@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cleartext is off everywhere. A self-hosted Navidrome reachable only over plain HTTP is a
+  deliberate, per-domain exception the user adds here; nothing is downgraded silently.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

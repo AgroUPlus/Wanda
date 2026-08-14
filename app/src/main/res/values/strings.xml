@@ -1,0 +1,8 @@
+<resources>
+    <!--
+      Only strings the platform itself reads live here. Screen labels are defined next to the
+      thing they name (nav destinations, VisualizerMode, SettingsSection), so duplicating them as
+      resources left 28 orphans that drifted out of sync with the code.
+    -->
+    <string name="app_name">Wanda</string>
+</resources>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Follows the system light/dark setting so the launch window matches the Compose theme.
+      The previous theme was hard-coded light and flashed white before dark content drew.
+
+      The day/night split comes from the values-night qualifier on @color/window_background, not
+      from a DayNight parent — that parent is API 29 and this app supports API 26.
+    -->
+    <style name="Theme.Wanda" parent="android:Theme.DeviceDefault.NoActionBar">
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+</resources>
