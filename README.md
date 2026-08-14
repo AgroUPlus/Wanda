@@ -5,7 +5,7 @@ One Android music player for **Navidrome**, **local files**, **YouTube Music** a
 Material 3 Expressive throughout. Battery-first, privacy-first, no telemetry.
 
 Inspired by the multi-source aggregation of Symfonium and the visualizer soul of
-[Wander](../Wander-main), the Rust TUI player this is the Android sibling of.
+[Wander](https://github.com/Kolbxyz/Wander), the Linux Rust TUI music player this is the Android sibling of.
 
 ---
 
