@@ -1,11 +1,9 @@
 # Wanda 🎵
 
-One Android music player for **Navidrome**, **local files**, **YouTube Music** and the
-**Internet Archive** — a single library, a single queue, a single player.
-Material 3 Expressive throughout. Battery-first, privacy-first, no telemetry.
+The Android version of [Wander](https://github.com/Kolbxyz/Wander) (also made by me), designed to replace other music apps in one place safely and freely.
 
-Inspired by the multi-source aggregation of Symfonium and the visualizer soul of
-[Wander](https://github.com/Kolbxyz/Wander), the Linux Rust TUI music player this is the Android sibling of.
+Unifies **Navidrome**, **local files**, **YouTube Music** and the **Internet Archive** behind a single library, a single queue, and a single player.
+Material 3 Expressive throughout. Battery-first, privacy-first, no telemetry.
 
 ---
 
