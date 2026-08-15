@@ -41,6 +41,7 @@ import com.wander.android.ui.components.player.MiniPlayerGap
 import com.wander.android.ui.components.player.MiniPlayerHeight
 import com.wander.android.ui.components.player.PlayerSheet
 import com.wander.android.ui.components.player.PlayerSheetContent
+import com.wander.android.ui.components.player.PlayerSheetValue
 import com.wander.android.ui.components.player.rememberPlayerSheetState
 import com.wander.android.ui.navigation.Routes
 import com.wander.android.ui.navigation.TopLevelDestination
@@ -128,7 +129,9 @@ fun WanderApp(
         if (!playerConnection.state.value.isPlaying) agroViewModel.allowReoffer()
         // Cheap and metadata-only, so asking on every foreground costs nothing.
         viewModel.refreshSyncOffer()
-        val job = scope.launch { agroViewModel.observeLiveUpdates() }
+        val job = scope.launch {
+            agroViewModel.observeLiveUpdates(onLibraryChanged = viewModel::refreshSyncOffer)
+        }
         onStopOrDispose { job.cancel() }
     }
 
@@ -210,9 +213,14 @@ fun WanderApp(
             )
         }
 
+        // Both bottom-anchored cards belong to the browsing surface, not to the player: floating
+        // them over a full-screen Now Playing reads as a stray dialog. `targetValue`, not
+        // `progress`, so this costs one recomposition per gesture rather than one per frame.
+        val sheetCollapsed = sheetState.targetValue == PlayerSheetValue.COLLAPSED
+
         // Sits above the resume card's slot: both are bottom-anchored offers, and the resume card
         // only appears while idle, so in practice only one is ever up.
-        if (syncOffer.isNotEmpty() && showChrome) {
+        if (syncOffer.isNotEmpty() && showChrome && sheetCollapsed) {
             SyncOfferCard(
                 count = syncOffer.size,
                 sample = remember(syncOffer) {
@@ -235,7 +243,7 @@ fun WanderApp(
         // The gate used to be "no track loaded", and a track stays loaded after it finishes, so
         // the card appeared exactly once per launch and never came back.
         val handoff = incomingHandoff
-        if (handoff != null && !isPlayingHere && showChrome) {
+        if (handoff != null && !isPlayingHere && showChrome && sheetCollapsed) {
             ResumeHandoffCard(
                 handoff = handoff,
                 deviceName = remember(handoff, agroDevices) {
@@ -287,11 +295,21 @@ private fun PaddingValues.plusBottom(
     )
 }
 
-/** Tab switching keeps each tab's own back stack and scroll position. */
+/**
+ * Tab switching keeps each tab's own state — and lands on the tab itself.
+ *
+ * `restoreState` brings back the whole saved stack, detail pages included, so tapping "Search"
+ * after opening an artist from it put you straight back on that artist page: the tab looked stuck.
+ * The stack is still restored, for the screen state it carries — a typed query, a scroll position —
+ * and then popped down to the tab's own destination, which is what the tap asked for.
+ */
 private fun androidx.navigation.NavHostController.switchTab(destination: TopLevelDestination) {
     navigate(destination.route) {
         popUpTo(graph.startDestinationId) { saveState = true }
         launchSingleTop = true
         restoreState = true
     }
+    // By id, not route: Search's destination is registered as `search?query={query}`, which no
+    // plain "search" string will match.
+    graph.findNode(destination.route)?.id?.let { popBackStack(it, inclusive = false) }
 }

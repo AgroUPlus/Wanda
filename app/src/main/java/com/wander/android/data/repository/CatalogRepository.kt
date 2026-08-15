@@ -79,8 +79,14 @@ class CatalogRepository @Inject constructor(
     fun artistAlbumsFlow(artist: String): Flow<List<UnifiedAlbum>> =
         albumDao.getAlbumsByArtistFlow(artist).map { it.map(AlbumEntity::toUnifiedAlbum) }
 
+    /**
+     * Deduplicated: the artist page is fed by a cross-source search, so the same song arrives once
+     * from Navidrome and once from YouTube Music. [TrackDeduplicator] keeps the copy from the
+     * lowest-priority source — your own files and your own server before anything streamed.
+     */
     fun artistTracksFlow(artist: String): Flow<List<UnifiedTrack>> =
-        trackDao.getTracksByArtistFlow(artist).map { it.map(TrackEntity::toUnifiedTrack) }
+        trackDao.getTracksByArtistFlow(artist)
+            .map { entities -> TrackDeduplicator.deduplicate(entities.map(TrackEntity::toUnifiedTrack)) }
 
     /**
      * Fills in an artist Room only partly knows, by searching every configured backend for their

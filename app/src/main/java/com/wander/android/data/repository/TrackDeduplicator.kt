@@ -95,6 +95,20 @@ object TrackDeduplicator {
         return winners
     }
 
+    /**
+     * A stable identity for the *recording* rather than the row.
+     *
+     * The same song from Navidrome and from YouTube Music produces the same string, so a list can
+     * key on it: when a late-arriving Navidrome copy displaces the YouTube one, the row is the same
+     * item moving rather than one item vanishing and another appearing in its place.
+     *
+     * Coarser than [deduplicate], which also compares durations — two distinct takes of one title
+     * can share this key, so callers building list keys must make repeats unique.
+     */
+    fun recordingKey(track: UnifiedTrack): String = with(keyOf(track)) {
+        "$artist|$title|${variants.sorted().joinToString(",")}"
+    }
+
     internal fun keyOf(track: UnifiedTrack) = RecordingKey(
         artist = normalizeArtist(track.artist),
         title = normalizeTitle(track.title),
