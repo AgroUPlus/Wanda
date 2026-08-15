@@ -8,6 +8,7 @@ import com.wander.android.core.sync.MediaStoreWriter
 import com.wander.android.data.sources.agro.AgroLibraryApi
 import com.wander.android.data.sources.agro.AgroUploader
 import com.wander.android.data.sources.agro.MissingTrack
+import com.wander.android.data.sources.agro.SyncMode
 import com.wander.android.data.sources.agro.UploadOutcome
 import com.wander.android.data.sources.navidrome.NavidromeSource
 import kotlinx.coroutines.Dispatchers
@@ -151,9 +152,25 @@ class LibrarySyncRepository @Inject constructor(
         }
     }
 
-    /** What another device has that this one does not. */
-    suspend fun missingHere(limit: Int = 50): Result<List<MissingTrack>> =
-        libraryApi.missingOnDevice(limit)
+    /**
+     * What another device has that this one does not — and should therefore be offered.
+     *
+     * Nothing is offered when the account streams from Navidrome: the track is already playable
+     * here, and downloading a copy of something you can already hear is not a feature. The server
+     * decides which case this is, so the phone and the desktop cannot disagree about it.
+     */
+    suspend fun missingHere(limit: Int = 50): Result<List<MissingTrack>> {
+        val mode = libraryApi.syncMode().getOrDefault(SyncMode.PEER_TO_PEER)
+        if (!mode.offersDownloads) return Result.success(emptyList())
+        return libraryApi.missingOnDevice(limit)
+    }
+
+    /** Local files the server has verified it holds, so this device need not keep them. */
+    suspend fun reclaimableHere(limit: Int = 50): Result<List<MissingTrack>> {
+        val mode = libraryApi.syncMode().getOrDefault(SyncMode.PEER_TO_PEER)
+        if (!mode.offersReclaim) return Result.success(emptyList())
+        return libraryApi.reclaimable(limit)
+    }
 
     /**
      * Pulls missing tracks down into the phone's music library.
@@ -174,9 +191,10 @@ class LibrarySyncRepository @Inject constructor(
                     title = track.title,
                     artist = track.artist,
                     album = track.album,
-                    // The server does not say; FLAC is the common case and MediaStore probes the
-                    // real format from the content anyway.
-                    extension = "flac",
+                    // The server indexed the container when it took the file, so use what it says.
+                    // This was hardcoded to "flac", which named every download .flac whatever it
+                    // really was — an mp3 library arrived entirely mislabelled.
+                    extension = track.format?.takeIf { it.isNotBlank() } ?: "flac",
                     expectedHash = track.contentHash
                 )
             }
@@ -199,11 +217,23 @@ class LibrarySyncRepository @Inject constructor(
      * delete, because their bytes provably exist somewhere else.
      */
     suspend fun deletableLocalTracks(): List<TrackEntity> = withContext(Dispatchers.IO) {
-        trackDao.getSyncedLocalTracks()
+        // The server is asked which of these it can actually still produce — it checks its own
+        // disk, not just its index. "We uploaded it once" and "it is there now" are the difference
+        // between freeing space and losing a track, and only the server can tell them apart.
+        //
+        // Falls back to the local view when the server cannot be reached: an empty list would read
+        // as "nothing to free", which is a worse lie than the old behaviour.
+        val synced = trackDao.getSyncedLocalTracks()
+        val confirmed = reclaimableHere(limit = MAX_RECLAIM).getOrNull() ?: return@withContext synced
+        val safe = confirmed.mapTo(mutableSetOf()) { it.contentHash }
+        synced.filter { it.contentHash in safe }
     }
 
     private companion object {
         const val TAG = "LibrarySync"
+
+        /** Ceiling on one "what can I delete" answer, matching the server's own cap. */
+        const val MAX_RECLAIM = 200
 
         /** Roughly a minute of hashing on a mid-range phone. */
         const val HASH_BATCH = 200
