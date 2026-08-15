@@ -2,6 +2,7 @@ package com.wander.android
 
 import com.wander.android.data.sources.ytmusic.parseDurationText
 import com.wander.android.data.sources.ytmusic.parsePlaylistPanelVideo
+import com.wander.android.data.sources.ytmusic.parseResponsiveListItem
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
@@ -46,5 +47,48 @@ class YtMusicParsingTest {
         assertEquals("Real Artist", track.artist)
         assertEquals("Real Album", track.album)
         assertEquals(245_000L, track.durationMs)
+    }
+
+    /**
+     * Search rows open with a type label — "Song", and translated on a non-English device — where
+     * library and radio rows open with the artist. Reading run 0 credited the label as the artist.
+     */
+    @Test
+    fun skipsTheTypeLabelOnSearchRows() {
+        val renderer = Json.parseToJsonElement(
+            """
+            {
+              "flexColumns": [
+                { "musicResponsiveListItemFlexColumnRenderer": {
+                    "text": { "runs": [ { "text": "Real Title" } ] } } },
+                { "musicResponsiveListItemFlexColumnRenderer": { "text": { "runs": [
+                    { "text": "Song" },
+                    { "text": " • " },
+                    { "text": "Real Artist", "navigationEndpoint": { "browseEndpoint": {
+                        "browseId": "UC1",
+                        "browseEndpointContextSupportedConfigs": {
+                          "browseEndpointContextMusicConfig": {
+                            "pageType": "MUSIC_PAGE_TYPE_ARTIST" } } } } },
+                    { "text": " • " },
+                    { "text": "Real Album", "navigationEndpoint": { "browseEndpoint": {
+                        "browseId": "MPRE1",
+                        "browseEndpointContextSupportedConfigs": {
+                          "browseEndpointContextMusicConfig": {
+                            "pageType": "MUSIC_PAGE_TYPE_ALBUM" } } } } },
+                    { "text": " • " },
+                    { "text": "3:41" }
+                ] } } }
+              ],
+              "playlistItemData": { "videoId": "abc123" }
+            }
+            """.trimIndent()
+        ).jsonObject
+
+        val track = parseResponsiveListItem(renderer)
+
+        assertNotNull(track)
+        assertEquals("Real Artist", track!!.artist)
+        assertEquals("Real Album", track.album)
+        assertEquals(221_000L, track.durationMs)
     }
 }

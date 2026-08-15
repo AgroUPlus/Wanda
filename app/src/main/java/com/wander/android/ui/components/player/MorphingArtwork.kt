@@ -79,6 +79,9 @@ internal fun MorphingArtwork(
             val width = rect.width.roundToInt().coerceAtLeast(0)
             val height = rect.height.roundToInt().coerceAtLeast(0)
             val placeable = measurable.measure(Constraints.fixed(width, height))
+            // The pitch the neighbours are spaced by, published so a committed swipe carries this
+            // cover off by exactly one slot instead of an arbitrary distance.
+            swipe.stepPx = rect.width + PeekGap.toPx()
             layout(width, height) {
                 placeable.place(
                     x = (rect.left + swipe.offsetX.value).roundToInt(),

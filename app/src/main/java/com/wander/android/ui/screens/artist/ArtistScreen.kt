@@ -34,6 +34,7 @@ import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.headerInset
+import com.wander.android.ui.components.trackListKeys
 import com.wander.android.ui.components.listInset
 import com.wander.android.ui.screens.library.AlbumCard
 
@@ -52,6 +53,7 @@ fun ArtistScreen(
     val albums by viewModel.albums.collectAsStateWithLifecycle()
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val trackKeys = remember(tracks) { trackListKeys(tracks) }
     var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
 
     actionsFor?.let { track ->
@@ -135,14 +137,19 @@ fun ArtistScreen(
                 }
                 itemsIndexed(
                     items = tracks,
-                    key = { _, track -> track.id },
+                    // Keyed by the recording, not the row: this page fills in from every backend
+                    // in turn, so a song's surviving copy can change source under the user. See
+                    // [trackListKeys].
+                    key = { index, _ -> trackKeys[index] },
                     contentType = { _, _ -> "track" }
                 ) { index, track ->
                     TrackRow(
                         track = track,
                         onPlay = { viewModel.play(index) },
                         onToggleLike = { viewModel.toggleLike(track) },
-                        onLongPress = { actionsFor = track }
+                        onLongPress = { actionsFor = track },
+                        // Late arrivals slide the rows below them down instead of teleporting.
+                        modifier = Modifier.animateItem()
                     )
                 }
             }

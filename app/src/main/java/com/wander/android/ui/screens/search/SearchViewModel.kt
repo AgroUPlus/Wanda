@@ -52,19 +52,22 @@ class SearchViewModel @Inject constructor(
      * that is not the user's own music.
      */
     private val _selectedSources = MutableStateFlow(
-        musicRepository.sources
-            .filter { it.capabilities.search }
-            .map { it.sourceType }
+        searchableSources()
             .filterNot { it == SourceType.INTERNET_ARCHIVE }
             .toSet()
     )
     val selectedSources: StateFlow<Set<SourceType>> = _selectedSources.asStateFlow()
 
-    /** Only sources that can actually search are offered as filters. */
-    val availableSources: List<SourceType> = musicRepository.sources
-        .filter { it.capabilities.search }
+    /**
+     * Only sources that can search *and* are set up right now. A backend the user signed out of
+     * has nothing to offer, so offering its chip — pre-selected, no less — only promised results
+     * that could never arrive.
+     */
+    val availableSources: List<SourceType> = searchableSources().sorted()
+
+    private fun searchableSources() = musicRepository.sources
+        .filter { it.capabilities.search && it.isConfigured.value }
         .map { it.sourceType }
-        .sorted()
 
     // Re-runs when the sources change as well as the query: toggling a backend on has to go and
     // ask it, not just unhide results that were never fetched.

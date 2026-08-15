@@ -149,12 +149,21 @@ class MusicRepository @Inject constructor(
     ): List<UnifiedTrack> = coroutineScope {
         if (query.isBlank()) return@coroutineScope emptyList()
 
-        val cached = trackDao.searchTracks(query).map(TrackEntity::toUnifiedTrack)
-        val remote = activeSources()
-            .filter { it.capabilities.search }
+        val allowed = activeSources()
             // Restricting *which sources are asked* rather than filtering their results is the
             // point: a slow backend the user turned off must not hold the whole search up.
             .filter { onlySources == null || it.sourceType in onlySources }
+        val allowedTypes = allowed.mapTo(mutableSetOf(), IMusicSource::sourceType)
+
+        // Room holds every result the app has ever shown, search hits included, so signing out of
+        // a backend used to leave its tracks turning up in Search for good — offered by a source
+        // that is no longer there to stream them. Downloads are the exception: the file is on this
+        // device and plays whatever the account does.
+        val cached = trackDao.searchTracks(query)
+            .map(TrackEntity::toUnifiedTrack)
+            .filter { it.source in allowedTypes || it.isDownloaded }
+        val remote = allowed
+            .filter { it.capabilities.search }
             .map { source -> async { source.search(query).getOrDefault(emptyList()) } }
             .flatMap { it.await() }
 
@@ -299,8 +308,14 @@ class MusicRepository @Inject constructor(
             tracks
         }
 
+    /**
+     * "Recently added" means added to *your* library, so the Internet Archive is left out: its
+     * recent uploads are a public catalogue, and this call marks what it fetches as library, which
+     * put strangers' uploads in the Library tab.
+     */
     suspend fun getRecentTracks(limit: Int = 30): List<UnifiedTrack> = coroutineScope {
         val remote = activeSources()
+            .filterNot { it.sourceType == SourceType.INTERNET_ARCHIVE }
             .map { source -> async { source.getRecentTracks(limit).getOrDefault(emptyList()) } }
             .flatMap { it.await() }
         persist(remote, asLibrary = true)

@@ -69,11 +69,7 @@ internal fun parseResponsiveListItem(renderer: JsonObject): UnifiedTrack? {
         .path("musicResponsiveListItemFlexColumnRenderer", "text")
 
     val title = column(0).runText() ?: return null
-    val subtitleRuns = column(1).path("runs")?.array()
-    val artist = subtitleRuns?.getOrNull(0).path("text").text() ?: "Unknown Artist"
-    // Runs are separated by " • " literals, so album and duration sit at odd offsets.
-    val album = subtitleRuns?.getOrNull(2).path("text").text()
-    val duration = subtitleRuns?.lastOrNull().path("text").text()
+    val subtitle = InnerTubeSubtitle.of(column(1).path("runs")?.array())
 
     val videoId = renderer.path("playlistItemData", "videoId").text()
         ?: renderer.path("navigationEndpoint", "watchEndpoint", "videoId").text()
@@ -83,11 +79,11 @@ internal fun parseResponsiveListItem(renderer: JsonObject): UnifiedTrack? {
         id = "$YTM_PREFIX$videoId",
         source = SourceType.YTMUSIC,
         title = title,
-        artist = artist,
-        album = album?.takeUnless { it.contains(':') },
+        artist = subtitle.artist ?: "Unknown Artist",
+        album = subtitle.album,
         artworkUrl = renderer.path("thumbnail", "musicThumbnailRenderer", "thumbnail")
             .bestThumbnail(),
-        durationMs = parseDurationText(duration),
+        durationMs = parseDurationText(subtitle.duration),
         format = "audio/webm",
         bitRateKbps = 160
     )
@@ -99,14 +95,14 @@ internal fun parseResponsiveListItem(renderer: JsonObject): UnifiedTrack? {
  */
 internal fun parsePlaylistPanelVideo(renderer: JsonObject): UnifiedTrack? {
     val videoId = renderer["videoId"].text() ?: return null
-    val bylineRuns = renderer["longBylineText"].path("runs")?.array()
+    val byline = InnerTubeSubtitle.of(renderer["longBylineText"].path("runs")?.array())
 
     return UnifiedTrack(
         id = "$YTM_PREFIX$videoId",
         source = SourceType.YTMUSIC,
         title = renderer["title"].runText() ?: return null,
-        artist = bylineRuns?.getOrNull(0).path("text").text() ?: "Unknown Artist",
-        album = bylineRuns?.getOrNull(2).path("text").text(),
+        artist = byline.artist ?: "Unknown Artist",
+        album = byline.album,
         artworkUrl = renderer["thumbnail"].bestThumbnail(),
         durationMs = parseDurationText(renderer["lengthText"].runText()),
         format = "audio/webm",
@@ -128,8 +124,7 @@ internal fun parseLibraryAlbum(renderer: JsonObject): UnifiedAlbum? {
         id = "$YTM_PREFIX$browseId",
         source = SourceType.YTMUSIC,
         title = title,
-        artist = column(1).path("runs")?.array()?.getOrNull(2).path("text").text()
-            ?: "Unknown Artist",
+        artist = InnerTubeSubtitle.of(column(1).path("runs")?.array()).artist ?: "Unknown Artist",
         coverArtUrl = renderer.path("thumbnail", "musicThumbnailRenderer", "thumbnail")
             .bestThumbnail()
     )

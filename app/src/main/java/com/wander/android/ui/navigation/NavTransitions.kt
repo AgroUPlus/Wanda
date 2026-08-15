@@ -1,6 +1,5 @@
 package com.wander.android.ui.navigation
 
-import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
@@ -10,7 +9,6 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.navigation.NavBackStackEntry
 
 /**
  * Material's shared-axis motion. Without these every destination fell back to NavHost's default
@@ -31,13 +29,26 @@ private fun <T> spatial() = tween<T>(durationMillis = DURATION_MS)
 
 private fun <T> effects() = tween<T>(durationMillis = FADE_MS)
 
-fun AnimatedContentTransitionScope<NavBackStackEntry>.tabEnter(forward: Boolean): EnterTransition =
-    slideInHorizontally(spatial()) { width -> if (forward) width / X_TRAVEL else -width / X_TRAVEL } +
+/**
+ * A tab arriving, from the side it sits on in the navigation bar: Library → Home comes in from the
+ * left, Search → Settings from the right.
+ *
+ * When the other screen is not a tab there is no left or right to speak of — it is an artist page
+ * being dismissed, or the queue closing — so the tab comes back along Z instead, matching the way
+ * that screen left.
+ */
+fun tabEnter(from: String?, to: String?): EnterTransition {
+    val direction = tabDirection(from, to) ?: return detailPopEnter()
+    return slideInHorizontally(spatial()) { width -> direction * width / X_TRAVEL } +
         fadeIn(effects())
+}
 
-fun AnimatedContentTransitionScope<NavBackStackEntry>.tabExit(forward: Boolean): ExitTransition =
-    slideOutHorizontally(spatial()) { width -> if (forward) -width / X_TRAVEL else width / X_TRAVEL } +
+/** The counterpart: the outgoing tab leaves towards the side the incoming one came from. */
+fun tabExit(from: String?, to: String?): ExitTransition {
+    val direction = tabDirection(from, to) ?: return detailExit()
+    return slideOutHorizontally(spatial()) { width -> -direction * width / X_TRAVEL } +
         fadeOut(effects())
+}
 
 /** Detail screens grow in from slightly behind the caller. */
 fun detailEnter(): EnterTransition = scaleIn(spatial(), initialScale = Z_SCALE_IN) + fadeIn(effects())
@@ -50,9 +61,22 @@ fun detailPopEnter(): EnterTransition =
 fun detailPopExit(): ExitTransition =
     scaleOut(spatial(), targetScale = Z_SCALE_IN) + fadeOut(effects())
 
-/** Tab order decides which way an X transition travels, so the motion matches the bar layout. */
-fun isForward(from: String?, to: String?): Boolean {
-    val fromIndex = TopLevelDestination.entries.indexOfFirst { it.route == from }
-    val toIndex = TopLevelDestination.entries.indexOfFirst { it.route == to }
-    return fromIndex < 0 || toIndex < 0 || toIndex > fromIndex
+/**
+ * Which way the bar is being travelled: +1 rightwards, -1 leftwards, 0 for a tab to itself.
+ * Null when either end is not a tab, and so has no place in that order.
+ */
+private fun tabDirection(from: String?, to: String?): Int? {
+    val fromIndex = tabIndex(from) ?: return null
+    val toIndex = tabIndex(to) ?: return null
+    return toIndex.compareTo(fromIndex)
+}
+
+/**
+ * Position in the bar. Arguments are stripped first: Search is registered as
+ * `search?query={query}`, so matching the raw route against the tab's own `search` never hit and
+ * every transition involving Search fell back to the same default direction.
+ */
+private fun tabIndex(route: String?): Int? {
+    val base = route?.substringBefore("?") ?: return null
+    return TopLevelDestination.entries.indexOfFirst { it.route == base }.takeIf { it >= 0 }
 }

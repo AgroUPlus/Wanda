@@ -120,12 +120,17 @@ private fun NavGraphBuilder.tabDestination(
 ) = composable(
     route = route,
     arguments = arguments,
-    enterTransition = { tabEnter(isForward(initialState.destination.route, route)) },
-    exitTransition = { tabExit(isForward(initialState.destination.route, route)) },
-    popEnterTransition = { tabEnter(isForward(initialState.destination.route, route)) },
-    popExitTransition = { tabExit(isForward(initialState.destination.route, route)) },
+    // Always the actual movement — where the transition comes from, where it goes — rather than
+    // this destination's own route. The exits used to be handed the *leaving* screen as their
+    // target, so a tab slid out as though every switch went the same way.
+    enterTransition = { tabEnter(initialState.route(), targetState.route()) },
+    exitTransition = { tabExit(initialState.route(), targetState.route()) },
+    popEnterTransition = { tabEnter(initialState.route(), targetState.route()) },
+    popExitTransition = { tabExit(initialState.route(), targetState.route()) },
     content = content
 )
+
+private fun NavBackStackEntry.route(): String? = destination.route
 
 /** A screen opened on top of another: shared-axis Z. */
 private fun NavGraphBuilder.detailDestination(

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.SmartMix
+import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.HomeShelfRepository
 import com.wander.android.data.repository.MusicRepository
@@ -121,9 +122,16 @@ class HomeViewModel @Inject constructor(
                 // The backends' own recommenders. Empty when nothing publishes one — signed out
                 // of YouTube Music, Home is the shelves below and nothing is missing.
                 val feed = async { recommendationRepository.getShelves() }
-                val perSource = musicRepository.configuredSources().map { source ->
-                    source to async { homeShelfRepository.getRecentBySource(source, CarouselSize) }
-                }
+                // The Archive is a place to go looking for something, not a library of yours, so
+                // it gets no shelf here. Its rows in Room are search residue — every result the
+                // Search screen has ever shown — which is the opposite of a recommendation.
+                val perSource = musicRepository.configuredSources()
+                    .filterNot { it == SourceType.INTERNET_ARCHIVE }
+                    .map { source ->
+                        source to async {
+                            homeShelfRepository.getRecentBySource(source, CarouselSize)
+                        }
+                    }
 
                 buildList {
                     add(carousel(SectionOnRepeat, "On Repeat", onRepeat.await()))

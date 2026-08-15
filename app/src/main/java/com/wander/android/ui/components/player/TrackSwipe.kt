@@ -61,6 +61,15 @@ internal class TrackSwipeState {
      */
     var isSwiping by mutableStateOf(false)
         internal set
+
+    /**
+     * The filmstrip pitch: one cover plus the gap to the next, in pixels.
+     *
+     * Written from [MorphingArtwork]'s layout lambda, which is the only place that knows how big
+     * the cover currently is, and read when a swipe commits. Plain `var`, not state: it is only
+     * ever read inside layout/gesture code, never in composition.
+     */
+    internal var stepPx: Float = 0f
 }
 
 @Composable
@@ -100,7 +109,14 @@ internal fun Modifier.swipeToChangeTrack(
                     if (skipNext || skipPrevious) {
                         // Carry the outgoing content off, swap, then bring the new one in from
                         // the far side.
-                        val exit = if (skipNext) -exitDistance else exitDistance
+                        //
+                        // Exactly one filmstrip step where the peek covers have reported one:
+                        // carrying the cover further than the neighbour is spaced meant the
+                        // incoming cover arrived from two slots away, which read as skipping two
+                        // tracks. [exitDistance] is the fallback for content with no filmstrip —
+                        // the docked strip's text.
+                        val travel = state.stepPx.takeIf { it > 0f } ?: exitDistance
+                        val exit = if (skipNext) -travel else travel
                         state.offsetX.animateTo(exit, tween(durationMillis = 140))
                         if (skipNext) onNext() else onPrevious()
                         state.offsetX.snapTo(-exit)

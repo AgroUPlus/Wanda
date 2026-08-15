@@ -49,13 +49,13 @@ private fun parseTwoRowItem(renderer: JsonObject): UnifiedTrack? {
     val videoId = renderer.path("navigationEndpoint", "watchEndpoint", "videoId").text()
         ?: return null
 
-    val subtitleRuns = renderer["subtitle"].path("runs")?.array()
+    val subtitle = InnerTubeSubtitle.of(renderer["subtitle"].path("runs")?.array())
 
     return UnifiedTrack(
         id = "$YTM_PREFIX$videoId",
         source = SourceType.YTMUSIC,
         title = renderer["title"].runText() ?: return null,
-        artist = subtitleRuns?.getOrNull(0).path("text").text() ?: "Unknown Artist",
+        artist = subtitle.artist ?: "Unknown Artist",
         artworkUrl = renderer
             .path("thumbnailRenderer", "musicThumbnailRenderer", "thumbnail")
             .bestThumbnail(),
