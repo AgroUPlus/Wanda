@@ -53,6 +53,13 @@ class SettingsViewModel @Inject constructor(
     /** Blank until the user names one; see [SecureStorage.shareDomain]. */
     val shareDomain: StateFlow<String> = secureStorage.shareDomain
 
+    /**
+     * The domain a paired Agro server publishes, blank if it has none or the feature is off.
+     * When it is set it takes precedence, and the settings row says so rather than showing a
+     * local value that is not the one being used.
+     */
+    val agroShareDomain: StateFlow<String> = secureStorage.agroShareDomain
+
     fun setShareDomain(domain: String) = secureStorage.setShareDomain(domain)
 
     private val _isIncognito = MutableStateFlow(secureStorage.isIncognitoMode)

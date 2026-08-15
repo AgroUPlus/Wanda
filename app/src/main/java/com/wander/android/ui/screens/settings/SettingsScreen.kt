@@ -67,6 +67,7 @@ fun SettingsScreen(
     var confirmAgroUnpair by rememberSaveable { mutableStateOf(false) }
     var showShareDomainDialog by rememberSaveable { mutableStateOf(false) }
     val shareDomain by viewModel.shareDomain.collectAsStateWithLifecycle()
+    val agroShareDomain by viewModel.agroShareDomain.collectAsStateWithLifecycle()
 
     if (showShareDomainDialog) {
         ShareDomainDialog(
@@ -266,9 +267,14 @@ fun SettingsScreen(
         item(key = "share_domain") {
             SettingsRow(
                 title = "Custom share domain",
-                subtitle = shareDomain.ifBlank { null }
-                    ?.let { "Links go out as $it/listen — tap to change" }
-                    ?: "Off — share each backend's own link",
+                subtitle = when {
+                    // Agro decides for the whole fleet when it has a domain, so saying what this
+                    // device was typed into would name a value that is not the one in use.
+                    agroShareDomain.isNotBlank() ->
+                        "$agroShareDomain/listen — set on your Agro server"
+                    shareDomain.isNotBlank() -> "Links go out as $shareDomain/listen — tap to change"
+                    else -> "Off — share each backend's own link"
+                },
                 onClick = { showShareDomainDialog = true }
             )
         }

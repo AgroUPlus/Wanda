@@ -124,6 +124,28 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     private val _shareDomain = MutableStateFlow(prefs.getString(KEY_SHARE_DOMAIN, "").orEmpty())
     val shareDomain: StateFlow<String> = _shareDomain.asStateFlow()
 
+    /**
+     * The same setting as configured on a paired Agro server, cached here so it survives a restart
+     * and works with the server unreachable.
+     *
+     * Kept apart from [shareDomain] rather than overwriting it: Agro is optional, and unpairing
+     * must leave the user with the domain *they* typed, not with whatever the server last said.
+     * Blank whenever Agro is unpaired, has no domain, or has the feature switched off.
+     */
+    private val _agroShareDomain = MutableStateFlow(prefs.getString(KEY_AGRO_SHARE_DOMAIN, "").orEmpty())
+    val agroShareDomain: StateFlow<String> = _agroShareDomain.asStateFlow()
+
+    /** Extra hosts the server will forward to, comma separated, as it reported them. */
+    var agroShareHosts: String
+        get() = prefs.getString(KEY_AGRO_SHARE_HOSTS, "").orEmpty()
+        private set(value) = prefs.edit { putString(KEY_AGRO_SHARE_HOSTS, value) }
+
+    fun setAgroShareSettings(domain: String, hosts: String) {
+        prefs.edit { putString(KEY_AGRO_SHARE_DOMAIN, domain.trim().lowercase()) }
+        agroShareHosts = hosts
+        _agroShareDomain.value = domain.trim().lowercase()
+    }
+
     fun setShareDomain(domain: String) {
         val host = domain.trim()
             .substringAfter("://")
@@ -258,6 +280,8 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_LOCAL_WATERMARK = "key_local_scan_watermark"
         private const val KEY_SETUP_DONE = "key_setup_complete"
         private const val KEY_SHARE_DOMAIN = "key_share_domain"
+        private const val KEY_AGRO_SHARE_DOMAIN = "key_agro_share_domain"
+        private const val KEY_AGRO_SHARE_HOSTS = "key_agro_share_hosts"
 
         /** A bare hostname: labels, dots, and a TLD. Anything else is not a domain to build on. */
         private val HOST = Regex("""[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+""")

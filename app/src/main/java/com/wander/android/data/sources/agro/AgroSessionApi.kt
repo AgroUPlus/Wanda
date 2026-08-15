@@ -54,7 +54,9 @@ class AgroSessionApi @Inject constructor(
     suspend fun syncedSettings(): Result<AgroSyncedSettings?> = graphQl.execute(
         """
         query SyncedSettings(${'$'}userId: String!) {
-            syncedSettings(userId: ${'$'}userId) { serverUrl serverUsername }
+            syncedSettings(userId: ${'$'}userId) {
+                serverUrl serverUsername shareDomain shareHosts shareEnabled
+            }
         }
         """.trimIndent(),
         buildJsonObject { put("userId", graphQl.userId) }
@@ -62,7 +64,10 @@ class AgroSessionApi @Inject constructor(
         (data["syncedSettings"] as? JsonObject)?.let {
             AgroSyncedSettings(
                 serverUrl = it.string("serverUrl"),
-                serverUsername = it.string("serverUsername")
+                serverUsername = it.string("serverUsername"),
+                shareDomain = it.string("shareDomain"),
+                shareHosts = it.string("shareHosts"),
+                shareEnabled = it.bool("shareEnabled")
             )
         }
     }
@@ -119,4 +124,8 @@ class AgroSessionApi @Inject constructor(
 
     private fun JsonObject.string(key: String): String? =
         this[key]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+
+    /** Absent reads as false: a server too old to know the field has the feature switched off. */
+    private fun JsonObject.bool(key: String): Boolean =
+        this[key]?.jsonPrimitive?.contentOrNull?.toBooleanStrictOrNull() ?: false
 }
