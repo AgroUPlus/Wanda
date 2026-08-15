@@ -65,6 +65,7 @@ fun SettingsScreen(
     var confirmNavidromeSignOut by rememberSaveable { mutableStateOf(false) }
     var confirmYouTubeSignOut by rememberSaveable { mutableStateOf(false) }
     var confirmAgroUnpair by rememberSaveable { mutableStateOf(false) }
+    var confirmForgetEverything by rememberSaveable { mutableStateOf(false) }
     var showShareDomainDialog by rememberSaveable { mutableStateOf(false) }
     val shareDomain by viewModel.shareDomain.collectAsStateWithLifecycle()
     val agroShareDomain by viewModel.agroShareDomain.collectAsStateWithLifecycle()
@@ -114,6 +115,20 @@ fun SettingsScreen(
             confirmLabel = "Unpair",
             onConfirm = viewModel::disconnectAgro,
             onDismiss = { confirmAgroUnpair = false }
+        )
+    }
+
+    if (confirmForgetEverything) {
+        ConfirmDialog(
+            title = "Forget all credentials?",
+            message = "This will sign out of every music source and erase all stored passwords, " +
+                "API keys and login tokens from this device. Downloaded tracks remain on disk.",
+            confirmLabel = "Forget all",
+            onConfirm = {
+                viewModel.forgetEverything()
+                confirmForgetEverything = false
+            },
+            onDismiss = { confirmForgetEverything = false }
         )
     }
 
@@ -292,7 +307,7 @@ fun SettingsScreen(
             SettingsRow(
                 title = "Forget all credentials",
                 subtitle = "Signs out of every source and erases stored secrets",
-                onClick = viewModel::forgetEverything,
+                onClick = { confirmForgetEverything = true },
                 destructive = true
             )
         }

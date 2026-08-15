@@ -181,8 +181,11 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun disconnectAgro() {
-        secureStorage.clearAgroCredentials()
-        resetAgroPairing()
+        viewModelScope.launch {
+            runCatching { sessionApi.unregisterNode() }
+            secureStorage.clearAgroCredentials()
+            resetAgroPairing()
+        }
     }
 
     init {
@@ -218,7 +221,19 @@ class SettingsViewModel @Inject constructor(
 
     /** Wipes every stored credential. Deliberately destructive and irreversible. */
     fun forgetEverything() {
-        secureStorage.clearAllCredentials()
+        viewModelScope.launch {
+            if (secureStorage.agroConfigured.value) {
+                runCatching { sessionApi.unregisterNode() }
+            }
+            if (secureStorage.navidromeConfigured.value) {
+                runCatching { navidromeSource.logout() }
+            }
+            if (accountManager.isLoggedIn.value) {
+                runCatching { accountManager.signOut() }
+            }
+            secureStorage.clearAllCredentials()
+            resetAgroPairing()
+        }
     }
 
     private fun refreshCacheSize() {

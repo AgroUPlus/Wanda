@@ -84,6 +84,20 @@ class AgroClient @Inject constructor(
         return graphQl.execute(mutation, variables).map { }
     }
 
+    /** Unregisters this device from Agro on unpair or credential reset. */
+    suspend fun unregisterNode(): Result<Unit> {
+        val mutation = """
+            mutation UnregisterNode(${'$'}userId: String!, ${'$'}deviceId: String!) {
+                unregisterNode(userId: ${'$'}userId, deviceId: ${'$'}deviceId)
+            }
+        """.trimIndent()
+        val variables = buildJsonObject {
+            put("userId", secureStorage.agroUsername)
+            put("deviceId", secureStorage.agroDeviceId)
+        }
+        return graphQl.execute(mutation, variables).map { }
+    }
+
     /** `agro://connect?username=…&passphrase=…&server=…`, as printed by the server's pairing QR. */
     suspend fun parseQrCodePayload(qrString: String): Boolean {
         if (!qrString.startsWith("agro://connect")) return false
