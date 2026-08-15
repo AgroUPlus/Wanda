@@ -1,8 +1,10 @@
 package com.wander.android.ui.components
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -28,9 +30,24 @@ import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.progressOf
 import com.wander.android.core.playback.rememberPlaybackPosition
 import com.wander.android.data.model.UnifiedTrack
+import kotlin.math.abs
 
 /** The edge of the docked strip's cover art. */
 val MiniArtworkSize = 48.dp
+
+/**
+ * Drag distance at which the strip's text has faded out completely. Matches the swipe's own
+ * commit threshold (see `TrackSwipe.kt`), so the text is gone exactly when releasing would skip.
+ */
+private const val SwipeFadeDistancePx = 120f
+
+/**
+ * Fixed height for the progress bar, so the wavy and flat indicators occupy the same box.
+ *
+ * The two have different intrinsic heights, and swapping them on pause reflowed the whole strip —
+ * the cover and text visibly stepped upward the moment playback stopped.
+ */
+private val ProgressBarHeight = 12.dp
 
 /**
  * The docked strip at the top of the player sheet.
@@ -42,6 +59,10 @@ val MiniArtworkSize = 48.dp
  * the sheet can draw one artwork that travels continuously into the full player. [contentAlpha]
  * fades everything else, leaving the cover untouched. It is a lambda so the fade is read
  * during draw rather than composition — the sheet's progress changes every frame.
+ *
+ * [swipeOffset] is the live drag-to-skip distance, and only the title and artist follow it: the
+ * strip's own surface must not slide around over the navigation bar, but a gesture where nothing
+ * at all moved read as if the swipe had not registered.
  */
 @Composable
 fun MiniPlayer(
@@ -50,6 +71,7 @@ fun MiniPlayer(
     playerConnection: PlayerConnection,
     modifier: Modifier = Modifier,
     contentAlpha: () -> Float = { 1f },
+    swipeOffset: () -> Float = { 0f },
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
     artworkSlot: @Composable () -> Unit = {
         Artwork(
@@ -87,7 +109,14 @@ fun MiniPlayer(
                     modifier = Modifier
                         .weight(1f)
                         .padding(horizontal = 12.dp)
-                        .graphicsLayer { alpha = contentAlpha() }
+                        .graphicsLayer {
+                            translationX = swipeOffset()
+                            // Fades as it travels, so the outgoing title does not simply run into
+                            // the play button. Reaching zero at the skip threshold means the
+                            // gesture's commit point is something you can see.
+                            val travel = (abs(swipeOffset()) / SwipeFadeDistancePx).coerceIn(0f, 1f)
+                            alpha = contentAlpha() * (1f - travel)
+                        }
                 ) {
                     Text(
                         text = track.title,
@@ -130,6 +159,9 @@ fun MiniPlayer(
  * Settings whenever a track is loaded — so leaving it mounted meant the app was never idle and
  * every screen paid for a full-rate redraw while scrolling. It also breaks the project's
  * no-polling battery rule.
+ *
+ * The swap is wrapped in a fixed-height box ([ProgressBarHeight]) because the two indicators do
+ * not measure the same: without it, pausing shrank this row and shifted everything below it up.
  */
 @Composable
 private fun PlaybackProgressBar(
@@ -141,9 +173,16 @@ private fun PlaybackProgressBar(
     val position by rememberPlaybackPosition(playerConnection)
     val progress = { progressOf(position.positionMs, durationMs) }
 
-    if (isPlaying) {
-        LinearWavyProgressIndicator(progress = progress, modifier = modifier.fillMaxWidth())
-    } else {
-        LinearProgressIndicator(progress = progress, modifier = modifier.fillMaxWidth())
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(ProgressBarHeight)
+    ) {
+        if (isPlaying) {
+            LinearWavyProgressIndicator(progress = progress, modifier = Modifier.fillMaxWidth())
+        } else {
+            LinearProgressIndicator(progress = progress, modifier = Modifier.fillMaxWidth())
+        }
     }
 }

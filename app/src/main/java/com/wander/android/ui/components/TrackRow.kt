@@ -1,6 +1,7 @@
 package com.wander.android.ui.components
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.UnifiedTrack
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TrackRow(
     track: UnifiedTrack,
@@ -29,13 +31,15 @@ fun TrackRow(
     modifier: Modifier = Modifier,
     isPlaying: Boolean = false,
     onToggleLike: (() -> Unit)? = null,
-    onRemove: (() -> Unit)? = null
+    onRemove: (() -> Unit)? = null,
+    /** Long press. Null leaves the row without a context menu, as in the queue's reorder mode. */
+    onLongPress: (() -> Unit)? = null
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onPlay)
+            .combinedClickable(onClick = onPlay, onLongClick = onLongPress)
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Artwork(

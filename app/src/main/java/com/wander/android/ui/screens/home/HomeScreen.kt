@@ -13,23 +13,34 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.ui.agro.AgroSessionViewModel
 import com.wander.android.ui.components.EmptyState
+import com.wander.android.ui.components.SessionSheet
+import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.TrackRow
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     contentPadding: PaddingValues,
@@ -38,10 +49,72 @@ fun HomeScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // The other devices' session, shown at the top of Home the way Spotify keeps "listening on…"
+    // in reach. Independent of the one-shot resume card, so it is available whenever you look.
+    val agroViewModel: AgroSessionViewModel = hiltViewModel()
+    val session by agroViewModel.latestSession.collectAsStateWithLifecycle()
+    val agroDevices by agroViewModel.devices.collectAsStateWithLifecycle()
+    val sessionArtwork by agroViewModel.sessionArtwork.collectAsStateWithLifecycle()
+    val isResuming by agroViewModel.isResuming.collectAsStateWithLifecycle()
+    var showSessionSheet by rememberSaveable { mutableStateOf(false) }
+
+    val sessionDevice = remember(session, agroDevices) {
+        session?.let { handoff -> agroDevices.firstOrNull { it.deviceId == handoff.deviceId } }
+    }
+    // The device's own online state decides this, not the session's `isPlaying` flag: that flag is
+    // whatever the sender last wrote, so a client that exited mid-track left it saying "playing"
+    // forever. `isPlaying` only stands in when the sending device is not in the list at all.
+    val sessionIsLive = sessionDevice?.isOnline
+        ?: (session?.isPlaying == true)
+
+    // The session can disappear while the sheet is open — it was resumed here, or the other device
+    // stopped — and a sheet describing nothing should not stay up.
+    if (showSessionSheet && session == null) showSessionSheet = false
+
+    session?.let { handoff ->
+        if (showSessionSheet) {
+            SessionSheet(
+                handoff = handoff,
+                deviceName = sessionDevice?.petname ?: "another device",
+                isLive = sessionIsLive,
+                isResuming = isResuming,
+                artworkUrl = sessionArtwork,
+                onResume = {
+                    agroViewModel.resume(handoff)
+                    showSessionSheet = false
+                },
+                onDismiss = { showSessionSheet = false }
+            )
+        }
+    }
+
     // Held above the LazyColumn, keyed by shelf. `rememberLazyListState()` called inside a lazy
     // `item {}` is disposed the moment that shelf scrolls off, so it neither preserved the
     // horizontal position nor avoided reallocating the state on the way back.
     val carouselStates = remember { mutableMapOf<String, LazyListState>() }
+
+    // The same long-press menu Library and Search use, so a track offers the same actions
+    // wherever it is shown. Held here rather than per shelf: only one can be open at a time.
+    var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
+
+    actionsFor?.let { track ->
+        TrackActionsSheet(
+            track = track,
+            isLiked = track.isLiked,
+            onPlay = { viewModel.play(listOf(track), 0) },
+            onPlayNext = { viewModel.playNext(track) },
+            onAddToQueue = { viewModel.addToQueue(track) },
+            onStartRadio = { viewModel.startRadio(track) },
+            onToggleLike = { viewModel.toggleLike(track) },
+            onRemove = null,
+            onDismiss = { actionsFor = null },
+            onShare = if (viewModel.canShare(track)) {
+                { viewModel.share(track) }
+            } else {
+                null
+            }
+        )
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         when {
@@ -56,17 +129,28 @@ fun HomeScreen(
                 modifier = Modifier.align(Alignment.Center)
             )
 
-            else -> LazyColumn(
-                contentPadding = contentPadding,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+            else -> PullToRefreshBox(
+                isRefreshing = state.isRefreshing,
+                onRefresh = viewModel::pullToRefresh,
                 modifier = Modifier.fillMaxSize()
             ) {
-                item(key = "header", contentType = "header") {
-                    HomeHeader(greeting = state.greeting, onOpenSettings = onOpenSettings)
-                }
+                LazyColumn(
+                    contentPadding = contentPadding,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    item(key = "header", contentType = "header") {
+                        HomeHeader(
+                            greeting = state.greeting,
+                            hasSession = session != null,
+                            onOpenSessions = { showSessionSheet = true },
+                            onOpenSettings = onOpenSettings
+                        )
+                    }
 
-                state.sections.forEach { section ->
-                    homeSection(section, viewModel, carouselStates)
+                    state.sections.forEach { section ->
+                        homeSection(section, viewModel, carouselStates) { actionsFor = it }
+                    }
                 }
             }
         }
@@ -79,7 +163,8 @@ fun HomeScreen(
 private fun LazyListScope.homeSection(
     section: HomeSection,
     viewModel: HomeViewModel,
-    carouselStates: MutableMap<String, LazyListState>
+    carouselStates: MutableMap<String, LazyListState>,
+    onLongPress: (UnifiedTrack) -> Unit
 ) {
     item(key = "${section.id}-title", contentType = "section-title") {
         SectionTitle(section.title)
@@ -123,7 +208,8 @@ private fun LazyListScope.homeSection(
                 ) { index, track ->
                     HorizontalTrackCard(
                         track = track,
-                        onPlay = { viewModel.play(section.tracks, index) }
+                        onPlay = { viewModel.play(section.tracks, index) },
+                        onLongPress = { onLongPress(track) }
                     )
                 }
             }
@@ -137,14 +223,20 @@ private fun LazyListScope.homeSection(
             TrackRow(
                 track = track,
                 onPlay = { viewModel.play(section.tracks, index) },
-                onToggleLike = { viewModel.toggleLike(track) }
+                onToggleLike = { viewModel.toggleLike(track) },
+                onLongPress = { onLongPress(track) }
             )
         }
     }
 }
 
 @Composable
-private fun HomeHeader(greeting: String, onOpenSettings: () -> Unit) {
+private fun HomeHeader(
+    greeting: String,
+    hasSession: Boolean,
+    onOpenSessions: () -> Unit,
+    onOpenSettings: () -> Unit
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -158,6 +250,14 @@ private fun HomeHeader(greeting: String, onOpenSettings: () -> Unit) {
             style = MaterialTheme.typography.headlineLarge,
             modifier = Modifier.weight(1f)
         )
+        // Only present when there is somewhere to hand off from, so the header stays quiet the
+        // rest of the time. No live badge: the icon's presence already says a session exists, and
+        // the sheet behind it is where "still playing" actually means something.
+        if (hasSession) {
+            IconButton(onClick = onOpenSessions) {
+                Icon(Icons.Rounded.Devices, contentDescription = "Sessions on other devices")
+            }
+        }
         IconButton(onClick = onOpenSettings) {
             Icon(Icons.Rounded.Settings, contentDescription = "Settings")
         }

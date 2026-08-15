@@ -145,6 +145,11 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
 
+    // YouTube cipher deobfuscation + PoToken (BotGuard) generation. GPL-3.0 — see LICENSE.
+    implementation("com.github.ZemerTeam:zemer-cipher:55ef918b75")
+    // zemer-cipher declares Timber compileOnly; it's absent at runtime without this.
+    implementation("com.jakewharton.timber:timber:5.0.1")
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)

@@ -30,6 +30,14 @@ interface TrackDao {
     @Query("SELECT * FROM tracks WHERE isLiked = 1 ORDER BY lastPlayedTimestamp DESC")
     fun getLikedTracksFlow(): Flow<List<TrackEntity>>
 
+    /**
+     * Just the ids, for screens that hold their own track list (search results, the queue) and
+     * only need to know which rows are liked. Emitting whole entities there would replace the
+     * list the user is looking at every time an unrelated like changed.
+     */
+    @Query("SELECT id FROM tracks WHERE isLiked = 1")
+    fun getLikedTrackIdsFlow(): Flow<List<String>>
+
     @Query("SELECT * FROM tracks WHERE isDownloaded = 1 AND source != 'LOCAL' ORDER BY title ASC")
     fun getDownloadedTracksFlow(): Flow<List<TrackEntity>>
 
@@ -44,6 +52,19 @@ interface TrackDao {
 
     @Query("SELECT * FROM tracks WHERE source = :source ORDER BY title ASC")
     suspend fun getTracksInSource(source: SourceType): List<TrackEntity>
+
+    /**
+     * Everything by an artist, most played first, matched on the printed name — see
+     * [com.wander.android.core.database.dao.AlbumDao.getAlbumsByArtistFlow] for why not `artistId`.
+     */
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE artist = :artist COLLATE NOCASE
+        ORDER BY playCount DESC, title ASC
+        """
+    )
+    fun getTracksByArtistFlow(artist: String): Flow<List<TrackEntity>>
 
     @Query(
         """
@@ -146,6 +167,59 @@ interface TrackDao {
 
     @Query("UPDATE tracks SET playCount = playCount + 1, lastPlayedTimestamp = :timestamp WHERE id = :trackId")
     suspend fun incrementPlayCount(trackId: String, timestamp: Long)
+
+    // ── Library sync ────────────────────────────────────────────────────────────────────────
+
+    /**
+     * On-device tracks whose bytes have not been hashed yet.
+     *
+     * Only `LOCAL`: a Navidrome or YouTube Music track is not a file this device could upload.
+     */
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE source = 'LOCAL' AND contentHash IS NULL AND streamUri IS NOT NULL
+        ORDER BY addedTimestamp DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun getUnhashedLocalTracks(limit: Int): List<TrackEntity>
+
+    @Query("UPDATE tracks SET contentHash = :hash WHERE id = :trackId")
+    suspend fun setContentHash(trackId: String, hash: String)
+
+    /** Hashed local tracks the server has not confirmed it holds. These are what get uploaded. */
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE source = 'LOCAL' AND contentHash IS NOT NULL AND syncedAt IS NULL
+        ORDER BY addedTimestamp DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun getUnsyncedLocalTracks(limit: Int): List<TrackEntity>
+
+    @Query("UPDATE tracks SET syncedAt = :timestamp WHERE id = :trackId")
+    suspend fun markSynced(trackId: String, timestamp: Long)
+
+    /**
+     * Local tracks the server has confirmed, which are therefore safe to offer to delete: the
+     * bytes exist somewhere other than this phone.
+     */
+    @Query(
+        "SELECT * FROM tracks WHERE source = 'LOCAL' AND syncedAt IS NOT NULL ORDER BY artist, album, trackNumber"
+    )
+    suspend fun getSyncedLocalTracks(): List<TrackEntity>
+
+    @Query("SELECT COUNT(*) FROM tracks WHERE source = 'LOCAL' AND contentHash IS NOT NULL AND syncedAt IS NULL")
+    fun countPendingUploadFlow(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM tracks WHERE source = 'LOCAL' AND syncedAt IS NOT NULL")
+    fun countSyncedFlow(): Flow<Int>
+
+    /** Local audio on this device at all — the denominator the sync counters are read against. */
+    @Query("SELECT COUNT(*) FROM tracks WHERE source = 'LOCAL'")
+    fun countLocalFlow(): Flow<Int>
 
     @Query("DELETE FROM tracks WHERE source = :source")
     suspend fun clearBySource(source: SourceType)

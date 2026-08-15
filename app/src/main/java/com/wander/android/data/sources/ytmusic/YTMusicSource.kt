@@ -1,5 +1,6 @@
 package com.wander.android.data.sources.ytmusic
 
+import com.wander.android.data.model.RecommendedShelf
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
@@ -8,7 +9,10 @@ import com.wander.android.data.sources.IMusicSource
 import com.wander.android.data.sources.SourceCapabilities
 import com.wander.android.data.sources.StreamInfo
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.IOException
+import java.net.URLEncoder
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,7 +23,8 @@ import javax.inject.Singleton
 @Singleton
 class YTMusicSource @Inject constructor(
     private val accountManager: GoogleAccountManager,
-    private val innerTube: InnerTubeClient
+    private val innerTube: InnerTubeClient,
+    private val streamUrlResolver: StreamUrlResolver
 ) : IMusicSource {
 
     override val sourceType = SourceType.YTMUSIC
@@ -30,7 +35,8 @@ class YTMusicSource @Inject constructor(
         albums = true,
         playlists = true,
         likes = true,
-        radio = true
+        radio = true,
+        recommendations = true
     )
 
     /**
@@ -44,24 +50,43 @@ class YTMusicSource @Inject constructor(
             root.responsiveListItems().mapNotNull(::parseResponsiveListItem)
         }
 
-    override suspend fun getStreamInfo(trackId: String): Result<StreamInfo> =
-        innerTube.player(trackId.removePrefix(YTM_PREFIX)).mapCatching { root ->
-            val url = root.bestAudioStreamUrl()
-                ?: throw IOException("YouTube Music returned no playable audio for this track")
+    override suspend fun getStreamInfo(trackId: String): Result<StreamInfo> {
+        val videoId = trackId.removePrefix(YTM_PREFIX)
+        return innerTube.player(videoId).mapCatching { response ->
+            // Web variants hand back a scrambled signature rather than a URL, and every variant's
+            // URL carries a throttling nonce — both are resolved here.
+            val rawUrl = streamUrlResolver.resolve(response.format, videoId)
+            // googlevideo separately checks the PO Token that authorized the /player call which
+            // minted this URL, when one was used — it has to travel with the fetch too.
+            val url = response.streamingPoToken?.let { "$rawUrl&pot=${URLEncoder.encode(it, "UTF-8")}" }
+                ?: rawUrl
+            // googlevideo also checks the fetch against the client the URL was minted for, so the
+            // media request has to keep the same identity as whichever /player call produced it.
             StreamInfo(
                 uri = url,
                 format = "audio/webm",
                 bitRateKbps = 160,
-                // googlevideo checks the fetch against the client the URL was minted for, so the
-                // media request has to keep the same identity as the /player call — an anonymous
-                // Android Music client. No web Origin: sending one alongside an Android
-                // User-Agent describes two different clients, which is what the /player call used
-                // to do and why it was refused.
-                headers = mapOf(
-                    "User-Agent" to InnerTubeVariant.ANDROID_MUSIC.userAgent
-                )
+                headers = mapOf("User-Agent" to response.variant.userAgent)
             )
         }
+    }
+
+    /**
+     * One track by id.
+     *
+     * Asked of the radio endpoint rather than `/player`: `next` answers with the queue seeded by
+     * this video, whose first entry *is* this video, carrying the title, artist, duration and
+     * cover that `/player` only exposes as raw `videoDetails`. One request either way, and this
+     * one reuses the parsing the radio shelf already goes through.
+     */
+    override suspend fun getTrack(trackId: String): Result<UnifiedTrack?> {
+        val videoId = trackId.removePrefix(YTM_PREFIX)
+        return innerTube.next(videoId).map { root ->
+            root.playlistPanelVideos()
+                .mapNotNull(::parsePlaylistPanelVideo)
+                .firstOrNull { it.id == "$YTM_PREFIX$videoId" }
+        }
+    }
 
     override suspend fun getRadio(seedTrackId: String, count: Int): Result<List<UnifiedTrack>> =
         innerTube.next(seedTrackId.removePrefix(YTM_PREFIX)).map { root ->
@@ -70,6 +95,17 @@ class YTMusicSource @Inject constructor(
                 .filter { it.id != seedTrackId }
                 .take(count)
         }
+
+    /**
+     * YouTube Music's front page, as YouTube Music itself builds it.
+     *
+     * The request carries the signed-in cookie ([InnerTubeClient] adds it for `WEB_REMIX`), so the
+     * shelves are the account's own recommendations. Signed out this source is not
+     * [isConfigured], so the repository never asks — Home falls back to its library-derived
+     * shelves rather than showing a stranger's generic feed.
+     */
+    override suspend fun getRecommendations(): Result<List<RecommendedShelf>> =
+        innerTube.home().map { root -> root.homeShelves() }
 
     override suspend fun getLikedTracks(limit: Int, offset: Int): Result<List<UnifiedTrack>> =
         innerTube.browse(LIKED_BROWSE_ID).map { root ->

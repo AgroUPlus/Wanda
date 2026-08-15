@@ -1,6 +1,7 @@
 package com.wander.android
 
 import android.app.Application
+import android.content.pm.ApplicationInfo
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import coil3.ImageLoader
@@ -12,6 +13,7 @@ import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.wander.android.core.cache.DownloadScheduler
 import com.wander.android.core.network.HttpClientFactory
+import com.zemer.cipher.ZemerCipher
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -57,6 +59,9 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
     override fun onCreate() {
         super.onCreate()
         downloadScheduler.scheduleAutoDownload()
+        // Needed for YT Music's PO Token / signature-cipher deobfuscation (see InnerTubeClient).
+        val isDebuggable = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        ZemerCipher.initialize(context = this, debugLogging = isDebuggable)
     }
 }
 

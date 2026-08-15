@@ -3,6 +3,7 @@ package com.wander.android.di
 import android.content.Context
 import androidx.room.Room
 import com.wander.android.core.audio.visualizer.AudioFftProcessor
+import com.wander.android.core.database.WANDER_MIGRATIONS
 import com.wander.android.core.database.WanderDatabase
 import com.wander.android.core.database.dao.AlbumDao
 import com.wander.android.core.database.dao.HistoryDao
@@ -28,7 +29,12 @@ object AppModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): WanderDatabase =
         Room.databaseBuilder(context, WanderDatabase::class.java, "wanda_music.db")
-            .fallbackToDestructiveMigration(dropAllTables = true)
+            // Real migrations, deliberately with no destructive fallback. The tracks table now
+            // carries library-sync state — a content hash that costs minutes of hashing to
+            // rebuild, and the record of which files the server has confirmed — so dropping it on
+            // a version bump would silently re-upload everything. A missing migration is now a
+            // crash on the next build, which is the right time to find out.
+            .addMigrations(*WANDER_MIGRATIONS)
             .build()
 
     @Provides fun provideTrackDao(db: WanderDatabase): TrackDao = db.trackDao()

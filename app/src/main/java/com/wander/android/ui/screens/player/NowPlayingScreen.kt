@@ -2,6 +2,10 @@ package com.wander.android.ui.screens.player
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +22,7 @@ import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Lyrics
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,7 +46,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.AudioQualityBadge
-import com.wander.android.ui.components.player.rememberSwipeToChangeTrack
 
 /** Nominal edge of the full-screen cover; drives the decode size, not the layout. */
 private val FullArtworkSize = 360.dp
@@ -51,6 +55,10 @@ private val FullArtworkSize = 360.dp
  *   player sheet passes a slot that only reserves and reports the space, because it draws a single
  *   artwork that travels between here and the docked strip.
  * @param onLyricsVisibleChange lets the sheet hide that travelling artwork while lyrics are shown.
+ * @param artworkModifier applied to the cover-art square. The sheet passes its shared
+ *   drag-to-skip gesture here, keeping the *movement* on the artwork it draws itself — if the box
+ *   that reports the artwork bounds moved with the finger, the peeking neighbour covers would be
+ *   measured against a frame that is itself sliding.
  */
 @Composable
 fun NowPlayingScreen(
@@ -58,25 +66,23 @@ fun NowPlayingScreen(
     onCollapse: () -> Unit,
     onOpenQueue: () -> Unit,
     modifier: Modifier = Modifier,
-    onNavigateToSearch: ((String) -> Unit)? = null,
+    onOpenArtist: ((String) -> Unit)? = null,
+    onOpenAlbum: ((String) -> Unit)? = null,
     contentAlpha: () -> Float = { 1f },
     artworkSlot: (@Composable (url: String?, contentDescription: String) -> Unit)? = null,
+    artworkModifier: Modifier = Modifier,
     onLyricsVisibleChange: (Boolean) -> Unit = {},
     viewModel: NowPlayingViewModel = hiltViewModel()
 ) {
     val state by playerConnection.state.collectAsStateWithLifecycle()
     val lyrics by viewModel.lyrics.collectAsStateWithLifecycle()
+    val likedTrackIds by viewModel.likedTrackIds.collectAsStateWithLifecycle()
     val track = state.currentTrack
     var showLyrics by rememberSaveable { mutableStateOf(false) }
 
     if (track == null) return
 
     LaunchedEffect(showLyrics) { onLyricsVisibleChange(showLyrics) }
-
-    val swipeModifier = rememberSwipeToChangeTrack(
-        onNext = playerConnection::next,
-        onPrevious = playerConnection::previous
-    )
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -131,28 +137,59 @@ fun NowPlayingScreen(
                 modifier = Modifier
                     .aspectRatio(1f)
                     .fillMaxSize()
-                    .then(swipeModifier)
+                    .then(artworkModifier)
             ) {
-                if (showLyrics) {
-                    SyncedLyricsView(
-                        lyrics = lyrics,
-                        playerConnection = playerConnection,
-                        onSeek = playerConnection::seekTo,
+                // Cover and lyrics occupy the same square, so swapping them is a plain cross-fade
+                // in place. It used to scale from 0.92 as well, under the default SizeTransform —
+                // and both of those change the measured bounds of this box, which is exactly what
+                // `PlayerArtworkAnchors` reports and the travelling cover follows. Closing the
+                // lyrics therefore shoved the artwork around instead of simply revealing it.
+                // `using null` disables the size transform; the spec comes from the motion scheme
+                // rather than a hand-rolled spring.
+                val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+                AnimatedContent(
+                    targetState = showLyrics,
+                    transitionSpec = { fadeIn(effects) togetherWith fadeOut(effects) using null },
+                    label = "lyrics-artwork",
+                    modifier = Modifier.fillMaxSize()
+                ) { lyricsVisible ->
+                    if (lyricsVisible) {
+                        SyncedLyricsView(
+                            lyrics = lyrics,
+                            playerConnection = playerConnection,
+                            onSeek = playerConnection::seekTo,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer { alpha = contentAlpha() }
+                        )
+                    } else if (artworkSlot != null) {
+                        artworkSlot(track.artworkUrl, track.title)
+                    } else {
+                        Artwork(
+                            url = track.artworkUrl,
+                            contentDescription = track.title,
+                            sizeDp = FullArtworkSize,
+                            shape = MaterialTheme.shapes.extraLarge,
+                            crossfade = true,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
+
+                // Only for backends that host the audio themselves — see `SourceCapabilities.share`.
+                if (viewModel.canShare(track)) {
+                    FilledTonalIconButton(
+                        onClick = { viewModel.share(track) },
                         modifier = Modifier
-                            .fillMaxSize()
+                            .align(Alignment.TopEnd)
+                            .padding(12.dp)
                             .graphicsLayer { alpha = contentAlpha() }
-                    )
-                } else if (artworkSlot != null) {
-                    artworkSlot(track.artworkUrl, track.title)
-                } else {
-                    Artwork(
-                        url = track.artworkUrl,
-                        contentDescription = track.title,
-                        sizeDp = FullArtworkSize,
-                        shape = MaterialTheme.shapes.extraLarge,
-                        crossfade = true,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Share,
+                            contentDescription = "Share a link to this track"
+                        )
+                    }
                 }
 
                 FilledTonalIconButton(
@@ -187,44 +224,52 @@ fun NowPlayingScreen(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    // These open the artist and album pages. They used to run a *search* for the
+                    // name, which is a list of loosely matching tracks rather than the record or
+                    // the discography the user was asking to see.
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .clickable(enabled = onNavigateToSearch != null) {
-                                onNavigateToSearch?.invoke(track.artist)
-                            }
-                            .padding(vertical = 2.dp)
+                        modifier = Modifier.padding(vertical = 2.dp)
                     ) {
                         Text(
                             text = track.artist,
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .clickable(
+                                    enabled = onOpenArtist != null && track.artist.isNotBlank()
+                                ) { onOpenArtist?.invoke(track.artist) }
                         )
+                        // Only linked when the track carries an album id: without one there is no
+                        // page to open, and a tap that goes nowhere is worse than plain text.
+                        val albumId = track.albumId
                         if (!track.album.isNullOrBlank()) {
                             Text(
                                 text = " · ${track.album}",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (albumId != null) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(4.dp))
-                                    .clickable(enabled = onNavigateToSearch != null) {
-                                        onNavigateToSearch?.invoke(track.album)
+                                    .clickable(enabled = albumId != null && onOpenAlbum != null) {
+                                        albumId?.let { onOpenAlbum?.invoke(it) }
                                     }
                             )
                         }
                     }
                 }
 
+                val isLiked = track.id in likedTrackIds
                 IconButton(onClick = { viewModel.toggleLike(track) }) {
                     Icon(
-                        imageVector = if (track.isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                        contentDescription = if (track.isLiked) "Unlike" else "Like",
-                        tint = if (track.isLiked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        imageVector = if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                        contentDescription = if (isLiked) "Unlike" else "Like",
+                        tint = if (isLiked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

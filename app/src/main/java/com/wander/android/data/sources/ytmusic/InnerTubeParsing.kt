@@ -14,19 +14,46 @@ import java.io.IOException
 internal const val YTM_PREFIX = "ytm:"
 
 /** Walks a chain of object keys, returning null as soon as one is missing. */
-private fun JsonElement?.path(vararg keys: String): JsonElement? =
+internal fun JsonElement?.path(vararg keys: String): JsonElement? =
     keys.fold(this) { node, key -> (node as? JsonObject)?.get(key) }
 
-private fun JsonElement?.array(): JsonArray? = this as? JsonArray
+internal fun JsonElement?.array(): JsonArray? = this as? JsonArray
 
-private fun JsonElement?.text(): String? = this?.jsonPrimitive?.contentOrNull
+internal fun JsonElement?.text(): String? = this?.jsonPrimitive?.contentOrNull
 
 /** First `runs[i].text` of a `{ runs: [...] }` node. */
-private fun JsonElement?.runText(index: Int = 0): String? =
+internal fun JsonElement?.runText(index: Int = 0): String? =
     path("runs")?.array()?.getOrNull(index).path("text").text()
 
-private fun JsonElement?.bestThumbnail(): String? =
-    path("thumbnail", "thumbnails")?.array()?.lastOrNull().path("url").text()
+/**
+ * Picks a cover URL out of a node that **holds** a `thumbnails` array — so the caller walks to
+ * whichever wrapper its renderer uses (`musicThumbnailRenderer.thumbnail`,
+ * `thumbnailRenderer.musicThumbnailRenderer.thumbnail`, or a bare `thumbnail`) and this does the
+ * rest. It used to walk one extra `thumbnail` hop itself, which was right for exactly one of
+ * those shapes: every radio and queue entry, which passes a bare `thumbnail`, resolved to null
+ * and rendered with no cover at all.
+ *
+ * YouTube's thumbnail list tops out around 544 px, and search rows often carry nothing bigger
+ * than 120 px — visibly soft as a full-screen player cover. On the `=w120-h120-l90-rj` host the
+ * size lives in the URL, so asking for a larger one is a rewrite rather than another request.
+ */
+internal fun JsonElement?.bestThumbnail(): String? =
+    path("thumbnails")?.array()?.lastOrNull().path("url").text()?.atHighestResolution()
+
+/**
+ * Only the sized host is rewritten. `/hqdefault.jpg` → `/maxresdefault.jpg` used to be here too,
+ * but `maxresdefault` only exists for videos uploaded above 720p — for everything else it 404s,
+ * which is the second reason radio covers came back blank.
+ */
+private fun String.atHighestResolution(): String =
+    if (contains("=w") && contains("-h")) {
+        replace(Regex("=w\\d+-h\\d+"), "=w$THUMBNAIL_PX-h$THUMBNAIL_PX")
+    } else {
+        this
+    }
+
+/** Large enough for a full-screen cover at 3× density without asking for more than YouTube has. */
+private const val THUMBNAIL_PX = 1080
 
 /** `mm:ss` or `h:mm:ss` as printed by YouTube Music. */
 internal fun parseDurationText(value: String?): Long {
@@ -58,7 +85,8 @@ internal fun parseResponsiveListItem(renderer: JsonObject): UnifiedTrack? {
         title = title,
         artist = artist,
         album = album?.takeUnless { it.contains(':') },
-        artworkUrl = renderer.path("thumbnail", "musicThumbnailRenderer").bestThumbnail(),
+        artworkUrl = renderer.path("thumbnail", "musicThumbnailRenderer", "thumbnail")
+            .bestThumbnail(),
         durationMs = parseDurationText(duration),
         format = "audio/webm",
         bitRateKbps = 160
@@ -102,16 +130,21 @@ internal fun parseLibraryAlbum(renderer: JsonObject): UnifiedAlbum? {
         title = title,
         artist = column(1).path("runs")?.array()?.getOrNull(2).path("text").text()
             ?: "Unknown Artist",
-        coverArtUrl = renderer.path("thumbnail", "musicThumbnailRenderer").bestThumbnail()
+        coverArtUrl = renderer.path("thumbnail", "musicThumbnailRenderer", "thumbnail")
+            .bestThumbnail()
     )
 }
 
 /** Collects every `musicResponsiveListItemRenderer` anywhere in a browse/search response. */
 internal fun JsonObject.responsiveListItems(): List<JsonObject> =
-    buildList { collectRenderers("musicResponsiveListItemRenderer", this@responsiveListItems, this) }
+    renderers("musicResponsiveListItemRenderer")
 
 internal fun JsonObject.playlistPanelVideos(): List<JsonObject> =
-    buildList { collectRenderers("playlistPanelVideoRenderer", this@playlistPanelVideos, this) }
+    renderers("playlistPanelVideoRenderer")
+
+/** Every renderer of one kind, anywhere beneath this node, in document order. */
+internal fun JsonElement.renderers(key: String): List<JsonObject> =
+    buildList { collectRenderers(key, this@renderers, this) }
 
 /**
  * InnerTube nests the same renderer under many different shapes depending on the surface, so a
@@ -134,11 +167,11 @@ private fun collectRenderers(key: String, node: JsonElement, into: MutableList<J
  * user as a cause instead of a generic "no audio". Two cases matter:
  *
  * - `playabilityStatus` is not OK — the video is blocked, private, or the request was challenged.
- * - The formats carry `signatureCipher` instead of `url` — those require running YouTube's
- *   obfuscated JS player to recover the URL. Wanda deliberately does not ship a JS engine, so
- *   this is a genuine limitation and says so rather than looking like an empty result.
+ * - The formats carry `signatureCipher` instead of `url`. Those are still usable — `StreamUrlResolver`
+ *   unscrambles them — but a format carrying *neither* is not, and returning one would surface far
+ *   downstream as a bare "no playable audio" instead of falling back to the next client variant.
  */
-internal fun JsonObject.bestAudioStreamUrl(): String? {
+internal fun JsonObject.bestAudioFormat(): JsonObject? {
     val status = path("playabilityStatus", "status").text()
     if (status != null && status != "OK") {
         // `errorScreen` is an object, so reading it as a primitive always yielded null and the
@@ -156,21 +189,18 @@ internal fun JsonObject.bestAudioStreamUrl(): String? {
     val adaptive = path("streamingData", "adaptiveFormats")?.array()?.map { it.jsonObject }.orEmpty()
     val progressive = path("streamingData", "formats")?.array()?.map { it.jsonObject }.orEmpty()
     val audio = (adaptive + progressive).filter {
-        it["mimeType"].text()?.startsWith("audio/") == true
+        it["mimeType"].text()?.startsWith("audio/") == true && it.hasPlayableSource()
     }
-    if (audio.isEmpty()) return null
 
     // itag 251 is Opus ~160 kbps: the best quality-per-byte YouTube Music offers.
-    val best = audio.firstOrNull { it["itag"].text() == "251" }
+    return audio.firstOrNull { it["itag"].text() == "251" }
         ?: audio.maxByOrNull { it["bitrate"].text()?.toLongOrNull() ?: 0L }
-
-    best?.get("url").text()?.let { return it }
-
-    if (audio.any { it["signatureCipher"] != null || it["cipher"] != null }) {
-        throw IOException(
-            "This track's audio is signature-protected. Wanda does not run YouTube's JS player, " +
-                "so it cannot be decoded."
-        )
-    }
-    return null
 }
+
+/** Either a ready-to-fetch `url`, or a cipher `StreamUrlResolver` can turn into one. */
+private fun JsonObject.hasPlayableSource(): Boolean =
+    !this["url"].text().isNullOrBlank() || !signatureCipher().isNullOrBlank()
+
+/** The obfuscated `s`/`sp`/`url` query blob web clients return in place of a plain `url`. */
+internal fun JsonObject.signatureCipher(): String? =
+    this["signatureCipher"].text() ?: this["cipher"].text()

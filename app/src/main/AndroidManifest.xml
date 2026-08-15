@@ -7,6 +7,13 @@
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!--
+      Library sync uploads whole albums, which takes far longer than WorkManager's ~10 minute cap
+      for a background worker. The data-sync type is what buys the exemption; note it is budgeted
+      at roughly six hours a day on API 34+, so each run is a bounded batch rather than one long
+      job. Only used while a sync the user asked for is actually running.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
@@ -44,6 +51,29 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="agro" />
+            </intent-filter>
+            <!--
+              YouTube and YouTube Music links, so a track someone sends you opens here.
+              Deliberately NOT autoVerify: Wanda plays audio and has no video, so it offers
+              itself in the chooser rather than quietly taking over every YouTube link on the
+              device. Non-track links (channels, playlists) are handed back to the browser —
+              see LinkRepository.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="music.youtube.com" />
+                <data android:scheme="https" android:host="youtube.com" />
+                <data android:scheme="https" android:host="www.youtube.com" />
+                <data android:scheme="https" android:host="m.youtube.com" />
+                <data android:scheme="https" android:host="youtu.be" />
+            </intent-filter>
         </activity>
 
         <!--
@@ -58,6 +88,17 @@
                 <action android:name="androidx.media3.session.MediaSessionService" />
             </intent-filter>
         </service>
+
+        <!--
+          WorkManager runs long jobs through its own foreground service, and on API 34+ a service
+          must declare the type it will use. The FOREGROUND_SERVICE_DATA_SYNC permission alone is
+          not enough — without this, promoting the library-sync worker to the foreground throws
+          MissingForegroundServiceTypeException the moment it starts.
+        -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
 
         <!-- WorkManager is initialised by WanderApplication so Hilt can inject the worker. -->
         <provider

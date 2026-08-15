@@ -21,3 +21,6 @@ local.properties
 # Release keystores must never be committed
 *.jks
 *.keystore
+
+# Claude Code local settings
+.claude/settings.local.json

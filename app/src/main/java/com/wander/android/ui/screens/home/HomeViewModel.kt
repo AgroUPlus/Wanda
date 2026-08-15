@@ -5,14 +5,19 @@ import androidx.lifecycle.viewModelScope
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.SmartMix
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.HomeShelfRepository
 import com.wander.android.data.repository.MusicRepository
+import com.wander.android.data.repository.ShareRepository
+import com.wander.android.data.repository.RecommendationRepository
 import com.wander.android.data.repository.SmartMixRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalTime
@@ -20,6 +25,12 @@ import javax.inject.Inject
 
 data class HomeUiState(
     val isLoading: Boolean = true,
+    /**
+     * A pull-to-refresh in progress. Deliberately separate from [isLoading]: that one replaces the
+     * whole screen with a spinner, which is right on a cold start and wrong when the user is
+     * looking at shelves and pulled them down.
+     */
+    val isRefreshing: Boolean = false,
     val greeting: String = "",
     val sections: List<HomeSection> = emptyList()
 ) {
@@ -29,16 +40,39 @@ data class HomeUiState(
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val musicRepository: MusicRepository,
+    private val homeShelfRepository: HomeShelfRepository,
+    private val recommendationRepository: RecommendationRepository,
     private val smartMixRepository: SmartMixRepository,
-    private val playerConnection: PlayerConnection
+    private val playerConnection: PlayerConnection,
+    private val shareRepository: ShareRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    /**
+     * Shelves are one-shot reads, so the tracks they hold keep whatever `isLiked` was true when
+     * they were fetched. Overlaying Room's liked set is what makes the heart respond to a tap.
+     */
+    private val likedTrackIds: StateFlow<Set<String>> = musicRepository.getLikedTrackIdsFlow()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+
     init {
         refresh()
         observeLibrary()
+        observeLikes()
+    }
+
+    private fun observeLikes() {
+        viewModelScope.launch {
+            likedTrackIds.collect { liked ->
+                _uiState.update { state -> state.copy(sections = state.sections.withLikes(liked)) }
+            }
+        }
+    }
+
+    private fun List<HomeSection>.withLikes(liked: Set<String>): List<HomeSection> = map { section ->
+        section.copy(tracks = section.tracks.map { it.copy(isLiked = it.id in liked) })
     }
 
     /**
@@ -59,20 +93,36 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun refresh() {
+    /** Pull-to-refresh. Same work as [refresh], but the shelves stay on screen while it runs. */
+    fun pullToRefresh() = refresh(showSpinner = false)
+
+    fun refresh(showSpinner: Boolean = true) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update {
+                if (showSpinner) it.copy(isLoading = true) else it.copy(isRefreshing = true)
+            }
 
             val sections = coroutineScope {
                 val mixes = async { smartMixRepository.getSmartMixes() }
-                val onRepeat = async { musicRepository.getTopTracks(CarouselSize) }
-                val jumpBackIn = async { musicRepository.getRecentAlbumStarters(CarouselSize) }
-                val recentlyPlayed = async { musicRepository.getRecentlyPlayed(CarouselSize) }
-                val liked = async { musicRepository.getLikedTracks(CarouselSize) }
-                val discover = async { musicRepository.getNeverPlayed(CarouselSize) }
+                val onRepeat = async { homeShelfRepository.getTopTracks(CarouselSize) }
+                val jumpBackIn = async { homeShelfRepository.getRecentAlbumStarters(CarouselSize) }
+                val recentlyPlayed = async { homeShelfRepository.getRecentlyPlayed(CarouselSize) }
+                val liked = async { homeShelfRepository.getLikedTracks(CarouselSize) }
+                val discover = async { homeShelfRepository.getNeverPlayed(CarouselSize) }
                 val recentAdded = async { musicRepository.getRecentTracks(ListSize) }
+                // Recommendations seeded by what you actually played last, rather than by what
+                // happens to be sitting unplayed in the library. The seed's own backend supplies
+                // them — for YouTube Music that is its radio, which mixes the artist with
+                // stylistic neighbours instead of returning the same song over and over.
+                val recommended = async {
+                    val seed = homeShelfRepository.getRecentlyPlayed(1).firstOrNull()
+                    seed to seed?.let { musicRepository.generateRadio(it, CarouselSize) }.orEmpty()
+                }
+                // The backends' own recommenders. Empty when nothing publishes one — signed out
+                // of YouTube Music, Home is the shelves below and nothing is missing.
+                val feed = async { recommendationRepository.getShelves() }
                 val perSource = musicRepository.configuredSources().map { source ->
-                    source to async { musicRepository.getRecentBySource(source, CarouselSize) }
+                    source to async { homeShelfRepository.getRecentBySource(source, CarouselSize) }
                 }
 
                 buildList {
@@ -85,10 +135,32 @@ class HomeViewModel @Inject constructor(
                             mixes = mixes.await()
                         )
                     )
+                    // High up on purpose: this is the one genuinely algorithmic part of Home, and
+                    // burying it under shelves derived from Room would waste it.
+                    feed.await().forEach { shelf ->
+                        add(carousel(shelf.id, shelf.title, shelf.tracks.take(CarouselSize)))
+                    }
                     add(carousel(SectionJumpBackIn, "Jump Back In", jumpBackIn.await()))
                     add(carousel(SectionRecentlyPlayed, "Recently Played", recentlyPlayed.await()))
                     add(carousel(SectionLiked, "Your Favourites", liked.await()))
                     add(carousel(SectionDiscover, "Discover", discover.await()))
+                    val (seed, suggestions) = recommended.await()
+                    if (seed != null) {
+                        add(
+                            carousel(
+                                id = SectionBecause,
+                                title = "Because you listened to ${seed.title}",
+                                // By title, not by id: a radio seeded from a track the user found
+                                // by search comes back full of re-uploads and remasters of that
+                                // same song under different ids, which is what made this shelf
+                                // read as "the thing you just searched for, twelve times".
+                                tracks = suggestions
+                                    .filter { it.id != seed.id }
+                                    .distinctBy { it.title.lowercase() }
+                                    .filterNot { it.title.equals(seed.title, ignoreCase = true) }
+                            )
+                        )
+                    }
                     perSource.forEach { (source, deferred) ->
                         add(
                             carousel(
@@ -111,8 +183,9 @@ class HomeViewModel @Inject constructor(
 
             _uiState.value = HomeUiState(
                 isLoading = false,
+                isRefreshing = false,
                 greeting = greeting(),
-                sections = sections
+                sections = sections.withLikes(likedTrackIds.value)
             )
         }
     }
@@ -120,6 +193,27 @@ class HomeViewModel @Inject constructor(
     fun playMix(mix: SmartMix) = playerConnection.play(mix.tracks)
 
     fun play(tracks: List<UnifiedTrack>, index: Int) = playerConnection.play(tracks, index)
+
+    fun playNext(track: UnifiedTrack) = playerConnection.playNext(listOf(track))
+
+    fun addToQueue(track: UnifiedTrack) = playerConnection.addToQueue(listOf(track))
+
+    /** Plays the track, then fills the queue behind it with its source's radio. */
+    fun startRadio(track: UnifiedTrack) {
+        viewModelScope.launch {
+            playerConnection.play(listOf(track))
+            val radio = musicRepository.generateRadio(track)
+            if (radio.isNotEmpty()) playerConnection.addToQueue(radio)
+        }
+    }
+
+    /** Whether this track's backend can mint a public link at all. */
+    fun canShare(track: UnifiedTrack) = shareRepository.canShare(track)
+
+    /** The link is published on a shared flow and raised as a share sheet by `WanderApp`. */
+    fun share(track: UnifiedTrack) {
+        viewModelScope.launch { shareRepository.share(track) }
+    }
 
     fun toggleLike(track: UnifiedTrack) {
         viewModelScope.launch { musicRepository.toggleLike(track) }
@@ -129,15 +223,26 @@ class HomeViewModel @Inject constructor(
         HomeSection(id = id, title = title, style = HomeSectionStyle.TRACK_CAROUSEL, tracks = tracks)
 
     /**
-     * Replaces a shelf, adding it if it wasn't there and dropping it once it empties, keeping the
-     * canonical shelf order in both cases.
+     * Replaces a shelf in place, adding it if it wasn't there and dropping it once it empties.
+     *
+     * Deliberately does **not** re-sort the whole list. It used to, by [SectionOrder] — which
+     * silently rearranged Home the first time a like landed, because the recommendation shelves
+     * and the per-source shelves are not in that list and all sorted to the end together. The
+     * order [refresh] built is the order Home keeps.
      */
     private fun List<HomeSection>.withSection(section: HomeSection): List<HomeSection> {
-        val without = filterNot { it.id == section.id }
-        if (section.isEmpty) return without
-        return (without + section).sortedBy { existing ->
-            SectionOrder.indexOf(existing.id).takeIf { it >= 0 } ?: SectionOrder.size
+        val existing = indexOfFirst { it.id == section.id }
+        if (existing >= 0) {
+            return if (section.isEmpty) filterIndexed { index, _ -> index != existing }
+            else toMutableList().also { it[existing] = section }
         }
+        if (section.isEmpty) return this
+
+        // New shelf: slot it in ahead of the first shelf it is meant to precede, so it does not
+        // simply appear at the bottom of the screen.
+        val rank = SectionOrder.indexOf(section.id).takeIf { it >= 0 } ?: return this + section
+        val at = indexOfFirst { SectionOrder.indexOf(it.id) > rank }
+        return if (at < 0) this + section else toMutableList().also { it.add(at, section) }
     }
 
     /** Time of day the user is most likely reading this. */
@@ -157,6 +262,7 @@ class HomeViewModel @Inject constructor(
         const val SectionRecentlyPlayed = "recently_played"
         const val SectionLiked = "liked"
         const val SectionDiscover = "discover"
+        const val SectionBecause = "because_you_listened"
         const val SectionRecentAdded = "recent_added"
 
         /** Per-source shelves are unlisted, so they sort after these and before the closing list. */
@@ -166,6 +272,7 @@ class HomeViewModel @Inject constructor(
             SectionJumpBackIn,
             SectionRecentlyPlayed,
             SectionLiked,
+            SectionBecause,
             SectionDiscover
         )
     }

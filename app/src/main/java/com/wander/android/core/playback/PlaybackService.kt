@@ -8,6 +8,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.wander.android.MainActivity
 import com.wander.android.data.repository.MusicRepository
+import com.wander.android.data.sources.agro.AgroHandoffPublisher
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,7 @@ class PlaybackService : MediaSessionService() {
 
     @Inject lateinit var playerFactory: PlayerFactory
     @Inject lateinit var musicRepository: MusicRepository
+    @Inject lateinit var agroHandoffPublisher: AgroHandoffPublisher
 
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private var mediaSession: MediaSession? = null
@@ -34,6 +36,7 @@ class PlaybackService : MediaSessionService() {
         super.onCreate()
         val player = playerFactory.create()
         player.addListener(PlayCountRecorder(player))
+        player.addListener(AgroHandoffReporter(player))
 
         val sessionActivity = PendingIntent.getActivity(
             this,
@@ -56,6 +59,7 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        agroHandoffPublisher.stop()
         mediaSession?.run {
             player.release()
             release()
@@ -79,6 +83,31 @@ class PlaybackService : MediaSessionService() {
             if (recordedFor == track.id) return
             recordedFor = track.id
             scope.launch { musicRepository.recordPlay(track) }
+        }
+    }
+
+    /**
+     * Feeds the Agro handoff. It lives here rather than in `PlaybackCoordinator` so that handoff
+     * follows playback even with no UI attached; [AgroHandoffPublisher] drops states that repeat
+     * and no-ops entirely when no server is paired, so this costs nothing when unused.
+     */
+    private inner class AgroHandoffReporter(private val player: Player) : Player.Listener {
+
+        override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+            report()
+        }
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) = report()
+
+        private fun report() {
+            val track = player.currentMediaItem?.toUnifiedTrack()
+            if (track == null) {
+                agroHandoffPublisher.stop()
+                return
+            }
+            // A provider, not a value: the publisher's heartbeat re-reads the position on each tick
+            // rather than repeating a stale one.
+            agroHandoffPublisher.publish(track, player::getCurrentPosition, player.isPlaying)
         }
     }
 }

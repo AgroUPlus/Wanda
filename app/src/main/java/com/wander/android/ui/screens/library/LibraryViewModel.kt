@@ -8,6 +8,7 @@ import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MusicRepository
+import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.sources.local.LocalMusicSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,7 +30,8 @@ enum class LibraryTab(val label: String) {
 class LibraryViewModel @Inject constructor(
     private val musicRepository: MusicRepository,
     private val localSource: LocalMusicSource,
-    private val playerConnection: PlayerConnection
+    private val playerConnection: PlayerConnection,
+    private val shareRepository: ShareRepository
 ) : ViewModel() {
 
     private val _tab = MutableStateFlow(LibraryTab.TRACKS)
@@ -79,6 +81,10 @@ class LibraryViewModel @Inject constructor(
             _isRefreshing.value = true
             localSource.refresh()
             musicRepository.refreshAlbums()
+            // Without this the Tracks tab only ever held what some other screen happened to have
+            // persisted — browsing an album, or playing a search result. Pulling recent tracks is
+            // what actually fills the library from the connected servers.
+            musicRepository.getRecentTracks(LIBRARY_TRACK_REFRESH)
             _playlists.value = musicRepository.getPlaylists()
             _isRefreshing.value = false
         }
@@ -90,13 +96,6 @@ class LibraryViewModel @Inject constructor(
 
     fun play(tracks: List<UnifiedTrack>, index: Int) = playerConnection.play(tracks, index)
 
-    fun openAlbum(album: UnifiedAlbum) {
-        viewModelScope.launch {
-            val tracks = musicRepository.getAlbumTracks(album)
-            if (tracks.isNotEmpty()) playerConnection.play(tracks)
-        }
-    }
-
     fun openPlaylist(playlist: UnifiedPlaylist) {
         viewModelScope.launch {
             val tracks = musicRepository.getPlaylistTracks(playlist)
@@ -104,7 +103,33 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    fun playNext(track: UnifiedTrack) = playerConnection.playNext(listOf(track))
+
+    fun addToQueue(track: UnifiedTrack) = playerConnection.addToQueue(listOf(track))
+
+    /** Plays the track, then fills the queue behind it with its source's radio. */
+    fun startRadio(track: UnifiedTrack) {
+        viewModelScope.launch {
+            playerConnection.play(listOf(track))
+            val radio = musicRepository.generateRadio(track)
+            if (radio.isNotEmpty()) playerConnection.addToQueue(radio)
+        }
+    }
+
+    /** Whether this track's backend can mint a public link at all. */
+    fun canShare(track: UnifiedTrack) = shareRepository.canShare(track)
+
+    /** The link is published on a shared flow and raised as a share sheet by `WanderApp`. */
+    fun share(track: UnifiedTrack) {
+        viewModelScope.launch { shareRepository.share(track) }
+    }
+
     fun toggleLike(track: UnifiedTrack) {
         viewModelScope.launch { musicRepository.toggleLike(track) }
+    }
+
+    private companion object {
+        /** How many recently added tracks a refresh pulls into Room from every active source. */
+        const val LIBRARY_TRACK_REFRESH = 200
     }
 }

@@ -23,7 +23,24 @@ data class SubsonicResponse(
     val playlist: SubsonicPlaylistDetail? = null,
     val lyrics: SubsonicLyrics? = null,
     val lyricsList: SubsonicLyricsList? = null,
-    val similarSongs2: SubsonicSimilarSongs? = null
+    val similarSongs2: SubsonicSimilarSongs? = null,
+    /** `getSong.view` — one track by id, used when another device hands over a session. */
+    val song: SubsonicSong? = null,
+    val shares: SubsonicShares? = null
+)
+
+/** `createShare` / `getShares`. Navidrome returns the public URL ready to hand out. */
+@Serializable
+data class SubsonicShares(
+    val share: List<SubsonicShare>? = null
+)
+
+@Serializable
+data class SubsonicShare(
+    val id: String,
+    val url: String,
+    val description: String? = null,
+    val expires: String? = null
 )
 
 @Serializable

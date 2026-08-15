@@ -69,6 +69,9 @@ class SubsonicApiClient @Inject constructor(
 
     suspend fun ping(): Result<Unit> = call("ping.view").map { }
 
+    suspend fun getSong(songId: String): Result<SubsonicSong?> =
+        call("getSong.view", "id" to songId).map { it.song }
+
     suspend fun search3(query: String): Result<SubsonicSearchResult3> =
         call(
             "search3.view",
@@ -105,6 +108,32 @@ class SubsonicApiClient @Inject constructor(
         call("getSimilarSongs2.view", "id" to id, "count" to count)
             .map { it.similarSongs2?.song.orEmpty() }
 
+    /**
+     * A public link to [ids], as the server itself publishes it — the same `createShare` call
+     * Wander's share overlay makes, so a link shared from either client looks identical.
+     *
+     * Fails when sharing is disabled server-side, which is reported rather than worked around:
+     * there is no way to mint a public URL without the server's cooperation.
+     */
+    suspend fun createShare(ids: List<String>, description: String): Result<String> =
+        call(
+            "createShare.view",
+            *ids.map { "id" to it as Any? }.toTypedArray(),
+            "description" to description.takeIf { it.isNotBlank() },
+            "downloadable" to false
+        ).mapCatching {
+            it.shares?.share?.firstOrNull()?.url
+                ?: throw IOException("The server accepted the share but returned no link")
+        }
+
+    /**
+     * Asks the server to rescan its music folders.
+     *
+     * Used after Agro files new uploads into the library: Navidrome would find them on its own
+     * eventually, but "eventually" can be an hour, and the user just watched the upload finish.
+     */
+    suspend fun startScan(): Result<Unit> = call("startScan.view").map { }
+
     suspend fun star(id: String): Result<Unit> = call("star.view", "id" to id).map { }
 
     suspend fun unstar(id: String): Result<Unit> = call("unstar.view", "id" to id).map { }
@@ -119,7 +148,12 @@ class SubsonicApiClient @Inject constructor(
     fun buildStreamUrl(trackId: String): String =
         buildUrl("stream.view", mapOf("id" to trackId))
 
-    fun buildCoverArtUrl(coverArtId: String?, size: Int = 500): String? {
+    /**
+     * 500 px was fine for a list row and soft as a full-screen player cover on a 1080 px-wide
+     * phone. Coil still decodes down to whatever each surface asks for, so the larger fetch costs
+     * bytes once and is cached — it does not cost memory per view.
+     */
+    fun buildCoverArtUrl(coverArtId: String?, size: Int = 1000): String? {
         if (coverArtId.isNullOrBlank()) return null
         return buildUrl("getCoverArt.view", mapOf("id" to coverArtId, "size" to size.toString()))
     }
