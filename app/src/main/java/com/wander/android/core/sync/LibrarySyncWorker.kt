@@ -50,18 +50,76 @@ class LibrarySyncWorker @AssistedInject constructor(
         // step that makes progress even when the server is unreachable.
         val hashed = syncRepository.hashBatch()
         if (isStopped) return@withContext Result.retry()
+        // The notification was only ever built with (0, 0), so its bar sat at "Preparing…" for the
+        // whole run however long it took. Re-posted between steps so it says something true.
+        runCatching { setForeground(foregroundInfo(1, 3)) }
 
         // Metadata next. Cheap, and it is what powers the "you're missing this" diff — worth doing
         // even for a user who never uploads a byte.
         val reported = syncRepository.reportHoldings()
         if (isStopped) return@withContext Result.retry()
+        runCatching { setForeground(foregroundInfo(2, 3)) }
 
         val uploaded = runCatching { syncRepository.uploadBatch() }.getOrDefault(0)
+        if (isStopped) return@withContext Result.retry()
+
+        // Finally, say if another device has put something here worth having. The in-app card only
+        // shows while the app is open, and a phone syncing on a charger overnight is exactly the
+        // phone nobody is looking at.
+        runCatching { notifyNewMusic() }
 
         // More to do: come back rather than declaring the library synced.
         if (hashed > 0 || uploaded > 0) Result.retry()
         else if (reported.isFailure) Result.retry()
         else Result.success()
+    }
+
+    /**
+     * Tells the user when another device has music this one lacks.
+     *
+     * Silent when there is nothing to offer — which, with a Navidrome, is always: the repository
+     * asks the server first, and a streaming setup answers "nothing" because the track is already
+     * playable here. So this cannot nag a user whose library is already reachable.
+     */
+    private suspend fun notifyNewMusic() {
+        val missing = syncRepository.missingHere().getOrNull().orEmpty()
+        if (missing.isEmpty()) return
+
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        ensureOfferChannel()
+
+        val albums = missing.mapNotNull { it.album }.distinct()
+        val summary = when {
+            albums.size == 1 -> albums.first()
+            albums.size > 1 -> "${albums.first()} and ${albums.size - 1} more"
+            else -> missing.joinToString(", ") { it.title }.take(80)
+        }
+
+        val notification = NotificationCompat.Builder(context, OFFER_CHANNEL_ID)
+            .setContentTitle(
+                if (missing.size == 1) "1 track from your other devices"
+                else "${missing.size} tracks from your other devices"
+            )
+            .setContentText(summary)
+            .setSmallIcon(R.drawable.ic_stat_sync)
+            .setAutoCancel(true)
+            .build()
+
+        runCatching { manager.notify(OFFER_NOTIFICATION_ID, notification) }
+            .onFailure { android.util.Log.i(TAG, "could not post the new-music notification") }
+    }
+
+    /** Its own channel: this one is worth a glance, the sync one is a chore. */
+    private fun ensureOfferChannel() {
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        if (manager.getNotificationChannel(OFFER_CHANNEL_ID) != null) return
+        manager.createNotificationChannel(
+            NotificationChannel(
+                OFFER_CHANNEL_ID,
+                "New music available",
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+        )
     }
 
     private fun foregroundInfo(done: Int, total: Int): ForegroundInfo {
@@ -102,5 +160,7 @@ class LibrarySyncWorker @AssistedInject constructor(
         const val TAG = "LibrarySyncWorker"
         private const val CHANNEL_ID = "wanda_library_sync"
         private const val NOTIFICATION_ID = 4711
+        private const val OFFER_CHANNEL_ID = "wanda_new_music"
+        private const val OFFER_NOTIFICATION_ID = 4712
     }
 }
