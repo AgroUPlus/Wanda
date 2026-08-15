@@ -4,14 +4,24 @@ import android.util.Log
 import com.wander.android.core.network.HttpClientFactory
 import com.wander.android.data.sources.agro.AgroGraphQl
 import com.wander.android.data.sources.agro.AgroHandoffState
+import com.wander.android.data.sources.agro.AgroLiveMessage
 import com.wander.android.data.sources.agro.AgroNode
 import com.wander.android.data.sources.agro.AgroSessionApi
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.retryWhen
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
@@ -74,8 +84,13 @@ class AgroSessionRepository @Inject constructor(
                 val fromElsewhere = handoff?.takeIf {
                     it.deviceId != graphQl.deviceId && it.trackTitle.isNotBlank()
                 }
-                _latestSession.value = fromElsewhere
-                _incomingHandoff.value = fromElsewhere?.takeIf(::isOfferable)
+                // The server holds one session per user, so this device publishing its own
+                // playback *replaces* the other device's entry. That is not the other session
+                // ending, and treating it as such is what made the session vanish for a few
+                // seconds — then come back, offer and all, the moment the other device sent its
+                // next update. Only a genuinely empty server session clears it.
+                if (fromElsewhere != null || handoff == null) _latestSession.value = fromElsewhere
+                _incomingHandoff.value = _latestSession.value?.takeIf(::isOfferable)
             }
             .onFailure { log("handoff", it) }
     }
@@ -89,11 +104,24 @@ class AgroSessionRepository @Inject constructor(
     fun consume(handoff: AgroHandoffState) = dismiss(handoff)
 
     /**
-     * Live updates while the UI is foreground. The server broadcasts to every subscriber with no
-     * per-user filtering, so a message is only ever a hint to re-query — never trusted as state.
-     * The socket closes as soon as collection stops, so nothing is held open in the background.
+     * Live updates while the UI is foreground.
+     *
+     * A message is only ever a hint to re-query, never trusted as state. The socket closes as soon
+     * as collection stops, so nothing is held open in the background.
+     *
+     * Reconnects with a capped backoff. A dropped socket used to end the flow for good, so one
+     * suspend or one server restart left the app silently poll-only until it was next foregrounded
+     * — which looked exactly like sync being broken.
      */
-    fun liveUpdates(): Flow<Unit> = callbackFlow {
+    fun liveUpdates(): Flow<AgroLiveMessage> = connectOnce().retryWhen { _, attempt ->
+        val backoff = (BASE_BACKOFF_MS shl attempt.coerceAtMost(5).toInt())
+            .coerceAtMost(MAX_BACKOFF_MS)
+        delay(backoff)
+        true
+    }
+
+    /** One connection's lifetime. Fails rather than completes, so [liveUpdates] can retry it. */
+    private fun connectOnce(): Flow<AgroLiveMessage> = callbackFlow {
         val url = graphQl.syncSocketUrl()
         if (url == null) {
             close()
@@ -110,14 +138,15 @@ class AgroSessionRepository @Inject constructor(
             request,
             object : WebSocketListener() {
                 override fun onMessage(webSocket: WebSocket, text: String) {
-                    if (RELEVANT.any { it in text }) trySend(Unit)
+                    parse(text)?.let { trySend(it) }
                 }
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                    // Losing the socket is not an error worth surfacing: the one-shot refresh on
-                    // resume already covers it, and reconnect storms cost battery.
+                    // Closed with the cause rather than cleanly, so the retry above sees a failure
+                    // and reconnects. Still not surfaced to the user: a dropped socket is not
+                    // something they can act on, and polling covers the gap.
                     Log.w(TAG, "Agro live updates stopped: ${t.message}")
-                    close()
+                    close(t)
                 }
             }
         )
@@ -163,16 +192,49 @@ class AgroSessionRepository @Inject constructor(
         return Duration.between(updated, Instant.now()) < MAX_AGE
     }
 
-    private fun AgroHandoffState.key() = "$deviceId|$trackUri|$updatedAt"
+    /**
+     * Deliberately device and track only. `updatedAt` used to be part of it, which meant every
+     * heartbeat and every pause/resume on the other device produced a "new" session that walked
+     * straight past the dismissal — the same card, re-offered seconds after it was declined.
+     */
+    private fun AgroHandoffState.key() = "$deviceId|$trackUri"
 
     private fun log(what: String, error: Throwable) {
         Log.w(TAG, "Agro $what refresh failed: ${error.message}")
     }
 
+    /**
+     * Reads one frame, or nothing.
+     *
+     * Parsed as JSON rather than substring-matched. The old check asked whether "HANDOFF" appeared
+     * anywhere in the text, which both missed the library messages entirely and would have matched
+     * a track called "HANDOFF" in someone's album title.
+     */
+    private fun parse(text: String): AgroLiveMessage? {
+        val envelope = runCatching { Json.parseToJsonElement(text).jsonObject }.getOrNull()
+            ?: return null
+        return when (envelope["msg_type"]?.jsonPrimitive?.contentOrNull) {
+            "HANDOFF", "NODE_UPDATE" -> AgroLiveMessage.Session
+            "SYNC_OFFER", "LIBRARY_UPDATED" -> {
+                val payload = envelope["payload"] as? JsonObject
+                AgroLiveMessage.Library(
+                    newTrackCount = payload?.get("count")?.jsonPrimitive?.intOrNull ?: 0,
+                    albums = payload?.get("albums")?.jsonArray
+                        ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+                        .orEmpty()
+                )
+            }
+            // SETTINGS_SYNC and anything a newer server adds are ignored by name rather than by
+            // accident, so adding one later is a single branch.
+            else -> null
+        }
+    }
+
     private companion object {
         const val TAG = "AgroSessions"
         const val NORMAL_CLOSURE = 1000
+        const val BASE_BACKOFF_MS = 2_000L
+        const val MAX_BACKOFF_MS = 60_000L
         val MAX_AGE: Duration = Duration.ofMinutes(10)
-        val RELEVANT = listOf("HANDOFF", "NODE_UPDATE")
     }
 }

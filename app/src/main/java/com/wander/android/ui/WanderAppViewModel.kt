@@ -13,8 +13,11 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -80,7 +83,17 @@ class WanderAppViewModel @Inject constructor(
 
     /** Local failures worth a snackbar, alongside the repository's own. */
     private val _writeErrors = MutableSharedFlow<String>(extraBufferCapacity = 1)
-    val syncErrors: SharedFlow<String> = _writeErrors.asSharedFlow()
+
+    /**
+     * Everything the user should hear about, from here and from the sync repository.
+     *
+     * The repository's errors were emitted but never collected — the comment above claimed they
+     * were included and they were not, so a per-file upload failure said nothing at all and sync
+     * simply looked like it had stopped.
+     */
+    val syncErrors: SharedFlow<String> =
+        merge(_writeErrors.asSharedFlow(), librarySync.errors)
+            .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), replay = 0)
 
     /** Decides whether the app opens on the welcome flow or straight into the library. */
     val hasCompletedSetup: StateFlow<Boolean> = secureStorage.hasCompletedSetup

@@ -6,12 +6,16 @@ import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.repository.AgroSessionRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.sources.agro.AgroHandoffState
+import com.wander.android.data.sources.agro.AgroLiveMessage
 import com.wander.android.data.sources.agro.AgroNode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -28,7 +32,19 @@ class AgroSessionViewModel @Inject constructor(
 ) : ViewModel() {
 
     val devices: StateFlow<List<AgroNode>> = sessionRepository.devices
-    val incomingHandoff: StateFlow<AgroHandoffState?> = sessionRepository.incomingHandoff
+
+    /**
+     * The offer, silenced while this device is playing.
+     *
+     * Held here rather than left to the card: the repository refreshes on every socket message, so
+     * without this the offer flickered in and out underneath whatever was on screen. Music playing
+     * here means the answer is already "no" — pausing makes it a question again.
+     */
+    val incomingHandoff: StateFlow<AgroHandoffState?> = combine(
+        sessionRepository.incomingHandoff,
+        playerConnection.state
+    ) { handoff, playback -> handoff?.takeIf { !playback.isPlaying } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Ungated: whatever another device last played, resumable whenever the user asks. */
     val latestSession: StateFlow<AgroHandoffState?> = sessionRepository.latestSession
@@ -72,9 +88,16 @@ class AgroSessionViewModel @Inject constructor(
      * Collected under `repeatOnLifecycle(STARTED)` by the caller, so the socket is open only while
      * the app is on screen and nothing is held in the background.
      */
-    suspend fun observeLiveUpdates() {
+    suspend fun observeLiveUpdates(onLibraryChanged: () -> Unit = {}) {
         sessionRepository.refresh()
-        sessionRepository.liveUpdates().collectLatest { sessionRepository.refresh() }
+        sessionRepository.liveUpdates().collectLatest { message ->
+            when (message) {
+                is AgroLiveMessage.Session -> sessionRepository.refresh()
+                // Library messages used to be dropped on the floor, so music uploaded from another
+                // device only appeared when this one was next foregrounded.
+                is AgroLiveMessage.Library -> onLibraryChanged()
+            }
+        }
     }
 
     /**

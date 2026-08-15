@@ -23,8 +23,33 @@ data class MissingTrack(
     val artist: String,
     val album: String?,
     val durationMs: Long,
-    val sizeBytes: Long
+    val sizeBytes: Long,
+    /** Container as the server indexed it — "flac", "mp3", "m4a". Null when it never learned. */
+    val format: String? = null
 )
+
+/**
+ * How this deployment moves music between devices, as the server sees it.
+ *
+ * Both clients ask the same question and act on the same answer; this used to be inferred
+ * separately on each device from local settings that knew nothing about the server.
+ */
+enum class SyncMode {
+    /** Streamable from Navidrome: a local copy is a convenience, not the only way to hear it. */
+    NAVIDROME,
+
+    /** The server keeps the files but nothing streams them, so a missing track is offered. */
+    PEER_TO_PEER,
+
+    /** Index only. The server is not a durable copy, so it never suggests deleting one. */
+    INDEX_ONLY;
+
+    /** Whether a device without a track should be offered the bytes. */
+    val offersDownloads: Boolean get() = this != NAVIDROME
+
+    /** Whether a redundant local copy is safe to suggest removing. */
+    val offersReclaim: Boolean get() = this == NAVIDROME
+}
 
 data class LibraryStats(
     val trackCount: Int,
@@ -124,7 +149,7 @@ class AgroLibraryApi @Inject constructor(
         val query = """
             query Missing(${'$'}userId: String!, ${'$'}deviceId: String!, ${'$'}limit: Int) {
               missingOnDevice(userId: ${'$'}userId, deviceId: ${'$'}deviceId, limit: ${'$'}limit) {
-                contentHash title artist album durationMs sizeBytes
+                contentHash title artist album durationMs sizeBytes format
               }
             }
         """.trimIndent()
@@ -134,19 +159,62 @@ class AgroLibraryApi @Inject constructor(
             put("limit", limit)
         }
         return graphQl.execute(query, variables).map { data ->
-            (data["missingOnDevice"]?.jsonArray ?: emptyList()).mapNotNull { element ->
-                val obj = element as? JsonObject ?: return@mapNotNull null
-                MissingTrack(
-                    contentHash = obj["contentHash"]?.jsonPrimitive?.contentOrNull
-                        ?: return@mapNotNull null,
-                    title = obj["title"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-                    artist = obj["artist"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-                    album = obj["album"]?.jsonPrimitive?.contentOrNull,
-                    durationMs = obj["durationMs"]?.jsonPrimitive?.long ?: 0L,
-                    sizeBytes = obj["sizeBytes"]?.jsonPrimitive?.long ?: 0L
-                )
+            (data["missingOnDevice"]?.jsonArray ?: emptyList()).mapNotNull(::parseTrack)
+        }
+    }
+
+    /**
+     * Files this device holds that the server has already filed away.
+     *
+     * The server checks its own disk before answering, so this is stronger than "our index says we
+     * uploaded it once" — which is the difference between freeing space and losing a track.
+     */
+    suspend fun reclaimable(limit: Int = 50): Result<List<MissingTrack>> {
+        val query = """
+            query Reclaimable(${'$'}userId: String!, ${'$'}deviceId: String!, ${'$'}limit: Int) {
+              reclaimable(userId: ${'$'}userId, deviceId: ${'$'}deviceId, limit: ${'$'}limit) {
+                contentHash title artist album durationMs sizeBytes format
+              }
+            }
+        """.trimIndent()
+        val variables = buildJsonObject {
+            put("userId", graphQl.userId)
+            put("deviceId", graphQl.deviceId)
+            put("limit", limit)
+        }
+        return graphQl.execute(query, variables).map { data ->
+            (data["reclaimable"]?.jsonArray ?: emptyList()).mapNotNull(::parseTrack)
+        }
+    }
+
+    /** Asks the server how this account is meant to sync. */
+    suspend fun syncMode(): Result<SyncMode> {
+        val query = """
+            query Mode(${'$'}userId: String!) { syncMode(userId: ${'$'}userId) }
+        """.trimIndent()
+        val variables = buildJsonObject { put("userId", graphQl.userId) }
+        return graphQl.execute(query, variables).map { data ->
+            when (data["syncMode"]?.jsonPrimitive?.contentOrNull) {
+                "NAVIDROME" -> SyncMode.NAVIDROME
+                "INDEX_ONLY" -> SyncMode.INDEX_ONLY
+                // An unrecognised mode from a newer server reads as peer-to-peer: it offers files
+                // and never suggests deleting one, which is the safe way to be wrong.
+                else -> SyncMode.PEER_TO_PEER
             }
         }
+    }
+
+    private fun parseTrack(element: kotlinx.serialization.json.JsonElement): MissingTrack? {
+        val obj = element as? JsonObject ?: return null
+        return MissingTrack(
+            contentHash = obj["contentHash"]?.jsonPrimitive?.contentOrNull ?: return null,
+            title = obj["title"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            artist = obj["artist"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            album = obj["album"]?.jsonPrimitive?.contentOrNull,
+            durationMs = obj["durationMs"]?.jsonPrimitive?.long ?: 0L,
+            sizeBytes = obj["sizeBytes"]?.jsonPrimitive?.long ?: 0L,
+            format = obj["format"]?.jsonPrimitive?.contentOrNull
+        )
     }
 
     suspend fun stats(): Result<LibraryStats> {

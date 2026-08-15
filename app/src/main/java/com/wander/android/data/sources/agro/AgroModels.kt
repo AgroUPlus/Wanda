@@ -59,3 +59,18 @@ data class AgroSyncedSettings(
     val serverUrl: String?,
     val serverUsername: String?
 )
+
+/**
+ * One frame from `/ws/sync`, reduced to what this app acts on.
+ *
+ * The socket is a hint channel, never a source of state: every message means "something changed",
+ * and the app answers by asking the server what it should now know. So a dropped or duplicated
+ * frame costs a redundant query rather than a wrong screen.
+ */
+sealed interface AgroLiveMessage {
+    /** The playing session or the device list moved. */
+    data object Session : AgroLiveMessage
+
+    /** The library changed, or this device is being offered something it lacks. */
+    data class Library(val newTrackCount: Int, val albums: List<String>) : AgroLiveMessage
+}
