@@ -129,6 +129,8 @@ fun WanderApp(
         if (!playerConnection.state.value.isPlaying) agroViewModel.allowReoffer()
         // Cheap and metadata-only, so asking on every foreground costs nothing.
         viewModel.refreshSyncOffer()
+        // Same trip: the share domain the fleet agreed on, if the server publishes one.
+        viewModel.refreshShareSettings()
         val job = scope.launch {
             agroViewModel.observeLiveUpdates(onLibraryChanged = viewModel::refreshSyncOffer)
         }

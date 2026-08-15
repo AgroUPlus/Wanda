@@ -33,8 +33,20 @@ class ShareLinkRewriter @Inject constructor(
     private val secureStorage: SecureStorage
 ) {
 
+    /**
+     * The domain in force: a paired Agro server's, if it has one configured, otherwise whatever
+     * this device was told directly.
+     *
+     * Agro wins because it is the setting the *fleet* shares — configure it once and Wanda and
+     * Wander agree without either being touched. But Agro is optional in both directions: with no
+     * server, the local field still works, and with a server that has the feature off, the local
+     * field is what is left.
+     */
+    internal fun domain(): String =
+        secureStorage.agroShareDomain.value.ifBlank { secureStorage.shareDomain.value }
+
     fun rewrite(url: String): String {
-        val domain = secureStorage.shareDomain.value
+        val domain = domain()
         if (domain.isBlank()) return url
 
         val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return url
@@ -77,7 +89,7 @@ class ShareLinkRewriter @Inject constructor(
         if (!isListen) return false
         return when (scheme?.lowercase()) {
             APP_SCHEME -> true
-            "https" -> host?.lowercase() == secureStorage.shareDomain.value.ifBlank { null }
+            "https" -> host?.lowercase() == domain().ifBlank { null }
             else -> false
         }
     }
@@ -93,8 +105,15 @@ class ShareLinkRewriter @Inject constructor(
         if (!scheme.equals("https", ignoreCase = true)) return false
         val host = host?.lowercase()?.removePrefix("www.")?.removePrefix("m.") ?: return false
         if (host in YOUTUBE_HOSTS) return true
-        return host == navidromeHost()
+        if (host == navidromeHost()) return true
+        // Whatever the server will forward to, so the two ends of the same feature agree: a link
+        // this app wraps is one the page at the other end is prepared to send a visitor to.
+        return host in agroHosts()
     }
+
+    private fun agroHosts(): Set<String> = secureStorage.agroShareHosts
+        .split(',')
+        .mapNotNullTo(mutableSetOf()) { it.trim().lowercase().takeIf(String::isNotBlank) }
 
     /** Host of the configured Navidrome server, so its share links pass and nothing else does. */
     private fun navidromeHost(): String? = runCatching {

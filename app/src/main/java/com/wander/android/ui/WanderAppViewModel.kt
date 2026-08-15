@@ -6,6 +6,7 @@ import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.repository.LibrarySyncRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.ShareRepository
+import com.wander.android.data.sources.agro.AgroSessionApi
 import com.wander.android.data.sources.agro.MissingTrack
 import com.wander.android.data.sources.local.LocalMusicSource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,7 +28,8 @@ class WanderAppViewModel @Inject constructor(
     musicRepository: MusicRepository,
     shareRepository: ShareRepository,
     private val librarySync: LibrarySyncRepository,
-    secureStorage: SecureStorage
+    private val sessionApi: AgroSessionApi,
+    private val secureStorage: SecureStorage
 ) : ViewModel() {
 
     /** Library writes that failed to reach their backend — shown as a snackbar, not swallowed. */
@@ -79,6 +81,23 @@ class WanderAppViewModel @Inject constructor(
     fun dismissSyncOffer() {
         dismissedOffer = true
         _syncOffer.value = emptyList()
+    }
+
+    /**
+     * Picks up the share-link domain a paired Agro server publishes, so it is set once for the
+     * whole fleet rather than typed into every player.
+     *
+     * Silent on every failure. This is a convenience that Agro *may* provide: an unpaired server,
+     * an unreachable one, or one too old to know the field all leave the locally configured
+     * domain — or no rewriting at all — exactly as it was. Sharing never depends on Agro.
+     */
+    fun refreshShareSettings() {
+        if (!secureStorage.agroConfigured.value) return
+        viewModelScope.launch {
+            val settings = sessionApi.syncedSettings().getOrNull() ?: return@launch
+            val domain = settings.shareDomain.orEmpty().takeIf { settings.shareEnabled }.orEmpty()
+            secureStorage.setAgroShareSettings(domain, settings.shareHosts.orEmpty())
+        }
     }
 
     /** Local failures worth a snackbar, alongside the repository's own. */

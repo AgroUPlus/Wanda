@@ -57,7 +57,15 @@ data class AgroHandoffTrack(
 @Immutable
 data class AgroSyncedSettings(
     val serverUrl: String?,
-    val serverUsername: String?
+    val serverUsername: String?,
+    /**
+     * Share-link forwarding, configured once on the server so every client agrees. Not a
+     * credential and not encrypted: the domain is printed in every link it produces, and
+     * [shareHosts] is the allowlist the server's own `/listen` route enforces.
+     */
+    val shareDomain: String?,
+    val shareHosts: String?,
+    val shareEnabled: Boolean
 )
 
 /**
