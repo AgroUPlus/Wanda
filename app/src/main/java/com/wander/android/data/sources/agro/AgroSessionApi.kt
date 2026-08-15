@@ -92,6 +92,20 @@ class AgroSessionApi @Inject constructor(
             }
         ).map { }
 
+    /** Unregisters a device node from the Agro server. */
+    suspend fun unregisterNode(deviceId: String = graphQl.deviceId): Result<Unit> =
+        graphQl.execute(
+            """
+            mutation UnregisterNode(${'$'}userId: String!, ${'$'}deviceId: String!) {
+                unregisterNode(userId: ${'$'}userId, deviceId: ${'$'}deviceId)
+            }
+            """.trimIndent(),
+            buildJsonObject {
+                put("userId", graphQl.userId)
+                put("deviceId", deviceId)
+            }
+        ).map { }
+
     private fun JsonObject.toNode() = AgroNode(
         deviceId = string("deviceId").orEmpty(),
         petname = string("petname").orEmpty(),

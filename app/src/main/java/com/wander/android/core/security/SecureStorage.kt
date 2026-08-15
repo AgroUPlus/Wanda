@@ -164,7 +164,11 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
      * showing a paired Agro server and the previous theme until the next cold start.
      */
     fun clearAllCredentials() {
-        prefs.edit { clear() }
+        val deviceId = prefs.getString(KEY_AGRO_DEVICE_ID, null)
+        prefs.edit {
+            clear()
+            deviceId?.let { putString(KEY_AGRO_DEVICE_ID, it) }
+        }
         _isOfflineMode.value = false
         _navidromeConfigured.value = false
         _ytMusicConfigured.value = false
@@ -173,6 +177,8 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _isMonetDynamic.value = true
         _agroConfigured.value = false
         _agroSyncSettings.value = false
+        _shareDomain.value = ""
+        _agroShareDomain.value = ""
     }
 
     private val _agroConfigured = MutableStateFlow(hasAgroCredentials())

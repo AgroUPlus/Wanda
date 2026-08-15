@@ -103,6 +103,9 @@ class AgroSessionRepository @Inject constructor(
     /** Once resumed, this device owns the session — offering it back would be a loop. */
     fun consume(handoff: AgroHandoffState) = dismiss(handoff)
 
+    /** Tells Agro to remove this device registration so it is not duplicated. */
+    suspend fun unregister(): Result<Unit> = sessionApi.unregisterNode()
+
     /**
      * Live updates while the UI is foreground.
      *
