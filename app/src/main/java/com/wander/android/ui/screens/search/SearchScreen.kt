@@ -19,6 +19,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
@@ -26,7 +29,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.ui.components.EmptyState
-import com.wander.android.ui.components.SourceFilterChips
+import com.wander.android.ui.components.SourceToggleChips
+import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
@@ -38,7 +43,27 @@ fun SearchScreen(
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val sourceFilter by viewModel.sourceFilter.collectAsStateWithLifecycle()
+    val selectedSources by viewModel.selectedSources.collectAsStateWithLifecycle()
+    var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
+
+    actionsFor?.let { track ->
+        TrackActionsSheet(
+            track = track,
+            isLiked = track.isLiked,
+            onPlay = { viewModel.play(listOf(track), 0) },
+            onPlayNext = { viewModel.playNext(track) },
+            onAddToQueue = { viewModel.addToQueue(track) },
+            onStartRadio = { viewModel.startRadio(track) },
+            onToggleLike = { viewModel.toggleLike(track) },
+            onRemove = null,
+            onDismiss = { actionsFor = null },
+            onShare = if (viewModel.canShare(track)) {
+                { viewModel.share(track) }
+            } else {
+                null
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -69,10 +94,11 @@ fun SearchScreen(
         )
 
         if (viewModel.availableSources.size > 1) {
-            SourceFilterChips(
+            SourceToggleChips(
                 sources = viewModel.availableSources,
-                selected = sourceFilter,
-                onSelect = viewModel::selectSource,
+                selected = selectedSources,
+                onToggle = viewModel::toggleSource,
+                onSelectAll = viewModel::selectAllSources,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
         }
@@ -119,7 +145,8 @@ fun SearchScreen(
                         TrackRow(
                             track = track,
                             onPlay = { viewModel.play(state.results, index) },
-                            onToggleLike = { viewModel.toggleLike(track) }
+                            onToggleLike = { viewModel.toggleLike(track) },
+                            onLongPress = { actionsFor = track }
                         )
                     }
                 }

@@ -1,7 +1,8 @@
 package com.wander.android.ui.screens.home
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Column
@@ -25,11 +26,14 @@ import com.wander.android.ui.components.Artwork
 /**
  * Spotify-style horizontal media card for carousels (Heavy Rotation, Recently Played).
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HorizontalTrackCard(
     track: UnifiedTrack,
     onPlay: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Long press, for the track actions sheet. Matches [com.wander.android.ui.components.TrackRow]. */
+    onLongPress: (() -> Unit)? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -45,10 +49,11 @@ fun HorizontalTrackCard(
             .scale(scale)
             // Deliberately no clip on the card: rounding the whole Column cropped the corners off
             // the title and artist underneath. The artwork rounds itself via its own shape.
-            .clickable(
+            .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
-                onClick = onPlay
+                onClick = onPlay,
+                onLongClick = onLongPress
             )
     ) {
         Artwork(

@@ -44,7 +44,8 @@ fun PlayerSheetContent(
     onExpand: () -> Unit,
     onCollapse: () -> Unit,
     onOpenQueue: () -> Unit,
-    onNavigateToSearch: (String) -> Unit = {}
+    onOpenArtist: (String) -> Unit = {},
+    onOpenAlbum: (String) -> Unit = {}
 ) {
     val anchors = remember { PlayerArtworkAnchors() }
     var lyricsVisible by remember { mutableStateOf(false) }
@@ -52,13 +53,29 @@ fun PlayerSheetContent(
     val fullPlayerPresent by remember { derivedStateOf { progress() > 0f } }
     val docked by remember { derivedStateOf { progress() == 0f } }
 
-    // Horizontal only, so the sheet's own vertical drag still opens the player. The strip itself
-    // stays put — sliding the docked bar sideways over the navigation bar looks broken.
-    val miniSwipe = rememberSwipeToChangeTrack(
+    // One drag state for both layouts, so the cover — which is drawn once, above both — can follow
+    // the finger either way round, and so the neighbouring covers know how far to slide in.
+    val swipe = rememberTrackSwipeState()
+
+    // Horizontal only, so the sheet's own vertical drag still opens the player. The strip's own
+    // surface stays put — sliding the docked bar sideways over the navigation bar looks broken —
+    // but its cover and text now move with the gesture, which is what was missing.
+    val miniSwipe = Modifier.swipeToChangeTrack(
+        state = swipe,
         onNext = playerConnection::next,
         onPrevious = playerConnection::previous,
-        translateContent = false
+        exitDistance = DockedExitDistance
     )
+    val fullSwipe = Modifier.swipeToChangeTrack(
+        state = swipe,
+        onNext = playerConnection::next,
+        onPrevious = playerConnection::previous
+    )
+
+    // The covers either side of this one in the queue, for the swipe to peek at. Coarse enough
+    // not to change during a gesture, so reading them here costs nothing per frame.
+    val previousArtwork = playback.queue.getOrNull(playback.currentIndex - 1)?.artworkUrl
+    val nextArtwork = playback.queue.getOrNull(playback.currentIndex + 1)?.artworkUrl
 
     // Full height regardless of how far the sheet is open — the sheet clips it. This keeps the
     // full player's layout, and so its artwork bounds, stable for the whole drag.
@@ -78,6 +95,8 @@ fun PlayerSheetContent(
             isPlaying = playback.isPlaying,
             playerConnection = playerConnection,
             contentAlpha = { 1f - smoothStep(progress(), 0f, 0.30f) },
+            // Only the title and artist slide; see MiniPlayer.
+            swipeOffset = { swipe.offsetX.value },
             // The sheet already paints this colour; an opaque strip here would hide the artwork
             // drawn after it.
             containerColor = Color.Transparent,
@@ -106,7 +125,10 @@ fun PlayerSheetContent(
             contentDescription = playback.currentTrack?.title,
             anchors = anchors,
             progress = progress,
-            visible = !lyricsVisible
+            visible = !lyricsVisible,
+            swipe = swipe,
+            previousUrl = previousArtwork,
+            nextUrl = nextArtwork
         )
 
         // Composed as soon as the drag starts, so its artwork bounds are known and nothing
@@ -116,9 +138,13 @@ fun PlayerSheetContent(
                 playerConnection = playerConnection,
                 onCollapse = onCollapse,
                 onOpenQueue = onOpenQueue,
-                onNavigateToSearch = onNavigateToSearch,
+                onOpenArtist = onOpenArtist,
+                onOpenAlbum = onOpenAlbum,
                 contentAlpha = { smoothStep(progress(), 0.20f, 0.55f) },
                 onLyricsVisibleChange = { lyricsVisible = it },
+                // The gesture only; the cover that visibly follows it is drawn above, so the
+                // reported artwork bounds stay still and the peek covers have a fixed frame.
+                artworkModifier = fullSwipe,
                 artworkSlot = { _, _ ->
                     Box(
                         modifier = Modifier

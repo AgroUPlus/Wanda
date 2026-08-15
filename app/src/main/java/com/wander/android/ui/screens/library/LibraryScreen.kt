@@ -13,14 +13,18 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -31,17 +35,41 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.SourceFilterChips
+import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
     contentPadding: PaddingValues,
+    onOpenAlbum: (String) -> Unit,
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val tab by viewModel.tab.collectAsStateWithLifecycle()
     val sourceFilter by viewModel.sourceFilter.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    var actionsFor by remember { mutableStateOf<com.wander.android.data.model.UnifiedTrack?>(null) }
+
+    actionsFor?.let { track ->
+        TrackActionsSheet(
+            track = track,
+            isLiked = track.isLiked,
+            onPlay = { viewModel.play(listOf(track), 0) },
+            onPlayNext = { viewModel.playNext(track) },
+            onAddToQueue = { viewModel.addToQueue(track) },
+            onStartRadio = { viewModel.startRadio(track) },
+            onToggleLike = { viewModel.toggleLike(track) },
+            onRemove = null,
+            onDismiss = { actionsFor = null },
+            onShare = if (viewModel.canShare(track)) {
+                { viewModel.share(track) }
+            } else {
+                null
+            }
+        )
+    }
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val likedTracks by viewModel.likedTracks.collectAsStateWithLifecycle()
     val downloadedTracks by viewModel.downloadedTracks.collectAsStateWithLifecycle()
@@ -85,7 +113,7 @@ fun LibraryScreen(
                 Tab(
                     selected = index == selectedPage,
                     onClick = { viewModel.selectTab(entry) },
-                    text = { Text(entry.label) }
+                    text = { Text(entry.label, maxLines = 1, softWrap = false) }
                 )
             }
         }
@@ -109,14 +137,22 @@ fun LibraryScreen(
             key = { LibraryTab.entries[it] },
             modifier = Modifier.weight(1f)
         ) { page ->
-            Column(modifier = Modifier.fillMaxSize()) {
-                when (val pageTab = LibraryTab.entries[page]) {
-                    LibraryTab.ALBUMS -> AlbumGrid(albums, contentPadding, viewModel)
-                    LibraryTab.PLAYLISTS -> PlaylistList(playlists, contentPadding, viewModel)
-                    LibraryTab.LIKED -> TrackList(likedTracks, pageTab, contentPadding, viewModel)
-                    LibraryTab.DOWNLOADS ->
-                        TrackList(downloadedTracks, pageTab, contentPadding, viewModel)
-                    LibraryTab.TRACKS -> TrackList(tracks, pageTab, contentPadding, viewModel)
+            // `refresh()` and `isRefreshing` already existed on the ViewModel with nothing driving
+            // them — the library could only be refreshed by leaving and coming back.
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = viewModel::refresh,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    when (val pageTab = LibraryTab.entries[page]) {
+                        LibraryTab.ALBUMS -> AlbumGrid(albums, contentPadding, onOpenAlbum)
+                        LibraryTab.PLAYLISTS -> PlaylistList(playlists, contentPadding, viewModel)
+                        LibraryTab.LIKED -> TrackList(likedTracks, pageTab, contentPadding, viewModel) { actionsFor = it }
+                        LibraryTab.DOWNLOADS ->
+                            TrackList(downloadedTracks, pageTab, contentPadding, viewModel) { actionsFor = it }
+                        LibraryTab.TRACKS -> TrackList(tracks, pageTab, contentPadding, viewModel) { actionsFor = it }
+                    }
                 }
             }
         }
@@ -127,7 +163,7 @@ fun LibraryScreen(
 private fun AlbumGrid(
     albums: List<com.wander.android.data.model.UnifiedAlbum>,
     contentPadding: PaddingValues,
-    viewModel: LibraryViewModel
+    onOpenAlbum: (String) -> Unit
 ) {
     if (albums.isEmpty()) {
         Centered {
@@ -144,7 +180,10 @@ private fun AlbumGrid(
         modifier = Modifier.fillMaxSize()
     ) {
         items(albums, key = { it.id }, contentType = { "album" }) { album ->
-            AlbumCard(album = album, onClick = { viewModel.openAlbum(album) })
+            // Opens the record rather than immediately playing it. Tapping an album to see what
+            // is on it is at least as common as tapping it to hear it, and the page has a Play
+            // button right at the top for the other case.
+            AlbumCard(album = album, onClick = { onOpenAlbum(album.id) })
         }
     }
 }
@@ -177,7 +216,8 @@ private fun TrackList(
     tracks: List<com.wander.android.data.model.UnifiedTrack>,
     tab: LibraryTab,
     contentPadding: PaddingValues,
-    viewModel: LibraryViewModel
+    viewModel: LibraryViewModel,
+    onLongPress: (com.wander.android.data.model.UnifiedTrack) -> Unit
 ) {
     if (tracks.isEmpty()) {
         Centered {
@@ -194,7 +234,8 @@ private fun TrackList(
             TrackRow(
                 track = track,
                 onPlay = { viewModel.play(tracks, index) },
-                onToggleLike = { viewModel.toggleLike(track) }
+                onToggleLike = { viewModel.toggleLike(track) },
+                onLongPress = { onLongPress(track) }
             )
         }
     }

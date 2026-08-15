@@ -2,6 +2,8 @@ package com.wander.android.ui.screens.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.security.SecureStorage
+import com.wander.android.data.sources.agro.AgroSessionApi
 import com.wander.android.data.sources.navidrome.NavidromeSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,11 +28,35 @@ data class NavidromeLoginState(
 
 @HiltViewModel
 class NavidromeLoginViewModel @Inject constructor(
-    private val navidromeSource: NavidromeSource
+    private val navidromeSource: NavidromeSource,
+    private val secureStorage: SecureStorage,
+    private val sessionApi: AgroSessionApi
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(NavidromeLoginState())
     val state: StateFlow<NavidromeLoginState> = _state.asStateFlow()
+
+    init {
+        prefillFromAgro()
+    }
+
+    /**
+     * With Agro settings sync on, the address and username another device already signed in with
+     * are filled in here. The password is not synced — Agro carries no credentials — so it is still
+     * typed once per device, which is why only the two fields are touched.
+     */
+    private fun prefillFromAgro() {
+        if (!secureStorage.agroSyncSettings.value) return
+        viewModelScope.launch {
+            val synced = sessionApi.syncedSettings().getOrNull() ?: return@launch
+            _state.update { current ->
+                current.copy(
+                    serverUrl = current.serverUrl.ifBlank { synced.serverUrl.orEmpty() },
+                    username = current.username.ifBlank { synced.serverUsername.orEmpty() }
+                )
+            }
+        }
+    }
 
     fun onServerUrlChange(value: String) = _state.update { it.copy(serverUrl = value, error = null) }
     fun onUsernameChange(value: String) = _state.update { it.copy(username = value, error = null) }
@@ -51,7 +77,19 @@ class NavidromeLoginViewModel @Inject constructor(
                 username = current.username,
                 password = current.password
             ).fold(
-                onSuccess = { _state.update { it.copy(isConnecting = false, isSignedIn = true) } },
+                onSuccess = {
+                    _state.update { it.copy(isConnecting = false, isSignedIn = true) }
+                    // Publish the address so the other devices stop asking for it. Best-effort:
+                    // a sync failure must not make a successful sign-in look broken.
+                    if (secureStorage.agroSyncSettings.value) {
+                        launch {
+                            sessionApi.pushSyncedSettings(
+                                serverUrl = current.serverUrl.withScheme(),
+                                serverUsername = current.username
+                            )
+                        }
+                    }
+                },
                 onFailure = { cause ->
                     _state.update {
                         it.copy(isConnecting = false, error = cause.readableMessage())

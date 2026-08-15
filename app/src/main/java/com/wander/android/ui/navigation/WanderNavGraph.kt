@@ -11,6 +11,8 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.ui.screens.album.AlbumScreen
+import com.wander.android.ui.screens.artist.ArtistScreen
 import com.wander.android.ui.screens.home.HomeScreen
 import com.wander.android.ui.screens.library.LibraryScreen
 import com.wander.android.ui.screens.login.NavidromeLoginScreen
@@ -33,7 +35,10 @@ fun NavGraphBuilder.wanderNavGraph(
     }
 
     tabDestination(TopLevelDestination.LIBRARY.route) {
-        LibraryScreen(contentPadding = contentPadding)
+        LibraryScreen(
+            contentPadding = contentPadding,
+            onOpenAlbum = { navController.navigate(Routes.album(it)) }
+        )
     }
 
     tabDestination(
@@ -54,6 +59,28 @@ fun NavGraphBuilder.wanderNavGraph(
             contentPadding = contentPadding,
             onNavidromeLogin = { navController.navigate(Routes.NAVIDROME_LOGIN) },
             onYouTubeLogin = { navController.navigate(Routes.YTMUSIC_LOGIN) }
+        )
+    }
+
+    detailDestination(
+        route = Routes.ALBUM,
+        arguments = listOf(navArgument("albumId") { type = NavType.StringType })
+    ) {
+        AlbumScreen(
+            contentPadding = contentPadding,
+            onBack = navController::popBackStack,
+            onOpenArtist = { navController.navigate(Routes.artist(it)) }
+        )
+    }
+
+    detailDestination(
+        route = Routes.ARTIST,
+        arguments = listOf(navArgument("artist") { type = NavType.StringType })
+    ) {
+        ArtistScreen(
+            contentPadding = contentPadding,
+            onBack = navController::popBackStack,
+            onOpenAlbum = { navController.navigate(Routes.album(it)) }
         )
     }
 
@@ -103,9 +130,11 @@ private fun NavGraphBuilder.tabDestination(
 /** A screen opened on top of another: shared-axis Z. */
 private fun NavGraphBuilder.detailDestination(
     route: String,
+    arguments: List<NamedNavArgument> = emptyList(),
     content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit
 ) = composable(
     route = route,
+    arguments = arguments,
     enterTransition = { detailEnter() },
     exitTransition = { detailExit() },
     popEnterTransition = { detailPopEnter() },

@@ -7,6 +7,7 @@ import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MusicRepository
+import com.wander.android.data.repository.ShareRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.net.URLDecoder
 import javax.inject.Inject
@@ -34,6 +36,7 @@ data class SearchUiState(
 class SearchViewModel @Inject constructor(
     private val musicRepository: MusicRepository,
     private val playerConnection: PlayerConnection,
+    private val shareRepository: ShareRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -43,8 +46,19 @@ class SearchViewModel @Inject constructor(
     private val _query = MutableStateFlow(decodedInitialQuery)
     val query: StateFlow<String> = _query.asStateFlow()
 
-    private val _sourceFilter = MutableStateFlow<SourceType?>(null)
-    val sourceFilter: StateFlow<SourceType?> = _sourceFilter.asStateFlow()
+    /**
+     * The backends this search queries. Everything except the Internet Archive by default: its
+     * search is slow enough to hold up every other source's results, and it is the one backend
+     * that is not the user's own music.
+     */
+    private val _selectedSources = MutableStateFlow(
+        musicRepository.sources
+            .filter { it.capabilities.search }
+            .map { it.sourceType }
+            .filterNot { it == SourceType.INTERNET_ARCHIVE }
+            .toSet()
+    )
+    val selectedSources: StateFlow<Set<SourceType>> = _selectedSources.asStateFlow()
 
     /** Only sources that can actually search are offered as filters. */
     val availableSources: List<SourceType> = musicRepository.sources
@@ -52,9 +66,11 @@ class SearchViewModel @Inject constructor(
         .map { it.sourceType }
         .sorted()
 
-    private val searchResults: StateFlow<SearchUiState> = _query
-        .debounce { if (it.isBlank()) 0L else DEBOUNCE_MS }
-        .flatMapLatest { query ->
+    // Re-runs when the sources change as well as the query: toggling a backend on has to go and
+    // ask it, not just unhide results that were never fetched.
+    private val searchResults: StateFlow<SearchUiState> = combine(_query, _selectedSources, ::Pair)
+        .debounce { (query, _) -> if (query.isBlank()) 0L else DEBOUNCE_MS }
+        .flatMapLatest { (query, sources) ->
             flow {
                 if (query.isBlank()) {
                     emit(SearchUiState())
@@ -64,7 +80,7 @@ class SearchViewModel @Inject constructor(
                 emit(
                     SearchUiState(
                         isSearching = false,
-                        results = musicRepository.searchAllSources(query),
+                        results = musicRepository.searchAllSources(query, sources),
                         hasQuery = true
                     )
                 )
@@ -72,15 +88,52 @@ class SearchViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState())
 
-    val uiState: StateFlow<SearchUiState> = combine(searchResults, _sourceFilter) { state, filter ->
-        if (filter == null) state else state.copy(results = state.results.filter { it.source == filter })
+    // Search results are a snapshot taken before any like happened, so the liked set is overlaid
+    // from Room — otherwise tapping the heart wrote through but left the icon unchanged.
+    val uiState: StateFlow<SearchUiState> = combine(
+        searchResults,
+        musicRepository.getLikedTrackIdsFlow()
+    ) { state, likedIds ->
+        state.copy(results = state.results.map { it.copy(isLiked = it.id in likedIds) })
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState())
 
     fun onQueryChange(value: String) { _query.value = value }
 
-    fun selectSource(source: SourceType?) { _sourceFilter.value = source }
+    fun toggleSource(source: SourceType) {
+        _selectedSources.update { current ->
+            if (source in current) {
+                // Never empty: a search with no sources would just silently return nothing.
+                current.minus(source).ifEmpty { current }
+            } else {
+                current + source
+            }
+        }
+    }
+
+    fun selectAllSources() { _selectedSources.value = availableSources.toSet() }
 
     fun play(tracks: List<UnifiedTrack>, index: Int) = playerConnection.play(tracks, index)
+
+    fun playNext(track: UnifiedTrack) = playerConnection.playNext(listOf(track))
+
+    fun addToQueue(track: UnifiedTrack) = playerConnection.addToQueue(listOf(track))
+
+    /** Plays the track, then fills the queue behind it with its source's radio. */
+    fun startRadio(track: UnifiedTrack) {
+        viewModelScope.launch {
+            playerConnection.play(listOf(track))
+            val radio = musicRepository.generateRadio(track)
+            if (radio.isNotEmpty()) playerConnection.addToQueue(radio)
+        }
+    }
+
+    /** Whether this track's backend can mint a public link at all. */
+    fun canShare(track: UnifiedTrack) = shareRepository.canShare(track)
+
+    /** The link is published on a shared flow and raised as a share sheet by `WanderApp`. */
+    fun share(track: UnifiedTrack) {
+        viewModelScope.launch { shareRepository.share(track) }
+    }
 
     fun toggleLike(track: UnifiedTrack) {
         viewModelScope.launch { musicRepository.toggleLike(track) }

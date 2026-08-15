@@ -5,6 +5,10 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.sources.local.EXTRA_ALBUM_ARTIST
+import com.wander.android.data.sources.local.EXTRA_CONTENT_HASH
+import com.wander.android.data.sources.local.EXTRA_EXTENSION
+import com.wander.android.data.sources.local.EXTRA_SIZE_BYTES
 
 /**
  * Room is the offline source of truth: whatever a source returns is persisted here and read back
@@ -23,7 +27,8 @@ import com.wander.android.data.model.UnifiedTrack
         Index(value = ["albumId"]),
         Index(value = ["isLiked"]),
         Index(value = ["isDownloaded"]),
-        Index(value = ["isLibrary"])
+        Index(value = ["isLibrary"]),
+        Index(value = ["contentHash"])
     ]
 )
 data class TrackEntity(
@@ -54,6 +59,32 @@ data class TrackEntity(
      */
     val isLibrary: Boolean = false,
     val localFilePath: String? = null,
+
+    // ── Library sync ────────────────────────────────────────────────────────────────────────
+    // Only meaningful for LOCAL tracks. All nullable: a track that has never been considered for
+    // upload simply has none of it.
+
+    /** File size in bytes, from MediaStore. The server needs it to plan a transfer. */
+    val sizeBytes: Long? = null,
+    /** Extension of the real filename, for the name the server files it under. */
+    val fileExtension: String? = null,
+    /** Album artist, which is what a compilation should be shelved by rather than track artist. */
+    val albumArtist: String? = null,
+    /**
+     * SHA-256 of the file's bytes — the identity Agro's library index keys on.
+     *
+     * Filled in lazily by the hashing worker, not at scan time: hashing an entire library at once
+     * would take minutes and burn battery for a feature the user may never turn on.
+     */
+    val contentHash: String? = null,
+    /**
+     * When the server confirmed it holds these exact bytes.
+     *
+     * This is what makes offering to delete the local copy safe — without a confirmation there is
+     * no evidence the file exists anywhere else.
+     */
+    val syncedAt: Long? = null,
+
     val playCount: Int = 0,
     val lastPlayedTimestamp: Long? = null,
     val addedTimestamp: Long = System.currentTimeMillis()
@@ -79,7 +110,15 @@ data class TrackEntity(
         isCached = isCached,
         isDownloaded = isDownloaded,
         playCount = playCount,
-        lastPlayedTimestamp = lastPlayedTimestamp
+        lastPlayedTimestamp = lastPlayedTimestamp,
+        // Round-tripped through extraData so the sync layer can read them without every other
+        // caller of UnifiedTrack paying for four more fields on the model.
+        extraData = buildMap {
+            sizeBytes?.let { put(EXTRA_SIZE_BYTES, it.toString()) }
+            fileExtension?.let { put(EXTRA_EXTENSION, it) }
+            albumArtist?.let { put(EXTRA_ALBUM_ARTIST, it) }
+            contentHash?.let { put(EXTRA_CONTENT_HASH, it) }
+        }
     )
 
     /** Backend metadata only — see [TrackSourceFields] for why user state is excluded. */
@@ -129,6 +168,10 @@ data class TrackEntity(
             isDownloaded = track.isDownloaded,
             isLibrary = isLibrary,
             localFilePath = localFilePath,
+            sizeBytes = track.extraData[EXTRA_SIZE_BYTES]?.toLongOrNull(),
+            fileExtension = track.extraData[EXTRA_EXTENSION],
+            albumArtist = track.extraData[EXTRA_ALBUM_ARTIST],
+            contentHash = track.extraData[EXTRA_CONTENT_HASH],
             playCount = track.playCount,
             lastPlayedTimestamp = track.lastPlayedTimestamp
         )

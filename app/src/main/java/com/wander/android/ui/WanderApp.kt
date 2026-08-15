@@ -21,16 +21,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.wander.android.core.permissions.rememberPermissionGate
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.ui.agro.AgroSessionViewModel
+import com.wander.android.ui.components.ResumeHandoffCard
+import com.wander.android.ui.components.SyncOfferCard
+import com.wander.android.ui.components.launchShareSheet
 import com.wander.android.ui.components.player.MiniPlayerGap
 import com.wander.android.ui.components.player.MiniPlayerHeight
 import com.wander.android.ui.components.player.PlayerSheet
@@ -41,7 +47,6 @@ import com.wander.android.ui.navigation.TopLevelDestination
 import com.wander.android.ui.navigation.WanderNavigationBar
 import com.wander.android.ui.navigation.wanderNavGraph
 import kotlinx.coroutines.launch
-import java.net.URLEncoder
 
 /**
  * The app shell: a bottom bar, the nav graph, and a player sheet overlaying both.
@@ -63,11 +68,16 @@ fun WanderApp(
     val currentRoute = backStackEntry?.destination?.route
 
     val playback by playerConnection.state.collectAsStateWithLifecycle()
-    val showChrome = remember(currentRoute) { currentRoute?.substringBefore("?") in Routes.topLevel }
+    val showChrome = remember(currentRoute) {
+        currentRoute?.substringBefore("?") in Routes.withChrome
+    }
     // Derived, not read straight off `playback`: PlaybackState carries isBuffering and durationMs,
     // which flip constantly while streaming, and every one of those recomposed this composable —
     // which reallocates contentPadding and so rebuilds the whole nav graph (see below).
     val hasTrack by remember { derivedStateOf { playback.currentTrack != null } }
+
+    /** Whether sound is actually coming out here, which is what decides the resume offer. */
+    val isPlayingHere by remember { derivedStateOf { playback.isPlaying } }
 
     val scope = rememberCoroutineScope()
     val sheetState = rememberPlayerSheetState()
@@ -77,6 +87,55 @@ fun WanderApp(
         playerConnection.errors.collect { message ->
             snackbarHostState.showSnackbar(message, withDismissAction = true)
         }
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.writeErrors.collect { message ->
+            snackbarHostState.showSnackbar(message, withDismissAction = true)
+        }
+    }
+
+    // Share links are minted from four different screens; the sheet is raised once, here, because
+    // that is where an Activity context is in reach.
+    val context = LocalContext.current
+    LaunchedEffect(viewModel, context) {
+        viewModel.shareLinks.collect { link -> context.launchShareSheet(link) }
+    }
+    LaunchedEffect(viewModel) {
+        viewModel.shareErrors.collect { message ->
+            snackbarHostState.showSnackbar(message, withDismissAction = true)
+        }
+    }
+    LaunchedEffect(viewModel) {
+        viewModel.syncErrors.collect { message ->
+            snackbarHostState.showSnackbar(message, withDismissAction = true)
+        }
+    }
+
+    // Agro live session updates, held only while the app is on screen — see AgroSessionRepository.
+    val agroViewModel: AgroSessionViewModel = hiltViewModel()
+    val incomingHandoff by agroViewModel.incomingHandoff.collectAsStateWithLifecycle()
+    val isResuming by agroViewModel.isResuming.collectAsStateWithLifecycle()
+    val agroDevices by agroViewModel.devices.collectAsStateWithLifecycle()
+    val agroError by agroViewModel.error.collectAsStateWithLifecycle()
+    val sessionArtwork by agroViewModel.sessionArtwork.collectAsStateWithLifecycle()
+    val syncOffer by viewModel.syncOffer.collectAsStateWithLifecycle()
+    val isFetchingSync by viewModel.isFetchingSync.collectAsStateWithLifecycle()
+
+    LifecycleStartEffect(agroViewModel) {
+        // Coming back to a silent Wanda is exactly when "that other device has something going —
+        // pick it up?" is worth saying again, so a dismissal from an earlier visit is cleared.
+        if (!playerConnection.state.value.isPlaying) agroViewModel.allowReoffer()
+        // Cheap and metadata-only, so asking on every foreground costs nothing.
+        viewModel.refreshSyncOffer()
+        val job = scope.launch { agroViewModel.observeLiveUpdates() }
+        onStopOrDispose { job.cancel() }
+    }
+
+    LaunchedEffect(agroError) {
+        val message = agroError ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(message, withDismissAction = true)
+        agroViewModel.clearError()
     }
 
     // Measured, not assumed: ShortNavigationBar is shorter than the classic bar and its height
@@ -138,15 +197,64 @@ fun WanderApp(
                 onExpand = { scope.launch { sheetState.expand() } },
                 onCollapse = { scope.launch { sheetState.collapse() } },
                 onOpenQueue = { navController.navigate(Routes.QUEUE) },
-                onNavigateToSearch = { query ->
+                // The sheet collapses first: the destination sits underneath it, and navigating
+                // while the player is still expanded left the user staring at the player.
+                onOpenArtist = { artist ->
                     scope.launch { sheetState.collapse() }
-                    val encoded = URLEncoder.encode(query, "UTF-8")
-                    navController.navigate("${TopLevelDestination.SEARCH.route}?query=$encoded") {
-                        popUpTo(navController.graph.startDestinationId) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+                    navController.navigate(Routes.artist(artist))
+                },
+                onOpenAlbum = { albumId ->
+                    scope.launch { sheetState.collapse() }
+                    navController.navigate(Routes.album(albumId))
                 }
+            )
+        }
+
+        // Sits above the resume card's slot: both are bottom-anchored offers, and the resume card
+        // only appears while idle, so in practice only one is ever up.
+        if (syncOffer.isNotEmpty() && showChrome) {
+            SyncOfferCard(
+                count = syncOffer.size,
+                sample = remember(syncOffer) {
+                    syncOffer.take(3).map { "${it.artist} — ${it.title}" }
+                },
+                isFetching = isFetchingSync,
+                onAccept = viewModel::acceptSyncOffer,
+                onDismiss = viewModel::dismissSyncOffer,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 12.dp)
+                    .padding(
+                        bottom = navBarHeight + 12.dp +
+                            if (hasTrack) MiniPlayerHeight + MiniPlayerGap else 0.dp
+                    )
+            )
+        }
+
+        // Offered whenever this device is idle — not merely when it has never played anything.
+        // The gate used to be "no track loaded", and a track stays loaded after it finishes, so
+        // the card appeared exactly once per launch and never came back.
+        val handoff = incomingHandoff
+        if (handoff != null && !isPlayingHere && showChrome) {
+            ResumeHandoffCard(
+                handoff = handoff,
+                deviceName = remember(handoff, agroDevices) {
+                    agroDevices.firstOrNull { it.deviceId == handoff.deviceId }?.petname
+                        ?: "another device"
+                },
+                isResuming = isResuming,
+                artworkUrl = sessionArtwork,
+                onResume = { agroViewModel.resume(handoff) },
+                onDismiss = { agroViewModel.dismiss(handoff) },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 12.dp)
+                    // Clears the docked strip when one is up, so the card never covers the player
+                    // it is offering to replace.
+                    .padding(
+                        bottom = navBarHeight + 12.dp +
+                            if (hasTrack) MiniPlayerHeight + MiniPlayerGap else 0.dp
+                    )
             )
         }
 

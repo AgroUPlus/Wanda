@@ -90,13 +90,28 @@ class PlayerConnection @Inject constructor(
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, PlaybackState())
 
+    /** A play request that arrived before the controller existed. See [play]. */
+    private data class PendingPlay(
+        val tracks: List<UnifiedTrack>,
+        val startIndex: Int,
+        val startPositionMs: Long
+    )
+
+    private var pendingPlay: PendingPlay? = null
+
     /** Connects to the service. Idempotent; safe to call from `Activity.onStart`. */
     fun connect() {
         if (_controller.value != null) return
         val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
         val future = MediaController.Builder(context, token).buildAsync()
         future.addListener(
-            { _controller.value = runCatching { future.get() }.getOrNull() },
+            {
+                _controller.value = runCatching { future.get() }.getOrNull()
+                pendingPlay?.let { queued ->
+                    pendingPlay = null
+                    play(queued.tracks, queued.startIndex, queued.startPositionMs)
+                }
+            },
             MoreExecutors.directExecutor()
         )
     }
@@ -110,11 +125,23 @@ class PlayerConnection @Inject constructor(
 
     // ── Commands ────────────────────────────────────────────────────────────────────────────
 
-    fun play(tracks: List<UnifiedTrack>, startIndex: Int = 0) {
-        val ctrl = _controller.value ?: return
+    /**
+     * [startPositionMs] is handed to Media3 with the queue rather than seeked to afterwards —
+     * a `seekTo` after `prepare()` races the initial buffer and can start the track from zero.
+     * Resuming another device's session (see `AgroSessionRepository`) is what needs it.
+     */
+    fun play(tracks: List<UnifiedTrack>, startIndex: Int = 0, startPositionMs: Long = 0L) {
         if (tracks.isEmpty()) return
+        val ctrl = _controller.value ?: run {
+            // Resuming a session can be the first thing that happens after a cold start, before
+            // the controller has finished binding. Dropping the request there is what made resume
+            // look like it did nothing at all; instead, connect and replay it once bound.
+            pendingPlay = PendingPlay(tracks, startIndex, startPositionMs)
+            connect()
+            return
+        }
         tracks.forEach { trackCache[it.id] = it }
-        ctrl.setMediaItems(tracks.map(UnifiedTrack::toMediaItem), startIndex, 0L)
+        ctrl.setMediaItems(tracks.map(UnifiedTrack::toMediaItem), startIndex, startPositionMs)
         ctrl.prepare()
         ctrl.play()
     }
@@ -235,6 +262,15 @@ private fun String.asActionableMessage(): String = when {
 
     contains("no playable audio", ignoreCase = true) ->
         "This track isn't playable from YouTube Music."
+
+    // A signature or throttling-nonce transform failing is transient — YouTube rotated its player
+    // JS — and retrying picks up the new one, which is very different advice from "unplayable".
+    contains("unscramble", ignoreCase = true) ||
+        contains("throttling parameter", ignoreCase = true) ->
+        "Couldn't prepare the YouTube stream. Try again in a moment."
+
+    contains("will not play this track", ignoreCase = true) ->
+        "YouTube Music won't play this track here."
 
     contains("Response code: 403") || contains("Response code: 410") ->
         "Stream expired. Play it again to refresh it."

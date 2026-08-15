@@ -1,7 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Cleartext is off everywhere. A self-hosted Navidrome reachable only over plain HTTP is a
-  deliberate, per-domain exception the user adds here; nothing is downgraded silently.
+  HTTPS everywhere by default. Cleartext is opted into per host, never globally: a blanket
+  cleartextTrafficPermitted="true" would let any request in the app fall back to plain HTTP,
+  including the ones that carry credentials.
+
+  Android resolves this policy from static XML with no runtime API, so every plain-HTTP host has
+  to be named at build time. Only development loopbacks are listed here, and neither leaves the
+  device: `localhost`/`127.0.0.1` is the `adb reverse tcp:8700 tcp:8700` flow, and `10.0.2.2` is
+  the emulator's route to its host machine.
+
+  A self-hosted Navidrome or Agro on the LAN needs HTTPS. Put it behind a reverse proxy with a
+  real certificate — that is the supported setup and needs no exception here at all. If you must
+  reach one over plain HTTP, add its literal address to the block below in your own build; do not
+  commit it, because a cleartext exception baked into a released APK applies to whatever happens
+  to sit at that address on *someone else's* network.
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false">
@@ -9,4 +21,10 @@
             <certificates src="system" />
         </trust-anchors>
     </base-config>
+
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
 </network-security-config>

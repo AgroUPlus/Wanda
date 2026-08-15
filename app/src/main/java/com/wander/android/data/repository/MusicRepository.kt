@@ -17,6 +17,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -33,8 +36,14 @@ class MusicRepository @Inject constructor(
     private val secureStorage: SecureStorage,
     val sources: Set<@JvmSuppressWildcards IMusicSource>
 ) {
-    /** Sources that are configured *and* not muted by offline mode. */
-    private fun activeSources(): List<IMusicSource> {
+    /**
+     * Sources that are configured *and* not muted by offline mode.
+     *
+     * Internal rather than private so [RecommendationRepository] applies the same rule — a source
+     * the user signed out of, or that offline mode has muted, must not be asked for a Home shelf
+     * either.
+     */
+    internal fun activeSources(): List<IMusicSource> {
         val offline = secureStorage.isOfflineMode.value
         return sources.filter { source ->
             source.isConfigured.value && (!offline || source.sourceType == SourceType.LOCAL)
@@ -134,12 +143,18 @@ class MusicRepository @Inject constructor(
      * cached but never enter the library, and duplicates of the same recording across backends
      * collapse to the best-ranked source.
      */
-    suspend fun searchAllSources(query: String): List<UnifiedTrack> = coroutineScope {
+    suspend fun searchAllSources(
+        query: String,
+        onlySources: Set<SourceType>? = null
+    ): List<UnifiedTrack> = coroutineScope {
         if (query.isBlank()) return@coroutineScope emptyList()
 
         val cached = trackDao.searchTracks(query).map(TrackEntity::toUnifiedTrack)
         val remote = activeSources()
             .filter { it.capabilities.search }
+            // Restricting *which sources are asked* rather than filtering their results is the
+            // point: a slow backend the user turned off must not hold the whole search up.
+            .filter { onlySources == null || it.sourceType in onlySources }
             .map { source -> async { source.search(query).getOrDefault(emptyList()) } }
             .flatMap { it.await() }
 
@@ -149,13 +164,99 @@ class MusicRepository @Inject constructor(
 
     // ── Writes ──────────────────────────────────────────────────────────────────────────────
 
+    /**
+     * The set of liked track ids, so a screen holding its own list of tracks (search results, the
+     * queue, Now Playing) can render the heart from Room instead of from the snapshot it fetched.
+     * Without this a like wrote to Room correctly but the icon never changed.
+     */
+    fun getLikedTrackIdsFlow(): Flow<Set<String>> =
+        trackDao.getLikedTrackIdsFlow().map { it.toSet() }
+
+    /**
+     * [track] may be a search or radio result that Room has never seen, and the UPDATE behind
+     * `setLiked` silently does nothing for a row that does not exist — so persist it first.
+     */
     suspend fun toggleLike(track: UnifiedTrack): Result<Unit> = withContext(Dispatchers.IO) {
-        val liked = !track.isLiked
+        val liked = !isLiked(track)
+        trackDao.upsertTracks(listOf(TrackEntity.fromUnifiedTrack(track)))
         trackDao.setLiked(track.id, liked)
         val source = sourceFor(track.source)
         if (source == null || !source.capabilities.likes) return@withContext Result.success(Unit)
-        source.setLiked(track.id, liked).onFailure { trackDao.setLiked(track.id, !liked) }
+
+        // The local like stands even when the backend refuses it. Reverting looked exactly like a
+        // double tap — the heart filled, then emptied a moment later — and threw away a choice the
+        // user had made, for a backend they may not even be signed into. Room is the source of
+        // truth for the library; the failure is reported instead of undoing the write.
+        source.setLiked(track.id, liked).onFailure { cause ->
+            _writeErrors.tryEmit(
+                cause.message ?: "Couldn't sync that like to ${source.displayName}."
+            )
+        }
+        Result.success(Unit)
     }
+
+    /**
+     * Failures from writes the user has already seen succeed locally — a like that could not be
+     * mirrored to its backend, say. Surfaced app-wide rather than swallowed.
+     */
+    private val _writeErrors = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val writeErrors: SharedFlow<String> = _writeErrors.asSharedFlow()
+
+    /** Room, not the passed-in copy: callers hold snapshots that go stale as soon as a like lands. */
+    private suspend fun isLiked(track: UnifiedTrack): Boolean =
+        trackDao.getTrackById(track.id)?.isLiked ?: track.isLiked
+
+    /**
+     * Finds a track this device can actually play from another device's description of it.
+     *
+     * Order matters, and it is deliberately **source-first**. A track handed over from Wander
+     * playing your own Navidrome carries a `navidrome:` id: that same file is what should play
+     * here, at your own server's quality — not a YouTube upload of the same song that happens to
+     * rank first in a cross-source search. So:
+     *
+     * 1. Room, by exact id — the track is already known, nothing to look up.
+     * 2. The backend the id belongs to, if this device has it configured. `navidrome:42` means
+     *    track 42 on the Navidrome both devices share, so it can be fetched directly.
+     * 3. Only then a cross-source search on title and artist, preferring a hit from the originating
+     *    source, then by source priority (local, then Navidrome, then the streaming backends).
+     *
+     * Step 3 is what keeps a handoff working when the other device played from a backend this one
+     * does not have at all.
+     */
+    suspend fun resolveTrack(
+        id: String,
+        title: String,
+        artist: String
+    ): UnifiedTrack? = withContext(Dispatchers.IO) {
+        trackDao.getTrackById(id)?.toUnifiedTrack()?.let { return@withContext it }
+
+        val originating = SourceType.entries.firstOrNull { id.startsWith(it.idPrefix) }
+
+        originating?.let(::sourceFor)
+            ?.takeIf { it.isConfigured.value }
+            ?.getTrack(id)
+            ?.getOrNull()
+            ?.let { return@withContext it }
+
+        val candidates = searchAllSources("$title $artist")
+            .filter { it.title.matches(title) }
+        candidates.firstOrNull { it.id == id }
+            ?: candidates
+                .filter { it.artist.matches(artist) }
+                .minByOrNull { candidate ->
+                    // Same backend the session came from wins outright; otherwise the usual
+                    // source ranking decides.
+                    if (candidate.source == originating) -1 else candidate.source.priority
+                }
+            ?: candidates.firstOrNull()
+    }
+
+    /** Titles differ by punctuation and remaster suffixes across backends more often than not. */
+    private fun String.matches(other: String): Boolean =
+        normalisedForMatch() == other.normalisedForMatch()
+
+    private fun String.normalisedForMatch(): String =
+        lowercase().filter { it.isLetterOrDigit() || it.isWhitespace() }.trim()
 
     // ── Remote browsing ─────────────────────────────────────────────────────────────────────
 
@@ -210,41 +311,6 @@ class MusicRepository @Inject constructor(
             )
             .take(limit)
     }
-
-    suspend fun getRecentlyPlayed(limit: Int = 20): List<UnifiedTrack> = withContext(Dispatchers.IO) {
-        trackDao.getRecentlyPlayedTracks(limit).map(TrackEntity::toUnifiedTrack)
-    }
-
-    suspend fun getTopTracks(limit: Int = 20): List<UnifiedTrack> = withContext(Dispatchers.IO) {
-        trackDao.getTopPlayedTracks(limit).map(TrackEntity::toUnifiedTrack)
-    }
-
-    suspend fun getLikedTracks(limit: Int = 20): List<UnifiedTrack> = withContext(Dispatchers.IO) {
-        trackDao.getLikedTracksList(limit).map(TrackEntity::toUnifiedTrack)
-    }
-
-    /** In the library but never listened to. */
-    suspend fun getNeverPlayed(limit: Int = 20): List<UnifiedTrack> = withContext(Dispatchers.IO) {
-        trackDao.getNeverPlayedTracks(limit).map(TrackEntity::toUnifiedTrack)
-    }
-
-    /** Recently added, restricted to one backend, for Home's per-source shelves. */
-    suspend fun getRecentBySource(source: SourceType, limit: Int = 12): List<UnifiedTrack> =
-        withContext(Dispatchers.IO) {
-            trackDao.getRecentlyAddedInSource(source, limit).map(TrackEntity::toUnifiedTrack)
-        }
-
-    /**
-     * Recently played, one track per album, so the shelf reads as "records you were listening to"
-     * rather than repeating six tracks off the same one.
-     */
-    suspend fun getRecentAlbumStarters(limit: Int = 12): List<UnifiedTrack> =
-        withContext(Dispatchers.IO) {
-            trackDao.getRecentlyPlayedTracks(limit * 4)
-                .map(TrackEntity::toUnifiedTrack)
-                .distinctBy { it.album?.takeIf { name -> name.isNotBlank() } ?: it.id }
-                .take(limit)
-        }
 
     /** The backends the user actually has set up, for building per-source Home shelves. */
     fun configuredSources(): List<SourceType> = activeSources().map { it.sourceType }

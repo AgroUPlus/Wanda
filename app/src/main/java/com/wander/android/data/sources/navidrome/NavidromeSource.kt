@@ -10,6 +10,8 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.IMusicSource
 import com.wander.android.data.sources.SourceCapabilities
 import com.wander.android.data.sources.StreamInfo
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,7 +35,8 @@ class NavidromeSource @Inject constructor(
         likes = true,
         scrobble = true,
         radio = true,
-        lyrics = true
+        lyrics = true,
+        share = true
     )
 
     override val isConfigured: StateFlow<Boolean> = secureStorage.navidromeConfigured
@@ -72,6 +75,11 @@ class NavidromeSource @Inject constructor(
     override suspend fun search(query: String) =
         apiClient.search3(query).map { result -> result.song.orEmpty().map { it.toUnified() } }
 
+    /** Resolves a `navidrome:` id straight off the server, so a handed-over session plays the
+     * user's own file rather than a lookalike found by searching. */
+    override suspend fun getTrack(trackId: String): Result<UnifiedTrack?> =
+        apiClient.getSong(trackId.removePrefix(PREFIX)).map { it?.toUnified() }
+
     override suspend fun getStreamInfo(trackId: String): Result<StreamInfo> {
         if (!apiClient.isConfigured) return Result.failure(IllegalStateException("Navidrome not configured"))
         return Result.success(
@@ -103,12 +111,25 @@ class NavidromeSource @Inject constructor(
     override suspend fun getLikedTracks(limit: Int, offset: Int) =
         apiClient.getStarred2().map { starred -> starred.song.orEmpty().map { it.toUnified() } }
 
-    override suspend fun getRecentTracks(limit: Int) =
-        apiClient.getAlbumList2(type = "recent", size = RECENT_ALBUMS).mapCatching { albums ->
-            albums.flatMap { album ->
-                apiClient.getAlbum(album.id).getOrNull()?.song.orEmpty().map { it.toUnified() }
-            }.take(limit)
+    /**
+     * Recently *added*, which in Subsonic terms is `newest`.
+     *
+     * This asked for `recent`, which the Subsonic API defines as recently **played** — so the
+     * library could only ever contain albums the user had already listened to, and a freshly
+     * imported record never appeared until it was found by search and played once.
+     *
+     * The album fetches run in parallel: at [RECENT_ALBUMS] albums, doing them in sequence made a
+     * library refresh take as long as the slowest link in a chain of round-trips.
+     */
+    override suspend fun getRecentTracks(limit: Int) = coroutineScope {
+        apiClient.getAlbumList2(type = "newest", size = RECENT_ALBUMS).mapCatching { albums ->
+            albums
+                .map { album -> async { apiClient.getAlbum(album.id).getOrNull()?.song.orEmpty() } }
+                .flatMap { it.await() }
+                .map { it.toUnified() }
+                .take(limit)
         }
+    }
 
     override suspend fun getAlbums(limit: Int, offset: Int) =
         apiClient.getAlbumList2(type = "alphabeticalByName", size = limit)
@@ -138,6 +159,12 @@ class NavidromeSource @Inject constructor(
             .map { detail -> detail.entry.orEmpty().map { it.toUnified() } }
 
     // ── Writes ──────────────────────────────────────────────────────────────────────────────
+
+    /** See [SubsonicApiClient.startScan] — called after library sync adds files to the server. */
+    suspend fun startScan(): Result<Unit> = apiClient.startScan()
+
+    override suspend fun createShareLink(trackId: String, description: String): Result<String> =
+        apiClient.createShare(listOf(trackId.removePrefix(PREFIX)), description)
 
     override suspend fun setLiked(trackId: String, liked: Boolean): Result<Unit> {
         val id = trackId.removePrefix(PREFIX)
@@ -183,6 +210,6 @@ class NavidromeSource @Inject constructor(
     )
 
     private companion object {
-        const val RECENT_ALBUMS = 8
+        const val RECENT_ALBUMS = 25
     }
 }

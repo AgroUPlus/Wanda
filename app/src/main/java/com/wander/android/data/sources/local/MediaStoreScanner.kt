@@ -3,6 +3,7 @@ package com.wander.android.data.sources.local
 import android.content.ContentUris
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
@@ -13,6 +14,20 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private val ALBUM_ART_URI: Uri = Uri.parse("content://media/external/audio/albumart")
+
+/**
+ * Extra fields the library-sync feature needs and nothing else does.
+ *
+ * `UnifiedTrack.extraData` rather than new fields on the model: the model is serialised into every
+ * `MediaItem` in the playback queue, so a field added for one feature is carried by every track in
+ * memory whether or not that feature is on.
+ */
+const val EXTRA_SIZE_BYTES = "sizeBytes"
+const val EXTRA_EXTENSION = "extension"
+const val EXTRA_ALBUM_ARTIST = "albumArtist"
+
+/** SHA-256 of the file's bytes, filled in lazily by the hashing worker rather than at scan time. */
+const val EXTRA_CONTENT_HASH = "contentHash"
 
 data class MediaStoreScan(
     val tracks: List<UnifiedTrack>,
@@ -43,8 +58,22 @@ class MediaStoreScanner @Inject constructor(
             MediaStore.Audio.Media.TRACK,
             MediaStore.Audio.Media.YEAR,
             MediaStore.Audio.Media.MIME_TYPE,
-            MediaStore.Audio.Media.DATE_MODIFIED
-        )
+            MediaStore.Audio.Media.DATE_MODIFIED,
+            // For library sync: the server files by album artist and disc, and needs the size to
+            // plan a transfer. DISPLAY_NAME supplies the extension for the archived filename —
+            // deriving one from the MIME type guesses wrong on the m4a/mp4 pair in particular.
+            MediaStore.Audio.Media.SIZE,
+            MediaStore.Audio.Media.DISPLAY_NAME
+        ) + if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Added in API 30. Below that they simply are not available, and the server falls back
+            // to the track artist and an absent disc number.
+            arrayOf(
+                MediaStore.Audio.Media.ALBUM_ARTIST,
+                MediaStore.Audio.Media.DISC_NUMBER
+            )
+        } else {
+            emptyArray()
+        }
         val selection = buildString {
             append("${MediaStore.Audio.Media.IS_MUSIC} != 0")
             if (sinceSeconds > 0L) append(" AND ${MediaStore.Audio.Media.DATE_MODIFIED} > ?")
@@ -71,6 +100,11 @@ class MediaStoreScanner @Inject constructor(
             val yearCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
             val mimeCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.MIME_TYPE)
             val modifiedCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED)
+            val sizeCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
+            val nameCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
+            // getColumnIndex, not ...OrThrow: these are absent below API 30 by design.
+            val albumArtistCol = c.getColumnIndex(MediaStore.Audio.Media.ALBUM_ARTIST)
+            val discCol = c.getColumnIndex(MediaStore.Audio.Media.DISC_NUMBER)
 
             while (c.moveToNext()) {
                 val id = c.getLong(idCol)
@@ -90,10 +124,27 @@ class MediaStoreScanner @Inject constructor(
                         .withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
                         .toString(),
                     trackNumber = c.getInt(trackCol).takeIf { it > 0 },
+                    discNumber = discCol.takeIf { it >= 0 }
+                        ?.let { c.getInt(it) }
+                        ?.takeIf { it > 0 },
                     year = c.getInt(yearCol).takeIf { it > 0 },
                     format = c.getString(mimeCol),
                     isDownloaded = true,
-                    isCached = true
+                    isCached = true,
+                    // Carried in extraData rather than as first-class fields: they exist for
+                    // library sync and nothing in playback or the UI reads them, so widening
+                    // UnifiedTrack for them would put them in every MediaItem in the queue.
+                    extraData = buildMap {
+                        c.getLong(sizeCol).takeIf { it > 0 }?.let { put(EXTRA_SIZE_BYTES, it.toString()) }
+                        c.getString(nameCol)
+                            ?.substringAfterLast('.', "")
+                            ?.takeIf { it.isNotBlank() && it.length <= 8 }
+                            ?.let { put(EXTRA_EXTENSION, it.lowercase()) }
+                        albumArtistCol.takeIf { it >= 0 }
+                            ?.let { c.getString(it) }
+                            ?.takeIf { it.isNotBlank() }
+                            ?.let { put(EXTRA_ALBUM_ARTIST, it) }
+                    }
                 )
             }
         }
