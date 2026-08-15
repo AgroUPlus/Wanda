@@ -60,8 +60,9 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Two kinds of link arrive here: an `agro:` pairing QR, and a YouTube/YouTube Music track
-     * someone shared. Anything else is left alone.
+     * Three kinds of link arrive here: an `agro:` pairing QR, a YouTube/YouTube Music track
+     * someone shared, and a `wanda://listen` handoff from a share-domain redirect page — the last
+     * two being the same track wearing a different URL. Anything else is left alone.
      */
     private fun handleIntent(intent: Intent?) {
         val uri = intent?.data ?: return
@@ -71,9 +72,9 @@ class MainActivity : ComponentActivity() {
             // Wanda offers itself for every YouTube link, but only *track* links have anything
             // behind them here. Landing silently on Home would read as the app having failed to
             // open the thing that was tapped.
-            uri.scheme == "https" -> Toast.makeText(
+            uri.scheme == "https" || uri.scheme == "wanda" -> Toast.makeText(
                 this,
-                "That YouTube link isn't a track Wanda can play.",
+                "That link isn't a track Wanda can play.",
                 Toast.LENGTH_LONG
             ).show()
         }

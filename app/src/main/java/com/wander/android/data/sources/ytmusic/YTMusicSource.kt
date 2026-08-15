@@ -36,7 +36,8 @@ class YTMusicSource @Inject constructor(
         playlists = true,
         likes = true,
         radio = true,
-        recommendations = true
+        recommendations = true,
+        share = true
     )
 
     /**
@@ -107,6 +108,19 @@ class YTMusicSource @Inject constructor(
     override suspend fun getRecommendations(): Result<List<RecommendedShelf>> =
         innerTube.home().map { root -> root.homeShelves() }
 
+    /**
+     * The canonical watch URL for the video, which is what YouTube Music's own share sheet hands
+     * out. No request is made and nothing is minted: unlike a Navidrome share — a token the server
+     * has to create — this link already exists and plays for anyone, signed in or not.
+     */
+    override suspend fun createShareLink(trackId: String, description: String): Result<String> {
+        val videoId = trackId.removePrefix(YTM_PREFIX)
+        if (videoId.isBlank() || videoId == trackId) {
+            return Result.failure(IllegalArgumentException("Not a YouTube Music track: $trackId"))
+        }
+        return Result.success("$WATCH_URL$videoId")
+    }
+
     override suspend fun getLikedTracks(limit: Int, offset: Int): Result<List<UnifiedTrack>> =
         innerTube.browse(LIKED_BROWSE_ID).map { root ->
             root.responsiveListItems().mapNotNull(::parseResponsiveListItem).drop(offset).take(limit)
@@ -153,5 +167,8 @@ class YTMusicSource @Inject constructor(
     private companion object {
         const val LIKED_BROWSE_ID = "FEmusic_liked_videos"
         const val LIBRARY_ALBUMS_BROWSE_ID = "FEmusic_liked_albums"
+
+        /** `music.` rather than plain youtube.com, so the link opens in the right app. */
+        const val WATCH_URL = "https://music.youtube.com/watch?v="
     }
 }

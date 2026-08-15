@@ -20,14 +20,22 @@ import javax.inject.Singleton
  */
 @Singleton
 class LinkRepository @Inject constructor(
-    private val musicRepository: MusicRepository
+    private val musicRepository: MusicRepository,
+    private val shareLinkRewriter: ShareLinkRewriter
 ) {
 
     /** Whether [uri] is a link this app can do something with. Cheap, no network. */
-    fun canOpen(uri: Uri): Boolean = youTubeVideoId(uri) != null
+    fun canOpen(uri: Uri): Boolean = youTubeVideoId(target(uri)) != null
+
+    /**
+     * The link itself, or what it stands for. A link shared through the user's own domain wraps
+     * one of these, so it has to be unwrapped before anything can be made of it — otherwise your
+     * own shared links were the one kind Wanda could not open.
+     */
+    private fun target(uri: Uri): Uri = shareLinkRewriter.unwrap(uri) ?: uri
 
     suspend fun resolve(uri: Uri): Result<UnifiedTrack> = withContext(Dispatchers.IO) {
-        val videoId = youTubeVideoId(uri)
+        val videoId = youTubeVideoId(target(uri))
             ?: return@withContext Result.failure(
                 IllegalArgumentException("That link doesn't point at a track Wanda can play.")
             )

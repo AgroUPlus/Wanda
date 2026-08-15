@@ -50,6 +50,11 @@ class SettingsViewModel @Inject constructor(
     val isOfflineMode: StateFlow<Boolean> = secureStorage.isOfflineMode
     val agroConnected: StateFlow<Boolean> = secureStorage.agroConfigured
 
+    /** Blank until the user names one; see [SecureStorage.shareDomain]. */
+    val shareDomain: StateFlow<String> = secureStorage.shareDomain
+
+    fun setShareDomain(domain: String) = secureStorage.setShareDomain(domain)
+
     private val _isIncognito = MutableStateFlow(secureStorage.isIncognitoMode)
     val isIncognito: StateFlow<Boolean> = _isIncognito.asStateFlow()
 
