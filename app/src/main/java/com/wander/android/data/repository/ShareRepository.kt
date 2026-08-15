@@ -21,7 +21,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class ShareRepository @Inject constructor(
-    private val musicRepository: MusicRepository
+    private val musicRepository: MusicRepository,
+    private val shareLinkRewriter: ShareLinkRewriter
 ) {
 
     private val _links = MutableSharedFlow<ShareLink>(extraBufferCapacity = 1)
@@ -40,7 +41,9 @@ class ShareRepository @Inject constructor(
             ?: return
 
         source.createShareLink(track.id, "${track.title} — ${track.artist}").fold(
-            onSuccess = { _links.tryEmit(ShareLink(track = track, url = it)) },
+            onSuccess = { url ->
+                _links.tryEmit(ShareLink(track = track, url = shareLinkRewriter.rewrite(url)))
+            },
             onFailure = {
                 // Sharing is off by default on a fresh Navidrome, and the server says so — which
                 // is a setting the user can go and change, so the reason is worth passing on.

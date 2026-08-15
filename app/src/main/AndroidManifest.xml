@@ -58,6 +58,17 @@
                 <data android:scheme="agro" />
             </intent-filter>
             <!--
+              The redirect page's "open in Wanda" button. A user's own share domain is set at
+              runtime and an intent filter is not, so the page hands the app its own scheme rather
+              than Wanda claiming every https://*/listen URL on the device to catch one domain.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="wanda" android:host="listen" />
+            </intent-filter>
+            <!--
               YouTube and YouTube Music links, so a track someone sends you opens here.
               Deliberately NOT autoVerify: Wanda plays audio and has no video, so it offers
               itself in the chooser rather than quietly taking over every YouTube link on the

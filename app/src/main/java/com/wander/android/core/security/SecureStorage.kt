@@ -112,6 +112,30 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _isMonetDynamic.value = enabled
     }
 
+    // ── Sharing ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A domain of the user's own to send share links through — `frwd.top` — or blank to share each
+     * backend's own link untouched.
+     *
+     * Stored as a bare host: whatever is typed, scheme, path and case are stripped, so the value
+     * can only ever be used to build one shape of URL.
+     */
+    private val _shareDomain = MutableStateFlow(prefs.getString(KEY_SHARE_DOMAIN, "").orEmpty())
+    val shareDomain: StateFlow<String> = _shareDomain.asStateFlow()
+
+    fun setShareDomain(domain: String) {
+        val host = domain.trim()
+            .substringAfter("://")
+            .substringBefore('/')
+            .substringBefore('?')
+            .lowercase()
+            .takeIf { it.matches(HOST) }
+            .orEmpty()
+        prefs.edit { putString(KEY_SHARE_DOMAIN, host) }
+        _shareDomain.value = host
+    }
+
     /**
      * `clear()` wipes preferences as well as credentials, so **every** flow has to be reset to the
      * value the store now actually holds. Leaving some of them stale meant a wipe left the app
@@ -233,6 +257,10 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_INCOGNITO = "key_incognito"
         private const val KEY_LOCAL_WATERMARK = "key_local_scan_watermark"
         private const val KEY_SETUP_DONE = "key_setup_complete"
+        private const val KEY_SHARE_DOMAIN = "key_share_domain"
+
+        /** A bare hostname: labels, dots, and a TLD. Anything else is not a domain to build on. */
+        private val HOST = Regex("""[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+""")
 
         fun create(context: Context): SecureStorage {
             val masterKey = MasterKey.Builder(context.applicationContext)

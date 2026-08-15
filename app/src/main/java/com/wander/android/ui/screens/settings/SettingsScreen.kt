@@ -65,6 +65,19 @@ fun SettingsScreen(
     var confirmNavidromeSignOut by rememberSaveable { mutableStateOf(false) }
     var confirmYouTubeSignOut by rememberSaveable { mutableStateOf(false) }
     var confirmAgroUnpair by rememberSaveable { mutableStateOf(false) }
+    var showShareDomainDialog by rememberSaveable { mutableStateOf(false) }
+    val shareDomain by viewModel.shareDomain.collectAsStateWithLifecycle()
+
+    if (showShareDomainDialog) {
+        ShareDomainDialog(
+            current = shareDomain,
+            onSave = { domain ->
+                viewModel.setShareDomain(domain)
+                showShareDomainDialog = false
+            },
+            onDismiss = { showShareDomainDialog = false }
+        )
+    }
 
     // Pairing succeeded: the row below now reports the connection, so the dialog has nothing left
     // to say.
@@ -246,6 +259,17 @@ fun SettingsScreen(
                 title = "Clear streaming cache",
                 subtitle = formatBytes(cacheBytes) + " in use",
                 onClick = viewModel::clearCache
+            )
+        }
+
+        item(key = "sharing") { SettingsSection("Sharing") }
+        item(key = "share_domain") {
+            SettingsRow(
+                title = "Custom share domain",
+                subtitle = shareDomain.ifBlank { null }
+                    ?.let { "Links go out as $it/listen — tap to change" }
+                    ?: "Off — share each backend's own link",
+                onClick = { showShareDomainDialog = true }
             )
         }
 
