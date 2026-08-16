@@ -19,6 +19,49 @@ interface HistoryDao {
     @Query("UPDATE history SET scrobbled = 1 WHERE historyId IN (:ids)")
     suspend fun markScrobbled(ids: List<Long>)
 
+    /**
+     * Plays not yet reported to Agro, with the metadata the fleet's statistics need.
+     *
+     * Joined rather than stored on the history row: a play is a track id and a time, and copying
+     * the title and artist into every row would be a second, staler copy of what `tracks` already
+     * holds. `INNER JOIN` because a play whose track has since been deleted from the library has
+     * nothing to report about.
+     */
+    @Query(
+        """
+        SELECT h.historyId AS historyId, h.playedAt AS playedAt, t.title AS title,
+               t.artist AS artist, t.album AS album, t.genre AS genre, t.durationMs AS durationMs
+        FROM history h
+        INNER JOIN tracks t ON t.id = h.trackId
+        WHERE h.agroSynced = 0
+        ORDER BY h.playedAt ASC
+        LIMIT :limit
+        """
+    )
+    suspend fun getPendingAgroScrobbles(limit: Int = 200): List<PendingScrobble>
+
+    @Query("UPDATE history SET agroSynced = 1 WHERE historyId IN (:ids)")
+    suspend fun markAgroSynced(ids: List<Long>)
+
+    /**
+     * Every play since a point in time, with what the track was.
+     *
+     * The local half of the statistics screen, used when no Agro server is paired. Same projection
+     * as [getPendingAgroScrobbles] and the same join for the same reason — the only difference is
+     * that this one does not care whether a play has been reported anywhere.
+     */
+    @Query(
+        """
+        SELECT h.historyId AS historyId, h.playedAt AS playedAt, t.title AS title,
+               t.artist AS artist, t.album AS album, t.genre AS genre, t.durationMs AS durationMs
+        FROM history h
+        INNER JOIN tracks t ON t.id = h.trackId
+        WHERE h.playedAt >= :since
+        ORDER BY h.playedAt ASC
+        """
+    )
+    suspend fun getHistorySince(since: Long): List<PendingScrobble>
+
     @Insert
     suspend fun recordHistory(entry: HistoryEntity): Long
 

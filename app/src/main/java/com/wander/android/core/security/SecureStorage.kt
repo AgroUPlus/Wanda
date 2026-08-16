@@ -21,6 +21,13 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     private val _isOfflineMode = MutableStateFlow(prefs.getBoolean(KEY_OFFLINE_MODE, false))
     val isOfflineMode: StateFlow<Boolean> = _isOfflineMode.asStateFlow()
 
+    /**
+     * Endless-radio queue top-up. Persisted because it was an in-memory flag on `PlayerConnection`,
+     * so a mode the user had deliberately turned on silently reset on every launch.
+     */
+    private val _isRadioMode = MutableStateFlow(prefs.getBoolean(KEY_RADIO_MODE, false))
+    val isRadioMode: StateFlow<Boolean> = _isRadioMode.asStateFlow()
+
     private val _isAmoledBlack = MutableStateFlow(prefs.getBoolean(KEY_AMOLED_BLACK, false))
     val isAmoledBlack: StateFlow<Boolean> = _isAmoledBlack.asStateFlow()
 
@@ -102,6 +109,11 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _isOfflineMode.value = enabled
     }
 
+    fun setRadioMode(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_RADIO_MODE, enabled) }
+        _isRadioMode.value = enabled
+    }
+
     fun setAmoledBlack(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_AMOLED_BLACK, enabled) }
         _isAmoledBlack.value = enabled
@@ -170,6 +182,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
             deviceId?.let { putString(KEY_AGRO_DEVICE_ID, it) }
         }
         _isOfflineMode.value = false
+        _isRadioMode.value = false
         _navidromeConfigured.value = false
         _ytMusicConfigured.value = false
         _hasCompletedSetup.value = false
@@ -280,6 +293,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_AGRO_DEVICE_ID = "key_agro_device_id"
         private const val KEY_AGRO_LIBRARY_SYNC = "key_agro_library_sync"
         private const val KEY_OFFLINE_MODE = "key_offline_mode"
+        private const val KEY_RADIO_MODE = "key_radio_mode"
         private const val KEY_AMOLED_BLACK = "key_amoled_black"
         private const val KEY_MONET_DYNAMIC = "key_monet_dynamic"
         private const val KEY_INCOGNITO = "key_incognito"

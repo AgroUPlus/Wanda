@@ -14,7 +14,6 @@ import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,13 +38,15 @@ import com.wander.android.data.model.UnifiedTrack
  * Everything here was previously reachable only by playing the track first and then finding the
  * control in the player — or, for queueing, not at all. Actions the track's source cannot perform
  * are absent rather than present-and-disabled: a source never advertises a feature it lacks.
+ *
+ * There is no "play now": tapping the row already does exactly that, and the long press is for
+ * everything tapping *cannot* do.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrackActionsSheet(
     track: UnifiedTrack,
     isLiked: Boolean,
-    onPlay: () -> Unit,
     onPlayNext: () -> Unit,
     onAddToQueue: () -> Unit,
     onStartRadio: (() -> Unit)?,
@@ -91,7 +92,6 @@ fun TrackActionsSheet(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-            SheetAction(Icons.Rounded.PlayArrow, "Play now") { onPlay(); onDismiss() }
             SheetAction(Icons.AutoMirrored.Rounded.PlaylistAdd, "Play next") { onPlayNext(); onDismiss() }
             SheetAction(Icons.AutoMirrored.Rounded.QueueMusic, "Add to queue") { onAddToQueue(); onDismiss() }
 

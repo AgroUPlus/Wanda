@@ -13,6 +13,7 @@ import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.wander.android.core.cache.DownloadScheduler
 import com.wander.android.core.network.HttpClientFactory
+import com.wander.android.core.sync.ScrobbleSyncScheduler
 import com.zemer.cipher.ZemerCipher
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -26,6 +27,7 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var downloadScheduler: DownloadScheduler
+    @Inject lateinit var scrobbleSyncScheduler: ScrobbleSyncScheduler
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -59,6 +61,8 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
     override fun onCreate() {
         super.onCreate()
         downloadScheduler.scheduleAutoDownload()
+        // Cheap and self-gating: the worker does nothing until an Agro server is paired.
+        scrobbleSyncScheduler.schedule()
         // Needed for YT Music's PO Token / signature-cipher deobfuscation (see InnerTubeClient).
         val isDebuggable = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         ZemerCipher.initialize(context = this, debugLogging = isDebuggable)

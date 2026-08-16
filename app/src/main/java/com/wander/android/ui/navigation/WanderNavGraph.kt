@@ -20,6 +20,7 @@ import com.wander.android.ui.screens.login.YouTubeLoginScreen
 import com.wander.android.ui.screens.queue.QueueScreen
 import com.wander.android.ui.screens.search.SearchScreen
 import com.wander.android.ui.screens.settings.SettingsScreen
+import com.wander.android.ui.screens.stats.StatsScreen
 import com.wander.android.ui.screens.welcome.WelcomeScreen
 
 fun NavGraphBuilder.wanderNavGraph(
@@ -30,7 +31,8 @@ fun NavGraphBuilder.wanderNavGraph(
     tabDestination(TopLevelDestination.HOME.route) {
         HomeScreen(
             contentPadding = contentPadding,
-            onOpenSettings = { navController.navigate(TopLevelDestination.SETTINGS.route) }
+            onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+            onOpenStats = { navController.navigate(Routes.STATS) }
         )
     }
 
@@ -54,7 +56,11 @@ fun NavGraphBuilder.wanderNavGraph(
         SearchScreen(contentPadding = contentPadding)
     }
 
-    tabDestination(TopLevelDestination.SETTINGS.route) {
+    tabDestination(Routes.STATS) {
+        StatsScreen(contentPadding = contentPadding)
+    }
+
+    tabDestination(Routes.SETTINGS) {
         SettingsScreen(
             contentPadding = contentPadding,
             onNavidromeLogin = { navController.navigate(Routes.NAVIDROME_LOGIN) },

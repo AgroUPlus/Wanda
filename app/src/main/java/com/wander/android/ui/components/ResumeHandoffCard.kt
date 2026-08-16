@@ -28,6 +28,11 @@ import com.wander.android.data.sources.agro.AgroHandoffState
  *
  * Shown only while this device is idle, so it can never talk over local playback. The position is
  * carried through, so resuming lands exactly where the other device is rather than at the start.
+ *
+ * [isLive] separates the two cases this card covers. A device still online is genuinely playing
+ * *now*, and "continue from" is literal. A session left behind by a device that has since closed is
+ * a bookmark, and saying "continue from that laptop" about a laptop that is switched off reads as
+ * the app being confused about what it can see.
  */
 @Composable
 internal fun ResumeHandoffCard(
@@ -36,6 +41,7 @@ internal fun ResumeHandoffCard(
     isResuming: Boolean,
     onResume: () -> Unit,
     onDismiss: () -> Unit,
+    isLive: Boolean,
     modifier: Modifier = Modifier,
     /**
      * Resolved on this device. Wander sends no `artworkUrl` — its cover URLs carry its own server
@@ -66,7 +72,11 @@ internal fun ResumeHandoffCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Continue from $deviceName",
+                    text = if (isLive) {
+                        "Continue from $deviceName"
+                    } else {
+                        "Pick up where you left off on $deviceName"
+                    },
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )

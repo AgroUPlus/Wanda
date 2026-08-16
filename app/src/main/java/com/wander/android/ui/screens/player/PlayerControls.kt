@@ -42,7 +42,11 @@ import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.RepeatMode
 
 /**
- * Transport controls and endless radio toggle with clear visual feedback.
+ * Transport controls.
+ *
+ * The radio toggle used to hang below this row, alone and last, which read as an afterthought
+ * bolted onto the bottom of the player. It now lives in the top action bar alongside the queue
+ * button — see [RadioChip] and `NowPlayingScreen`.
  */
 @Composable
 fun PlayerControls(
@@ -56,63 +60,61 @@ fun PlayerControls(
         label = "playButtonSize"
     )
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Row(
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
         modifier = modifier.fillMaxWidth()
     ) {
-        Row(
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            ToggleButton(
-                icon = Icons.Rounded.Shuffle,
-                description = "Shuffle",
-                active = state.isShuffle,
-                onClick = connection::toggleShuffle
-            )
+        ToggleButton(
+            icon = Icons.Rounded.Shuffle,
+            description = "Shuffle",
+            active = state.isShuffle,
+            onClick = connection::toggleShuffle
+        )
 
-            IconButton(onClick = connection::previous, modifier = Modifier.size(56.dp)) {
-                Icon(Icons.Rounded.SkipPrevious, contentDescription = "Previous track", modifier = Modifier.size(32.dp))
-            }
-
-            FilledIconButton(
-                onClick = connection::togglePlayPause,
-                shape = MaterialTheme.shapes.large,
-                modifier = Modifier.size(playButtonSize)
-            ) {
-                Icon(
-                    imageVector = if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                    contentDescription = if (state.isPlaying) "Pause" else "Play",
-                    modifier = Modifier.size(38.dp)
-                )
-            }
-
-            IconButton(onClick = connection::next, modifier = Modifier.size(56.dp)) {
-                Icon(Icons.Rounded.SkipNext, contentDescription = "Next track", modifier = Modifier.size(32.dp))
-            }
-
-            ToggleButton(
-                icon = when (state.repeatMode) {
-                    RepeatMode.ONE -> Icons.Rounded.RepeatOne
-                    else -> Icons.Rounded.Repeat
-                },
-                description = "Repeat",
-                active = state.repeatMode != RepeatMode.OFF,
-                onClick = connection::toggleRepeat
+        IconButton(onClick = connection::previous, modifier = Modifier.size(56.dp)) {
+            Icon(
+                Icons.Rounded.SkipPrevious,
+                contentDescription = "Previous track",
+                modifier = Modifier.size(32.dp)
             )
         }
 
-        RadioChip(
-            isRadioMode = state.isRadioMode,
-            onToggle = connection::toggleRadio,
-            modifier = Modifier.padding(top = 12.dp)
+        FilledIconButton(
+            onClick = connection::togglePlayPause,
+            shape = MaterialTheme.shapes.large,
+            modifier = Modifier.size(playButtonSize)
+        ) {
+            Icon(
+                imageVector = if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                contentDescription = if (state.isPlaying) "Pause" else "Play",
+                modifier = Modifier.size(38.dp)
+            )
+        }
+
+        IconButton(onClick = connection::next, modifier = Modifier.size(56.dp)) {
+            Icon(
+                Icons.Rounded.SkipNext,
+                contentDescription = "Next track",
+                modifier = Modifier.size(32.dp)
+            )
+        }
+
+        ToggleButton(
+            icon = when (state.repeatMode) {
+                RepeatMode.ONE -> Icons.Rounded.RepeatOne
+                else -> Icons.Rounded.Repeat
+            },
+            description = "Repeat",
+            active = state.repeatMode != RepeatMode.OFF,
+            onClick = connection::toggleRepeat
         )
     }
 }
 
+/** The endless-radio toggle, hoisted so `NowPlayingScreen` can place it in its top action bar. */
 @Composable
-private fun RadioChip(
+internal fun RadioChip(
     isRadioMode: Boolean,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier

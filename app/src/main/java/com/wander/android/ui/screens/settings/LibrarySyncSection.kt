@@ -36,8 +36,7 @@ internal fun LazyListScope.librarySyncSection(
     item(key = "library_sync_toggle") {
         SettingsToggle(
             title = "Send my music to Agro",
-            subtitle = "Uploads local files to your server, filed by artist and album. " +
-                "Runs on Wi-Fi while charging.",
+            subtitle = "Local files only, on Wi-Fi while charging",
             checked = enabled,
             onCheckedChange = onEnabledChange
         )
@@ -57,9 +56,8 @@ internal fun LazyListScope.librarySyncSection(
                     // The single most confusing state: everything is configured correctly, the
                     // counters read zero, and nothing explains why. This feature only ever sends
                     // files stored *on this device* — a library streamed from Navidrome has
-                    // nothing for it to do.
-                    "No music stored on this device, so there is nothing to send. " +
-                        "This uploads local files only — tracks you stream stay where they are."
+                    // nothing for it to do. One line is enough to say so.
+                    "Nothing to send — no music files stored on this device"
                 } else {
                     "$syncedCount of $localTrackCount local tracks on the server · " +
                         "$pendingCount still to send"
@@ -97,7 +95,7 @@ internal fun LazyListScope.librarySyncSection(
     item(key = "library_sync_now") {
         SettingsRow(
             title = "Sync now",
-            subtitle = if (progress.running) "Running…" else "Hash, report and upload straight away",
+            subtitle = if (progress.running) "Running…" else "Upload straight away",
             onClick = onSyncNow
         )
     }
@@ -108,9 +106,9 @@ internal fun LazyListScope.librarySyncSection(
             // The wording is the safety argument: only files the server has *confirmed* are
             // offered, so nothing is ever the last copy.
             subtitle = if (canDelete) {
-                "Delete the $syncedCount local files your server already holds"
+                "Delete the $syncedCount files your server already holds"
             } else {
-                "Nothing to remove yet — files appear here once the server confirms them"
+                "Nothing to remove — the server has confirmed no files yet"
             },
             onClick = onReviewDeletions,
             destructive = canDelete

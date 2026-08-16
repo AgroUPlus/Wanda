@@ -18,7 +18,7 @@ import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
 
 /** Past this many pixels, or this fling velocity, the drag counts as a skip. */
-private const val DistanceThreshold = 120f
+internal const val DistanceThreshold = 120f
 private const val VelocityThreshold = 800f
 
 /** Drags track at 70% of the finger so the gesture feels weighted rather than loose. */
@@ -70,6 +70,28 @@ internal class TrackSwipeState {
      * ever read inside layout/gesture code, never in composition.
      */
     internal var stepPx: Float = 0f
+
+    /**
+     * The cover to show *instead of* the playing track's, from the moment a skip commits until the
+     * player actually reports the new track.
+     *
+     * Skipping is asynchronous — the gesture ends here, but the new track arrives from Media3 a
+     * frame or more later. Without this the sequence was: fly the outgoing cover off, snap the
+     * carriage back, and spring the *same, still-current* cover back into the slot, only for the
+     * artwork to change underneath it once the player caught up. That is the "it moves twice, shows
+     * the current one, then the next one" bug.
+     *
+     * Holding the incoming URL here lets the commit land the filmstrip in its final position in one
+     * movement: the peek cover that slid into the slot simply stays there, pixel for pixel, and the
+     * hand-off back to playback state is invisible whenever it happens.
+     */
+    var pendingArtworkUrl by mutableStateOf<String?>(null)
+        internal set
+
+    /** Drops [pendingArtworkUrl] once playback has caught up with the skip. */
+    internal fun clearPending() {
+        pendingArtworkUrl = null
+    }
 }
 
 @Composable
@@ -89,6 +111,8 @@ internal fun Modifier.swipeToChangeTrack(
     state: TrackSwipeState,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
+    nextArtworkUrl: String?,
+    previousArtworkUrl: String?,
     exitDistance: Float = FullExitDistance
 ): Modifier {
     val scope = rememberCoroutineScope()
@@ -107,28 +131,37 @@ internal fun Modifier.swipeToChangeTrack(
                     val skipPrevious = offset > DistanceThreshold || velocity > VelocityThreshold
 
                     if (skipNext || skipPrevious) {
-                        // Carry the outgoing content off, swap, then bring the new one in from
-                        // the far side.
+                        // Slide the whole filmstrip by exactly one slot, and stop.
                         //
-                        // Exactly one filmstrip step where the peek covers have reported one:
-                        // carrying the cover further than the neighbour is spaced meant the
-                        // incoming cover arrived from two slots away, which read as skipping two
-                        // tracks. [exitDistance] is the fallback for content with no filmstrip —
-                        // the docked strip's text.
+                        // Exactly one step where the peek covers have reported one: carrying the
+                        // cover further than the neighbour is spaced meant the incoming cover
+                        // arrived from two slots away, which read as skipping two tracks.
+                        // [exitDistance] is the fallback for content with no filmstrip — the docked
+                        // strip's text.
                         val travel = state.stepPx.takeIf { it > 0f } ?: exitDistance
-                        val exit = if (skipNext) -travel else travel
-                        state.offsetX.animateTo(exit, tween(durationMillis = 140))
-                        if (skipNext) onNext() else onPrevious()
-                        state.offsetX.snapTo(-exit)
-                    }
-
-                    state.offsetX.animateTo(
-                        targetValue = 0f,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMediumLow
+                        state.offsetX.animateTo(
+                            targetValue = if (skipNext) -travel else travel,
+                            animationSpec = tween(durationMillis = 180)
                         )
-                    )
+
+                        // The neighbour is now sitting exactly in the slot. Adopt its cover and
+                        // re-zero the carriage in the same breath: the two cancel out, so nothing
+                        // moves, and the strip is already in its final state before the player has
+                        // even been told to skip.
+                        state.pendingArtworkUrl =
+                            if (skipNext) nextArtworkUrl else previousArtworkUrl
+                        state.offsetX.snapTo(0f)
+
+                        if (skipNext) onNext() else onPrevious()
+                    } else {
+                        state.offsetX.animateTo(
+                            targetValue = 0f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            )
+                        )
+                    }
                 } finally {
                     // In a `finally` because a second gesture starting mid-settle cancels this
                     // coroutine, and leaving the flag set would strand the peek covers on screen.

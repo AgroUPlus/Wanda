@@ -51,7 +51,6 @@ fun AlbumScreen(
         TrackActionsSheet(
             track = track,
             isLiked = track.isLiked,
-            onPlay = { viewModel.play(tracks.indexOf(track).coerceAtLeast(0)) },
             onPlayNext = { viewModel.playNext(track) },
             onAddToQueue = { viewModel.addToQueue(track) },
             onStartRadio = { viewModel.startRadio(track) },

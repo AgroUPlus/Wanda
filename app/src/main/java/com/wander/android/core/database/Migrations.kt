@@ -25,5 +25,20 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
     }
 }
 
+/**
+ * Adds the Agro half of the play outbox.
+ *
+ * Existing rows default to *synced* rather than pending. They predate centralised statistics, so
+ * there is no device name or client type to attribute them to and nothing on the server expecting
+ * them — uploading a year of history the moment the feature is switched on would be a large,
+ * surprising, and not especially accurate import.
+ */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE history ADD COLUMN agroSynced INTEGER NOT NULL DEFAULT 1")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_history_agroSynced ON history (agroSynced)")
+    }
+}
+
 /** Every migration, in order. Room applies whichever ones a given database still needs. */
-val WANDER_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_2_3)
+val WANDER_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_2_3, MIGRATION_3_4)

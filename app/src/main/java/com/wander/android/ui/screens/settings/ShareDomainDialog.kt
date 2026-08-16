@@ -44,8 +44,8 @@ internal fun ShareDomainDialog(
                     value = domain,
                     onValueChange = { domain = it },
                     label = { Text("Domain") },
-                    placeholder = { Text("frwd.top") },
-                    supportingText = { Text("Links become https://your-domain/listen?v=…") },
+                    placeholder = { Text("share.example.com") },
+                    supportingText = { Text("Links become https://your-domain/listen?…") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Uri,

@@ -12,7 +12,7 @@ import com.wander.android.core.database.entity.TrackEntity
 /** Constructed by Hilt in [com.wander.android.di.AppModule]. */
 @Database(
     entities = [TrackEntity::class, AlbumEntity::class, HistoryEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class WanderDatabase : RoomDatabase() {

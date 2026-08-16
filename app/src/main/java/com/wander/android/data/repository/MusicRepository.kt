@@ -1,6 +1,7 @@
 package com.wander.android.data.repository
 
 import com.wander.android.core.database.dao.AlbumDao
+import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.database.dao.HistoryDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.AlbumEntity
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -34,17 +36,22 @@ class MusicRepository @Inject constructor(
     private val albumDao: AlbumDao,
     private val historyDao: HistoryDao,
     private val secureStorage: SecureStorage,
+    private val connectivity: ConnectivityObserver,
     val sources: Set<@JvmSuppressWildcards IMusicSource>
 ) {
     /**
-     * Sources that are configured *and* not muted by offline mode.
+     * Sources that are configured *and* reachable.
+     *
+     * Two things mute a remote source: offline mode, and there being no network. The second used
+     * to be missing entirely — with the radio off, every remote source was still asked for data
+     * and every request sat there until it timed out.
      *
      * Internal rather than private so [RecommendationRepository] applies the same rule — a source
      * the user signed out of, or that offline mode has muted, must not be asked for a Home shelf
      * either.
      */
     internal fun activeSources(): List<IMusicSource> {
-        val offline = secureStorage.isOfflineMode.value
+        val offline = secureStorage.isOfflineMode.value || !connectivity.isOnline.value
         return sources.filter { source ->
             source.isConfigured.value && (!offline || source.sourceType == SourceType.LOCAL)
         }
@@ -88,6 +95,15 @@ class MusicRepository @Inject constructor(
         } ?: return@withContext Result.failure(
             IllegalArgumentException("Unrecognised track id: $trackId")
         )
+        // Checked after the local-file branch above, so downloaded tracks still play. Failing here
+        // is what turns "the track silently never starts" into a message the player can show: the
+        // resolve runs on ExoPlayer's loading thread, where an unreachable host is a long timeout
+        // rather than an error.
+        if (type != SourceType.LOCAL && !connectivity.isOnline.value) {
+            return@withContext Result.failure(
+                IOException("No network — this track is not available on this device")
+            )
+        }
         val source = sourceFor(type)
             ?: return@withContext Result.failure(IllegalStateException("$type is unavailable"))
         source.getStreamInfo(trackId)

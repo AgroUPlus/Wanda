@@ -6,6 +6,7 @@ import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.wander.android.core.network.HttpClientFactory
+import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 
 /**
@@ -44,8 +45,35 @@ internal fun UnifiedTrack.toMediaItem(): MediaItem {
 }
 
 internal fun MediaItem.toUnifiedTrack(): UnifiedTrack? {
-    val json = mediaMetadata.extras?.getString(EXTRA_TRACK_JSON) ?: return null
-    return runCatching { HttpClientFactory.jsonConfig.decodeFromString<UnifiedTrack>(json) }.getOrNull()
+    val json = mediaMetadata.extras?.getString(EXTRA_TRACK_JSON)
+    if (!json.isNullOrBlank()) {
+        val parsed = runCatching { HttpClientFactory.jsonConfig.decodeFromString<UnifiedTrack>(json) }.getOrNull()
+        if (parsed != null) return parsed
+    }
+
+    // Robust fallback: Reconstruct UnifiedTrack from MediaItem standard fields when IPC drops extras Bundle
+    val trackId = mediaId.takeIf { it.isNotBlank() } ?: requestMetadata.mediaUri?.wandaTrackId() ?: return null
+    val resolvedSource = when {
+        trackId.startsWith(SourceType.NAVIDROME.idPrefix) -> SourceType.NAVIDROME
+        trackId.startsWith(SourceType.YTMUSIC.idPrefix) -> SourceType.YTMUSIC
+        trackId.startsWith(SourceType.INTERNET_ARCHIVE.idPrefix) -> SourceType.INTERNET_ARCHIVE
+        trackId.startsWith(SourceType.LOCAL.idPrefix) -> SourceType.LOCAL
+        else -> SourceType.LOCAL
+    }
+    val trackTitle = mediaMetadata.title?.toString().takeIf { !it.isNullOrBlank() } ?: "Playing Track"
+    val trackArtist = mediaMetadata.artist?.toString().takeIf { !it.isNullOrBlank() } ?: "Unknown Artist"
+    val trackAlbum = mediaMetadata.albumTitle?.toString()
+    val trackArtwork = mediaMetadata.artworkUri?.toString()
+
+    return UnifiedTrack(
+        id = trackId,
+        source = resolvedSource,
+        title = trackTitle,
+        artist = trackArtist,
+        album = trackAlbum,
+        artworkUrl = trackArtwork,
+        streamUri = requestMetadata.mediaUri?.toString()
+    )
 }
 
 /** Extracts the track id from a placeholder URI produced by [toMediaItem]. */

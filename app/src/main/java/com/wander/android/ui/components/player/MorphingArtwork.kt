@@ -13,6 +13,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import com.wander.android.ui.components.Artwork
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
@@ -57,7 +58,8 @@ internal fun MorphingArtwork(
     swipe: TrackSwipeState,
     previousUrl: String?,
     nextUrl: String?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    alpha: () -> Float = { 1f }
 ) {
     if (!visible) return
 
@@ -74,7 +76,9 @@ internal fun MorphingArtwork(
     }
 
     Box(
-        modifier = modifier.layout { measurable, _ ->
+        modifier = modifier
+            .graphicsLayer { this.alpha = alpha() }
+            .layout { measurable, _ ->
             val rect = anchors.currentRect(mini, progress)
             val width = rect.width.roundToInt().coerceAtLeast(0)
             val height = rect.height.roundToInt().coerceAtLeast(0)
@@ -91,7 +95,9 @@ internal fun MorphingArtwork(
         }
     ) {
         Artwork(
-            url = url,
+            // While a skip is settling this is the cover the gesture already put in the slot; see
+            // [TrackSwipeState.pendingArtworkUrl].
+            url = swipe.pendingArtworkUrl ?: url,
             contentDescription = contentDescription,
             sizeDp = MorphArtworkSize,
             shape = MorphShape,
@@ -124,8 +130,16 @@ private fun PeekArtwork(
         modifier = Modifier
             .graphicsLayer {
                 // Invisible while docked and through the first half of the drag open, so the
-                // filmstrip only appears once there is room for it.
-                alpha = smoothStep(progress(), 0.5f, 0.9f)
+                // filmstrip only appears once there is room for it — and, within that, faded in
+                // proportion to how far the finger has travelled.
+                //
+                // The second factor is what stops the neighbours *popping* out of existence when a
+                // short drag is released: they used to be composed at full opacity for as long as
+                // `isSwiping` was set and simply vanish when it cleared, which read as a glitch.
+                // Tying the alpha to the live offset means they fade in with the drag and fade back
+                // out with the spring, and it costs nothing — this lambda already runs per frame.
+                val reach = abs(swipe.offsetX.value) / DistanceThreshold
+                alpha = smoothStep(progress(), 0.5f, 0.9f) * reach.coerceIn(0f, 1f)
             }
             .layout { measurable, _ ->
                 val rect = anchors.currentRect(mini, progress)
