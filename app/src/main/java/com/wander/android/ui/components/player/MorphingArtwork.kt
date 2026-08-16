@@ -76,23 +76,29 @@ internal fun MorphingArtwork(
     }
 
     Box(
+        // `graphicsLayer` goes *inside* `layout`, and the order is load-bearing. An alpha below 1
+        // forces an offscreen layer, and that layer is clipped to the bounds of the node it sits
+        // on. Outside the `layout` those bounds are this node's own box at the parent's origin,
+        // while the cover is placed far down the screen at `rect.top` — so fading it showed only
+        // the sliver where the two happened to overlap, which is the "top half of the cover"
+        // effect. Inside, the layer is the placeable itself and travels with it.
         modifier = modifier
-            .graphicsLayer { this.alpha = alpha() }
             .layout { measurable, _ ->
-            val rect = anchors.currentRect(mini, progress)
-            val width = rect.width.roundToInt().coerceAtLeast(0)
-            val height = rect.height.roundToInt().coerceAtLeast(0)
-            val placeable = measurable.measure(Constraints.fixed(width, height))
-            // The pitch the neighbours are spaced by, published so a committed swipe carries this
-            // cover off by exactly one slot instead of an arbitrary distance.
-            swipe.stepPx = rect.width + PeekGap.toPx()
-            layout(width, height) {
-                placeable.place(
-                    x = (rect.left + swipe.offsetX.value).roundToInt(),
-                    y = rect.top.roundToInt()
-                )
+                val rect = anchors.currentRect(mini, progress)
+                val width = rect.width.roundToInt().coerceAtLeast(0)
+                val height = rect.height.roundToInt().coerceAtLeast(0)
+                val placeable = measurable.measure(Constraints.fixed(width, height))
+                // The pitch the neighbours are spaced by, published so a committed swipe carries
+                // this cover off by exactly one slot instead of an arbitrary distance.
+                swipe.stepPx = rect.width + PeekGap.toPx()
+                layout(width, height) {
+                    placeable.place(
+                        x = (rect.left + swipe.offsetX.value).roundToInt(),
+                        y = rect.top.roundToInt()
+                    )
+                }
             }
-        }
+            .graphicsLayer { this.alpha = alpha() }
     ) {
         Artwork(
             // While a skip is settling this is the cover the gesture already put in the slot; see
@@ -127,20 +133,9 @@ private fun PeekArtwork(
     if (url == null) return
 
     Box(
+        // Layer inside the layout, for the reason spelled out in [MorphingArtwork] — these are
+        // placed at the same offsets and would be clipped the same way.
         modifier = Modifier
-            .graphicsLayer {
-                // Invisible while docked and through the first half of the drag open, so the
-                // filmstrip only appears once there is room for it — and, within that, faded in
-                // proportion to how far the finger has travelled.
-                //
-                // The second factor is what stops the neighbours *popping* out of existence when a
-                // short drag is released: they used to be composed at full opacity for as long as
-                // `isSwiping` was set and simply vanish when it cleared, which read as a glitch.
-                // Tying the alpha to the live offset means they fade in with the drag and fade back
-                // out with the spring, and it costs nothing — this lambda already runs per frame.
-                val reach = abs(swipe.offsetX.value) / DistanceThreshold
-                alpha = smoothStep(progress(), 0.5f, 0.9f) * reach.coerceIn(0f, 1f)
-            }
             .layout { measurable, _ ->
                 val rect = anchors.currentRect(mini, progress)
                 val width = rect.width.roundToInt().coerceAtLeast(0)
@@ -153,6 +148,19 @@ private fun PeekArtwork(
                         y = rect.top.roundToInt()
                     )
                 }
+            }
+            .graphicsLayer {
+                // Invisible while docked and through the first half of the drag open, so the
+                // filmstrip only appears once there is room for it — and, within that, faded in
+                // proportion to how far the finger has travelled.
+                //
+                // The second factor is what stops the neighbours *popping* out of existence when a
+                // short drag is released: they used to be composed at full opacity for as long as
+                // `isSwiping` was set and simply vanish when it cleared, which read as a glitch.
+                // Tying the alpha to the live offset means they fade in with the drag and fade back
+                // out with the spring, and it costs nothing — this lambda already runs per frame.
+                val reach = abs(swipe.offsetX.value) / DistanceThreshold
+                alpha = smoothStep(progress(), 0.5f, 0.9f) * reach.coerceIn(0f, 1f)
             }
     ) {
         Artwork(

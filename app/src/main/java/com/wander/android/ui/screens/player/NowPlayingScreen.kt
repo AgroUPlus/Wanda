@@ -25,11 +25,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,7 +46,11 @@ private val FullArtworkSize = 360.dp
  * @param artworkSlot fills the cover-art area. By default the screen draws its own artwork; the
  *   player sheet passes a slot that only reserves and reports the space, because it draws a single
  *   artwork that travels between here and the docked strip.
- * @param onLyricsVisibleChange lets the sheet hide that travelling artwork while lyrics are shown.
+ * @param showLyrics whether the lyrics are up instead of the cover. Hoisted rather than kept here
+ *   because the sheet has to know — it draws the travelling artwork this replaces — and because
+ *   state owned here outlived the screen: collapsing the player disposes this composable but
+ *   `rememberSaveable` restored the flag, so the sheet was left hiding a cover nothing would ever
+ *   ask it to show again.
  * @param artworkModifier applied to the cover-art square. The sheet passes its shared
  *   drag-to-skip gesture here, keeping the *movement* on the artwork it draws itself — if the box
  *   that reports the artwork bounds moved with the finger, the peeking neighbour covers would be
@@ -67,18 +67,16 @@ fun NowPlayingScreen(
     contentAlpha: () -> Float = { 1f },
     artworkSlot: (@Composable (url: String?, contentDescription: String) -> Unit)? = null,
     artworkModifier: Modifier = Modifier,
-    onLyricsVisibleChange: (Boolean) -> Unit = {},
+    showLyrics: Boolean = false,
+    onToggleLyrics: () -> Unit = {},
     viewModel: NowPlayingViewModel = hiltViewModel()
 ) {
     val state by playerConnection.state.collectAsStateWithLifecycle()
     val lyrics by viewModel.lyrics.collectAsStateWithLifecycle()
     val likedTrackIds by viewModel.likedTrackIds.collectAsStateWithLifecycle()
     val track = state.currentTrack
-    var showLyrics by rememberSaveable { mutableStateOf(false) }
 
     if (track == null) return
-
-    LaunchedEffect(showLyrics) { onLyricsVisibleChange(showLyrics) }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -184,7 +182,7 @@ fun NowPlayingScreen(
 
                 PlayerOverlayButtons(
                     showLyrics = showLyrics,
-                    onToggleLyrics = { showLyrics = !showLyrics },
+                    onToggleLyrics = onToggleLyrics,
                     onShare = { viewModel.share(track) }.takeIf { viewModel.canShare(track) },
                     contentAlpha = contentAlpha
                 )
