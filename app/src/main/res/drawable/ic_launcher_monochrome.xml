@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  The themed-icon layer (Android 13+).
+
+  Without one, Wanda is left out of themed icons entirely: the launcher keeps showing the full
+  colour icon while every other app on the home screen takes the wallpaper's palette, which is the
+  most visible way an app can look like it predates Material You.
+
+  The same wave as the foreground, with no background and no colour of its own — the system tints
+  this and supplies the surface behind it. The stroke is a little heavier than the colour version
+  because a single-tint glyph has no gradient to give it weight.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="11"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M30,54 C34,38 38,38 42,54 C46,70 50,70 54,54 C58,38 62,38 66,54 C70,70 74,70 78,54" />
+</vector>

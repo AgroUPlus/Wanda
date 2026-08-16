@@ -2,4 +2,9 @@
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@drawable/ic_launcher_background" />
     <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <!--
+      Read only by Android 13+; earlier releases skip child tags they do not recognise, which is
+      why this needs no separate -v33 variant.
+    -->
+    <monochrome android:drawable="@drawable/ic_launcher_monochrome" />
 </adaptive-icon>

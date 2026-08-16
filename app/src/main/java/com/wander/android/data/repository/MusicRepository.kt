@@ -1,13 +1,14 @@
 package com.wander.android.data.repository
 
 import com.wander.android.core.database.dao.AlbumDao
-import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.database.dao.HistoryDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.AlbumEntity
 import com.wander.android.core.database.entity.HistoryEntity
 import com.wander.android.core.database.entity.TrackEntity
+import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.security.SecureStorage
+import com.wander.android.core.sync.ScrobbleSyncScheduler
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
@@ -37,6 +38,7 @@ class MusicRepository @Inject constructor(
     private val historyDao: HistoryDao,
     private val secureStorage: SecureStorage,
     private val connectivity: ConnectivityObserver,
+    private val scrobbleSyncScheduler: ScrobbleSyncScheduler,
     val sources: Set<@JvmSuppressWildcards IMusicSource>
 ) {
     /**
@@ -122,6 +124,10 @@ class MusicRepository @Inject constructor(
             ?.scrobble(track.id)
             ?.isSuccess == true
         if (scrobbled) historyDao.markScrobbled(listOf(entryId))
+
+        // The row above is also the Agro outbox entry, so the nudge belongs here rather than at a
+        // caller that could forget it. Self-batching and delayed — see `syncSoon`.
+        scrobbleSyncScheduler.syncSoon()
     }
 
     // ── Persistence ─────────────────────────────────────────────────────────────────────────

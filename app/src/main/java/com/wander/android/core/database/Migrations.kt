@@ -40,5 +40,27 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
     }
 }
 
+/**
+ * Offers the play history this device already had to Agro's fleet-wide statistics.
+ *
+ * [MIGRATION_3_4] marked existing rows as already-synced, on the reasoning that they predate the
+ * feature. In practice that means a phone with months of listening contributes nothing to the
+ * totals until it plays something new, and the fleet's figures look like the device only started
+ * existing on upgrade day. Flipping them back to pending lets the outbox send them.
+ *
+ * The rows carry their real `playedAt`, and everything else the upload needs is joined from
+ * `tracks`, so the history lands on the right days rather than piling onto today. Ingest is
+ * idempotent on (account, artist, title, time), so a device that somehow ran this twice cannot
+ * double-count.
+ *
+ * A separate migration rather than an edit to [MIGRATION_3_4]: a device may already be on 4.
+ */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("UPDATE history SET agroSynced = 0")
+    }
+}
+
 /** Every migration, in order. Room applies whichever ones a given database still needs. */
-val WANDER_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_2_3, MIGRATION_3_4)
+val WANDER_MIGRATIONS: Array<Migration> =
+    arrayOf(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
