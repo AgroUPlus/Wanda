@@ -34,10 +34,14 @@ fun rememberPlaybackPosition(
             return@produceState
         }
         // Emit once even while paused, so a seek or track change shows up immediately.
-        value = PlaybackPosition(ctrl.currentPosition, ctrl.bufferedPosition)
+        val initialPos = runCatching { ctrl.currentPosition }.getOrDefault(0L)
+        val initialBuffered = runCatching { ctrl.bufferedPosition }.getOrDefault(0L)
+        value = PlaybackPosition(initialPos, initialBuffered)
         while (state.isPlaying) {
             delay(intervalMs)
-            value = PlaybackPosition(ctrl.currentPosition, ctrl.bufferedPosition)
+            val pos = runCatching { ctrl.currentPosition }.getOrNull() ?: break
+            val buf = runCatching { ctrl.bufferedPosition }.getOrDefault(pos)
+            value = PlaybackPosition(pos, buf)
         }
     }
 }

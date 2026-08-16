@@ -50,7 +50,6 @@ fun SearchScreen(
         TrackActionsSheet(
             track = track,
             isLiked = track.isLiked,
-            onPlay = { viewModel.play(listOf(track), 0) },
             onPlayNext = { viewModel.playNext(track) },
             onAddToQueue = { viewModel.addToQueue(track) },
             onStartRadio = { viewModel.startRadio(track) },

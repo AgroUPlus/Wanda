@@ -176,6 +176,19 @@ class NavidromeSource @Inject constructor(
         return apiClient.scrobble(trackId.removePrefix(PREFIX), submissionTime / 1000L)
     }
 
+    /**
+     * Looks up a Navidrome public share by ID or URL and resolves the track.
+     */
+    suspend fun resolveShare(shareUrlOrId: String): Result<UnifiedTrack> =
+        apiClient.getShares().mapCatching { shares ->
+            val share = shares.firstOrNull {
+                it.id == shareUrlOrId || it.url == shareUrlOrId || it.url.endsWith("/$shareUrlOrId") ||
+                    (it.id.isNotBlank() && shareUrlOrId.contains(it.id))
+            } ?: throw java.io.IOException("Share not found or expired on Navidrome server")
+            share.entry?.firstOrNull()?.toUnified()
+                ?: throw java.io.IOException("Navidrome share has no playable songs")
+        }
+
     private fun SubsonicSong.toUnified() = UnifiedTrack(
         id = "$PREFIX$id",
         source = SourceType.NAVIDROME,

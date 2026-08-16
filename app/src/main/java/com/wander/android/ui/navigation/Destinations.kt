@@ -4,15 +4,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 import java.net.URLEncoder
 
-/** The four top-level tabs. Now Playing and Queue are separate routes, not tabs. */
+/**
+ * The three top-level tabs. Now Playing, Queue and Settings are separate routes, not tabs.
+ *
+ * Settings used to be the fourth tab. It is reached from the icon in the Home header instead —
+ * two permanent entry points to the same screen, one of them occupying a quarter of the navigation
+ * bar, was one too many.
+ */
 enum class TopLevelDestination(
     val route: String,
     val label: String,
@@ -21,12 +25,13 @@ enum class TopLevelDestination(
 ) {
     HOME("home", "Home", Icons.Rounded.Home, Icons.Outlined.Home),
     LIBRARY("library", "Library", Icons.Rounded.LibraryMusic, Icons.Outlined.LibraryMusic),
-    SEARCH("search", "Search", Icons.Rounded.Search, Icons.Outlined.Search),
-    SETTINGS("settings", "Settings", Icons.Rounded.Settings, Icons.Outlined.Settings)
+    SEARCH("search", "Search", Icons.Rounded.Search, Icons.Outlined.Search)
 }
 
 object Routes {
     const val WELCOME = "welcome"
+    const val SETTINGS = "settings"
+    const val STATS = "stats"
     const val QUEUE = "queue"
     const val NAVIDROME_LOGIN = "login/navidrome"
     const val YTMUSIC_LOGIN = "login/ytmusic"
@@ -54,5 +59,5 @@ object Routes {
      * tracklist would stop the music's controls being reachable from the very screen you opened
      * *from* the player. The queue and the login flows still take the screen over.
      */
-    val withChrome: Set<String> = topLevel + ALBUM + ARTIST
+    val withChrome: Set<String> = topLevel + ALBUM + ARTIST + SETTINGS + STATS
 }

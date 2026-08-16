@@ -99,32 +99,21 @@ class HomeViewModel @Inject constructor(
 
     fun refresh(showSpinner: Boolean = true) {
         viewModelScope.launch {
-            _uiState.update {
-                if (showSpinner) it.copy(isLoading = true) else it.copy(isRefreshing = true)
+            // If we already have sections rendered, keep them on screen without showing full spinner
+            val hasExisting = _uiState.value.sections.isNotEmpty()
+            if (showSpinner && !hasExisting) {
+                _uiState.update { it.copy(isLoading = true) }
+            } else {
+                _uiState.update { it.copy(isRefreshing = true) }
             }
 
-            val sections = coroutineScope {
-                val mixes = async { smartMixRepository.getSmartMixes() }
+            // Phase 1: Instant Local-First Room Database Read (< 5ms)
+            val localSections = coroutineScope {
                 val onRepeat = async { homeShelfRepository.getTopTracks(CarouselSize) }
                 val jumpBackIn = async { homeShelfRepository.getRecentAlbumStarters(CarouselSize) }
                 val recentlyPlayed = async { homeShelfRepository.getRecentlyPlayed(CarouselSize) }
                 val liked = async { homeShelfRepository.getLikedTracks(CarouselSize) }
                 val discover = async { homeShelfRepository.getNeverPlayed(CarouselSize) }
-                val recentAdded = async { musicRepository.getRecentTracks(ListSize) }
-                // Recommendations seeded by what you actually played last, rather than by what
-                // happens to be sitting unplayed in the library. The seed's own backend supplies
-                // them — for YouTube Music that is its radio, which mixes the artist with
-                // stylistic neighbours instead of returning the same song over and over.
-                val recommended = async {
-                    val seed = homeShelfRepository.getRecentlyPlayed(1).firstOrNull()
-                    seed to seed?.let { musicRepository.generateRadio(it, CarouselSize) }.orEmpty()
-                }
-                // The backends' own recommenders. Empty when nothing publishes one — signed out
-                // of YouTube Music, Home is the shelves below and nothing is missing.
-                val feed = async { recommendationRepository.getShelves() }
-                // The Archive is a place to go looking for something, not a library of yours, so
-                // it gets no shelf here. Its rows in Room are search residue — every result the
-                // Search screen has ever shown — which is the opposite of a recommendation.
                 val perSource = musicRepository.configuredSources()
                     .filterNot { it == SourceType.INTERNET_ARCHIVE }
                     .map { source ->
@@ -135,40 +124,10 @@ class HomeViewModel @Inject constructor(
 
                 buildList {
                     add(carousel(SectionOnRepeat, "On Repeat", onRepeat.await()))
-                    add(
-                        HomeSection(
-                            id = SectionMixes,
-                            title = "Made For You",
-                            style = HomeSectionStyle.MIX_CAROUSEL,
-                            mixes = mixes.await()
-                        )
-                    )
-                    // High up on purpose: this is the one genuinely algorithmic part of Home, and
-                    // burying it under shelves derived from Room would waste it.
-                    feed.await().forEach { shelf ->
-                        add(carousel(shelf.id, shelf.title, shelf.tracks.take(CarouselSize)))
-                    }
                     add(carousel(SectionJumpBackIn, "Jump Back In", jumpBackIn.await()))
                     add(carousel(SectionRecentlyPlayed, "Recently Played", recentlyPlayed.await()))
                     add(carousel(SectionLiked, "Your Favourites", liked.await()))
                     add(carousel(SectionDiscover, "Discover", discover.await()))
-                    val (seed, suggestions) = recommended.await()
-                    if (seed != null) {
-                        add(
-                            carousel(
-                                id = SectionBecause,
-                                title = "Because you listened to ${seed.title}",
-                                // By title, not by id: a radio seeded from a track the user found
-                                // by search comes back full of re-uploads and remasters of that
-                                // same song under different ids, which is what made this shelf
-                                // read as "the thing you just searched for, twelve times".
-                                tracks = suggestions
-                                    .filter { it.id != seed.id }
-                                    .distinctBy { it.title.lowercase() }
-                                    .filterNot { it.title.equals(seed.title, ignoreCase = true) }
-                            )
-                        )
-                    }
                     perSource.forEach { (source, deferred) ->
                         add(
                             carousel(
@@ -178,23 +137,66 @@ class HomeViewModel @Inject constructor(
                             )
                         )
                     }
-                    add(
-                        HomeSection(
-                            id = SectionRecentAdded,
-                            title = "Recently Added",
-                            style = HomeSectionStyle.TRACK_LIST,
-                            tracks = recentAdded.await()
-                        )
-                    )
                 }.filterNot(HomeSection::isEmpty)
             }
 
+            // Immediately emit local shelves so the screen pops up in 0ms with zero blocking
             _uiState.value = HomeUiState(
                 isLoading = false,
                 isRefreshing = false,
                 greeting = greeting(),
-                sections = sections.withLikes(likedTrackIds.value)
+                sections = localSections.withLikes(likedTrackIds.value)
             )
+
+            // Phase 2: Non-blocking Background Network Enrichment (with 3.5s timeout)
+            launch {
+                runCatching {
+                    kotlinx.coroutines.withTimeoutOrNull(3500) {
+                        val feedDeferred = async { recommendationRepository.getShelves() }
+                        val recommendedDeferred = async {
+                            val seed = homeShelfRepository.getRecentlyPlayed(1).firstOrNull()
+                            seed to seed?.let { musicRepository.generateRadio(it, CarouselSize) }.orEmpty()
+                        }
+                        val feed = feedDeferred.await()
+                        val (seed, suggestions) = recommendedDeferred.await()
+
+                        if (feed.isNotEmpty() || (seed != null && suggestions.isNotEmpty())) {
+                            _uiState.update { state ->
+                                val updated = buildList {
+                                    // Keep On Repeat first
+                                    state.sections.find { it.id == SectionOnRepeat }?.let { add(it) }
+                                    // Add online recommendation feed shelves
+                                    feed.forEach { shelf ->
+                                        add(carousel(shelf.id, shelf.title, shelf.tracks.take(CarouselSize)))
+                                    }
+                                    // Add remaining local sections
+                                    state.sections.filterNot { it.id == SectionOnRepeat }.forEach { add(it) }
+                                    // Add seed radio recommendations
+                                    if (seed != null && suggestions.isNotEmpty()) {
+                                        add(
+                                            carousel(
+                                                id = SectionBecause,
+                                                title = "Because you listened to ${seed.title}",
+                                                tracks = suggestions
+                                                    .filter { it.id != seed.id }
+                                                    .distinctBy { it.title.lowercase() }
+                                                    .filterNot { it.title.equals(seed.title, ignoreCase = true) }
+                                            )
+                                        )
+                                    }
+                                }.filterNot(HomeSection::isEmpty)
+                                state.copy(sections = updated.withLikes(likedTrackIds.value))
+                            }
+                        }
+                    }
+                }
+                // Background sync of recent tracks for next launch
+                runCatching {
+                    kotlinx.coroutines.withTimeoutOrNull(4000) {
+                        musicRepository.getRecentTracks(ListSize)
+                    }
+                }
+            }
         }
     }
 

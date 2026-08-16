@@ -2,6 +2,7 @@ package com.wander.android.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.repository.LibrarySyncRepository
 import com.wander.android.data.repository.MusicRepository
@@ -10,6 +11,7 @@ import com.wander.android.data.sources.agro.AgroSessionApi
 import com.wander.android.data.sources.agro.MissingTrack
 import com.wander.android.data.sources.local.LocalMusicSource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -17,8 +19,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -29,7 +35,8 @@ class WanderAppViewModel @Inject constructor(
     shareRepository: ShareRepository,
     private val librarySync: LibrarySyncRepository,
     private val sessionApi: AgroSessionApi,
-    private val secureStorage: SecureStorage
+    private val secureStorage: SecureStorage,
+    connectivity: ConnectivityObserver
 ) : ViewModel() {
 
     /** Library writes that failed to reach their backend — shown as a snackbar, not swallowed. */
@@ -114,6 +121,49 @@ class WanderAppViewModel @Inject constructor(
         merge(_writeErrors.asSharedFlow(), librarySync.errors)
             .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), replay = 0)
 
+    // ── Network transitions ─────────────────────────────────────────────────────────────────
+
+    private val dismissedPrompt = MutableStateFlow<NetworkPrompt?>(null)
+
+    /**
+     * The prompt to offer when the network state changes, or null when there is nothing to ask.
+     *
+     * Offline mode was a switch buried in Settings that the user had to remember existed, so
+     * losing signal just meant remote sources failing one request at a time. Now the app notices
+     * and asks — once per transition, and only when the answer would actually change something:
+     * there is no point offering to enable offline mode when it is already on.
+     *
+     * `drop(1)` skips the flow's seeded value: the state at launch is not a transition, and without
+     * it every cold start on a plane would open with a dialog.
+     */
+    // `debounce` is still a preview API. Opted into deliberately rather than hand-rolling a
+    // timer: the alternative is a coroutine and a mutable timestamp for behaviour the operator
+    // already has exactly right.
+    @OptIn(FlowPreview::class)
+    val networkPrompt: StateFlow<NetworkPrompt?> = combine(
+        connectivity.isOnline.drop(1).debounce(NetworkSettleMs),
+        secureStorage.isOfflineMode,
+        dismissedPrompt
+    ) { online, offlineMode, dismissed ->
+        val prompt = when {
+            !online && !offlineMode -> NetworkPrompt.GO_OFFLINE
+            online && offlineMode -> NetworkPrompt.GO_ONLINE
+            else -> null
+        }
+        // A declined prompt stays declined until the *other* transition happens, which is a state
+        // the user has not answered for yet.
+        prompt?.takeIf { it != dismissed }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun acceptNetworkPrompt(prompt: NetworkPrompt) {
+        secureStorage.setOfflineMode(prompt == NetworkPrompt.GO_OFFLINE)
+        dismissedPrompt.value = prompt
+    }
+
+    fun dismissNetworkPrompt(prompt: NetworkPrompt) {
+        dismissedPrompt.value = prompt
+    }
+
     /** Decides whether the app opens on the welcome flow or straight into the library. */
     val hasCompletedSetup: StateFlow<Boolean> = secureStorage.hasCompletedSetup
 
@@ -125,3 +175,12 @@ class WanderAppViewModel @Inject constructor(
         viewModelScope.launch { localSource.refresh() }
     }
 }
+
+/** Which way the network just turned, and so what there is to offer the user. */
+enum class NetworkPrompt { GO_OFFLINE, GO_ONLINE }
+
+/**
+ * How long the network has to hold a state before the app believes it. A lift, a tunnel or a
+ * Wi-Fi/mobile handover all flap, and each flap would otherwise be a dialog.
+ */
+private const val NetworkSettleMs = 5_000L

@@ -7,6 +7,7 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
+import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.UnifiedTrack
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -38,15 +39,19 @@ import javax.inject.Singleton
  */
 @Singleton
 class PlayerConnection @Inject constructor(
-    @param:ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context,
+    private val secureStorage: SecureStorage
 ) {
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
 
     private val _controller = MutableStateFlow<MediaController?>(null)
     val controller: StateFlow<MediaController?> = _controller.asStateFlow()
 
-    private val _isRadioMode = MutableStateFlow(false)
-    val isRadioMode: StateFlow<Boolean> = _isRadioMode.asStateFlow()
+    /**
+     * Endless-radio top-up. Owned by [SecureStorage] rather than held here, because a flag that
+     * only lived in this singleton was gone the moment the process was.
+     */
+    val isRadioMode: StateFlow<Boolean> get() = secureStorage.isRadioMode
 
     /**
      * Playback failures, phrased for the user.
@@ -73,7 +78,7 @@ class PlayerConnection @Inject constructor(
                         if (timelineChanged) {
                             lastQueue = player.queueTracks(trackCache)
                         }
-                        trySend(player.buildSnapshot(_isRadioMode.value, lastQueue, trackCache))
+                        trySend(player.buildSnapshot(secureStorage.isRadioMode.value, lastQueue, trackCache))
                     }
 
                     override fun onPlayerError(error: PlaybackException) {
@@ -82,11 +87,11 @@ class PlayerConnection @Inject constructor(
                 }
                 ctrl.addListener(listener)
                 lastQueue = ctrl.queueTracks(trackCache)
-                trySend(ctrl.buildSnapshot(_isRadioMode.value, lastQueue, trackCache))
+                trySend(ctrl.buildSnapshot(secureStorage.isRadioMode.value, lastQueue, trackCache))
                 awaitClose { ctrl.removeListener(listener) }
             }
         }
-        .combine(_isRadioMode) { state, radio -> state.copy(isRadioMode = radio) }
+        .combine(secureStorage.isRadioMode) { state, radio -> state.copy(isRadioMode = radio) }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, PlaybackState())
 
@@ -215,7 +220,7 @@ class PlayerConnection @Inject constructor(
     }
 
     fun toggleRadio() {
-        _isRadioMode.value = !_isRadioMode.value
+        secureStorage.setRadioMode(!secureStorage.isRadioMode.value)
     }
 
     /** Offload saves power but starves the visualizer, so the two are mutually exclusive. */
@@ -286,21 +291,31 @@ private fun Player.buildSnapshot(
     radio: Boolean,
     cachedQueue: List<UnifiedTrack>,
     cache: java.util.concurrent.ConcurrentHashMap<String, UnifiedTrack>
-) = PlaybackState(
-    currentTrack = currentMediaItem?.resolveTrack(cache),
-    queue = cachedQueue,
-    currentIndex = currentMediaItemIndex,
-    isPlaying = isPlaying,
-    isBuffering = playbackState == Player.STATE_BUFFERING,
-    durationMs = duration.coerceAtLeast(0L),
-    isShuffle = shuffleModeEnabled,
-    repeatMode = when (repeatMode) {
-        Player.REPEAT_MODE_ALL -> RepeatMode.ALL
-        Player.REPEAT_MODE_ONE -> RepeatMode.ONE
-        else -> RepeatMode.OFF
-    },
-    isRadioMode = radio
-)
+): PlaybackState {
+    val activeItem = runCatching { currentMediaItem }.getOrNull()
+    val playing = runCatching { isPlaying }.getOrDefault(false)
+    val buffering = runCatching { playbackState == Player.STATE_BUFFERING }.getOrDefault(false)
+    val dur = runCatching { duration }.getOrDefault(0L).coerceAtLeast(0L)
+    val curIndex = runCatching { currentMediaItemIndex }.getOrDefault(0)
+    val shuffle = runCatching { shuffleModeEnabled }.getOrDefault(false)
+    val repMode = runCatching { repeatMode }.getOrDefault(Player.REPEAT_MODE_OFF)
+
+    return PlaybackState(
+        currentTrack = activeItem?.resolveTrack(cache),
+        queue = cachedQueue,
+        currentIndex = curIndex,
+        isPlaying = playing,
+        isBuffering = buffering,
+        durationMs = dur,
+        isShuffle = shuffle,
+        repeatMode = when (repMode) {
+            Player.REPEAT_MODE_ALL -> RepeatMode.ALL
+            Player.REPEAT_MODE_ONE -> RepeatMode.ONE
+            else -> RepeatMode.OFF
+        },
+        isRadioMode = radio
+    )
+}
 
 private fun Player.queueTracks(cache: java.util.concurrent.ConcurrentHashMap<String, UnifiedTrack>): List<UnifiedTrack> =
     (0 until mediaItemCount).mapNotNull { getMediaItemAt(it).resolveTrack(cache) }

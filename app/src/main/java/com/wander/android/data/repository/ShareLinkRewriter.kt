@@ -2,7 +2,13 @@ package com.wander.android.data.repository
 
 import android.net.Uri
 import com.wander.android.core.security.SecureStorage
+import com.wander.android.data.sources.agro.AgroGraphQl
 import com.wander.android.data.sources.ytmusic.youTubeVideoId
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import java.net.URLDecoder
 import java.net.URLEncoder
 import javax.inject.Inject
@@ -21,43 +27,55 @@ internal const val APP_SCHEME = "wanda"
  * domain is; anything else is shared exactly as its backend minted it, with no warning and no
  * refusal — the user asked for their domain on their links, not for a lecture about the ones it
  * cannot carry.
- *
- * That silence is what makes the allowlist safe to enforce strictly. A redirector that will
- * forward to any URL handed to it is an open redirect: a phishing link wearing the user's own
- * domain, and the domain's reputation paying for it. So only links this app could have produced
- * are ever wrapped, and the set of those is derived from the backends actually configured rather
- * than from a list somebody has to remember to update.
  */
 @Singleton
 class ShareLinkRewriter @Inject constructor(
-    private val secureStorage: SecureStorage
+    private val secureStorage: SecureStorage,
+    private val agroGraphQl: AgroGraphQl
 ) {
 
     /**
      * The domain in force: a paired Agro server's, if it has one configured, otherwise whatever
      * this device was told directly.
-     *
-     * Agro wins because it is the setting the *fleet* shares — configure it once and Wanda and
-     * Wander agree without either being touched. But Agro is optional in both directions: with no
-     * server, the local field still works, and with a server that has the feature off, the local
-     * field is what is left.
      */
     internal fun domain(): String =
         secureStorage.agroShareDomain.value.ifBlank { secureStorage.shareDomain.value }
 
-    fun rewrite(url: String): String {
+    suspend fun rewrite(url: String): String {
         val domain = domain()
         if (domain.isBlank()) return url
 
         val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return url
         if (!uri.isAllowed()) return url
 
-        // A YouTube link keeps its video id in the open: it is already public, it is what makes
-        // the short link readable, and it means the page can offer "open in YouTube Music"
-        // without unpacking anything.
+        // When Agro is paired, mint a short link UID instead of placing raw URLs or video IDs in query params
+        if (agroGraphQl.isConfigured) {
+            val shortId = runCatching {
+                // Attributed to the account, and tagged with which backend it came from. Without
+                // the owner the link could be minted but never listed, counted or revoked in
+                // Agro's link manager; without the source, deleting it there cannot say whether
+                // anything is left behind on Navidrome.
+                val mutation = "mutation CreateShortLink(\$userId: String, \$targetUrl: String!, " +
+                    "\$source: String) { createShortLink(userId: \$userId, targetUrl: " +
+                    "\$targetUrl, source: \$source) }"
+                val vars = buildJsonObject {
+                    put("userId", agroGraphQl.userId)
+                    put("targetUrl", url)
+                    put("source", sourceOf(uri))
+                }
+                agroGraphQl.execute(mutation, vars).getOrNull()
+                    ?.get("createShortLink")?.jsonPrimitive?.contentOrNull
+            }.getOrNull()
+            if (!shortId.isNullOrBlank()) {
+                return "https://$domain/$LISTEN_PATH?id=$shortId"
+            }
+        }
+
+        // Fallback for YouTube links when Agro is not paired
         youTubeVideoId(uri)?.let { videoId ->
             return "https://$domain/$LISTEN_PATH?v=$videoId"
         }
+
         val target = URLEncoder.encode(url, Charsets.UTF_8.name())
         return "https://$domain/$LISTEN_PATH?u=$target"
     }
@@ -101,6 +119,23 @@ class ShareLinkRewriter @Inject constructor(
      * host must either be YouTube's or the user's own music server, which is the only other place
      * this app mints links for.
      */
+    /**
+     * Which backend a link points at, as Agro's link manager records it.
+     *
+     * Only `"navidrome"` is acted on there — it is the one case where deleting the link leaves a
+     * share behind on another server. Everything else is a plain forwarding link that exists
+     * nowhere but Agro.
+     */
+    private fun sourceOf(uri: Uri): String? {
+        val host = uri.host?.lowercase()?.removePrefix("www.")?.removePrefix("m.")
+        return when {
+            host == null -> null
+            host == navidromeHost() -> "navidrome"
+            host in YOUTUBE_HOSTS -> "ytmusic"
+            else -> null
+        }
+    }
+
     internal fun Uri.isAllowed(): Boolean {
         if (!scheme.equals("https", ignoreCase = true)) return false
         val host = host?.lowercase()?.removePrefix("www.")?.removePrefix("m.") ?: return false

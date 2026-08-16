@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Devices
+import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -45,6 +46,7 @@ import com.wander.android.ui.components.TrackRow
 fun HomeScreen(
     contentPadding: PaddingValues,
     onOpenSettings: () -> Unit,
+    onOpenStats: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -101,7 +103,6 @@ fun HomeScreen(
         TrackActionsSheet(
             track = track,
             isLiked = track.isLiked,
-            onPlay = { viewModel.play(listOf(track), 0) },
             onPlayNext = { viewModel.playNext(track) },
             onAddToQueue = { viewModel.addToQueue(track) },
             onStartRadio = { viewModel.startRadio(track) },
@@ -144,6 +145,7 @@ fun HomeScreen(
                             greeting = state.greeting,
                             hasSession = session != null,
                             onOpenSessions = { showSessionSheet = true },
+                            onOpenStats = onOpenStats,
                             onOpenSettings = onOpenSettings
                         )
                     }
@@ -235,6 +237,7 @@ private fun HomeHeader(
     greeting: String,
     hasSession: Boolean,
     onOpenSessions: () -> Unit,
+    onOpenStats: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
     Row(
@@ -257,6 +260,9 @@ private fun HomeHeader(
             IconButton(onClick = onOpenSessions) {
                 Icon(Icons.Rounded.Devices, contentDescription = "Sessions on other devices")
             }
+        }
+        IconButton(onClick = onOpenStats) {
+            Icon(Icons.Rounded.BarChart, contentDescription = "Listening statistics")
         }
         IconButton(onClick = onOpenSettings) {
             Icon(Icons.Rounded.Settings, contentDescription = "Settings")

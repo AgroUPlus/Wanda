@@ -1,5 +1,7 @@
 package com.wander.android.ui.components
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,7 +21,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,12 +48,16 @@ val MiniArtworkSize = 48.dp
 private const val SwipeFadeDistancePx = 120f
 
 /**
- * Fixed height for the progress bar, so the wavy and flat indicators occupy the same box.
+ * Fixed height for the progress bar, so the wavy indicator has a stable box to wave inside no
+ * matter what its amplitude is.
  *
- * The two have different intrinsic heights, and swapping them on pause reflowed the whole strip —
- * the cover and text visibly stepped upward the moment playback stopped.
+ * Public because `PlayerSheet` sizes the docked strip from the strip's real parts; keeping the
+ * number in one place is what stops the two drifting apart again.
  */
-private val ProgressBarHeight = 12.dp
+val MiniProgressBarHeight = 12.dp
+
+/** Padding above and below the artwork row. Summed into `MiniPlayerHeight`. */
+val MiniRowVerticalPadding = 8.dp
 
 /**
  * The docked strip at the top of the player sheet.
@@ -101,7 +111,7 @@ fun MiniPlayer(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .padding(horizontal = 12.dp, vertical = MiniRowVerticalPadding)
             ) {
                 artworkSlot()
 
@@ -154,14 +164,19 @@ fun MiniPlayer(
  * alone. Read inside [MiniPlayer] it recomposed the whole docked player while sitting above the
  * scrolling content.
  *
- * The wavy indicator is mounted **only while playing**. Its wave is an infinite transition that
- * runs regardless of the progress value, and this strip sits behind Home, Library, Search and
- * Settings whenever a track is loaded — so leaving it mounted meant the app was never idle and
- * every screen paid for a full-rate redraw while scrolling. It also breaks the project's
- * no-polling battery rule.
+ * The wavy indicator cannot simply stay mounted: its wave is an infinite transition that runs
+ * regardless of the progress value, and this strip sits behind Home, Library, Search and Settings
+ * whenever a track is loaded — so leaving it mounted meant the app was never idle and every screen
+ * paid for a full-rate redraw while scrolling. It also breaks the project's no-polling battery rule.
  *
- * The swap is wrapped in a fixed-height box ([ProgressBarHeight]) because the two indicators do
- * not measure the same: without it, pausing shrank this row and shifted everything below it up.
+ * But hard-swapping it for the flat indicator on pause made the line jump: the wave fills the whole
+ * box and the flat bar is a thin line centred in it. So the wave's **amplitude** is animated down
+ * to zero first, and only once it has settled flat — and playback is still paused — is the wavy
+ * indicator unmounted in favour of the flat one it now looks like. Pausing therefore reads as the
+ * wave relaxing into a line, and the infinite transition still stops.
+ *
+ * Everything sits in a fixed-height box ([MiniProgressBarHeight]) because the two indicators do not
+ * measure the same: without it, pausing shrank this row and shifted everything below it up.
  */
 @Composable
 private fun PlaybackProgressBar(
@@ -173,16 +188,38 @@ private fun PlaybackProgressBar(
     val position by rememberPlaybackPosition(playerConnection)
     val progress = { progressOf(position.positionMs, durationMs) }
 
+    val amplitude = remember { Animatable(if (isPlaying) 1f else 0f) }
+    // Starts flat when paused so a cold launch does not animate a wave in for no reason.
+    var flattened by remember { mutableStateOf(!isPlaying) }
+
+    LaunchedEffect(isPlaying) {
+        if (isPlaying) {
+            // Mount first, then grow: the reverse would flatten and unmount in the same frame.
+            flattened = false
+            amplitude.animateTo(1f, tween(durationMillis = AmplitudeDurationMs))
+        } else {
+            amplitude.animateTo(0f, tween(durationMillis = AmplitudeDurationMs))
+            flattened = true
+        }
+    }
+
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .fillMaxWidth()
-            .height(ProgressBarHeight)
+            .height(MiniProgressBarHeight)
     ) {
-        if (isPlaying) {
-            LinearWavyProgressIndicator(progress = progress, modifier = Modifier.fillMaxWidth())
-        } else {
+        if (flattened) {
             LinearProgressIndicator(progress = progress, modifier = Modifier.fillMaxWidth())
+        } else {
+            LinearWavyProgressIndicator(
+                progress = progress,
+                amplitude = { amplitude.value },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
+
+/** How long the wave takes to relax into a line, and to rise back out of one. */
+private const val AmplitudeDurationMs = 350

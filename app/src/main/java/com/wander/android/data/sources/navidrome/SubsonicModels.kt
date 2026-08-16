@@ -40,7 +40,8 @@ data class SubsonicShare(
     val id: String,
     val url: String,
     val description: String? = null,
-    val expires: String? = null
+    val expires: String? = null,
+    val entry: List<SubsonicSong>? = null
 )
 
 @Serializable

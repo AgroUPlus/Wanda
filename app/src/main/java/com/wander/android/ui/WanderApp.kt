@@ -21,7 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -34,11 +33,9 @@ import androidx.navigation.compose.rememberNavController
 import com.wander.android.core.permissions.rememberPermissionGate
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.ui.agro.AgroSessionViewModel
-import com.wander.android.ui.components.ResumeHandoffCard
-import com.wander.android.ui.components.SyncOfferCard
-import com.wander.android.ui.components.launchShareSheet
 import com.wander.android.ui.components.player.MiniPlayerGap
 import com.wander.android.ui.components.player.MiniPlayerHeight
+import com.wander.android.ui.components.player.MiniPlayerShadowInset
 import com.wander.android.ui.components.player.PlayerSheet
 import com.wander.android.ui.components.player.PlayerSheetContent
 import com.wander.android.ui.components.player.PlayerSheetValue
@@ -68,50 +65,28 @@ fun WanderApp(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
-    val playback by playerConnection.state.collectAsStateWithLifecycle()
+    val playbackState = playerConnection.state.collectAsStateWithLifecycle()
+    val playback = playbackState.value
     val showChrome = remember(currentRoute) {
         currentRoute?.substringBefore("?") in Routes.withChrome
     }
     // Derived, not read straight off `playback`: PlaybackState carries isBuffering and durationMs,
     // which flip constantly while streaming, and every one of those recomposed this composable —
     // which reallocates contentPadding and so rebuilds the whole nav graph (see below).
-    val hasTrack by remember { derivedStateOf { playback.currentTrack != null } }
+    val hasTrack by remember { derivedStateOf { playbackState.value.currentTrack != null } }
 
     /** Whether sound is actually coming out here, which is what decides the resume offer. */
-    val isPlayingHere by remember { derivedStateOf { playback.isPlaying } }
+    val isPlayingHere by remember { derivedStateOf { playbackState.value.isPlaying } }
 
     val scope = rememberCoroutineScope()
     val sheetState = rememberPlayerSheetState()
 
     val snackbarHostState = remember { SnackbarHostState() }
-    LaunchedEffect(playerConnection) {
-        playerConnection.errors.collect { message ->
-            snackbarHostState.showSnackbar(message, withDismissAction = true)
-        }
-    }
-
-    LaunchedEffect(viewModel) {
-        viewModel.writeErrors.collect { message ->
-            snackbarHostState.showSnackbar(message, withDismissAction = true)
-        }
-    }
-
-    // Share links are minted from four different screens; the sheet is raised once, here, because
-    // that is where an Activity context is in reach.
-    val context = LocalContext.current
-    LaunchedEffect(viewModel, context) {
-        viewModel.shareLinks.collect { link -> context.launchShareSheet(link) }
-    }
-    LaunchedEffect(viewModel) {
-        viewModel.shareErrors.collect { message ->
-            snackbarHostState.showSnackbar(message, withDismissAction = true)
-        }
-    }
-    LaunchedEffect(viewModel) {
-        viewModel.syncErrors.collect { message ->
-            snackbarHostState.showSnackbar(message, withDismissAction = true)
-        }
-    }
+    AppEvents(
+        viewModel = viewModel,
+        playerConnection = playerConnection,
+        snackbarHostState = snackbarHostState
+    )
 
     // Agro live session updates, held only while the app is on screen — see AgroSessionRepository.
     val agroViewModel: AgroSessionViewModel = hiltViewModel()
@@ -170,7 +145,14 @@ fun WanderApp(
             // Remembered because `NavHost` keys its `remember(builder)` on the graph-building
             // lambda, which captures this. A fresh PaddingValues on every recomposition meant the
             // lambda was a new instance every time and all seven destinations were re-created.
-            val extraBottom = if (hasTrack && showChrome) MiniPlayerHeight + MiniPlayerGap else 0.dp
+            // The shadow inset is reserved on top of the strip itself: the elevation is drawn
+            // outside the strip's clip box, so content that merely cleared the strip still sat
+            // under it.
+            val extraBottom = if (hasTrack && showChrome) {
+                MiniPlayerHeight + MiniPlayerGap + MiniPlayerShadowInset
+            } else {
+                0.dp
+            }
             val direction = LocalLayoutDirection.current
             val contentPadding = remember(padding, extraBottom, direction) {
                 padding.plusBottom(extraBottom, direction)
@@ -220,53 +202,23 @@ fun WanderApp(
         // `progress`, so this costs one recomposition per gesture rather than one per frame.
         val sheetCollapsed = sheetState.targetValue == PlayerSheetValue.COLLAPSED
 
-        // Sits above the resume card's slot: both are bottom-anchored offers, and the resume card
-        // only appears while idle, so in practice only one is ever up.
-        if (syncOffer.isNotEmpty() && showChrome && sheetCollapsed) {
-            SyncOfferCard(
-                count = syncOffer.size,
-                sample = remember(syncOffer) {
-                    syncOffer.take(3).map { "${it.artist} — ${it.title}" }
-                },
-                isFetching = isFetchingSync,
-                onAccept = viewModel::acceptSyncOffer,
-                onDismiss = viewModel::dismissSyncOffer,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(horizontal = 12.dp)
-                    .padding(
-                        bottom = navBarHeight + 12.dp +
-                            if (hasTrack) MiniPlayerHeight + MiniPlayerGap else 0.dp
-                    )
-            )
-        }
-
         // Offered whenever this device is idle — not merely when it has never played anything.
         // The gate used to be "no track loaded", and a track stays loaded after it finishes, so
         // the card appeared exactly once per launch and never came back.
-        val handoff = incomingHandoff
-        if (handoff != null && !isPlayingHere && showChrome && sheetCollapsed) {
-            ResumeHandoffCard(
-                handoff = handoff,
-                deviceName = remember(handoff, agroDevices) {
-                    agroDevices.firstOrNull { it.deviceId == handoff.deviceId }?.petname
-                        ?: "another device"
-                },
-                isResuming = isResuming,
-                artworkUrl = sessionArtwork,
-                onResume = { agroViewModel.resume(handoff) },
-                onDismiss = { agroViewModel.dismiss(handoff) },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(horizontal = 12.dp)
-                    // Clears the docked strip when one is up, so the card never covers the player
-                    // it is offering to replace.
-                    .padding(
-                        bottom = navBarHeight + 12.dp +
-                            if (hasTrack) MiniPlayerHeight + MiniPlayerGap else 0.dp
-                    )
-            )
-        }
+        BottomOffers(
+            syncOffer = if (showChrome && sheetCollapsed) syncOffer else emptyList(),
+            isFetchingSync = isFetchingSync,
+            onAcceptSync = viewModel::acceptSyncOffer,
+            onDismissSync = viewModel::dismissSyncOffer,
+            handoff = incomingHandoff?.takeIf { !isPlayingHere && showChrome && sheetCollapsed },
+            agroDevices = agroDevices,
+            isResuming = isResuming,
+            sessionArtwork = sessionArtwork,
+            onResume = agroViewModel::resume,
+            onDismissHandoff = agroViewModel::dismiss,
+            navBarHeight = navBarHeight,
+            hasTrack = hasTrack
+        )
 
         // Last in the Box, so errors sit above the player instead of behind it — previously the
         // Scaffold's own host was painted under the sheet and hidden entirely when expanded.

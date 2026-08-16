@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,13 +19,9 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
-import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.Lyrics
-import androidx.compose.material.icons.rounded.Share
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -49,6 +47,9 @@ import com.wander.android.ui.components.AudioQualityBadge
 
 /** Nominal edge of the full-screen cover; drives the decode size, not the layout. */
 private val FullArtworkSize = 360.dp
+
+/** Just enough scale to register as movement without reading as a zoom. */
+private const val SubtleScale = 0.98f
 
 /**
  * @param artworkSlot fills the cover-art area. By default the screen draws its own artwork; the
@@ -120,6 +121,13 @@ fun NowPlayingScreen(
                     )
                 }
             }
+            // Up here with the other playback-wide switches rather than stranded under the
+            // transport row, where it read as an afterthought bolted onto the bottom.
+            RadioChip(
+                isRadioMode = state.isRadioMode,
+                onToggle = playerConnection::toggleRadio,
+                modifier = Modifier.padding(end = 4.dp)
+            )
             IconButton(onClick = onOpenQueue) {
                 Icon(Icons.AutoMirrored.Rounded.QueueMusic, contentDescription = "Open queue")
             }
@@ -146,10 +154,20 @@ fun NowPlayingScreen(
                 // lyrics therefore shoved the artwork around instead of simply revealing it.
                 // `using null` disables the size transform; the spec comes from the motion scheme
                 // rather than a hand-rolled spring.
+                //
+                // The scale is deliberately tiny (0.98) and, unlike the old 0.92, is applied by
+                // `scaleIn`/`scaleOut` — which are pure `graphicsLayer` effects and do not touch
+                // the measured bounds. It reads as the lyrics settling into place rather than as a
+                // zoom.
                 val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
                 AnimatedContent(
                     targetState = showLyrics,
-                    transitionSpec = { fadeIn(effects) togetherWith fadeOut(effects) using null },
+                    transitionSpec = {
+                        (fadeIn(effects) + scaleIn(effects, initialScale = SubtleScale))
+                            .togetherWith(
+                                fadeOut(effects) + scaleOut(effects, targetScale = SubtleScale)
+                            ) using null
+                    },
                     label = "lyrics-artwork",
                     modifier = Modifier.fillMaxSize()
                 ) { lyricsVisible ->
@@ -176,34 +194,12 @@ fun NowPlayingScreen(
                     }
                 }
 
-                // Only for backends that host the audio themselves — see `SourceCapabilities.share`.
-                if (viewModel.canShare(track)) {
-                    FilledTonalIconButton(
-                        onClick = { viewModel.share(track) },
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(12.dp)
-                            .graphicsLayer { alpha = contentAlpha() }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Share,
-                            contentDescription = "Share a link to this track"
-                        )
-                    }
-                }
-
-                FilledTonalIconButton(
-                    onClick = { showLyrics = !showLyrics },
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(12.dp)
-                        .graphicsLayer { alpha = contentAlpha() }
-                ) {
-                    Icon(
-                        imageVector = if (showLyrics) Icons.Rounded.Album else Icons.Rounded.Lyrics,
-                        contentDescription = if (showLyrics) "Show artwork" else "Show lyrics"
-                    )
-                }
+                PlayerOverlayButtons(
+                    showLyrics = showLyrics,
+                    onToggleLyrics = { showLyrics = !showLyrics },
+                    onShare = { viewModel.share(track) }.takeIf { viewModel.canShare(track) },
+                    contentAlpha = contentAlpha
+                )
             }
         }
 

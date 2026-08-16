@@ -25,13 +25,29 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
+import com.wander.android.ui.components.MiniArtworkSize
+import com.wander.android.ui.components.MiniProgressBarHeight
+import com.wander.android.ui.components.MiniRowVerticalPadding
 import kotlinx.coroutines.launch
 
-/** Height of the docked strip. */
-val MiniPlayerHeight: Dp = 68.dp
+/**
+ * Height of the docked strip, summed from what `MiniPlayer` actually lays out rather than guessed:
+ * the progress bar, then the artwork row's vertical padding either side of the cover.
+ *
+ * It was a flat 68 dp, which is 8 dp short of the real content. The strip is clipped to this value
+ * below, so the bottom of the play controls was cut off, and every screen's list padding is derived
+ * from it, so the last row of covers ended up under the strip.
+ */
+val MiniPlayerHeight: Dp = MiniProgressBarHeight + MiniRowVerticalPadding * 2 + MiniArtworkSize
 
 /** Gap between the docked strip and the navigation bar, so the strip reads as floating over it. */
 val MiniPlayerGap: Dp = 8.dp
+
+/**
+ * The strip's drop shadow is drawn *outside* its clip box, so content scrolled to the very bottom
+ * sits under the shadow even when it clears the strip itself. Reserved on top of [MiniPlayerGap].
+ */
+val MiniPlayerShadowInset: Dp = 6.dp
 
 /**
  * Inset on each side while docked, giving the strip its floating-card look. It animates away as

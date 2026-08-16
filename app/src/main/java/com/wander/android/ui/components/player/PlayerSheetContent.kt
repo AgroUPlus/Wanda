@@ -1,5 +1,6 @@
 package com.wander.android.ui.components.player
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -7,7 +8,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +52,11 @@ fun PlayerSheetContent(
 ) {
     val anchors = remember { PlayerArtworkAnchors() }
     var lyricsVisible by remember { mutableStateOf(false) }
+    val artworkAlpha by animateFloatAsState(
+        targetValue = if (lyricsVisible) 0f else 1f,
+        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+        label = "artwork-lyrics-fade"
+    )
 
     val fullPlayerPresent by remember { derivedStateOf { progress() > 0f } }
     val docked by remember { derivedStateOf { progress() == 0f } }
@@ -60,22 +68,33 @@ fun PlayerSheetContent(
     // Horizontal only, so the sheet's own vertical drag still opens the player. The strip's own
     // surface stays put — sliding the docked bar sideways over the navigation bar looks broken —
     // but its cover and text now move with the gesture, which is what was missing.
+    // The covers either side of this one in the queue, for the swipe to peek at. Coarse enough
+    // not to change during a gesture, so reading them here costs nothing per frame.
+    val previousArtwork = playback.queue.getOrNull(playback.currentIndex - 1)?.artworkUrl
+    val nextArtwork = playback.queue.getOrNull(playback.currentIndex + 1)?.artworkUrl
+
     val miniSwipe = Modifier.swipeToChangeTrack(
         state = swipe,
         onNext = playerConnection::next,
         onPrevious = playerConnection::previous,
+        nextArtworkUrl = nextArtwork,
+        previousArtworkUrl = previousArtwork,
         exitDistance = DockedExitDistance
     )
     val fullSwipe = Modifier.swipeToChangeTrack(
         state = swipe,
         onNext = playerConnection::next,
-        onPrevious = playerConnection::previous
+        onPrevious = playerConnection::previous,
+        nextArtworkUrl = nextArtwork,
+        previousArtworkUrl = previousArtwork
     )
 
-    // The covers either side of this one in the queue, for the swipe to peek at. Coarse enough
-    // not to change during a gesture, so reading them here costs nothing per frame.
-    val previousArtwork = playback.queue.getOrNull(playback.currentIndex - 1)?.artworkUrl
-    val nextArtwork = playback.queue.getOrNull(playback.currentIndex + 1)?.artworkUrl
+    // The skip has landed: hand the cover back to playback state. Keyed on the track rather than
+    // the index so a queue edit cannot strand the override.
+    val currentArtwork = playback.currentTrack?.artworkUrl
+    LaunchedEffect(currentArtwork) {
+        swipe.clearPending()
+    }
 
     // Full height regardless of how far the sheet is open — the sheet clips it. This keeps the
     // full player's layout, and so its artwork bounds, stable for the whole drag.
@@ -121,11 +140,15 @@ fun PlayerSheetContent(
         )
 
         MorphingArtwork(
-            url = playback.currentTrack?.artworkUrl,
+            url = currentArtwork,
             contentDescription = playback.currentTrack?.title,
             anchors = anchors,
             progress = progress,
-            visible = !lyricsVisible,
+            // Cross-fades with the lyrics rather than cutting. The cover is drawn here, outside
+            // `NowPlayingScreen`'s `AnimatedContent`, so it had no transition of its own — the
+            // lyrics faded in over a cover that had already vanished.
+            visible = artworkAlpha > 0f,
+            alpha = { artworkAlpha },
             swipe = swipe,
             previousUrl = previousArtwork,
             nextUrl = nextArtwork

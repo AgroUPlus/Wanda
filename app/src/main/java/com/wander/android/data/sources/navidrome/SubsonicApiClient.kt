@@ -127,6 +127,14 @@ class SubsonicApiClient @Inject constructor(
         }
 
     /**
+     * Lists active shares on this Navidrome / Subsonic server.
+     */
+    suspend fun getShares(): Result<List<SubsonicShare>> =
+        call("getShares.view").mapCatching {
+            it.shares?.share.orEmpty()
+        }
+
+    /**
      * Asks the server to rescan its music folders.
      *
      * Used after Agro files new uploads into the library: Navidrome would find them on its own

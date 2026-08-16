@@ -56,7 +56,6 @@ fun LibraryScreen(
         TrackActionsSheet(
             track = track,
             isLiked = track.isLiked,
-            onPlay = { viewModel.play(listOf(track), 0) },
             onPlayNext = { viewModel.playNext(track) },
             onAddToQueue = { viewModel.addToQueue(track) },
             onStartRadio = { viewModel.startRadio(track) },
@@ -118,24 +117,12 @@ fun LibraryScreen(
             }
         }
 
-        // Composed on every page, not just Tracks. Rendering it conditionally *inside* the pager
-        // made the list below it jump up and down mid-swipe as pages with and without it scrolled
-        // past each other; reserving the row keeps every page's content at the same offset.
-        val filtersApply = LibraryTab.entries[selectedPage] == LibraryTab.TRACKS
-        SourceFilterChips(
-            sources = viewModel.availableSources,
-            selected = sourceFilter,
-            onSelect = viewModel::selectSource,
-            enabled = filtersApply,
-            modifier = Modifier
-                .padding(vertical = 12.dp)
-                .graphicsLayer { alpha = if (filtersApply) 1f else 0f }
-        )
-
         HorizontalPager(
             state = pagerState,
             key = { LibraryTab.entries[it] },
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
+                .padding(top = 4.dp)
         ) { page ->
             // `refresh()` and `isRefreshing` already existed on the ViewModel with nothing driving
             // them — the library could only be refreshed by leaving and coming back.
@@ -144,14 +131,21 @@ fun LibraryScreen(
                 onRefresh = viewModel::refresh,
                 modifier = Modifier.fillMaxSize()
             ) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    when (val pageTab = LibraryTab.entries[page]) {
-                        LibraryTab.ALBUMS -> AlbumGrid(albums, contentPadding, onOpenAlbum)
-                        LibraryTab.PLAYLISTS -> PlaylistList(playlists, contentPadding, viewModel)
-                        LibraryTab.LIKED -> TrackList(likedTracks, pageTab, contentPadding, viewModel) { actionsFor = it }
-                        LibraryTab.DOWNLOADS ->
-                            TrackList(downloadedTracks, pageTab, contentPadding, viewModel) { actionsFor = it }
-                        LibraryTab.TRACKS -> TrackList(tracks, pageTab, contentPadding, viewModel) { actionsFor = it }
+                when (val pageTab = LibraryTab.entries[page]) {
+                    LibraryTab.ALBUMS -> AlbumGrid(albums, contentPadding, onOpenAlbum)
+                    LibraryTab.PLAYLISTS -> PlaylistList(playlists, contentPadding, viewModel)
+                    LibraryTab.LIKED -> TrackList(likedTracks, pageTab, contentPadding, viewModel) { actionsFor = it }
+                    LibraryTab.DOWNLOADS -> TrackList(downloadedTracks, pageTab, contentPadding, viewModel) { actionsFor = it }
+                    LibraryTab.TRACKS -> Column(modifier = Modifier.fillMaxSize()) {
+                        if (viewModel.availableSources.size > 1) {
+                            SourceFilterChips(
+                                sources = viewModel.availableSources,
+                                selected = sourceFilter,
+                                onSelect = viewModel::selectSource,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
+                        TrackList(tracks, pageTab, contentPadding, viewModel) { actionsFor = it }
                     }
                 }
             }

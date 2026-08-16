@@ -60,7 +60,6 @@ fun ArtistScreen(
         TrackActionsSheet(
             track = track,
             isLiked = track.isLiked,
-            onPlay = { viewModel.play(tracks.indexOf(track).coerceAtLeast(0)) },
             onPlayNext = { viewModel.playNext(track) },
             onAddToQueue = { viewModel.addToQueue(track) },
             onStartRadio = { viewModel.startRadio(track) },
@@ -140,7 +139,7 @@ fun ArtistScreen(
                     // Keyed by the recording, not the row: this page fills in from every backend
                     // in turn, so a song's surviving copy can change source under the user. See
                     // [trackListKeys].
-                    key = { index, _ -> trackKeys[index] },
+                    key = { index, track -> trackKeys.getOrNull(index) ?: track.id },
                     contentType = { _, _ -> "track" }
                 ) { index, track ->
                     TrackRow(

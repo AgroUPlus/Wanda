@@ -1,6 +1,7 @@
 package com.wander.android.data.repository
 
 import android.util.Log
+import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.network.HttpClientFactory
 import com.wander.android.data.sources.agro.AgroGraphQl
 import com.wander.android.data.sources.agro.AgroHandoffState
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -41,7 +43,8 @@ import javax.inject.Singleton
 @Singleton
 class AgroSessionRepository @Inject constructor(
     private val sessionApi: AgroSessionApi,
-    private val graphQl: AgroGraphQl
+    private val graphQl: AgroGraphQl,
+    private val connectivity: ConnectivityObserver
 ) {
     private val _devices = MutableStateFlow<List<AgroNode>>(emptyList())
     val devices: StateFlow<List<AgroNode>> = _devices.asStateFlow()
@@ -64,7 +67,21 @@ class AgroSessionRepository @Inject constructor(
     /** In memory only: a session declined now should be offerable again next launch. */
     private var dismissed: String? = null
 
+    /**
+     * One "pick up where you left off" per app process, however stale the session is.
+     *
+     * Without it the only sessions ever offered were live ones or ones minutes old — so closing the
+     * desktop player and opening the phone an hour later, which is the single most obvious thing to
+     * want, offered nothing at all. It is spent the first time it produces an offer rather than on
+     * dismissal, so it cannot come back on every foreground.
+     */
+    private var coldStartOfferAvailable = true
+
     suspend fun refresh() {
+        // Offline the server is simply unreachable; a round of requests that can only time out is
+        // worse than no round at all. The cached device list and session stay as they were.
+        if (!connectivity.isOnline.value) return
+
         if (!graphQl.isConfigured) {
             _devices.value = emptyList()
             _incomingHandoff.value = null
@@ -115,8 +132,12 @@ class AgroSessionRepository @Inject constructor(
      * Reconnects with a capped backoff. A dropped socket used to end the flow for good, so one
      * suspend or one server restart left the app silently poll-only until it was next foregrounded
      * — which looked exactly like sync being broken.
+     *
+     * With no network there is nothing to back off *to*, so the retry parks on connectivity instead
+     * of burning the radio on a handshake that cannot complete. It resumes on the next online edge.
      */
     fun liveUpdates(): Flow<AgroLiveMessage> = connectOnce().retryWhen { _, attempt ->
+        connectivity.isOnline.first { it }
         val backoff = (BASE_BACKOFF_MS shl attempt.coerceAtMost(5).toInt())
             .coerceAtMost(MAX_BACKOFF_MS)
         delay(backoff)
@@ -125,7 +146,7 @@ class AgroSessionRepository @Inject constructor(
 
     /** One connection's lifetime. Fails rather than completes, so [liveUpdates] can retry it. */
     private fun connectOnce(): Flow<AgroLiveMessage> = callbackFlow {
-        val url = graphQl.syncSocketUrl()
+        val url = graphQl.syncSocketUrl().takeIf { connectivity.isOnline.value }
         if (url == null) {
             close()
             return@callbackFlow
@@ -170,7 +191,14 @@ class AgroSessionRepository @Inject constructor(
         // being offered precisely because it was going strong — and only publishes on track
         // changes, so a long album could go quiet for the whole of it.
         if (devices.value.any { it.deviceId == handoff.deviceId && it.isOnline }) return true
-        return handoff.isRecent()
+        if (handoff.isRecent()) return true
+
+        // See [coldStartOfferAvailable]. Spent here, where the offer is actually made.
+        if (coldStartOfferAvailable) {
+            coldStartOfferAvailable = false
+            return true
+        }
+        return false
     }
 
     /**
