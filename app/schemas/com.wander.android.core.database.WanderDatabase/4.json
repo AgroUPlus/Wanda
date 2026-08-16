@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 4,
-    "identityHash": "c6ce9de9b10b35a96997a09727481acc",
+    "identityHash": "95a2b19c51b6d58949039a12407f28a7",
     "entities": [
       {
         "tableName": "tracks",
@@ -365,7 +365,7 @@
       },
       {
         "tableName": "history",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`historyId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `trackId` TEXT NOT NULL, `playedAt` INTEGER NOT NULL, `scrobbled` INTEGER NOT NULL, `agroSynced` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`historyId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `trackId` TEXT NOT NULL, `playedAt` INTEGER NOT NULL, `scrobbled` INTEGER NOT NULL, `agroSynced` INTEGER NOT NULL DEFAULT 1)",
         "fields": [
           {
             "fieldPath": "historyId",
@@ -395,7 +395,8 @@
             "fieldPath": "agroSynced",
             "columnName": "agroSynced",
             "affinity": "INTEGER",
-            "notNull": true
+            "notNull": true,
+            "defaultValue": "1"
           }
         ],
         "primaryKey": {
@@ -446,7 +447,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c6ce9de9b10b35a96997a09727481acc')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '95a2b19c51b6d58949039a12407f28a7')"
     ]
   }
 }
