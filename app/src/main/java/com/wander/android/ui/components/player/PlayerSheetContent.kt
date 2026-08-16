@@ -15,6 +15,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,7 +52,12 @@ fun PlayerSheetContent(
     onOpenAlbum: (String) -> Unit = {}
 ) {
     val anchors = remember { PlayerArtworkAnchors() }
-    var lyricsVisible by remember { mutableStateOf(false) }
+    // Owned here, not in `NowPlayingScreen`. The sheet is what draws the cover the lyrics replace,
+    // and it outlives the screen: collapsing disposes `NowPlayingScreen` while this composable
+    // stays, so state kept down there left the strip's cover hidden with nothing on screen able to
+    // bring it back.
+    var lyricsVisible by rememberSaveable { mutableStateOf(false) }
+
     // Opacity only, and read in a `graphicsLayer` rather than here — see the note on this
     // composable. The cover is drawn outside `NowPlayingScreen`'s `AnimatedContent`, so it has no
     // transition of its own; this is what cross-fades it with the lyrics instead of cutting.
@@ -70,6 +76,11 @@ fun PlayerSheetContent(
 
     val fullPlayerPresent by remember { derivedStateOf { progress() > 0f } }
     val docked by remember { derivedStateOf { progress() == 0f } }
+
+    // Collapsing puts the cover back. The docked strip is a cover and two lines of text — there is
+    // nowhere for lyrics to be, so carrying the toggle down into it only ever means a missing
+    // cover.
+    LaunchedEffect(docked) { if (docked) lyricsVisible = false }
 
     // One drag state for both layouts, so the cover — which is drawn once, above both — can follow
     // the finger either way round, and so the neighbouring covers know how far to slide in.
@@ -174,7 +185,8 @@ fun PlayerSheetContent(
                 onOpenArtist = onOpenArtist,
                 onOpenAlbum = onOpenAlbum,
                 contentAlpha = { smoothStep(progress(), 0.20f, 0.55f) },
-                onLyricsVisibleChange = { lyricsVisible = it },
+                showLyrics = lyricsVisible,
+                onToggleLyrics = { lyricsVisible = !lyricsVisible },
                 // The gesture only; the cover that visibly follows it is drawn above, so the
                 // reported artwork bounds stay still and the peek covers have a fixed frame.
                 artworkModifier = fullSwipe,
