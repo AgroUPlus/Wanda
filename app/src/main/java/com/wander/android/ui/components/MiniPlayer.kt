@@ -1,7 +1,6 @@
 package com.wander.android.ui.components
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -192,13 +191,18 @@ private fun PlaybackProgressBar(
     // Starts flat when paused so a cold launch does not animate a wave in for no reason.
     var flattened by remember { mutableStateOf(!isPlaying) }
 
+    // The *fast* effects spec, not the default one. This animation sits directly under a button
+    // press, so anything leisurely reads as the tap not having registered rather than as motion —
+    // the wave has to start settling on the same frame the icon changes.
+    val amplitudeSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+
     LaunchedEffect(isPlaying) {
         if (isPlaying) {
             // Mount first, then grow: the reverse would flatten and unmount in the same frame.
             flattened = false
-            amplitude.animateTo(1f, tween(durationMillis = AmplitudeDurationMs))
+            amplitude.animateTo(1f, amplitudeSpec)
         } else {
-            amplitude.animateTo(0f, tween(durationMillis = AmplitudeDurationMs))
+            amplitude.animateTo(0f, amplitudeSpec)
             flattened = true
         }
     }
@@ -220,6 +224,3 @@ private fun PlaybackProgressBar(
         }
     }
 }
-
-/** How long the wave takes to relax into a line, and to rise back out of one. */
-private const val AmplitudeDurationMs = 350

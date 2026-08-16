@@ -52,11 +52,21 @@ fun PlayerSheetContent(
 ) {
     val anchors = remember { PlayerArtworkAnchors() }
     var lyricsVisible by remember { mutableStateOf(false) }
-    val artworkAlpha by animateFloatAsState(
+    // Opacity only, and read in a `graphicsLayer` rather than here — see the note on this
+    // composable. The cover is drawn outside `NowPlayingScreen`'s `AnimatedContent`, so it has no
+    // transition of its own; this is what cross-fades it with the lyrics instead of cutting.
+    val artworkAlphaState = animateFloatAsState(
         targetValue = if (lyricsVisible) 0f else 1f,
         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
         label = "artwork-lyrics-fade"
     )
+
+    // Derived, so this flips twice per toggle instead of once per animation frame. Reading the
+    // raw alpha in composition scope would recompose the whole player on every frame of the
+    // fade — the one thing this file is built to avoid.
+    val artworkPresent by remember {
+        derivedStateOf { artworkAlphaState.value > 0f }
+    }
 
     val fullPlayerPresent by remember { derivedStateOf { progress() > 0f } }
     val docked by remember { derivedStateOf { progress() == 0f } }
@@ -147,8 +157,8 @@ fun PlayerSheetContent(
             // Cross-fades with the lyrics rather than cutting. The cover is drawn here, outside
             // `NowPlayingScreen`'s `AnimatedContent`, so it had no transition of its own — the
             // lyrics faded in over a cover that had already vanished.
-            visible = artworkAlpha > 0f,
-            alpha = { artworkAlpha },
+            visible = artworkPresent,
+            alpha = { artworkAlphaState.value },
             swipe = swipe,
             previousUrl = previousArtwork,
             nextUrl = nextArtwork

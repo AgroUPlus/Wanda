@@ -1,5 +1,6 @@
 package com.wander.android.core.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -26,5 +27,15 @@ data class HistoryEntity(
     val trackId: String,
     val playedAt: Long = System.currentTimeMillis(),
     val scrobbled: Boolean = false,
+    /**
+     * The SQL default is 1 while the Kotlin default is `false`, and the two disagree on purpose.
+     *
+     * Room always writes this column explicitly on insert, so the SQL default never decides what a
+     * new play gets — that is the `false` above, which is what puts it in the outbox. The SQL
+     * default exists only so a freshly created table matches one upgraded by `MIGRATION_3_4`:
+     * SQLite cannot add a NOT NULL column without a default, and Room refuses to open a database
+     * whose columns differ from the ones it would have created.
+     */
+    @ColumnInfo(defaultValue = "1")
     val agroSynced: Boolean = false
 )

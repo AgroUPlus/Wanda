@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,9 +45,6 @@ import com.wander.android.ui.components.AudioQualityBadge
 
 /** Nominal edge of the full-screen cover; drives the decode size, not the layout. */
 private val FullArtworkSize = 360.dp
-
-/** Just enough scale to register as movement without reading as a zoom. */
-private const val SubtleScale = 0.98f
 
 /**
  * @param artworkSlot fills the cover-art area. By default the screen draws its own artwork; the
@@ -147,27 +142,20 @@ fun NowPlayingScreen(
                     .fillMaxSize()
                     .then(artworkModifier)
             ) {
-                // Cover and lyrics occupy the same square, so swapping them is a plain cross-fade
-                // in place. It used to scale from 0.92 as well, under the default SizeTransform —
-                // and both of those change the measured bounds of this box, which is exactly what
-                // `PlayerArtworkAnchors` reports and the travelling cover follows. Closing the
-                // lyrics therefore shoved the artwork around instead of simply revealing it.
-                // `using null` disables the size transform; the spec comes from the motion scheme
-                // rather than a hand-rolled spring.
+                // Opacity only. Nothing here may move, scale or resize, because [artworkSlot] is
+                // the box whose bounds `PlayerArtworkAnchors` reports and the travelling cover
+                // follows — and `graphicsLayer` transforms are included in the coordinates
+                // `onGloballyPositioned` hands back. A `SizeTransform` did it by resizing, and a
+                // `scaleIn`/`scaleOut` of even 0.98 did it by transform: either way the cover
+                // spends the transition chasing a target that is itself shrinking, which is what
+                // made the toggle look broken rather than smooth.
                 //
-                // The scale is deliberately tiny (0.98) and, unlike the old 0.92, is applied by
-                // `scaleIn`/`scaleOut` — which are pure `graphicsLayer` effects and do not touch
-                // the measured bounds. It reads as the lyrics settling into place rather than as a
-                // zoom.
+                // `using null` disables the size transform for the same reason. The spec comes
+                // from the motion scheme rather than a hand-rolled spring.
                 val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
                 AnimatedContent(
                     targetState = showLyrics,
-                    transitionSpec = {
-                        (fadeIn(effects) + scaleIn(effects, initialScale = SubtleScale))
-                            .togetherWith(
-                                fadeOut(effects) + scaleOut(effects, targetScale = SubtleScale)
-                            ) using null
-                    },
+                    transitionSpec = { fadeIn(effects) togetherWith fadeOut(effects) using null },
                     label = "lyrics-artwork",
                     modifier = Modifier.fillMaxSize()
                 ) { lyricsVisible ->
