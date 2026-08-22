@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.UnifiedTrack
@@ -33,13 +34,27 @@ fun TrackRow(
     onToggleLike: (() -> Unit)? = null,
     onRemove: (() -> Unit)? = null,
     /** Long press. Null leaves the row without a context menu, as in the queue's reorder mode. */
-    onLongPress: (() -> Unit)? = null
+    onLongPress: (() -> Unit)? = null,
+    /**
+     * Whether tapping the row would actually play something. Defaults to the offline rule, so
+     * every list dims the same tracks without being told to; the queue passes its own value.
+     */
+    enabled: Boolean = track.isPlayableNow()
 ) {
+    // Dimming the whole row rather than each piece: the row is one object, and fading the parts
+    // separately made the artwork and the text disagree about how unavailable the track was.
+    val rowAlpha = if (enabled) 1f else DisabledAlpha
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = onPlay, onLongClick = onLongPress)
+            // Long press stays live while the tap does not: the actions sheet is still useful on
+            // an unplayable track — it is where "download" and "add to playlist" live.
+            .combinedClickable(
+                onClick = { if (enabled) onPlay() },
+                onLongClick = onLongPress
+            )
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Artwork(
@@ -47,13 +62,16 @@ fun TrackRow(
             contentDescription = null,
             sizeDp = 52.dp,
             shape = MaterialTheme.shapes.small,
-            modifier = Modifier.size(52.dp)
+            modifier = Modifier
+                .size(52.dp)
+                .graphicsLayer { alpha = rowAlpha }
         )
 
         Column(
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 12.dp)
+                .graphicsLayer { alpha = rowAlpha }
         ) {
             Text(
                 text = track.title,
@@ -104,6 +122,9 @@ fun TrackRow(
         }
     }
 }
+
+/** Material's disabled-content opacity. */
+private const val DisabledAlpha = 0.38f
 
 /** "Artist · Album · 3:41", skipping whatever the source did not provide. */
 private fun UnifiedTrack.subtitle(): String = listOfNotNull(

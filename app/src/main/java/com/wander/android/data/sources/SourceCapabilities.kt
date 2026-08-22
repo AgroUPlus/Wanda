@@ -8,6 +8,12 @@ data class SourceCapabilities(
     val search: Boolean = false,
     val albums: Boolean = false,
     val playlists: Boolean = false,
+    /**
+     * The backend can be *told* about playlists, not just asked. Reading and writing are separate
+     * because most sources do one without the other: YouTube Music lists playlists it will not let
+     * us build, and a source that cannot write must not offer "add to playlist" at all.
+     */
+    val playlistWrite: Boolean = false,
     val likes: Boolean = false,
     val scrobble: Boolean = false,
     val radio: Boolean = false,

@@ -68,6 +68,10 @@ private val DockedCorner: Dp = 28.dp
  * surface's height and padding changed. Every use is now inside a deferred `layout` or
  * `graphicsLayer` lambda, and the content slot receives a `() -> Float` so it can do the same.
  *
+ * Two of them, in fact: `progress` is clamped to 0..1 and is what almost everything wants, while
+ * `rawProgress` keeps the spring's overshoot for the one element that animates past its resting
+ * frame. The sheet's own radius and box lerp deliberately stay on the clamped one.
+ *
  * The content is measured **once**, at a constant size; only the node's drawn box animates.
  */
 @Composable
@@ -76,7 +80,7 @@ fun PlayerSheet(
     bottomInset: Dp,
     isVisible: Boolean,
     modifier: Modifier = Modifier,
-    content: @Composable (progress: () -> Float, expandedHeight: Dp) -> Unit
+    content: @Composable (progress: () -> Float, rawProgress: () -> Float, expandedHeight: Dp) -> Unit
 ) {
     if (!isVisible) return
 
@@ -164,7 +168,7 @@ fun PlayerSheet(
             CompositionLocalProvider(
                 LocalContentColor provides contentColorFor(containerColor)
             ) {
-                content({ sheetState.progress }, sheetHeight)
+                content({ sheetState.progress }, { sheetState.rawProgress }, sheetHeight)
             }
         }
     }

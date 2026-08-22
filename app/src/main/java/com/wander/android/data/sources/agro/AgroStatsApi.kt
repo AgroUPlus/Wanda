@@ -80,9 +80,17 @@ class AgroStatsApi @Inject constructor(
      * [deviceName] narrows it to one device's plays; null is the whole fleet, which is the number
      * that does not exist anywhere else and the reason for centralising this at all.
      */
+    /**
+     * Statistics for an account — your own by default, or a friend's when [username] names one.
+     *
+     * The account was hardcoded to this device's own, so a friend's listening was unreachable from
+     * the app even once they had opened it. The server decides whether the answer comes back: your
+     * own always, a friend's only when their `showStats` switch is on.
+     */
     suspend fun listeningStats(
         period: StatsPeriod,
-        deviceName: String? = null
+        deviceName: String? = null,
+        username: String? = null
     ): Result<AgroStats> = graphQl.execute(
         """
         query Stats(${'$'}userId: String!, ${'$'}period: String, ${'$'}deviceName: String) {
@@ -100,7 +108,7 @@ class AgroStatsApi @Inject constructor(
         }
         """.trimIndent(),
         buildJsonObject {
-            put("userId", graphQl.userId)
+            put("userId", username?.takeIf { it.isNotBlank() } ?: graphQl.userId)
             put("period", period.wireName)
             put("deviceName", deviceName)
         }
@@ -122,16 +130,3 @@ class AgroStatsApi @Inject constructor(
         )
     }
 }
-
-private fun kotlinx.serialization.json.JsonObject.long(key: String): Long =
-    this[key]?.jsonPrimitive?.longOrNull ?: 0L
-
-private fun kotlinx.serialization.json.JsonObject.longs(key: String): List<Long> =
-    this[key]?.jsonArray.orEmpty().map { it.jsonPrimitive.longOrNull ?: 0L }
-
-private fun kotlinx.serialization.json.JsonObject.entries(key: String): List<StatEntry> =
-    this[key]?.jsonArray.orEmpty().mapNotNull { element ->
-        val entry = element.jsonObject
-        val name = entry["name"]?.jsonPrimitive?.content ?: return@mapNotNull null
-        StatEntry(name, entry["value"]?.jsonPrimitive?.longOrNull ?: 0L)
-    }

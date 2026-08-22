@@ -275,8 +275,16 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _agroConfigured.value = false
     }
 
+    /**
+     * The username is part of the credential, not decoration.
+     *
+     * Every account-scoped field in Agro's schema names a `userId`, and the server checks it against
+     * the identity the token resolved to. A stored server and token with no username reported this
+     * app as paired while every query it could send was refused, which looked like the server being
+     * broken rather than the pairing being incomplete.
+     */
     private fun hasAgroCredentials() =
-        agroServerUrl.isNotBlank() && agroApiKey.isNotBlank()
+        agroServerUrl.isNotBlank() && agroApiKey.isNotBlank() && agroUsername.isNotBlank()
 
     companion object {
         private const val PREFS_NAME = "wanda_secure_vault"

@@ -20,6 +20,11 @@ import com.wander.android.ui.screens.login.YouTubeLoginScreen
 import com.wander.android.ui.screens.queue.QueueScreen
 import com.wander.android.ui.screens.search.SearchScreen
 import com.wander.android.ui.screens.settings.SettingsScreen
+import com.wander.android.ui.screens.social.CircleScreen
+import com.wander.android.ui.screens.social.InboxScreen
+import com.wander.android.ui.screens.social.JamScreen
+import com.wander.android.ui.screens.social.ProfileScreen
+import com.wander.android.ui.screens.social.SocialScreen
 import com.wander.android.ui.screens.stats.StatsScreen
 import com.wander.android.ui.screens.welcome.WelcomeScreen
 
@@ -56,6 +61,17 @@ fun NavGraphBuilder.wanderNavGraph(
         SearchScreen(contentPadding = contentPadding)
     }
 
+    tabDestination(TopLevelDestination.FRIENDS.route) {
+        SocialScreen(
+            contentPadding = contentPadding,
+            onOpenProfile = { navController.navigate(Routes.profile(it)) },
+            onOpenJam = { navController.navigate(Routes.JAM) },
+            onOpenInbox = { navController.navigate(Routes.INBOX) },
+            onOpenCircle = { navController.navigate(Routes.CIRCLE) },
+            onOpenSettings = { navController.navigate(Routes.SETTINGS) }
+        )
+    }
+
     tabDestination(Routes.STATS) {
         StatsScreen(contentPadding = contentPadding)
     }
@@ -79,6 +95,56 @@ fun NavGraphBuilder.wanderNavGraph(
         )
     }
 
+    // A profile keeps the chrome — you arrive from a friend's now-playing card, and the player
+    // that card is about must stay reachable.
+    tabDestination(
+        route = Routes.PROFILE,
+        arguments = listOf(navArgument("username") { type = NavType.StringType })
+    ) {
+        ProfileScreen(
+            contentPadding = contentPadding,
+            onBack = navController::popBackStack
+        )
+    }
+
+    detailDestination(route = Routes.INBOX) {
+        InboxScreen(
+            contentPadding = contentPadding,
+            onBack = navController::popBackStack
+        )
+    }
+
+    detailDestination(route = Routes.CIRCLE) {
+        CircleScreen(
+            contentPadding = contentPadding,
+            onBack = navController::popBackStack
+        )
+    }
+
+    detailDestination(
+        route = Routes.JAM_ROUTE,
+        arguments = listOf(
+            navArgument("code") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            }
+        )
+    ) { backStackEntry ->
+        val rawCode = backStackEntry.arguments?.getString("code")
+        val initialCode = if (rawCode.isNullOrBlank() || rawCode == "{code}" || rawCode.equals("CODE", ignoreCase = true)) {
+            null
+        } else {
+            rawCode.trim().uppercase().filter { it.isLetterOrDigit() }.take(10)
+        }
+        JamScreen(
+            contentPadding = contentPadding,
+            onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+            onBack = navController::popBackStack,
+            initialCode = initialCode
+        )
+    }
+
     detailDestination(
         route = Routes.ARTIST,
         arguments = listOf(navArgument("artist") { type = NavType.StringType })
@@ -93,7 +159,11 @@ fun NavGraphBuilder.wanderNavGraph(
     detailDestination(Routes.QUEUE) {
         QueueScreen(
             playerConnection = playerConnection,
-            onClose = navController::popBackStack
+            onClose = navController::popBackStack,
+            onOpenJam = {
+                navController.popBackStack()
+                navController.navigate(Routes.JAM)
+            }
         )
     }
 

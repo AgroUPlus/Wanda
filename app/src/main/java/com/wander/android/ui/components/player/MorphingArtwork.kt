@@ -54,6 +54,7 @@ internal fun MorphingArtwork(
     contentDescription: String?,
     anchors: PlayerArtworkAnchors,
     progress: () -> Float,
+    rawProgress: () -> Float,
     visible: Boolean,
     swipe: TrackSwipeState,
     previousUrl: String?,
@@ -84,7 +85,7 @@ internal fun MorphingArtwork(
         // effect. Inside, the layer is the placeable itself and travels with it.
         modifier = modifier
             .layout { measurable, _ ->
-                val rect = anchors.currentRect(mini, progress)
+                val rect = anchors.currentRect(mini, rawProgress)
                 val width = rect.width.roundToInt().coerceAtLeast(0)
                 val height = rect.height.roundToInt().coerceAtLeast(0)
                 val placeable = measurable.measure(Constraints.fixed(width, height))
@@ -182,5 +183,10 @@ private fun PeekArtwork(
  */
 private fun PlayerArtworkAnchors.currentRect(mini: Rect, progress: () -> Float): Rect {
     val full = fullBounds ?: return mini
-    return lerp(mini, full, FastOutSlowInEasing.transform(progress().coerceIn(0f, 1f)))
+    val p = progress()
+    // Past 1 the cover is overshooting its resting frame, and the easing curve cannot help: a
+    // cubic bezier easing *throws* outside 0..1. Extrapolate linearly instead, which meets the
+    // eased curve exactly at 1 (easing(1) == 1) and so stays continuous through the handover.
+    val t = if (p > 1f) p else FastOutSlowInEasing.transform(p.coerceIn(0f, 1f))
+    return lerp(mini, full, t)
 }

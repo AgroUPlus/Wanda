@@ -27,6 +27,8 @@ internal data class SettingsUiState(
     val cacheBytes: Long,
     val agroPaired: Boolean,
     val agroPairing: AgroPairingState,
+    val agroConnection: AgroConnectionState,
+    val agroVisibility: com.wander.android.data.sources.agro.AgroVisibility?,
     val agroSyncSettings: Boolean,
     val librarySync: Boolean,
     val syncProgress: SyncProgress,
@@ -50,6 +52,8 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val cacheBytes by viewModel.cacheBytes.collectAsStateWithLifecycle()
     val agro by viewModel.agroConnected.collectAsStateWithLifecycle()
     val agroPairing by viewModel.agroPairing.collectAsStateWithLifecycle()
+    val agroConnection by viewModel.agroConnection.collectAsStateWithLifecycle()
+    val agroVisibility by viewModel.agroVisibility.collectAsStateWithLifecycle()
     val agroSyncSettings by viewModel.agroSyncSettings.collectAsStateWithLifecycle()
     val librarySync by viewModel.librarySyncEnabled.collectAsStateWithLifecycle()
     val syncProgress by viewModel.librarySyncProgress.collectAsStateWithLifecycle()
@@ -71,6 +75,8 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         cacheBytes = cacheBytes,
         agroPaired = agro,
         agroPairing = agroPairing,
+        agroConnection = agroConnection,
+        agroVisibility = agroVisibility,
         agroSyncSettings = agroSyncSettings,
         librarySync = librarySync,
         syncProgress = syncProgress,

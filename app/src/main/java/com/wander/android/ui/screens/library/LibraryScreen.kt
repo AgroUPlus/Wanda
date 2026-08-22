@@ -1,9 +1,16 @@
 package com.wander.android.ui.screens.library
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -33,6 +40,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.ui.components.NewPlaylistDialog
+import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.SourceFilterChips
 import com.wander.android.ui.components.TrackActionsSheet
@@ -52,6 +61,8 @@ fun LibraryScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<com.wander.android.data.model.UnifiedTrack?>(null) }
 
+    val addToPlaylist = AddToPlaylistHost()
+
     actionsFor?.let { track ->
         TrackActionsSheet(
             track = track,
@@ -64,6 +75,11 @@ fun LibraryScreen(
             onDismiss = { actionsFor = null },
             onShare = if (viewModel.canShare(track)) {
                 { viewModel.share(track) }
+            } else {
+                null
+            },
+            onAddToPlaylist = if (addToPlaylist.canAdd(track)) {
+                { addToPlaylist.open(track) }
             } else {
                 null
             }
@@ -188,17 +204,66 @@ private fun PlaylistList(
     contentPadding: PaddingValues,
     viewModel: LibraryViewModel
 ) {
+    var naming by remember { mutableStateOf(false) }
+
+    if (naming) {
+        NewPlaylistDialog(
+            onConfirm = { name ->
+                naming = false
+                viewModel.createPlaylist(name)
+            },
+            onDismiss = { naming = false }
+        )
+    }
+
+    // The empty case used to return early, which meant a source that *can* make playlists offered
+    // no way to make the first one — the only state in which you most need it.
     if (playlists.isEmpty()) {
         Centered {
-            EmptyState(
-                title = "No playlists",
-                message = "Playlists from Navidrome, YouTube Music and the Internet Archive " +
-                    "appear here once those sources are connected."
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                EmptyState(
+                    title = "No playlists",
+                    message = "Playlists from Navidrome, YouTube Music and the Internet Archive " +
+                        "appear here once those sources are connected."
+                )
+                if (viewModel.canCreatePlaylists) {
+                    Button(
+                        onClick = { naming = true },
+                        modifier = Modifier.padding(top = 16.dp)
+                    ) {
+                        Icon(Icons.Rounded.Add, contentDescription = null)
+                        Text("New playlist", modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+            }
         }
         return
     }
+
     LazyColumn(contentPadding = contentPadding.listInset(), modifier = Modifier.fillMaxSize()) {
+        if (viewModel.canCreatePlaylists) {
+            item(key = "new_playlist", contentType = "action") {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { naming = true }
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Add,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "New playlist",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 20.dp)
+                    )
+                }
+            }
+        }
         items(playlists, key = { it.id }, contentType = { "playlist" }) { playlist ->
             PlaylistRow(playlist = playlist, onPlay = { viewModel.openPlaylist(playlist) })
         }

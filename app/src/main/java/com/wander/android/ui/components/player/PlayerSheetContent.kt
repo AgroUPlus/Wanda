@@ -42,6 +42,7 @@ import com.wander.android.ui.screens.player.NowPlayingScreen
 @Composable
 fun PlayerSheetContent(
     progress: () -> Float,
+    rawProgress: () -> Float,
     expandedHeight: Dp,
     playback: PlaybackState,
     playerConnection: PlayerConnection,
@@ -49,7 +50,8 @@ fun PlayerSheetContent(
     onCollapse: () -> Unit,
     onOpenQueue: () -> Unit,
     onOpenArtist: (String) -> Unit = {},
-    onOpenAlbum: (String) -> Unit = {}
+    onOpenAlbum: (String) -> Unit = {},
+    onOpenJam: () -> Unit = {}
 ) {
     val anchors = remember { PlayerArtworkAnchors() }
     // Owned here, not in `NowPlayingScreen`. The sheet is what draws the cover the lyrics replace,
@@ -165,6 +167,7 @@ fun PlayerSheetContent(
             contentDescription = playback.currentTrack?.title,
             anchors = anchors,
             progress = progress,
+            rawProgress = rawProgress,
             // Cross-fades with the lyrics rather than cutting. The cover is drawn here, outside
             // `NowPlayingScreen`'s `AnimatedContent`, so it had no transition of its own — the
             // lyrics faded in over a cover that had already vanished.
@@ -184,6 +187,7 @@ fun PlayerSheetContent(
                 onOpenQueue = onOpenQueue,
                 onOpenArtist = onOpenArtist,
                 onOpenAlbum = onOpenAlbum,
+                onOpenJam = onOpenJam,
                 contentAlpha = { smoothStep(progress(), 0.20f, 0.55f) },
                 showLyrics = lyricsVisible,
                 onToggleLyrics = { lyricsVisible = !lyricsVisible },

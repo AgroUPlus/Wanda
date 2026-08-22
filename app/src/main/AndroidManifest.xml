@@ -67,6 +67,15 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="wanda" android:host="listen" />
+                <data android:scheme="wanda" android:host="jam" />
+                <data android:scheme="wanda" android:host="inbox" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="frwd.top" android:pathPrefix="/jam" />
+                <data android:scheme="https" android:host="frwd.top" android:pathPrefix="/listen" />
             </intent-filter>
             <!--
               YouTube and YouTube Music links, so a track someone sends you opens here.

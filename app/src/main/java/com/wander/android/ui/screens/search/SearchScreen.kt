@@ -28,6 +28,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.ui.components.SearchKindToggle
+import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.SourceToggleChips
 import com.wander.android.data.model.UnifiedTrack
@@ -44,7 +46,10 @@ fun SearchScreen(
     val query by viewModel.query.collectAsStateWithLifecycle()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val selectedSources by viewModel.selectedSources.collectAsStateWithLifecycle()
+    val kind by viewModel.kind.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
+
+    val addToPlaylist = AddToPlaylistHost()
 
     actionsFor?.let { track ->
         TrackActionsSheet(
@@ -58,6 +63,11 @@ fun SearchScreen(
             onDismiss = { actionsFor = null },
             onShare = if (viewModel.canShare(track)) {
                 { viewModel.share(track) }
+            } else {
+                null
+            },
+            onAddToPlaylist = if (addToPlaylist.canAdd(track)) {
+                { addToPlaylist.open(track) }
             } else {
                 null
             }
@@ -90,6 +100,12 @@ fun SearchScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 16.dp)
+        )
+
+        SearchKindToggle(
+            selected = kind,
+            onSelect = viewModel::selectKind,
+            modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 12.dp)
         )
 
         if (viewModel.availableSources.size > 1) {

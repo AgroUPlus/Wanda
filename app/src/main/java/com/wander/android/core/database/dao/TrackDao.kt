@@ -223,4 +223,8 @@ interface TrackDao {
 
     @Query("DELETE FROM tracks WHERE source = :source")
     suspend fun clearBySource(source: SourceType)
+
+    /** Bulk lookup for rebuilding a cached shelf, in one query rather than one per track. */
+    @Query("SELECT * FROM tracks WHERE id IN (:ids)")
+    suspend fun getTracksByIds(ids: List<String>): List<TrackEntity>
 }

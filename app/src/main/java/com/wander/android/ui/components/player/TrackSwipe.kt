@@ -154,10 +154,12 @@ internal fun Modifier.swipeToChangeTrack(
 
                         if (skipNext) onNext() else onPrevious()
                     } else {
+                        // Same mild bounce as the sheet itself — an abandoned swipe springs back
+                        // rather than gliding, which is what says the gesture did not take.
                         state.offsetX.animateTo(
                             targetValue = 0f,
                             animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                dampingRatio = PlayerSheetState.ExpressiveDamping,
                                 stiffness = Spring.StiffnessMediumLow
                             )
                         )

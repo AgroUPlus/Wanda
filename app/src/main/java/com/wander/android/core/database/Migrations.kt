@@ -61,6 +61,105 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
     }
 }
 
+/**
+ * Adds the recommendation-shelf cache.
+ *
+ * Purely additive — an empty table simply means the next Home refresh fetches, which is exactly
+ * what every launch did before. Nothing is backfilled because there is nothing to backfill: the
+ * feed only ever existed in memory.
+ */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `shelves` (
+                `id` TEXT NOT NULL,
+                `title` TEXT NOT NULL,
+                `position` INTEGER NOT NULL,
+                `trackIds` TEXT NOT NULL,
+                `fetchedAt` INTEGER NOT NULL,
+                PRIMARY KEY(`id`)
+            )
+            """.trimIndent()
+        )
+    }
+}
+
+/**
+ * Adds the friend-list cache.
+ *
+ * Additive, and an empty table is the correct starting state: an account with no Agro pairing has
+ * no friends to cache, and one with a pairing refills it on the next Friends refresh. Nothing about
+ * what a friend is *playing* is stored here — see [com.wander.android.core.database.entity.FriendEntity].
+ */
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `friends` (
+                `username` TEXT NOT NULL,
+                `displayName` TEXT,
+                `bio` TEXT,
+                `avatarUrl` TEXT,
+                `state` TEXT NOT NULL,
+                `outgoing` INTEGER NOT NULL,
+                `showNowPlaying` INTEGER NOT NULL,
+                `showStats` INTEGER NOT NULL,
+                `syncedAt` INTEGER NOT NULL,
+                PRIMARY KEY(`username`)
+            )
+            """.trimIndent()
+        )
+    }
+}
+
+/**
+ * Adds the drop inbox.
+ *
+ * Additive, and empty is the right starting state for the same reason [MIGRATION_6_7] is: a device
+ * with no Agro pairing has no inbox, and one with a pairing fills it on the next refresh. Unlike
+ * the friend cache this table is genuinely durable — see
+ * [com.wander.android.core.database.entity.DropEntity] for why a drop is stored when presence is
+ * not.
+ */
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `drops` (
+                `id` TEXT NOT NULL,
+                `fromUser` TEXT NOT NULL,
+                `toUser` TEXT NOT NULL,
+                `trackTitle` TEXT NOT NULL,
+                `artistName` TEXT NOT NULL,
+                `albumName` TEXT,
+                `artworkUrl` TEXT,
+                `contentHash` TEXT,
+                `trackUri` TEXT,
+                `note` TEXT,
+                `createdAt` TEXT NOT NULL,
+                `readAt` TEXT,
+                `archived` INTEGER NOT NULL,
+                `incoming` INTEGER NOT NULL,
+                `syncedAt` INTEGER NOT NULL,
+                PRIMARY KEY(`id`)
+            )
+            """.trimIndent()
+        )
+        // An earlier build of this migration created an index under a name the entity did not
+        // declare. Room compares the live schema against the entities on every open, so that
+        // mismatch threw while the database was opening and the app could not start at all.
+        // Dropped rather than left alone, in case any device committed it.
+        db.execSQL("DROP INDEX IF EXISTS `index_drops_incoming`")
+        // The name is the one Room generates for the entity's own `@Index`. They have to agree
+        // exactly, or the validation above fails for the opposite reason.
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_drops_incoming_archived_createdAt` " +
+                "ON `drops` (`incoming`, `archived`, `createdAt`)"
+        )
+    }
+}
+
 /** Every migration, in order. Room applies whichever ones a given database still needs. */
 val WANDER_MIGRATIONS: Array<Migration> =
-    arrayOf(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+    arrayOf(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)

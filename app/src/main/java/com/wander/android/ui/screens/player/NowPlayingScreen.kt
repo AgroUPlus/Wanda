@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.player
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.animation.AnimatedContent
@@ -9,20 +10,24 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -57,13 +63,14 @@ private val FullArtworkSize = 360.dp
  *   measured against a frame that is itself sliding.
  */
 @Composable
-fun NowPlayingScreen(
+internal fun NowPlayingScreen(
     playerConnection: PlayerConnection,
     onCollapse: () -> Unit,
     onOpenQueue: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenArtist: ((String) -> Unit)? = null,
     onOpenAlbum: ((String) -> Unit)? = null,
+    onOpenJam: () -> Unit = {},
     contentAlpha: () -> Float = { 1f },
     artworkSlot: (@Composable (url: String?, contentDescription: String) -> Unit)? = null,
     artworkModifier: Modifier = Modifier,
@@ -74,6 +81,7 @@ fun NowPlayingScreen(
     val state by playerConnection.state.collectAsStateWithLifecycle()
     val lyrics by viewModel.lyrics.collectAsStateWithLifecycle()
     val likedTrackIds by viewModel.likedTrackIds.collectAsStateWithLifecycle()
+    val jam by viewModel.jam.collectAsStateWithLifecycle()
     val track = state.currentTrack
 
     if (track == null) return
@@ -101,29 +109,60 @@ fun NowPlayingScreen(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.weight(1f)
             ) {
-                Text(
-                    text = track.source.displayName,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-                track.audioQualityLabel?.let { quality ->
-                    AudioQualityBadge(
-                        quality = quality,
-                        modifier = Modifier.padding(start = 8.dp)
+                val activeJam = jam
+                if (activeJam != null) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                        modifier = Modifier.clickable(onClick = onOpenJam)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .background(androidx.compose.ui.graphics.Color(0xFFEF4444), androidx.compose.foundation.shape.CircleShape)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "Jam",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            com.wander.android.ui.components.AvatarGroup(
+                                usernames = activeJam.members,
+                                size = 18.dp,
+                                overlap = 5.dp,
+                                maxDisplay = 3
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        text = track.source.displayName,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
                     )
+                    track.audioQualityLabel?.let { quality ->
+                        AudioQualityBadge(
+                            quality = quality,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
                 }
             }
-            // Up here with the other playback-wide switches rather than stranded under the
-            // transport row, where it read as an afterthought bolted onto the bottom.
-            RadioChip(
+            // Radio folded into a long press here rather than carrying its own labelled chip,
+            // which cost a whole slot in the bar to say something the icon tint can say.
+            QueueRadioButton(
                 isRadioMode = state.isRadioMode,
-                onToggle = playerConnection::toggleRadio,
-                modifier = Modifier.padding(end = 4.dp)
+                onOpenQueue = onOpenQueue,
+                onToggleRadio = playerConnection::toggleRadio
             )
-            IconButton(onClick = onOpenQueue) {
-                Icon(Icons.AutoMirrored.Rounded.QueueMusic, contentDescription = "Open queue")
-            }
         }
 
         // Swipeable Artwork / Lyrics Area

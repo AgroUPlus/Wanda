@@ -1,0 +1,60 @@
+package com.wander.android.data.sources.agro
+
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
+
+/**
+ * The GraphQL payloads, turned into models.
+ *
+ * Kept apart from the two API classes because both of them read profiles and both read presence —
+ * a shared parser is the only way those two stay one definition instead of drifting apart.
+ */
+
+/** The fields every profile query selects. Written once so the queries cannot disagree. */
+internal const val PROFILE_FIELDS =
+    "username displayName bio avatarUrl createdAt friendState outgoing " +
+        "showNowPlaying showStats discoverable showActivity"
+
+internal const val NOW_PLAYING_FIELDS =
+    "username trackUri trackTitle artistName albumName artworkUrl positionMs isPlaying updatedAt"
+
+internal fun JsonObject.toProfile(): AgroProfile = AgroProfile(
+    username = str("username").orEmpty(),
+    displayName = str("displayName"),
+    bio = str("bio"),
+    avatarUrl = str("avatarUrl"),
+    createdAt = str("createdAt").orEmpty(),
+    friendState = FriendState.parse(str("friendState")),
+    outgoing = bool("outgoing"),
+    showNowPlaying = bool("showNowPlaying"),
+    showStats = bool("showStats"),
+    discoverable = bool("discoverable"),
+    showActivity = bool("showActivity")
+)
+
+internal fun JsonObject.toNowPlaying(): AgroFriendNowPlaying = AgroFriendNowPlaying(
+    username = str("username").orEmpty(),
+    trackUri = str("trackUri").orEmpty(),
+    trackTitle = str("trackTitle").orEmpty(),
+    artistName = str("artistName").orEmpty(),
+    albumName = str("albumName"),
+    artworkUrl = str("artworkUrl"),
+    positionMs = long("positionMs"),
+    isPlaying = bool("isPlaying"),
+    updatedAt = str("updatedAt").orEmpty()
+)
+
+internal fun JsonObject.toFriend(): AgroFriend = AgroFriend(
+    profile = obj("profile")?.toProfile() ?: toProfile(),
+    nowPlaying = obj("nowPlaying")?.toNowPlaying()
+)
+
+internal fun JsonObject.toListenAlong(): AgroListenAlong = AgroListenAlong(
+    host = str("host").orEmpty(),
+    listeners = (this["listeners"] as? JsonArray)
+        ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+        .orEmpty(),
+    nowPlaying = obj("nowPlaying")?.toNowPlaying()
+)

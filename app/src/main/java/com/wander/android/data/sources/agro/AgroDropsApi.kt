@@ -1,0 +1,106 @@
+package com.wander.android.data.sources.agro
+
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.put
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * Songs handed between friends.
+ *
+ * Like the rest of the social API, none of these name an account to read. The inbox is the one the
+ * token proved, and there is no argument through which another could be asked for.
+ *
+ * Sending is gated on friendship alone. The server refuses a stranger with exactly the same message
+ * it uses for an account that does not exist, so a failure here is never worth interpreting more
+ * finely than "that did not go".
+ */
+@Singleton
+internal class AgroDropsApi @Inject constructor(
+    private val graphQl: AgroGraphQl
+) {
+    suspend fun inbox(limit: Int = 100): Result<List<AgroDrop>> = graphQl.execute(
+        """
+        query Inbox(${'$'}limit: Int) { inbox(limit: ${'$'}limit) { $DROP_FIELDS } }
+        """.trimIndent(),
+        buildJsonObject { put("limit", limit) }
+    ).map { data ->
+        (data["inbox"] as? JsonArray).orEmpty().map { it.jsonObject.toDrop() }
+    }
+
+    suspend fun sent(limit: Int = 100): Result<List<AgroDrop>> = graphQl.execute(
+        """
+        query SentDrops(${'$'}limit: Int) { sentDrops(limit: ${'$'}limit) { $DROP_FIELDS } }
+        """.trimIndent(),
+        buildJsonObject { put("limit", limit) }
+    ).map { data ->
+        (data["sentDrops"] as? JsonArray).orEmpty().map { it.jsonObject.toDrop() }
+    }
+
+    suspend fun unreadCount(): Result<Long> = graphQl.execute(
+        "{ unreadDropCount }",
+        buildJsonObject { }
+    ).map { data -> data["unreadDropCount"]?.jsonPrimitive?.longOrNull ?: 0L }
+
+    /**
+     * Hands a track to a friend.
+     *
+     * [contentHash] and [trackUri] are sent when this device happens to know them and omitted when
+     * it does not — a drop from a backend with no stable identity is still a drop, and refusing to
+     * send one would make the action available only for local files.
+     */
+    suspend fun drop(
+        to: String,
+        trackTitle: String,
+        artistName: String,
+        albumName: String? = null,
+        artworkUrl: String? = null,
+        contentHash: String? = null,
+        trackUri: String? = null,
+        note: String? = null
+    ): Result<AgroDrop> = graphQl.execute(
+        """
+        mutation Drop(
+            ${'$'}to: String!, ${'$'}trackTitle: String!, ${'$'}artistName: String!,
+            ${'$'}albumName: String, ${'$'}artworkUrl: String, ${'$'}contentHash: String,
+            ${'$'}trackUri: String, ${'$'}note: String
+        ) {
+            dropTrack(
+                to: ${'$'}to, trackTitle: ${'$'}trackTitle, artistName: ${'$'}artistName,
+                albumName: ${'$'}albumName, artworkUrl: ${'$'}artworkUrl,
+                contentHash: ${'$'}contentHash, trackUri: ${'$'}trackUri, note: ${'$'}note
+            ) { $DROP_FIELDS }
+        }
+        """.trimIndent(),
+        buildJsonObject {
+            put("to", to.trim().lowercase())
+            put("trackTitle", trackTitle)
+            put("artistName", artistName)
+            put("albumName", albumName)
+            put("artworkUrl", artworkUrl)
+            put("contentHash", contentHash)
+            put("trackUri", trackUri)
+            put("note", note?.takeIf { it.isNotBlank() })
+        }
+    ).mapCatching { data ->
+        data["dropTrack"]?.jsonObject?.toDrop()
+            ?: error("the server accepted the drop but did not describe it")
+    }
+
+    suspend fun markRead(id: String): Result<Boolean> = idMutation("markDropRead", id)
+
+    suspend fun archive(id: String): Result<Boolean> = idMutation("archiveDrop", id)
+
+    /** The two id-taking mutations differ only in their name, so they share one body. */
+    private suspend fun idMutation(field: String, id: String): Result<Boolean> = graphQl.execute(
+        """
+        mutation Drop(${'$'}id: String!) { $field(id: ${'$'}id) }
+        """.trimIndent(),
+        buildJsonObject { put("id", id) }
+    ).map { data -> data[field]?.jsonPrimitive?.booleanOrNull ?: false }
+}

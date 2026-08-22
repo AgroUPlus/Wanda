@@ -6,6 +6,7 @@ import com.wander.android.core.playback.PlaybackCoordinator
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.ShareRepository
+import com.wander.android.data.repository.JamRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -14,13 +15,15 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class NowPlayingViewModel @Inject constructor(
+internal class NowPlayingViewModel @Inject constructor(
     private val coordinator: PlaybackCoordinator,
     private val musicRepository: MusicRepository,
-    private val shareRepository: ShareRepository
+    private val shareRepository: ShareRepository,
+    jamRepository: JamRepository
 ) : ViewModel() {
 
     val lyrics = coordinator.lyrics
+    val jam = jamRepository.jam
 
     /**
      * The playing track is a snapshot taken when it was queued, so its own `isLiked` never changes

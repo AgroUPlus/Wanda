@@ -12,10 +12,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.security.SecureStorage
+import com.wander.android.data.sources.agro.AgroAuthError
 import com.wander.android.data.sources.agro.AgroClient
+import com.wander.android.data.sources.agro.explain
 import com.wander.android.data.repository.LinkRepository
 import com.wander.android.data.sources.agro.AgroHandoffPublisher
 import com.wander.android.ui.WanderApp
+import com.wander.android.ui.navigation.DeepLinkRouter
+import com.wander.android.ui.navigation.Routes
 import com.wander.android.ui.theme.WanderTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -34,6 +38,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var agroClient: AgroClient
     @Inject lateinit var agroHandoffPublisher: AgroHandoffPublisher
     @Inject lateinit var linkRepository: LinkRepository
+    @Inject lateinit var deepLinkRouter: DeepLinkRouter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,23 +65,40 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Three kinds of link arrive here: an `agro:` pairing QR, a YouTube/YouTube Music track
-     * someone shared, and a `wanda://listen` handoff from a share-domain redirect page — the last
-     * two being the same track wearing a different URL. Anything else is left alone.
+     * Links arrive here: an `agro:` pairing QR, a YouTube/YouTube Music track
+     * someone shared, a `wanda://listen` handoff, a `wanda://inbox` notification,
+     * or a Jam invite link `https://frwd.top/jam?code=...` / `wanda://jam?code=...`.
      */
     private fun handleIntent(intent: Intent?) {
         val uri = intent?.data ?: return
         when {
             uri.scheme == "agro" -> handleAgroPairing(uri)
+            // A tapped drop notification.
+            uri.scheme == "wanda" && uri.host == "inbox" -> deepLinkRouter.request(Routes.INBOX)
+            isJamLink(uri) -> handleJamLink(uri)
             linkRepository.canOpen(uri) -> openSharedLink(uri)
-            // Wanda offers itself for every YouTube link, but only *track* links have anything
-            // behind them here. Landing silently on Home would read as the app having failed to
-            // open the thing that was tapped.
             uri.scheme == "https" || uri.scheme == "wanda" -> Toast.makeText(
                 this,
-                "That link isn't a track Wanda can play.",
+                "That link isn't a track or Jam Wanda can open.",
                 Toast.LENGTH_LONG
             ).show()
+        }
+    }
+
+    private fun isJamLink(uri: Uri): Boolean {
+        val isScheme = uri.scheme in setOf("wanda", "https", "http")
+        val isJamHostOrPath = uri.host == "jam" || uri.pathSegments.contains("jam")
+        val hasCodeOrId = uri.getQueryParameter("code") != null || uri.getQueryParameter("id") != null
+        return isScheme && isJamHostOrPath && hasCodeOrId
+    }
+
+    private fun handleJamLink(uri: Uri) {
+        val code = uri.getQueryParameter("code")?.trim()?.uppercase()?.filter { it.isLetterOrDigit() }?.take(10)
+        if (!code.isNullOrEmpty()) {
+            Toast.makeText(this, "Opening Jam $code...", Toast.LENGTH_SHORT).show()
+            deepLinkRouter.request(Routes.jam(code))
+        } else {
+            deepLinkRouter.request(Routes.jam())
         }
     }
 
@@ -101,14 +123,17 @@ class MainActivity : ComponentActivity() {
 
     private fun handleAgroPairing(uri: Uri) {
         lifecycleScope.launch {
-            val success = agroClient.parseQrCodePayload(uri.toString())
-            // A silent failure here read as "paired" to the user, who then waited for a sync
-            // that was never going to come.
-            val message = if (success) {
-                "Paired with Agro as ${secureStorage.agroDevicePetname.ifEmpty { "wanda" }}"
-            } else {
-                "Agro pairing failed — check the server is reachable and rescan"
-            }
+            val result = agroClient.parseQrCodePayload(uri.toString())
+            val message = result.fold(
+                onSuccess = { petname ->
+                    "Paired with Agro as ${petname ?: secureStorage.agroDevicePetname.ifEmpty { "wanda" }}"
+                },
+                onFailure = { error ->
+                    // The message only; the URL and token in this flow are credentials.
+                    android.util.Log.w("Wanda", "Agro pairing failed: ${error.message}")
+                    AgroAuthError.from(error).explain()
+                }
+            )
             Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
         }
     }

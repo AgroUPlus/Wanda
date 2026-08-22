@@ -1,5 +1,6 @@
 package com.wander.android.data.sources.ytmusic
 
+import com.wander.android.data.model.SearchKind
 import com.wander.android.core.network.HttpClientFactory
 import io.ktor.client.HttpClient
 import io.ktor.client.request.HttpRequestBuilder
@@ -49,12 +50,12 @@ class InnerTubeClient @Inject constructor(
     /** Pairs the PO Token request with the player request when no visitor ID is available yet. */
     private val fallbackSessionId = UUID.randomUUID().toString()
 
-    suspend fun search(query: String): Result<JsonObject> = post(
+    suspend fun search(query: String, kind: SearchKind = SearchKind.TRACKS): Result<JsonObject> = post(
         "search",
         buildJsonObject {
             put("context", webContext())
             put("query", query)
-            put("params", SONGS_FILTER)
+            put("params", kind.filterParam())
         }
     )
 
@@ -129,7 +130,7 @@ class InnerTubeClient @Inject constructor(
                     putJsonObject("playbackContext") {
                         putJsonObject("contentPlaybackContext") {
                             put("html5Preference", "HTML5_PREF_WANTS")
-                            put("referer", "$ORIGIN/")
+                            put("referer", "$YT_MUSIC_ORIGIN/")
                             signatureTimestamp?.let { put("signatureTimestamp", it) }
                         }
                     }
@@ -219,7 +220,7 @@ class InnerTubeClient @Inject constructor(
 
     /**
      * Only `WEB_REMIX` (search/browse/library) carries cookie auth: it's the signed-in browser
-     * identity, authenticated with a `SAPISIDHASH` computed over [ORIGIN] — Google re-derives the
+     * identity, authenticated with a `SAPISIDHASH` computed over [YT_MUSIC_ORIGIN] — Google re-derives the
      * hash from the `Origin`/`X-Origin` header, so the two always travel together. The playback
      * client (`ANDROID_VR`) is deliberately anonymous: it neither accepts nor needs cookie auth
      * for `/player`, and sending it would just make the request read as a mismatched, suspicious
@@ -236,9 +237,9 @@ class InnerTubeClient @Inject constructor(
 
         if (variant != InnerTubeVariant.WEB_REMIX) return
 
-        header("Origin", ORIGIN)
-        header("X-Origin", ORIGIN)
-        header("Referer", "$ORIGIN/")
+        header("Origin", YT_MUSIC_ORIGIN)
+        header("X-Origin", YT_MUSIC_ORIGIN)
+        header("Referer", "$YT_MUSIC_ORIGIN/")
         (visitorIdOverride ?: accountManager.visitorData).takeIf { it.isNotBlank() }
             ?.let { header("X-Goog-Visitor-Id", it) }
 
@@ -268,23 +269,12 @@ class InnerTubeClient @Inject constructor(
     private fun deviceCountry(): String = Locale.getDefault().country.ifBlank { "US" }
 
     private companion object {
-        const val ORIGIN = "https://music.youtube.com"
-        const val SONGS_FILTER = "EgWKAQIIAWoKEAkQBRAKEAMQBA=="
-
-        /** The browse id behind music.youtube.com's front page. */
-        const val HOME_BROWSE_ID = "FEmusic_home"
-
-        /** YouTube Music's id for "radio seeded by this video". */
-        const val RADIO_PREFIX = "RDAMVM"
-        const val ANDROID_VR_SDK_VERSION = 32
-        const val ANDROID_VR_OS_VERSION = "12L"
-
         val SAPISID_REGEX = Regex("(?:__Secure-3PAPISID|SAPISID)=([^;]+)")
 
         fun sapisidHash(sapisid: String): String {
             val time = System.currentTimeMillis() / 1000
             val digest = MessageDigest.getInstance("SHA-1")
-                .digest("$time $sapisid $ORIGIN".toByteArray(Charsets.UTF_8))
+                .digest("$time $sapisid $YT_MUSIC_ORIGIN".toByteArray(Charsets.UTF_8))
             return "SAPISIDHASH ${time}_${digest.joinToString("") { "%02x".format(it) }}"
         }
     }

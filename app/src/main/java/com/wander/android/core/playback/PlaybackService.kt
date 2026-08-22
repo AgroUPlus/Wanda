@@ -12,8 +12,10 @@ import com.wander.android.data.sources.agro.AgroHandoffPublisher
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -69,20 +71,55 @@ class PlaybackService : MediaSessionService() {
         super.onDestroy()
     }
 
-    /** Records a play once a track actually starts, so counts reflect listening, not queuing. */
+    /** Records a play once a track reaches 75% of its duration, so counts reflect actual listening. */
     private inner class PlayCountRecorder(private val player: Player) : Player.Listener {
         private var recordedFor: String? = null
+        private var scrobbleJob: Job? = null
 
         override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
             recordedFor = null
+            scrobbleJob?.cancel()
+            scrobbleJob = null
+            checkScrobbleProgress()
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
-            if (!isPlaying) return
+            if (isPlaying) {
+                checkScrobbleProgress()
+            } else {
+                scrobbleJob?.cancel()
+                scrobbleJob = null
+            }
+        }
+
+        private fun checkScrobbleProgress() {
+            scrobbleJob?.cancel()
+            if (!player.isPlaying) return
             val track = player.currentMediaItem?.toUnifiedTrack() ?: return
             if (recordedFor == track.id) return
-            recordedFor = track.id
-            scope.launch { musicRepository.recordPlay(track) }
+
+            scrobbleJob = scope.launch {
+                while (player.isPlaying) {
+                    val currentPos = player.currentPosition
+                    val duration = if (track.durationMs > 0) track.durationMs else player.duration
+
+                    // 75% threshold, with a 15s minimum for short tracks, capped at 4 min for long audio
+                    val thresholdMs = if (duration > 0) {
+                        minOf((duration * 0.75).toLong(), 240_000L).coerceAtLeast(15_000L)
+                    } else {
+                        30_000L
+                    }
+
+                    if (currentPos >= thresholdMs) {
+                        if (recordedFor != track.id) {
+                            recordedFor = track.id
+                            musicRepository.recordPlay(track)
+                        }
+                        break
+                    }
+                    delay(2_000L)
+                }
+            }
         }
     }
 

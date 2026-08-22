@@ -1,6 +1,8 @@
 package com.wander.android.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,11 +11,14 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.LibraryAdd
 import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,12 +29,19 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.ui.screens.social.JamViewModel
 import com.wander.android.data.model.UnifiedTrack
 
 /**
@@ -41,6 +53,9 @@ import com.wander.android.data.model.UnifiedTrack
  *
  * There is no "play now": tapping the row already does exactly that, and the long press is for
  * everything tapping *cannot* do.
+ *
+ * The same absence rule covers offline: when the track cannot be played without a network, the
+ * actions that would queue it are gone rather than present and doomed.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,13 +69,54 @@ fun TrackActionsSheet(
     onRemove: (() -> Unit)?,
     onDismiss: () -> Unit,
     /** Null unless the track's source can publish a public link — see `SourceCapabilities.share`. */
-    onShare: (() -> Unit)? = null
+    onShare: (() -> Unit)? = null,
+    /**
+     * Null unless the track's source can be written to — see `SourceCapabilities.playlistWrite`.
+     * Unlike the queue actions this survives offline: the write is worth attempting whether or not
+     * the track itself would play right now.
+     */
+    onAddToPlaylist: (() -> Unit)? = null,
+    /** Told what to say once a drop has been sent, or failed to be. */
+    onDropSent: (String) -> Unit = {}
 ) {
+    val playable = track.isPlayableNow()
+
+    // Resolved here rather than passed in by each caller. This sheet is opened from a dozen
+    // screens, and threading a jam callback through all of them would mean the action quietly
+    // missing wherever one was forgotten — which is how it shipped with no way to add a track at
+    // all. Shown only while actually in a jam, since otherwise there is nowhere for it to go.
+    val jamViewModel: JamViewModel = hiltViewModel()
+    val jamState by jamViewModel.state.collectAsStateWithLifecycle()
+
+    // Resolved here for the same reason the jam view model is: this sheet opens from a dozen
+    // screens, and threading a callback through all of them is how an action ends up missing from
+    // whichever one was forgotten.
+    val dropFriends by hiltViewModel<DropToFriendViewModel>().friends.collectAsStateWithLifecycle()
+    var pickingFriend by remember { mutableStateOf(false) }
+
+    if (pickingFriend) {
+        DropToFriendSheet(
+            track = track,
+            onDismiss = {
+                pickingFriend = false
+                onDismiss()
+            },
+            onSent = onDropSent
+        )
+        return
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState()
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
-        Column(modifier = Modifier.navigationBarsPadding()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = 32.dp)
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -92,14 +148,40 @@ fun TrackActionsSheet(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-            SheetAction(Icons.AutoMirrored.Rounded.PlaylistAdd, "Play next") { onPlayNext(); onDismiss() }
-            SheetAction(Icons.AutoMirrored.Rounded.QueueMusic, "Add to queue") { onAddToQueue(); onDismiss() }
+            // Queueing a track the player would refuse to load only moves the failure later, so
+            // offline these are omitted the same way an unsupported capability is. Liking,
+            // sharing and removing still work — none of them need to play anything.
+            if (playable) {
+                SheetAction(Icons.AutoMirrored.Rounded.PlaylistAdd, "Play next") { onPlayNext(); onDismiss() }
+                SheetAction(Icons.AutoMirrored.Rounded.QueueMusic, "Add to queue") { onAddToQueue(); onDismiss() }
 
-            onStartRadio?.let {
-                SheetAction(Icons.Rounded.Radio, "Start radio from this") { it(); onDismiss() }
+                onStartRadio?.let {
+                    SheetAction(Icons.Rounded.Radio, "Start radio from this") { it(); onDismiss() }
+                }
+            }
+            jamState.jam?.let { jam ->
+                // Named for what it does. In democracy mode this does not add anything — it asks
+                // the room, and saying "add" would promise something the server will not do.
+                val label = if (jam.mode == com.wander.android.data.sources.agro.JamMode.DEMOCRACY) {
+                    "Suggest to jam"
+                } else {
+                    "Add to jam"
+                }
+                SheetAction(Icons.Rounded.Groups, label) {
+                    jamViewModel.suggest(track)
+                    onDismiss()
+                }
+            }
+            onAddToPlaylist?.let {
+                SheetAction(Icons.Rounded.LibraryAdd, "Add to playlist") { it(); onDismiss() }
             }
             onShare?.let {
                 SheetAction(Icons.Rounded.Share, "Share a link") { it(); onDismiss() }
+            }
+            // Only offered when there is somebody to send to. An action that can only ever answer
+            // "you have no friends" is not worth a row.
+            if (dropFriends.isNotEmpty()) {
+                SheetAction(Icons.AutoMirrored.Rounded.Send, "Send to a friend") { pickingFriend = true }
             }
             onToggleLike?.let {
                 SheetAction(

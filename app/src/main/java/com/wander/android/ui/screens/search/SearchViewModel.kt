@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.search
 
+import com.wander.android.data.model.SearchKind
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -59,6 +60,16 @@ class SearchViewModel @Inject constructor(
     val selectedSources: StateFlow<Set<SourceType>> = _selectedSources.asStateFlow()
 
     /**
+     * What kind of thing this search is for. Only YouTube Music serves anything but [
+     * SearchKind.TRACKS]; the other backends answer the non-music kinds with nothing rather than
+     * with songs, so the results stay honest to the chip that is selected.
+     */
+    private val _kind = MutableStateFlow(SearchKind.TRACKS)
+    val kind: StateFlow<SearchKind> = _kind.asStateFlow()
+
+    fun selectKind(kind: SearchKind) { _kind.value = kind }
+
+    /**
      * Only sources that can search *and* are set up right now. A backend the user signed out of
      * has nothing to offer, so offering its chip — pre-selected, no less — only promised results
      * that could never arrive.
@@ -71,9 +82,13 @@ class SearchViewModel @Inject constructor(
 
     // Re-runs when the sources change as well as the query: toggling a backend on has to go and
     // ask it, not just unhide results that were never fetched.
-    private val searchResults: StateFlow<SearchUiState> = combine(_query, _selectedSources, ::Pair)
-        .debounce { (query, _) -> if (query.isBlank()) 0L else DEBOUNCE_MS }
-        .flatMapLatest { (query, sources) ->
+    private val searchResults: StateFlow<SearchUiState> = combine(
+        _query,
+        _selectedSources,
+        _kind
+    ) { query, sources, kind -> Triple(query, sources, kind) }
+        .debounce { (query, _, _) -> if (query.isBlank()) 0L else DEBOUNCE_MS }
+        .flatMapLatest { (query, sources, kind) ->
             flow {
                 if (query.isBlank()) {
                     emit(SearchUiState())
@@ -83,7 +98,7 @@ class SearchViewModel @Inject constructor(
                 emit(
                     SearchUiState(
                         isSearching = false,
-                        results = musicRepository.searchAllSources(query, sources),
+                        results = musicRepository.searchAllSources(query, sources, kind),
                         hasQuery = true
                     )
                 )

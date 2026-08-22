@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.DetailHeader
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.TrackActionsSheet
@@ -56,6 +57,8 @@ fun ArtistScreen(
     val trackKeys = remember(tracks) { trackListKeys(tracks) }
     var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
 
+    val addToPlaylist = AddToPlaylistHost()
+
     actionsFor?.let { track ->
         TrackActionsSheet(
             track = track,
@@ -68,6 +71,11 @@ fun ArtistScreen(
             onDismiss = { actionsFor = null },
             onShare = if (viewModel.canShare(track)) {
                 { viewModel.share(track) }
+            } else {
+                null
+            },
+            onAddToPlaylist = if (addToPlaylist.canAdd(track)) {
+                { addToPlaylist.open(track) }
             } else {
                 null
             }

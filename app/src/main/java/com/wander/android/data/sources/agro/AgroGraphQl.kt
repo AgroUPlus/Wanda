@@ -64,17 +64,40 @@ class AgroGraphQl @Inject constructor(
                 header("Authorization", "Bearer ${secureStorage.agroApiKey}")
                 setBody(body.toString())
             }
+            val text = response.bodyAsText()
+            val json = runCatching {
+                HttpClientFactory.jsonConfig.parseToJsonElement(text).jsonObject
+            }.getOrNull()
+            val firstError = (json?.get("errors") as? JsonArray)?.firstOrNull()
+                ?.jsonObject?.get("message")?.jsonPrimitive?.contentOrNull
+
             if (!response.status.isSuccess()) {
-                throw IOException("Agro refused the request (HTTP ${response.status.value})")
+                throw AgroAuthError.of(response.status.value, firstError)
             }
-            val json = HttpClientFactory.jsonConfig
-                .parseToJsonElement(response.bodyAsText()).jsonObject
-            (json["errors"] as? JsonArray)?.takeIf { it.isNotEmpty() }?.let { errors ->
-                val message = errors.firstOrNull()?.jsonObject?.get("message")?.jsonPrimitive?.contentOrNull
-                throw IOException("Agro rejected the request: ${message ?: "unspecified GraphQL error"}")
+            if (json == null) {
+                throw IOException("Agro did not answer with JSON")
+            }
+            if (firstError != null) {
+                throw authErrorOrNull(firstError)
+                    ?: IOException("Agro rejected the request: $firstError")
             }
             json["data"]?.jsonObject ?: throw IOException("Agro returned no data")
         }
+    }
+
+    /**
+     * Recognises the two rejections that mean the stored credential is no longer good.
+     *
+     * The middleware answers 401/403 for a token it cannot resolve, but a resolver that refuses the
+     * caller answers HTTP 200 with `Forbidden` in the errors array. Both mean the same thing to the
+     * app — stop trusting what is in storage — and only the typed error lets callers tell that
+     * apart from an ordinary query mistake.
+     */
+    private fun authErrorOrNull(message: String): AgroAuthError? = when {
+        message.contains("Unauthorized", ignoreCase = true) -> AgroAuthError.Rejected(message)
+        message.contains("not active", ignoreCase = true) -> AgroAuthError.NotActive(message)
+        message.contains("Forbidden", ignoreCase = true) -> AgroAuthError.Rejected(message)
+        else -> null
     }
 
     /**

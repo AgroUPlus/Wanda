@@ -137,6 +137,21 @@ class PlayerConnection @Inject constructor(
      */
     fun play(tracks: List<UnifiedTrack>, startIndex: Int = 0, startPositionMs: Long = 0L) {
         if (tracks.isEmpty()) return
+        // In a jam, choosing a track proposes it to the room instead of playing it here. That is
+        // the whole point of a shared queue: one person deciding what plays by pressing play is
+        // the thing voting exists to replace.
+        onPlayInJam?.let { propose ->
+            // The *tapped* track, not the head of the list. Callers hand over the whole row and say
+            // which one was chosen — `play(section.tracks, index)` — so proposing `tracks.first()`
+            // silently suggested the row's opening track whatever you actually pressed.
+            propose(tracks, startIndex.coerceIn(0, tracks.lastIndex))
+            return
+        }
+        // Deliberately *not* gated on `isFollowing`. Picking something else to play is an
+        // unambiguous decision, and answering it with a dialog every time — "leave the session?" —
+        // is worse than simply doing what was asked. `onLeaveFollowing` ends the session quietly;
+        // the banner disappearing is the confirmation.
+        if (isFollowing) onLeaveFollowing?.invoke()
         val ctrl = _controller.value ?: run {
             // Resuming a session can be the first thing that happens after a cold start, before
             // the controller has finished binding. Dropping the request there is what made resume
@@ -182,25 +197,156 @@ class PlayerConnection @Inject constructor(
         lastQueue = emptyList()
     }
 
+    /**
+     * Enough of the player's state to put it back exactly as it was.
+     *
+     * A jam borrows this device's queue rather than adding to it, so what was playing before has to
+     * be kept somewhere to give back. Nothing here is persisted: a jam lasts as long as the app is
+     * in it, and restoring yesterday's queue would be worse than restoring nothing.
+     */
+    data class QueueSnapshot(
+        val tracks: List<UnifiedTrack>,
+        val index: Int,
+        val positionMs: Long
+    )
+
+    /** What is loaded right now, or null when there is nothing worth putting back. */
+    fun snapshotQueue(): QueueSnapshot? {
+        val ctrl = _controller.value ?: return null
+        val tracks = lastQueue.ifEmpty { return null }
+        return QueueSnapshot(
+            tracks = tracks,
+            index = ctrl.currentMediaItemIndex.coerceAtLeast(0),
+            positionMs = ctrl.currentPosition.coerceAtLeast(0L)
+        )
+    }
+
+    /**
+     * Puts a snapshot back, at the track and position it was taken from.
+     *
+     * Goes through the private path rather than [play], which in a jam would propose the whole
+     * queue to the room instead of playing it.
+     */
+    fun restoreQueue(snapshot: QueueSnapshot) {
+        val ctrl = _controller.value ?: return
+        if (snapshot.tracks.isEmpty()) return
+        snapshot.tracks.forEach { trackCache[it.id] = it }
+        ctrl.setMediaItems(
+            snapshot.tracks.map(UnifiedTrack::toMediaItem),
+            snapshot.index.coerceIn(0, snapshot.tracks.lastIndex),
+            snapshot.positionMs
+        )
+        ctrl.prepare()
+        ctrl.play()
+    }
+
+    /**
+     * While following a friend, the transport belongs to them.
+     *
+     * Set by `ListenAlongController` for as long as a session lasts. The player stays fully
+     * visible and expandable — you should be able to see what you are hearing — but pause, skip
+     * and seek are inert, because acting on them would fight the host's next frame and leave the
+     * two devices quietly out of step with no indication why.
+     *
+     * Enforced here rather than by disabling controls in each composable: there are several, in
+     * the mini strip and the full screen, and one that forgot would silently break the session.
+     * Starting *different* music is not blocked — see [play] — because that is an unambiguous
+     * decision to stop following.
+     */
+    var isFollowing: Boolean = false
+        private set
+
+    /**
+     * Called by the listen-along session as it starts and ends.
+     *
+     * [onLeave] is invoked when the user starts different music, so the session ends itself rather
+     * than lingering as a banner over playback it is no longer driving.
+     */
+    fun setFollowing(following: Boolean, onLeave: (() -> Unit)? = null) {
+        isFollowing = following
+        onLeaveFollowing = if (following) onLeave else null
+    }
+
+    private var onLeaveFollowing: (() -> Unit)? = null
+
+    /**
+     * Set while in a jam: what to do when the user picks something to play.
+     *
+     * Null when not in one, so ordinary playback is untouched.
+     */
+    private var onPlayInJam: ((List<UnifiedTrack>, Int) -> Unit)? = null
+
+    /**
+     * [propose] is given the list and the index of the track the user actually chose. The index is
+     * part of the contract rather than left to the caller to infer: without it this proposed the
+     * first track of whatever row was tapped.
+     */
+    fun setJamProposal(propose: ((List<UnifiedTrack>, Int) -> Unit)?) {
+        onPlayInJam = propose
+    }
+
+    /**
+     * The jam's own playback, which must not be re-proposed back into the jam it came from.
+     *
+     * [startPositionMs] is the room's position, not zero: joining a jam halfway through a song
+     * should drop you in where everyone else is.
+     */
+    internal fun playForJam(tracks: List<UnifiedTrack>, startPositionMs: Long = 0L) {
+        if (tracks.isEmpty()) return
+        val ctrl = _controller.value ?: return
+        tracks.forEach { trackCache[it.id] = it }
+        ctrl.setMediaItems(tracks.map(UnifiedTrack::toMediaItem), 0, startPositionMs)
+        ctrl.prepare()
+        ctrl.play()
+    }
+
+    /**
+     * Where the player actually is, for code that has to compare it against somebody else's clock.
+     *
+     * Read straight off the controller rather than from [state], which carries no position — the
+     * position flow is sampled for the UI and is deliberately coarse. Null when nothing is bound.
+     */
+    internal fun currentPositionMs(): Long? = _controller.value?.currentPosition
+
+    /** Whether audio is actually coming out right now. */
+    internal fun isPlayingNow(): Boolean = _controller.value?.isPlaying == true
+
+    /** What the follower's own session is allowed to do, bypassing [isFollowing]. */
+    internal fun followerSeek(positionMs: Long) {
+        _controller.value?.seekTo(positionMs)
+    }
+
+    internal fun followerSetPlaying(shouldPlay: Boolean) {
+        val ctrl = _controller.value ?: return
+        if (ctrl.isPlaying != shouldPlay) {
+            if (shouldPlay) ctrl.play() else ctrl.pause()
+        }
+    }
+
     fun togglePlayPause() {
+        if (isFollowing) return
         val ctrl = _controller.value ?: return
         if (ctrl.isPlaying) ctrl.pause() else ctrl.play()
     }
 
     fun seekTo(positionMs: Long) {
+        if (isFollowing) return
         _controller.value?.seekTo(positionMs)
     }
 
     fun seekToIndex(index: Int) {
+        if (isFollowing) return
         _controller.value?.seekToDefaultPosition(index)
     }
 
     fun next() {
+        if (isFollowing) return
         _controller.value?.seekToNextMediaItem()
     }
 
     /** Restarts the track when we are past the intro, otherwise steps back — the usual convention. */
     fun previous() {
+        if (isFollowing) return
         val ctrl = _controller.value ?: return
         if (ctrl.currentPosition > RESTART_THRESHOLD_MS) ctrl.seekTo(0L) else ctrl.seekToPreviousMediaItem()
     }
