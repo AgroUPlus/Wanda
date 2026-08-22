@@ -46,11 +46,25 @@ internal class ListenAlongResolver @Inject constructor(
             .bestMatch(title, artist)
             ?.let { return ResolvedTrack(it, ResolvedFrom.YOUR_LIBRARY) }
 
+        // Also query by title alone on personal sources if artist is present (handles local internal sounds/files with missing or divergent artist tags)
+        if (artist.isNotBlank()) {
+            musicRepository
+                .searchAllSources(title, onlySources = PERSONAL_SOURCES, kind = SearchKind.TRACKS)
+                .bestMatch(title, artist)
+                ?.let { return ResolvedTrack(it, ResolvedFrom.YOUR_LIBRARY) }
+        }
+
         // Then YouTube Music, so a friend playing something you do not own is still joinable.
-        return musicRepository
+        musicRepository
             .searchAllSources(query, onlySources = setOf(SourceType.YTMUSIC), kind = SearchKind.TRACKS)
             .bestMatch(title, artist)
-            ?.let { ResolvedTrack(it, ResolvedFrom.YOUTUBE_MUSIC) }
+            ?.let { return ResolvedTrack(it, ResolvedFrom.YOUTUBE_MUSIC) }
+
+        // Finally fallback to other configured sources (e.g. Internet Archive)
+        return musicRepository
+            .searchAllSources(query, onlySources = setOf(SourceType.INTERNET_ARCHIVE), kind = SearchKind.TRACKS)
+            .bestMatch(title, artist)
+            ?.let { ResolvedTrack(it, ResolvedFrom.YOUR_LIBRARY) }
     }
 
     /**
@@ -62,13 +76,19 @@ internal class ListenAlongResolver @Inject constructor(
      */
     private fun List<UnifiedTrack>.bestMatch(title: String, artist: String): UnifiedTrack? =
         firstOrNull { candidate ->
-            candidate.title.matches(title) && (artist.isBlank() || candidate.artist.matches(artist))
+            candidate.title.matches(title) && (
+                artist.isBlank()
+                    || isGenericArtist(artist)
+                    || candidate.artist.isBlank()
+                    || isGenericArtist(candidate.artist)
+                    || candidate.artist.matches(artist)
+            )
         }
 
     /**
      * Loose enough for the differences that do not change the recording, strict enough to reject a
-     * different song: punctuation, case and a trailing "(Remastered 2011)" are ignored, but one
-     * title still has to contain the other.
+     * different song: punctuation, case, common audio extensions, and a trailing "(Remastered 2011)"
+     * are ignored, but one title still has to contain the other.
      */
     private fun String.matches(other: String): Boolean {
         val a = normalise()
@@ -79,14 +99,22 @@ internal class ListenAlongResolver @Inject constructor(
 
     private fun String.normalise(): String =
         lowercase()
+            .replace(AUDIO_EXTENSIONS, "")
             .replace(BRACKETED, " ")
             .filter { it.isLetterOrDigit() || it.isWhitespace() }
             .trim()
             .replace(WHITESPACE, " ")
 
+    private fun isGenericArtist(a: String): Boolean {
+        val clean = a.trim().lowercase()
+        return clean in GENERIC_ARTISTS || clean.startsWith("<") && clean.endsWith(">")
+    }
+
     private companion object {
         val PERSONAL_SOURCES = setOf(SourceType.LOCAL, SourceType.NAVIDROME)
         val BRACKETED = Regex("""[\(\[].*?[\)\]]""")
         val WHITESPACE = Regex("""\s+""")
+        val AUDIO_EXTENSIONS = Regex("""\.(mp3|flac|wav|ogg|m4a|aac|opus|wma|alac)$""", RegexOption.IGNORE_CASE)
+        val GENERIC_ARTISTS = setOf("unknown", "unknown artist", "<unknown>", "various", "various artists", "various artist")
     }
 }
