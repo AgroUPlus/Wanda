@@ -18,10 +18,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.Artwork
+import com.wander.android.ui.components.isPlayableNow
 
 /**
  * Spotify-style horizontal media card for carousels (Heavy Rotation, Recently Played).
@@ -33,7 +35,9 @@ fun HorizontalTrackCard(
     onPlay: () -> Unit,
     modifier: Modifier = Modifier,
     /** Long press, for the track actions sheet. Matches [com.wander.android.ui.components.TrackRow]. */
-    onLongPress: (() -> Unit)? = null
+    onLongPress: (() -> Unit)? = null,
+    /** Whether tapping would play anything. Defaults to the offline rule, as `TrackRow` does. */
+    enabled: Boolean = track.isPlayableNow()
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -47,12 +51,13 @@ fun HorizontalTrackCard(
         modifier = modifier
             .width(140.dp)
             .scale(scale)
+            .graphicsLayer { alpha = if (enabled) 1f else DisabledAlpha }
             // Deliberately no clip on the card: rounding the whole Column cropped the corners off
             // the title and artist underneath. The artwork rounds itself via its own shape.
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
-                onClick = onPlay,
+                onClick = { if (enabled) onPlay() },
                 onLongClick = onLongPress
             )
     ) {
@@ -85,3 +90,6 @@ fun HorizontalTrackCard(
         )
     }
 }
+
+/** Material's disabled-content opacity, matching `TrackRow`. */
+private const val DisabledAlpha = 0.38f

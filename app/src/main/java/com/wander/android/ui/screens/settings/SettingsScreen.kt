@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
  * scaffolding. Each tab's rows live in their own file; see [SettingsTab].
  */
 @Composable
-fun SettingsScreen(
+internal fun SettingsScreen(
     contentPadding: PaddingValues,
     onNavidromeLogin: () -> Unit,
     onYouTubeLogin: () -> Unit,
@@ -57,6 +57,12 @@ fun SettingsScreen(
     val agroSession by agroViewModel.latestSession.collectAsStateWithLifecycle()
     val agroResuming by agroViewModel.isResuming.collectAsStateWithLifecycle()
     LaunchedEffect(state.agroPaired) { if (state.agroPaired) agroViewModel.refresh() }
+    // One check per visit to Settings. This is the only thing that notices a revoked token, and the
+    // answer cannot change while the screen is not being looked at, so a poll would buy nothing.
+    LaunchedEffect(state.agroPaired) {
+        viewModel.refreshAgroConnection()
+        viewModel.refreshAgroVisibility()
+    }
 
     val dialogs = rememberSettingsDialogs()
     SettingsDialogs(state = state, dialogs = dialogs, viewModel = viewModel)
@@ -103,6 +109,7 @@ fun SettingsScreen(
 
                     SettingsTab.SYNC -> syncTab(
                         paired = state.agroPaired,
+                        connection = state.agroConnection,
                         devicePetname = viewModel.agroDevicePetname,
                         server = viewModel.agroServer,
                         syncSettings = state.agroSyncSettings,
@@ -155,6 +162,9 @@ fun SettingsScreen(
                     SettingsTab.PRIVACY -> privacyTab(
                         incognito = state.incognito,
                         onIncognitoChange = viewModel::setIncognito,
+                        agroPaired = state.agroPaired,
+                        visibility = state.agroVisibility,
+                        onVisibilityChange = viewModel::setAgroVisibility,
                         onForgetEverything = { dialogs.confirmForgetEverything = true }
                     )
                 }

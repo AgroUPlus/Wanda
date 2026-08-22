@@ -2,6 +2,8 @@ package com.wander.android.ui.navigation
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -17,7 +19,6 @@ import androidx.compose.animation.slideOutHorizontally
  * Tabs move along X because they are peers; detail screens move along Z (a scale-and-fade) because
  * they sit on top of what opened them.
  */
-private const val DURATION_MS = 350
 private const val FADE_MS = 200
 private const val Z_SCALE_IN = 0.92f
 private const val Z_SCALE_OUT = 1.06f
@@ -25,8 +26,23 @@ private const val Z_SCALE_OUT = 1.06f
 /** Distance a shared-axis-X transition travels, as a fraction of the screen. */
 private const val X_TRAVEL = 6
 
-private fun <T> spatial() = tween<T>(durationMillis = DURATION_MS)
+/**
+ * Movement is a spring, so destinations arrive with a little overshoot instead of easing flatly
+ * into place. The duration this replaced was 350 ms of `tween`, which is the same *length* of
+ * motion but none of the character.
+ */
+private fun <T> spatial() = spring<T>(
+    // Lighter than the player's: a screen transition is a smaller visual move, and it can carry a
+    // little more spring without reading as slack.
+    dampingRatio = 0.85f,
+    stiffness = Spring.StiffnessMediumLow,
+    visibilityThreshold = null
+)
 
+/**
+ * Fades stay a tween on purpose. An overshooting alpha would have to pass 1 and come back, which
+ * reads as a flicker rather than as motion.
+ */
 private fun <T> effects() = tween<T>(durationMillis = FADE_MS)
 
 /**

@@ -17,10 +17,10 @@ import kotlinx.serialization.json.JsonObject
  * until that browse happens, so they are dropped rather than rendered as tracks that do nothing.
  */
 internal fun JsonObject.homeShelves(): List<RecommendedShelf> =
-    renderers("musicCarouselShelfRenderer").mapIndexedNotNull { index, shelf ->
+    renderers("musicCarouselShelfRenderer").mapNotNull { shelf ->
         val title = shelf.path(
             "header", "musicCarouselShelfBasicHeaderRenderer", "title"
-        ).runText() ?: return@mapIndexedNotNull null
+        ).runText() ?: return@mapNotNull null
 
         // Both card shapes appear on the feed: two-row tiles on most shelves, list rows on the
         // "quick picks" one. Collected within this shelf, so a track never lands under another
@@ -28,15 +28,25 @@ internal fun JsonObject.homeShelves(): List<RecommendedShelf> =
         val tracks = shelf.renderers("musicTwoRowItemRenderer").mapNotNull(::parseTwoRowItem) +
             shelf.renderers("musicResponsiveListItemRenderer").mapNotNull(::parseResponsiveListItem)
 
-        if (tracks.isEmpty()) return@mapIndexedNotNull null
+        if (tracks.isEmpty()) return@mapNotNull null
         RecommendedShelf(
-            // The index is part of the id because YouTube reuses shelf titles between feeds, and
-            // Home keys its lazy items on it.
-            id = "ytm_home_$index",
+            // Derived from the title, not the position. The index used to be the id, which made
+            // every shelf's identity change the moment YouTube reordered the feed — fine while
+            // this was thrown away each launch, but it churns every row once the feed is cached.
+            id = shelfId(title),
             title = title,
             tracks = tracks.distinctBy { it.id }
         )
     }
+
+/**
+ * A stable id for a shelf, from the name YouTube gave it.
+ *
+ * Lower-cased and stripped to word characters so trivial re-titling ("Listen Again" vs "Listen
+ * again") does not read as a different shelf.
+ */
+private fun shelfId(title: String): String =
+    "ytm_" + title.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
 
 /**
  * One tile on the home feed.

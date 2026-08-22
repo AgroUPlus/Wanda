@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.security.SecureStorage
+import com.wander.android.ui.navigation.DeepLinkRouter
 import com.wander.android.data.repository.LibrarySyncRepository
+import com.wander.android.data.repository.PlaylistWriteRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.sources.agro.AgroSessionApi
@@ -34,10 +36,17 @@ class WanderAppViewModel @Inject constructor(
     musicRepository: MusicRepository,
     shareRepository: ShareRepository,
     private val librarySync: LibrarySyncRepository,
+    playlistWriter: PlaylistWriteRepository,
     private val sessionApi: AgroSessionApi,
     private val secureStorage: SecureStorage,
+    private val deepLinkRouter: DeepLinkRouter,
     connectivity: ConnectivityObserver
 ) : ViewModel() {
+
+    /** Routes asked for from outside the composition — a tapped notification. */
+    val deepLinkRoutes = deepLinkRouter.routes
+
+    fun consumeDeepLink() = deepLinkRouter.consume()
 
     /** Library writes that failed to reach their backend — shown as a snackbar, not swallowed. */
     val writeErrors = musicRepository.writeErrors
@@ -124,6 +133,19 @@ class WanderAppViewModel @Inject constructor(
     // ── Network transitions ─────────────────────────────────────────────────────────────────
 
     private val dismissedPrompt = MutableStateFlow<NetworkPrompt?>(null)
+
+    /**
+     * Playback is cut off from the network: offline mode is on, or there is no connection.
+     *
+     * The same two conditions `MusicRepository.activeSources()` mutes remote sources on, hoisted
+     * so the UI can dim what it is about to refuse to play rather than letting the user find out
+     * by tapping.
+     */
+    val offlinePlayback: StateFlow<Boolean> = combine(
+        connectivity.isOnline,
+        secureStorage.isOfflineMode
+    ) { online, offlineMode -> offlineMode || !online }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     /**
      * The prompt to offer when the network state changes, or null when there is nothing to ask.

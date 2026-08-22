@@ -2,10 +2,7 @@ package com.wander.android.ui.screens.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -13,98 +10,129 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.text.KeyboardOptions
+import com.wander.android.data.sources.agro.AgroAuthError
 
-/** Where a manual pairing attempt currently stands, so the dialog can report rather than guess. */
-sealed interface AgroPairingState {
-    data object Idle : AgroPairingState
-    data object Connecting : AgroPairingState
-    data class Paired(val petname: String) : AgroPairingState
-    data class Failed(val message: String) : AgroPairingState
-}
+/** Whether the dialog is signing in to an existing account or making a new one. */
+internal enum class AgroPairingMode { PAIR, CREATE }
 
 /**
- * Manual entry for an Agro server. The pairing QR carries whatever address the dashboard was
- * serving itself on, which is wrong whenever that is `localhost` or an address the phone cannot
- * route to — a server behind a reverse proxy on its own domain is the normal case, not an edge one.
+ * Manual entry for an Agro server, and signup for a server that accepts strangers.
+ *
+ * Manual entry exists because the pairing QR carries whatever address the dashboard was serving
+ * itself on, which is wrong whenever that is `localhost` or an address the phone cannot route to —
+ * a server behind a reverse proxy on its own domain is the normal case, not an edge one.
+ *
+ * The dialog no longer closes itself on success. It used to, on the reasoning that the row behind
+ * it reported the connection; but that row reports the same thing whether the token works or not,
+ * so a successful pairing produced no confirmation anywhere. Now it says so, and the user closes it.
  */
 @Composable
 internal fun AgroPairingDialog(
     state: AgroPairingState,
+    defaultServer: String,
     onPair: (server: String, username: String, passphrase: String) -> Unit,
+    onSignUp: (server: String, username: String, inviteCode: String) -> Unit,
+    onRecheck: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    var mode by rememberSaveable { mutableStateOf(AgroPairingMode.PAIR) }
     var server by rememberSaveable { mutableStateOf("") }
     var username by rememberSaveable { mutableStateOf("") }
     var passphrase by rememberSaveable { mutableStateOf("") }
-    val connecting = state is AgroPairingState.Connecting
+    var inviteCode by rememberSaveable { mutableStateOf("") }
+
+    val busy = state is AgroPairingState.Connecting
+    val resolvedServer = server.ifBlank { defaultServer }
+    // A rate limit is the one failure where trying again immediately is guaranteed to fail too.
+    val throttled = (state as? AgroPairingState.Failed)?.error is AgroAuthError.RateLimited
 
     AlertDialog(
-        onDismissRequest = { if (!connecting) onDismiss() },
-        title = { Text("Pair with Agro") },
+        onDismissRequest = { if (!busy) onDismiss() },
+        title = {
+            Text(
+                when {
+                    state is AgroPairingState.Paired -> "Connected"
+                    state is AgroPairingState.Registered -> "Account created"
+                    mode == AgroPairingMode.CREATE -> "Create an Agro account"
+                    else -> "Pair with Agro"
+                }
+            )
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = server,
-                    onValueChange = { server = it },
-                    label = { Text("Server") },
-                    placeholder = { Text("agro.example.com") },
-                    supportingText = { Text("https:// is assumed. Use http:// for a plain LAN host.") },
-                    singleLine = true,
-                    enabled = !connecting,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Uri,
-                        imeAction = ImeAction.Next
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = username,
-                    onValueChange = { username = it },
-                    label = { Text("Username") },
-                    singleLine = true,
-                    enabled = !connecting,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = passphrase,
-                    onValueChange = { passphrase = it },
-                    label = { Text("Passphrase") },
-                    singleLine = true,
-                    enabled = !connecting,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Password,
-                        imeAction = ImeAction.Done
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                if (state is AgroPairingState.Failed) {
-                    Text(
-                        text = state.message,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
+                when (state) {
+                    is AgroPairingState.Paired -> AgroPairedMessage(state)
+                    is AgroPairingState.Registered -> AgroRegisteredMessage(
+                        signup = state.signup,
+                        server = resolvedServer
+                    )
+
+                    else -> AgroPairingForm(
+                        mode = mode,
+                        server = server,
+                        username = username,
+                        passphrase = passphrase,
+                        inviteCode = inviteCode,
+                        enabled = !busy,
+                        defaultServer = defaultServer,
+                        error = (state as? AgroPairingState.Failed)?.error,
+                        onServerChange = { server = it },
+                        onUsernameChange = { username = it },
+                        onPassphraseChange = { passphrase = it },
+                        onInviteCodeChange = { inviteCode = it },
+                        onModeChange = { mode = it }
                     )
                 }
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = { onPair(server, username, passphrase) },
-                enabled = !connecting &&
-                    server.isNotBlank() && username.isNotBlank() && passphrase.isNotBlank()
-            ) {
-                Text(if (connecting) "Connecting…" else "Pair")
+            when (state) {
+                is AgroPairingState.Paired -> TextButton(onClick = onDismiss) { Text("Done") }
+
+                is AgroPairingState.Registered -> TextButton(
+                    onClick = {
+                        // The passphrase was just minted here, so pairing needs nothing typed.
+                        passphrase = state.signup.passphrase
+                        username = state.signup.username
+                        onPair(resolvedServer, state.signup.username, state.signup.passphrase)
+                    },
+                    // A queued account cannot log in yet; offering the button would only produce
+                    // an error the previous screen already explained.
+                    enabled = !state.signup.isPending
+                ) {
+                    Text(if (state.signup.isPending) "Waiting for approval" else "Pair this device")
+                }
+
+                else -> TextButton(
+                    onClick = {
+                        if (mode == AgroPairingMode.CREATE) {
+                            onSignUp(resolvedServer, username, inviteCode)
+                        } else {
+                            onPair(resolvedServer, username, passphrase)
+                        }
+                    },
+                    enabled = !busy && !throttled && username.isNotBlank() &&
+                        (mode == AgroPairingMode.CREATE || passphrase.isNotBlank())
+                ) {
+                    Text(
+                        when {
+                            busy -> "Connecting…"
+                            mode == AgroPairingMode.CREATE -> "Create account"
+                            else -> "Pair"
+                        }
+                    )
+                }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !connecting) { Text("Cancel") }
+            // "Check again" is the only useful move while an account waits for approval: nothing
+            // about what was typed is wrong, so re-submitting the form would be theatre.
+            if ((state as? AgroPairingState.Failed)?.error is AgroAuthError.NotActive) {
+                TextButton(onClick = onRecheck, enabled = !busy) { Text("Check again") }
+            } else {
+                TextButton(onClick = onDismiss, enabled = !busy) { Text("Cancel") }
+            }
         }
     )
 }

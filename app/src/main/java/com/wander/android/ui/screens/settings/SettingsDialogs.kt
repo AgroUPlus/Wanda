@@ -52,16 +52,16 @@ internal fun SettingsDialogs(
     dialogs: SettingsDialogState,
     viewModel: SettingsViewModel
 ) {
-    // Pairing succeeded: the row behind this now reports the connection, so the dialog has nothing
-    // left to say.
-    if (dialogs.showAgroDialog && state.agroPairing is AgroPairingState.Paired) {
-        dialogs.showAgroDialog = false
-    }
-
+    // The dialog used to close itself the moment pairing succeeded, on the reasoning that the row
+    // behind it reported the connection. That row reported the same thing either way, so a
+    // successful pairing was confirmed nowhere at all. It stays open and says so; the user closes it.
     if (dialogs.showAgroDialog) {
         AgroPairingDialog(
             state = state.agroPairing,
+            defaultServer = viewModel.agroDefaultServer,
             onPair = viewModel::pairAgro,
+            onSignUp = viewModel::signUpAgro,
+            onRecheck = viewModel::refreshAgroConnection,
             onDismiss = {
                 dialogs.showAgroDialog = false
                 viewModel.resetAgroPairing()

@@ -27,7 +27,7 @@ enum class PlayerSheetValue {
 class PlayerSheetState(
     initialValue: PlayerSheetValue = PlayerSheetValue.COLLAPSED,
     private val animationSpec: AnimationSpec<Float> = spring(
-        dampingRatio = Spring.DampingRatioNoBouncy,
+        dampingRatio = ExpressiveDamping,
         stiffness = Spring.StiffnessMediumLow
     )
 ) {
@@ -39,11 +39,28 @@ class PlayerSheetState(
 
     internal val offset = Animatable(if (initialValue == PlayerSheetValue.EXPANDED) 0f else Float.MAX_VALUE)
 
-    val progress: Float by derivedStateOf {
+    /**
+     * How far open the sheet is, clamped to 0..1.
+     *
+     * Everything that would break outside that range reads this one: the corner radius goes
+     * negative above 1, and the width/height lerp would report a box larger than the screen.
+     */
+    val progress: Float by derivedStateOf { rawProgress.coerceIn(0f, 1f) }
+
+    /**
+     * The same ratio with the spring's overshoot left in, so it can pass 1 at the end of a fling.
+     *
+     * The clamp above is what used to swallow the bounce entirely — the spring overshot the
+     * *offset* and `progress` flattened it back to 1, so a bouncier spec changed nothing you could
+     * see. Only the travelling artwork reads this, where overshooting past the final frame is the
+     * whole effect; the lower bound is still held at 0 because a sheet that reads as less than
+     * closed has nothing to show.
+     */
+    internal val rawProgress: Float by derivedStateOf {
         if (maxOffsetPx <= 0f) {
             if (targetValue == PlayerSheetValue.EXPANDED) 1f else 0f
         } else {
-            (1f - (offset.value / maxOffsetPx)).coerceIn(0f, 1f)
+            (1f - (offset.value / maxOffsetPx)).coerceAtLeast(0f)
         }
     }
 
@@ -101,6 +118,16 @@ class PlayerSheetState(
 
     companion object {
         const val FLING_VELOCITY = 1000f
+
+        /**
+         * A hint of overshoot, and no more.
+         *
+         * Between `DampingRatioLowBouncy` (0.55) and `DampingRatioNoBouncy` (1.0). This started at
+         * 0.75 and was too loose in the hand: the player is a full-screen surface with the cover
+         * art riding on it, so an overshoot that reads as playful on a small chip reads as the
+         * sheet wobbling. Big surfaces want less bounce than small ones.
+         */
+        const val ExpressiveDamping = 0.9f
 
         val Saver: Saver<PlayerSheetState, PlayerSheetValue> = Saver(
             save = { it.targetValue },

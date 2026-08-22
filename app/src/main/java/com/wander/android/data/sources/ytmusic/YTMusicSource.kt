@@ -1,5 +1,8 @@
 package com.wander.android.data.sources.ytmusic
 
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
+import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.RecommendedShelf
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
@@ -47,7 +50,16 @@ class YTMusicSource @Inject constructor(
     override val isConfigured: StateFlow<Boolean> = accountManager.isLoggedIn
 
     override suspend fun search(query: String): Result<List<UnifiedTrack>> =
-        innerTube.search(query).map { root ->
+        search(query, SearchKind.TRACKS)
+
+    /**
+     * Episodes and videos parse with the same reader as songs — they arrive as the same
+     * `musicResponsiveListItemRenderer`, and `parseResponsiveListItem` drops anything without a
+     * `videoId`, so a podcast *show* (which has none) is skipped rather than added as something
+     * unplayable.
+     */
+    override suspend fun search(query: String, kind: SearchKind): Result<List<UnifiedTrack>> =
+        innerTube.search(query, kind).map { root ->
             root.responsiveListItems().mapNotNull(::parseResponsiveListItem)
         }
 
@@ -105,8 +117,27 @@ class YTMusicSource @Inject constructor(
      * [isConfigured], so the repository never asks — Home falls back to its library-derived
      * shelves rather than showing a stranger's generic feed.
      */
-    override suspend fun getRecommendations(): Result<List<RecommendedShelf>> =
-        innerTube.home().map { root -> root.homeShelves() }
+    /**
+     * The personalised front page, plus the standing discovery feeds behind it.
+     *
+     * The home feed alone leans hard on what you already play, which is exactly the complaint it
+     * earns — it goes stale and repeats. New releases, charts and explore are not personalised at
+     * all, and that is the point: they are the part of the feed that can still surprise you.
+     *
+     * The extra feeds are fetched in parallel and each one is allowed to fail on its own. A
+     * discovery feed that 404s one day must not take the personalised feed down with it.
+     */
+    override suspend fun getRecommendations(): Result<List<RecommendedShelf>> = coroutineScope {
+        val home = async { innerTube.home().map { it.homeShelves() }.getOrDefault(emptyList()) }
+        val discovery = DISCOVERY_BROWSE_IDS.map { browseId ->
+            async { innerTube.browse(browseId).map { it.homeShelves() }.getOrDefault(emptyList()) }
+        }
+
+        val shelves = (listOf(home) + discovery).flatMap { it.await() }
+        // Distinct by id: the discovery feeds overlap each other — "New albums & singles" turns up
+        // under both new releases and explore — and a duplicate id would collide in the cache.
+        Result.success(shelves.distinctBy { it.id })
+    }
 
     /**
      * The canonical watch URL for the video, which is what YouTube Music's own share sheet hands

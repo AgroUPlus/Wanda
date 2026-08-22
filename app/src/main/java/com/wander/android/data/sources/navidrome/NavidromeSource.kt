@@ -13,6 +13,7 @@ import com.wander.android.data.sources.StreamInfo
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.StateFlow
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,6 +33,7 @@ class NavidromeSource @Inject constructor(
         search = true,
         albums = true,
         playlists = true,
+        playlistWrite = true,
         likes = true,
         scrobble = true,
         radio = true,
@@ -162,6 +164,34 @@ class NavidromeSource @Inject constructor(
 
     /** See [SubsonicApiClient.startScan] — called after library sync adds files to the server. */
     suspend fun startScan(): Result<Unit> = apiClient.startScan()
+
+    /**
+     * Creates the playlist and returns its prefixed id.
+     *
+     * Subsonic's `createPlaylist` is specified to return the new playlist, but not every server
+     * actually does — Navidrome answers some versions with an empty body. Rather than inventing an
+     * id, the name is looked up afterwards; the playlist genuinely exists by then, so this reads
+     * back what the server made instead of guessing what it should have made.
+     */
+    override suspend fun createPlaylist(name: String, trackIds: List<String>): Result<String> {
+        val songIds = trackIds.map { it.removePrefix(PREFIX) }
+        val created = apiClient.createPlaylist(name, songIds)
+        created.exceptionOrNull()?.let { return Result.failure(it) }
+
+        created.getOrNull()?.let { return Result.success("$PREFIX$it") }
+
+        return apiClient.getPlaylists().mapCatching { playlists ->
+            val match = playlists.lastOrNull { it.name == name }
+                ?: throw IOException("The server accepted the playlist but did not return it")
+            "$PREFIX${match.id}"
+        }
+    }
+
+    override suspend fun addToPlaylist(playlistId: String, trackIds: List<String>): Result<Unit> =
+        apiClient.updatePlaylist(
+            playlistId = playlistId.removePrefix(PREFIX),
+            songIdsToAdd = trackIds.map { it.removePrefix(PREFIX) }
+        )
 
     override suspend fun createShareLink(trackId: String, description: String): Result<String> =
         apiClient.createShare(listOf(trackId.removePrefix(PREFIX)), description)

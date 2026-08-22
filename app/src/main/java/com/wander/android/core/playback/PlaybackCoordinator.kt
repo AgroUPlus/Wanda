@@ -24,12 +24,15 @@ import javax.inject.Singleton
  * Cross-cutting playback behaviour that does not belong in the service: lyrics for the current
  * track, endless-radio queue top-up, and the visualizer/offload trade-off.
  */
+import com.wander.android.data.repository.JamRepository
+
 @Singleton
-class PlaybackCoordinator @Inject constructor(
+internal class PlaybackCoordinator @Inject constructor(
     private val connection: PlayerConnection,
     private val musicRepository: MusicRepository,
     private val lyricsRepository: LyricsRepository,
-    private val fftProcessor: AudioFftProcessor
+    private val fftProcessor: AudioFftProcessor,
+    private val jamRepository: JamRepository
 ) {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -57,18 +60,45 @@ class PlaybackCoordinator @Inject constructor(
             .launchIn(scope)
 
         // Endless radio: top up before the user hits the end, never mid-track twice.
+        // In a Jam, the queue belongs to the room rather than personal radio top-up.
         connection.state
             .filterNotNull()
             .map { RadioTrigger(it.isRadioMode, it.currentIndex, it.queue.size) }
             .distinctUntilChanged()
             .onEach { trigger ->
                 if (!trigger.enabled) return@onEach
+                if (jamRepository.jam.value != null) return@onEach
                 if (trigger.size - trigger.index > RADIO_LOOKAHEAD) return@onEach
                 val seed = connection.state.value.currentTrack ?: return@onEach
                 val more = musicRepository.generateRadio(seed, RADIO_BATCH)
                 if (more.isNotEmpty()) scope.launch(Dispatchers.Main) { connection.addToQueue(more) }
             }
             .launchIn(scope)
+
+        // Offload follows the visualizer, on every controller — not just when the mode is changed.
+        //
+        // `PlayerFactory` builds every player with offload *enabled*, and a new controller resets
+        // the track-selection parameters to that default. So a visualizer chosen in an earlier
+        // session came back with offload on, no decoded PCM reaching the tap, and a wave that
+        // simply never drew. It looked source-specific because it is: offload is used for the
+        // compressed streams YouTube Music serves and often not for local FLAC, so the same
+        // setting killed the visualizer on one and left it working on the other.
+        connection.controller
+            .filterNotNull()
+            .onEach { applyOffloadForVisualizer() }
+            .launchIn(scope)
+    }
+
+    /**
+     * Offload and the visualizer are mutually exclusive; this states which one currently wins.
+     *
+     * On the main thread, always. `setOffloadEnabled` writes `trackSelectionParameters` on the
+     * MediaController, and Media3 throws outright when a controller is touched from anywhere else —
+     * this scope is [Dispatchers.Default], so calling it directly crashed the app.
+     */
+    private fun applyOffloadForVisualizer() {
+        val offload = _visualizerMode.value == VisualizerMode.OFF
+        scope.launch(Dispatchers.Main) { connection.setOffloadEnabled(offload) }
     }
 
     /**
@@ -79,16 +109,22 @@ class PlaybackCoordinator @Inject constructor(
         _visualizerMode.value = mode
         val active = mode != VisualizerMode.OFF
         fftProcessor.isVisualizerActive = active
-        connection.setOffloadEnabled(!active)
+        applyOffloadForVisualizer()
     }
 
     /** Called when Now Playing leaves the screen: stop doing FFT work nobody can see. */
     fun pauseVisualizer() {
         fftProcessor.isVisualizerActive = false
+        // Nothing is watching, so take the battery win back — on the main thread, like every other
+        // controller write.
+        scope.launch(Dispatchers.Main) { connection.setOffloadEnabled(true) }
     }
 
     fun resumeVisualizer() {
         fftProcessor.isVisualizerActive = _visualizerMode.value != VisualizerMode.OFF
+        // Setting the flag is not enough: without decoded PCM there is nothing for it to process,
+        // and returning to Now Playing must undo any offload turned back on while it was away.
+        applyOffloadForVisualizer()
     }
 
     private data class RadioTrigger(val enabled: Boolean, val index: Int, val size: Int)

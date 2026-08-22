@@ -8,6 +8,7 @@ import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MusicRepository
+import com.wander.android.data.repository.PlaylistWriteRepository
 import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.sources.local.LocalMusicSource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,8 +32,22 @@ class LibraryViewModel @Inject constructor(
     private val musicRepository: MusicRepository,
     private val localSource: LocalMusicSource,
     private val playerConnection: PlayerConnection,
-    private val shareRepository: ShareRepository
+    private val shareRepository: ShareRepository,
+    private val playlistWriter: PlaylistWriteRepository
 ) : ViewModel() {
+
+    /** Whether any connected source can be written to. Drives the "New playlist" affordance. */
+    val canCreatePlaylists: Boolean
+        get() = SourceType.entries.any(playlistWriter::canWrite)
+
+    /** Creates an empty playlist, then refreshes so it appears in the list. */
+    fun createPlaylist(name: String) {
+        val target = SourceType.entries.firstOrNull(playlistWriter::canWrite) ?: return
+        viewModelScope.launch {
+            playlistWriter.createPlaylist(target, name, emptyList())
+            _playlists.value = musicRepository.getPlaylists()
+        }
+    }
 
     private val _tab = MutableStateFlow(LibraryTab.TRACKS)
     val tab: StateFlow<LibraryTab> = _tab.asStateFlow()

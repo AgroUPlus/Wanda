@@ -5,6 +5,7 @@ import com.wander.android.data.model.RecommendedShelf
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
+import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.flow.StateFlow
 
@@ -32,6 +33,17 @@ interface IMusicSource {
     val isConfigured: StateFlow<Boolean>
 
     suspend fun search(query: String): Result<List<UnifiedTrack>>
+
+    /**
+     * Search restricted to one kind of content.
+     *
+     * Defaults to ignoring [kind] and answering with tracks, because for a pure music backend
+     * every kind *is* tracks. Sources that genuinely hold other kinds — YouTube Music — override
+     * this and return empty for a kind they cannot serve, rather than quietly handing back songs
+     * the user did not ask for.
+     */
+    suspend fun search(query: String, kind: SearchKind): Result<List<UnifiedTrack>> =
+        if (kind == SearchKind.TRACKS) search(query) else Result.success(emptyList())
     suspend fun getStreamInfo(trackId: String): Result<StreamInfo>
 
     /**
@@ -69,6 +81,20 @@ interface IMusicSource {
     suspend fun getPlaylists(): Result<List<UnifiedPlaylist>> = Result.success(emptyList())
     suspend fun getPlaylistTracks(playlistId: String): Result<List<UnifiedTrack>> =
         Result.success(emptyList())
+
+    /**
+     * Creates a playlist holding [trackIds] and returns its id.
+     *
+     * Only meaningful when [SourceCapabilities.playlistWrite] is set. Like [createShareLink] the
+     * default fails loudly: a playlist the user believes they made, that exists nowhere, is worse
+     * than being told the source cannot make one.
+     */
+    suspend fun createPlaylist(name: String, trackIds: List<String>): Result<String> =
+        Result.failure(UnsupportedOperationException("$displayName cannot create playlists"))
+
+    /** Appends [trackIds] to an existing playlist. See [createPlaylist]. */
+    suspend fun addToPlaylist(playlistId: String, trackIds: List<String>): Result<Unit> =
+        Result.failure(UnsupportedOperationException("$displayName cannot modify playlists"))
 
     /**
      * A public link to [trackId] that anyone can open, for sharing.

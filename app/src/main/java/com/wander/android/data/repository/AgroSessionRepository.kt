@@ -4,8 +4,12 @@ import android.util.Log
 import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.network.HttpClientFactory
 import com.wander.android.data.sources.agro.AgroGraphQl
+import com.wander.android.data.sources.agro.toPushedDrop
 import com.wander.android.data.sources.agro.AgroHandoffState
+import com.wander.android.data.sources.agro.AgroFriendNowPlaying
+import com.wander.android.data.sources.agro.AgroJamNowPlaying
 import com.wander.android.data.sources.agro.AgroLiveMessage
+import com.wander.android.data.sources.agro.FriendEvent
 import com.wander.android.data.sources.agro.AgroNode
 import com.wander.android.data.sources.agro.AgroSessionApi
 import kotlinx.coroutines.channels.awaitClose
@@ -20,7 +24,9 @@ import kotlinx.coroutines.flow.retryWhen
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -136,7 +142,7 @@ class AgroSessionRepository @Inject constructor(
      * With no network there is nothing to back off *to*, so the retry parks on connectivity instead
      * of burning the radio on a handshake that cannot complete. It resumes on the next online edge.
      */
-    fun liveUpdates(): Flow<AgroLiveMessage> = connectOnce().retryWhen { _, attempt ->
+    internal fun liveUpdates(): Flow<AgroLiveMessage> = connectOnce().retryWhen { _, attempt ->
         connectivity.isOnline.first { it }
         val backoff = (BASE_BACKOFF_MS shl attempt.coerceAtMost(5).toInt())
             .coerceAtMost(MAX_BACKOFF_MS)
@@ -253,6 +259,79 @@ class AgroSessionRepository @Inject constructor(
                     albums = payload?.get("albums")?.jsonArray
                         ?.mapNotNull { it.jsonPrimitive.contentOrNull }
                         .orEmpty()
+                )
+            }
+            // Presence and the answer to a request arrive on the same socket but mean different
+            // things to the user: one silently refreshes a list, the other is worth saying out loud.
+            "FRIEND_PRESENCE" -> {
+                val payload = envelope["payload"] as? JsonObject
+                val who = payload?.get("username")?.jsonPrimitive?.contentOrNull
+                AgroLiveMessage.Friends(
+                    presence = who?.let {
+                        AgroFriendNowPlaying(
+                            username = it,
+                            trackUri = "",
+                            trackTitle = payload["trackTitle"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                            artistName = payload["artistName"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                            albumName = payload["albumName"]?.jsonPrimitive?.contentOrNull,
+                            artworkUrl = payload["artworkUrl"]?.jsonPrimitive?.contentOrNull,
+                            positionMs = 0L,
+                            isPlaying = payload["isPlaying"]?.jsonPrimitive?.booleanOrNull ?: false,
+                            updatedAt = payload["updatedAt"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                        )
+                    }
+                )
+            }
+            "FRIEND_REQUEST" -> {
+                val payload = envelope["payload"] as? JsonObject
+                val from = payload?.get("from")?.jsonPrimitive?.contentOrNull
+                val acceptedBy = payload?.get("accepted_by")?.jsonPrimitive?.contentOrNull
+                val declinedBy = payload?.get("declined_by")?.jsonPrimitive?.contentOrNull
+                AgroLiveMessage.Friends(
+                    when {
+                        acceptedBy != null -> FriendEvent.Accepted(acceptedBy)
+                        declinedBy != null -> FriendEvent.Declined(declinedBy)
+                        from != null -> FriendEvent.Requested(from)
+                        else -> null
+                    }
+                )
+            }
+            "JAM_UPDATED" -> AgroLiveMessage.JamUpdated
+            "JAM_NOW_PLAYING" -> {
+                val payload = envelope["payload"] as? JsonObject
+                val stopped = payload?.get("stopped")?.jsonPrimitive?.booleanOrNull ?: false
+                val trackId = payload?.get("trackId")?.jsonPrimitive?.contentOrNull
+                AgroLiveMessage.JamNowPlayingFrame(
+                    if (stopped || trackId == null) null else AgroJamNowPlaying(
+                        trackId = trackId,
+                        title = payload["title"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                        artist = payload["artist"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                        artworkUrl = payload["artworkUrl"]?.jsonPrimitive?.contentOrNull,
+                        durationMs = payload["durationMs"]?.jsonPrimitive?.longOrNull ?: 0L,
+                        positionMs = payload["positionMs"]?.jsonPrimitive?.longOrNull ?: 0L
+                    )
+                )
+            }
+            "LISTEN_ALONG" -> {
+                val payload = envelope["payload"] as? JsonObject
+                AgroLiveMessage.ListenAlong(
+                    host = payload?.get("host")?.jsonPrimitive?.contentOrNull.orEmpty(),
+                    trackUri = payload?.get("trackUri")?.jsonPrimitive?.contentOrNull.orEmpty(),
+                    trackTitle = payload?.get("trackTitle")?.jsonPrimitive?.contentOrNull.orEmpty(),
+                    artistName = payload?.get("artistName")?.jsonPrimitive?.contentOrNull.orEmpty(),
+                    albumName = payload?.get("albumName")?.jsonPrimitive?.contentOrNull,
+                    artworkUrl = payload?.get("artworkUrl")?.jsonPrimitive?.contentOrNull,
+                    positionMs = payload?.get("positionMs")?.jsonPrimitive?.longOrNull ?: 0L,
+                    isPlaying = payload?.get("isPlaying")?.jsonPrimitive?.booleanOrNull ?: false,
+                    // The host's own frames carry a track; the stop frame carries only this.
+                    stopped = payload?.get("stopped")?.jsonPrimitive?.booleanOrNull ?: false
+                )
+            }
+            "TRACK_DROP" -> (envelope["payload"] as? JsonObject)?.let { payload ->
+                // The frame names the sender but not the recipient — it is only ever sent to one
+                // account, and that account is this one.
+                AgroLiveMessage.TrackDrop(
+                    payload.toPushedDrop(recipient = graphQl.userId)
                 )
             }
             // SETTINGS_SYNC and anything a newer server adds are ignored by name rather than by

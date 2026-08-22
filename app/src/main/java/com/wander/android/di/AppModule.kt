@@ -7,6 +7,9 @@ import com.wander.android.core.database.WANDER_MIGRATIONS
 import com.wander.android.core.database.WanderDatabase
 import com.wander.android.core.database.dao.AlbumDao
 import com.wander.android.core.database.dao.HistoryDao
+import com.wander.android.core.database.dao.DropDao
+import com.wander.android.core.database.dao.FriendDao
+import com.wander.android.core.database.dao.ShelfDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.security.SecureStorage
 import dagger.Module
@@ -40,6 +43,9 @@ object AppModule {
     @Provides fun provideTrackDao(db: WanderDatabase): TrackDao = db.trackDao()
     @Provides fun provideAlbumDao(db: WanderDatabase): AlbumDao = db.albumDao()
     @Provides fun provideHistoryDao(db: WanderDatabase): HistoryDao = db.historyDao()
+    @Provides fun provideShelfDao(db: WanderDatabase): ShelfDao = db.shelfDao()
+    @Provides fun provideFriendDao(db: WanderDatabase): FriendDao = db.friendDao()
+    @Provides fun provideDropDao(db: WanderDatabase): DropDao = db.dropDao()
 
     @Provides
     @Singleton

@@ -1,22 +1,14 @@
 package com.wander.android.ui.screens.player
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material.icons.rounded.Shuffle
@@ -26,15 +18,10 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.wander.android.core.playback.PlaybackState
@@ -44,9 +31,8 @@ import com.wander.android.core.playback.RepeatMode
 /**
  * Transport controls.
  *
- * The radio toggle used to hang below this row, alone and last, which read as an afterthought
- * bolted onto the bottom of the player. It now lives in the top action bar alongside the queue
- * button — see [RadioChip] and `NowPlayingScreen`.
+ * The radio toggle is deliberately not here: it lives on a long press of the queue button in the
+ * top action bar — see `QueueRadioButton`.
  */
 @Composable
 fun PlayerControls(
@@ -109,61 +95,6 @@ fun PlayerControls(
             active = state.repeatMode != RepeatMode.OFF,
             onClick = connection::toggleRepeat
         )
-    }
-}
-
-/** The endless-radio toggle, hoisted so `NowPlayingScreen` can place it in its top action bar. */
-@Composable
-internal fun RadioChip(
-    isRadioMode: Boolean,
-    onToggle: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val containerColor by animateColorAsState(
-        targetValue = if (isRadioMode) MaterialTheme.colorScheme.primaryContainer
-        else MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f),
-        label = "radioChipContainer"
-    )
-    val contentColor by animateColorAsState(
-        targetValue = if (isRadioMode) MaterialTheme.colorScheme.onPrimaryContainer
-        else MaterialTheme.colorScheme.onSurfaceVariant,
-        label = "radioChipContent"
-    )
-
-    Box(
-        modifier = modifier
-            .clip(CircleShape)
-            .background(containerColor)
-            .border(
-                width = 1.dp,
-                color = if (isRadioMode) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else Color.Transparent,
-                shape = CircleShape
-            )
-            .clickable(onClick = onToggle)
-            .semantics {
-                // The label is just the feature name, so the state has to be spoken here.
-                contentDescription = if (isRadioMode) "Radio on" else "Radio off"
-            }
-            .padding(horizontal = 14.dp, vertical = 8.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Radio,
-                contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier.size(16.dp)
-            )
-            // The chip's own filled/outlined state says whether it is on; the label only has to
-            // name the feature, and it names it the same way the Home shelf does.
-            Text(
-                text = "Radio",
-                style = MaterialTheme.typography.labelMedium,
-                color = contentColor
-            )
-        }
     }
 }
 

@@ -1,5 +1,6 @@
 package com.wander.android.data.repository
 
+import com.wander.android.data.model.SearchKind
 import com.wander.android.core.database.dao.AlbumDao
 import com.wander.android.core.database.dao.HistoryDao
 import com.wander.android.core.database.dao.TrackDao
@@ -39,6 +40,7 @@ class MusicRepository @Inject constructor(
     private val secureStorage: SecureStorage,
     private val connectivity: ConnectivityObserver,
     private val scrobbleSyncScheduler: ScrobbleSyncScheduler,
+    private val scrobbleSuppression: ScrobbleSuppression,
     val sources: Set<@JvmSuppressWildcards IMusicSource>
 ) {
     /**
@@ -101,9 +103,20 @@ class MusicRepository @Inject constructor(
         // is what turns "the track silently never starts" into a message the player can show: the
         // resolve runs on ExoPlayer's loading thread, where an unreachable host is a long timeout
         // rather than an error.
-        if (type != SourceType.LOCAL && !connectivity.isOnline.value) {
+        // Offline mode counts here, not just a missing network. It already mutes remote sources
+        // for browsing (see `activeSources`); letting it keep streaming would have made the
+        // setting mean two different things, and would have made the dimmed rows in the UI a lie.
+        if (type != SourceType.LOCAL &&
+            (!connectivity.isOnline.value || secureStorage.isOfflineMode.value)
+        ) {
             return@withContext Result.failure(
-                IOException("No network — this track is not available on this device")
+                IOException(
+                    if (secureStorage.isOfflineMode.value) {
+                        "Offline mode — this track is not downloaded to this device"
+                    } else {
+                        "No network — this track is not available on this device"
+                    }
+                )
             )
         }
         val source = sourceFor(type)
@@ -112,11 +125,14 @@ class MusicRepository @Inject constructor(
     }
 
     /**
-     * Increments the play count and queues a scrobble. In incognito mode neither happens — the
-     * user's listening simply is not recorded.
+     * Increments the play count and queues a scrobble.
+     *
+     * Neither happens in incognito mode, nor while listening along with a friend — in the second
+     * case because the track is their choice rather than this account's, and counting it would put
+     * their listening into your history. See [ScrobbleSuppression].
      */
     suspend fun recordPlay(track: UnifiedTrack) = withContext(Dispatchers.IO) {
-        if (secureStorage.isIncognitoMode) return@withContext
+        if (secureStorage.isIncognitoMode || scrobbleSuppression.isSuppressed) return@withContext
         trackDao.incrementPlayCount(track.id, System.currentTimeMillis())
         val entryId = historyDao.recordHistory(HistoryEntity(trackId = track.id))
         val scrobbled = sourceFor(track.source)
@@ -167,7 +183,8 @@ class MusicRepository @Inject constructor(
      */
     suspend fun searchAllSources(
         query: String,
-        onlySources: Set<SourceType>? = null
+        onlySources: Set<SourceType>? = null,
+        kind: SearchKind = SearchKind.TRACKS
     ): List<UnifiedTrack> = coroutineScope {
         if (query.isBlank()) return@coroutineScope emptyList()
 
@@ -181,12 +198,19 @@ class MusicRepository @Inject constructor(
         // a backend used to leave its tracks turning up in Search for good — offered by a source
         // that is no longer there to stream them. Downloads are the exception: the file is on this
         // device and plays whatever the account does.
-        val cached = trackDao.searchTracks(query)
-            .map(TrackEntity::toUnifiedTrack)
-            .filter { it.source in allowedTypes || it.isDownloaded }
+        // Room is only consulted for music. It has no idea whether a row was once a podcast
+        // episode, so folding cached tracks into a Videos or Podcasts search would answer a
+        // question the user did not ask with songs they have already seen.
+        val cached = if (kind == SearchKind.TRACKS) {
+            trackDao.searchTracks(query)
+                .map(TrackEntity::toUnifiedTrack)
+                .filter { it.source in allowedTypes || it.isDownloaded }
+        } else {
+            emptyList()
+        }
         val remote = allowed
             .filter { it.capabilities.search }
-            .map { source -> async { source.search(query).getOrDefault(emptyList()) } }
+            .map { source -> async { source.search(query, kind).getOrDefault(emptyList()) } }
             .flatMap { it.await() }
 
         persist(remote, asLibrary = false)

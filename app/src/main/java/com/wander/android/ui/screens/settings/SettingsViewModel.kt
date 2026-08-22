@@ -10,6 +10,8 @@ import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.repository.LibrarySyncRepository
 import com.wander.android.data.repository.SyncProgress
 import com.wander.android.data.sources.agro.AgroClient
+import com.wander.android.data.sources.agro.AgroProfileApi
+import com.wander.android.data.sources.agro.AgroVisibility
 import com.wander.android.data.sources.agro.AgroSyncedSettings
 import com.wander.android.data.sources.agro.AgroSessionApi
 import com.wander.android.data.sources.local.LocalMusicSource
@@ -27,7 +29,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
-class SettingsViewModel @Inject constructor(
+internal class SettingsViewModel @Inject constructor(
     private val secureStorage: SecureStorage,
     private val cacheManager: AudioCacheManager,
     private val navidromeSource: NavidromeSource,
@@ -35,6 +37,8 @@ class SettingsViewModel @Inject constructor(
     private val localSource: LocalMusicSource,
     private val downloadScheduler: DownloadScheduler,
     private val agroClient: AgroClient,
+    private val pairing: AgroPairingController,
+    private val profileApi: AgroProfileApi,
     private val sessionApi: AgroSessionApi,
     private val librarySync: LibrarySyncRepository,
     private val librarySyncScheduler: LibrarySyncScheduler,
@@ -78,20 +82,58 @@ class SettingsViewModel @Inject constructor(
      * domain the QR was never told about, or a QR printed with a `localhost` address that means
      * something else entirely on a phone.
      */
-    private val _agroPairing = MutableStateFlow<AgroPairingState>(AgroPairingState.Idle)
-    val agroPairing: StateFlow<AgroPairingState> = _agroPairing.asStateFlow()
+    internal val agroPairing: StateFlow<AgroPairingState> = pairing.state
+    internal val agroConnection: StateFlow<AgroConnectionState> = pairing.connection
+
+    /** The address a blank server field means, so the dialog and the client agree on one default. */
+    val agroDefaultServer: String get() = AgroClient.DEFAULT_SERVER_URL
 
     fun pairAgro(server: String, username: String, passphrase: String) {
-        _agroPairing.value = AgroPairingState.Connecting
+        viewModelScope.launch { pairing.pair(server, username, passphrase) }
+    }
+
+    fun signUpAgro(server: String, username: String, inviteCode: String) {
+        viewModelScope.launch { pairing.signUp(server, username, inviteCode) }
+    }
+
+    fun resetAgroPairing() = pairing.reset()
+
+    private val _agroVisibility = MutableStateFlow<AgroVisibility?>(null)
+    internal val agroVisibility: StateFlow<AgroVisibility?> = _agroVisibility.asStateFlow()
+
+    /**
+     * Reads the switches back from the server rather than caching them here.
+     *
+     * They are the server's state, not this device's: another of your devices can change them, and
+     * a stale local copy would show the user a privacy setting that is not the one in force.
+     */
+    fun refreshAgroVisibility() {
+        if (!secureStorage.agroConfigured.value) {
+            _agroVisibility.value = null
+            return
+        }
         viewModelScope.launch {
-            _agroPairing.value = agroClient.pair(server, username, passphrase).fold(
-                onSuccess = { AgroPairingState.Paired(it ?: agroDevicePetname) },
-                onFailure = { AgroPairingState.Failed(it.message ?: "Could not reach the server") }
-            )
+            _agroVisibility.value = profileApi.profile(secureStorage.agroUsername)
+                .getOrNull()
+                ?.let { AgroVisibility(it.showNowPlaying, it.showStats, it.discoverable) }
         }
     }
 
-    fun resetAgroPairing() { _agroPairing.value = AgroPairingState.Idle }
+    fun setAgroVisibility(visibility: AgroVisibility) {
+        // Shown immediately, then confirmed. A privacy switch that lags a round trip behind the
+        // finger invites a second tap that puts it back where it started.
+        _agroVisibility.value = visibility
+        viewModelScope.launch {
+            profileApi.setVisibility(visibility).onSuccess { profile ->
+                _agroVisibility.value =
+                    AgroVisibility(profile.showNowPlaying, profile.showStats, profile.discoverable)
+            }.onFailure { refreshAgroVisibility() }
+        }
+    }
+
+    fun refreshAgroConnection() {
+        viewModelScope.launch { pairing.refreshConnection() }
+    }
 
     val agroSyncSettings: StateFlow<Boolean> = secureStorage.agroSyncSettings
 
