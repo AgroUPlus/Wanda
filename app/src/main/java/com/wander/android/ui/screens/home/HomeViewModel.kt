@@ -24,20 +24,6 @@ import kotlinx.coroutines.launch
 import java.time.LocalTime
 import javax.inject.Inject
 
-data class HomeUiState(
-    val isLoading: Boolean = true,
-    /**
-     * A pull-to-refresh in progress. Deliberately separate from [isLoading]: that one replaces the
-     * whole screen with a spinner, which is right on a cold start and wrong when the user is
-     * looking at shelves and pulled them down.
-     */
-    val isRefreshing: Boolean = false,
-    val greeting: String = "",
-    val sections: List<HomeSection> = emptyList()
-) {
-    val isEmpty: Boolean get() = !isLoading && sections.isEmpty()
-}
-
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val musicRepository: MusicRepository,
@@ -67,7 +53,7 @@ class HomeViewModel @Inject constructor(
     private fun observeLikes() {
         viewModelScope.launch {
             likedTrackIds.collect { liked ->
-                _uiState.update { state -> state.copy(sections = state.sections.withLikes(liked)) }
+                _uiState.update { state -> state.copy(allSections = state.allSections.withLikes(liked)) }
             }
         }
     }
@@ -85,7 +71,7 @@ class HomeViewModel @Inject constructor(
             musicRepository.getLikedTracksFlow().collect { liked ->
                 _uiState.update { state ->
                     state.copy(
-                        sections = state.sections.withSection(
+                        allSections = state.allSections.withSection(
                             carousel(SectionLiked, "Your Favourites", liked.take(CarouselSize))
                         )
                     )
@@ -100,7 +86,7 @@ class HomeViewModel @Inject constructor(
     fun refresh(showSpinner: Boolean = true) {
         viewModelScope.launch {
             // If we already have sections rendered, keep them on screen without showing full spinner
-            val hasExisting = _uiState.value.sections.isNotEmpty()
+            val hasExisting = _uiState.value.allSections.isNotEmpty()
             if (showSpinner && !hasExisting) {
                 _uiState.update { it.copy(isLoading = true) }
             } else {
@@ -108,14 +94,16 @@ class HomeViewModel @Inject constructor(
             }
 
             // Phase 1: Instant Local-First Room Database Read (< 5ms)
+            var sources: List<SourceType> = emptyList()
             val localSections = coroutineScope {
                 val onRepeat = async { homeShelfRepository.getTopTracks(CarouselSize) }
                 val jumpBackIn = async { homeShelfRepository.getRecentAlbumStarters(CarouselSize) }
                 val recentlyPlayed = async { homeShelfRepository.getRecentlyPlayed(CarouselSize) }
                 val liked = async { homeShelfRepository.getLikedTracks(CarouselSize) }
                 val discover = async { homeShelfRepository.getNeverPlayed(CarouselSize) }
-                val perSource = musicRepository.configuredSources()
+                sources = musicRepository.configuredSources()
                     .filterNot { it == SourceType.INTERNET_ARCHIVE }
+                val perSource = sources
                     .map { source ->
                         source to async {
                             homeShelfRepository.getRecentBySource(source, CarouselSize)
@@ -123,15 +111,17 @@ class HomeViewModel @Inject constructor(
                     }
 
                 buildList {
-                    add(carousel(SectionOnRepeat, "On Repeat", onRepeat.await()))
-                    add(carousel(SectionJumpBackIn, "Jump Back In", jumpBackIn.await()))
+                    // The lead shelf earns legible full-width rows; the second earns big
+                    // artwork. The rest stay carousels, so the top of Home has a shape to it.
+                    add(shelf(SectionOnRepeat, "Quick picks", HomeSectionStyle.TRACK_PAGER, onRepeat.await()))
+                    add(shelf(SectionJumpBackIn, "Keep listening", HomeSectionStyle.LARGE_GRID, jumpBackIn.await()))
                     add(carousel(SectionRecentlyPlayed, "Recently Played", recentlyPlayed.await()))
                     add(carousel(SectionLiked, "Your Favourites", liked.await()))
                     add(carousel(SectionDiscover, "Discover", discover.await()))
                     perSource.forEach { (source, deferred) ->
                         add(
                             carousel(
-                                id = "source_${source.name}",
+                                id = "$SourceSectionPrefix${source.name}",
                                 title = "From ${source.displayName}",
                                 tracks = deferred.await()
                             )
@@ -145,7 +135,11 @@ class HomeViewModel @Inject constructor(
                 isLoading = false,
                 isRefreshing = false,
                 greeting = greeting(),
-                sections = localSections.withLikes(likedTrackIds.value)
+                allSections = localSections.withLikes(likedTrackIds.value),
+                sources = sources,
+                // A filter survives a refresh: it is how the user is looking at Home, not a
+                // property of the data underneath it.
+                selectedSource = _uiState.value.selectedSource?.takeIf { it in sources }
             )
 
             // Phase 2: Non-blocking Background Network Enrichment (with 3.5s timeout)
@@ -164,13 +158,13 @@ class HomeViewModel @Inject constructor(
                             _uiState.update { state ->
                                 val updated = buildList {
                                     // Keep On Repeat first
-                                    state.sections.find { it.id == SectionOnRepeat }?.let { add(it) }
+                                    state.allSections.find { it.id == SectionOnRepeat }?.let { add(it) }
                                     // Add online recommendation feed shelves
                                     feed.forEach { shelf ->
                                         add(carousel(shelf.id, shelf.title, shelf.tracks.take(CarouselSize)))
                                     }
                                     // Add remaining local sections
-                                    state.sections.filterNot { it.id == SectionOnRepeat }.forEach { add(it) }
+                                    state.allSections.filterNot { it.id == SectionOnRepeat }.forEach { add(it) }
                                     // Add seed radio recommendations
                                     if (seed != null && suggestions.isNotEmpty()) {
                                         add(
@@ -185,7 +179,7 @@ class HomeViewModel @Inject constructor(
                                         )
                                     }
                                 }.filterNot(HomeSection::isEmpty)
-                                state.copy(sections = updated.withLikes(likedTrackIds.value))
+                                state.copy(allSections = updated.withLikes(likedTrackIds.value))
                             }
                         }
                     }
@@ -229,8 +223,20 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { musicRepository.toggleLike(track) }
     }
 
+    /** Narrows Home to one backend, or back to all of them. Filters; never refetches. */
+    fun selectSource(source: SourceType?) {
+        _uiState.update { it.copy(selectedSource = source) }
+    }
+
     private fun carousel(id: String, title: String, tracks: List<UnifiedTrack>) =
-        HomeSection(id = id, title = title, style = HomeSectionStyle.TRACK_CAROUSEL, tracks = tracks)
+        shelf(id, title, HomeSectionStyle.TRACK_CAROUSEL, tracks)
+
+    private fun shelf(
+        id: String,
+        title: String,
+        style: HomeSectionStyle,
+        tracks: List<UnifiedTrack>
+    ) = HomeSection(id = id, title = title, style = style, tracks = tracks)
 
     /**
      * Replaces a shelf in place, adding it if it wasn't there and dropping it once it empties.

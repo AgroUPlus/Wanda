@@ -10,7 +10,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Icon
@@ -30,7 +29,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistHost
-import com.wander.android.ui.components.DetailHeader
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.TrackRow
@@ -110,13 +108,12 @@ fun ArtistScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             item(key = "header", contentType = "header") {
-                DetailHeader(
-                    title = viewModel.artist,
+                ArtistHero(
+                    name = viewModel.artist,
                     subtitle = artistSubtitle(albums.size, tracks.size),
-                    artworkUrl = viewModel.image(),
-                    // Round, so an artist never reads as a record at a glance.
-                    artworkShape = CircleShape,
+                    imageUrl = viewModel.image(),
                     onPlay = viewModel::playTop,
+                    onRadio = viewModel::startArtistRadio,
                     onShuffle = viewModel::shuffle,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
@@ -140,7 +137,7 @@ fun ArtistScreen(
 
             if (tracks.isNotEmpty()) {
                 item(key = "tracks-title", contentType = "section-title") {
-                    SectionTitle("Tracks")
+                    SectionTitle("Top songs")
                 }
                 itemsIndexed(
                     items = tracks,
