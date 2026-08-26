@@ -2,6 +2,7 @@ package com.wander.android.core.playback
 
 import android.content.ComponentName
 import android.content.Context
+import android.net.Uri
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
@@ -135,17 +136,28 @@ class PlayerConnection @Inject constructor(
      * never comes through here at all.
      */
     private fun retryAsLiveStream(ctrl: MediaController, error: PlaybackException): Boolean {
-        if (error.errorCode != PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED) {
-            return false
-        }
+        if (error.errorCode !in CONTAINER_PARSE_ERRORS) return false
         val item = runCatching { ctrl.currentMediaItem }.getOrNull() ?: return false
-        if (item.localConfiguration?.mimeType == MimeTypes.APPLICATION_M3U8) return false
-        if (!retriedAsLive.add(item.mediaId)) return false
+        val id = item.mediaId.takeIf { it.isNotBlank() } ?: return false
 
+        // A track addressed by a real file path is not a mislabelled manifest, so a corrupt local
+        // file still reports itself rather than being retried as a stream. A null configuration
+        // means it did not survive IPC, which is the placeholder case and the one worth retrying.
+        val scheme = item.localConfiguration?.uri?.scheme
+        if (scheme != null && scheme != WANDA_SCHEME) return false
+
+        if (!retriedAsLive.add(id)) return false
+
+        // Rebuilt from the id rather than amended in place. The URI carries the container hint —
+        // see `MediaItems` — and the item handed back by the session may have lost the
+        // configuration that would have been amended.
         val index = runCatching { ctrl.currentMediaItemIndex }.getOrNull() ?: return false
         ctrl.replaceMediaItem(
             index,
-            item.buildUpon().setMimeType(MimeTypes.APPLICATION_M3U8).build()
+            item.buildUpon()
+                .setUri("$WANDA_SCHEME://track/${Uri.encode(id)}$LIVE_SUFFIX")
+                .setMimeType(MimeTypes.APPLICATION_M3U8)
+                .build()
         )
         ctrl.prepare()
         ctrl.play()
@@ -492,6 +504,18 @@ class PlayerConnection @Inject constructor(
 
     private companion object {
         const val RESTART_THRESHOLD_MS = 3_000L
+        /**
+         * Both ways a container can fail to parse.
+         *
+         * A manifest handed to the progressive extractors reports "unsupported" on most builds and
+         * "malformed" on some, depending on how far the sniff gets before it gives up. Matching one
+         * of the two left the retry not firing at all on devices that reported the other.
+         */
+        val CONTAINER_PARSE_ERRORS = setOf(
+            PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
+            PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED
+        )
+
         const val MIN_RATE = 0.5f
         const val MAX_RATE = 2.0f
     }
