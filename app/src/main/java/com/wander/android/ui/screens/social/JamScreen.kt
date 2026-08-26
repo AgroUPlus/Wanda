@@ -420,13 +420,13 @@ private fun RoomCard(jam: Jam, isRadioEnabled: Boolean, viewModel: JamViewModel)
             )
 
             if (jam.isHost) {
-                // Jam Radio (Friends Blend) setting - Host only
+                // Jam Radio setting - Host only
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 12.dp)
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Jam Radio (Friends Blend)", style = MaterialTheme.typography.bodyMedium)
+                        Text("Jam Radio", style = MaterialTheme.typography.bodyMedium)
                         Text(
                             text = "Auto-blends the room's music tastes when the queue runs out.",
                             style = MaterialTheme.typography.bodySmall,

@@ -99,11 +99,9 @@ internal fun QueueScreen(
                 }
             }
 
-            if (jam != null) {
-                FilledTonalButton(onClick = onOpenJam) {
-                    Text("Room")
-                }
-            } else if (state.queue.isNotEmpty()) {
+            // No "Room" button: the header beside it already opens the room, and two controls
+            // one tap apart doing the same thing is a menu asking which one is real.
+            if (jam == null && state.queue.isNotEmpty()) {
                 IconButton(onClick = playerConnection::clearQueue) {
                     Icon(Icons.Rounded.DeleteSweep, contentDescription = "Clear queue")
                 }

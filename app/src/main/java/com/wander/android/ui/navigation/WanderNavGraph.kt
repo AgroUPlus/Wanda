@@ -32,7 +32,15 @@ import com.wander.android.ui.screens.welcome.WelcomeScreen
 fun NavGraphBuilder.wanderNavGraph(
     navController: NavHostController,
     playerConnection: PlayerConnection,
-    contentPadding: PaddingValues
+    contentPadding: PaddingValues,
+    /**
+     * Docks the player sheet.
+     *
+     * The sheet lives in the shell, above the whole nav host, and keeps its expanded state across
+     * navigation — so a destination reached *from* the maximized player opens underneath it and
+     * cannot be seen. Screens that navigate somewhere worth looking at have to say so.
+     */
+    onCollapsePlayer: () -> Unit
 ) {
     tabDestination(TopLevelDestination.HOME.route) {
         HomeScreen(
@@ -172,6 +180,9 @@ fun NavGraphBuilder.wanderNavGraph(
             playerConnection = playerConnection,
             onClose = navController::popBackStack,
             onOpenJam = {
+                // The queue is opened from the maximized player, so the sheet is still expanded
+                // behind it — without this the room opens correctly and is completely hidden.
+                onCollapsePlayer()
                 navController.popBackStack()
                 navController.navigate(Routes.JAM)
             }
