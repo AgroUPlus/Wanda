@@ -1,21 +1,23 @@
 package com.wander.android.ui.screens.home
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Radio
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
@@ -30,13 +32,21 @@ import androidx.compose.ui.unit.dp
  * the thumb rests over the navigation bar and the mini player's controls, and a button that
  * starts playing something over the top of them is a button that gets pressed by accident.
  *
- * While the station is being assembled the icon pulses instead of the label changing to a
- * spinner — the press has visibly done something, and the button keeps its size so the layout
- * does not jump underneath the finger.
+ * Icon only, and small. It started as an extended FAB with a label and it dominated the corner of
+ * a screen whose whole job is showing artwork — the icon says it on its own, and a pill that size
+ * competes with the content rather than sitting beside it.
+ *
+ * Hidden while the list is moving. A button pinned over a scrolling feed is in the way of the
+ * thing being scrolled, and it is never what the hand is doing mid-flick.
+ *
+ * While the station is being assembled the icon pulses rather than swapping in a spinner — the
+ * press has visibly done something, and the button keeps its size so nothing shifts underneath
+ * the finger.
  */
 @Composable
 internal fun InstantRadioFab(
     isStarting: Boolean,
+    isScrolling: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -48,18 +58,28 @@ internal fun InstantRadioFab(
         label = "radio-pulse"
     )
 
-    ExtendedFloatingActionButton(
-        onClick = onClick,
+    AnimatedVisibility(
+        // Never yanked away mid-press: a start already in flight keeps its button, or the
+        // pulsing feedback would vanish along with it.
+        visible = !isScrolling || isStarting,
+        enter = scaleIn() + fadeIn(),
+        exit = scaleOut() + fadeOut(),
         modifier = modifier
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        SmallFloatingActionButton(
+            onClick = onClick,
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            // Its own shadow only. This cannot out-stack the docked player — that is drawn after
+            // the whole nav host and always wins — so the two are kept from overlapping by the
+            // caller's bottom offset rather than by elevation. See `HomeScreen`.
+            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)
+        ) {
             Icon(
                 imageVector = Icons.Rounded.Radio,
-                contentDescription = null,
+                contentDescription = if (isStarting) "Starting radio" else "Start radio",
                 modifier = Modifier.graphicsLayer { alpha = if (isStarting) pulse else 1f }
             )
-            Spacer(Modifier.width(10.dp))
-            Text(if (isStarting) "Tuning in…" else "Start radio")
         }
     }
 }
