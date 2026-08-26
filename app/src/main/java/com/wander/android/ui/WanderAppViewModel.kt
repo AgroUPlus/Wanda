@@ -3,24 +3,27 @@ package com.wander.android.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.network.ConnectivityObserver
+import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.core.update.UpdateCheckResult
 import com.wander.android.core.update.UpdateChecker
-import com.wander.android.ui.navigation.DeepLinkRouter
+import com.wander.android.data.repository.InstantRadioRepository
 import com.wander.android.data.repository.LibrarySyncRepository
-import com.wander.android.data.repository.PlaylistWriteRepository
 import com.wander.android.data.repository.MusicRepository
+import com.wander.android.data.repository.PlaylistWriteRepository
 import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.sources.agro.AgroSessionApi
 import com.wander.android.data.sources.agro.MissingTrack
 import com.wander.android.data.sources.local.LocalMusicSource
+import com.wander.android.ui.navigation.DeepLinkRouter
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
@@ -30,7 +33,6 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @HiltViewModel
 class WanderAppViewModel @Inject constructor(
@@ -43,8 +45,60 @@ class WanderAppViewModel @Inject constructor(
     private val secureStorage: SecureStorage,
     private val deepLinkRouter: DeepLinkRouter,
     connectivity: ConnectivityObserver,
-    private val updateChecker: UpdateChecker
+    private val updateChecker: UpdateChecker,
+    private val instantRadio: InstantRadioRepository,
+    private val playerConnection: PlayerConnection
 ) : ViewModel() {
+
+    /**
+     * The instant-radio button, hoisted to the shell.
+     *
+     * It used to live in `HomeScreen`, which put it inside the nav host — and the player sheet is
+     * drawn after the whole nav host, so the button lost to the docked strip whenever the two came
+     * near each other regardless of elevation. Owning it here is the only way it can sit *above*
+     * the mini player rather than merely beside it.
+     *
+     * The state has to live at this level too, or the shell would be reading a different
+     * `HomeViewModel` instance than the screen does — one per nav backstack entry.
+     */
+    private val _isStartingRadio = MutableStateFlow(false)
+    val isStartingRadio: StateFlow<Boolean> = _isStartingRadio.asStateFlow()
+
+    /**
+     * Whether Home's feed is moving, reported up by the screen.
+     *
+     * A button pinned over a scrolling list is in the way of the thing being scrolled, and the
+     * shell has no other way to know — the list state belongs to the screen.
+     */
+    private val _homeScrolling = MutableStateFlow(false)
+    val homeScrolling: StateFlow<Boolean> = _homeScrolling.asStateFlow()
+
+    fun setHomeScrolling(scrolling: Boolean) {
+        _homeScrolling.value = scrolling
+    }
+
+    /**
+     * Starts a station with nothing to go on — no seed, no chosen playlist.
+     *
+     * Radio mode goes on with it, so the station keeps topping itself up instead of ending forty
+     * tracks later. An empty result is reported rather than silently ignored: a library with no
+     * plays and no likes has said nothing about what its owner wants to hear, and a button that
+     * quietly does nothing reads as broken.
+     */
+    fun startInstantRadio() {
+        if (_isStartingRadio.value) return
+        _isStartingRadio.value = true
+        viewModelScope.launch {
+            val station = instantRadio.buildStation()
+            _isStartingRadio.value = false
+            if (station.isEmpty()) {
+                playerConnection.notifyNoStation()
+                return@launch
+            }
+            playerConnection.play(station)
+            playerConnection.setRadioMode(true)
+        }
+    }
 
     /** Routes asked for from outside the composition — a tapped notification. */
     val deepLinkRoutes = deepLinkRouter.routes

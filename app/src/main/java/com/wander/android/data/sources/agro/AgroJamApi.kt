@@ -132,11 +132,11 @@ internal class AgroJamApi @Inject constructor(
             """
             mutation AddJamTrack(
                 ${'$'}uri: String!, ${'$'}title: String!, ${'$'}artist: String!, ${'$'}art: String,
-                ${'$'}duration: Int
+                ${'$'}duration: Int, ${'$'}isLive: Boolean
             ) {
                 addJamTrack(
                     trackUri: ${'$'}uri, title: ${'$'}title, artist: ${'$'}artist,
-                    artworkUrl: ${'$'}art, durationMs: ${'$'}duration
+                    artworkUrl: ${'$'}art, durationMs: ${'$'}duration, isLive: ${'$'}isLive
                 ) {
                     $jamFields
                 }
@@ -148,6 +148,11 @@ internal class AgroJamApi @Inject constructor(
                 put("artist", track.artist)
                 put("art", track.artworkUrl)
                 put("duration", track.durationMs)
+                // Tells the room's clock that this one has no end of its own, so it holds the
+                // room until somebody skips instead of being retired on a duration it does not
+                // have. Without it a radio looks exactly like a track whose length failed to
+                // parse, and those want the opposite treatment.
+                put("isLive", track.isLive)
             }
         ).mapCatching { data -> data["addJamTrack"]!!.jsonObject.toJam() }
 

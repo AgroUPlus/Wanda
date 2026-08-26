@@ -34,17 +34,15 @@ import androidx.navigation.compose.rememberNavController
 import com.wander.android.core.permissions.rememberPermissionGate
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.ui.agro.AgroSessionViewModel
-import com.wander.android.ui.components.LocalOfflinePlayback
-import com.wander.android.ui.components.player.MiniPlayerGap
-import com.wander.android.ui.components.player.MiniPlayerHeight
-import com.wander.android.ui.components.player.MiniPlayerShadowInset
 import com.wander.android.ui.components.JamBar
 import com.wander.android.ui.components.JamBarHeight
 import com.wander.android.ui.components.ListenAlongBar
 import com.wander.android.ui.components.ListenAlongBarHeight
+import com.wander.android.ui.components.LocalOfflinePlayback
 import com.wander.android.ui.components.UpdateAvailableDialog
-import com.wander.android.ui.screens.social.JamViewModel
-import com.wander.android.ui.screens.social.SocialViewModel
+import com.wander.android.ui.components.player.MiniPlayerGap
+import com.wander.android.ui.components.player.MiniPlayerHeight
+import com.wander.android.ui.components.player.MiniPlayerShadowInset
 import com.wander.android.ui.components.player.PlayerSheet
 import com.wander.android.ui.components.player.PlayerSheetContent
 import com.wander.android.ui.components.player.PlayerSheetValue
@@ -53,6 +51,9 @@ import com.wander.android.ui.navigation.Routes
 import com.wander.android.ui.navigation.TopLevelDestination
 import com.wander.android.ui.navigation.WanderNavigationBar
 import com.wander.android.ui.navigation.wanderNavGraph
+import com.wander.android.ui.screens.home.InstantRadioFab
+import com.wander.android.ui.screens.social.JamViewModel
+import com.wander.android.ui.screens.social.SocialViewModel
 import kotlinx.coroutines.launch
 
 /**
@@ -253,6 +254,31 @@ fun WanderApp(
             // `progress`, so this costs one recomposition per gesture rather than one per frame.
             val sheetCollapsed = sheetState.targetValue == PlayerSheetValue.COLLAPSED
 
+            // Drawn here rather than by `HomeScreen`, and this is the whole reason: the player
+            // sheet above is painted after the entire nav host, so a button a screen puts near the
+            // bottom edge is covered by the docked strip no matter what elevation it claims. Here
+            // it is genuinely above it, whether or not anything is playing.
+            val isStartingRadio by viewModel.isStartingRadio.collectAsStateWithLifecycle()
+            val homeScrolling by viewModel.homeScrolling.collectAsStateWithLifecycle()
+            if (currentRoute == TopLevelDestination.HOME.route && sheetCollapsed) {
+                InstantRadioFab(
+                    isStarting = isStartingRadio,
+                    isScrolling = homeScrolling,
+                    onClick = viewModel::startInstantRadio,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        // Clears whatever the shell has parked at the bottom: the navigation bar
+                        // always, and the docked strip when there is a track. Both are measured
+                        // rather than assumed, so the button sits the same distance clear of the
+                        // strip as it does of the bar on its own.
+                        .padding(
+                            start = 20.dp,
+                            bottom = navBarHeight + RadioFabClearance +
+                                if (hasTrack) MiniPlayerHeight + MiniPlayerGap else 0.dp
+                        )
+                )
+            }
+
             // Offered whenever this device is idle — not merely when it has never played anything.
             // The gate used to be "no track loaded", and a track stays loaded after it finishes, so
             // the card appeared exactly once per launch and never came back.
@@ -345,3 +371,6 @@ private fun androidx.navigation.NavHostController.switchTab(destination: TopLeve
     // plain "search" string will match.
     graph.findNode(destination.route)?.id?.let { popBackStack(it, inclusive = false) }
 }
+
+/** The gap between the radio button and whatever is parked at the bottom edge. */
+private val RadioFabClearance = 16.dp

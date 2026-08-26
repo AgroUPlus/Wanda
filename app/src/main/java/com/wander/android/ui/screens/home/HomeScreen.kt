@@ -1,5 +1,7 @@
 package com.wander.android.ui.screens.home
 
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -22,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.ui.WanderAppViewModel
 import com.wander.android.ui.agro.AgroSessionViewModel
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.EmptyState
@@ -91,8 +95,14 @@ fun HomeScreen(
     // Held above the LazyColumn so a shelf scrolling off screen does not forget where it was.
     // See [HomeShelfStates].
     val shelfStates = remember { HomeShelfStates() }
-    // Hoisted so the radio button can hide itself while the list is moving — see InstantRadioFab.
+    // The radio button is drawn by the shell, above the docked player — see `WanderApp`. It still
+    // wants to know when this list is moving, and the list state belongs here, so it is reported
+    // upward rather than the button being pulled back down into a layer that cannot host it.
     val listState = rememberLazyListState()
+    val shellViewModel: WanderAppViewModel = hiltViewModel(LocalActivity.current as ComponentActivity)
+    LaunchedEffect(listState.isScrollInProgress) {
+        shellViewModel.setHomeScrolling(listState.isScrollInProgress)
+    }
 
     // The same long-press menu Library and Search use, so a track offers the same actions
     // wherever it is shown. Held here rather than per shelf: only one can be open at a time.
@@ -201,31 +211,6 @@ fun HomeScreen(
             }
         }
 
-        // Outside the `when`, so it survives a filter that came up empty — but not the states
-        // where there is nothing to build a station from at all.
-        if (!state.isLoading && !state.isGloballyEmpty) {
-            InstantRadioFab(
-                isStarting = state.isStartingRadio,
-                isScrolling = listState.isScrollInProgress,
-                onClick = viewModel::startInstantRadio,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    // Clearance, not stacking. The player sheet is drawn after the entire nav
-                    // host, so anything a screen puts near the bottom edge is painted over no
-                    // matter what elevation it claims — the only way to be *above* the docked
-                    // player is to not share space with it.
-                    //
-                    // `contentPadding` already carries the navigation bar plus the whole docked
-                    // strip (height, gap and the shadow it throws outside its own clip box), and
-                    // it shrinks back when nothing is playing. Adding the constants again here
-                    // would double-count them and leave the button floating in the middle of the
-                    // screen with no track loaded.
-                    .padding(
-                        start = 20.dp,
-                        bottom = contentPadding.calculateBottomPadding() + RadioFabClearance
-                    )
-            )
-        }
     }
 }
 
@@ -262,6 +247,3 @@ private fun HomeHeader(
         }
     }
 }
-
-/** The gap between the radio button and whatever the shell has parked at the bottom edge. */
-private val RadioFabClearance = 16.dp

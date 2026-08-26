@@ -12,8 +12,6 @@ data class HomeUiState(
      * looking at shelves and pulled them down.
      */
     val isRefreshing: Boolean = false,
-    /** True while the instant station is being assembled — the FAB shows it rather than a dialog. */
-    val isStartingRadio: Boolean = false,
     val greeting: String = "",
     /** Every shelf that was built, before [selectedSource] narrows them. */
     val allSections: List<HomeSection> = emptyList(),

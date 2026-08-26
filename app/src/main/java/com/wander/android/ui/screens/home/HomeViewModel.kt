@@ -7,7 +7,6 @@ import com.wander.android.data.model.SmartMix
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.HomeShelfRepository
-import com.wander.android.data.repository.InstantRadioRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.repository.RecommendationRepository
@@ -32,8 +31,7 @@ class HomeViewModel @Inject constructor(
     private val recommendationRepository: RecommendationRepository,
     private val smartMixRepository: SmartMixRepository,
     private val playerConnection: PlayerConnection,
-    private val shareRepository: ShareRepository,
-    private val instantRadioRepository: InstantRadioRepository
+    private val shareRepository: ShareRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -203,29 +201,6 @@ class HomeViewModel @Inject constructor(
     fun playNext(track: UnifiedTrack) = playerConnection.playNext(listOf(track))
 
     fun addToQueue(track: UnifiedTrack) = playerConnection.addToQueue(listOf(track))
-
-    /**
-     * Starts a station with nothing to go on — no seed, no chosen playlist.
-     *
-     * Radio mode is switched on with it, so the station keeps topping itself up instead of ending
-     * forty tracks later. An empty result is reported rather than silently ignored: a library
-     * with no plays and no likes has said nothing about what its owner wants to hear, and the
-     * button quietly doing nothing would read as broken.
-     */
-    fun startInstantRadio() {
-        if (_uiState.value.isStartingRadio) return
-        _uiState.update { it.copy(isStartingRadio = true) }
-        viewModelScope.launch {
-            val station = instantRadioRepository.buildStation()
-            _uiState.update { it.copy(isStartingRadio = false) }
-            if (station.isEmpty()) {
-                playerConnection.notifyNoStation()
-                return@launch
-            }
-            playerConnection.play(station)
-            playerConnection.setRadioMode(true)
-        }
-    }
 
     /** Plays the track, then fills the queue behind it with its source's radio. */
     fun startRadio(track: UnifiedTrack) {
