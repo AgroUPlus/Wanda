@@ -8,14 +8,15 @@ import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.IMusicSource
+import com.wander.android.data.sources.ShareTarget
 import com.wander.android.data.sources.SourceCapabilities
 import com.wander.android.data.sources.StreamInfo
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.StateFlow
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.StateFlow
 
 private const val PREFIX = "navidrome:"
 
@@ -193,8 +194,12 @@ class NavidromeSource @Inject constructor(
             songIdsToAdd = trackIds.map { it.removePrefix(PREFIX) }
         )
 
-    override suspend fun createShareLink(trackId: String, description: String): Result<String> =
-        apiClient.createShare(listOf(trackId.removePrefix(PREFIX)), description)
+    /**
+     * Subsonic's `createShare` takes ids of any kind — a song, an album, an artist or a playlist —
+     * and answers with a public URL for whatever it was given, so all four are the same call.
+     */
+    override suspend fun createShareLink(target: ShareTarget): Result<String> =
+        apiClient.createShare(listOf(target.id.removePrefix(PREFIX)), target.description)
 
     override suspend fun setLiked(trackId: String, liked: Boolean): Result<Unit> {
         val id = trackId.removePrefix(PREFIX)

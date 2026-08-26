@@ -9,15 +9,17 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.CatalogRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.ShareRepository
+import com.wander.android.data.sources.ShareKind
+import com.wander.android.data.sources.ShareTarget
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.net.URLDecoder
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.net.URLDecoder
-import javax.inject.Inject
 
 @HiltViewModel
 class AlbumViewModel @Inject constructor(
@@ -84,5 +86,24 @@ class AlbumViewModel @Inject constructor(
 
     fun share(track: UnifiedTrack) {
         viewModelScope.launch { shareRepository.share(track) }
+    }
+
+    /** Whether this record's backend can publish a link for the album itself, not just a track. */
+    fun canShareAlbum(): Boolean =
+        _album.value?.let { shareRepository.canShare(it.source) } ?: false
+
+    fun shareAlbum() {
+        val album = _album.value ?: return
+        viewModelScope.launch {
+            shareRepository.share(
+                ShareTarget(
+                    kind = ShareKind.ALBUM,
+                    source = album.source,
+                    id = album.id,
+                    title = album.title,
+                    subtitle = album.artist
+                )
+            )
+        }
     }
 }

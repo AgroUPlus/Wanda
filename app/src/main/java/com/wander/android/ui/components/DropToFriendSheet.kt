@@ -31,6 +31,9 @@ import com.wander.android.data.model.UnifiedTrack
  * The note comes before the friend list rather than after picking one: choosing a name is the last
  * act, so the list rows can be the send button and there is no second confirmation step. Handing
  * somebody a song should take one tap more than deciding to.
+ *
+ * Rows carry the friend's avatar. This is the one moment in the app where the thing being chosen
+ * is a *person*, and a column of usernames is the least personal way to render that.
  */
 @Composable
 internal fun DropToFriendSheet(
@@ -90,6 +93,17 @@ internal fun DropToFriendSheet(
                 items(items = friends, key = { it.username }) { friend ->
                     ListItem(
                         headlineContent = { Text(friend.name) },
+                        supportingContent = { Text("@" + friend.username) },
+                        // A face, not just a name. Picking who to send a song to is the one
+                        // moment in the app where you are choosing a *person*, and a list of
+                        // usernames in a plain sheet is the least personal way to render that.
+                        leadingContent = {
+                            CuteAvatar(
+                                seed = friend.username,
+                                avatarUrl = friend.avatarUrl,
+                                size = 40.dp
+                            )
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             // Disabled while a send is in flight, so a double tap cannot send the

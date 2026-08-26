@@ -1,23 +1,25 @@
 package com.wander.android.data.sources.ytmusic
 
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.async
-import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.RecommendedShelf
+import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.IMusicSource
+import com.wander.android.data.sources.ShareKind
+import com.wander.android.data.sources.ShareTarget
 import com.wander.android.data.sources.SourceCapabilities
 import com.wander.android.data.sources.StreamInfo
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import java.io.IOException
 import java.net.URLEncoder
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * YouTube Music via InnerTube. Search and playback work signed out; the personal library and
@@ -156,12 +158,20 @@ class YTMusicSource @Inject constructor(
      * out. No request is made and nothing is minted: unlike a Navidrome share — a token the server
      * has to create — this link already exists and plays for anyone, signed in or not.
      */
-    override suspend fun createShareLink(trackId: String, description: String): Result<String> {
-        val videoId = trackId.removePrefix(YTM_PREFIX)
-        if (videoId.isBlank() || videoId == trackId) {
-            return Result.failure(IllegalArgumentException("Not a YouTube Music track: $trackId"))
+    override suspend fun createShareLink(target: ShareTarget): Result<String> {
+        val id = target.id.removePrefix(YTM_PREFIX)
+        if (id.isBlank() || id == target.id) {
+            return Result.failure(IllegalArgumentException("Not a YouTube Music id: ${target.id}"))
         }
-        return Result.success("$WATCH_URL$videoId")
+        // A playlist id is the one YouTube addresses by query parameter rather than by path; an
+        // album and an artist are both browse pages, which is why they share a form.
+        return Result.success(
+            when (target.kind) {
+                ShareKind.TRACK -> "$WATCH_URL$id"
+                ShareKind.PLAYLIST -> "$PLAYLIST_URL$id"
+                ShareKind.ALBUM, ShareKind.ARTIST -> "$BROWSE_URL$id"
+            }
+        )
     }
 
     override suspend fun getLikedTracks(limit: Int, offset: Int): Result<List<UnifiedTrack>> =
@@ -213,5 +223,7 @@ class YTMusicSource @Inject constructor(
 
         /** `music.` rather than plain youtube.com, so the link opens in the right app. */
         const val WATCH_URL = "https://music.youtube.com/watch?v="
+        const val BROWSE_URL = "https://music.youtube.com/browse/"
+        const val PLAYLIST_URL = "https://music.youtube.com/playlist?list="
     }
 }

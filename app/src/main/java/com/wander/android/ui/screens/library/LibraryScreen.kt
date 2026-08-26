@@ -265,7 +265,12 @@ private fun PlaylistList(
             }
         }
         items(playlists, key = { it.id }, contentType = { "playlist" }) { playlist ->
-            PlaylistRow(playlist = playlist, onPlay = { viewModel.openPlaylist(playlist) })
+            PlaylistRow(
+                playlist = playlist,
+                onPlay = { viewModel.openPlaylist(playlist) },
+                onShare = { viewModel.sharePlaylist(playlist) }
+                    .takeIf { viewModel.canShare(playlist.source) }
+            )
         }
     }
 }

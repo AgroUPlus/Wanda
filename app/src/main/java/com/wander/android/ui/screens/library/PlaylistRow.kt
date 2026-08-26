@@ -1,6 +1,6 @@
 package com.wander.android.ui.screens.library
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,13 +22,17 @@ import com.wander.android.ui.components.scrollingTitle
 fun PlaylistRow(
     playlist: UnifiedPlaylist,
     onPlay: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Null when this playlist's backend cannot publish a link for it. */
+    onShare: (() -> Unit)? = null
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onPlay)
+            // Long press to share, matching the track rows on every other tab — the same gesture
+            // means the same thing wherever it is used.
+            .combinedClickable(onClick = onPlay, onLongClick = onShare)
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Artwork(
