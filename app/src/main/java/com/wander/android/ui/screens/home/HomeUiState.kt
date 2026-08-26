@@ -37,7 +37,16 @@ data class HomeUiState(
         }
     }
 
+    /** Nothing to show for the current filter — may still have music under a different source. */
     val isEmpty: Boolean get() = !isLoading && sections.isEmpty()
+
+    /**
+     * Nothing to show no matter the filter. Distinct from [isEmpty]: filtering to a source with no
+     * tracks is not the same situation as having no music at all, and only this one should take
+     * over the whole screen — the other should leave the header and source chips reachable so the
+     * user can pick a different filter instead of being stuck looking at "open Settings."
+     */
+    val isGloballyEmpty: Boolean get() = !isLoading && allSections.isEmpty()
 }
 
 /** Per-source shelves are id'd with this, so the filter can recognise and drop them. */
