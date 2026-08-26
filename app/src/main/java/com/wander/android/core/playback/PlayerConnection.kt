@@ -344,11 +344,21 @@ class PlayerConnection @Inject constructor(
         _controller.value?.seekToNextMediaItem()
     }
 
+    /**
+     * Whether [previous] would restart the current track rather than step back to another one.
+     *
+     * Exposed because the swipe gesture has to show where it is about to land *before* the player
+     * has moved, and "previous" means two different things depending on the position. Read at the
+     * moment a gesture starts, never in composition — it changes with playback position.
+     */
+    val restartsOnPrevious: Boolean
+        get() = (_controller.value?.currentPosition ?: 0L) > RESTART_THRESHOLD_MS
+
     /** Restarts the track when we are past the intro, otherwise steps back — the usual convention. */
     fun previous() {
         if (isFollowing) return
         val ctrl = _controller.value ?: return
-        if (ctrl.currentPosition > RESTART_THRESHOLD_MS) ctrl.seekTo(0L) else ctrl.seekToPreviousMediaItem()
+        if (restartsOnPrevious) ctrl.seekTo(0L) else ctrl.seekToPreviousMediaItem()
     }
 
     fun toggleShuffle() {

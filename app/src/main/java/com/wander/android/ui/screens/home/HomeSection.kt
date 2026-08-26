@@ -5,7 +5,17 @@ import com.wander.android.data.model.SmartMix
 import com.wander.android.data.model.UnifiedTrack
 
 /** How a shelf is laid out on Home. */
-enum class HomeSectionStyle { TRACK_CAROUSEL, MIX_CAROUSEL, TRACK_LIST }
+enum class HomeSectionStyle {
+    /** A row of square cards. The default shelf. */
+    TRACK_CAROUSEL,
+    MIX_CAROUSEL,
+    /** Full-width rows, straight down the page. */
+    TRACK_LIST,
+    /** Rows again, but dealt into swipeable pages of [com.wander.android.ui.screens.home.RowsPerPage]. */
+    TRACK_PAGER,
+    /** Two rows of oversized cards that scroll sideways together. */
+    LARGE_GRID
+}
 
 /**
  * One shelf on Home.
