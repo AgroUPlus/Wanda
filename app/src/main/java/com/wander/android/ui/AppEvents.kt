@@ -32,6 +32,12 @@ internal fun AppEvents(
         }
     }
 
+    LaunchedEffect(playerConnection) {
+        playerConnection.notices.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
     LaunchedEffect(viewModel) {
         viewModel.writeErrors.collect { message ->
             snackbarHostState.showSnackbar(message, withDismissAction = true)
