@@ -26,5 +26,6 @@ data class TrackSourceFields(
     val year: Int?,
     val genre: String?,
     val bitRateKbps: Int?,
-    val format: String?
+    val format: String?,
+    val isLive: Boolean
 )

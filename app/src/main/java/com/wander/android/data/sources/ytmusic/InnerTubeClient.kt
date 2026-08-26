@@ -30,10 +30,13 @@ import javax.inject.Singleton
 /** A resolved playable audio format paired with the client identity that produced it — the
  * stream URL has to be fetched with a matching User-Agent, or googlevideo refuses it. */
 internal data class PlayerResponse(
-    val format: JsonObject,
+    /** Null for a livestream, which is served through [hlsManifestUrl] instead of a format list. */
+    val format: JsonObject?,
     val variant: InnerTubeVariant,
     /** When present, must be appended to the stream URL as a `pot` query param. */
-    val streamingPoToken: String? = null
+    val streamingPoToken: String? = null,
+    /** Set for a livestream: play this manifest directly, no signature or nonce to resolve. */
+    val hlsManifestUrl: String? = null
 )
 
 /**
@@ -148,9 +151,16 @@ class InnerTubeClient @Inject constructor(
             // A response can be HTTP 200 while still refusing to play (playabilityStatus != OK), so
             // success has to be judged by that field rather than by the HTTP status — otherwise a
             // refusal never reaches the fallback above.
-            val format = body.bestAudioFormat()
-                ?: throw IOException("YouTube Music returned no playable audio for this track")
-            PlayerResponse(format, variant, poToken?.streamingDataPoToken)
+            // Live first: a livestream legitimately has no format list, so asking for one and
+            // treating its absence as a failure would reject a video that plays perfectly well.
+            val hls = body.hlsManifestUrl()
+            if (hls != null) {
+                PlayerResponse(null, variant, poToken?.streamingDataPoToken, hls)
+            } else {
+                val format = body.bestAudioFormat()
+                    ?: throw IOException("YouTube Music returned no playable audio for this track")
+                PlayerResponse(format, variant, poToken?.streamingDataPoToken)
+            }
         }
     }
 

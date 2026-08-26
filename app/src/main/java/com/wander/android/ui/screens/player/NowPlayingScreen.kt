@@ -299,7 +299,8 @@ internal fun NowPlayingScreen(
                 playerConnection = playerConnection,
                 durationMs = state.durationMs,
                 onSeek = playerConnection::seekTo,
-                modifier = Modifier.padding(top = 12.dp)
+                modifier = Modifier.padding(top = 12.dp),
+                isLive = track.isLive
             )
 
             PlayerControls(

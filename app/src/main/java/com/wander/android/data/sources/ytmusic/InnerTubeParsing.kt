@@ -62,6 +62,28 @@ internal fun parseDurationText(value: String?): Long {
     return parts.fold(0L) { acc, part -> acc * 60 + part } * 1000L
 }
 
+/**
+ * Whether a row is a livestream rather than a recording.
+ *
+ * YouTube marks these two different ways depending on the surface: search and library rows carry
+ * a `BADGE_STYLE_TYPE_LIVE_NOW` badge, while queue entries get the time-status overlay in its
+ * `LIVE` style where a recording would print a duration. Either marker is enough, and neither
+ * appears on a recording — which is why this looks for the marker rather than inferring live from
+ * a missing duration, a shape plenty of ordinary rows also have.
+ */
+internal fun JsonObject.isLiveEntry(): Boolean =
+    LIVE_MARKER_KEYS.any { key -> this[key]?.let { containsLiveMarker(it) } == true }
+
+private val LIVE_MARKER_KEYS = listOf("badges", "thumbnailOverlays")
+
+private val LIVE_MARKERS = setOf("BADGE_STYLE_TYPE_LIVE_NOW", "LIVE")
+
+private fun containsLiveMarker(node: JsonElement): Boolean = when (node) {
+    is JsonObject -> node.any { (_, v) -> containsLiveMarker(v) }
+    is JsonArray -> node.any { containsLiveMarker(it) }
+    else -> node.text() in LIVE_MARKERS
+}
+
 /** A search result or playlist row. */
 internal fun parseResponsiveListItem(renderer: JsonObject): UnifiedTrack? {
     val columns = renderer["flexColumns"]?.array() ?: return null
@@ -85,7 +107,8 @@ internal fun parseResponsiveListItem(renderer: JsonObject): UnifiedTrack? {
             .bestThumbnail(),
         durationMs = parseDurationText(subtitle.duration),
         format = "audio/webm",
-        bitRateKbps = 160
+        bitRateKbps = 160,
+        isLive = renderer.isLiveEntry()
     )
 }
 
@@ -106,7 +129,8 @@ internal fun parsePlaylistPanelVideo(renderer: JsonObject): UnifiedTrack? {
         artworkUrl = renderer["thumbnail"].bestThumbnail(),
         durationMs = parseDurationText(renderer["lengthText"].runText()),
         format = "audio/webm",
-        bitRateKbps = 160
+        bitRateKbps = 160,
+        isLive = renderer.isLiveEntry()
     )
 }
 
@@ -191,6 +215,17 @@ internal fun JsonObject.bestAudioFormat(): JsonObject? {
     return audio.firstOrNull { it["itag"].text() == "251" }
         ?: audio.maxByOrNull { it["bitrate"].text()?.toLongOrNull() ?: 0L }
 }
+
+/**
+ * The HLS manifest a livestream is served through.
+ *
+ * A live video has no `adaptiveFormats` and no `formats` at all, so [bestAudioFormat] finds
+ * nothing and the caller used to treat that as "unplayable" — the load failed, and ExoPlayer's
+ * default response to a failed item is to advance the queue. That is precisely why live tracks
+ * looked like they were being skipped.
+ */
+internal fun JsonObject.hlsManifestUrl(): String? =
+    path("streamingData", "hlsManifestUrl").text()?.takeIf { it.isNotBlank() }
 
 /** Either a ready-to-fetch `url`, or a cipher `StreamUrlResolver` can turn into one. */
 private fun JsonObject.hasPlayableSource(): Boolean =
