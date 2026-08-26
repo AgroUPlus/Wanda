@@ -93,7 +93,23 @@ fun PlayerSheetContent(
     // but its cover and text now move with the gesture, which is what was missing.
     // The covers either side of this one in the queue, for the swipe to peek at. Coarse enough
     // not to change during a gesture, so reading them here costs nothing per frame.
-    val previousArtwork = playback.queue.getOrNull(playback.currentIndex - 1)?.artworkUrl
+    //
+    // Past the intro, "previous" restarts the track it is already on rather than stepping back
+    // (see [PlayerConnection.previous]) — so the cover it lands on is the *current* one. Taking
+    // the neighbour's cover unconditionally is what left a restarted track wearing the previous
+    // track's artwork, and left it there: the hand-off below waits for the artwork to change,
+    // and on a restart it never does.
+    //
+    // Evaluated once per gesture rather than per frame: `isSwiping` flips twice, and the answer
+    // only has to be right for as long as the finger is down.
+    val previousRestartsCurrent = remember(swipe.isSwiping) {
+        swipe.isSwiping && playerConnection.restartsOnPrevious
+    }
+    val previousArtwork = if (previousRestartsCurrent) {
+        playback.currentTrack?.artworkUrl
+    } else {
+        playback.queue.getOrNull(playback.currentIndex - 1)?.artworkUrl
+    }
     val nextArtwork = playback.queue.getOrNull(playback.currentIndex + 1)?.artworkUrl
 
     val miniSwipe = Modifier.swipeToChangeTrack(
@@ -112,10 +128,11 @@ fun PlayerSheetContent(
         previousArtworkUrl = previousArtwork
     )
 
-    // The skip has landed: hand the cover back to playback state. Keyed on the track rather than
-    // the index so a queue edit cannot strand the override.
+    // The skip has landed: hand the cover back to playback state. Keyed on the track's identity
+    // rather than the index so a queue edit cannot strand the override — and rather than the
+    // artwork URL, which two tracks off the same album share, leaving the override set.
     val currentArtwork = playback.currentTrack?.artworkUrl
-    LaunchedEffect(currentArtwork) {
+    LaunchedEffect(playback.currentTrack?.id) {
         swipe.clearPending()
     }
 
