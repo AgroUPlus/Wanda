@@ -2,6 +2,7 @@ package com.wander.android.core.playback
 
 import android.content.ComponentName
 import android.content.Context
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
@@ -11,6 +12,8 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.UnifiedTrack
 import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,8 +31,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The UI's handle on playback: a [MediaController] bound to [PlaybackService], exposed as flows.
@@ -93,6 +94,7 @@ class PlayerConnection @Inject constructor(
                     }
 
                     override fun onPlayerError(error: PlaybackException) {
+                        if (retryAsLiveStream(ctrl, error)) return
                         _errors.tryEmit(error.userMessage())
                     }
                 }
@@ -105,6 +107,50 @@ class PlayerConnection @Inject constructor(
         .combine(secureStorage.isRadioMode) { state, radio -> state.copy(isRadioMode = radio) }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, PlaybackState())
+
+    /**
+     * Ids already retried as a livestream, so a genuinely unplayable file cannot loop forever.
+     */
+    private val retriedAsLive = java.util.Collections.newSetFromMap(
+        java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+    )
+
+    /**
+     * Re-prepares the current item as HLS after it failed to parse as a media container.
+     *
+     * The stream URL is hidden behind a `wanda://track/…` placeholder until load time, so the
+     * media-source factory has to choose progressive or HLS from a MIME hint set when the item was
+     * *queued* — before anything has fetched it. When a track is not recognised as live at parse
+     * time the hint is missing, ExoPlayer hands an HLS manifest to the progressive extractors, and
+     * they report exactly one thing: none of them can read it.
+     *
+     * That error code is unambiguous enough to act on. It says the bytes were not a container, and
+     * for this app the overwhelmingly likely reason is that they were a playlist — so the item is
+     * rebuilt with the manifest MIME type and prepared again. Once per id, and never for an item
+     * that already carried the hint, so a file that is simply corrupt still surfaces as an error
+     * instead of retrying forever.
+     *
+     * This is the safety net rather than the mechanism: [StreamResolver] records the track as live
+     * the first time it resolves a manifest for it, so the *next* play sets the hint up front and
+     * never comes through here at all.
+     */
+    private fun retryAsLiveStream(ctrl: MediaController, error: PlaybackException): Boolean {
+        if (error.errorCode != PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED) {
+            return false
+        }
+        val item = runCatching { ctrl.currentMediaItem }.getOrNull() ?: return false
+        if (item.localConfiguration?.mimeType == MimeTypes.APPLICATION_M3U8) return false
+        if (!retriedAsLive.add(item.mediaId)) return false
+
+        val index = runCatching { ctrl.currentMediaItemIndex }.getOrNull() ?: return false
+        ctrl.replaceMediaItem(
+            index,
+            item.buildUpon().setMimeType(MimeTypes.APPLICATION_M3U8).build()
+        )
+        ctrl.prepare()
+        ctrl.play()
+        return true
+    }
 
     /** A play request that arrived before the controller existed. See [play]. */
     private data class PendingPlay(

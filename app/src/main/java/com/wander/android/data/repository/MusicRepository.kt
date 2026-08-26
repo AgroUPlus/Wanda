@@ -1,6 +1,6 @@
 package com.wander.android.data.repository
 
-import com.wander.android.data.model.SearchKind
+import androidx.media3.common.MimeTypes
 import com.wander.android.core.database.dao.AlbumDao
 import com.wander.android.core.database.dao.HistoryDao
 import com.wander.android.core.database.dao.TrackDao
@@ -10,12 +10,16 @@ import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.core.sync.ScrobbleSyncScheduler
+import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.IMusicSource
 import com.wander.android.data.sources.StreamInfo
+import java.io.IOException
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -25,9 +29,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The only thing ViewModels talk to for music data. Room is the source of truth; sources fill it.
@@ -125,7 +126,13 @@ class MusicRepository @Inject constructor(
         }
         val source = sourceFor(type)
             ?: return@withContext Result.failure(IllegalStateException("$type is unavailable"))
-        source.getStreamInfo(trackId)
+        source.getStreamInfo(trackId).onSuccess { info ->
+            // The one moment anything knows for certain. A search row's badges are a guess about
+            // whether something is live, and YouTube moves them around; a resolved HLS manifest
+            // is not a guess. Recorded here so the next play sets the container hint up front
+            // instead of finding out from a failed parse.
+            if (info.format == MimeTypes.APPLICATION_M3U8) trackDao.markLive(trackId)
+        }
     }
 
     /**

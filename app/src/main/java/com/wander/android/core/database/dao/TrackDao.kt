@@ -101,6 +101,17 @@ interface TrackDao {
     suspend fun getRecentlyAddedTracks(limit: Int = 30): List<TrackEntity>
 
     /**
+     * Records that a track turned out to be a livestream.
+     *
+     * Written when a stream actually resolves to a manifest, which is the only moment anything
+     * knows for certain — the badges a search row carries are a guess, and one that YouTube
+     * changes the shape of. Stored so the *next* play sets the container hint before loading
+     * rather than discovering it from a parse failure.
+     */
+    @Query("UPDATE tracks SET isLive = 1 WHERE id = :trackId AND isLive = 0")
+    suspend fun markLive(trackId: String)
+
+    /**
      * The album ids most recently added to, newest first.
      *
      * Grouped rather than distinct-on-a-track-list, so an album whose tracks arrived together

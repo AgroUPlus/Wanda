@@ -1,5 +1,6 @@
 package com.wander.android.data.sources.ytmusic
 
+import androidx.media3.common.MimeTypes
 import com.wander.android.data.model.RecommendedShelf
 import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.SourceType
@@ -73,7 +74,7 @@ class YTMusicSource @Inject constructor(
             response.hlsManifestUrl?.let { manifest ->
                 return@mapCatching StreamInfo(
                     uri = manifest,
-                    format = "application/x-mpegURL",
+                    format = MimeTypes.APPLICATION_M3U8,
                     bitRateKbps = 0,
                     headers = mapOf("User-Agent" to response.variant.userAgent)
                 )

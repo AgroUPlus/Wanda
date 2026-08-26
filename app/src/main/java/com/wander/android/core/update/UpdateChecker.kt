@@ -9,7 +9,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val RELEASES_URL =
-    "https://api.github.com/repos/Kolbxyz/Wanda/releases/latest"
+    "https://api.github.com/repos/AgroUPlus/Wanda/releases/latest"
 
 /** What the "Check for update" row found, once the network round-trip is done. */
 sealed interface UpdateCheckResult {
