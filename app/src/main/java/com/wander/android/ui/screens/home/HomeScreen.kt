@@ -9,8 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.BarChart
+import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -19,6 +19,7 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +35,7 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.agro.AgroSessionViewModel
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.EmptyState
+import com.wander.android.ui.components.ExpressiveRefreshIndicator
 import com.wander.android.ui.components.SessionSheet
 import com.wander.android.ui.components.TrackActionsSheet
 
@@ -136,9 +138,19 @@ fun HomeScreen(
             // The header and the source chips stay on screen even when the *current filter* comes
             // up empty — otherwise selecting a source with nothing in it strands the user on a
             // dead-end screen with no way back to "All" short of restarting the app.
-            else -> PullToRefreshBox(
+            else -> {
+                val refreshState = rememberPullToRefreshState()
+                PullToRefreshBox(
                 isRefreshing = state.isRefreshing,
                 onRefresh = viewModel::pullToRefresh,
+                state = refreshState,
+                indicator = {
+                    ExpressiveRefreshIndicator(
+                        isRefreshing = state.isRefreshing,
+                        state = refreshState,
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
+                },
                 modifier = Modifier.fillMaxSize()
             ) {
                 LazyColumn(
@@ -181,6 +193,7 @@ fun HomeScreen(
                         }
                     }
                 }
+            }
             }
         }
 

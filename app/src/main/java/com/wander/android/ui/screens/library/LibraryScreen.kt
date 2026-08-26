@@ -1,38 +1,42 @@
 package com.wander.android.ui.screens.library
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,9 +44,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.wander.android.ui.components.NewPlaylistDialog
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.EmptyState
+import com.wander.android.ui.components.ExpressiveRefreshIndicator
+import com.wander.android.ui.components.NewPlaylistDialog
 import com.wander.android.ui.components.SourceFilterChips
 import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.TrackRow
@@ -89,6 +94,7 @@ fun LibraryScreen(
     val likedTracks by viewModel.likedTracks.collectAsStateWithLifecycle()
     val downloadedTracks by viewModel.downloadedTracks.collectAsStateWithLifecycle()
     val albums by viewModel.albums.collectAsStateWithLifecycle()
+    val recentAlbums by viewModel.recentAlbums.collectAsStateWithLifecycle()
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
 
     val pagerState = rememberPagerState(
@@ -142,13 +148,23 @@ fun LibraryScreen(
         ) { page ->
             // `refresh()` and `isRefreshing` already existed on the ViewModel with nothing driving
             // them — the library could only be refreshed by leaving and coming back.
+            val refreshState = rememberPullToRefreshState()
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
                 onRefresh = viewModel::refresh,
+                state = refreshState,
+                indicator = {
+                    ExpressiveRefreshIndicator(
+                        isRefreshing = isRefreshing,
+                        state = refreshState,
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
+                },
                 modifier = Modifier.fillMaxSize()
             ) {
                 when (val pageTab = LibraryTab.entries[page]) {
-                    LibraryTab.ALBUMS -> AlbumGrid(albums, contentPadding, onOpenAlbum)
+                    LibraryTab.ALBUMS ->
+                        AlbumGrid(albums, recentAlbums, contentPadding, onOpenAlbum)
                     LibraryTab.PLAYLISTS -> PlaylistList(playlists, contentPadding, viewModel)
                     LibraryTab.LIKED -> TrackList(likedTracks, pageTab, contentPadding, viewModel) { actionsFor = it }
                     LibraryTab.DOWNLOADS -> TrackList(downloadedTracks, pageTab, contentPadding, viewModel) { actionsFor = it }
@@ -172,6 +188,7 @@ fun LibraryScreen(
 @Composable
 private fun AlbumGrid(
     albums: List<com.wander.android.data.model.UnifiedAlbum>,
+    recentAlbums: List<com.wander.android.data.model.UnifiedAlbum>,
     contentPadding: PaddingValues,
     onOpenAlbum: (String) -> Unit
 ) {
@@ -189,6 +206,38 @@ private fun AlbumGrid(
         contentPadding = contentPadding.listInset(),
         modifier = Modifier.fillMaxSize()
     ) {
+        // The one thing an alphabetical grid cannot tell you: what turned up lately. Only shown
+        // once there is enough of a library for "recent" to mean something — with eight records
+        // on the device the row would just be the grid again, in a different order.
+        if (recentAlbums.size >= MinRecentAlbums && albums.size > recentAlbums.size) {
+            item(span = { GridItemSpan(maxLineSpan) }, key = "recent_header") {
+                Text(
+                    text = "Recently added",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)
+                )
+            }
+            item(span = { GridItemSpan(maxLineSpan) }, key = "recent_row") {
+                LazyRow(contentPadding = PaddingValues(horizontal = 8.dp)) {
+                    items(recentAlbums, key = { "recent_" + it.id }) { album ->
+                        AlbumCard(
+                            album = album,
+                            onClick = { onOpenAlbum(album.id) },
+                            artworkSize = 140.dp,
+                            modifier = Modifier.width(156.dp)
+                        )
+                    }
+                }
+            }
+            item(span = { GridItemSpan(maxLineSpan) }, key = "all_header") {
+                Text(
+                    text = "All albums",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 4.dp)
+                )
+            }
+        }
+
         items(albums, key = { it.id }, contentType = { "album" }) { album ->
             // Opens the record rather than immediately playing it. Tapping an album to see what
             // is on it is at least as common as tapping it to hear it, and the page has a Play
@@ -322,3 +371,6 @@ private fun emptyMessageFor(tab: LibraryTab) = when (tab) {
 private fun Centered(content: @Composable () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { content() }
 }
+
+/** Below this the row is not telling you anything the grid underneath it does not. */
+private const val MinRecentAlbums = 4

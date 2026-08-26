@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -79,6 +80,20 @@ class LibraryViewModel @Inject constructor(
 
     val downloadedTracks: StateFlow<List<UnifiedTrack>> = musicRepository.getDownloadedTracksFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * The handful of records added most recently, for the row above the grid.
+     *
+     * Ordered by the id list rather than by the album list, because the id list *is* the
+     * ordering — a `mapNotNull` over the albums would silently hand back alphabetical order.
+     */
+    val recentAlbums: StateFlow<List<UnifiedAlbum>> = combine(
+        musicRepository.getAlbumsFlow(),
+        musicRepository.getRecentlyAddedAlbumIdsFlow()
+    ) { albums, recentIds ->
+        val byId = albums.associateBy { it.id }
+        recentIds.mapNotNull(byId::get)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val albums: StateFlow<List<UnifiedAlbum>> = musicRepository.getAlbumsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
