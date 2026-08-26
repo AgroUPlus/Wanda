@@ -17,7 +17,11 @@ internal fun LazyListScope.connectionsTab(
     onNavidromeSignOut: () -> Unit,
     onYouTubeLogin: () -> Unit,
     onYouTubeSignOut: () -> Unit,
-    onRescanLocal: () -> Unit
+    onRescanLocal: () -> Unit,
+    /** Null when this device is too old to narrow the scan — see `supportsFolderScan`. */
+    onPickLocalFolder: (() -> Unit)?,
+    /** The chosen folder, or null for the whole device. */
+    localFolder: String?
 ) {
     item(key = "navidrome") {
         SettingsRow(
@@ -39,7 +43,7 @@ internal fun LazyListScope.connectionsTab(
         SettingsRow(
             title = "YouTube Music",
             subtitle = if (youTubeConnected) {
-                "Signed in — tap to sign out"
+                "Signed in"
             } else {
                 "Signed out. Search still works; your library needs sign-in."
             },
@@ -52,12 +56,18 @@ internal fun LazyListScope.connectionsTab(
     item(key = "local") {
         SettingsRow(
             title = "Music on this device",
-            subtitle = if (localReady) {
-                "Tap to rescan"
-            } else {
-                "Waiting for permission to read audio files"
+            subtitle = when {
+                !localReady -> "Waiting for permission to read audio files"
+                localFolder != null -> "$localFolder — tap to rescan, hold to change folder"
+                onPickLocalFolder != null ->
+                    "Whole device — tap to rescan, hold to pick a folder"
+                else -> "Tap to rescan"
             },
-            onClick = onRescanLocal
+            onClick = onRescanLocal,
+            // A phone's audio is not all music: ringtones, podcast downloads and voice memos all
+            // satisfy MediaStore's IS_MUSIC. Narrowing the scan is set once and forgotten, so it
+            // sits behind a long press rather than taking a row from the action used every time.
+            onLongClick = onPickLocalFolder
         )
     }
 }

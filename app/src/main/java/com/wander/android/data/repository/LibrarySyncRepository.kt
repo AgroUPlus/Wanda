@@ -212,6 +212,9 @@ class LibrarySyncRepository @Inject constructor(
 
     suspend fun stats() = libraryApi.stats()
 
+    /** Bytes used against the account quota. Null quota means uncapped, not zero. */
+    suspend fun storageUsage() = libraryApi.storageUsage()
+
     /**
      * Local files the server has confirmed it holds — the only ones it is safe to offer to
      * delete, because their bytes provably exist somewhere else.

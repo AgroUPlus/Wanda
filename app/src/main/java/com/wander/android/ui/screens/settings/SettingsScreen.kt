@@ -63,9 +63,11 @@ internal fun SettingsScreen(
     LaunchedEffect(state.agroPaired) {
         viewModel.refreshAgroConnection()
         viewModel.refreshAgroVisibility()
+        viewModel.refreshStorageUsage()
     }
 
     val uriHandler = LocalUriHandler.current
+    val pickLocalFolder = rememberLocalFolderPicker(viewModel::setLocalScanFolder)
     val dialogs = rememberSettingsDialogs()
     SettingsDialogs(state = state, dialogs = dialogs, viewModel = viewModel)
 
@@ -106,7 +108,9 @@ internal fun SettingsScreen(
                         onNavidromeSignOut = { dialogs.confirmNavidromeSignOut = true },
                         onYouTubeLogin = onYouTubeLogin,
                         onYouTubeSignOut = { dialogs.confirmYouTubeSignOut = true },
-                        onRescanLocal = viewModel::rescanLocalLibrary
+                        onRescanLocal = viewModel::rescanLocalLibrary,
+                        onPickLocalFolder = pickLocalFolder.takeIf { supportsFolderScan },
+                        localFolder = state.localScanFolder
                     )
 
                     SettingsTab.SYNC -> syncTab(
@@ -127,6 +131,8 @@ internal fun SettingsScreen(
                         pendingUploads = state.pendingUploads,
                         syncedTracks = state.syncedTracks,
                         localTracks = state.localTracks,
+                        incognito = state.incognito,
+                        storageUsage = state.storageUsage,
                         syncProgress = state.syncProgress,
                         filesLandInNavidrome = state.navidrome,
                         onSyncNow = viewModel::syncLibraryNow,
@@ -158,7 +164,8 @@ internal fun SettingsScreen(
                     SettingsTab.SHARING -> sharingTab(
                         shareDomain = state.shareDomain,
                         agroShareDomain = state.agroShareDomain,
-                        onEditDomain = { dialogs.showShareDomainDialog = true }
+                        onEditDomain = { dialogs.showShareDomainDialog = true },
+                        incognito = state.incognito
                     )
 
                     SettingsTab.PRIVACY -> privacyTab(
@@ -177,7 +184,8 @@ internal fun SettingsScreen(
                         autoUpdateCheck = state.autoUpdateCheckEnabled,
                         onAutoUpdateCheckChange = viewModel::setAutoUpdateCheckEnabled,
                         onCheckForUpdate = viewModel::checkForUpdate,
-                        onOpenRelease = { uriHandler.openUri(it) }
+                        onOpenRelease = { uriHandler.openUri(it) },
+                        onOpenUrl = { uriHandler.openUri(it) }
                     )
                 }
             }
