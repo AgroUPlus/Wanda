@@ -26,7 +26,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -307,10 +307,7 @@ private fun ConversationDropMessage(
                         Spacer(Modifier.width(6.dp))
 
                         if (isResolving) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(32.dp).padding(4.dp),
-                                strokeWidth = 2.5.dp
-                            )
+                            LoadingIndicator(modifier = Modifier.size(32.dp).padding(4.dp))
                         } else {
                             FilledIconButton(
                                 onClick = onPlay,

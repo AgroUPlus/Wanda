@@ -100,6 +100,25 @@ interface TrackDao {
     @Query("SELECT * FROM tracks ORDER BY addedTimestamp DESC LIMIT :limit")
     suspend fun getRecentlyAddedTracks(limit: Int = 30): List<TrackEntity>
 
+    /**
+     * The album ids most recently added to, newest first.
+     *
+     * Grouped rather than distinct-on-a-track-list, so an album whose tracks arrived together
+     * counts once and is ordered by its newest track. Albums have no timestamp of their own —
+     * they are derived from the tracks filed under them — so this is where "recently added"
+     * actually lives.
+     */
+    @Query(
+        """
+        SELECT albumId FROM tracks
+        WHERE albumId IS NOT NULL
+        GROUP BY albumId
+        ORDER BY MAX(addedTimestamp) DESC
+        LIMIT :limit
+        """
+    )
+    fun observeRecentlyAddedAlbumIds(limit: Int = 12): Flow<List<String>>
+
     @Query("SELECT * FROM tracks WHERE lastPlayedTimestamp IS NOT NULL ORDER BY lastPlayedTimestamp DESC LIMIT :limit")
     suspend fun getRecentlyPlayedTracks(limit: Int = 30): List<TrackEntity>
 

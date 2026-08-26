@@ -80,6 +80,10 @@ class MusicRepository @Inject constructor(
     fun getAlbumsFlow(): Flow<List<UnifiedAlbum>> =
         albumDao.getAllAlbumsFlow().map { list -> list.map(AlbumEntity::toUnifiedAlbum) }
 
+    /** Album ids in the order they were most recently added to. See [TrackDao.observeRecentlyAddedAlbumIds]. */
+    fun getRecentlyAddedAlbumIdsFlow(limit: Int = 12): Flow<List<String>> =
+        trackDao.observeRecentlyAddedAlbumIds(limit)
+
     fun getAlbumTracksFlow(albumId: String): Flow<List<UnifiedTrack>> =
         trackDao.getTracksByAlbumFlow(albumId).mapToTracks()
 
