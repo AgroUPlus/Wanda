@@ -170,6 +170,22 @@ class InnerTubeClient @Inject constructor(
      */
     suspend fun home(): Result<JsonObject> = browse(HOME_BROWSE_ID)
 
+    /**
+     * The display name of the signed-in account, or null if the response does not carry one.
+     *
+     * `account/account_menu` is what the web player asks to draw its own avatar menu, so it
+     * answers for exactly the identity the cookie represents — which is the point: a Google
+     * account can hold several YouTube channels, and only the session knows which one is active.
+     *
+     * The name only; the email sitting beside it in the same response is deliberately not read.
+     * Settings needs to answer "signed in as who", and an address is more than that question
+     * asks for on a screen anyone glancing over a shoulder can see.
+     */
+    suspend fun accountName(): Result<String?> = post(
+        "account/account_menu",
+        buildJsonObject { put("context", webContext()) }
+    ).map { body -> body.activeAccountName() }
+
     suspend fun browse(browseId: String): Result<JsonObject> = post(
         "browse",
         buildJsonObject {

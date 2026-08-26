@@ -75,6 +75,16 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     val ytMusicAuthCookie: String get() = prefs.getString(KEY_YTM_COOKIE, "").orEmpty()
     val ytMusicVisitorData: String get() = prefs.getString(KEY_YTM_VISITOR, "").orEmpty()
 
+    /**
+     * The signed-in YouTube Music account's display name, cached so Settings can say who you are
+     * without a network round trip every time the screen is opened.
+     *
+     * A name, never the address beside it in the same response — see `InnerTubeClient.accountName`.
+     */
+    var ytMusicAccountName: String
+        get() = prefs.getString(KEY_YTM_ACCOUNT, "").orEmpty()
+        set(value) = prefs.edit { putString(KEY_YTM_ACCOUNT, value.trim()) }
+
     fun setYtMusicSession(cookie: String, visitorData: String = ytMusicVisitorData) {
         prefs.edit {
             putString(KEY_YTM_COOKIE, cookie.trim())
@@ -84,7 +94,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     }
 
     fun clearYtMusicSession() {
-        prefs.edit { remove(KEY_YTM_COOKIE); remove(KEY_YTM_VISITOR) }
+        prefs.edit { remove(KEY_YTM_COOKIE); remove(KEY_YTM_VISITOR); remove(KEY_YTM_ACCOUNT) }
         _ytMusicConfigured.value = false
     }
 
@@ -324,6 +334,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_NAVIDROME_TOKEN = "key_navidrome_token"
         private const val KEY_YTM_COOKIE = "key_ytm_cookie"
         private const val KEY_YTM_VISITOR = "key_ytm_visitor"
+        private const val KEY_YTM_ACCOUNT = "key_ytm_account"
         private const val KEY_AGRO_URL = "key_agro_url"
         private const val KEY_AGRO_USER = "key_agro_user"
         private const val KEY_AGRO_KEY = "key_agro_key"

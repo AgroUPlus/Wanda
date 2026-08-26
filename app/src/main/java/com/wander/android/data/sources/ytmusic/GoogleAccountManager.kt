@@ -28,6 +28,13 @@ class GoogleAccountManager @Inject constructor(
 
     fun signOut() = secureStorage.clearYtMusicSession()
 
+    /** The signed-in account's display name, or empty when it has not been looked up yet. */
+    val accountName: String get() = secureStorage.ytMusicAccountName
+
+    fun rememberAccountName(name: String) {
+        secureStorage.ytMusicAccountName = name
+    }
+
     companion object {
         fun isUsable(cookie: String): Boolean =
             cookie.contains("SAPISID=") || cookie.contains("__Secure-3PAPISID=")

@@ -4,32 +4,33 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.cache.AudioCacheManager
 import com.wander.android.core.cache.DownloadScheduler
+import com.wander.android.core.security.SecureStorage
 import com.wander.android.core.sync.LibrarySyncScheduler
 import com.wander.android.core.sync.LocalFileDeleter
-import com.wander.android.core.security.SecureStorage
 import com.wander.android.core.update.UpdateCheckResult
 import com.wander.android.core.update.UpdateChecker
 import com.wander.android.data.repository.LibrarySyncRepository
 import com.wander.android.data.repository.SyncProgress
 import com.wander.android.data.sources.agro.AgroClient
 import com.wander.android.data.sources.agro.AgroProfileApi
-import com.wander.android.data.sources.agro.AgroVisibility
-import com.wander.android.data.sources.agro.AgroSyncedSettings
 import com.wander.android.data.sources.agro.AgroSessionApi
+import com.wander.android.data.sources.agro.AgroSyncedSettings
+import com.wander.android.data.sources.agro.AgroVisibility
+import com.wander.android.data.sources.agro.StorageUsage
 import com.wander.android.data.sources.local.LocalMusicSource
 import com.wander.android.data.sources.navidrome.NavidromeSource
 import com.wander.android.data.sources.ytmusic.GoogleAccountManager
-import com.wander.android.data.sources.agro.StorageUsage
+import com.wander.android.data.sources.ytmusic.YTMusicSource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
 
 @HiltViewModel
 internal class SettingsViewModel @Inject constructor(
@@ -37,6 +38,7 @@ internal class SettingsViewModel @Inject constructor(
     private val cacheManager: AudioCacheManager,
     private val navidromeSource: NavidromeSource,
     private val accountManager: GoogleAccountManager,
+    private val ytMusicSource: YTMusicSource,
     private val localSource: LocalMusicSource,
     private val downloadScheduler: DownloadScheduler,
     private val agroClient: AgroClient,
@@ -71,6 +73,19 @@ internal class SettingsViewModel @Inject constructor(
 
     val navidromeConnected: StateFlow<Boolean> = secureStorage.navidromeConfigured
     val youTubeConnected: StateFlow<Boolean> = accountManager.isLoggedIn
+
+    /**
+     * Who is signed in to YouTube Music.
+     *
+     * Empty until it is known, which the row renders as a plain "Signed in" — a name that has not
+     * arrived yet must not make the row read as though nobody is.
+     */
+    private val _youTubeAccount = MutableStateFlow(accountManager.accountName)
+    val youTubeAccount: StateFlow<String> = _youTubeAccount.asStateFlow()
+
+    fun refreshYouTubeAccount() {
+        viewModelScope.launch { _youTubeAccount.value = ytMusicSource.accountName() }
+    }
     val localAvailable: StateFlow<Boolean> = localSource.isConfigured
 
     val isMonetDynamic: StateFlow<Boolean> = secureStorage.isMonetDynamic
@@ -306,7 +321,10 @@ internal class SettingsViewModel @Inject constructor(
 
     fun disconnectNavidrome() = navidromeSource.logout()
 
-    fun disconnectYouTube() = accountManager.signOut()
+    fun disconnectYouTube() {
+        accountManager.signOut()
+        _youTubeAccount.value = ""
+    }
 
     fun rescanLocalLibrary() {
         viewModelScope.launch { localSource.refresh(full = true) }

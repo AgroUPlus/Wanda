@@ -154,6 +154,20 @@ internal fun parseLibraryAlbum(renderer: JsonObject): UnifiedAlbum? {
     )
 }
 
+/**
+ * The signed-in account's display name, out of an `account/account_menu` response.
+ *
+ * Found by sweeping for the renderer rather than walking the documented path. The menu arrives
+ * wrapped in an `actions[].openPopupAction.popup.multiPageMenuRenderer.header` chain that exists
+ * to describe a popup, and none of those hops mean anything here — the same recursive search the
+ * rest of this file uses for renderers survives YouTube rearranging them, which it does.
+ */
+internal fun JsonObject.activeAccountName(): String? =
+    renderers("activeAccountHeaderRenderer")
+        .firstNotNullOfOrNull { it["accountName"].runText() }
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+
 /** Collects every `musicResponsiveListItemRenderer` anywhere in a browse/search response. */
 internal fun JsonObject.responsiveListItems(): List<JsonObject> =
     renderers("musicResponsiveListItemRenderer")

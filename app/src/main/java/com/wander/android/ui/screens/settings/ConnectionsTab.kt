@@ -12,6 +12,8 @@ internal fun LazyListScope.connectionsTab(
     navidromeServer: String,
     syncedNavidrome: AgroSyncedSettings?,
     youTubeConnected: Boolean,
+    /** Display name of the signed-in account, or empty until it is known. */
+    youTubeAccount: String,
     localReady: Boolean,
     onNavidromeLogin: () -> Unit,
     onNavidromeSignOut: () -> Unit,
@@ -43,7 +45,10 @@ internal fun LazyListScope.connectionsTab(
         SettingsRow(
             title = "YouTube Music",
             subtitle = if (youTubeConnected) {
-                "Signed in"
+                // A Google account can hold several YouTube channels and only the session knows
+                // which one is active, so naming it is the only way to be sure the right one is
+                // signed in. Falls back to the bare state while the name is still unknown.
+                youTubeAccount.takeIf { it.isNotBlank() }?.let { "Signed in as $it" } ?: "Signed in"
             } else {
                 "Signed out. Search still works; your library needs sign-in."
             },
