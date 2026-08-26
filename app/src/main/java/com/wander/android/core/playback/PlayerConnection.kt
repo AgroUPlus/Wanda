@@ -64,6 +64,16 @@ class PlayerConnection @Inject constructor(
     private val _errors = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val errors: SharedFlow<String> = _errors.asSharedFlow()
 
+    /**
+     * Things worth telling the user that are not failures.
+     *
+     * Separate from [errors] so a confirmation is not dressed up as a problem. Used by the
+     * controls whose whole effect is invisible until the queue happens to run out — radio mode
+     * being the one that prompted it.
+     */
+    private val _notices = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val notices: SharedFlow<String> = _notices.asSharedFlow()
+
     // Fast track lookup cache to avoid repeatedly deserializing JSON on the UI thread
     private val trackCache = java.util.concurrent.ConcurrentHashMap<String, UnifiedTrack>()
     private var lastQueue: List<UnifiedTrack> = emptyList()
@@ -376,8 +386,30 @@ class PlayerConnection @Inject constructor(
         }
     }
 
+    fun setRadioMode(enabled: Boolean) {
+        secureStorage.setRadioMode(enabled)
+    }
+
+    /**
+     * Said by the instant-radio button when there is nothing to build a station out of.
+     *
+     * Lives here rather than in the calling ViewModel because [notices] is the shell's one
+     * subscription for this kind of message, and a second channel would mean a second collector
+     * for the same snackbar.
+     */
+    fun notifyNoStation() {
+        _notices.tryEmit("Not enough listening yet — play a few tracks and try again")
+    }
+
     fun toggleRadio() {
-        secureStorage.setRadioMode(!secureStorage.isRadioMode.value)
+        val enabled = !secureStorage.isRadioMode.value
+        secureStorage.setRadioMode(enabled)
+        // The toggle lives on a long press and changes nothing you can see until the queue runs
+        // out, so without this it was impossible to tell whether the press had registered at all.
+        _notices.tryEmit(
+            if (enabled) "Radio mode on — the queue keeps going"
+            else "Radio mode off"
+        )
     }
 
     /**

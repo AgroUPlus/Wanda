@@ -185,6 +185,23 @@ fun HomeScreen(
                 }
             }
         }
+
+        // Outside the `when`, so it survives a filter that came up empty — but not the states
+        // where there is nothing to build a station from at all.
+        if (!state.isLoading && !state.isGloballyEmpty) {
+            InstantRadioFab(
+                isStarting = state.isStartingRadio,
+                onClick = viewModel::startInstantRadio,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    // The shell already reserves the mini player and navigation bar in
+                    // `contentPadding`; this only adds the gap above whatever that came to.
+                    .padding(
+                        start = 20.dp,
+                        bottom = contentPadding.calculateBottomPadding() + 16.dp
+                    )
+            )
+        }
     }
 }
 
