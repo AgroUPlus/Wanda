@@ -3,6 +3,7 @@ package com.wander.android.core.playback
 import android.content.ComponentName
 import android.content.Context
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -379,6 +380,31 @@ class PlayerConnection @Inject constructor(
         secureStorage.setRadioMode(!secureStorage.isRadioMode.value)
     }
 
+    /**
+     * Playback rate and pitch, as one pair.
+     *
+     * Media3 carries both in a single `PlaybackParameters`, so setting one has to restate the
+     * other or it snaps back to 1.0. Exposed as a StateFlow because the controls that set it are
+     * a transient popup — it has to survive being dismissed and reopened, and it is not part of
+     * the per-track snapshot in [PlaybackState].
+     *
+     * Offload is switched off for anything but 1.0×: the DSP plays the stream untouched, so a
+     * rate change silently does nothing while it is on.
+     */
+    private val _speedAndPitch = MutableStateFlow(SpeedAndPitch())
+    val speedAndPitch: StateFlow<SpeedAndPitch> = _speedAndPitch.asStateFlow()
+
+    fun setSpeedAndPitch(speed: Float, pitch: Float) {
+        val ctrl = _controller.value ?: return
+        val clamped = SpeedAndPitch(
+            speed = speed.coerceIn(MIN_RATE, MAX_RATE),
+            pitch = pitch.coerceIn(MIN_RATE, MAX_RATE)
+        )
+        setOffloadEnabled(clamped.isDefault)
+        ctrl.playbackParameters = PlaybackParameters(clamped.speed, clamped.pitch)
+        _speedAndPitch.value = clamped
+    }
+
     /** Offload saves power but starves the visualizer, so the two are mutually exclusive. */
     fun setOffloadEnabled(enabled: Boolean) {
         val ctrl = _controller.value ?: return
@@ -388,6 +414,8 @@ class PlayerConnection @Inject constructor(
 
     private companion object {
         const val RESTART_THRESHOLD_MS = 3_000L
+        const val MIN_RATE = 0.5f
+        const val MAX_RATE = 2.0f
     }
 }
 

@@ -1,12 +1,13 @@
 package com.wander.android.ui.screens.player
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,13 +32,18 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -72,6 +78,11 @@ internal fun NowPlayingScreen(
     onOpenAlbum: ((String) -> Unit)? = null,
     onOpenJam: () -> Unit = {},
     contentAlpha: () -> Float = { 1f },
+    /**
+     * Alpha for the two buttons floating over the cover. Separate from [contentAlpha] because the
+     * cover they sit on is drawn by the sheet, not by this layout — see [PlayerOverlayButtons].
+     */
+    overlayAlpha: () -> Float = contentAlpha,
     artworkSlot: (@Composable (url: String?, contentDescription: String) -> Unit)? = null,
     artworkModifier: Modifier = Modifier,
     showLyrics: Boolean = false,
@@ -165,6 +176,12 @@ internal fun NowPlayingScreen(
             )
         }
 
+        // Long-pressing the cover opens speed and pitch at the point that was touched. Kept off
+        // the top bar deliberately: it is an adjustment made mid-listen and does not deserve a
+        // permanent slot next to the controls that are used every time.
+        var rateAnchor by remember { mutableStateOf<IntOffset?>(null) }
+        val speedAndPitch by playerConnection.speedAndPitch.collectAsStateWithLifecycle()
+
         // Swipeable Artwork / Lyrics Area
         Box(
             modifier = Modifier
@@ -178,6 +195,13 @@ internal fun NowPlayingScreen(
                     .aspectRatio(1f)
                     .fillMaxSize()
                     .then(artworkModifier)
+                    // `pointerInput` after the swipe modifier, so a horizontal drag still reaches
+                    // the skip gesture — only a press that stays put becomes a long press.
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onLongPress = { rateAnchor = IntOffset(it.x.toInt(), it.y.toInt()) }
+                        )
+                    }
             ) {
                 // Opacity only. Nothing here may move, scale or resize, because [artworkSlot] is
                 // the box whose bounds `PlayerArtworkAnchors` reports and the travelling cover
@@ -219,11 +243,20 @@ internal fun NowPlayingScreen(
                     }
                 }
 
+                rateAnchor?.let { anchor ->
+                    SpeedPitchPopup(
+                        value = speedAndPitch,
+                        onChange = { playerConnection.setSpeedAndPitch(it.speed, it.pitch) },
+                        onDismiss = { rateAnchor = null },
+                        offset = anchor
+                    )
+                }
+
                 PlayerOverlayButtons(
                     showLyrics = showLyrics,
                     onToggleLyrics = onToggleLyrics,
                     onShare = { viewModel.share(track) }.takeIf { viewModel.canShare(track) },
-                    contentAlpha = contentAlpha
+                    contentAlpha = overlayAlpha
                 )
             }
         }

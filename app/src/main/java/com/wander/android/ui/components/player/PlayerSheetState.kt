@@ -81,6 +81,7 @@ class PlayerSheetState(
 
     suspend fun expand() {
         targetValue = PlayerSheetValue.EXPANDED
+        if (offset.value == 0f) return
         offset.animateTo(0f, animationSpec)
     }
 
@@ -113,6 +114,12 @@ class PlayerSheetState(
             else -> maxOffsetPx
         }
         targetValue = if (target == 0f) PlayerSheetValue.EXPANDED else PlayerSheetValue.COLLAPSED
+        // A gesture that pushes further into an anchor the sheet is already resting on has
+        // nowhere to go. `dragBy` clamps it, so nothing moves under the finger — but springing
+        // to an offset it already holds still lets the overshoot carry it *past* the anchor, and
+        // the whole sheet lifted off the top of the screen for a frame or two on release. There
+        // is no travel to animate, so there is nothing to animate.
+        if (offset.value == target) return
         offset.animateTo(target, animationSpec, initialVelocity = velocity)
     }
 

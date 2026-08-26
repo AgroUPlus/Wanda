@@ -29,6 +29,11 @@ import androidx.compose.ui.unit.dp
  *
  * [contentAlpha] is a lambda so the player-sheet fade is read during draw rather than composition —
  * the sheet's progress changes every frame of a drag.
+ *
+ * It is deliberately a *steeper* ramp than the rest of the full player. These two sit on the cover
+ * but are not drawn with it — the travelling cover is painted above this layout, so the square
+ * these are aligned to never moves. On the way down the cover left immediately while the buttons
+ * hung in place over nothing, which is exactly what looked broken. They now go first.
  */
 @Composable
 internal fun BoxScope.PlayerOverlayButtons(
