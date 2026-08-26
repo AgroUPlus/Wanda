@@ -12,6 +12,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -49,6 +50,22 @@ enum class SyncMode {
 
     /** Whether a redundant local copy is safe to suggest removing. */
     val offersReclaim: Boolean get() = this == NAVIDROME
+}
+
+/**
+ * How much of the account's allowance is gone.
+ *
+ * [quotaBytes] is null when the account is uncapped, which is not a quota of zero — the admin owns
+ * the disk. A null must be shown as "no limit" rather than as a full bar.
+ */
+data class StorageUsage(
+    val usedBytes: Long,
+    val quotaBytes: Long?
+) {
+    /** Null when uncapped, so a caller cannot accidentally divide by a missing limit. */
+    val fraction: Float? get() = quotaBytes
+        ?.takeIf { it > 0L }
+        ?.let { (usedBytes.toFloat() / it).coerceIn(0f, 1f) }
 }
 
 data class LibraryStats(
@@ -234,6 +251,33 @@ class AgroLibraryApi @Inject constructor(
                 archivedCount = obj["archivedCount"]?.jsonPrimitive?.int ?: 0,
                 totalBytes = obj["totalBytes"]?.jsonPrimitive?.long ?: 0L,
                 spoolBytes = obj["spoolBytes"]?.jsonPrimitive?.long ?: 0L
+            )
+        }
+    }
+
+    /**
+     * Storage used against the account's quota.
+     *
+     * Asked of the server rather than derived from [stats]: `totalBytes` counts every archived
+     * track in the deployment, so it reads the same for an account holding nothing as for the one
+     * that owns the disk. The server computes this from the same two values the upload path
+     * enforces, so the bar cannot disagree with the answer an upload gets.
+     */
+    suspend fun storageUsage(): Result<StorageUsage> {
+        val query = """
+            query Usage(${'$'}userId: String!) {
+              storageUsage(userId: ${'$'}userId) {
+                usedBytes quotaBytes
+              }
+            }
+        """.trimIndent()
+        val variables = buildJsonObject { put("userId", graphQl.userId) }
+        return graphQl.execute(query, variables).mapCatching { data ->
+            val obj = data["storageUsage"]?.jsonObject
+                ?: error("the server returned no storage usage")
+            StorageUsage(
+                usedBytes = obj["usedBytes"]?.jsonPrimitive?.long ?: 0L,
+                quotaBytes = obj["quotaBytes"]?.jsonPrimitive?.longOrNull
             )
         }
     }

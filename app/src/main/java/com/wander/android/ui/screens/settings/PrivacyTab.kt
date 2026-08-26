@@ -23,7 +23,8 @@ internal fun LazyListScope.privacyTab(
     item(key = "incognito") {
         SettingsToggle(
             title = "Incognito",
-            subtitle = "Do not record play counts or scrobble to your server",
+            subtitle = "Stop recording plays, and stop telling anyone what you are listening " +
+                "to. Everything below is off while this is on.",
             checked = incognito,
             onCheckedChange = onIncognitoChange
         )
@@ -32,14 +33,29 @@ internal fun LazyListScope.privacyTab(
     if (agroPaired && visibility != null) {
         item(key = "visibility_header") { SettingsSection("What friends can see") }
 
+        // Greyed out rather than hidden while incognito is on. The stored preferences are left
+        // exactly as they were and come back untouched when it goes off — incognito overrides
+        // them for as long as it is on, it does not rewrite them. Hiding the rows instead would
+        // leave no way to tell what will be shared again afterwards.
+        if (incognito) {
+            item(key = "visibility_incognito_note") {
+                SettingsRow(
+                    subtitle = "Incognito is on, so none of this is being shared. " +
+                        "Your choices are kept for when you turn it off.",
+                    title = "Paused by incognito"
+                )
+            }
+        }
+
         item(key = "show_now_playing") {
             SettingsToggle(
                 title = "Show what I'm playing",
                 subtitle = "Friends see your current track, and can listen along with you",
-                checked = visibility.showNowPlaying,
+                checked = visibility.showNowPlaying && !incognito,
                 onCheckedChange = {
                     onVisibilityChange(visibility.copy(showNowPlaying = it))
-                }
+                },
+                enabled = !incognito
             )
         }
 
@@ -47,8 +63,9 @@ internal fun LazyListScope.privacyTab(
             SettingsToggle(
                 title = "Share my listening stats",
                 subtitle = "Friends see your top artists and how much your taste overlaps theirs",
-                checked = visibility.showStats,
-                onCheckedChange = { onVisibilityChange(visibility.copy(showStats = it)) }
+                checked = visibility.showStats && !incognito,
+                onCheckedChange = { onVisibilityChange(visibility.copy(showStats = it)) },
+                enabled = !incognito
             )
         }
 
@@ -57,8 +74,9 @@ internal fun LazyListScope.privacyTab(
                 title = "Let people find me",
                 subtitle = "Your username appears when someone searches for it. Off means only " +
                     "people you have already added can see you at all.",
-                checked = visibility.discoverable,
-                onCheckedChange = { onVisibilityChange(visibility.copy(discoverable = it)) }
+                checked = visibility.discoverable && !incognito,
+                onCheckedChange = { onVisibilityChange(visibility.copy(discoverable = it)) },
+                enabled = !incognito
             )
         }
     }

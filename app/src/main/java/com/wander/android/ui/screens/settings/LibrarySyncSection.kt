@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.repository.SyncProgress
+import com.wander.android.data.sources.agro.StorageUsage
 
 /**
  * Library sync in Settings.
@@ -29,20 +30,28 @@ internal fun LazyListScope.librarySyncSection(
     onReviewDeletions: () -> Unit,
     canDelete: Boolean,
     /** Audio files stored on this device. Zero means there is nothing here to send. */
-    localTrackCount: Int
+    localTrackCount: Int,
+    /** Null until the server has answered, or when it could not be asked. */
+    storageUsage: StorageUsage?,
+    incognito: Boolean
 ) {
     item(key = "library_sync_section") { SettingsSection("Library sync") }
 
     item(key = "library_sync_toggle") {
         SettingsToggle(
             title = "Send my music to Agro",
-            subtitle = "Local files only, on Wi-Fi while charging",
-            checked = enabled,
-            onCheckedChange = onEnabledChange
+            subtitle = if (incognito) {
+                "Paused — incognito is on"
+            } else {
+                "Local files only, on Wi-Fi while charging"
+            },
+            checked = enabled && !incognito,
+            onCheckedChange = onEnabledChange,
+            enabled = !incognito
         )
     }
 
-    if (!enabled) return
+    if (!enabled || incognito) return
 
     item(key = "library_sync_status") {
         Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
@@ -92,6 +101,10 @@ internal fun LazyListScope.librarySyncSection(
         }
     }
 
+    storageUsage?.let { usage ->
+        item(key = "library_sync_quota") { StorageQuotaRow(usage) }
+    }
+
     item(key = "library_sync_now") {
         SettingsRow(
             title = "Sync now",
@@ -115,3 +128,46 @@ internal fun LazyListScope.librarySyncSection(
         )
     }
 }
+
+/**
+ * The storage pool: how much of the account's allowance is gone.
+ *
+ * An uncapped account gets no bar at all rather than an empty or a full one. Both would be a
+ * claim about a limit that does not exist — the admin owns the disk, and drawing a bar for them
+ * invents a ceiling to worry about.
+ */
+@Composable
+private fun StorageQuotaRow(usage: StorageUsage) {
+    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
+        Text(text = "Storage pool", style = MaterialTheme.typography.titleMedium)
+
+        val fraction = usage.fraction
+        if (fraction != null) {
+            LinearProgressIndicator(
+                progress = { fraction },
+                color = if (fraction >= NearlyFull) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 6.dp)
+            )
+        }
+
+        Text(
+            text = when {
+                usage.quotaBytes == null ->
+                    "${formatBytes(usage.usedBytes)} used · no limit on this account"
+                else ->
+                    "${formatBytes(usage.usedBytes)} of ${formatBytes(usage.quotaBytes)} used"
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/** Where the bar turns red — late enough not to nag, early enough to still act on. */
+private const val NearlyFull = 0.9f

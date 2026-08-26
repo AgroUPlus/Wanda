@@ -109,6 +109,26 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         get() = prefs.getLong(KEY_LOCAL_WATERMARK, 0L)
         set(value) = prefs.edit { putLong(KEY_LOCAL_WATERMARK, value) }
 
+    /**
+     * The one folder the on-device scan is allowed to look in, as a MediaStore `RELATIVE_PATH`
+     * prefix ending in `/` — for example `Music/Vinyl rips/`.
+     *
+     * Null means the whole volume, which stays the default. A phone's audio is not all music:
+     * ringtones, podcast downloads, voice memos and whatever a messaging app saved all satisfy
+     * `IS_MUSIC`, and on a full device the library is mostly things nobody wants to see.
+     *
+     * Stored as the relative path rather than the picked tree URI because that is what MediaStore
+     * can be queried against; the URI is kept alongside it only so the row can name the folder.
+     */
+    var localScanFolder: String?
+        get() = prefs.getString(KEY_LOCAL_FOLDER, null)
+        set(value) = prefs.edit { putString(KEY_LOCAL_FOLDER, value) }
+
+    /** The picked tree URI, shown in Settings. Not used for querying — see [localScanFolder]. */
+    var localScanFolderLabel: String?
+        get() = prefs.getString(KEY_LOCAL_FOLDER_LABEL, null)
+        set(value) = prefs.edit { putString(KEY_LOCAL_FOLDER_LABEL, value) }
+
     fun setOfflineMode(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_OFFLINE_MODE, enabled) }
         _isOfflineMode.value = enabled
@@ -318,6 +338,8 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_AUTO_UPDATE_CHECK = "key_auto_update_check"
         private const val KEY_INCOGNITO = "key_incognito"
         private const val KEY_LOCAL_WATERMARK = "key_local_scan_watermark"
+        private const val KEY_LOCAL_FOLDER = "key_local_scan_folder"
+        private const val KEY_LOCAL_FOLDER_LABEL = "key_local_scan_folder_label"
         private const val KEY_SETUP_DONE = "key_setup_complete"
         private const val KEY_SHARE_DOMAIN = "key_share_domain"
         private const val KEY_AGRO_SHARE_DOMAIN = "key_agro_share_domain"

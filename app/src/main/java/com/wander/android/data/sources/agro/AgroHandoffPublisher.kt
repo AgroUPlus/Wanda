@@ -10,6 +10,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.wander.android.core.security.SecureStorage
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -30,7 +31,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class AgroHandoffPublisher @Inject constructor(
-    private val agroClient: AgroClient
+    private val agroClient: AgroClient,
+    private val secureStorage: SecureStorage
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var lastSent: Handoff? = null
@@ -54,6 +56,13 @@ class AgroHandoffPublisher @Inject constructor(
 
         heartbeat?.cancel()
         heartbeat = null
+
+        // Incognito was suppressing scrobbles and play counts while still telling the fleet — and
+        // through it, every friend — exactly what was playing. Publishing presence is the most
+        // visible thing the app does with a listen, so it has to be the first thing incognito
+        // stops. Checked *after* the heartbeat is cancelled, so switching incognito on mid-track
+        // silences the running heartbeat at the next state change rather than leaving it ticking.
+        if (secureStorage.isIncognitoMode) return
 
         val handoff = Handoff(track.id, isPlaying)
         val stateChanged = handoff != lastSent

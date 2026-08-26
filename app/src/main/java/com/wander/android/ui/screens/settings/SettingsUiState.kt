@@ -36,6 +36,8 @@ internal data class SettingsUiState(
     val pendingUploads: Int,
     val syncedTracks: Int,
     val localTracks: Int,
+    val localScanFolder: String?,
+    val storageUsage: com.wander.android.data.sources.agro.StorageUsage?,
     val shareDomain: String,
     val agroShareDomain: String,
     val appVersion: String,
@@ -65,6 +67,8 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val pendingUploads by viewModel.pendingUploads.collectAsStateWithLifecycle()
     val syncedTracks by viewModel.syncedTracks.collectAsStateWithLifecycle()
     val localTracks by viewModel.localTracks.collectAsStateWithLifecycle()
+    val localScanFolder by viewModel.localScanFolder.collectAsStateWithLifecycle()
+    val storageUsage by viewModel.storageUsage.collectAsStateWithLifecycle()
     val shareDomain by viewModel.shareDomain.collectAsStateWithLifecycle()
     val agroShareDomain by viewModel.agroShareDomain.collectAsStateWithLifecycle()
     val updateCheck by viewModel.updateCheck.collectAsStateWithLifecycle()
@@ -91,6 +95,8 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         pendingUploads = pendingUploads,
         syncedTracks = syncedTracks,
         localTracks = localTracks,
+        localScanFolder = localScanFolder,
+        storageUsage = storageUsage,
         shareDomain = shareDomain,
         agroShareDomain = agroShareDomain,
         appVersion = viewModel.appVersion,

@@ -19,6 +19,7 @@ import com.wander.android.data.sources.agro.AgroSessionApi
 import com.wander.android.data.sources.local.LocalMusicSource
 import com.wander.android.data.sources.navidrome.NavidromeSource
 import com.wander.android.data.sources.ytmusic.GoogleAccountManager
+import com.wander.android.data.sources.agro.StorageUsage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -212,6 +213,42 @@ internal class SettingsViewModel @Inject constructor(
     /** How much local audio exists at all, so a zero can explain itself rather than just sit there. */
     val localTracks: StateFlow<Int> = librarySync.localTrackCount
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
+    /**
+     * Storage used against the account's quota, or null when it could not be asked.
+     *
+     * Refreshed when Settings is opened rather than observed: nothing else on the device changes
+     * it, and a poll would be a network call per interval for a number that moves when a sync
+     * runs. Null is left null on failure — an unknown quota drawn as an empty bar would be a
+     * claim, and a wrong one.
+     */
+    private val _storageUsage = MutableStateFlow<StorageUsage?>(null)
+    val storageUsage: StateFlow<StorageUsage?> = _storageUsage.asStateFlow()
+
+    fun refreshStorageUsage() {
+        if (!secureStorage.agroLibrarySync) return
+        viewModelScope.launch {
+            _storageUsage.value = librarySync.storageUsage().getOrNull()
+        }
+    }
+
+    /**
+     * The one folder the on-device scan looks in, or null for the whole device.
+     *
+     * Setting it clears the incremental watermark: the previous scan only ever saw the old
+     * folder, so continuing from where it left off would leave the new folder's files missing
+     * until something in them happened to be modified.
+     */
+    private val _localScanFolder = MutableStateFlow(secureStorage.localScanFolderLabel)
+    val localScanFolder: StateFlow<String?> = _localScanFolder.asStateFlow()
+
+    fun setLocalScanFolder(path: String, label: String) {
+        secureStorage.localScanFolder = path
+        secureStorage.localScanFolderLabel = label
+        secureStorage.localScanWatermark = 0L
+        _localScanFolder.value = label
+        rescanLocalLibrary()
+    }
 
     /** Whether this device can delete other apps' media at all — API 30+ only. */
     val canDeleteLocalFiles: Boolean get() = localFileDeleter.isSupported

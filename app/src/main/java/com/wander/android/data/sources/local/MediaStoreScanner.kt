@@ -7,6 +7,7 @@ import android.os.Build
 import android.provider.MediaStore
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.core.security.SecureStorage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -41,7 +42,8 @@ data class MediaStoreScan(
  */
 @Singleton
 class MediaStoreScanner @Inject constructor(
-    @param:ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context,
+    private val secureStorage: SecureStorage
 ) {
     /**
      * @param sinceSeconds only return items modified after this `DATE_MODIFIED`. Pass 0 for a
@@ -74,11 +76,23 @@ class MediaStoreScanner @Inject constructor(
         } else {
             emptyArray()
         }
+        // A chosen folder narrows the scan; without one the whole volume is fair game, which is
+        // the default and what most people want. `RELATIVE_PATH` is API 29+, so on older devices
+        // the choice simply cannot be honoured and the row that offers it is not shown.
+        val folder = secureStorage.localScanFolder
+            ?.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q }
         val selection = buildString {
             append("${MediaStore.Audio.Media.IS_MUSIC} != 0")
             if (sinceSeconds > 0L) append(" AND ${MediaStore.Audio.Media.DATE_MODIFIED} > ?")
+            // `LIKE folder%` rather than `= folder`, so sub-folders of the chosen one are
+            // included. Picking "Music" and getting only the loose files sitting directly in it
+            // would be a folder picker that does not pick a folder.
+            if (folder != null) append(" AND ${MediaStore.Audio.Media.RELATIVE_PATH} LIKE ?")
         }
-        val args = if (sinceSeconds > 0L) arrayOf(sinceSeconds.toString()) else null
+        val args = buildList {
+            if (sinceSeconds > 0L) add(sinceSeconds.toString())
+            if (folder != null) add("$folder%")
+        }.takeIf { it.isNotEmpty() }?.toTypedArray()
 
         val tracks = ArrayList<UnifiedTrack>()
         var watermark = sinceSeconds

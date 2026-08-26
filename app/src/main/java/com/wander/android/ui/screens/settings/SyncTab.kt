@@ -30,6 +30,8 @@ internal fun LazyListScope.syncTab(
     pendingUploads: Int,
     syncedTracks: Int,
     localTracks: Int,
+    incognito: Boolean,
+    storageUsage: com.wander.android.data.sources.agro.StorageUsage?,
     syncProgress: SyncProgress,
     filesLandInNavidrome: Boolean,
     onSyncNow: () -> Unit,
@@ -56,9 +58,10 @@ internal fun LazyListScope.syncTab(
     item(key = "agro_sync") {
         SettingsToggle(
             title = "Sync settings with Agro",
-            subtitle = "Share the Navidrome address between devices. Passwords never leave here.",
-            checked = syncSettings,
-            onCheckedChange = onSyncSettingsChange
+            subtitle = "Share the Navidrome address between devices.",
+            checked = syncSettings && !incognito,
+            onCheckedChange = onSyncSettingsChange,
+            enabled = !incognito
         )
     }
 
@@ -83,7 +86,9 @@ internal fun LazyListScope.syncTab(
         onSyncNow = onSyncNow,
         onReviewDeletions = onReviewDeletions,
         canDelete = canDelete,
-        localTrackCount = localTracks
+        localTrackCount = localTracks,
+        incognito = incognito,
+        storageUsage = storageUsage
     )
 }
 
@@ -101,13 +106,13 @@ private fun AgroConnectionState.describe(
     paired: Boolean
 ): String = when (this) {
     is AgroConnectionState.Unpaired ->
-        if (paired) "$devicePetname • $server • Tap to unpair"
+        if (paired) "$devicePetname • $server"
         else "Not paired — scan the pairing QR, or tap to enter a server"
     is AgroConnectionState.Checking -> "$server • Checking…"
-    is AgroConnectionState.Connected -> "$username • $devicePetname • $server • Tap to unpair"
+    is AgroConnectionState.Connected -> "$username • $devicePetname • $server"
     is AgroConnectionState.Rejected ->
         "Signed out by $server — this device's token was revoked. Tap to pair again."
     is AgroConnectionState.NotActive -> "$server • $detail"
     is AgroConnectionState.Unreachable ->
-        "$devicePetname • $server • Could not reach the server. Tap to unpair."
+        "$devicePetname • $server • Could not reach the server."
 }

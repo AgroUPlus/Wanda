@@ -5,8 +5,18 @@ import androidx.compose.foundation.lazy.LazyListScope
 internal fun LazyListScope.sharingTab(
     shareDomain: String,
     agroShareDomain: String,
-    onEditDomain: () -> Unit
+    onEditDomain: () -> Unit,
+    incognito: Boolean
 ) {
+    if (incognito) {
+        item(key = "sharing_incognito") {
+            SettingsRow(
+                title = "Paused by incognito",
+                subtitle = "Sharing is off while incognito is on. Turn it off in Privacy."
+            )
+        }
+    }
+
     item(key = "share_domain") {
         SettingsRow(
             title = "Custom share domain",
@@ -17,7 +27,8 @@ internal fun LazyListScope.sharingTab(
                 shareDomain.isNotBlank() -> "Links go out as $shareDomain/listen — tap to change"
                 else -> "Off — share each backend's own link"
             },
-            onClick = onEditDomain
+            onClick = onEditDomain,
+            enabled = !incognito
         )
     }
 }
