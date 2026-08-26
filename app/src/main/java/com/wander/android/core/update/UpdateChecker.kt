@@ -12,7 +12,7 @@ private const val RELEASES_URL =
     "https://api.github.com/repos/Kolbxyz/Wanda/releases/latest"
 
 /** What the "Check for update" row found, once the network round-trip is done. */
-internal sealed interface UpdateCheckResult {
+sealed interface UpdateCheckResult {
     data object UpToDate : UpdateCheckResult
     data class UpdateAvailable(val version: String, val releaseUrl: String) : UpdateCheckResult
     data object Failed : UpdateCheckResult
@@ -26,7 +26,7 @@ internal sealed interface UpdateCheckResult {
  * [UpdateCheckResult.Failed] rather than silently treated as "up to date".
  */
 @Singleton
-internal class UpdateChecker @Inject constructor(
+class UpdateChecker @Inject constructor(
     private val httpClient: HttpClient
 ) {
     suspend fun checkForUpdate(): UpdateCheckResult {
