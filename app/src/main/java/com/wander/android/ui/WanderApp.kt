@@ -211,7 +211,8 @@ fun WanderApp(
                     wanderNavGraph(
                         navController = navController,
                         playerConnection = playerConnection,
-                        contentPadding = contentPadding
+                        contentPadding = contentPadding,
+                        onCollapsePlayer = { scope.launch { sheetState.collapse() } }
                     )
                 }
             }
