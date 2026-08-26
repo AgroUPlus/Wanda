@@ -72,7 +72,6 @@ internal fun InboxScreen(
     viewModel: InboxViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var showSent by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(viewModel) {
@@ -90,11 +89,15 @@ internal fun InboxScreen(
                     .padding(start = 8.dp, end = 20.dp, top = 8.dp, bottom = 4.dp)
                     .fillMaxWidth()
             ) {
-                IconButton(onClick = onBack) {
+                IconButton(
+                    // Back closes the open thread first. Leaving the screen from inside one
+                    // would make the list unreachable without opening the inbox again.
+                    onClick = { if (state.openWith != null) viewModel.closeThread() else onBack() }
+                ) {
                     Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                 }
                 Text(
-                    text = "Inbox",
+                    text = state.openWith?.let { "@" + it } ?: "Messages",
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.weight(1f).padding(start = 4.dp)
                 )
@@ -111,35 +114,35 @@ internal fun InboxScreen(
                 }
             }
 
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp)
-            ) {
-                SegmentedButton(
-                    selected = !showSent,
-                    onClick = { showSent = false },
-                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-                ) {
-                    Text(if (state.unread > 0) "Received (${state.unread})" else "Received")
+            val openWith = state.openWith
+            if (openWith == null) {
+                if (state.threads.isEmpty() && !state.loading) {
+                    EmptyState(
+                        title = "No conversations yet",
+                        message = "Press and hold any track to send it to a friend with a note."
+                    )
+                    return@Column
                 }
-                SegmentedButton(
-                    selected = showSent,
-                    onClick = { showSent = true },
-                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-                ) {
-                    Text("Sent")
-                }
-            }
 
-            val drops = if (showSent) state.sent else state.received
-            if (drops.isEmpty() && !state.loading) {
-                EmptyState(
-                    title = if (showSent) "Nothing sent yet" else "Nothing in inbox",
-                    message = if (showSent) {
-                        "Press and hold any track to send it to a friend with a note."
-                    } else {
-                        "When a friend sends you a track, it will appear here like a conversation."
+                LazyColumn(
+                    contentPadding = contentPadding.listInset(),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(
+                        count = state.threads.size,
+                        key = { index -> "thread_" + state.counterpart(state.threads[index]) }
+                    ) { index ->
+                        val latest = state.threads[index]
+                        val friend = state.counterpart(latest)
+                        ThreadRow(
+                            friend = friend,
+                            latest = latest,
+                            sentByMe = state.isMine(latest),
+                            unread = state.unreadByFriend[friend.lowercase()] ?: 0,
+                            onClick = { viewModel.openThread(friend) }
+                        )
                     }
-                )
+                }
                 return@Column
             }
 
@@ -148,14 +151,18 @@ internal fun InboxScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                items(count = drops.size, key = { index -> drops[index].id }) { index ->
-                    val drop = drops[index]
+                items(
+                    count = state.conversation.size,
+                    key = { index -> state.conversation[index].id }
+                ) { index ->
+                    val drop = state.conversation[index]
                     ConversationDropMessage(
                         drop = drop,
-                        incoming = !showSent,
+                        incoming = !state.isMine(drop),
                         isResolving = state.resolving == drop.id,
                         onPlay = { viewModel.play(drop) },
-                        onArchive = { viewModel.archive(drop.id) }
+                        onArchive = { viewModel.archive(drop.id) },
+                        onReact = { emoji -> viewModel.react(drop, emoji) }
                     )
                 }
             }
@@ -177,8 +184,12 @@ private fun ConversationDropMessage(
     incoming: Boolean,
     isResolving: Boolean,
     onPlay: () -> Unit,
-    onArchive: () -> Unit
+    onArchive: () -> Unit,
+    onReact: (String) -> Unit
 ) {
+    // The picker opens on the bubble that was pressed, so it cannot be mistaken for a reaction to
+    // the message above or below it.
+    var picking by remember { mutableStateOf(false) }
     val bubbleAlignment = if (incoming) Alignment.Start else Alignment.End
     val bubbleShape = if (incoming) {
         RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomEnd = 20.dp, bottomStart = 4.dp)
@@ -207,7 +218,7 @@ private fun ConversationDropMessage(
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
         ) {
             val userLabel = if (incoming) drop.fromUser else "You → ${drop.toUser}"
-            UserInitialsBadge(name = if (incoming) drop.fromUser else drop.toUser, isIncoming = incoming)
+            UserInitialsBadge(name = if (incoming) drop.fromUser else drop.toUser, avatarUrl = null)
             Spacer(Modifier.width(6.dp))
             Text(
                 text = userLabel,
@@ -215,6 +226,12 @@ private fun ConversationDropMessage(
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            // A reaction travels back to the sender, unlike a read receipt — so their own
+            // bubble is where they find out somebody answered.
+            if (!incoming && drop.reaction != null) {
+                Spacer(Modifier.width(6.dp))
+                Text(text = drop.reaction, style = MaterialTheme.typography.labelLarge)
+            }
             if (incoming && drop.isUnread) {
                 Spacer(Modifier.width(6.dp))
                 Box(
@@ -313,6 +330,46 @@ private fun ConversationDropMessage(
                     }
                 }
 
+                // Reacting is the recipient's reply, so only an incoming bubble offers it. The
+                // sender's own reaction to their own message would be a way to fake a response.
+                if (incoming) {
+                    Row(
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+                    ) {
+                        if (picking) {
+                            REACTIONS.forEach { emoji ->
+                                Text(
+                                    text = emoji,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .clickable {
+                                            onReact(emoji)
+                                            picking = false
+                                        }
+                                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                                )
+                            }
+                        } else {
+                            Text(
+                                text = drop.reaction ?: "☺",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = if (drop.reaction == null) {
+                                    bubbleContentColor.copy(alpha = 0.45f)
+                                } else {
+                                    bubbleContentColor
+                                },
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .clickable { picking = true }
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+
                 // Footer actions
                 if (incoming) {
                     Row(
@@ -339,9 +396,70 @@ private fun ConversationDropMessage(
 }
 
 @Composable
-private fun UserInitialsBadge(name: String, isIncoming: Boolean) {
+private fun UserInitialsBadge(name: String, avatarUrl: String?) {
     com.wander.android.ui.components.CuteAvatar(
         seed = name,
+        avatarUrl = avatarUrl,
         size = 20.dp
     )
 }
+
+/**
+ * One row per person, showing the last thing exchanged with them.
+ *
+ * The list a mailbox never had. `Received` and `Sent` were two halves of the same exchange filed
+ * apart, so a song and the song sent back in reply to it lived on different tabs and neither
+ * screen could show a conversation.
+ */
+@Composable
+private fun ThreadRow(
+    friend: String,
+    latest: AgroDrop,
+    sentByMe: Boolean,
+    unread: Int,
+    onClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 12.dp)
+    ) {
+        com.wander.android.ui.components.CuteAvatar(seed = friend, size = 44.dp)
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "@" + friend,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = if (unread > 0) FontWeight.Bold else FontWeight.Normal
+            )
+            Text(
+                // Prefixed so a thread whose last message is your own does not read as though
+                // they sent it — which, with only a title to go on, it otherwise would.
+                text = (if (sentByMe) "You: " else "") + latest.trackTitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        if (unread > 0) {
+            Badge(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
+                Text(if (unread > 99) "99+" else "$unread")
+            }
+        }
+    }
+}
+
+/**
+ * The six on offer.
+ *
+ * A fixed short row rather than the system emoji keyboard: this is a reaction, and picking one
+ * should take a tap, not a search. They are the ones that mean something about a song someone
+ * gave you — loved it, it goes hard, it made me cry, it made me laugh, I already know it, no.
+ */
+private val REACTIONS = listOf("❤️", "🔥", "😭", "😂", "👀", "🙃")

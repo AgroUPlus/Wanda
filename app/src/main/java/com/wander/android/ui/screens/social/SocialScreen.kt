@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material3.Card
@@ -47,6 +48,7 @@ internal fun SocialScreen(
     onOpenJam: () -> Unit = {},
     onOpenInbox: () -> Unit = {},
     onOpenCircle: () -> Unit = {},
+    onOpenMyProfile: () -> Unit = {},
     viewModel: SocialViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -63,6 +65,9 @@ internal fun SocialScreen(
             onQueryChange = viewModel::onQueryChange,
             onSendRequest = viewModel::sendRequest,
             onOpenProfile = onOpenProfile,
+            onToggleCode = viewModel::toggleFriendCode,
+            onRefreshCode = viewModel::refreshFriendCode,
+            onRevokeCode = viewModel::revokeFriendCode,
             onDismiss = {
                 searching = false
                 viewModel.clearSearch()
@@ -80,15 +85,23 @@ internal fun SocialScreen(
                 .fillMaxWidth()
         ) {
             Text(text = "Friends", style = MaterialTheme.typography.headlineLarge)
-            if (state.isPaired) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (state.isPaired) {
                     InboxAction(unread = unread, onClick = onOpenInbox)
                     FilledTonalIconButton(onClick = { searching = true }) {
                         Icon(Icons.Rounded.PersonAdd, contentDescription = "Find people")
                     }
+                }
+                // Outside the `isPaired` branch on purpose. Your own profile — and the listening
+                // statistics behind it — is about you, not about anyone else, so it must not
+                // disappear because no server is paired or because nobody has been added yet.
+                // This is also where the stats button lives now: it was in Home's header, which
+                // is the one place on the screen that has nothing to do with statistics.
+                FilledTonalIconButton(onClick = onOpenMyProfile) {
+                    Icon(Icons.Rounded.AccountCircle, contentDescription = "My profile")
                 }
             }
         }
@@ -116,6 +129,19 @@ internal fun SocialScreen(
                             modifier = Modifier.padding(12.dp)
                         )
                     }
+                }
+            }
+
+            if (state.friends.isNotEmpty()) {
+                item(key = "friend_grid") {
+                    FriendGrid(
+                        friends = state.friends,
+                        listening = remember(state.nowPlaying) {
+                            state.nowPlaying.map { it.username.lowercase() }.toSet()
+                        },
+                        onOpenProfile = onOpenProfile,
+                        modifier = Modifier.padding(vertical = 12.dp)
+                    )
                 }
             }
 
@@ -153,6 +179,22 @@ internal fun SocialScreen(
                             )
                         }
                     }
+                }
+            }
+
+            // The feed the server has always answered and nothing on this screen ever asked for.
+            // Placed above the roster because it is the only part of the tab that changes.
+            if (state.feed.isNotEmpty()) {
+                item(key = "feed_header") { SectionHeader("Lately") }
+                items(
+                    count = state.feed.size,
+                    key = { index -> "feed_" + index }
+                ) { index ->
+                    FeedItemCard(
+                        item = state.feed[index],
+                        onOpenProfile = onOpenProfile,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                    )
                 }
             }
 

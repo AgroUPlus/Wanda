@@ -69,6 +69,8 @@
                 <data android:scheme="wanda" android:host="listen" />
                 <data android:scheme="wanda" android:host="jam" />
                 <data android:scheme="wanda" android:host="inbox" />
+                <!-- A friend code, scanned off someone's screen with the system camera. -->
+                <data android:scheme="wanda" android:host="friend" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

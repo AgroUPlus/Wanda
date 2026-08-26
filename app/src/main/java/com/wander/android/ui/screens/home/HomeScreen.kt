@@ -42,7 +42,6 @@ import com.wander.android.ui.components.TrackActionsSheet
 fun HomeScreen(
     contentPadding: PaddingValues,
     onOpenSettings: () -> Unit,
-    onOpenStats: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -152,7 +151,6 @@ fun HomeScreen(
                             greeting = state.greeting,
                             hasSession = session != null,
                             onOpenSessions = { showSessionSheet = true },
-                            onOpenStats = onOpenStats,
                             onOpenSettings = onOpenSettings
                         )
                     }
@@ -210,7 +208,6 @@ private fun HomeHeader(
     greeting: String,
     hasSession: Boolean,
     onOpenSessions: () -> Unit,
-    onOpenStats: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
     Row(
@@ -233,9 +230,6 @@ private fun HomeHeader(
             IconButton(onClick = onOpenSessions) {
                 Icon(Icons.Rounded.Devices, contentDescription = "Sessions on other devices")
             }
-        }
-        IconButton(onClick = onOpenStats) {
-            Icon(Icons.Rounded.BarChart, contentDescription = "Listening statistics")
         }
         IconButton(onClick = onOpenSettings) {
             Icon(Icons.Rounded.Settings, contentDescription = "Settings")

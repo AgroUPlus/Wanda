@@ -3,8 +3,13 @@ package com.wander.android.ui.screens.social
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.data.repository.ListenAlongController
+import com.wander.android.data.repository.ListenAlongSession
 import com.wander.android.data.repository.SocialRepository
+import com.wander.android.data.sources.agro.AgroFeedItem
+import com.wander.android.data.sources.agro.AgroFriendNowPlaying
+import com.wander.android.data.sources.agro.AgroProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +20,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @OptIn(FlowPreview::class)
 @HiltViewModel
@@ -39,15 +43,27 @@ internal class SocialViewModel @Inject constructor(
             repository.requests,
             repository.nowPlaying,
             repository.isPaired,
-            listenAlong.session
-        ) { friends, requests, playing, paired, session ->
+            listenAlong.session,
+            repository.feed
+        ) { values ->
+            @Suppress("UNCHECKED_CAST")
+            val friends = values[0] as List<AgroProfile>
+            @Suppress("UNCHECKED_CAST")
+            val requests = values[1] as List<AgroProfile>
+            @Suppress("UNCHECKED_CAST")
+            val playing = values[2] as List<AgroFriendNowPlaying>
+            val paired = values[3] as Boolean
+            val session = values[4] as ListenAlongSession?
+            @Suppress("UNCHECKED_CAST")
+            val feed = values[5] as List<AgroFeedItem>
             _state.value.copy(
                 isPaired = paired,
                 friends = friends,
                 incoming = requests.filter { !it.outgoing },
                 outgoing = requests.filter { it.outgoing },
                 nowPlaying = playing,
-                session = session
+                session = session,
+                feed = feed
             )
         }.onEach { _state.value = it }.launchIn(viewModelScope)
 
@@ -85,6 +101,38 @@ internal class SocialViewModel @Inject constructor(
     fun clearSearch() {
         query.value = ""
         _search.value = UserSearchState()
+    }
+
+    /**
+     * Shows or hides the QR panel.
+     *
+     * Hiding revokes rather than only clearing the local copy: a code left live on the server is
+     * a code that still works for anyone who photographed it, which is the one thing the short
+     * lifetime exists to prevent.
+     */
+    fun toggleFriendCode() {
+        val showing = !_search.value.showingCode
+        _search.value = _search.value.copy(showingCode = showing, friendCode = null)
+        if (!showing) revokeFriendCode()
+    }
+
+    /**
+     * Mints a code, replacing whichever one was on screen.
+     *
+     * Cleared before the call so the panel shows it is working. A failure leaves it null, which
+     * the panel renders as still loading — correct, because a code that could not be minted is
+     * not a code the user should be shown as if it worked.
+     */
+    fun refreshFriendCode() {
+        _search.value = _search.value.copy(friendCode = null)
+        viewModelScope.launch {
+            val minted = repository.createFriendCode().getOrNull()
+            _search.value = _search.value.copy(friendCode = minted?.code)
+        }
+    }
+
+    fun revokeFriendCode() {
+        viewModelScope.launch { repository.revokeFriendCode() }
     }
 
     private suspend fun runSearch(term: String) {

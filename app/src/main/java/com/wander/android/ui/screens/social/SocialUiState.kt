@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.social
 
 import androidx.compose.runtime.Immutable
 import com.wander.android.data.repository.ListenAlongSession
+import com.wander.android.data.sources.agro.AgroFeedItem
 import com.wander.android.data.sources.agro.AgroFriendNowPlaying
 import com.wander.android.data.sources.agro.AgroProfile
 
@@ -21,7 +22,9 @@ internal data class SocialUiState(
     val nowPlaying: List<AgroFriendNowPlaying> = emptyList(),
     val isRefreshing: Boolean = false,
     val error: String? = null,
-    val session: ListenAlongSession? = null
+    val session: ListenAlongSession? = null,
+    /** What friends have been into lately. Empty while offline, and that is not an error. */
+    val feed: List<AgroFeedItem> = emptyList()
 ) {
     /** True only when there is genuinely nothing yet — not merely while a refresh is in flight. */
     val isEmpty: Boolean
@@ -40,5 +43,9 @@ internal data class UserSearchState(
     val isSearching: Boolean = false,
     /** Usernames just requested, so a row can say so before the next refresh lands. */
     val requested: Set<String> = emptySet(),
-    val error: String? = null
+    val error: String? = null,
+    /** True while the QR panel is showing. Never persisted — the code dies with the sheet. */
+    val showingCode: Boolean = false,
+    /** Null while one is being minted. */
+    val friendCode: String? = null
 )

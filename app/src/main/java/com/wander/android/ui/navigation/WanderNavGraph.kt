@@ -23,6 +23,7 @@ import com.wander.android.ui.screens.settings.SettingsScreen
 import com.wander.android.ui.screens.social.CircleScreen
 import com.wander.android.ui.screens.social.InboxScreen
 import com.wander.android.ui.screens.social.JamScreen
+import com.wander.android.ui.screens.social.MyProfileScreen
 import com.wander.android.ui.screens.social.ProfileScreen
 import com.wander.android.ui.screens.social.SocialScreen
 import com.wander.android.ui.screens.stats.StatsScreen
@@ -36,8 +37,7 @@ fun NavGraphBuilder.wanderNavGraph(
     tabDestination(TopLevelDestination.HOME.route) {
         HomeScreen(
             contentPadding = contentPadding,
-            onOpenSettings = { navController.navigate(Routes.SETTINGS) },
-            onOpenStats = { navController.navigate(Routes.STATS) }
+            onOpenSettings = { navController.navigate(Routes.SETTINGS) }
         )
     }
 
@@ -68,7 +68,18 @@ fun NavGraphBuilder.wanderNavGraph(
             onOpenJam = { navController.navigate(Routes.JAM) },
             onOpenInbox = { navController.navigate(Routes.INBOX) },
             onOpenCircle = { navController.navigate(Routes.CIRCLE) },
+            onOpenMyProfile = { navController.navigate(Routes.MY_PROFILE) },
             onOpenSettings = { navController.navigate(Routes.SETTINGS) }
+        )
+    }
+
+    // Registered before `PROFILE`, whose `profile/{username}` pattern would otherwise swallow
+    // `profile/me` and open a page about a friend called "me".
+    tabDestination(Routes.MY_PROFILE) {
+        MyProfileScreen(
+            contentPadding = contentPadding,
+            onBack = navController::popBackStack,
+            onOpenStats = { navController.navigate(Routes.STATS) }
         )
     }
 

@@ -44,6 +44,15 @@ object Routes {
     const val ARTIST = "artist/{artist}"
     const val PROFILE = "profile/{username}"
 
+    /**
+     * Your own page, and the way into your listening statistics.
+     *
+     * Its own route rather than `profile/{me}`: it is editable and the other is not, and reaching
+     * it must not depend on knowing your own username — which, with no server paired, you do not
+     * have.
+     */
+    const val MY_PROFILE = "profile/me"
+
     /** The shared queue. A detail screen off Friends, not a tab: you are only in one sometimes. */
     const val JAM = "jam"
     const val JAM_ROUTE = "jam?code={code}"
@@ -84,5 +93,6 @@ object Routes {
      * *from* the player. The queue and the login flows still take the screen over.
      */
     val withChrome: Set<String> =
-        topLevel + ALBUM + ARTIST + PROFILE + SETTINGS + STATS + JAM + "jam" + INBOX + CIRCLE
+        topLevel + ALBUM + ARTIST + PROFILE + MY_PROFILE + SETTINGS + STATS + JAM + "jam" +
+            INBOX + CIRCLE
 }

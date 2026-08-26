@@ -12,18 +12,20 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.security.SecureStorage
+import com.wander.android.data.repository.LinkRepository
+import com.wander.android.data.repository.SocialRepository
 import com.wander.android.data.sources.agro.AgroAuthError
 import com.wander.android.data.sources.agro.AgroClient
-import com.wander.android.data.sources.agro.explain
-import com.wander.android.data.repository.LinkRepository
 import com.wander.android.data.sources.agro.AgroHandoffPublisher
+import com.wander.android.data.sources.agro.explain
 import com.wander.android.ui.WanderApp
 import com.wander.android.ui.navigation.DeepLinkRouter
 import com.wander.android.ui.navigation.Routes
+import com.wander.android.ui.navigation.TopLevelDestination
 import com.wander.android.ui.theme.WanderTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.coroutines.launch
 
 /**
  * Holds no state of its own. It connects to [com.wander.android.core.playback.PlaybackService]
@@ -39,6 +41,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var agroHandoffPublisher: AgroHandoffPublisher
     @Inject lateinit var linkRepository: LinkRepository
     @Inject lateinit var deepLinkRouter: DeepLinkRouter
+    @Inject internal lateinit var socialRepository: SocialRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,6 +78,10 @@ class MainActivity : ComponentActivity() {
             uri.scheme == "agro" -> handleAgroPairing(uri)
             // A tapped drop notification.
             uri.scheme == "wanda" && uri.host == "inbox" -> deepLinkRouter.request(Routes.INBOX)
+            // A friend code held up on someone else's screen. Scanned with the system camera
+            // rather than one built into the app: the pairing QR already works this way, and an
+            // in-app scanner would mean a camera permission for a feature used once.
+            uri.scheme == "wanda" && uri.host == "friend" -> handleFriendCode(uri)
             isJamLink(uri) -> handleJamLink(uri)
             linkRepository.canOpen(uri) -> openSharedLink(uri)
             uri.scheme == "https" || uri.scheme == "wanda" -> Toast.makeText(
@@ -82,6 +89,26 @@ class MainActivity : ComponentActivity() {
                 "That link isn't a track or Jam Wanda can open.",
                 Toast.LENGTH_LONG
             ).show()
+        }
+    }
+
+    /**
+     * Spends a scanned friend code.
+     *
+     * Reported either way. A code that has expired between being shown and being scanned is the
+     * common failure here, and one that silently does nothing is indistinguishable from a scan
+     * that missed.
+     */
+    private fun handleFriendCode(uri: Uri) {
+        val code = uri.lastPathSegment?.trim().orEmpty()
+        if (code.isEmpty()) return
+        lifecycleScope.launch {
+            val friend = socialRepository.redeemFriendCode(code).getOrNull()
+            val message = friend
+                ?.let { "You and @$it are now friends" }
+                ?: "That code has expired or has already been used."
+            Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+            if (friend != null) deepLinkRouter.request(TopLevelDestination.FRIENDS.route)
         }
     }
 

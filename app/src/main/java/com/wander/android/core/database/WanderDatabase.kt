@@ -25,7 +25,7 @@ import com.wander.android.core.database.entity.TrackEntity
         FriendEntity::class,
         DropEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 abstract class WanderDatabase : RoomDatabase() {
