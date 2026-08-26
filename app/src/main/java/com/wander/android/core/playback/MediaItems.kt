@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.MimeTypes
 import com.wander.android.core.network.HttpClientFactory
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
@@ -41,6 +42,12 @@ internal fun UnifiedTrack.toMediaItem(): MediaItem {
         .setMediaId(id)
         .setUri(uri)
         .setMediaMetadata(metadata)
+        // The real URL is hidden behind the placeholder until load time, so the media-source
+        // factory cannot infer the container from the URI the way it normally would. A livestream
+        // arrives as an HLS manifest and needs an HlsMediaSource chosen *before* loading starts —
+        // without this hint it was parsed as a progressive stream, failed, and ExoPlayer advanced
+        // to the next item, which is what made live tracks look like they were being skipped.
+        .apply { if (isLive) setMimeType(MimeTypes.APPLICATION_M3U8) }
         .build()
 }
 

@@ -23,6 +23,14 @@ data class UnifiedTrack(
     val genre: String? = null,
     val bitRateKbps: Int? = null,
     val format: String? = null,
+    /**
+     * A stream with no end: a livestream rather than a recording.
+     *
+     * Playback treats these differently in two ways that matter — the seek bar has nothing to
+     * scrub over, and a load error must not be allowed to advance the queue, which is what made
+     * live tracks look like they were being skipped.
+     */
+    val isLive: Boolean = false,
     val isLiked: Boolean = false,
     val isCached: Boolean = false,
     val isDownloaded: Boolean = false,

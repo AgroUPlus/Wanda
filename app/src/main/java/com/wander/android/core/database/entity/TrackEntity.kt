@@ -49,6 +49,7 @@ data class TrackEntity(
     val genre: String?,
     val bitRateKbps: Int?,
     val format: String?,
+    val isLive: Boolean = false,
     val isLiked: Boolean = false,
     val isCached: Boolean = false,
     val isDownloaded: Boolean = false,
@@ -106,6 +107,7 @@ data class TrackEntity(
         genre = genre,
         bitRateKbps = bitRateKbps,
         format = format,
+        isLive = isLive,
         isLiked = isLiked,
         isCached = isCached,
         isDownloaded = isDownloaded,
@@ -137,7 +139,8 @@ data class TrackEntity(
         year = year,
         genre = genre,
         bitRateKbps = bitRateKbps,
-        format = format
+        format = format,
+        isLive = isLive
     )
 
     companion object {
@@ -163,6 +166,7 @@ data class TrackEntity(
             genre = track.genre,
             bitRateKbps = track.bitRateKbps,
             format = track.format,
+            isLive = track.isLive,
             isLiked = track.isLiked,
             isCached = track.isCached,
             isDownloaded = track.isDownloaded,

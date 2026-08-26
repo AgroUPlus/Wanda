@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.rememberPlaybackPosition
+import com.wander.android.ui.components.LiveChip
 import java.util.Locale
 
 /**
@@ -25,14 +26,16 @@ fun PlayerSeekBar(
     playerConnection: PlayerConnection,
     durationMs: Long,
     onSeek: (Long) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isLive: Boolean = false
 ) {
     val position by rememberPlaybackPosition(playerConnection, intervalMs = 250L)
     PlayerSeekBarInternal(
         positionMs = position.positionMs,
         durationMs = durationMs,
         onSeek = onSeek,
-        modifier = modifier
+        modifier = modifier,
+        isLive = isLive
     )
 }
 
@@ -41,9 +44,10 @@ fun PlayerSeekBar(
     positionMs: Long,
     durationMs: Long,
     onSeek: (Long) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isLive: Boolean = false
 ) {
-    PlayerSeekBarInternal(positionMs, durationMs, onSeek, modifier)
+    PlayerSeekBarInternal(positionMs, durationMs, onSeek, modifier, isLive)
 }
 
 @Composable
@@ -51,7 +55,8 @@ private fun PlayerSeekBarInternal(
     positionMs: Long,
     durationMs: Long,
     onSeek: (Long) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isLive: Boolean = false
 ) {
     var scrubbing by remember { mutableFloatStateOf(-1f) }
     val fraction = if (scrubbing >= 0f) {
@@ -74,16 +79,26 @@ private fun PlayerSeekBarInternal(
         )
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = formatTime((fraction * durationMs).toLong()),
+                text = if (isLive) formatTime(positionMs) else formatTime((fraction * durationMs).toLong()),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f)
             )
-            Text(
-                text = if (durationMs > 0L) formatTime(durationMs) else "--:--",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            when {
+                // A stream with no end has no total to count towards, and `--:--` reads as
+                // metadata that failed to load rather than as "this is happening right now".
+                isLive -> LiveChip()
+                durationMs > 0L -> Text(
+                    text = formatTime(durationMs),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                else -> Text(
+                    text = "--:--",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

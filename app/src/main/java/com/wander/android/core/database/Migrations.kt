@@ -160,6 +160,20 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
     }
 }
 
+/**
+ * Marks a track as an endless stream rather than a recording.
+ *
+ * Defaults to 0: everything already stored was parsed before live streams were understood, and a
+ * recording wrongly flagged live would lose its seek bar.
+ */
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `tracks` ADD COLUMN `isLive` INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
 /** Every migration, in order. Room applies whichever ones a given database still needs. */
-val WANDER_MIGRATIONS: Array<Migration> =
-    arrayOf(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+val WANDER_MIGRATIONS: Array<Migration> = arrayOf(
+    MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
+    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9
+)

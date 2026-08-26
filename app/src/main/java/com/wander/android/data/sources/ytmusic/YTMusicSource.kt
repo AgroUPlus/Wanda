@@ -66,9 +66,21 @@ class YTMusicSource @Inject constructor(
     override suspend fun getStreamInfo(trackId: String): Result<StreamInfo> {
         val videoId = trackId.removePrefix(YTM_PREFIX)
         return innerTube.player(videoId).mapCatching { response ->
+            // A livestream is the manifest and nothing else: there is no signature to unscramble
+            // and no throttling nonce, and appending a PO Token to a manifest URL invalidates it.
+            response.hlsManifestUrl?.let { manifest ->
+                return@mapCatching StreamInfo(
+                    uri = manifest,
+                    format = "application/x-mpegURL",
+                    bitRateKbps = 0,
+                    headers = mapOf("User-Agent" to response.variant.userAgent)
+                )
+            }
+            val format = response.format
+                ?: throw IOException("YouTube Music returned no playable audio for this track")
             // Web variants hand back a scrambled signature rather than a URL, and every variant's
             // URL carries a throttling nonce — both are resolved here.
-            val rawUrl = streamUrlResolver.resolve(response.format, videoId)
+            val rawUrl = streamUrlResolver.resolve(format, videoId)
             // googlevideo separately checks the PO Token that authorized the /player call which
             // minted this URL, when one was used — it has to travel with the fetch too.
             val url = response.streamingPoToken?.let { "$rawUrl&pot=${URLEncoder.encode(it, "UTF-8")}" }
