@@ -19,6 +19,14 @@ internal const val WANDA_SCHEME = "wanda"
 
 private const val EXTRA_TRACK_JSON = "wanda.track"
 
+/**
+ * Appended to a livestream's placeholder URI so the container can be inferred from it.
+ *
+ * `Util.inferContentTypeForUriAndMimeType` falls back to the last path segment's extension when no
+ * MIME type reaches it, which is what happens across the controller-to-service boundary.
+ */
+internal const val LIVE_SUFFIX = ".m3u8"
+
 internal fun UnifiedTrack.toMediaItem(): MediaItem {
     val extras = Bundle().apply {
         putString(EXTRA_TRACK_JSON, HttpClientFactory.jsonConfig.encodeToString(this@toMediaItem))
@@ -34,19 +42,24 @@ internal fun UnifiedTrack.toMediaItem(): MediaItem {
         .build()
 
     // Local and already-downloaded files can be addressed directly; everything else is resolved.
+    //
+    // A livestream's placeholder carries an `.m3u8` suffix. The media-source factory picks
+    // progressive or HLS *before* anything is fetched, and it decides from the MIME type or, with
+    // no MIME type, from the URI — and the MIME type lives in `localConfiguration`, which is the
+    // part of a MediaItem that does not survive the trip across IPC to the playback service. The
+    // suffix does, because the URI is the one field that must arrive or nothing plays at all.
     val uri = streamUri?.takeIf { it.startsWith("/") || it.startsWith("file:") || it.startsWith("content:") }
         ?.toUri()
-        ?: Uri.parse("$WANDA_SCHEME://track/${Uri.encode(id)}")
+        ?: Uri.parse(
+            "$WANDA_SCHEME://track/${Uri.encode(id)}" + if (isLive) LIVE_SUFFIX else ""
+        )
 
     return MediaItem.Builder()
         .setMediaId(id)
         .setUri(uri)
         .setMediaMetadata(metadata)
-        // The real URL is hidden behind the placeholder until load time, so the media-source
-        // factory cannot infer the container from the URI the way it normally would. A livestream
-        // arrives as an HLS manifest and needs an HlsMediaSource chosen *before* loading starts —
-        // without this hint it was parsed as a progressive stream, failed, and ExoPlayer advanced
-        // to the next item, which is what made live tracks look like they were being skipped.
+        // Set as well as the URI suffix above. This is the hint the factory prefers when it
+        // survives; the suffix is what makes it work when it does not.
         .apply { if (isLive) setMimeType(MimeTypes.APPLICATION_M3U8) }
         .build()
 }
@@ -84,5 +97,9 @@ internal fun MediaItem.toUnifiedTrack(): UnifiedTrack? {
 }
 
 /** Extracts the track id from a placeholder URI produced by [toMediaItem]. */
-internal fun Uri.wandaTrackId(): String? =
-    if (scheme == WANDA_SCHEME) Uri.decode(lastPathSegment) else null
+internal fun Uri.wandaTrackId(): String? {
+    if (scheme != WANDA_SCHEME) return null
+    // The suffix is a hint to the media-source factory, not part of the id — see [toMediaItem].
+    val segment = lastPathSegment?.removeSuffix(LIVE_SUFFIX) ?: return null
+    return Uri.decode(segment)
+}
