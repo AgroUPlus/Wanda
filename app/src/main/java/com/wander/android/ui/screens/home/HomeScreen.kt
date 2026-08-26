@@ -123,7 +123,9 @@ fun HomeScreen(
         when {
             state.isLoading -> LoadingIndicator(modifier = Modifier.align(Alignment.Center))
 
-            state.isEmpty -> EmptyState(
+            // No music anywhere, under any filter — there is nothing for the header or the source
+            // chips to do, so the whole screen is the "go connect something" message.
+            state.isGloballyEmpty -> EmptyState(
                 title = "Nothing to play yet",
                 message = "Connect Navidrome or YouTube Music in Settings, or grant access to " +
                     "music stored on this device.",
@@ -132,6 +134,9 @@ fun HomeScreen(
                 modifier = Modifier.align(Alignment.Center)
             )
 
+            // The header and the source chips stay on screen even when the *current filter* comes
+            // up empty — otherwise selecting a source with nothing in it strands the user on a
+            // dead-end screen with no way back to "All" short of restarting the app.
             else -> PullToRefreshBox(
                 isRefreshing = state.isRefreshing,
                 onRefresh = viewModel::pullToRefresh,
@@ -163,8 +168,19 @@ fun HomeScreen(
                         }
                     }
 
-                    state.sections.forEach { section ->
-                        homeSection(section, viewModel, shelfStates) { actionsFor = it }
+                    if (state.isEmpty) {
+                        item(key = "filtered_empty", contentType = "empty") {
+                            EmptyState(
+                                title = "Nothing here yet",
+                                message = "${state.selectedSource?.displayName ?: "This source"} " +
+                                    "has no tracks. Tap the filter again to see everything.",
+                                modifier = Modifier.fillMaxWidth().padding(top = 48.dp)
+                            )
+                        }
+                    } else {
+                        state.sections.forEach { section ->
+                            homeSection(section, viewModel, shelfStates) { actionsFor = it }
+                        }
                     }
                 }
             }
