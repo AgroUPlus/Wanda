@@ -92,6 +92,44 @@ internal class AgroDropsApi @Inject constructor(
             ?: error("the server accepted the drop but did not describe it")
     }
 
+    /**
+     * Everything exchanged with one person, oldest first, both directions in one list.
+     *
+     * One request rather than intersecting `inbox` and `sentDrops` on the device: the server can
+     * order the two sides against each other, and a thread stitched together from two separately
+     * paged lists would be missing whichever half fell off the end of its page.
+     */
+    suspend fun conversation(username: String, limit: Int = 200): Result<List<AgroDrop>> =
+        graphQl.execute(
+            """
+            query Conversation(${'$'}with: String!, ${'$'}limit: Int) {
+              conversation(with: ${'$'}with, limit: ${'$'}limit) { $DROP_FIELDS }
+            }
+            """.trimIndent(),
+            buildJsonObject {
+                put("with", username)
+                put("limit", limit)
+            }
+        ).mapCatching { data ->
+            (data["conversation"] as? JsonArray).orEmpty().map { it.jsonObject.toDrop() }
+        }
+
+    /**
+     * Reacts to a received drop. A null or blank [emoji] clears the reaction, so tapping the same
+     * one twice undoes it.
+     */
+    suspend fun react(id: String, emoji: String?): Result<Boolean> = graphQl.execute(
+        """
+        mutation React(${'$'}id: String!, ${'$'}emoji: String) {
+          reactToDrop(id: ${'$'}id, emoji: ${'$'}emoji)
+        }
+        """.trimIndent(),
+        buildJsonObject {
+            put("id", id)
+            put("emoji", emoji)
+        }
+    ).map { data -> data["reactToDrop"]?.jsonPrimitive?.booleanOrNull ?: false }
+
     suspend fun markRead(id: String): Result<Boolean> = idMutation("markDropRead", id)
 
     suspend fun archive(id: String): Result<Boolean> = idMutation("archiveDrop", id)

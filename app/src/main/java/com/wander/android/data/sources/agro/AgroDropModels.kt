@@ -36,7 +36,14 @@ internal data class AgroDrop(
      * "seen" indicator on top of this; there is nothing behind it.
      */
     val readAt: String?,
-    val archived: Boolean
+    val archived: Boolean,
+    /**
+     * The recipient's one-emoji reply, or null if they have not reacted.
+     *
+     * Unlike [readAt], this is meaningful on a sent drop too. A read receipt is something the
+     * server observed; a reaction is something the recipient chose to send back.
+     */
+    val reaction: String? = null
 ) {
     val isUnread: Boolean get() = readAt == null && !archived
 }

@@ -18,6 +18,58 @@ interface DropDao {
     @Query("SELECT * FROM drops WHERE incoming = 0 ORDER BY createdAt DESC")
     fun observeSent(): Flow<List<DropEntity>>
 
+    /**
+     * Everything exchanged with one person, oldest first, both directions in one list.
+     *
+     * The seam that makes this a conversation rather than a mailbox. `incoming` is still stored,
+     * because a bubble has to know which side to sit on, but it is no longer what the list is
+     * split by.
+     *
+     * Archived drops are included: archiving clears the *inbox*, which is a queue of things to
+     * deal with, and dropping them from the record would leave a history with holes in it.
+     */
+    @Query(
+        """
+        SELECT * FROM drops
+        WHERE (incoming = 1 AND fromUser = :username COLLATE NOCASE)
+           OR (incoming = 0 AND toUser = :username COLLATE NOCASE)
+        ORDER BY createdAt ASC
+        """
+    )
+    fun observeConversation(username: String): Flow<List<DropEntity>>
+
+    /**
+     * One row per person, carrying the newest exchange with them — the conversation list.
+     *
+     * The counterpart is whoever is not this account, which is why it is chosen by `incoming`
+     * rather than by comparing against a username the DAO does not have.
+     */
+    @Query(
+        """
+        SELECT * FROM drops
+        WHERE id IN (
+            SELECT id FROM drops d
+            WHERE d.createdAt = (
+                SELECT MAX(d2.createdAt) FROM drops d2
+                WHERE (CASE WHEN d2.incoming = 1 THEN d2.fromUser ELSE d2.toUser END)
+                    = (CASE WHEN d.incoming = 1 THEN d.fromUser ELSE d.toUser END)
+            )
+        )
+        ORDER BY createdAt DESC
+        """
+    )
+    fun observeThreads(): Flow<List<DropEntity>>
+
+    /** Unread drops per counterpart, for the badge on each row of the conversation list. */
+    @Query(
+        """
+        SELECT fromUser AS username, COUNT(*) AS count FROM drops
+        WHERE incoming = 1 AND readAt IS NULL AND archived = 0
+        GROUP BY fromUser COLLATE NOCASE
+        """
+    )
+    fun observeUnreadByFriend(): Flow<List<UnreadCount>>
+
     @Query("SELECT COUNT(*) FROM drops WHERE incoming = 1 AND archived = 0 AND readAt IS NULL")
     fun observeUnreadCount(): Flow<Int>
 
@@ -67,4 +119,17 @@ interface DropDao {
 
     @Query("UPDATE drops SET archived = 1 WHERE id = :id")
     suspend fun markArchived(id: String)
+
+    /**
+     * Records a reaction locally so the bubble answers the tap immediately.
+     *
+     * Applied on both sides of the table for one drop id: the same message exists as a received
+     * row here and a sent row on the other device, and a refresh will confirm whichever this
+     * account holds.
+     */
+    @Query("UPDATE drops SET reaction = :emoji WHERE id = :id")
+    suspend fun setReaction(id: String, emoji: String?)
 }
+
+/** How many unread drops one friend has sent. */
+data class UnreadCount(val username: String, val count: Int)

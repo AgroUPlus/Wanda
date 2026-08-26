@@ -6,6 +6,8 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -86,6 +88,50 @@ internal class AgroFriendsApi @Inject constructor(
     /** Declines a request, or ends a friendship. The same call for both. */
     suspend fun removeFriend(username: String): Result<Boolean> =
         booleanMutation("removeFriend", username)
+
+    /**
+     * Mints a short-lived code for adding this account as a friend in person.
+     *
+     * For two people in the same room, where the username search cannot help — one of them may
+     * not be discoverable, and should not have to become so to be added once. The server drops
+     * any previous code when it mints a new one, so only the code currently on screen works.
+     */
+    suspend fun createFriendCode(): Result<AgroFriendCode> = graphQl.execute(
+        """
+        mutation CreateFriendCode {
+          createFriendCode { code expiresAt ttlSeconds }
+        }
+        """.trimIndent(),
+        buildJsonObject { }
+    ).mapCatching { data ->
+        val obj = data["createFriendCode"]?.jsonObject
+            ?: error("the server minted no friend code")
+        AgroFriendCode(
+            code = obj["code"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            ttlSeconds = obj["ttlSeconds"]?.jsonPrimitive?.longOrNull ?: 0L
+        )
+    }
+
+    /** Drops this account's outstanding code, for a panel being closed or the app going away. */
+    suspend fun revokeFriendCode(): Result<Boolean> = graphQl.execute(
+        "mutation RevokeFriendCode { revokeFriendCode }",
+        buildJsonObject { }
+    ).map { data -> data["revokeFriendCode"]?.jsonPrimitive?.booleanOrNull ?: false }
+
+    /**
+     * Spends someone's code and becomes their friend.
+     *
+     * Answers with their username on success and null on every failure — unknown, expired,
+     * already spent, blocked. The server does not distinguish them, and neither should this.
+     */
+    suspend fun redeemFriendCode(code: String): Result<String?> = graphQl.execute(
+        """
+        mutation RedeemFriendCode(${'$'}code: String!) {
+          redeemFriendCode(code: ${'$'}code)
+        }
+        """.trimIndent(),
+        buildJsonObject { put("code", code.trim()) }
+    ).map { data -> data["redeemFriendCode"]?.jsonPrimitive?.contentOrNull }
 
     suspend fun blockUser(username: String): Result<Boolean> =
         booleanMutation("blockUser", username)

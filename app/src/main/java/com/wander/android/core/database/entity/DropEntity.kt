@@ -46,6 +46,14 @@ data class DropEntity(
     val createdAt: String,
     val readAt: String?,
     val archived: Boolean,
+    /**
+     * The recipient's one-emoji reply, or null if they have not reacted.
+     *
+     * Unlike [readAt], this is meaningful on both sides. A read receipt is something the server
+     * observed and deliberately keeps from the sender; a reaction is something the recipient
+     * chose to send, so it comes back with a sent drop too.
+     */
+    val reaction: String?,
     /** True for the inbox, false for the sent list. Both live in this table. */
     val incoming: Boolean,
     val syncedAt: Long

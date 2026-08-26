@@ -3,6 +3,8 @@ package com.wander.android.data.repository
 import com.wander.android.core.database.dao.FriendDao
 import com.wander.android.core.database.entity.FriendEntity
 import com.wander.android.core.security.SecureStorage
+import com.wander.android.data.sources.agro.AgroFeedApi
+import com.wander.android.data.sources.agro.AgroFeedItem
 import com.wander.android.data.sources.agro.AgroFriend
 import com.wander.android.data.sources.agro.AgroFriendNowPlaying
 import com.wander.android.data.sources.agro.AgroFriendsApi
@@ -10,17 +12,17 @@ import com.wander.android.data.sources.agro.AgroProfile
 import com.wander.android.data.sources.agro.AgroProfileApi
 import com.wander.android.data.sources.agro.AgroStats
 import com.wander.android.data.sources.agro.AgroStatsApi
-import com.wander.android.data.sources.agro.StatsPeriod
 import com.wander.android.data.sources.agro.AgroTasteMatch
 import com.wander.android.data.sources.agro.AgroVisibility
 import com.wander.android.data.sources.agro.FriendState
+import com.wander.android.data.sources.agro.StatsPeriod
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The friend graph and the presence feed, with a deliberate split down the middle.
@@ -40,6 +42,7 @@ internal class SocialRepository @Inject constructor(
     private val profileApi: AgroProfileApi,
     private val friendDao: FriendDao,
     private val statsApi: AgroStatsApi,
+    private val feedApi: AgroFeedApi,
     private val secureStorage: SecureStorage
 ) {
     val friends: Flow<List<AgroProfile>> =
@@ -47,6 +50,18 @@ internal class SocialRepository @Inject constructor(
 
     val requests: Flow<List<AgroProfile>> =
         friendDao.observeRequests().map { rows -> rows.map { it.toProfile() } }
+
+    /**
+     * What friends have been into lately.
+     *
+     * The server has answered `friendActivity` for as long as the feed has existed, and only the
+     * Circle screen ever asked — so the Friends tab, which is the screen people actually open,
+     * showed a static roster and nothing else. Held in memory rather than cached in Room: it is a
+     * derived view of everyone's scrobbles that goes stale by the hour, and a stale feed shown
+     * offline would be worse than none.
+     */
+    private val _feed = MutableStateFlow<List<AgroFeedItem>>(emptyList())
+    val feed: StateFlow<List<AgroFeedItem>> = _feed.asStateFlow()
 
     private val _nowPlaying = MutableStateFlow<List<AgroFriendNowPlaying>>(emptyList())
     val nowPlaying: StateFlow<List<AgroFriendNowPlaying>> = _nowPlaying.asStateFlow()
@@ -68,6 +83,9 @@ internal class SocialRepository @Inject constructor(
 
         val friendResult = friendsApi.friends()
         val requestResult = friendsApi.friendRequests()
+        // Failure leaves whatever was there. An empty feed and a feed that could not be fetched
+        // look identical on screen, and only one of them means "nobody has done anything".
+        feedApi.friendActivity().onSuccess { _feed.value = it }
 
         // The cache is only replaced when *both* answered. A partial write would delete every
         // pending request on a refresh whose second call happened to fail.
@@ -142,6 +160,15 @@ internal class SocialRepository @Inject constructor(
 
     suspend fun block(username: String): Result<Boolean> =
         friendsApi.blockUser(username).alsoRefresh()
+
+    /** A short-lived code for adding this account as a friend in person. */
+    suspend fun createFriendCode() = friendsApi.createFriendCode()
+
+    suspend fun revokeFriendCode() = friendsApi.revokeFriendCode()
+
+    /** Spends somebody's code. Answers with their username, or null for every kind of failure. */
+    suspend fun redeemFriendCode(code: String): Result<String?> =
+        friendsApi.redeemFriendCode(code).also { if (it.getOrNull() != null) refresh() }
 
     private suspend fun Result<Boolean>.alsoRefresh(): Result<Boolean> =
         also { if (it.getOrDefault(false)) refresh() }

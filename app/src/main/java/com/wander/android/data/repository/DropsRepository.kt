@@ -36,6 +36,57 @@ internal class DropsRepository @Inject constructor(
     val unreadCount: Flow<Int> = dropDao.observeUnreadCount()
 
     /**
+     * One row per person, newest exchange first — the conversation list.
+     *
+     * Read from the cache rather than asked for: the server has no notion of a thread list, and
+     * building one would mean a query per friend. Both halves are already here.
+     */
+    val threads: Flow<List<AgroDrop>> =
+        dropDao.observeThreads().map { rows -> rows.map { it.toDrop() } }
+
+    /** Unread drops per sender, for the badge on each row of that list. */
+    val unreadByFriend: Flow<Map<String, Int>> = dropDao.observeUnreadByFriend()
+        .map { rows -> rows.associate { it.username.lowercase() to it.count } }
+
+    /** Everything exchanged with one person, oldest first. */
+    fun conversation(username: String): Flow<List<AgroDrop>> =
+        dropDao.observeConversation(username).map { rows -> rows.map { it.toDrop() } }
+
+    /**
+     * Re-reads one thread from the server.
+     *
+     * Upserted rather than replacing a side of the table: this is the truth about one exchange,
+     * not about the whole inbox, and clearing on it would take every other conversation with it.
+     */
+    suspend fun refreshConversation(username: String): Result<Unit> {
+        val now = Instant.now().toEpochMilli()
+        return dropsApi.conversation(username).mapCatching { drops ->
+            dropDao.upsert(
+                drops.map { drop ->
+                    // Which side a message sits on is decided by who sent it, not by which query
+                    // it arrived in — a thread carries both directions. If the other person sent
+                    // it, it came in.
+                    drop.toEntity(
+                        incoming = drop.fromUser.equals(username, ignoreCase = true),
+                        syncedAt = now
+                    )
+                }
+            )
+        }
+    }
+
+    /**
+     * Reacts to a received drop, locally first so the bubble answers the tap.
+     *
+     * Passing null clears it, which is what tapping the same emoji twice does. A failed call is
+     * corrected by the next refresh, the same way [markRead] is.
+     */
+    suspend fun react(id: String, emoji: String?): Result<Boolean> {
+        dropDao.setReaction(id, emoji)
+        return dropsApi.react(id, emoji)
+    }
+
+    /**
      * Re-reads both sides.
      *
      * Each side is replaced independently: a failure fetching one must not empty the other, and the
@@ -121,6 +172,7 @@ private fun AgroDrop.toEntity(incoming: Boolean, syncedAt: Long) = DropEntity(
     createdAt = createdAt,
     readAt = readAt,
     archived = archived,
+    reaction = reaction,
     incoming = incoming,
     syncedAt = syncedAt
 )
@@ -138,5 +190,6 @@ private fun DropEntity.toDrop() = AgroDrop(
     note = note,
     createdAt = createdAt,
     readAt = readAt,
-    archived = archived
+    archived = archived,
+    reaction = reaction
 )

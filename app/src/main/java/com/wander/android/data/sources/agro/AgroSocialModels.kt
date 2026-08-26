@@ -102,3 +102,16 @@ internal data class AgroVisibility(
      */
     val showActivity: Boolean = false
 )
+
+/**
+ * A short-lived code for adding the account that minted it as a friend.
+ *
+ * [ttlSeconds] counts down from the moment the server answered, rather than being derived from an
+ * expiry timestamp: the device's clock is not the server's, and a panel re-minting on a drifting
+ * timer would either show a dead code or thrash.
+ */
+@Immutable
+internal data class AgroFriendCode(
+    val code: String,
+    val ttlSeconds: Long
+)

@@ -3,19 +3,20 @@ package com.wander.android.ui.screens.social
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.repository.DropsRepository
 import com.wander.android.data.repository.ListenAlongResolver
 import com.wander.android.data.sources.agro.AgroDrop
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * The inbox, read from Room and refreshed from the network behind it.
@@ -28,8 +29,11 @@ import javax.inject.Inject
 internal class InboxViewModel @Inject constructor(
     private val drops: DropsRepository,
     private val resolver: ListenAlongResolver,
-    private val playerConnection: PlayerConnection
+    private val playerConnection: PlayerConnection,
+    secureStorage: SecureStorage
 ) : ViewModel() {
+
+    private val me: String = secureStorage.agroUsername
 
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 1)
     /** Why a drop could not be played. Nothing is said when one plays — the audio says it. */
@@ -40,9 +44,21 @@ internal class InboxViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            combine(drops.inbox, drops.sent, drops.unreadCount) { received, sent, unread ->
-                InboxUiState(received = received, sent = sent, unread = unread, loading = false)
-            }.collect { _state.value = it }
+            combine(
+                drops.threads,
+                drops.unreadByFriend,
+                drops.unreadCount
+            ) { threads, unreadByFriend, unread ->
+                Triple(threads, unreadByFriend, unread)
+            }.collect { (threads, unreadByFriend, unread) ->
+                _state.value = _state.value.copy(
+                    threads = threads,
+                    unreadByFriend = unreadByFriend,
+                    unread = unread,
+                    loading = false,
+                    me = me
+                )
+            }
         }
         refresh()
     }
@@ -64,6 +80,43 @@ internal class InboxViewModel @Inject constructor(
 
     fun archive(id: String) {
         viewModelScope.launch { drops.archive(id) }
+    }
+
+    /**
+     * Opens one exchange.
+     *
+     * Refreshed from the server as well as read from Room, because a thread includes messages
+     * this account sent from *another* device — which its own inbox refresh has never seen.
+     */
+    fun openThread(username: String) {
+        _state.value = _state.value.copy(openWith = username, conversation = emptyList())
+        viewModelScope.launch {
+            drops.refreshConversation(username)
+        }
+        viewModelScope.launch {
+            drops.conversation(username).collect { thread ->
+                // Guarded: the previous thread's flow is still running until this coroutine is
+                // cancelled, and without this a slow one could overwrite the thread just opened.
+                if (_state.value.openWith == username) {
+                    _state.value = _state.value.copy(conversation = thread)
+                }
+            }
+        }
+    }
+
+    fun closeThread() {
+        _state.value = _state.value.copy(openWith = null, conversation = emptyList())
+    }
+
+    /**
+     * Reacts to something a friend sent, or takes the reaction back.
+     *
+     * Tapping the emoji already on a message clears it, which is the behaviour every messaging
+     * app has taught people to expect and costs nothing to honour.
+     */
+    fun react(drop: AgroDrop, emoji: String) {
+        val next = if (drop.reaction == emoji) null else emoji
+        viewModelScope.launch { drops.react(drop.id, next) }
     }
 
     /**

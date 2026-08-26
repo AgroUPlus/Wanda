@@ -1,19 +1,26 @@
 package com.wander.android.ui.screens.social
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.QrCode2
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.sources.agro.AgroProfile
@@ -34,6 +41,9 @@ internal fun UserSearchSheet(
     onQueryChange: (String) -> Unit,
     onSendRequest: (String) -> Unit,
     onOpenProfile: (String) -> Unit,
+    onToggleCode: () -> Unit,
+    onRefreshCode: () -> Unit,
+    onRevokeCode: () -> Unit,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(
@@ -47,7 +57,31 @@ internal fun UserSearchSheet(
                 .navigationBarsPadding()
                 .padding(bottom = 24.dp)
         ) {
-            Text(text = "Find people", style = MaterialTheme.typography.titleLarge)
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "Find people", style = MaterialTheme.typography.titleLarge)
+                // The other way in, for two people in the same room — where searching by
+                // username needs one of them to be publicly listed, and being added once is not
+                // a reason to be listed forever.
+                TextButton(onClick = onToggleCode) {
+                    Icon(
+                        imageVector = Icons.Rounded.QrCode2,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 6.dp)
+                    )
+                    Text(if (state.showingCode) "Hide my code" else "My code")
+                }
+            }
+
+            FriendCodePanel(
+                visible = state.showingCode,
+                code = state.friendCode,
+                onRefresh = onRefreshCode,
+                onRevoke = onRevokeCode
+            )
             OutlinedTextField(
                 value = state.query,
                 onValueChange = onQueryChange,

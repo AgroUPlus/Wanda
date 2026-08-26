@@ -181,7 +181,7 @@ internal fun CircleScreen(
                 }
 
                 items(count = state.feed.size, key = { index -> "feed_$index" }) { index ->
-                    ExpressiveFeedItemCard(state.feed[index])
+                    FeedItemCard(state.feed[index])
                 }
             }
         }
@@ -517,59 +517,6 @@ private fun TasteMatrixSection(matrix: List<AgroTasteMatrixEntry>) {
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
-                }
-            }
-        }
-    }
-}
-
-/**
- * Activity Feed item with expressive event badge.
- */
-@Composable
-private fun ExpressiveFeedItemCard(item: AgroFeedItem) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(14.dp)
-        ) {
-            val (badgeIcon, badgeColor) = when (item.kind) {
-                "ON_REPEAT" -> Icons.Rounded.LocalFireDepartment to MaterialTheme.colorScheme.error
-                "NEW_FAVOURITE" -> Icons.Rounded.Favorite to MaterialTheme.colorScheme.tertiary
-                else -> Icons.Rounded.Stars to MaterialTheme.colorScheme.primary
-            }
-
-            Surface(
-                color = badgeColor.copy(alpha = 0.15f),
-                contentColor = badgeColor,
-                shape = CircleShape,
-                modifier = Modifier.size(36.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(badgeIcon, contentDescription = null, modifier = Modifier.size(20.dp))
-                }
-            }
-
-            Spacer(Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = item.summary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                if (!item.title.isNullOrBlank()) {
-                    Text(
-                        text = "${item.title} · ${item.artist}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
                 }
             }
         }
