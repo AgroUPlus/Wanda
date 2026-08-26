@@ -52,6 +52,16 @@ internal class JamPlaybackController @Inject constructor(
     private var playingTrackId: String? = null
 
     /**
+     * True when the room is on a livestream.
+     *
+     * A stream has no position to be in step *at* — every listener is at its live edge, which is a
+     * different moment for each of them and cannot be seeked to. So the room's clock does not
+     * apply, and nothing here tries to make it. Everyone hears roughly the same thing, which is
+     * the most a broadcast can offer and is plenty for listening together.
+     */
+    private var playingLive: Boolean = false
+
+    /**
      * Where the room was, and when we heard that — the two numbers the room's position is derived
      * from. Wall-clock *since the frame* rather than the server's `startedAt`, so a phone with a
      * skewed clock still lands in the right place.
@@ -88,6 +98,7 @@ internal class JamPlaybackController @Inject constructor(
             // Between tracks, or the queue ran dry. What is playing keeps playing: cutting the
             // audio dead would be a worse surprise than a moment of the previous song.
             playingTrackId = null
+            playingLive = false
             pending = null
             reconcileJob?.cancel()
             reconcileJob = null
@@ -114,6 +125,7 @@ internal class JamPlaybackController @Inject constructor(
         reconcileJob?.cancel()
         reconcileJob = null
         playingTrackId = null
+        playingLive = false
         pending = null
         _unresolvable.value = null
         _outOfSync.value = false
@@ -135,6 +147,7 @@ internal class JamPlaybackController @Inject constructor(
 
         _unresolvable.value = null
         playingTrackId = now.trackId
+        playingLive = resolved.track.isLive
         basePositionMs = now.positionMs
         baseAt = arrivedAt
         trackDurationMs = now.durationMs
@@ -143,14 +156,19 @@ internal class JamPlaybackController @Inject constructor(
         // at the frame's own position meant beginning however long the lookup took behind the
         // room, and then being seeked forward for it a few seconds later — a correction that was
         // entirely self-inflicted.
-        val startAt = roomPositionMs()
+        // A stream starts at its live edge. Seeking into one by the room's elapsed time asks for
+        // a moment that is not in the window and, on a stream that has been running for hours, is
+        // not a moment anyone else is at either.
+        val startAt = if (playingLive) 0L else roomPositionMs()
         // A correction immediately after starting would be measuring the buffer, so the cooldown
         // starts here rather than at the first seek.
         lastCorrectionAt = SystemClock.elapsedRealtime()
         withContext(Dispatchers.Main) {
             playerConnection.playForJam(listOf(resolved.track), startAt)
         }
-        startReconciling()
+        // Nothing to reconcile against on a stream, so the loop is not started at all rather than
+        // started and made to skip every pass.
+        if (!playingLive) startReconciling()
     }
 
     /** Where the room is now, derived from the last frame and the time since it arrived. */
@@ -217,9 +235,10 @@ internal class JamPlaybackController @Inject constructor(
     fun resync() {
         if (playingTrackId == null) return
         scope.launch {
-            val expected = roomPositionMs()
             withContext(Dispatchers.Main) {
-                playerConnection.followerSeek(expected)
+                // On a stream there is nowhere to seek back to: rejoining means resuming at the
+                // live edge, which is wherever the stream is by the time it starts.
+                if (!playingLive) playerConnection.followerSeek(roomPositionMs())
                 playerConnection.followerSetPlaying(true)
             }
             _outOfSync.value = false
