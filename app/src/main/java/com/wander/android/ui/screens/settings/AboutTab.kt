@@ -10,6 +10,7 @@ import com.wander.android.core.update.UpdateCheckResult
  * network round trip when someone is looking at this row.
  */
 private const val ORG_URL = "https://github.com/AgroUPlus"
+private const val REPO_URL = "https://github.com/AgroUPlus/Wanda"
 
 internal fun LazyListScope.aboutTab(
     appVersion: String,
@@ -24,7 +25,8 @@ internal fun LazyListScope.aboutTab(
     item(key = "version") {
         SettingsRow(
             title = "Version",
-            subtitle = appVersion
+            subtitle = appVersion,
+            onClick = { onOpenUrl(REPO_URL) }
         )
     }
 
@@ -57,23 +59,6 @@ internal fun LazyListScope.aboutTab(
             title = "AgroUPlus",
             subtitle = "Wanda and Agro are built here. Source, issues and releases on GitHub.",
             onClick = { onOpenUrl(ORG_URL) }
-        )
-    }
-
-    item(key = "credits_sources") {
-        SettingsRow(
-            title = "Standing on",
-            // Named rather than summarised as "open source libraries": these are the projects
-            // whose work the app is made of, and a list that names nobody credits nobody.
-            subtitle = "Media3 · Jetpack Compose · Room · Ktor · Coil · Hilt · " +
-                "the Subsonic API, and Navidrome's implementation of it"
-        )
-    }
-
-    item(key = "credits_licence") {
-        SettingsRow(
-            title = "Licence",
-            subtitle = "GPL-3.0. No telemetry, no analytics, no accounts of our own."
         )
     }
 
