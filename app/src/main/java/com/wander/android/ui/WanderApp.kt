@@ -260,7 +260,17 @@ fun WanderApp(
             // it is genuinely above it, whether or not anything is playing.
             val isStartingRadio by viewModel.isStartingRadio.collectAsStateWithLifecycle()
             val homeScrolling by viewModel.homeScrolling.collectAsStateWithLifecycle()
-            if (currentRoute == TopLevelDestination.HOME.route && sheetCollapsed) {
+            // `progress`, not `targetValue` like the cards above: the target only flips when the
+            // gesture is released and the sheet decides where it is going, so the button hung
+            // around for the whole drag and only left once the player had already arrived. This
+            // leaves at the first pixel of the slide, which is when it is in the way.
+            //
+            // `derivedStateOf` keeps that cheap — the float changes every frame, the boolean it is
+            // read through changes twice per gesture.
+            val playerDocked by remember(sheetState) {
+                derivedStateOf { sheetState.progress <= DockedEpsilon }
+            }
+            if (currentRoute == TopLevelDestination.HOME.route && playerDocked) {
                 InstantRadioFab(
                     isStarting = isStartingRadio,
                     isScrolling = homeScrolling,
@@ -374,3 +384,11 @@ private fun androidx.navigation.NavHostController.switchTab(destination: TopLeve
 
 /** The gap between the radio button and whatever is parked at the bottom edge. */
 private val RadioFabClearance = 16.dp
+
+/**
+ * How far the player sheet may travel before it counts as opening.
+ *
+ * Not zero: the docked sheet settles on an animated float, so an exact comparison would flicker on
+ * the last fraction of a spring that has effectively already stopped.
+ */
+private const val DockedEpsilon = 0.01f
