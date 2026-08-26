@@ -206,6 +206,10 @@ fun PlayerSheetContent(
                 onOpenAlbum = onOpenAlbum,
                 onOpenJam = onOpenJam,
                 contentAlpha = { smoothStep(progress(), 0.20f, 0.55f) },
+                // Gone almost as soon as the sheet leaves the top. The cover starts travelling at
+                // the first pixel of the drag, and these have to leave with it rather than
+                // linger over the space it used to fill.
+                overlayAlpha = { smoothStep(progress(), 0.85f, 1f) },
                 showLyrics = lyricsVisible,
                 onToggleLyrics = { lyricsVisible = !lyricsVisible },
                 // The gesture only; the cover that visibly follows it is drawn above, so the

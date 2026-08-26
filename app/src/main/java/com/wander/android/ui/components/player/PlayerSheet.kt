@@ -24,6 +24,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.lerp as lerpColor
 import androidx.compose.ui.util.lerp
 import com.wander.android.ui.components.MiniArtworkSize
 import com.wander.android.ui.components.MiniProgressBarHeight
@@ -101,7 +103,13 @@ fun PlayerSheet(
             scope.launch { sheetState.collapse() }
         }
 
-        val containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        // Two colours, not one. Docked, this is a card lifted off the screen and wants a raised
+        // container; expanded, it *is* the screen and wants the plain background — which is what
+        // makes it honour the OLED theme. Pinned to `surfaceContainerHigh` it stayed #1A1A1A with
+        // pure black switched on, so the one screen that fills the panel was the one screen that
+        // never went black.
+        val dockedColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        val expandedColor = MaterialTheme.colorScheme.background
 
         // Modifier order matters here. Outside in:
         //   graphicsLayer  — translation, corner and shadow, clipping to the *animated* box
@@ -130,7 +138,11 @@ fun PlayerSheet(
                     clip = true
                     shadowElevation = (6.dp + 2.dp * progress).toPx()
                 }
-                .background(containerColor)
+                // Drawn rather than composed: the colour changes every frame of a drag, and a
+                // `background(...)` argument would recompose the sheet along with it.
+                .drawBehind {
+                    drawRect(lerpColor(dockedColor, expandedColor, sheetState.progress))
+                }
                 .layout { measurable, constraints ->
                     val fullWidth = constraints.maxWidth
                     val dockedWidth = fullWidth - DockedSideInset.roundToPx() * 2
@@ -166,7 +178,7 @@ fun PlayerSheet(
             // A bare Box, unlike Surface, sets no content colour — so every Text and Icon in the
             // player fell back to the default and rendered black on a dark surface.
             CompositionLocalProvider(
-                LocalContentColor provides contentColorFor(containerColor)
+                LocalContentColor provides contentColorFor(dockedColor)
             ) {
                 content({ sheetState.progress }, { sheetState.rawProgress }, sheetHeight)
             }
