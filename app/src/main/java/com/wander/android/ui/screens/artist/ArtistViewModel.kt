@@ -68,6 +68,11 @@ class ArtistViewModel @Inject constructor(
 
     fun addToQueue(track: UnifiedTrack) = playerConnection.addToQueue(listOf(track))
 
+    /** Radio for the artist as a whole, seeded from their most played. */
+    fun startArtistRadio() {
+        tracks.value.firstOrNull()?.let(::startRadio)
+    }
+
     fun startRadio(track: UnifiedTrack) {
         viewModelScope.launch {
             playerConnection.play(listOf(track))
