@@ -8,10 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.BarChart
@@ -40,7 +36,6 @@ import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.SessionSheet
 import com.wander.android.ui.components.TrackActionsSheet
-import com.wander.android.ui.components.TrackRow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,10 +86,9 @@ fun HomeScreen(
         }
     }
 
-    // Held above the LazyColumn, keyed by shelf. `rememberLazyListState()` called inside a lazy
-    // `item {}` is disposed the moment that shelf scrolls off, so it neither preserved the
-    // horizontal position nor avoided reallocating the state on the way back.
-    val carouselStates = remember { mutableMapOf<String, LazyListState>() }
+    // Held above the LazyColumn so a shelf scrolling off screen does not forget where it was.
+    // See [HomeShelfStates].
+    val shelfStates = remember { HomeShelfStates() }
 
     // The same long-press menu Library and Search use, so a track offers the same actions
     // wherever it is shown. Held here rather than per shelf: only one can be open at a time.
@@ -158,84 +152,22 @@ fun HomeScreen(
                         )
                     }
 
+                    // Only earns its row when there is more than one backend to choose between.
+                    if (state.sources.size > 1) {
+                        item(key = "sources", contentType = "source-chips") {
+                            SourceChipRow(
+                                sources = state.sources,
+                                selected = state.selectedSource,
+                                onSelect = viewModel::selectSource
+                            )
+                        }
+                    }
+
                     state.sections.forEach { section ->
-                        homeSection(section, viewModel, carouselStates) { actionsFor = it }
+                        homeSection(section, viewModel, shelfStates) { actionsFor = it }
                     }
                 }
             }
-        }
-    }
-}
-
-/**
- * One shelf. Split out of the screen body so a new shelf costs a [HomeSection] and nothing else.
- */
-private fun LazyListScope.homeSection(
-    section: HomeSection,
-    viewModel: HomeViewModel,
-    carouselStates: MutableMap<String, LazyListState>,
-    onLongPress: (UnifiedTrack) -> Unit
-) {
-    item(key = "${section.id}-title", contentType = "section-title") {
-        SectionTitle(section.title)
-    }
-
-    when (section.style) {
-        HomeSectionStyle.MIX_CAROUSEL -> item(
-            key = "${section.id}-row",
-            contentType = "mix-carousel"
-        ) {
-            LazyRow(
-                state = carouselStates.getOrPut(section.id) { LazyListState() },
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(horizontal = 20.dp)
-            ) {
-                itemsIndexed(
-                    items = section.mixes,
-                    key = { _, mix -> "${section.id}-${mix.id}" },
-                    contentType = { _, _ -> "mix-card" }
-                ) { _, mix ->
-                    SmartMixCard(mix = mix, onPlay = { viewModel.playMix(mix) })
-                }
-            }
-        }
-
-        HomeSectionStyle.TRACK_CAROUSEL -> item(
-            key = "${section.id}-row",
-            contentType = "carousel"
-        ) {
-            LazyRow(
-                state = carouselStates.getOrPut(section.id) { LazyListState() },
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(horizontal = 20.dp)
-            ) {
-                // Indexed, so playing a card does not linear-scan the shelf for the track and
-                // does not capture the whole list in a lambda that changes every recomposition.
-                itemsIndexed(
-                    items = section.tracks,
-                    key = { _, track -> "${section.id}-${track.id}" },
-                    contentType = { _, _ -> "track-card" }
-                ) { index, track ->
-                    HorizontalTrackCard(
-                        track = track,
-                        onPlay = { viewModel.play(section.tracks, index) },
-                        onLongPress = { onLongPress(track) }
-                    )
-                }
-            }
-        }
-
-        HomeSectionStyle.TRACK_LIST -> itemsIndexed(
-            items = section.tracks,
-            key = { _, track -> "${section.id}-${track.id}" },
-            contentType = { _, _ -> "track-row" }
-        ) { index, track ->
-            TrackRow(
-                track = track,
-                onPlay = { viewModel.play(section.tracks, index) },
-                onToggleLike = { viewModel.toggleLike(track) },
-                onLongPress = { onLongPress(track) }
-            )
         }
     }
 }
@@ -276,13 +208,4 @@ private fun HomeHeader(
             Icon(Icons.Rounded.Settings, contentDescription = "Settings")
         }
     }
-}
-
-@Composable
-private fun SectionTitle(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleLarge,
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
-    )
 }
