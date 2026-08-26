@@ -22,9 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -174,6 +172,14 @@ fun MiniPlayer(
  * indicator unmounted in favour of the flat one it now looks like. Pausing therefore reads as the
  * wave relaxing into a line, and the infinite transition still stops.
  *
+ * Which indicator is mounted is *derived* from the amplitude itself ([showWavy]) rather than
+ * tracked as a separate flag set imperatively at specific points in the animating coroutine: a
+ * flag like that only reaches its "flatten now" line if the coroutine runs to completion
+ * uninterrupted, and `isPlaying` flickering rapidly (seen with YTM's network buffering, not
+ * Navidrome's steadier stream) cancels and restarts that coroutine before it gets there — leaving
+ * the flag stuck saying "still wavy" while nothing is actually drawn. Deriving the decision from
+ * the current amplitude value instead means there is no in-between state to get stuck in.
+ *
  * Everything sits in a fixed-height box ([MiniProgressBarHeight]) because the two indicators do not
  * measure the same: without it, pausing shrank this row and shifted everything below it up.
  */
@@ -188,8 +194,6 @@ private fun PlaybackProgressBar(
     val progress = { progressOf(position.positionMs, durationMs) }
 
     val amplitude = remember { Animatable(if (isPlaying) 1f else 0f) }
-    // Starts flat when paused so a cold launch does not animate a wave in for no reason.
-    var flattened by remember { mutableStateOf(!isPlaying) }
 
     // The *fast* effects spec, not the default one. This animation sits directly under a button
     // press, so anything leisurely reads as the tap not having registered rather than as motion —
@@ -197,15 +201,14 @@ private fun PlaybackProgressBar(
     val amplitudeSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
 
     LaunchedEffect(isPlaying) {
-        if (isPlaying) {
-            // Mount first, then grow: the reverse would flatten and unmount in the same frame.
-            flattened = false
-            amplitude.animateTo(1f, amplitudeSpec)
-        } else {
-            amplitude.animateTo(0f, amplitudeSpec)
-            flattened = true
-        }
+        amplitude.animateTo(if (isPlaying) 1f else 0f, amplitudeSpec)
     }
+
+    // Wavy the instant playback resumes, even mid-decay; flat only once fully settled and still
+    // paused. Reading `.value` here (not through a lambda) is deliberate: it is what makes this
+    // recompose — and therefore correct — every frame the amplitude is actually changing, at the
+    // cost of those few animated frames instead of the whole idle lifetime of the strip.
+    val showWavy = isPlaying || amplitude.value > 0f
 
     Box(
         contentAlignment = Alignment.Center,
@@ -213,14 +216,14 @@ private fun PlaybackProgressBar(
             .fillMaxWidth()
             .height(MiniProgressBarHeight)
     ) {
-        if (flattened) {
-            LinearProgressIndicator(progress = progress, modifier = Modifier.fillMaxWidth())
-        } else {
+        if (showWavy) {
             LinearWavyProgressIndicator(
                 progress = progress,
                 amplitude = { amplitude.value },
                 modifier = Modifier.fillMaxWidth()
             )
+        } else {
+            LinearProgressIndicator(progress = progress, modifier = Modifier.fillMaxWidth())
         }
     }
 }
