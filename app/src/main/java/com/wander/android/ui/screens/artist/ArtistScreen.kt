@@ -115,6 +115,7 @@ fun ArtistScreen(
                     onPlay = viewModel::playTop,
                     onRadio = viewModel::startArtistRadio,
                     onShuffle = viewModel::shuffle,
+                    onShare = viewModel::shareArtist.takeIf { viewModel.canShareArtist() },
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
             }

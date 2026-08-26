@@ -1,8 +1,6 @@
 package com.wander.android.ui.components
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,10 +8,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
+import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
@@ -41,8 +41,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.wander.android.ui.screens.social.JamViewModel
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.ui.screens.social.JamViewModel
 
 /**
  * What you can do with a track, on long press.
@@ -93,6 +93,27 @@ fun TrackActionsSheet(
     // whichever one was forgotten.
     val dropFriends by hiltViewModel<DropToFriendViewModel>().friends.collectAsStateWithLifecycle()
     var pickingFriend by remember { mutableStateOf(false) }
+    var choosingShare by remember { mutableStateOf(false) }
+
+    if (choosingShare) {
+        ShareChooserSheet(
+            subject = track.title,
+            onShareLink = {
+                choosingShare = false
+                onShare?.invoke()
+                onDismiss()
+            },
+            onSendToFriend = {
+                choosingShare = false
+                pickingFriend = true
+            }.takeIf { dropFriends.isNotEmpty() },
+            onDismiss = {
+                choosingShare = false
+                onDismiss()
+            }
+        )
+        return
+    }
 
     if (pickingFriend) {
         DropToFriendSheet(
@@ -177,13 +198,14 @@ fun TrackActionsSheet(
             onAddToPlaylist?.let {
                 SheetAction(Icons.Rounded.LibraryAdd, "Add to playlist") { it(); onDismiss() }
             }
-            onShare?.let {
-                SheetAction(Icons.Rounded.Share, "Share a link") { it(); onDismiss() }
-            }
-            // Only offered when there is somebody to send to. An action that can only ever answer
-            // "you have no friends" is not worth a row.
-            if (dropFriends.isNotEmpty()) {
-                SheetAction(Icons.AutoMirrored.Rounded.Send, "Send to a friend") { pickingFriend = true }
+            // One verb, then a question — rather than two rows that ask the user to know
+            // Wanda's internal distinction between a public URL and a drop before they have
+            // decided who they are sharing with. Shown when either half is available; with no
+            // friends and no shareable source there is nothing behind it at all.
+            if (onShare != null || dropFriends.isNotEmpty()) {
+                SheetAction(Icons.Rounded.Share, "Share") {
+                    if (onShare == null) pickingFriend = true else choosingShare = true
+                }
             }
             onToggleLike?.let {
                 SheetAction(

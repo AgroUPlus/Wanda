@@ -1,11 +1,14 @@
 package com.wander.android.data.repository
 
+import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.sources.ShareKind
+import com.wander.android.data.sources.ShareTarget
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Public links to tracks, minted by the backend that hosts them.
@@ -32,22 +35,35 @@ class ShareRepository @Inject constructor(
     val errors: SharedFlow<String> = _errors.asSharedFlow()
 
     /** Whether [track]'s backend can publish a link at all — decides if the action is offered. */
-    fun canShare(track: UnifiedTrack): Boolean =
-        musicRepository.sources.any { it.sourceType == track.source && it.capabilities.share }
+    fun canShare(track: UnifiedTrack): Boolean = canShare(track.source)
 
-    suspend fun share(track: UnifiedTrack) {
+    /** The same question for an album, artist or playlist, which have no `UnifiedTrack`. */
+    fun canShare(source: SourceType): Boolean =
+        musicRepository.sources.any { it.sourceType == source && it.capabilities.share }
+
+    suspend fun share(track: UnifiedTrack) = share(
+        ShareTarget(
+            kind = ShareKind.TRACK,
+            source = track.source,
+            id = track.id,
+            title = track.title,
+            subtitle = track.artist
+        )
+    )
+
+    suspend fun share(target: ShareTarget) {
         val source = musicRepository.sources
-            .firstOrNull { it.sourceType == track.source && it.capabilities.share }
+            .firstOrNull { it.sourceType == target.source && it.capabilities.share }
             ?: return
 
-        source.createShareLink(track.id, "${track.title} — ${track.artist}").fold(
+        source.createShareLink(target).fold(
             onSuccess = { url ->
-                _links.tryEmit(ShareLink(track = track, url = shareLinkRewriter.rewrite(url)))
+                _links.tryEmit(ShareLink(target = target, url = shareLinkRewriter.rewrite(url)))
             },
             onFailure = {
                 // Sharing is off by default on a fresh Navidrome, and the server says so — which
                 // is a setting the user can go and change, so the reason is worth passing on.
-                _errors.tryEmit(it.message ?: "Couldn't create a share link for that track.")
+                _errors.tryEmit(it.message ?: "Couldn't create a share link for that.")
             }
         )
     }
@@ -55,6 +71,6 @@ class ShareRepository @Inject constructor(
 
 /** A minted link, ready to hand to the system share sheet. */
 data class ShareLink(
-    val track: UnifiedTrack,
+    val target: ShareTarget,
     val url: String
 )

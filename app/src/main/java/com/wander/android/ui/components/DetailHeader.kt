@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -42,7 +44,15 @@ internal fun DetailHeader(
     artworkShape: Shape,
     onPlay: () -> Unit,
     onShuffle: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /**
+     * Null when this record's backend cannot publish a link for it.
+     *
+     * An icon button beside Play and Shuffle rather than a third labelled button: sharing a whole
+     * album is a deliberate act but not a frequent one, and giving it equal weight to the two
+     * things people came to this screen to do would be the wrong emphasis.
+     */
+    onShare: (() -> Unit)? = null
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -91,6 +101,11 @@ internal fun DetailHeader(
             OutlinedButton(onClick = onShuffle) {
                 Icon(Icons.Rounded.Shuffle, contentDescription = null, modifier = Modifier.size(18.dp))
                 Text(text = "Shuffle", modifier = Modifier.padding(start = 6.dp))
+            }
+            onShare?.let { share ->
+                FilledTonalIconButton(onClick = share) {
+                    Icon(Icons.Rounded.Share, contentDescription = "Share")
+                }
             }
         }
     }

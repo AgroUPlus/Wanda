@@ -97,12 +97,14 @@ interface IMusicSource {
         Result.failure(UnsupportedOperationException("$displayName cannot modify playlists"))
 
     /**
-     * A public link to [trackId] that anyone can open, for sharing.
+     * A public link to [target] that anyone can open, for sharing.
      *
-     * Only meaningful when [SourceCapabilities.share] is set. The default fails rather than
-     * returning some other URL: a link that does not play the track is worse than no link.
+     * Only meaningful when [SourceCapabilities.share] is set, and even then a source may support
+     * some kinds and not others — a backend that can publish a track but has no notion of a
+     * public playlist must fail for [ShareKind.PLAYLIST] rather than inventing a URL. The default
+     * fails for everything, because a link that does not open what it names is worse than no link.
      */
-    suspend fun createShareLink(trackId: String, description: String): Result<String> =
+    suspend fun createShareLink(target: ShareTarget): Result<String> =
         Result.failure(UnsupportedOperationException("$displayName cannot create share links"))
 
     suspend fun setLiked(trackId: String, liked: Boolean): Result<Unit> = Result.success(Unit)

@@ -114,6 +114,7 @@ fun AlbumScreen(
                     artworkShape = MaterialTheme.shapes.large,
                     onPlay = viewModel::playAll,
                     onShuffle = viewModel::shuffle,
+                    onShare = viewModel::shareAlbum.takeIf { viewModel.canShareAlbum() },
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
             }

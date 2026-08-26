@@ -10,10 +10,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Podcasts
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -41,7 +43,9 @@ internal fun ArtistHero(
     onPlay: () -> Unit,
     onRadio: () -> Unit,
     onShuffle: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Null until a track has loaded with a backend artist id — see `ArtistViewModel`. */
+    onShare: (() -> Unit)? = null
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Artwork(
@@ -97,6 +101,11 @@ internal fun ArtistHero(
             // gets, so it is the one that reads as a button rather than an option.
             FilledIconButton(onClick = onShuffle) {
                 Icon(Icons.Rounded.Shuffle, contentDescription = "Shuffle")
+            }
+            onShare?.let { share ->
+                IconButton(onClick = share) {
+                    Icon(Icons.Rounded.Share, contentDescription = "Share")
+                }
             }
         }
     }

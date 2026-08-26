@@ -10,8 +10,11 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.PlaylistWriteRepository
 import com.wander.android.data.repository.ShareRepository
+import com.wander.android.data.sources.ShareKind
+import com.wander.android.data.sources.ShareTarget
 import com.wander.android.data.sources.local.LocalMusicSource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -20,7 +23,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 enum class LibraryTab(val label: String) {
     TRACKS("Tracks"), LIKED("Liked"), ALBUMS("Albums"), PLAYLISTS("Playlists"), DOWNLOADS("Offline")
@@ -133,6 +135,22 @@ class LibraryViewModel @Inject constructor(
 
     /** Whether this track's backend can mint a public link at all. */
     fun canShare(track: UnifiedTrack) = shareRepository.canShare(track)
+
+    /** The same question for a playlist, which has no `UnifiedTrack` to ask about. */
+    fun canShare(source: SourceType): Boolean = shareRepository.canShare(source)
+
+    fun sharePlaylist(playlist: UnifiedPlaylist) {
+        viewModelScope.launch {
+            shareRepository.share(
+                ShareTarget(
+                    kind = ShareKind.PLAYLIST,
+                    source = playlist.source,
+                    id = playlist.id,
+                    title = playlist.name
+                )
+            )
+        }
+    }
 
     /** The link is published on a shared flow and raised as a share sheet by `WanderApp`. */
     fun share(track: UnifiedTrack) {

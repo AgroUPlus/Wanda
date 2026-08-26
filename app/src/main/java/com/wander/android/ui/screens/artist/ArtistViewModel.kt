@@ -9,15 +9,17 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.CatalogRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.ShareRepository
+import com.wander.android.data.sources.ShareKind
+import com.wander.android.data.sources.ShareTarget
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.net.URLDecoder
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.net.URLDecoder
-import javax.inject.Inject
 
 @HiltViewModel
 class ArtistViewModel @Inject constructor(
@@ -38,6 +40,31 @@ class ArtistViewModel @Inject constructor(
 
     val tracks: StateFlow<List<UnifiedTrack>> = catalogRepository.artistTracksFlow(artist)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * The backend's own id for this artist, taken from a track that credits them.
+     *
+     * This screen is keyed by *name* — it gathers everything by that artist across every source —
+     * so there is no single id to share until at least one track has loaded. Null means the
+     * action is not offered rather than offered and broken.
+     */
+    private fun artistTarget(): ShareTarget? {
+        val track = tracks.value.firstOrNull { !it.artistId.isNullOrBlank() } ?: return null
+        return ShareTarget(
+            kind = ShareKind.ARTIST,
+            source = track.source,
+            id = track.artistId.orEmpty(),
+            title = artist
+        )
+    }
+
+    fun canShareArtist(): Boolean =
+        artistTarget()?.let { shareRepository.canShare(it.source) } ?: false
+
+    fun shareArtist() {
+        val target = artistTarget() ?: return
+        viewModelScope.launch { shareRepository.share(target) }
+    }
 
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
