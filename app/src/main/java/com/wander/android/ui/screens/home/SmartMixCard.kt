@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.SmartMix
+import com.wander.android.ui.components.scrollingTitle
 
 /**
  * A one-press mix. Each mix carries its own gradient so the row reads as a set of distinct
@@ -85,7 +86,8 @@ fun SmartMixCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.85f),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Clip,
+                modifier = Modifier.scrollingTitle()
             )
         }
     }

@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.ui.components.Artwork
+import com.wander.android.ui.components.scrollingTitle
 
 @Composable
 fun AlbumCard(
@@ -41,15 +42,16 @@ fun AlbumCard(
             text = album.title,
             style = MaterialTheme.typography.titleMedium,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 8.dp)
+            overflow = TextOverflow.Clip,
+            modifier = Modifier.padding(top = 8.dp).scrollingTitle()
         )
         Text(
             text = album.artist,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Clip,
+            modifier = Modifier.scrollingTitle()
         )
     }
 }

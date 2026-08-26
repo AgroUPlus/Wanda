@@ -29,6 +29,7 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.isPlayableNow
 import com.wander.android.ui.components.rememberPressScale
+import com.wander.android.ui.components.scrollingTitle
 
 /**
  * Two rows of oversized cards that scroll sideways as one block.
@@ -106,15 +107,16 @@ private fun LargeTrackCard(
             text = track.title,
             style = MaterialTheme.typography.titleMedium,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Clip,
+            modifier = Modifier.scrollingTitle()
         )
         Text(
             text = track.artist,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 2.dp)
+            overflow = TextOverflow.Clip,
+            modifier = Modifier.padding(top = 2.dp).scrollingTitle()
         )
     }
 }

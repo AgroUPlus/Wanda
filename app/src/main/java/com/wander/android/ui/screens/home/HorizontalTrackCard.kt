@@ -23,6 +23,7 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.isPlayableNow
 import com.wander.android.ui.components.rememberPressScale
+import com.wander.android.ui.components.scrollingTitle
 
 /**
  * Spotify-style horizontal media card for carousels (Heavy Rotation, Recently Played).
@@ -69,7 +70,8 @@ fun HorizontalTrackCard(
             text = track.title,
             style = MaterialTheme.typography.titleSmall,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Clip,
+            modifier = Modifier.scrollingTitle()
         )
 
         // No quality badge here: it belongs to the track you are listening to, not to every card
@@ -79,8 +81,8 @@ fun HorizontalTrackCard(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 2.dp)
+            overflow = TextOverflow.Clip,
+            modifier = Modifier.padding(top = 2.dp).scrollingTitle()
         )
     }
 }

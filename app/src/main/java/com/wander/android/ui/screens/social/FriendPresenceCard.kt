@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -17,12 +16,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.wander.android.data.sources.agro.AgroFriendNowPlaying
 import com.wander.android.data.sources.agro.AgroProfile
 import com.wander.android.ui.components.ListeningGreen
+import com.wander.android.ui.components.scrollingTitle
 
 /**
  * One friend and what they are playing, for the row across the top of the Friends tab.
@@ -63,8 +64,8 @@ internal fun FriendPresenceCard(
                     text = profile.name,
                     style = MaterialTheme.typography.labelLarge,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.weight(1f).scrollingTitle()
                 )
                 if (nowPlaying.isPlaying) {
                     Surface(
@@ -78,14 +79,16 @@ internal fun FriendPresenceCard(
                 text = nowPlaying.trackTitle,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Clip,
+                modifier = Modifier.scrollingTitle()
             )
             Text(
                 text = nowPlaying.artistName,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Clip,
+                modifier = Modifier.scrollingTitle()
             )
         }
     }

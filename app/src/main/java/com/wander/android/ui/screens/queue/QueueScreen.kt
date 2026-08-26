@@ -49,6 +49,7 @@ import com.wander.android.data.sources.agro.JamTrack
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.TrackRow
+import com.wander.android.ui.components.scrollingTitle
 import com.wander.android.ui.screens.social.JamViewModel
 
 @Composable
@@ -175,13 +176,15 @@ private fun JamQueueContent(
                                 text = now.title,
                                 style = MaterialTheme.typography.titleMedium,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                overflow = TextOverflow.Clip,
+                                modifier = Modifier.scrollingTitle()
                             )
                             Text(
                                 text = now.artist,
                                 style = MaterialTheme.typography.bodySmall,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                overflow = TextOverflow.Clip,
+                                modifier = Modifier.scrollingTitle()
                             )
                         }
                     }
@@ -280,7 +283,8 @@ private fun JamQueueItem(
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.scrollingTitle()
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -340,7 +344,8 @@ private fun JamProposalItem(
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.scrollingTitle()
                 )
                 Text(
                     text = "${track.artist} · from @${track.addedBy}",

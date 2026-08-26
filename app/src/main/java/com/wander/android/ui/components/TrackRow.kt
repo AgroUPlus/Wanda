@@ -79,7 +79,8 @@ fun TrackRow(
                 color = if (isPlaying) MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Clip,
+                modifier = Modifier.scrollingTitle()
             )
             // No quality badge here: it belongs to the track you are listening to, not to every
             // row in every list. Now Playing is the one place that shows it.
@@ -88,8 +89,8 @@ fun TrackRow(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 2.dp)
+                overflow = TextOverflow.Clip,
+                modifier = Modifier.padding(top = 2.dp).scrollingTitle()
             )
         }
 
