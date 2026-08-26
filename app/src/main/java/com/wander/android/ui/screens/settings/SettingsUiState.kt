@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.core.update.UpdateCheckResult
 import com.wander.android.data.repository.SyncProgress
 import com.wander.android.data.sources.agro.AgroSyncedSettings
 
@@ -36,7 +37,11 @@ internal data class SettingsUiState(
     val syncedTracks: Int,
     val localTracks: Int,
     val shareDomain: String,
-    val agroShareDomain: String
+    val agroShareDomain: String,
+    val appVersion: String,
+    val updateCheck: UpdateCheckResult?,
+    val isCheckingForUpdate: Boolean,
+    val autoUpdateCheckEnabled: Boolean
 )
 
 @Composable
@@ -62,6 +67,9 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val localTracks by viewModel.localTracks.collectAsStateWithLifecycle()
     val shareDomain by viewModel.shareDomain.collectAsStateWithLifecycle()
     val agroShareDomain by viewModel.agroShareDomain.collectAsStateWithLifecycle()
+    val updateCheck by viewModel.updateCheck.collectAsStateWithLifecycle()
+    val isCheckingForUpdate by viewModel.isCheckingForUpdate.collectAsStateWithLifecycle()
+    val autoUpdateCheckEnabled by viewModel.isAutoUpdateCheckEnabled.collectAsStateWithLifecycle()
 
     return SettingsUiState(
         navidrome = navidrome,
@@ -84,6 +92,10 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         syncedTracks = syncedTracks,
         localTracks = localTracks,
         shareDomain = shareDomain,
-        agroShareDomain = agroShareDomain
+        agroShareDomain = agroShareDomain,
+        appVersion = viewModel.appVersion,
+        updateCheck = updateCheck,
+        isCheckingForUpdate = isCheckingForUpdate,
+        autoUpdateCheckEnabled = autoUpdateCheckEnabled
     )
 }

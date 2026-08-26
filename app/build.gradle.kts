@@ -63,7 +63,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 
     lint {
         // androidx.lifecycle's RepeatOnLifecycleDetector crashes on Kotlin 2.3 sources
@@ -145,7 +148,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
 
-    // YouTube cipher deobfuscation + PoToken (BotGuard) generation. GPL-3.0 — see LICENSE.
+    // YouTube cipher deobfuscation + PoToken (BotGuard) generation. GPL-3.0 (Wanda is AGPL-3.0;
+    // GPLv3 §13 permits the combination) — see LICENSE.
     implementation("com.github.ZemerTeam:zemer-cipher:55ef918b75")
     // zemer-cipher declares Timber compileOnly; it's absent at runtime without this.
     implementation("com.jakewharton.timber:timber:5.0.1")
