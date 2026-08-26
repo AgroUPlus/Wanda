@@ -1,11 +1,9 @@
 package com.wander.android.ui.screens.home
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -17,16 +15,11 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.graphicsLayer
@@ -99,30 +92,13 @@ private fun LargeTrackCard(
                 onLongClick = onLongPress
             )
     ) {
-        Box(contentAlignment = Alignment.BottomEnd) {
-            Artwork(
-                url = track.artworkUrl,
-                contentDescription = track.title,
-                sizeDp = CardWidth,
-                shape = MaterialTheme.shapes.large,
-                modifier = Modifier.size(CardWidth)
-            )
-            // Sits on the art rather than beside the title: on a card this size the play
-            // affordance is what the eye lands on, and the caption stays uncluttered.
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .padding(10.dp)
-                    .size(40.dp)
-                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.55f), CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.PlayArrow,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.inverseOnSurface
-                )
-            }
-        }
+        Artwork(
+            url = track.artworkUrl,
+            contentDescription = track.title,
+            sizeDp = CardWidth,
+            shape = MaterialTheme.shapes.large,
+            modifier = Modifier.size(CardWidth)
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
 
