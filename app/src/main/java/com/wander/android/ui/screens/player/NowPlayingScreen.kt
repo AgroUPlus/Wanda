@@ -50,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.AudioQualityBadge
+import com.wander.android.ui.components.scrollingTitle
 
 /** Nominal edge of the full-screen cover; drives the decode size, not the layout. */
 private val FullArtworkSize = 360.dp
@@ -276,7 +277,8 @@ internal fun NowPlayingScreen(
                         text = track.title,
                         style = MaterialTheme.typography.headlineSmall,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Clip,
+                        modifier = Modifier.scrollingTitle()
                     )
                     // These open the artist and album pages. They used to run a *search* for the
                     // name, which is a list of loosely matching tracks rather than the record or
@@ -290,8 +292,8 @@ internal fun NowPlayingScreen(
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier
+                            overflow = TextOverflow.Clip,
+                            modifier = Modifier.scrollingTitle()
                                 .clip(RoundedCornerShape(4.dp))
                                 .clickable(
                                     enabled = onOpenArtist != null && track.artist.isNotBlank()
@@ -307,8 +309,8 @@ internal fun NowPlayingScreen(
                                 color = if (albumId != null) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier
+                                overflow = TextOverflow.Clip,
+                                modifier = Modifier.scrollingTitle()
                                     .clip(RoundedCornerShape(4.dp))
                                     .clickable(enabled = albumId != null && onOpenAlbum != null) {
                                         albumId?.let { onOpenAlbum?.invoke(it) }

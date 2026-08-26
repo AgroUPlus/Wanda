@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.wander.android.ui.components.scrollingTitle
 
 /** "More from <artist>" — the way off an album page into the rest of the discography. */
 @Composable
@@ -43,8 +44,8 @@ internal fun ArtistLinkRow(
             text = "More from $artist",
             style = MaterialTheme.typography.bodyLarge,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
+            overflow = TextOverflow.Clip,
+            modifier = Modifier.weight(1f).scrollingTitle()
         )
         Icon(
             imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,

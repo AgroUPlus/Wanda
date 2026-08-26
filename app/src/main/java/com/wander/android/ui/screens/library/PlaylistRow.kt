@@ -16,6 +16,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.ui.components.Artwork
+import com.wander.android.ui.components.scrollingTitle
 
 @Composable
 fun PlaylistRow(
@@ -46,14 +47,16 @@ fun PlaylistRow(
                 text = playlist.name,
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Clip,
+                modifier = Modifier.scrollingTitle()
             )
             Text(
                 text = remember(playlist) { playlist.subtitle() },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Clip,
+                modifier = Modifier.scrollingTitle()
             )
         }
     }

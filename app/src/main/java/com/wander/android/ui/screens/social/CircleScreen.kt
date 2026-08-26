@@ -64,6 +64,7 @@ import com.wander.android.data.sources.agro.StatEntry
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.scrollingTitle
 
 private val PERIODS = listOf("WEEK", "MONTH", "YEAR", "ALL")
 
@@ -373,8 +374,8 @@ private fun TrendsetterCard(trendsetter: AgroTrendsetter) {
                                 text = trackName,
                                 style = MaterialTheme.typography.labelSmall,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                overflow = TextOverflow.Clip,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).scrollingTitle()
                             )
                         }
                     }

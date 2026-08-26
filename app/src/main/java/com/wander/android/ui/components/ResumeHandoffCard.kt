@@ -84,14 +84,16 @@ internal fun ResumeHandoffCard(
                     text = handoff.trackTitle,
                     style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.scrollingTitle()
                 )
                 Text(
                     text = handoff.artistName,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.scrollingTitle()
                 )
             }
 

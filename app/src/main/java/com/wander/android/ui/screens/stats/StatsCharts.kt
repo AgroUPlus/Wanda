@@ -18,6 +18,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.sources.agro.StatEntry
+import com.wander.android.ui.components.scrollingTitle
 
 /**
  * A row of bars scaled to the largest value in the set.
@@ -100,8 +101,8 @@ internal fun TopList(
                     text = entry.name,
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.weight(1f).scrollingTitle()
                 )
                 Text(
                     text = valueLabel(entry.value),

@@ -77,7 +77,8 @@ internal fun ListenAlongBar(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Clip,
+                modifier = Modifier.scrollingTitle()
             )
         }
         TextButton(onClick = onLeave) { Text("Leave") }
@@ -159,8 +160,8 @@ internal fun JamBar(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.weight(1f, fill = false).scrollingTitle()
                 )
             }
             androidx.compose.material3.IconButton(
