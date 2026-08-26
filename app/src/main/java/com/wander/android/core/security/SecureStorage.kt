@@ -34,6 +34,11 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     private val _isMonetDynamic = MutableStateFlow(prefs.getBoolean(KEY_MONET_DYNAMIC, true))
     val isMonetDynamic: StateFlow<Boolean> = _isMonetDynamic.asStateFlow()
 
+    /** Off by default: a version check on every launch is a network call the user did not ask for. */
+    private val _isAutoUpdateCheckEnabled =
+        MutableStateFlow(prefs.getBoolean(KEY_AUTO_UPDATE_CHECK, false))
+    val isAutoUpdateCheckEnabled: StateFlow<Boolean> = _isAutoUpdateCheckEnabled.asStateFlow()
+
     private val _navidromeConfigured = MutableStateFlow(hasNavidromeCredentials())
     val navidromeConfigured: StateFlow<Boolean> = _navidromeConfigured.asStateFlow()
 
@@ -124,6 +129,11 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _isMonetDynamic.value = enabled
     }
 
+    fun setAutoUpdateCheckEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_AUTO_UPDATE_CHECK, enabled) }
+        _isAutoUpdateCheckEnabled.value = enabled
+    }
+
     // ── Sharing ─────────────────────────────────────────────────────────────────────────────
 
     /**
@@ -192,6 +202,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _agroSyncSettings.value = false
         _shareDomain.value = ""
         _agroShareDomain.value = ""
+        _isAutoUpdateCheckEnabled.value = false
     }
 
     private val _agroConfigured = MutableStateFlow(hasAgroCredentials())
@@ -304,6 +315,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_RADIO_MODE = "key_radio_mode"
         private const val KEY_AMOLED_BLACK = "key_amoled_black"
         private const val KEY_MONET_DYNAMIC = "key_monet_dynamic"
+        private const val KEY_AUTO_UPDATE_CHECK = "key_auto_update_check"
         private const val KEY_INCOGNITO = "key_incognito"
         private const val KEY_LOCAL_WATERMARK = "key_local_scan_watermark"
         private const val KEY_SETUP_DONE = "key_setup_complete"

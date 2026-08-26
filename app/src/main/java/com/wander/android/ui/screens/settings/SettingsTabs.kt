@@ -14,5 +14,6 @@ internal enum class SettingsTab(val label: String) {
     APPEARANCE("Appearance"),
     PLAYBACK("Playback"),
     SHARING("Sharing"),
-    PRIVACY("Privacy")
+    PRIVACY("Privacy"),
+    ABOUT("About")
 }

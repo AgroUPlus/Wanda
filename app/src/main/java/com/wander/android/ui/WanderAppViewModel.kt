@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.security.SecureStorage
+import com.wander.android.core.update.UpdateCheckResult
+import com.wander.android.core.update.UpdateChecker
 import com.wander.android.ui.navigation.DeepLinkRouter
 import com.wander.android.data.repository.LibrarySyncRepository
 import com.wander.android.data.repository.PlaylistWriteRepository
@@ -40,7 +42,8 @@ class WanderAppViewModel @Inject constructor(
     private val sessionApi: AgroSessionApi,
     private val secureStorage: SecureStorage,
     private val deepLinkRouter: DeepLinkRouter,
-    connectivity: ConnectivityObserver
+    connectivity: ConnectivityObserver,
+    private val updateChecker: UpdateChecker
 ) : ViewModel() {
 
     /** Routes asked for from outside the composition — a tapped notification. */
@@ -188,6 +191,32 @@ class WanderAppViewModel @Inject constructor(
 
     /** Decides whether the app opens on the welcome flow or straight into the library. */
     val hasCompletedSetup: StateFlow<Boolean> = secureStorage.hasCompletedSetup
+
+    // ── Update check on launch ──────────────────────────────────────────────────────────────
+
+    private val _launchUpdateAvailable = MutableStateFlow<UpdateCheckResult.UpdateAvailable?>(null)
+    val launchUpdateAvailable: StateFlow<UpdateCheckResult.UpdateAvailable?> =
+        _launchUpdateAvailable.asStateFlow()
+
+    private var hasCheckedThisLaunch = false
+
+    /**
+     * Runs at most once per process. Gated on the Settings toggle, which defaults off: this is a
+     * network call the user did not ask for, so it only fires when they opted in.
+     */
+    fun checkForUpdateOnLaunch() {
+        if (hasCheckedThisLaunch || !secureStorage.isAutoUpdateCheckEnabled.value) return
+        hasCheckedThisLaunch = true
+        viewModelScope.launch {
+            (updateChecker.checkForUpdate() as? UpdateCheckResult.UpdateAvailable)?.let {
+                _launchUpdateAvailable.value = it
+            }
+        }
+    }
+
+    fun dismissLaunchUpdate() {
+        _launchUpdateAvailable.value = null
+    }
 
     /**
      * Runs once the audio permission is granted. The scan is incremental, so calling it on every

@@ -19,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -64,6 +65,7 @@ internal fun SettingsScreen(
         viewModel.refreshAgroVisibility()
     }
 
+    val uriHandler = LocalUriHandler.current
     val dialogs = rememberSettingsDialogs()
     SettingsDialogs(state = state, dialogs = dialogs, viewModel = viewModel)
 
@@ -166,6 +168,16 @@ internal fun SettingsScreen(
                         visibility = state.agroVisibility,
                         onVisibilityChange = viewModel::setAgroVisibility,
                         onForgetEverything = { dialogs.confirmForgetEverything = true }
+                    )
+
+                    SettingsTab.ABOUT -> aboutTab(
+                        appVersion = state.appVersion,
+                        updateCheck = state.updateCheck,
+                        isChecking = state.isCheckingForUpdate,
+                        autoUpdateCheck = state.autoUpdateCheckEnabled,
+                        onAutoUpdateCheckChange = viewModel::setAutoUpdateCheckEnabled,
+                        onCheckForUpdate = viewModel::checkForUpdate,
+                        onOpenRelease = { uriHandler.openUri(it) }
                     )
                 }
             }

@@ -110,6 +110,21 @@ Release builds are signed from `local.properties` (`releaseStoreFile`, `releaseS
 `releaseKeyAlias`, `releaseKeyPassword`). Without those keys the release build is left unsigned
 rather than falling back to the debug key.
 
+A GitHub Actions workflow (`.github/workflows/release-apk.yml`) builds and signs the release APK
+and attaches it whenever a GitHub Release is published, using the same four values stored as
+repository secrets (`RELEASE_KEYSTORE_BASE64`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`,
+`RELEASE_KEY_PASSWORD`).
+
+## Updating
+
+Settings > About has a manual **Check for update** row that looks up the latest GitHub release
+and compares it against the installed version. There is also a **Check for updates on launch**
+toggle, off by default, that runs the same check once each time the app opens and shows a popup
+if a newer release exists; either way, updating means opening the release page in the browser and
+installing the APK yourself — the app never downloads or installs anything on its own.
+
 ## License
 
-MIT
+AGPL-3.0. This project links `zemer-cipher`, which is GPL-3.0; GPLv3 §13 explicitly permits
+combining GPLv3 code with an AGPLv3 work, which is why Wanda itself can be licensed AGPL-3.0
+rather than GPL-3.0.

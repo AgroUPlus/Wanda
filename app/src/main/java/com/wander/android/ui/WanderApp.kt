@@ -42,6 +42,7 @@ import com.wander.android.ui.components.JamBar
 import com.wander.android.ui.components.JamBarHeight
 import com.wander.android.ui.components.ListenAlongBar
 import com.wander.android.ui.components.ListenAlongBarHeight
+import com.wander.android.ui.components.UpdateAvailableDialog
 import com.wander.android.ui.screens.social.JamViewModel
 import com.wander.android.ui.screens.social.SocialViewModel
 import com.wander.android.ui.components.player.PlayerSheet
@@ -63,6 +64,12 @@ fun WanderApp(
     viewModel: WanderAppViewModel = hiltViewModel()
 ) {
     val setupDone by viewModel.hasCompletedSetup.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) { viewModel.checkForUpdateOnLaunch() }
+    val launchUpdate by viewModel.launchUpdateAvailable.collectAsStateWithLifecycle()
+    launchUpdate?.let { update ->
+        UpdateAvailableDialog(update = update, onDismiss = viewModel::dismissLaunchUpdate)
+    }
 
     rememberPermissionGate(
         onAudioGranted = viewModel::onAudioPermissionGranted,

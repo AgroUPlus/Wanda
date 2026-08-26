@@ -7,6 +7,8 @@ import com.wander.android.core.cache.DownloadScheduler
 import com.wander.android.core.sync.LibrarySyncScheduler
 import com.wander.android.core.sync.LocalFileDeleter
 import com.wander.android.core.security.SecureStorage
+import com.wander.android.core.update.UpdateCheckResult
+import com.wander.android.core.update.UpdateChecker
 import com.wander.android.data.repository.LibrarySyncRepository
 import com.wander.android.data.repository.SyncProgress
 import com.wander.android.data.sources.agro.AgroClient
@@ -42,8 +44,29 @@ internal class SettingsViewModel @Inject constructor(
     private val sessionApi: AgroSessionApi,
     private val librarySync: LibrarySyncRepository,
     private val librarySyncScheduler: LibrarySyncScheduler,
-    private val localFileDeleter: LocalFileDeleter
+    private val localFileDeleter: LocalFileDeleter,
+    private val updateChecker: UpdateChecker
 ) : ViewModel() {
+
+    val appVersion: String get() = com.wander.android.BuildConfig.VERSION_NAME
+
+    private val _updateCheck = MutableStateFlow<UpdateCheckResult?>(null)
+    val updateCheck: StateFlow<UpdateCheckResult?> = _updateCheck.asStateFlow()
+
+    private val _isCheckingForUpdate = MutableStateFlow(false)
+    val isCheckingForUpdate: StateFlow<Boolean> = _isCheckingForUpdate.asStateFlow()
+
+    fun checkForUpdate() {
+        if (_isCheckingForUpdate.value) return
+        viewModelScope.launch {
+            _isCheckingForUpdate.value = true
+            _updateCheck.value = updateChecker.checkForUpdate()
+            _isCheckingForUpdate.value = false
+        }
+    }
+
+    val isAutoUpdateCheckEnabled: StateFlow<Boolean> = secureStorage.isAutoUpdateCheckEnabled
+    fun setAutoUpdateCheckEnabled(enabled: Boolean) = secureStorage.setAutoUpdateCheckEnabled(enabled)
 
     val navidromeConnected: StateFlow<Boolean> = secureStorage.navidromeConfigured
     val youTubeConnected: StateFlow<Boolean> = accountManager.isLoggedIn
