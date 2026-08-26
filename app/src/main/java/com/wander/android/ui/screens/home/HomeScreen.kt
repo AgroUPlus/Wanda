@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Devices
@@ -90,6 +91,8 @@ fun HomeScreen(
     // Held above the LazyColumn so a shelf scrolling off screen does not forget where it was.
     // See [HomeShelfStates].
     val shelfStates = remember { HomeShelfStates() }
+    // Hoisted so the radio button can hide itself while the list is moving — see InstantRadioFab.
+    val listState = rememberLazyListState()
 
     // The same long-press menu Library and Search use, so a track offers the same actions
     // wherever it is shown. Held here rather than per shelf: only one can be open at a time.
@@ -154,6 +157,7 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxSize()
             ) {
                 LazyColumn(
+                    state = listState,
                     contentPadding = contentPadding,
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
@@ -202,14 +206,23 @@ fun HomeScreen(
         if (!state.isLoading && !state.isGloballyEmpty) {
             InstantRadioFab(
                 isStarting = state.isStartingRadio,
+                isScrolling = listState.isScrollInProgress,
                 onClick = viewModel::startInstantRadio,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    // The shell already reserves the mini player and navigation bar in
-                    // `contentPadding`; this only adds the gap above whatever that came to.
+                    // Clearance, not stacking. The player sheet is drawn after the entire nav
+                    // host, so anything a screen puts near the bottom edge is painted over no
+                    // matter what elevation it claims — the only way to be *above* the docked
+                    // player is to not share space with it.
+                    //
+                    // `contentPadding` already carries the navigation bar plus the whole docked
+                    // strip (height, gap and the shadow it throws outside its own clip box), and
+                    // it shrinks back when nothing is playing. Adding the constants again here
+                    // would double-count them and leave the button floating in the middle of the
+                    // screen with no track loaded.
                     .padding(
                         start = 20.dp,
-                        bottom = contentPadding.calculateBottomPadding() + 16.dp
+                        bottom = contentPadding.calculateBottomPadding() + RadioFabClearance
                     )
             )
         }
@@ -249,3 +262,6 @@ private fun HomeHeader(
         }
     }
 }
+
+/** The gap between the radio button and whatever the shell has parked at the bottom edge. */
+private val RadioFabClearance = 16.dp
