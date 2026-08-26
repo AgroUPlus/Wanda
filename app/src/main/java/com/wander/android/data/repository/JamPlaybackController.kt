@@ -62,6 +62,9 @@ internal class JamPlaybackController @Inject constructor(
 
     private var reconcileJob: Job? = null
 
+    /** When the last corrective seek happened, so the next one can be held off. */
+    private var lastCorrectionAt: Long = 0L
+
     private val _unresolvable = MutableStateFlow<String?>(null)
     /** A track the room is playing that no source here has. */
     val unresolvable: StateFlow<String?> = _unresolvable.asStateFlow()
@@ -92,11 +95,16 @@ internal class JamPlaybackController @Inject constructor(
             return
         }
         pending = now
+        // Stamped here, before the work below. `follow` has to search for the track and resolve a
+        // stream, which takes seconds — measuring the room's clock from *after* that would bake
+        // this device's lookup time into where it thinks the room is, permanently and differently
+        // on every device.
+        val arrivedAt = SystemClock.elapsedRealtime()
         scope.launch {
             lock.withLock {
                 val target = pending ?: return@withLock
                 pending = null
-                follow(target)
+                follow(target, arrivedAt)
             }
         }
     }
@@ -111,7 +119,7 @@ internal class JamPlaybackController @Inject constructor(
         _outOfSync.value = false
     }
 
-    private suspend fun follow(now: JamNowPlaying) {
+    private suspend fun follow(now: JamNowPlaying, arrivedAt: Long) {
         // The same track again — a re-announcement, or a second listener joining. Already playing.
         if (now.trackId == playingTrackId) return
 
@@ -128,12 +136,19 @@ internal class JamPlaybackController @Inject constructor(
         _unresolvable.value = null
         playingTrackId = now.trackId
         basePositionMs = now.positionMs
-        baseAt = SystemClock.elapsedRealtime()
+        baseAt = arrivedAt
         trackDurationMs = now.durationMs
         _outOfSync.value = false
+        // Where the room has got to *by now*, not where it was when the frame was sent. Starting
+        // at the frame's own position meant beginning however long the lookup took behind the
+        // room, and then being seeked forward for it a few seconds later — a correction that was
+        // entirely self-inflicted.
+        val startAt = roomPositionMs()
+        // A correction immediately after starting would be measuring the buffer, so the cooldown
+        // starts here rather than at the first seek.
+        lastCorrectionAt = SystemClock.elapsedRealtime()
         withContext(Dispatchers.Main) {
-            // Started at the room's position, not at zero, so joining late lands in the right place.
-            playerConnection.playForJam(listOf(resolved.track), now.positionMs)
+            playerConnection.playForJam(listOf(resolved.track), startAt)
         }
         startReconciling()
     }
@@ -166,14 +181,29 @@ internal class JamPlaybackController @Inject constructor(
                     _outOfSync.value = true
                     continue
                 }
+                _outOfSync.value = false
+
+                // Buffering is not drift. The position sits still while a buffer fills, so
+                // measuring here measures the buffer — and "correcting" it seeks, which starts
+                // another buffer, which reads as more drift. That loop is what made this
+                // interrupt over and over instead of settling.
+                if (playerConnection.state.value.isBuffering) continue
+
+                // A correction is audible, so one is allowed and then the device is left alone
+                // for a while. Without this, a phone that simply cannot keep up — a slow stream,
+                // a weak signal — was seeked every few seconds forever, and every seek cost it
+                // more buffering than the drift it was fixing.
+                val sinceLastCorrection = SystemClock.elapsedRealtime() - lastCorrectionAt
+                if (sinceLastCorrection < CORRECTION_COOLDOWN_MS) continue
+
                 val actual = withContext(Dispatchers.Main) { playerConnection.currentPositionMs() }
                     ?: continue
                 val drift = kotlin.math.abs(actual - expected)
                 if (drift > DRIFT_TOLERANCE_MS) {
                     Log.i(TAG, "drifted ${drift}ms from the room; seeking back in step")
+                    lastCorrectionAt = SystemClock.elapsedRealtime()
                     withContext(Dispatchers.Main) { playerConnection.followerSeek(expected) }
                 }
-                _outOfSync.value = false
             }
         }
     }
@@ -205,10 +235,25 @@ internal class JamPlaybackController @Inject constructor(
         /**
          * How far out of step is worth correcting.
          *
-         * Two seconds rather than something tighter: a seek is audible, and correcting a drift
-         * nobody can hear would make the room stutter in the name of a synchronicity it already
-         * had. Network jitter and buffering routinely account for a second either way.
+         * Two seconds was too tight to be achievable, let alone worth achieving. The room's clock
+         * starts when the frame arrives, but this device then has to *search* for the track,
+         * resolve a stream and fill a buffer before a sound comes out — seconds, routinely. So a
+         * follower is legitimately behind from the moment it starts, and a threshold below that
+         * floor guarantees a correction on every pass.
+         *
+         * Six seconds sits above that floor. Nobody sharing a room is listening on two phones at
+         * once, and a few seconds between two people in different places is not something either
+         * of them can perceive — whereas the seek that closes it is something both of them hear.
          */
-        const val DRIFT_TOLERANCE_MS = 2_000L
+        const val DRIFT_TOLERANCE_MS = 6_000L
+
+        /**
+         * How long to leave the device alone after a corrective seek.
+         *
+         * Correcting costs a rebuffer, which puts the device behind again, which reads as fresh
+         * drift. Left ungated that is a loop, and it interrupts playback indefinitely on exactly
+         * the connections least able to afford it.
+         */
+        const val CORRECTION_COOLDOWN_MS = 30_000L
     }
 }
