@@ -64,6 +64,7 @@ internal fun SettingsScreen(
         viewModel.refreshAgroConnection()
         viewModel.refreshAgroVisibility()
         viewModel.refreshStorageUsage()
+        viewModel.refreshYouTubeAccount()
     }
 
     val uriHandler = LocalUriHandler.current
@@ -103,6 +104,7 @@ internal fun SettingsScreen(
                         navidromeServer = viewModel.navidromeServer,
                         syncedNavidrome = state.syncedNavidrome,
                         youTubeConnected = state.youTube,
+                        youTubeAccount = state.youTubeAccount,
                         localReady = state.localReady,
                         onNavidromeLogin = onNavidromeLogin,
                         onNavidromeSignOut = { dialogs.confirmNavidromeSignOut = true },

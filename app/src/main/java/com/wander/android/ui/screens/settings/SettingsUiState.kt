@@ -19,6 +19,7 @@ import com.wander.android.data.sources.agro.AgroSyncedSettings
 internal data class SettingsUiState(
     val navidrome: Boolean,
     val youTube: Boolean,
+    val youTubeAccount: String,
     val localReady: Boolean,
     val syncedNavidrome: AgroSyncedSettings?,
     val monet: Boolean,
@@ -50,6 +51,7 @@ internal data class SettingsUiState(
 internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiState {
     val navidrome by viewModel.navidromeConnected.collectAsStateWithLifecycle()
     val youTube by viewModel.youTubeConnected.collectAsStateWithLifecycle()
+    val youTubeAccount by viewModel.youTubeAccount.collectAsStateWithLifecycle()
     val localReady by viewModel.localAvailable.collectAsStateWithLifecycle()
     val syncedNavidrome by viewModel.syncedNavidrome.collectAsStateWithLifecycle()
     val monet by viewModel.isMonetDynamic.collectAsStateWithLifecycle()
@@ -78,6 +80,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     return SettingsUiState(
         navidrome = navidrome,
         youTube = youTube,
+        youTubeAccount = youTubeAccount,
         localReady = localReady,
         syncedNavidrome = syncedNavidrome,
         monet = monet,

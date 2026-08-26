@@ -66,6 +66,21 @@ class YTMusicSource @Inject constructor(
             root.responsiveListItems().mapNotNull(::parseResponsiveListItem)
         }
 
+    /**
+     * Who is signed in, for Settings to name.
+     *
+     * Served from the cache when there is one, so opening Settings is not a network call. A
+     * failure leaves the cache alone and answers with whatever was already known — "signed in"
+     * is still true when the name simply could not be fetched.
+     */
+    suspend fun accountName(): String {
+        if (!accountManager.isLoggedIn.value) return ""
+        accountManager.accountName.takeIf { it.isNotBlank() }?.let { return it }
+        val fetched = innerTube.accountName().getOrNull()?.takeIf { it.isNotBlank() } ?: return ""
+        accountManager.rememberAccountName(fetched)
+        return fetched
+    }
+
     override suspend fun getStreamInfo(trackId: String): Result<StreamInfo> {
         val videoId = trackId.removePrefix(YTM_PREFIX)
         return innerTube.player(videoId).mapCatching { response ->
