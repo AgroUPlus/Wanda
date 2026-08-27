@@ -259,7 +259,6 @@ fun WanderApp(
             // bottom edge is covered by the docked strip no matter what elevation it claims. Here
             // it is genuinely above it, whether or not anything is playing.
             val isStartingRadio by viewModel.isStartingRadio.collectAsStateWithLifecycle()
-            val homeScrolling by viewModel.homeScrolling.collectAsStateWithLifecycle()
             // `progress`, not `targetValue` like the cards above: the target only flips when the
             // gesture is released and the sheet decides where it is going, so the button hung
             // around for the whole drag and only left once the player had already arrived. This
@@ -270,10 +269,13 @@ fun WanderApp(
             val playerDocked by remember(sheetState) {
                 derivedStateOf { sheetState.progress <= DockedEpsilon }
             }
-            if (currentRoute == TopLevelDestination.HOME.route && playerDocked) {
+            // Only the route gates composition. `playerDocked` is passed *in* rather than wrapped
+            // around the call, because an `if` here would tear the button out before its exit
+            // transition could run — which is what made it pop rather than leave.
+            if (currentRoute == TopLevelDestination.HOME.route) {
                 InstantRadioFab(
                     isStarting = isStartingRadio,
-                    isScrolling = homeScrolling,
+                    isPlayerDocked = playerDocked,
                     onClick = viewModel::startInstantRadio,
                     modifier = Modifier
                         .align(Alignment.BottomStart)
