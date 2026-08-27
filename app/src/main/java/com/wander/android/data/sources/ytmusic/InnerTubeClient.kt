@@ -79,12 +79,19 @@ class InnerTubeClient @Inject constructor(
         val web = playerAs(videoId, InnerTubeVariant.WEB_REMIX)
         web.getOrNull()?.let { return Result.success(it) }
 
+        // Last, and only because the two above have already said no: a livestream has no format
+        // list for either of them to find, so this is the point at which "no playable audio" and
+        // "is it live?" become the same question. See `InnerTubeVariant.IOS`.
+        val ios = playerAs(videoId, InnerTubeVariant.IOS)
+        ios.getOrNull()?.let { return Result.success(it) }
+
         // Reporting only the last variant's error made every failure read as a WEB_REMIX problem,
         // hiding which identity YouTube actually refused and why.
         return Result.failure(
             IOException(
                 "ANDROID_VR: ${vr.exceptionOrNull()?.message ?: "failed"} | " +
-                    "WEB_REMIX: ${web.exceptionOrNull()?.message ?: "failed"}"
+                    "WEB_REMIX: ${web.exceptionOrNull()?.message ?: "failed"} | " +
+                    "IOS: ${ios.exceptionOrNull()?.message ?: "failed"}"
             )
         )
     }
@@ -118,14 +125,24 @@ class InnerTubeClient @Inject constructor(
                         put("clientVersion", variant.clientVersion)
                         put("hl", deviceLanguage())
                         put("gl", deviceCountry())
-                        if (isWeb) {
-                            put("visitorData", sessionId)
-                        } else {
-                            put("androidSdkVersion", ANDROID_VR_SDK_VERSION)
-                            put("osName", "Android")
-                            put("osVersion", ANDROID_VR_OS_VERSION)
-                            put("deviceMake", "Oculus")
-                            put("deviceModel", "Quest 3")
+                        when (variant) {
+                            InnerTubeVariant.WEB_REMIX -> put("visitorData", sessionId)
+                            InnerTubeVariant.ANDROID_VR -> {
+                                put("androidSdkVersion", ANDROID_VR_SDK_VERSION)
+                                put("osName", "Android")
+                                put("osVersion", ANDROID_VR_OS_VERSION)
+                                put("deviceMake", "Oculus")
+                                put("deviceModel", "Quest 3")
+                            }
+                            // The handset identity is checked against its own device fields, and
+                            // an iPhone claiming to be a Quest is refused before it gets as far
+                            // as the manifest.
+                            InnerTubeVariant.IOS -> {
+                                put("osName", "iPhone")
+                                put("osVersion", IOS_OS_VERSION)
+                                put("deviceMake", "Apple")
+                                put("deviceModel", IOS_DEVICE_MODEL)
+                            }
                         }
                     }
                 }
