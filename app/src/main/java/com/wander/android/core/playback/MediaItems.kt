@@ -27,6 +27,14 @@ private const val EXTRA_TRACK_JSON = "wanda.track"
  */
 internal const val LIVE_SUFFIX = ".m3u8"
 
+/**
+ * How far behind the live edge to sit.
+ *
+ * Close enough that "live" means it, far enough that a single slow segment does not stall the
+ * stream. YouTube's own HLS lives are served in ~5 s segments.
+ */
+private const val LIVE_TARGET_OFFSET_MS = 15_000L
+
 internal fun UnifiedTrack.toMediaItem(): MediaItem {
     val extras = Bundle().apply {
         putString(EXTRA_TRACK_JSON, HttpClientFactory.jsonConfig.encodeToString(this@toMediaItem))
@@ -60,7 +68,20 @@ internal fun UnifiedTrack.toMediaItem(): MediaItem {
         .setMediaMetadata(metadata)
         // Set as well as the URI suffix above. This is the hint the factory prefers when it
         // survives; the suffix is what makes it work when it does not.
-        .apply { if (isLive) setMimeType(MimeTypes.APPLICATION_M3U8) }
+        .apply {
+            if (isLive) {
+                setMimeType(MimeTypes.APPLICATION_M3U8)
+                // Without this the player treats the manifest's window as the item's duration and
+                // calls it finished when it reaches the end of it — which is exactly what a
+                // livestream looked like it was doing: playing for a while, then skipping on. A
+                // live configuration tells the player to keep following the edge instead.
+                setLiveConfiguration(
+                    MediaItem.LiveConfiguration.Builder()
+                        .setTargetOffsetMs(LIVE_TARGET_OFFSET_MS)
+                        .build()
+                )
+            }
+        }
         .build()
 }
 
@@ -85,6 +106,12 @@ internal fun MediaItem.toUnifiedTrack(): UnifiedTrack? {
     val trackAlbum = mediaMetadata.albumTitle?.toString()
     val trackArtwork = mediaMetadata.artworkUri?.toString()
 
+    // The URI carries the live hint for the same reason it carries it on the way out: it is the
+    // one field guaranteed to survive the trip. Rebuilding a live track as a normal one here put
+    // it straight back into the progressive path the `.m3u8` suffix exists to avoid.
+    val live = requestMetadata.mediaUri?.toString()?.endsWith(LIVE_SUFFIX) == true ||
+        localConfiguration?.uri?.toString()?.endsWith(LIVE_SUFFIX) == true
+
     return UnifiedTrack(
         id = trackId,
         source = resolvedSource,
@@ -92,7 +119,8 @@ internal fun MediaItem.toUnifiedTrack(): UnifiedTrack? {
         artist = trackArtist,
         album = trackAlbum,
         artworkUrl = trackArtwork,
-        streamUri = requestMetadata.mediaUri?.toString()
+        streamUri = requestMetadata.mediaUri?.toString(),
+        isLive = live
     )
 }
 

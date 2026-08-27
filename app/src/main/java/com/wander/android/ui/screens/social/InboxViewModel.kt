@@ -6,6 +6,7 @@ import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.repository.DropsRepository
 import com.wander.android.data.repository.ListenAlongResolver
+import com.wander.android.data.repository.SocialRepository
 import com.wander.android.data.sources.agro.AgroDrop
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -30,6 +31,7 @@ internal class InboxViewModel @Inject constructor(
     private val drops: DropsRepository,
     private val resolver: ListenAlongResolver,
     private val playerConnection: PlayerConnection,
+    private val social: SocialRepository,
     secureStorage: SecureStorage
 ) : ViewModel() {
 
@@ -47,21 +49,41 @@ internal class InboxViewModel @Inject constructor(
             combine(
                 drops.threads,
                 drops.unreadByFriend,
-                drops.unreadCount
-            ) { threads, unreadByFriend, unread ->
-                Triple(threads, unreadByFriend, unread)
-            }.collect { (threads, unreadByFriend, unread) ->
+                drops.unreadCount,
+                // The friend list is already cached in Room, so this costs a map rather than a
+                // request — and without it every name in the inbox is a bare `@handle`.
+                social.friends
+            ) { threads, unreadByFriend, unread, friends ->
+                InboxSnapshot(threads, unreadByFriend, unread, friends.associateBy { it.username.lowercase() })
+            }.collect { snapshot ->
                 _state.value = _state.value.copy(
-                    threads = threads,
-                    unreadByFriend = unreadByFriend,
-                    unread = unread,
+                    threads = snapshot.threads,
+                    unreadByFriend = snapshot.unreadByFriend,
+                    unread = snapshot.unread,
+                    people = snapshot.people,
                     loading = false,
                     me = me
                 )
             }
         }
+        // Your own avatar, for the bubbles you sent. A failure here is not worth reporting: the
+        // fallback is the generated avatar, which is what an account without a picture gets anyway.
+        viewModelScope.launch {
+            if (me.isNotBlank()) {
+                social.profile(me).getOrNull()?.let { profile ->
+                    _state.value = _state.value.copy(myAvatarUrl = profile.avatarUrl)
+                }
+            }
+        }
         refresh()
     }
+
+    private data class InboxSnapshot(
+        val threads: List<AgroDrop>,
+        val unreadByFriend: Map<String, Int>,
+        val unread: Int,
+        val people: Map<String, com.wander.android.data.sources.agro.AgroProfile>
+    )
 
     fun refresh() {
         viewModelScope.launch { drops.refresh() }
@@ -78,7 +100,15 @@ internal class InboxViewModel @Inject constructor(
         viewModelScope.launch { drops.markRead(id) }
     }
 
-    fun archive(id: String) {
+    /**
+     * Takes a message out of the conversation, for this account only.
+     *
+     * There is no "delete for everyone" behind this and the wording does not pretend otherwise:
+     * the row is marked archived locally and the server keeps the other side's copy. It replaced
+     * an archive button that sat permanently in every incoming bubble doing exactly this, which
+     * spent a control on something people do rarely.
+     */
+    fun remove(id: String) {
         viewModelScope.launch { drops.archive(id) }
     }
 

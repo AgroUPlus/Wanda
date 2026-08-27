@@ -11,8 +11,11 @@ package com.wander.android.data.sources.ytmusic
  * `ANDROID_MUSIC` and `WEB_REMIX` player calls now require a PO Token (BotGuard/DroidGuard
  * attestation) YouTube does not hand out to third-party apps; without one, `/player` refuses even
  * playable, unrestricted videos with LOGIN_REQUIRED/UNPLAYABLE. `WEB_EMBEDDED` returns
- * `playabilityStatus: ERROR` with no formats. So `ANDROID_VR` is the sole playback identity, and
- * `WEB_REMIX` is kept only for the signed-in surfaces — search, browse, library, likes.
+ * `playabilityStatus: ERROR` with no formats. So `ANDROID_VR` is the sole playback identity for
+ * ordinary tracks, and `WEB_REMIX` is kept only for the signed-in surfaces — search, browse,
+ * library, likes.
+ *
+ * Livestreams are the exception, and [IOS] exists for them alone — see its own note.
  */
 enum class InnerTubeVariant(
     /** `X-YouTube-Client-Name` header value / INNERTUBE_CONTEXT_CLIENT_NAME. */
@@ -48,6 +51,27 @@ enum class InnerTubeVariant(
         clientVersion = "1.65.10",
         userAgent = "com.google.android.apps.youtube.vr.oculus/1.65.10 " +
             "(Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip",
+        apiBaseUrl = "https://www.youtube.com/youtubei/v1"
+    ),
+
+    /**
+     * Livestreams, and nothing else.
+     *
+     * A live video has no format list at all — it is served through an HLS manifest, and
+     * `streamingData.hlsManifestUrl` is the only thing in a `/player` response that can play it.
+     * [ANDROID_VR] is a headset identity that never returns that field, and [WEB_REMIX] refuses
+     * the call outright without a PO Token, so between them a livestream had no route to a
+     * manifest and every one of them failed with a flat "will not play this track".
+     *
+     * The handset identity does return it, and is PO-Token-exempt for the same reason
+     * [ANDROID_VR] is. It is tried only after the other two, so ordinary tracks keep taking the
+     * path they already take.
+     */
+    IOS(
+        clientId = "5",
+        contextClientName = "IOS",
+        clientVersion = "20.29.6",
+        userAgent = "com.google.ios.youtube/20.29.6 (iPhone16,2; U; CPU iOS 18_5 like Mac OS X)",
         apiBaseUrl = "https://www.youtube.com/youtubei/v1"
     )
 }

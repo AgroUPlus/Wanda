@@ -85,19 +85,37 @@ internal class PlaybackCoordinator @Inject constructor(
         // setting killed the visualizer on one and left it working on the other.
         connection.controller
             .filterNotNull()
-            .onEach { applyOffloadForVisualizer() }
+            .onEach { applyOffload() }
+            .launchIn(scope)
+
+        // And on whether the current track is live, for a reason that has nothing to do with the
+        // visualizer — see `applyOffload`.
+        connection.state
+            .map { it.currentTrack?.isLive == true }
+            .distinctUntilChanged()
+            .onEach { applyOffload() }
             .launchIn(scope)
     }
 
     /**
-     * Offload and the visualizer are mutually exclusive; this states which one currently wins.
+     * The single place that decides whether offload is on, because two unrelated things want it off.
+     *
+     * A visualizer needs decoded PCM, which offload bypasses — that is the original trade-off, and
+     * the flag on the processor is the truth of it rather than the stored mode, so a visualizer
+     * paused because nobody is looking takes the battery win back.
+     *
+     * A livestream wants it off for a different reason: offload hands a fixed buffer to the DSP and
+     * expects a track that ends, and an HLS live window is neither. With it on, a live stream
+     * played to the end of the first window and the player called the item finished — which is what
+     * the "it plays for a bit then skips to the next song" report was.
      *
      * On the main thread, always. `setOffloadEnabled` writes `trackSelectionParameters` on the
      * MediaController, and Media3 throws outright when a controller is touched from anywhere else —
      * this scope is [Dispatchers.Default], so calling it directly crashed the app.
      */
-    private fun applyOffloadForVisualizer() {
-        val offload = _visualizerMode.value == VisualizerMode.OFF
+    private fun applyOffload() {
+        val live = connection.state.value.currentTrack?.isLive == true
+        val offload = !fftProcessor.isVisualizerActive && !live
         scope.launch(Dispatchers.Main) { connection.setOffloadEnabled(offload) }
     }
 
@@ -109,22 +127,22 @@ internal class PlaybackCoordinator @Inject constructor(
         _visualizerMode.value = mode
         val active = mode != VisualizerMode.OFF
         fftProcessor.isVisualizerActive = active
-        applyOffloadForVisualizer()
+        applyOffload()
     }
 
     /** Called when Now Playing leaves the screen: stop doing FFT work nobody can see. */
     fun pauseVisualizer() {
         fftProcessor.isVisualizerActive = false
-        // Nothing is watching, so take the battery win back — on the main thread, like every other
-        // controller write.
-        scope.launch(Dispatchers.Main) { connection.setOffloadEnabled(true) }
+        // Nothing is watching, so take the battery win back — unless the current track is live,
+        // which `applyOffload` is the one place that knows.
+        applyOffload()
     }
 
     fun resumeVisualizer() {
         fftProcessor.isVisualizerActive = _visualizerMode.value != VisualizerMode.OFF
         // Setting the flag is not enough: without decoded PCM there is nothing for it to process,
         // and returning to Now Playing must undo any offload turned back on while it was away.
-        applyOffloadForVisualizer()
+        applyOffload()
     }
 
     private data class RadioTrigger(val enabled: Boolean, val index: Int, val size: Int)

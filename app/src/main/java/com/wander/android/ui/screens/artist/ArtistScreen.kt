@@ -52,6 +52,7 @@ fun ArtistScreen(
     val albums by viewModel.albums.collectAsStateWithLifecycle()
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val details by viewModel.details.collectAsStateWithLifecycle()
     val trackKeys = remember(tracks) { trackListKeys(tracks) }
     var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
 
@@ -111,7 +112,9 @@ fun ArtistScreen(
                 ArtistHero(
                     name = viewModel.artist,
                     subtitle = artistSubtitle(albums.size, tracks.size),
-                    imageUrl = viewModel.image(),
+                    // The backend's portrait when it has one; otherwise a cover off one of their
+                    // records, which is what this page has always fallen back to.
+                    imageUrl = viewModel.heroImage(),
                     onPlay = viewModel::playTop,
                     onRadio = viewModel::startArtistRadio,
                     onShuffle = viewModel::shuffle,
@@ -120,9 +123,26 @@ fun ArtistScreen(
                 )
             }
 
+            details?.bio?.let { bio ->
+                item(key = "bio", contentType = "bio") { ArtistBio(bio) }
+            }
+
+            // The artist's own page first — their shelves, in their order. What the library knows
+            // follows underneath, because it is a different claim: one is "here is this artist",
+            // the other is "here is what you have of them".
+            details?.sections?.let { sections ->
+                artistSections(
+                    sections = sections,
+                    onOpenAlbum = onOpenAlbum,
+                    onPlayTrack = viewModel::playOne,
+                    onLongPressTrack = { actionsFor = it },
+                    onToggleLike = viewModel::toggleLike
+                )
+            }
+
             if (albums.isNotEmpty()) {
                 item(key = "albums-title", contentType = "section-title") {
-                    SectionTitle("Discography")
+                    ArtistSectionTitle(if (details == null) "Discography" else "In your library")
                 }
                 item(key = "albums", contentType = "album-row") {
                     LazyRow(
@@ -138,7 +158,7 @@ fun ArtistScreen(
 
             if (tracks.isNotEmpty()) {
                 item(key = "tracks-title", contentType = "section-title") {
-                    SectionTitle("Top songs")
+                    ArtistSectionTitle("Top songs")
                 }
                 itemsIndexed(
                     items = tracks,
@@ -163,7 +183,7 @@ fun ArtistScreen(
 }
 
 @Composable
-private fun SectionTitle(text: String) {
+internal fun ArtistSectionTitle(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.titleLarge,

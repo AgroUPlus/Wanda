@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.social
 
 import androidx.compose.runtime.Immutable
 import com.wander.android.data.sources.agro.AgroDrop
+import com.wander.android.data.sources.agro.AgroProfile
 
 /** What the inbox screen draws. */
 @Immutable
@@ -30,7 +31,17 @@ internal data class InboxUiState(
     /** The drop currently being looked up, so its row can say so instead of seeming inert. */
     val resolving: String? = null,
     /** This account's username, so a message can be told from a reply. */
-    val me: String = ""
+    val me: String = "",
+    /**
+     * Everyone this account is friends with, keyed by lowercased username.
+     *
+     * A drop carries usernames and nothing else, so the inbox had no way to show anybody by the
+     * name they chose — it printed `@handle` everywhere while the rest of the app used display
+     * names. This is the friend list it already has, indexed so a bubble can look one up.
+     */
+    val people: Map<String, AgroProfile> = emptyMap(),
+    /** This account's own avatar, for the bubbles it sent. */
+    val myAvatarUrl: String? = null
 ) {
     /** Who an exchange is with: whoever is not this account. */
     fun counterpart(drop: AgroDrop): String =
@@ -38,4 +49,10 @@ internal data class InboxUiState(
 
     /** True when this account sent it, which is what decides the side a bubble sits on. */
     fun isMine(drop: AgroDrop): Boolean = drop.fromUser.equals(me, ignoreCase = true)
+
+    /** What to call someone: the name they chose, or their username when they have not chosen one. */
+    fun nameOf(username: String): String = people[username.lowercase()]?.name ?: username
+
+    /** Their avatar, or null — in which case `CuteAvatar` draws one from the username. */
+    fun avatarOf(username: String): String? = people[username.lowercase()]?.avatarUrl
 }

@@ -3,6 +3,7 @@ package com.wander.android.data.sources
 import com.wander.android.data.model.LyricsData
 import com.wander.android.data.model.RecommendedShelf
 import com.wander.android.data.model.SourceType
+import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.SearchKind
@@ -77,6 +78,16 @@ interface IMusicSource {
 
     suspend fun getAlbumTracks(albumId: String): Result<List<UnifiedTrack>> =
         Result.success(emptyList())
+
+    /**
+     * The artist's own page — bio, portrait, and the shelves the backend arranges them into.
+     *
+     * Only meaningful when [SourceCapabilities.artists] is set. The default fails rather than
+     * returning an empty page: a source that has no artist endpoint has nothing to say about an
+     * artist, and an empty page presented as theirs would be a claim that they have no records.
+     */
+    suspend fun getArtist(artistId: String): Result<ArtistDetails> =
+        Result.failure(UnsupportedOperationException("$sourceType has no artist pages"))
 
     suspend fun getPlaylists(): Result<List<UnifiedPlaylist>> = Result.success(emptyList())
     suspend fun getPlaylistTracks(playlistId: String): Result<List<UnifiedTrack>> =

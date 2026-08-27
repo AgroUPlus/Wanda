@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.data.repository.ListenAlongController
 import com.wander.android.data.repository.ListenAlongSession
+import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.repository.SocialRepository
 import com.wander.android.data.sources.agro.AgroFeedItem
 import com.wander.android.data.sources.agro.AgroFriendNowPlaying
@@ -25,8 +26,11 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 internal class SocialViewModel @Inject constructor(
     private val repository: SocialRepository,
-    private val listenAlong: ListenAlongController
+    private val listenAlong: ListenAlongController,
+    secureStorage: SecureStorage
 ) : ViewModel() {
+
+    private val me: String = secureStorage.agroUsername
 
     private val _state = MutableStateFlow(SocialUiState())
     val state: StateFlow<SocialUiState> = _state.asStateFlow()
@@ -57,6 +61,8 @@ internal class SocialViewModel @Inject constructor(
             @Suppress("UNCHECKED_CAST")
             val feed = values[5] as List<AgroFeedItem>
             _state.value.copy(
+                loading = false,
+                myUsername = me,
                 isPaired = paired,
                 friends = friends,
                 incoming = requests.filter { !it.outgoing },
@@ -73,6 +79,16 @@ internal class SocialViewModel @Inject constructor(
             .distinctUntilChanged()
             .onEach { runSearch(it) }
             .launchIn(viewModelScope)
+
+        // Your own picture, for the header. A failure is not worth reporting: without it the
+        // generated avatar stands in, which is what an account with no picture gets anyway.
+        viewModelScope.launch {
+            if (me.isNotBlank()) {
+                repository.profile(me).getOrNull()?.let { profile ->
+                    _state.value = _state.value.copy(myAvatarUrl = profile.avatarUrl)
+                }
+            }
+        }
 
         refresh()
     }

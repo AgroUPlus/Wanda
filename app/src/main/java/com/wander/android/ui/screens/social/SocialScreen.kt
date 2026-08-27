@@ -1,5 +1,7 @@
 package com.wander.android.ui.screens.social
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material3.Card
@@ -26,10 +27,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.ui.components.CuteAvatar
+import com.wander.android.ui.components.SkeletonRow
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
 
@@ -76,38 +82,26 @@ internal fun SocialScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .padding(contentPadding.headerInset())
-                .padding(start = 20.dp, end = 20.dp, top = 16.dp)
-                .fillMaxWidth()
-        ) {
-            Text(text = "Friends", style = MaterialTheme.typography.headlineLarge)
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (state.isPaired) {
-                    InboxAction(unread = unread, onClick = onOpenInbox)
-                    FilledTonalIconButton(onClick = { searching = true }) {
-                        Icon(Icons.Rounded.PersonAdd, contentDescription = "Find people")
-                    }
-                }
-                // Outside the `isPaired` branch on purpose. Your own profile — and the listening
-                // statistics behind it — is about you, not about anyone else, so it must not
-                // disappear because no server is paired or because nobody has been added yet.
-                // This is also where the stats button lives now: it was in Home's header, which
-                // is the one place on the screen that has nothing to do with statistics.
-                FilledTonalIconButton(onClick = onOpenMyProfile) {
-                    Icon(Icons.Rounded.AccountCircle, contentDescription = "My profile")
-                }
-            }
-        }
+        SocialHeader(
+            state = state,
+            unread = unread,
+            contentPadding = contentPadding,
+            onOpenInbox = onOpenInbox,
+            onOpenMyProfile = onOpenMyProfile,
+            onFindPeople = { searching = true }
+        )
 
         if (!state.isPaired) {
             NotPairedNotice(onOpenSettings = onOpenSettings)
+            return
+        }
+
+        // Placeholders only on the very first read, and only with nothing cached. After that Room
+        // answers instantly and the tab would flash placeholders over content already on screen.
+        if (state.loading && state.isEmpty) {
+            Column(modifier = Modifier.fillMaxSize().padding(contentPadding.listInset())) {
+                repeat(SKELETON_ROWS) { SkeletonRow() }
+            }
             return
         }
 
@@ -283,3 +277,6 @@ internal fun NotPairedNotice(onOpenSettings: () -> Unit) {
         }
     }
 }
+
+/** Enough to fill the fold. A placeholder nobody scrolls to is work for nothing. */
+private const val SKELETON_ROWS = 6

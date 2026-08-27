@@ -73,8 +73,11 @@ internal fun QueueRadioButton(
             return@LaunchedEffect
         }
         wiggle.snapTo(0f)
+        // Target 0f, not 1f. `Animatable.animateTo` settles on its *target* once the spec has run,
+        // whatever the last keyframe says — targeting 1f left the icon parked at a permanent 14
+        // degrees and 1.12x the moment the wiggle finished.
         wiggle.animateTo(
-            targetValue = 1f,
+            targetValue = 0f,
             animationSpec = keyframes {
                 durationMillis = 420
                 0f at 0
