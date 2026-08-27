@@ -33,6 +33,11 @@ import com.wander.android.ui.components.ListeningGreen
  * Agro keeps **one** session per user rather than one per device, so Resume always picks up the
  * most recent one, whichever device produced it. The copy says so instead of implying you can pull
  * a specific device's stream.
+ *
+ * These are **your own** account's devices, and this one is never among them — it is the device
+ * you are holding. So an empty list is the ordinary state for anyone signed in on one phone, and
+ * the section says that rather than vanishing: a heading that is simply absent looks like a
+ * feature that failed to load, which is exactly how it was read.
  */
 internal fun LazyListScope.agroDevicesSection(
     devices: List<AgroNode>,
@@ -40,9 +45,20 @@ internal fun LazyListScope.agroDevicesSection(
     isResuming: Boolean,
     onResume: (AgroHandoffState) -> Unit
 ) {
-    if (devices.isEmpty()) return
-
     item(key = "agro_devices_header") { SettingsSection("Devices") }
+
+    if (devices.isEmpty()) {
+        item(key = "agro_devices_empty") {
+            Text(
+                text = "Nothing else is signed in. Other devices using this Agro account " +
+                    "show up here — this one never does.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+            )
+        }
+        return
+    }
 
     items(items = devices, key = { "agro_device_${it.deviceId}" }) { node ->
         val resumable = handoff?.takeIf { it.deviceId == node.deviceId }
