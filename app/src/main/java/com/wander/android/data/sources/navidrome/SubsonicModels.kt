@@ -26,7 +26,34 @@ data class SubsonicResponse(
     val similarSongs2: SubsonicSimilarSongs? = null,
     /** `getSong.view` — one track by id, used when another device hands over a session. */
     val song: SubsonicSong? = null,
-    val shares: SubsonicShares? = null
+    val shares: SubsonicShares? = null,
+    /** `getArtist.view` — an artist and their records. */
+    val artist: SubsonicArtistDetail? = null,
+    /** `getArtistInfo2.view` — the biography and portraits, which the artist row does not carry. */
+    val artistInfo2: SubsonicArtistInfo? = null
+)
+
+/** `getArtist.view`: the artist row plus every album credited to them. */
+@Serializable
+data class SubsonicArtistDetail(
+    val id: String,
+    val name: String,
+    val coverArt: String? = null,
+    val album: List<SubsonicAlbum>? = null
+)
+
+/**
+ * `getArtistInfo2.view`.
+ *
+ * The endpoint has always existed on Navidrome and Wanda never called it, so an artist page built
+ * from a Subsonic server had no biography at all — the one source in the app that reliably serves
+ * one. `biography` arrives as HTML with a trailing "Read more on Last.fm" link.
+ */
+@Serializable
+data class SubsonicArtistInfo(
+    val biography: String? = null,
+    val largeImageUrl: String? = null,
+    val mediumImageUrl: String? = null
 )
 
 /** `createShare` / `getShares`. Navidrome returns the public URL ready to hand out. */

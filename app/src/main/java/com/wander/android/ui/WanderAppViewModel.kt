@@ -65,19 +65,6 @@ class WanderAppViewModel @Inject constructor(
     val isStartingRadio: StateFlow<Boolean> = _isStartingRadio.asStateFlow()
 
     /**
-     * Whether Home's feed is moving, reported up by the screen.
-     *
-     * A button pinned over a scrolling list is in the way of the thing being scrolled, and the
-     * shell has no other way to know — the list state belongs to the screen.
-     */
-    private val _homeScrolling = MutableStateFlow(false)
-    val homeScrolling: StateFlow<Boolean> = _homeScrolling.asStateFlow()
-
-    fun setHomeScrolling(scrolling: Boolean) {
-        _homeScrolling.value = scrolling
-    }
-
-    /**
      * Starts a station with nothing to go on — no seed, no chosen playlist.
      *
      * Radio mode goes on with it, so the station keeps topping itself up instead of ending forty

@@ -30,6 +30,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -45,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.ui.components.AddToPlaylistHost
+import com.wander.android.ui.components.SkeletonRow
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.ExpressiveRefreshIndicator
 import com.wander.android.ui.components.NewPlaylistDialog
@@ -93,6 +95,7 @@ fun LibraryScreen(
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val likedTracks by viewModel.likedTracks.collectAsStateWithLifecycle()
     val downloadedTracks by viewModel.downloadedTracks.collectAsStateWithLifecycle()
+    val historyTracks by viewModel.historyTracks.collectAsStateWithLifecycle()
     val albums by viewModel.albums.collectAsStateWithLifecycle()
     val recentAlbums by viewModel.recentAlbums.collectAsStateWithLifecycle()
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
@@ -166,8 +169,9 @@ fun LibraryScreen(
                     LibraryTab.ALBUMS ->
                         AlbumGrid(albums, recentAlbums, contentPadding, onOpenAlbum)
                     LibraryTab.PLAYLISTS -> PlaylistList(playlists, contentPadding, viewModel)
-                    LibraryTab.LIKED -> TrackList(likedTracks, pageTab, contentPadding, viewModel) { actionsFor = it }
-                    LibraryTab.DOWNLOADS -> TrackList(downloadedTracks, pageTab, contentPadding, viewModel) { actionsFor = it }
+                    LibraryTab.LIKED -> TrackList(likedTracks, pageTab, isRefreshing, contentPadding, viewModel) { actionsFor = it }
+                    LibraryTab.HISTORY -> TrackList(historyTracks, pageTab, isRefreshing, contentPadding, viewModel) { actionsFor = it }
+                    LibraryTab.DOWNLOADS -> TrackList(downloadedTracks, pageTab, isRefreshing, contentPadding, viewModel) { actionsFor = it }
                     LibraryTab.TRACKS -> Column(modifier = Modifier.fillMaxSize()) {
                         if (viewModel.availableSources.size > 1) {
                             SourceFilterChips(
@@ -177,7 +181,7 @@ fun LibraryScreen(
                                 modifier = Modifier.padding(vertical = 8.dp)
                             )
                         }
-                        TrackList(tracks, pageTab, contentPadding, viewModel) { actionsFor = it }
+                        TrackList(tracks, pageTab, isRefreshing, contentPadding, viewModel) { actionsFor = it }
                     }
                 }
             }
@@ -328,11 +332,26 @@ private fun PlaylistList(
 private fun TrackList(
     tracks: List<com.wander.android.data.model.UnifiedTrack>,
     tab: LibraryTab,
+    isRefreshing: Boolean,
     contentPadding: PaddingValues,
     viewModel: LibraryViewModel,
     onLongPress: (com.wander.android.data.model.UnifiedTrack) -> Unit
 ) {
     if (tracks.isEmpty()) {
+        // An empty list and a list that has not arrived look identical, and the empty state makes
+        // a claim — "your library is empty" — that a refresh in flight has not yet earned.
+        if (isRefreshing) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(contentPadding.listInset())
+            ) {
+                repeat(SKELETON_ROWS) {
+                    SkeletonRow(leadingSize = 48.dp, leadingShape = RoundedCornerShape(8.dp))
+                }
+            }
+            return
+        }
         Centered {
             EmptyState(title = emptyTitleFor(tab), message = emptyMessageFor(tab))
         }
@@ -355,12 +374,14 @@ private fun TrackList(
 }
 
 private fun emptyTitleFor(tab: LibraryTab) = when (tab) {
+    LibraryTab.HISTORY -> "Nothing played yet"
     LibraryTab.LIKED -> "Nothing liked yet"
     LibraryTab.DOWNLOADS -> "Nothing saved offline"
     else -> "Your library is empty"
 }
 
 private fun emptyMessageFor(tab: LibraryTab) = when (tab) {
+    LibraryTab.HISTORY -> "Everything you play turns up here, newest first."
     LibraryTab.LIKED -> "Tap the heart on any track to keep it here."
     LibraryTab.DOWNLOADS ->
         "Liked tracks download automatically on Wi-Fi while your phone is charging."
@@ -374,3 +395,6 @@ private fun Centered(content: @Composable () -> Unit) {
 
 /** Below this the row is not telling you anything the grid underneath it does not. */
 private const val MinRecentAlbums = 4
+
+/** Enough to fill the fold; a placeholder nobody scrolls to is work for nothing. */
+private const val SKELETON_ROWS = 8

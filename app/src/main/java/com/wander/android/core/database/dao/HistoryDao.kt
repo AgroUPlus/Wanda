@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import com.wander.android.core.database.entity.HistoryEntity
+import com.wander.android.core.database.entity.TrackEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -11,6 +12,26 @@ interface HistoryDao {
 
     @Query("SELECT * FROM history ORDER BY playedAt DESC LIMIT :limit")
     fun getRecentHistoryFlow(limit: Int = 50): Flow<List<HistoryEntity>>
+
+    /**
+     * What was played, most recent first, as tracks rather than as ids.
+     *
+     * `GROUP BY` rather than one row per play: a song put on four times in an evening is one thing
+     * you listened to, and four identical rows in a row is a log, not a history. `MAX(playedAt)` is
+     * what the ordering is then done on, so it is the most recent play that decides the position.
+     *
+     * `INNER JOIN` because a play whose track has since left the library has nothing to show.
+     */
+    @Query(
+        """
+        SELECT t.* FROM history h
+        INNER JOIN tracks t ON t.id = h.trackId
+        GROUP BY h.trackId
+        ORDER BY MAX(h.playedAt) DESC
+        LIMIT :limit
+        """
+    )
+    fun getRecentlyPlayedTracksFlow(limit: Int = 200): Flow<List<TrackEntity>>
 
     /** Plays that could not be scrobbled yet — retried when the source comes back online. */
     @Query("SELECT * FROM history WHERE scrobbled = 0 ORDER BY playedAt ASC LIMIT :limit")

@@ -17,8 +17,21 @@ import kotlinx.serialization.json.JsonElement
  */
 internal class InnerTubeSubtitle private constructor(private val tokens: List<JsonElement>) {
 
-    val artist: String? = tokens.firstOrNull { it.pageType() == ARTIST_PAGE }?.textOf()
+    private val artistRun: JsonElement? = tokens.firstOrNull { it.pageType() == ARTIST_PAGE }
+
+    val artist: String? = artistRun?.textOf()
         ?: withoutTypeLabel().firstOrNull()?.textOf()
+
+    /**
+     * The artist's own page, when the run linking to it says which one.
+     *
+     * This was already being located in order to identify the artist token and then thrown away
+     * with the rest of the endpoint — so YouTube Music tracks carried an artist *name* and no id,
+     * and every feature keyed on an artist id (sharing one, opening their real page) was silently
+     * unavailable for the one source that always knows it. Null on uploads YouTube has not matched
+     * to an artist, which is a genuine absence rather than a parsing failure.
+     */
+    val artistId: String? = artistRun.path("navigationEndpoint", "browseEndpoint", "browseId").text()
 
     /**
      * The album link when there is one, else the token after the artist — which is where an album

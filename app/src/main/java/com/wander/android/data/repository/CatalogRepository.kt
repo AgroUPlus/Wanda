@@ -4,6 +4,7 @@ import com.wander.android.core.database.dao.AlbumDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.AlbumEntity
 import com.wander.android.core.database.entity.TrackEntity
+import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
@@ -99,6 +100,25 @@ class CatalogRepository @Inject constructor(
      */
     suspend fun refreshArtist(artist: String) {
         musicRepository.searchAllSources(artist)
+    }
+
+    /**
+     * The artist's own page from the backend that has one.
+     *
+     * The name-keyed view above is still what the screen is built on — it gathers everything by
+     * that artist across every source, which no single backend can do. This adds what only the
+     * backend knows: the bio, their portrait, and the shelves *they* arrange their work into.
+     * Sources that do not publish artist pages are skipped rather than approximated; see
+     * `SourceCapabilities.artists`.
+     *
+     * Null when nothing was reachable, which the screen treats as "no extra page", not an error —
+     * the library-derived one underneath it is still perfectly good.
+     */
+    suspend fun artistDetails(artistId: String): ArtistDetails? = withContext(Dispatchers.IO) {
+        val source = musicRepository.sources.firstOrNull {
+            it.capabilities.artists && artistId.startsWith(it.sourceType.idPrefix)
+        } ?: return@withContext null
+        source.getArtist(artistId).getOrNull()
     }
 
     /** Cover for the artist header: whichever of their records has one. */

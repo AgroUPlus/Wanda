@@ -7,6 +7,12 @@ package com.wander.android.data.sources
 data class SourceCapabilities(
     val search: Boolean = false,
     val albums: Boolean = false,
+    /**
+     * The backend serves an artist's own page — their bio and the shelves they arrange their work
+     * into — rather than only answering searches for their name. Without it the artist screen falls
+     * back to what the library already knows about them, which is records and songs and no more.
+     */
+    val artists: Boolean = false,
     val playlists: Boolean = false,
     /**
      * The backend can be *told* about playlists, not just asked. Reading and writing are separate

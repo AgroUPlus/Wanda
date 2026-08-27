@@ -3,6 +3,8 @@ package com.wander.android.data.sources.navidrome
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.LyricLine
 import com.wander.android.data.model.LyricsData
+import com.wander.android.data.model.ArtistAlbumSection
+import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
@@ -33,6 +35,7 @@ class NavidromeSource @Inject constructor(
     override val capabilities = SourceCapabilities(
         search = true,
         albums = true,
+        artists = true,
         playlists = true,
         playlistWrite = true,
         likes = true,
@@ -141,6 +144,39 @@ class NavidromeSource @Inject constructor(
     override suspend fun getAlbumTracks(albumId: String) =
         apiClient.getAlbum(albumId.removePrefix(PREFIX))
             .map { album -> album.song.orEmpty().map { it.toUnified() } }
+
+    /**
+     * An artist, their records, and the biography Navidrome's metadata agent found for them.
+     *
+     * Two calls because Subsonic splits them: `getArtist` knows the discography and nothing about
+     * the person, `getArtistInfo2` knows the person and nothing about the discography. The second
+     * is allowed to fail — a server with no metadata agent configured answers nothing at all, and
+     * that is an artist without a bio rather than an artist that could not be loaded.
+     *
+     * One section, "Albums", because that is all Subsonic distinguishes. It does not separate
+     * singles from albums or publish a top-songs shelf, and inventing those headings over an
+     * arbitrary split of the same list would be a claim the server never made.
+     */
+    override suspend fun getArtist(artistId: String): Result<ArtistDetails> {
+        val id = artistId.removePrefix(PREFIX)
+        return apiClient.getArtist(id).map { artist ->
+            val info = apiClient.getArtistInfo2(id).getOrNull()
+            val albums = artist.album.orEmpty().map { it.toUnified() }
+            ArtistDetails(
+                id = "$PREFIX${artist.id}",
+                name = artist.name,
+                imageUrl = info?.largeImageUrl
+                    ?: info?.mediumImageUrl
+                    ?: apiClient.buildCoverArtUrl(artist.coverArt),
+                bio = info?.biography?.stripBiographyMarkup(),
+                sections = if (albums.isEmpty()) {
+                    emptyList()
+                } else {
+                    listOf(ArtistAlbumSection("Albums", albums))
+                }
+            )
+        }
+    }
 
     override suspend fun getPlaylists() = apiClient.getPlaylists().map { list ->
         list.map { playlist ->
