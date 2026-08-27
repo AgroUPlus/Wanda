@@ -4,6 +4,8 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -84,14 +86,27 @@ fun TrackRow(
             )
             // No quality badge here: it belongs to the track you are listening to, not to every
             // row in every list. Now Playing is the one place that shows it.
-            Text(
-                text = track.subtitle(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Clip,
-                modifier = Modifier.padding(top = 2.dp).scrollingTitle()
-            )
+            // The badge leads the subtitle rather than replacing it: which station this is still
+            // matters, and a livestream's subtitle is where the channel name lives. Static here —
+            // see [LiveChip]. Without it a live row was indistinguishable from an hour-long
+            // recording until you played it and found you could not scrub.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 2.dp)
+            ) {
+                if (track.isLive) {
+                    LiveChip(pulsing = false)
+                    Spacer(Modifier.width(6.dp))
+                }
+                Text(
+                    text = track.subtitle(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.scrollingTitle()
+                )
+            }
         }
 
         if (onRemove != null) {

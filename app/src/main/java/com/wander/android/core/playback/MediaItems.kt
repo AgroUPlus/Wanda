@@ -35,6 +35,21 @@ internal const val LIVE_SUFFIX = ".m3u8"
  */
 private const val LIVE_TARGET_OFFSET_MS = 15_000L
 
+/**
+ * Tells the player to follow the live edge instead of treating the manifest's window as a
+ * duration.
+ *
+ * Shared with [PlayerConnection.retryContainerMismatch], which is the *other* way an item becomes
+ * a livestream: one that was queued as an ordinary track, failed to parse as a progressive
+ * container, and turned out to be a manifest. Without this applied there too, such an item played
+ * to the end of its first window — about an hour — and the queue moved on, which looked exactly
+ * like Wanda skipping the stream on purpose.
+ */
+internal fun liveConfiguration(): MediaItem.LiveConfiguration =
+    MediaItem.LiveConfiguration.Builder()
+        .setTargetOffsetMs(LIVE_TARGET_OFFSET_MS)
+        .build()
+
 internal fun UnifiedTrack.toMediaItem(): MediaItem {
     val extras = Bundle().apply {
         putString(EXTRA_TRACK_JSON, HttpClientFactory.jsonConfig.encodeToString(this@toMediaItem))
@@ -75,21 +90,27 @@ internal fun UnifiedTrack.toMediaItem(): MediaItem {
                 // calls it finished when it reaches the end of it — which is exactly what a
                 // livestream looked like it was doing: playing for a while, then skipping on. A
                 // live configuration tells the player to keep following the edge instead.
-                setLiveConfiguration(
-                    MediaItem.LiveConfiguration.Builder()
-                        .setTargetOffsetMs(LIVE_TARGET_OFFSET_MS)
-                        .build()
-                )
+                setLiveConfiguration(liveConfiguration())
             }
         }
         .build()
 }
 
 internal fun MediaItem.toUnifiedTrack(): UnifiedTrack? {
+    // Read before the extras, and applied on top of them.
+    //
+    // The extras hold the track exactly as it was queued, which for a livestream YouTube did not
+    // badge as one says `isLive = false`. The URI is the newer fact: `retryContainerMismatch`
+    // rewrites it to the `.m3u8` hint the moment the item turns out to be a manifest, and that is
+    // what the LIVE chip and the suppressed seek bar read. Trusting the stale extras here is why
+    // a livestream that had *started playing* correctly still showed a scrubbable hour-long
+    // progress bar.
+    val live = isLiveUri()
+
     val json = mediaMetadata.extras?.getString(EXTRA_TRACK_JSON)
     if (!json.isNullOrBlank()) {
         val parsed = runCatching { HttpClientFactory.jsonConfig.decodeFromString<UnifiedTrack>(json) }.getOrNull()
-        if (parsed != null) return parsed
+        if (parsed != null) return if (live && !parsed.isLive) parsed.copy(isLive = true) else parsed
     }
 
     // Robust fallback: Reconstruct UnifiedTrack from MediaItem standard fields when IPC drops extras Bundle
@@ -106,12 +127,6 @@ internal fun MediaItem.toUnifiedTrack(): UnifiedTrack? {
     val trackAlbum = mediaMetadata.albumTitle?.toString()
     val trackArtwork = mediaMetadata.artworkUri?.toString()
 
-    // The URI carries the live hint for the same reason it carries it on the way out: it is the
-    // one field guaranteed to survive the trip. Rebuilding a live track as a normal one here put
-    // it straight back into the progressive path the `.m3u8` suffix exists to avoid.
-    val live = requestMetadata.mediaUri?.toString()?.endsWith(LIVE_SUFFIX) == true ||
-        localConfiguration?.uri?.toString()?.endsWith(LIVE_SUFFIX) == true
-
     return UnifiedTrack(
         id = trackId,
         source = resolvedSource,
@@ -123,6 +138,17 @@ internal fun MediaItem.toUnifiedTrack(): UnifiedTrack? {
         isLive = live
     )
 }
+
+/**
+ * Whether either URI on the item carries the livestream hint.
+ *
+ * The URI is checked rather than any metadata field for the reason it carries the hint on the way
+ * out: it is the one part of a `MediaItem` guaranteed to survive the trip across IPC to the
+ * playback service.
+ */
+private fun MediaItem.isLiveUri(): Boolean =
+    requestMetadata.mediaUri?.toString()?.endsWith(LIVE_SUFFIX) == true ||
+        localConfiguration?.uri?.toString()?.endsWith(LIVE_SUFFIX) == true
 
 /** Extracts the track id from a placeholder URI produced by [toMediaItem]. */
 internal fun Uri.wandaTrackId(): String? {

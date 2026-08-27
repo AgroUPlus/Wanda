@@ -96,6 +96,7 @@ class PlayerConnection @Inject constructor(
 
                     override fun onPlayerError(error: PlaybackException) {
                         if (retryContainerMismatch(ctrl, error)) return
+                        if (rejoinLiveEdge(ctrl)) return
                         _errors.tryEmit(error.userMessage())
                     }
                 }
@@ -153,6 +154,11 @@ class PlayerConnection @Inject constructor(
             builder.setMimeType(null)
         } else {
             builder.setMimeType(MimeTypes.APPLICATION_M3U8)
+            // A YouTube item that turns out to be a manifest is a livestream — the badges just
+            // failed to say so. Without the live configuration the player reads the manifest's
+            // window as the item's duration, plays to the end of it and advances the queue, and
+            // the playlist tracker eventually gives up with PlaylistStuckException.
+            builder.setLiveConfiguration(liveConfiguration())
         }
 
         ctrl.replaceMediaItem(index, builder.build())
@@ -160,6 +166,30 @@ class PlayerConnection @Inject constructor(
         ctrl.play()
         return true
     }
+
+    /**
+     * Puts a livestream back on the air after a load error, instead of reporting one.
+     *
+     * For a broadcast, "the segment you asked for is gone" is not a failure worth telling the user
+     * about — it means the player fell behind the window, which a pause, a tunnel or a moment of
+     * bad signal is enough to do. The answer is the same one a radio gives: rejoin at whatever is
+     * playing now. Only an error the user can act on should reach them.
+     *
+     * Bounded per item, because a stream that has genuinely ended would otherwise be re-prepared
+     * forever, and "this station is off the air" is something they *do* need to be told.
+     */
+    private fun rejoinLiveEdge(ctrl: MediaController): Boolean {
+        if (state.value.currentTrack?.isLive != true) return false
+        val id = runCatching { ctrl.currentMediaItem?.mediaId }.getOrNull() ?: return false
+        if (!liveRejoins.allow(id)) return false
+
+        ctrl.seekToDefaultPosition()
+        ctrl.prepare()
+        ctrl.play()
+        return true
+    }
+
+    private val liveRejoins = LiveRejoinBudget()
 
     /** A play request that arrived before the controller existed. See [play]. */
     private data class PendingPlay(
@@ -385,14 +415,31 @@ class PlayerConnection @Inject constructor(
     internal fun followerSetPlaying(shouldPlay: Boolean) {
         val ctrl = _controller.value ?: return
         if (ctrl.isPlaying != shouldPlay) {
-            if (shouldPlay) ctrl.play() else ctrl.pause()
+            // Rejoins the edge on resume for the same reason [togglePlayPause] does, and it
+            // matters more here: the room carried on broadcasting while this device was paused,
+            // so resuming where it stopped is both a dead position and one nobody else is at.
+            if (shouldPlay) ctrl.resumeAtLiveEdge() else ctrl.pause()
         }
     }
 
     fun togglePlayPause() {
         if (isFollowing) return
         val ctrl = _controller.value ?: return
-        if (ctrl.isPlaying) ctrl.pause() else ctrl.play()
+        if (ctrl.isPlaying) ctrl.pause() else ctrl.resumeAtLiveEdge()
+    }
+
+    /**
+     * Resumes, rejoining the live edge first when what is playing is a broadcast.
+     *
+     * A paused livestream does not wait. The player holds the position it was paused at, and the
+     * broadcaster keeps only a window — pause for longer than that window and resuming asks for
+     * segments that no longer exist, which surfaces as a source error a few seconds in. There is
+     * no "where I left off" for a broadcast anyway: leaving and coming back means hearing what is
+     * on air now, exactly as it does on a radio.
+     */
+    private fun MediaController.resumeAtLiveEdge() {
+        if (state.value.currentTrack?.isLive == true) seekToDefaultPosition()
+        play()
     }
 
     fun seekTo(positionMs: Long) {
@@ -503,13 +550,20 @@ class PlayerConnection @Inject constructor(
      */
     fun setOffloadEnabled(enabled: Boolean) {
         val ctrl = _controller.value ?: return
-        val allowed = enabled && state.value.currentTrack?.isLive != true
-        ctrl.trackSelectionParameters =
-            PlayerFactory.withOffload(ctrl.trackSelectionParameters, allowed)
+        val live = state.value.currentTrack?.isLive == true
+        val allowed = enabled && !live
+        // Video is suppressed here rather than anywhere else because this is the single writer of
+        // `trackSelectionParameters` — two writers would each clobber the other's decision. See
+        // [PlayerFactory.withVideoSuppressed] for why a livestream needs it at all.
+        ctrl.trackSelectionParameters = PlayerFactory.withVideoSuppressed(
+            PlayerFactory.withOffload(ctrl.trackSelectionParameters, allowed),
+            live
+        )
     }
 
     private companion object {
         const val RESTART_THRESHOLD_MS = 3_000L
+
         /**
          * Both ways a container can fail to parse.
          *

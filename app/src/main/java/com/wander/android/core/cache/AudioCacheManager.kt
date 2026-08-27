@@ -33,12 +33,23 @@ class AudioCacheManager(
         )
     }
 
+    /**
+     * The plain network path, with no cache in front of it.
+     *
+     * Livestreams use this one. A live HLS media playlist is re-fetched every few seconds at the
+     * *same URL* to pick up new segments, so putting it behind a cache means the first copy is
+     * served forever and the playlist never advances — which ExoPlayer reports, correctly, as
+     * `PlaylistStuckException`. Its segments have nothing to gain from a cache either: each is
+     * played once and never referenced again, so caching them only evicts music somebody might
+     * actually replay.
+     */
+    fun getUpstreamDataSourceFactory(): DataSource.Factory =
+        DefaultDataSource.Factory(context, OkHttpDataSource.Factory(okHttpClient))
+
     fun getCacheDataSourceFactory(): DataSource.Factory =
         CacheDataSource.Factory()
             .setCache(simpleCache)
-            .setUpstreamDataSourceFactory(
-                DefaultDataSource.Factory(context, OkHttpDataSource.Factory(okHttpClient))
-            )
+            .setUpstreamDataSourceFactory(getUpstreamDataSourceFactory())
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
 
     fun cacheSizeBytes(): Long = simpleCache.cacheSpace

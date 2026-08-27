@@ -32,16 +32,26 @@ import androidx.compose.ui.unit.dp
  *
  * The dot breathes rather than blinking. A hard on/off draws the eye away from the artwork every
  * second; a slow opacity ramp reads as "still going" without competing for attention.
+ *
+ * [pulsing] turns that off, and list rows pass false. One breathing dot next to the thing you are
+ * listening to reads as "this is happening now"; a screenful of them independently breathing in a
+ * scrolling list is just noise, and each one is an animation running behind a row nobody is
+ * looking at.
  */
 @Composable
-internal fun LiveChip(modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "live-pulse")
-    val dotAlpha by transition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0.35f,
-        animationSpec = infiniteRepeatable(tween(1100), RepeatMode.Reverse),
-        label = "live-dot"
-    )
+internal fun LiveChip(modifier: Modifier = Modifier, pulsing: Boolean = true) {
+    val dotAlpha = if (pulsing) {
+        val transition = rememberInfiniteTransition(label = "live-pulse")
+        val animated by transition.animateFloat(
+            initialValue = 1f,
+            targetValue = 0.35f,
+            animationSpec = infiniteRepeatable(tween(1100), RepeatMode.Reverse),
+            label = "live-dot"
+        )
+        animated
+    } else {
+        1f
+    }
 
     Surface(
         shape = CircleShape,

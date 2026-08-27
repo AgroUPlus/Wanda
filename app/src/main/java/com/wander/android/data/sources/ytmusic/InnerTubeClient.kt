@@ -13,6 +13,8 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -53,6 +55,37 @@ class InnerTubeClient @Inject constructor(
     /** Pairs the PO Token request with the player request when no visitor ID is available yet. */
     private val fallbackSessionId = UUID.randomUUID().toString()
 
+    /**
+     * An anonymous visitor session, fetched once and kept for the life of the process.
+     *
+     * [InnerTubeVariant.VISIONOS] will not mint a livestream manifest without one: with no
+     * `visitorData` it answers LOGIN_REQUIRED — "Sign in to confirm you're not a bot" — for every
+     * video. A locally generated UUID does not satisfy it either; the value has to be one YouTube
+     * issued, which `visitor_id` hands out to anyone who asks, with no account and no cookie.
+     *
+     * The signed-in session's own visitor id is preferred when there is one, so a user who has
+     * connected YouTube Music does not carry two identities around.
+     *
+     * Cached because it is a per-session identifier, not a per-request one — refetching it for
+     * every play would both cost a round-trip and look like a new device each time.
+     */
+    private val visitorLock = Mutex()
+    @Volatile private var cachedVisitorId: String? = null
+
+    private suspend fun visitorSession(): String? {
+        accountManager.visitorData.takeIf { it.isNotBlank() }?.let { return it }
+        cachedVisitorId?.let { return it }
+        return visitorLock.withLock {
+            cachedVisitorId ?: fetchVisitorId()?.also { cachedVisitorId = it }
+        }
+    }
+
+    private suspend fun fetchVisitorId(): String? = post(
+        "visitor_id",
+        buildJsonObject { put("context", webContext()) },
+        client = InnerTubeVariant.WEB_REMIX
+    ).getOrNull()?.visitorData()
+
     suspend fun search(query: String, kind: SearchKind = SearchKind.TRACKS): Result<JsonObject> = post(
         "search",
         buildJsonObject {
@@ -74,16 +107,29 @@ class InnerTubeClient @Inject constructor(
      */
     internal suspend fun player(videoId: String): Result<PlayerResponse> {
         val vr = playerAs(videoId, InnerTubeVariant.ANDROID_VR)
-        vr.getOrNull()?.let { return Result.success(it) }
+        vr.getOrNull()?.takeIf { it.hlsManifestUrl == null }?.let { return Result.success(it) }
 
         val web = playerAs(videoId, InnerTubeVariant.WEB_REMIX)
-        web.getOrNull()?.let { return Result.success(it) }
+        web.getOrNull()?.takeIf { it.hlsManifestUrl == null }?.let { return Result.success(it) }
 
-        // Last, and only because the two above have already said no: a livestream has no format
-        // list for either of them to find, so this is the point at which "no playable audio" and
-        // "is it live?" become the same question. See `InnerTubeVariant.IOS`.
-        val ios = playerAs(videoId, InnerTubeVariant.IOS)
-        ios.getOrNull()?.let { return Result.success(it) }
+        // A livestream goes to VISIONOS even when one of the two above already produced a
+        // manifest, which is why they are skipped on `hlsManifestUrl != null` rather than simply
+        // being tried first.
+        //
+        // They do produce one — WEB_REMIX in particular, once the PO Token minter has run — and
+        // taking it was the bug behind "Stream expired. Play it again to refresh it." surviving
+        // the move off the iOS identity: the manifest and its media playlist both load, and then
+        // googlevideo 403s the first media segment. A GVS PO Token is only *recommended* rather
+        // than required for HLS on the web music client, and "recommended" is YouTube's word for
+        // "sometimes refused". VISIONOS has no token policy at all, so its manifests have nothing
+        // to be refused over. See `InnerTubeVariant.VISIONOS`.
+        val live = playerAs(videoId, InnerTubeVariant.VISIONOS)
+        live.getOrNull()?.let { return Result.success(it) }
+
+        // Only if the token-free identity itself refused. A manifest that might 403 partway is
+        // still worth more than no playback at all, and it is the same one the user had before.
+        vr.getOrNull()?.let { return Result.success(it) }
+        web.getOrNull()?.let { return Result.success(it) }
 
         // Reporting only the last variant's error made every failure read as a WEB_REMIX problem,
         // hiding which identity YouTube actually refused and why.
@@ -91,13 +137,17 @@ class InnerTubeClient @Inject constructor(
             IOException(
                 "ANDROID_VR: ${vr.exceptionOrNull()?.message ?: "failed"} | " +
                     "WEB_REMIX: ${web.exceptionOrNull()?.message ?: "failed"} | " +
-                    "IOS: ${ios.exceptionOrNull()?.message ?: "failed"}"
+                    "VISIONOS: ${live.exceptionOrNull()?.message ?: "failed"}"
             )
         )
     }
 
     private suspend fun playerAs(videoId: String, variant: InnerTubeVariant): Result<PlayerResponse> {
         val isWeb = variant == InnerTubeVariant.WEB_REMIX
+        val isLive = variant == InnerTubeVariant.VISIONOS
+        // Fetched before the body is built rather than inside it: acquiring a session is a network
+        // call, and `buildJsonObject` takes an ordinary lambda.
+        val visitorId = if (isLive) visitorSession() else null
         // The PO Token is bound to this exact ID at mint time; YouTube checks the two match, so
         // whichever ID is used here has to also travel in the request (context.client.visitorData
         // and X-Goog-Visitor-Id below) — not just be self-consistent locally.
@@ -134,14 +184,18 @@ class InnerTubeClient @Inject constructor(
                                 put("deviceMake", "Oculus")
                                 put("deviceModel", "Quest 3")
                             }
-                            // The handset identity is checked against its own device fields, and
-                            // an iPhone claiming to be a Quest is refused before it gets as far
-                            // as the manifest.
-                            InnerTubeVariant.IOS -> {
-                                put("osName", "iPhone")
-                                put("osVersion", IOS_OS_VERSION)
+                            // Checked against its own device fields, and a Vision Pro claiming to
+                            // be a Quest is refused before it gets as far as the manifest. The
+                            // visitor session is the part this identity will not go without: with
+                            // no visitorData it answers LOGIN_REQUIRED for every video, live or
+                            // not, and the manifest never gets minted at all.
+                            InnerTubeVariant.VISIONOS -> {
+                                put("osName", "visionOS")
+                                put("osVersion", VISIONOS_OS_VERSION)
                                 put("deviceMake", "Apple")
-                                put("deviceModel", IOS_DEVICE_MODEL)
+                                put("deviceModel", VISIONOS_DEVICE_MODEL)
+                                put("userAgent", InnerTubeVariant.VISIONOS.userAgent)
+                                visitorId?.let { put("visitorData", it) }
                             }
                         }
                     }
@@ -163,7 +217,7 @@ class InnerTubeClient @Inject constructor(
                 put("racyCheckOk", true)
             },
             client = variant,
-            visitorIdOverride = sessionId.takeIf { isWeb }
+            visitorIdOverride = if (isWeb) sessionId else visitorId
         ).mapCatching { body ->
             // A response can be HTTP 200 while still refusing to play (playabilityStatus != OK), so
             // success has to be judged by that field rather than by the HTTP status — otherwise a
@@ -277,6 +331,14 @@ class InnerTubeClient @Inject constructor(
         header("User-Agent", variant.userAgent)
         header("X-YouTube-Client-Name", variant.clientId)
         header("X-YouTube-Client-Version", variant.clientVersion)
+
+        // The livestream identity carries its visitor session and nothing else — no cookie, no
+        // origin, no SAPISID. It is an anonymous YouTube client, not a signed-in music one, and
+        // sending it the music host's credentials would make it read as a mismatched identity.
+        if (variant == InnerTubeVariant.VISIONOS) {
+            visitorIdOverride?.takeIf { it.isNotBlank() }?.let { header("X-Goog-Visitor-Id", it) }
+            return
+        }
 
         if (variant != InnerTubeVariant.WEB_REMIX) return
 
