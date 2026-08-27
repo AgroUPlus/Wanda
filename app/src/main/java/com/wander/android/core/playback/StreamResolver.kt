@@ -53,9 +53,10 @@ class StreamResolver @Inject constructor(
         val streamInfo = runBlocking { musicRepository.getStreamInfo(trackId) }
             .getOrElse { throw IOException("Could not resolve stream for track", it) }
 
-        // Remembered only for a manifest. Everything else is a single self-contained request, and
-        // holding an identity past it would mean sending it with whatever played next.
-        liveHeaders = if (streamInfo.format == MimeTypes.APPLICATION_M3U8) {
+        // Remembered for any YouTube stream (manifest, segments, ranges). Dropped as soon as a
+        // non-YouTube track resolves, so one source's identity is never sent with another's.
+        val host = streamInfo.uri.toUri().host
+        liveHeaders = if (carriesLiveIdentity(host)) {
             streamInfo.headers
         } else {
             emptyMap()
