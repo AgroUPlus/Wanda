@@ -107,10 +107,12 @@ class YTMusicSource @Inject constructor(
                 ?: rawUrl
             // googlevideo also checks the fetch against the client the URL was minted for, so the
             // media request has to keep the same identity as whichever /player call produced it.
+            val mime = format["mimeType"].text()?.substringBefore(';') ?: "audio/webm"
+            val bitrate = format["bitrate"].text()?.toIntOrNull()?.div(1000) ?: 160
             StreamInfo(
                 uri = url,
-                format = "audio/webm",
-                bitRateKbps = 160,
+                format = mime,
+                bitRateKbps = bitrate,
                 headers = mapOf("User-Agent" to response.variant.userAgent)
             )
         }
