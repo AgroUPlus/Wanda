@@ -132,6 +132,15 @@ class SubsonicApiClient @Inject constructor(
     suspend fun getLyricsBySongId(id: String): Result<SubsonicLyricsList?> =
         call("getLyricsBySongId.view", "id" to id).map { it.lyricsList }
 
+    suspend fun getArtist(artistId: String): Result<SubsonicArtistDetail> =
+        call("getArtist.view", "id" to artistId).mapCatching {
+            it.artist ?: throw IOException("Artist $artistId not found")
+        }
+
+    /** Biography and portraits. Absent on servers with no metadata agent, which is not an error. */
+    suspend fun getArtistInfo2(artistId: String): Result<SubsonicArtistInfo?> =
+        call("getArtistInfo2.view", "id" to artistId).map { it.artistInfo2 }
+
     suspend fun getSimilarSongs2(id: String, count: Int): Result<List<SubsonicSong>> =
         call("getSimilarSongs2.view", "id" to id, "count" to count)
             .map { it.similarSongs2?.song.orEmpty() }

@@ -3,6 +3,7 @@ package com.wander.android.data.sources.ytmusic
 import androidx.media3.common.MimeTypes
 import com.wander.android.data.model.RecommendedShelf
 import com.wander.android.data.model.SearchKind
+import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
@@ -39,6 +40,7 @@ class YTMusicSource @Inject constructor(
     override val capabilities = SourceCapabilities(
         search = true,
         albums = true,
+        artists = true,
         playlists = true,
         likes = true,
         radio = true,
@@ -204,6 +206,24 @@ class YTMusicSource @Inject constructor(
                 .drop(offset)
                 .take(limit)
         }
+
+    /**
+     * Their page as YouTube Music serves it — bio, portrait, and the shelves in YouTube's order.
+     *
+     * The id is the artist's channel browse id, which every track parsed from this source now
+     * carries; see `InnerTubeSubtitle.artistId`. A response that carries no header is not an
+     * artist page, and saying so is better than returning a page with a name and nothing else.
+     */
+    override suspend fun getArtist(artistId: String): Result<ArtistDetails> {
+        val browseId = artistId.removePrefix(YTM_PREFIX)
+        if (browseId.isBlank()) {
+            return Result.failure(IllegalArgumentException("No YouTube Music artist id"))
+        }
+        return innerTube.browse(browseId).mapCatching { body ->
+            body.artistPage(browseId)
+                ?: throw IOException("YouTube Music returned no artist page for this id")
+        }
+    }
 
     override suspend fun getAlbumTracks(albumId: String): Result<List<UnifiedTrack>> =
         innerTube.browse(albumId.removePrefix(YTM_PREFIX)).map { root ->
