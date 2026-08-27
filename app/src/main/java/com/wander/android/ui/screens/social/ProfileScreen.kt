@@ -63,10 +63,13 @@ internal fun ProfileScreen(
         ) {
             val profile = state.profile
             if (profile == null) {
+                if (state.isLoading) {
+                    item(key = "loading") { ProfileSkeleton() }
+                    return@LazyColumn
+                }
                 item(key = "missing") {
                 Text(
                     text = when {
-                        state.isLoading -> "Loading…"
                         state.error != null -> state.error.orEmpty()
                         // Not found and not visible are the same answer from the server, on
                         // purpose, so this cannot become a way to test whether an account exists.
@@ -79,33 +82,7 @@ internal fun ProfileScreen(
             return@LazyColumn
         }
 
-        item(key = "header") {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-            ) {
-                Avatar(profile, size = 72.dp)
-                Column {
-                    Text(text = profile.name, style = MaterialTheme.typography.headlineSmall)
-                    Text(
-                        text = "@" + profile.username,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-
-        profile.bio?.let { bio ->
-            item(key = "bio") {
-                Text(
-                    text = bio,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                )
-            }
-        }
+        item(key = "header") { ProfileHero(profile) }
 
         item(key = "action") {
             Row(
@@ -182,22 +159,22 @@ internal fun ProfileScreen(
                         text = profile.name + "'s listening",
                         style = MaterialTheme.typography.titleMedium
                     )
-                    Text(
-                        text = friendStats.playCount.toString() + " plays · " +
-                            (friendStats.secondsTotal / 3600) + " h",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
+            }
+            item(key = "their-totals") {
+                StatTiles(
+                    plays = friendStats.playCount,
+                    hours = friendStats.secondsTotal / 3600
+                )
             }
             if (friendStats.topArtists.isNotEmpty()) {
                 item(key = "their-artists") {
-                    StatColumn("Top artists", friendStats.topArtists.take(5))
+                    StatBars("Top artists", friendStats.topArtists.take(5))
                 }
             }
             if (friendStats.topTracks.isNotEmpty()) {
                 item(key = "their-tracks") {
-                    StatColumn("Top tracks", friendStats.topTracks.take(5))
+                    StatBars("Top tracks", friendStats.topTracks.take(5))
                 }
             }
         }
@@ -252,40 +229,6 @@ internal fun ProfileScreen(
                 )
             }
         }
-        }
-    }
-}
-
-
-/**
- * A short ranked list — top artists, top tracks.
- *
- * Deliberately plain text rather than a chart: these are five rows of a name and a count, and a
- * bar chart of five values is decoration standing in for information.
- */
-@Composable
-private fun StatColumn(
-    title: String,
-    entries: List<com.wander.android.data.sources.agro.StatEntry>
-) {
-    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
-        Text(text = title, style = MaterialTheme.typography.titleSmall)
-        entries.forEachIndexed { index, entry ->
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "${index + 1}. ${entry.name}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1
-                )
-                Text(
-                    text = entry.value.toString(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
 }
