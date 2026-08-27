@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.CatalogRepository
@@ -58,6 +59,9 @@ class ArtistViewModel @Inject constructor(
         )
     }
 
+    /** Their portrait from the backend if there is one, else a cover off one of their records. */
+    fun heroImage(): String? = _details.value?.imageUrl ?: image()
+
     fun canShareArtist(): Boolean =
         artistTarget()?.let { shareRepository.canShare(it.source) } ?: false
 
@@ -69,6 +73,15 @@ class ArtistViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    /**
+     * The artist's page from the backend, when one of them serves it.
+     *
+     * Null is the ordinary state, not a failure: an artist known only from local files has no page
+     * anywhere, and the library-derived discography below is the whole of what is true about them.
+     */
+    private val _details = MutableStateFlow<ArtistDetails?>(null)
+    val details: StateFlow<ArtistDetails?> = _details.asStateFlow()
+
     init {
         refresh()
     }
@@ -78,8 +91,15 @@ class ArtistViewModel @Inject constructor(
             _isLoading.value = true
             catalogRepository.refreshArtist(artist)
             _isLoading.value = false
+            // After the search, not before: the artist's backend id comes off a track, and until
+            // the search has persisted one there is nothing to ask the backend about.
+            _details.value = artistId()?.let { catalogRepository.artistDetails(it) }
         }
     }
+
+    /** The backend's own id for this artist, taken from a track that credits them. */
+    private fun artistId(): String? =
+        tracks.value.firstNotNullOfOrNull { it.artistId?.takeIf(String::isNotBlank) }
 
     fun image(): String? = catalogRepository.artistImage(albums.value, tracks.value)
 
@@ -90,6 +110,14 @@ class ArtistViewModel @Inject constructor(
         ?.let { playerConnection.play(it.shuffled()) }
 
     fun play(index: Int) = playerConnection.play(tracks.value, index)
+
+    /**
+     * Plays one track on its own.
+     *
+     * The backend's shelves are not the library list, so an index into that list means nothing for
+     * a song that only appears on the artist's own page.
+     */
+    fun playOne(track: UnifiedTrack) = playerConnection.play(listOf(track))
 
     fun playNext(track: UnifiedTrack) = playerConnection.playNext(listOf(track))
 
