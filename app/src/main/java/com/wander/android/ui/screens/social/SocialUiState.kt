@@ -24,7 +24,18 @@ internal data class SocialUiState(
     val error: String? = null,
     val session: ListenAlongSession? = null,
     /** What friends have been into lately. Empty while offline, and that is not an error. */
-    val feed: List<AgroFeedItem> = emptyList()
+    val feed: List<AgroFeedItem> = emptyList(),
+    /** This account's own username, for the avatar that opens your own profile. */
+    val myUsername: String = "",
+    /** This account's own picture, when it has one. */
+    val myAvatarUrl: String? = null,
+    /**
+     * True until the cached graph has been read once.
+     *
+     * Distinct from [isRefreshing], which is true on every refresh over content already on
+     * screen — this one is what decides between placeholders and a blank tab.
+     */
+    val loading: Boolean = true
 ) {
     /** True only when there is genuinely nothing yet — not merely while a refresh is in flight. */
     val isEmpty: Boolean
