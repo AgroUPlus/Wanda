@@ -102,6 +102,7 @@ internal fun parseResponsiveListItem(renderer: JsonObject): UnifiedTrack? {
         source = SourceType.YTMUSIC,
         title = title,
         artist = subtitle.artist ?: "Unknown Artist",
+        artistId = subtitle.artistId?.let { "$YTM_PREFIX$it" },
         album = subtitle.album,
         artworkUrl = renderer.path("thumbnail", "musicThumbnailRenderer", "thumbnail")
             .bestThumbnail(),
@@ -125,6 +126,7 @@ internal fun parsePlaylistPanelVideo(renderer: JsonObject): UnifiedTrack? {
         source = SourceType.YTMUSIC,
         title = renderer["title"].runText() ?: return null,
         artist = byline.artist ?: "Unknown Artist",
+        artistId = byline.artistId?.let { "$YTM_PREFIX$it" },
         album = byline.album,
         artworkUrl = renderer["thumbnail"].bestThumbnail(),
         durationMs = parseDurationText(renderer["lengthText"].runText()),
