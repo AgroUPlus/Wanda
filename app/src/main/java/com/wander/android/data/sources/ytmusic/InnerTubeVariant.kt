@@ -15,7 +15,7 @@ package com.wander.android.data.sources.ytmusic
  * ordinary tracks, and `WEB_REMIX` is kept only for the signed-in surfaces — search, browse,
  * library, likes.
  *
- * Livestreams are the exception, and [IOS] exists for them alone — see its own note.
+ * Livestreams are the exception, and [VISIONOS] exists for them alone — see its own note.
  */
 enum class InnerTubeVariant(
     /** `X-YouTube-Client-Name` header value / INNERTUBE_CONTEXT_CLIENT_NAME. */
@@ -63,15 +63,25 @@ enum class InnerTubeVariant(
      * the call outright without a PO Token, so between them a livestream had no route to a
      * manifest and every one of them failed with a flat "will not play this track".
      *
-     * The handset identity does return it, and is PO-Token-exempt for the same reason
-     * [ANDROID_VR] is. It is tried only after the other two, so ordinary tracks keep taking the
-     * path they already take.
+     * This replaced the `IOS` handset identity, which was the actual cause of "Stream expired.
+     * Play it again to refresh it." iOS is the *one* client for which YouTube requires a PO Token
+     * on live HLS specifically — it hands out a manifest that plays for about thirty seconds and
+     * then answers every further segment with 403, which is exactly what the player saw. No amount
+     * of carrying the client identity onto the segment requests could fix that; the token was
+     * never the User-Agent. (yt-dlp encodes the same rule: every client is exempt from a PO Token
+     * on HLS *except* iOS.)
+     *
+     * The Vision Pro identity has no PO Token policy at all, needs no signature descrambling, and
+     * its manifests were verified serving segments continuously for three minutes with no headers
+     * of any kind on the media requests. It does insist on a real visitor session — with none it
+     * answers LOGIN_REQUIRED — which is what `InnerTubeClient.visitorSession()` is for.
      */
-    IOS(
-        clientId = "5",
-        contextClientName = "IOS",
-        clientVersion = "20.29.6",
-        userAgent = "com.google.ios.youtube/20.29.6 (iPhone16,2; U; CPU iOS 18_5 like Mac OS X)",
+    VISIONOS(
+        clientId = "101",
+        contextClientName = "VISIONOS",
+        clientVersion = "1.02",
+        userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 " +
+            "(KHTML, like Gecko) Version/26.0 Safari/605.1.15",
         apiBaseUrl = "https://www.youtube.com/youtubei/v1"
     )
 }

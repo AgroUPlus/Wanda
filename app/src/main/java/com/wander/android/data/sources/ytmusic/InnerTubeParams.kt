@@ -58,6 +58,6 @@ internal const val RADIO_PREFIX = "RDAMVM"
 internal const val ANDROID_VR_SDK_VERSION = 32
 internal const val ANDROID_VR_OS_VERSION = "12L"
 
-/** Device fields the handset identity is checked against — see `InnerTubeVariant.IOS`. */
-internal const val IOS_OS_VERSION = "18.5.0.22F76"
-internal const val IOS_DEVICE_MODEL = "iPhone16,2"
+/** Device fields the headset identity is checked against — see `InnerTubeVariant.VISIONOS`. */
+internal const val VISIONOS_OS_VERSION = "26.5.23O471"
+internal const val VISIONOS_DEVICE_MODEL = "RealityDevice17,1"

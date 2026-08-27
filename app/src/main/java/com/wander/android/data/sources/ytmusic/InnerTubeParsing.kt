@@ -65,21 +65,33 @@ internal fun parseDurationText(value: String?): Long {
 /**
  * Whether a row is a livestream rather than a recording.
  *
- * YouTube marks these two different ways depending on the surface: search and library rows carry
- * a `BADGE_STYLE_TYPE_LIVE_NOW` badge, while queue entries get the time-status overlay in its
- * `LIVE` style where a recording would print a duration. Either marker is enough, and neither
- * appears on a recording — which is why this looks for the marker rather than inferring live from
- * a missing duration, a shape plenty of ordinary rows also have.
+ * YouTube marks these three different ways depending on the surface, and a row only has to carry
+ * one of them:
+ *
+ *  - **`liveBadgeRenderer`** — a renderer *key*, which is what YouTube Music search actually uses
+ *    today. Matched by name rather than by its label, because that label is display text: it reads
+ *    "Live" in English and "En direct" in French, so a French device recognised none of its own
+ *    search results. This is why lives found through the search bar played as ordinary tracks.
+ *  - **`BADGE_STYLE_TYPE_LIVE_NOW`** — an icon style on plain-YouTube rows.
+ *  - **`LIVE`** — the time-status overlay style on queue entries, where a recording prints a
+ *    duration.
+ *
+ * Deliberately still a marker hunt rather than an inference from a missing duration: plenty of
+ * ordinary rows have no duration either, and guessing would put a seekless LIVE chip on records.
  */
 internal fun JsonObject.isLiveEntry(): Boolean =
     LIVE_MARKER_KEYS.any { key -> this[key]?.let { containsLiveMarker(it) } == true }
 
 private val LIVE_MARKER_KEYS = listOf("badges", "thumbnailOverlays")
 
+/** Renderer names, never localised. */
+private const val LIVE_BADGE_RENDERER = "liveBadgeRenderer"
+
+/** Enum-style values, never localised either. Display text is deliberately not matched. */
 private val LIVE_MARKERS = setOf("BADGE_STYLE_TYPE_LIVE_NOW", "LIVE")
 
 private fun containsLiveMarker(node: JsonElement): Boolean = when (node) {
-    is JsonObject -> node.any { (_, v) -> containsLiveMarker(v) }
+    is JsonObject -> node.any { (key, v) -> key == LIVE_BADGE_RENDERER || containsLiveMarker(v) }
     is JsonArray -> node.any { containsLiveMarker(it) }
     else -> node.text() in LIVE_MARKERS
 }
@@ -242,6 +254,16 @@ internal fun JsonObject.bestAudioFormat(): JsonObject? {
  */
 internal fun JsonObject.hlsManifestUrl(): String? =
     path("streamingData", "hlsManifestUrl").text()?.takeIf { it.isNotBlank() }
+
+/**
+ * The visitor session YouTube issued for this request.
+ *
+ * Every InnerTube response carries one back in its `responseContext`, so the dedicated
+ * `visitor_id` endpoint is only the cheapest way to ask for one — the field is read the same way
+ * wherever it turns up. See `InnerTubeClient.visitorSession`.
+ */
+internal fun JsonObject.visitorData(): String? =
+    path("responseContext", "visitorData").text()?.takeIf { it.isNotBlank() }
 
 /** Either a ready-to-fetch `url`, or a cipher `StreamUrlResolver` can turn into one. */
 private fun JsonObject.hasPlayableSource(): Boolean =

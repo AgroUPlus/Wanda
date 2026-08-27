@@ -1,8 +1,10 @@
 package com.wander.android.ui.screens.player
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -11,7 +13,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.rememberPlaybackPosition
 import com.wander.android.ui.components.LiveChip
@@ -67,6 +71,28 @@ private fun PlayerSeekBarInternal(
         0f
     }
 
+    // A broadcast gets the chip alone, centred where the slider would have been.
+    //
+    // Nothing else on this row means anything for a livestream. There is no track to scrub — an
+    // HLS live window reports a duration, the hour or so the broadcaster keeps available, so the
+    // thumb used to be draggable; dragging it back and returning to the edge asks for segments
+    // that have rolled out of the window and the stream dies with a source error. And an elapsed
+    // count is a stopwatch on the listener, not a position in anything.
+    //
+    // The box keeps the height the slider and its labels occupied, so the artwork and the
+    // transport controls above and below it do not shift when a live item starts.
+    if (isLive) {
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(LiveRowHeight),
+            contentAlignment = Alignment.Center
+        ) {
+            LiveChip()
+        }
+        return
+    }
+
     Column(modifier = modifier.fillMaxWidth()) {
         Slider(
             value = fraction,
@@ -79,29 +105,25 @@ private fun PlayerSeekBarInternal(
         )
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = if (isLive) formatTime(positionMs) else formatTime((fraction * durationMs).toLong()),
+                text = formatTime((fraction * durationMs).toLong()),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f)
             )
-            when {
-                // A stream with no end has no total to count towards, and `--:--` reads as
-                // metadata that failed to load rather than as "this is happening right now".
-                isLive -> LiveChip()
-                durationMs > 0L -> Text(
-                    text = formatTime(durationMs),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                else -> Text(
-                    text = "--:--",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                text = if (durationMs > 0L) formatTime(durationMs) else "--:--",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
+
+/**
+ * The height a slider plus its label row occupies, so swapping one for the chip does not move
+ * everything around it. Material's slider is 48.dp of touch target; the labels add the rest.
+ */
+private val LiveRowHeight = 68.dp
 
 internal fun formatTime(ms: Long): String {
     val totalSeconds = (ms / 1000).coerceAtLeast(0)
