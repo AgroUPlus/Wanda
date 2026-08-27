@@ -209,7 +209,17 @@ fun PlayerSheetContent(
                 // Gone almost as soon as the sheet leaves the top. The cover starts travelling at
                 // the first pixel of the drag, and these have to leave with it rather than
                 // linger over the space it used to fill.
-                overlayAlpha = { smoothStep(progress(), 0.85f, 1f) },
+                //
+                // The same is true sideways, and for the same reason: swiping to the next track
+                // slides the cover out from under two buttons that are not drawn with it, so
+                // share and lyrics sat over the incoming song's artwork still labelled for the
+                // outgoing one. They fade with the drag and come back as it settles.
+                //
+                // Both read at draw time — `offsetX` changes every frame, and `overlayAlpha` is
+                // only ever called inside a `graphicsLayer`.
+                overlayAlpha = {
+                    smoothStep(progress(), 0.85f, 1f) * swipeFade(swipe.offsetX.value)
+                },
                 showLyrics = lyricsVisible,
                 onToggleLyrics = { lyricsVisible = !lyricsVisible },
                 // The gesture only; the cover that visibly follows it is drawn above, so the
@@ -233,3 +243,15 @@ internal fun smoothStep(value: Float, from: Float, to: Float): Float {
     val t = ((value - from) / (to - from)).coerceIn(0f, 1f)
     return t * t * (3f - 2f * t)
 }
+
+/**
+ * How much of the overlay survives a horizontal drag.
+ *
+ * Full strength until the drag is clearly a drag rather than a stray touch, then out by the point
+ * the gesture would count as a skip — so the buttons are gone before the cover behind them has
+ * changed, not after.
+ */
+private fun swipeFade(offsetX: Float): Float =
+    1f - smoothStep(kotlin.math.abs(offsetX), SwipeFadeStart, DistanceThreshold)
+
+private const val SwipeFadeStart = 12f
