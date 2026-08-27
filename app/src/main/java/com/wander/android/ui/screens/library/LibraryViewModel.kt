@@ -26,7 +26,14 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 enum class LibraryTab(val label: String) {
-    TRACKS("Tracks"), LIKED("Liked"), ALBUMS("Albums"), PLAYLISTS("Playlists"), DOWNLOADS("Offline")
+    TRACKS("Tracks"),
+    // Next to Liked rather than at the end: both are lists of songs you have a relationship with,
+    // and the two after them are collections rather than tracks.
+    HISTORY("History"),
+    LIKED("Liked"),
+    ALBUMS("Albums"),
+    PLAYLISTS("Playlists"),
+    DOWNLOADS("Offline")
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -76,6 +83,10 @@ class LibraryViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val likedTracks: StateFlow<List<UnifiedTrack>> = musicRepository.getLikedTracksFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** What has been played on this device, newest first. Room-backed, so it works offline. */
+    val historyTracks: StateFlow<List<UnifiedTrack>> = musicRepository.getRecentlyPlayedFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val downloadedTracks: StateFlow<List<UnifiedTrack>> = musicRepository.getDownloadedTracksFlow()

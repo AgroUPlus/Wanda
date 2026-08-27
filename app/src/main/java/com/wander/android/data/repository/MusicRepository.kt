@@ -72,6 +72,17 @@ class MusicRepository @Inject constructor(
     fun getLikedTracksFlow(): Flow<List<UnifiedTrack>> =
         trackDao.getLikedTracksFlow().mapToTracks()
 
+    /**
+     * Everything played on this device, newest first.
+     *
+     * The history table has recorded every play since the app had a player, and until now the only
+     * things that read it were the scrobble outbox and the statistics screen — so the plainest
+     * question anybody asks a music player, "what was that song I had on yesterday", had no answer
+     * anywhere in the UI.
+     */
+    fun getRecentlyPlayedFlow(): Flow<List<UnifiedTrack>> =
+        historyDao.getRecentlyPlayedTracksFlow().mapToTracks()
+
     fun getDownloadedTracksFlow(): Flow<List<UnifiedTrack>> =
         trackDao.getDownloadedTracksFlow().mapToTracks()
 
