@@ -45,14 +45,14 @@ fun NavGraphBuilder.wanderNavGraph(
     tabDestination(TopLevelDestination.HOME.route) {
         HomeScreen(
             contentPadding = contentPadding,
-            onOpenSettings = { navController.navigate(Routes.SETTINGS) }
+            onOpenSettings = { navController.navigateSettled(Routes.SETTINGS) }
         )
     }
 
     tabDestination(TopLevelDestination.LIBRARY.route) {
         LibraryScreen(
             contentPadding = contentPadding,
-            onOpenAlbum = { navController.navigate(Routes.album(it)) }
+            onOpenAlbum = { navController.navigateSettled(Routes.album(it)) }
         )
     }
 
@@ -72,12 +72,12 @@ fun NavGraphBuilder.wanderNavGraph(
     tabDestination(TopLevelDestination.FRIENDS.route) {
         SocialScreen(
             contentPadding = contentPadding,
-            onOpenProfile = { navController.navigate(Routes.profile(it)) },
-            onOpenJam = { navController.navigate(Routes.JAM) },
-            onOpenInbox = { navController.navigate(Routes.INBOX) },
-            onOpenCircle = { navController.navigate(Routes.CIRCLE) },
-            onOpenMyProfile = { navController.navigate(Routes.MY_PROFILE) },
-            onOpenSettings = { navController.navigate(Routes.SETTINGS) }
+            onOpenProfile = { navController.navigateSettled(Routes.profile(it)) },
+            onOpenJam = { navController.navigateSettled(Routes.JAM) },
+            onOpenInbox = { navController.navigateSettled(Routes.INBOX) },
+            onOpenCircle = { navController.navigateSettled(Routes.CIRCLE) },
+            onOpenMyProfile = { navController.navigateSettled(Routes.MY_PROFILE) },
+            onOpenSettings = { navController.navigateSettled(Routes.SETTINGS) }
         )
     }
 
@@ -87,7 +87,7 @@ fun NavGraphBuilder.wanderNavGraph(
         MyProfileScreen(
             contentPadding = contentPadding,
             onBack = navController::popBackStack,
-            onOpenStats = { navController.navigate(Routes.STATS) }
+            onOpenStats = { navController.navigateSettled(Routes.STATS) }
         )
     }
 
@@ -98,8 +98,8 @@ fun NavGraphBuilder.wanderNavGraph(
     tabDestination(Routes.SETTINGS) {
         SettingsScreen(
             contentPadding = contentPadding,
-            onNavidromeLogin = { navController.navigate(Routes.NAVIDROME_LOGIN) },
-            onYouTubeLogin = { navController.navigate(Routes.YTMUSIC_LOGIN) }
+            onNavidromeLogin = { navController.navigateSettled(Routes.NAVIDROME_LOGIN) },
+            onYouTubeLogin = { navController.navigateSettled(Routes.YTMUSIC_LOGIN) }
         )
     }
 
@@ -110,7 +110,7 @@ fun NavGraphBuilder.wanderNavGraph(
         AlbumScreen(
             contentPadding = contentPadding,
             onBack = navController::popBackStack,
-            onOpenArtist = { navController.navigate(Routes.artist(it)) }
+            onOpenArtist = { navController.navigateSettled(Routes.artist(it)) }
         )
     }
 
@@ -158,7 +158,7 @@ fun NavGraphBuilder.wanderNavGraph(
         }
         JamScreen(
             contentPadding = contentPadding,
-            onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+            onOpenSettings = { navController.navigateSettled(Routes.SETTINGS) },
             onBack = navController::popBackStack,
             initialCode = initialCode
         )
@@ -171,7 +171,7 @@ fun NavGraphBuilder.wanderNavGraph(
         ArtistScreen(
             contentPadding = contentPadding,
             onBack = navController::popBackStack,
-            onOpenAlbum = { navController.navigate(Routes.album(it)) }
+            onOpenAlbum = { navController.navigateSettled(Routes.album(it)) }
         )
     }
 
@@ -184,6 +184,8 @@ fun NavGraphBuilder.wanderNavGraph(
                 // behind it — without this the room opens correctly and is completely hidden.
                 onCollapsePlayer()
                 navController.popBackStack()
+                // Not guarded: the pop above leaves the entry mid-transition by construction, so
+                // a settled check here would swallow the navigation every time.
                 navController.navigate(Routes.JAM)
             }
         )
@@ -191,9 +193,10 @@ fun NavGraphBuilder.wanderNavGraph(
 
     detailDestination(Routes.WELCOME) {
         WelcomeScreen(
-            onNavidromeLogin = { navController.navigate(Routes.NAVIDROME_LOGIN) },
-            onYouTubeLogin = { navController.navigate(Routes.YTMUSIC_LOGIN) },
+            onNavidromeLogin = { navController.navigateSettled(Routes.NAVIDROME_LOGIN) },
+            onYouTubeLogin = { navController.navigateSettled(Routes.YTMUSIC_LOGIN) },
             onDone = {
+                // Not guarded: setup finishing is not a stray tap, and this must not be dropped.
                 navController.navigate(TopLevelDestination.HOME.route) {
                     popUpTo(Routes.WELCOME) { inclusive = true }
                 }
