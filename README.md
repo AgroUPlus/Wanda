@@ -1,5 +1,9 @@
 # Wanda 🎵
 
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=AgroUPlus_Wanda&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=AgroUPlus_Wanda)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=AgroUPlus_Wanda&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=AgroUPlus_Wanda)
+[![Quality gate status](https://sonarcloud.io/api/project_badges/measure?project=AgroUPlus_Wanda&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=AgroUPlus_Wanda)
+
 The Android version of [Wander](https://github.com/Kolbxyz/Wander) (also made by me), designed to replace other music apps in one place safely and freely.
 
 Unifies **Navidrome**, **local files**, **YouTube Music** and the **Internet Archive** behind a single library, a single queue, and a single player.
