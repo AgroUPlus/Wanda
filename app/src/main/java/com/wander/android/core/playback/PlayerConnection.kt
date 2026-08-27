@@ -95,7 +95,7 @@ class PlayerConnection @Inject constructor(
                     }
 
                     override fun onPlayerError(error: PlaybackException) {
-                        if (retryAsLiveStream(ctrl, error)) return
+                        if (retryContainerMismatch(ctrl, error)) return
                         _errors.tryEmit(error.userMessage())
                     }
                 }
@@ -117,48 +117,45 @@ class PlayerConnection @Inject constructor(
     )
 
     /**
-     * Re-prepares the current item as HLS after it failed to parse as a media container.
+     * Re-prepares the current item after it failed to parse as a media container (progressive vs HLS).
      *
      * The stream URL is hidden behind a `wanda://track/…` placeholder until load time, so the
      * media-source factory has to choose progressive or HLS from a MIME hint set when the item was
-     * *queued* — before anything has fetched it. When a track is not recognised as live at parse
-     * time the hint is missing, ExoPlayer hands an HLS manifest to the progressive extractors, and
-     * they report exactly one thing: none of them can read it.
+     * *queued* — before anything has fetched it. When YouTube hands back an HLS manifest for a track
+     * queued as progressive, or a direct audio format for a live stream marked as HLS, the extractors
+     * report that they cannot parse the container.
      *
-     * That error code is unambiguous enough to act on. It says the bytes were not a container, and
-     * for this app the overwhelmingly likely reason is that they were a playlist — so the item is
-     * rebuilt with the manifest MIME type and prepared again. Once per id, and never for an item
-     * that already carried the hint, so a file that is simply corrupt still surfaces as an error
-     * instead of retrying forever.
-     *
-     * This is the safety net rather than the mechanism: [StreamResolver] records the track as live
-     * the first time it resolves a manifest for it, so the *next* play sets the hint up front and
-     * never comes through here at all.
+     * In either case, the item is swapped to the opposite container hint and prepared again. Once
+     * per id, so a genuinely corrupt file still surfaces as an error instead of looping forever.
      */
-    private fun retryAsLiveStream(ctrl: MediaController, error: PlaybackException): Boolean {
+    private fun retryContainerMismatch(ctrl: MediaController, error: PlaybackException): Boolean {
         if (error.errorCode !in CONTAINER_PARSE_ERRORS) return false
         val item = runCatching { ctrl.currentMediaItem }.getOrNull() ?: return false
         val id = item.mediaId.takeIf { it.isNotBlank() } ?: return false
 
-        // A track addressed by a real file path is not a mislabelled manifest, so a corrupt local
-        // file still reports itself rather than being retried as a stream. A null configuration
-        // means it did not survive IPC, which is the placeholder case and the one worth retrying.
-        val scheme = item.localConfiguration?.uri?.scheme
-        if (scheme != null && scheme != WANDA_SCHEME) return false
+        val uri = item.localConfiguration?.uri
+        if (uri != null && uri.scheme != WANDA_SCHEME) return false
 
         if (!retriedAsLive.add(id)) return false
 
-        // Rebuilt from the id rather than amended in place. The URI carries the container hint —
-        // see `MediaItems` — and the item handed back by the session may have lost the
-        // configuration that would have been amended.
         val index = runCatching { ctrl.currentMediaItemIndex }.getOrNull() ?: return false
-        ctrl.replaceMediaItem(
-            index,
-            item.buildUpon()
-                .setUri("$WANDA_SCHEME://track/${Uri.encode(id)}$LIVE_SUFFIX")
-                .setMimeType(MimeTypes.APPLICATION_M3U8)
-                .build()
-        )
+        val isHls = uri?.toString()?.endsWith(LIVE_SUFFIX) == true ||
+            item.localConfiguration?.mimeType == MimeTypes.APPLICATION_M3U8
+
+        val newUri = if (isHls) {
+            Uri.parse("$WANDA_SCHEME://track/${Uri.encode(id)}")
+        } else {
+            Uri.parse("$WANDA_SCHEME://track/${Uri.encode(id)}$LIVE_SUFFIX")
+        }
+
+        val builder = item.buildUpon().setUri(newUri)
+        if (isHls) {
+            builder.setMimeType(null)
+        } else {
+            builder.setMimeType(MimeTypes.APPLICATION_M3U8)
+        }
+
+        ctrl.replaceMediaItem(index, builder.build())
         ctrl.prepare()
         ctrl.play()
         return true
