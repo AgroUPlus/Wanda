@@ -301,6 +301,10 @@ class MusicRepository @Inject constructor(
         val liked = !isLiked(track)
         trackDao.upsertTracks(listOf(TrackEntity.fromUnifiedTrack(track)))
         trackDao.setLiked(track.id, liked)
+        // A like is about the *recording*, not about the copy you happened to tap. Liking a song
+        // found on YouTube Music used to leave the Navidrome copy of it showing an empty heart —
+        // nine songs in one real library were split that way. Every rendition moves together.
+        renditionsOf(track).forEach { trackDao.setLiked(it.id, liked) }
         val source = sourceFor(track.source)
         if (source == null || !source.capabilities.likes) return@withContext Result.success(Unit)
 
@@ -428,6 +432,40 @@ class MusicRepository @Inject constructor(
             persist(tracks, asLibrary = false)
             tracks
         }
+    }
+
+    /**
+     * The other rows that are the same performance as [track].
+     *
+     * Name-matched in SQL to get a small candidate set, then judged by
+     * [TrackDeduplicator.isSameRecording] — the artist name alone cannot tell two same-named
+     * artists apart, and the title alone cannot tell a live take from a studio one.
+     */
+    private suspend fun renditionsOf(track: UnifiedTrack): List<UnifiedTrack> =
+        trackDao.getTracksByArtistOnce(track.artist)
+            .map(TrackEntity::toUnifiedTrack)
+            .filter { it.id != track.id && TrackDeduplicator.isSameRecording(track, it) }
+
+    /**
+     * Brings existing likes onto every copy of the recording they belong to.
+     *
+     * A one-off repair for likes made before a like meant the recording rather than the row. Safe
+     * to run repeatedly: it only ever *adds* likes to copies of something already liked, so it
+     * converges and never takes a like away. Nothing is merged and nothing is deleted, which is
+     * what makes this the half of the recording model that can be shipped without a way back.
+     */
+    suspend fun unifySplitLikes(): Int = withContext(Dispatchers.IO) {
+        val liked = trackDao.getLikedTracksOnce().map(TrackEntity::toUnifiedTrack)
+        var repaired = 0
+        for (track in liked) {
+            for (other in renditionsOf(track)) {
+                if (!other.isLiked) {
+                    trackDao.setLiked(other.id, true)
+                    repaired++
+                }
+            }
+        }
+        repaired
     }
 
     suspend fun getPlaylists(): List<UnifiedPlaylist> = coroutineScope {
