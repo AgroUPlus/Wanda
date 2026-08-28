@@ -13,8 +13,6 @@ import com.wander.android.data.sources.agro.AgroNode
 import com.wander.android.data.sources.agro.MissingTrack
 import com.wander.android.ui.components.ResumeHandoffCard
 import com.wander.android.ui.components.SyncOfferCard
-import com.wander.android.ui.components.player.MiniPlayerGap
-import com.wander.android.ui.components.player.MiniPlayerHeight
 
 /**
  * The two cards that rise from the bottom of the browsing surface: "your other device is playing
@@ -41,12 +39,12 @@ internal fun BoxScope.BottomOffers(
     onResume: (AgroHandoffState) -> Unit,
     onDismissHandoff: (AgroHandoffState) -> Unit,
     /** Height of the navigation bar, measured rather than assumed. */
-    navBarHeight: Dp,
-    hasTrack: Boolean
+    /** What the dock and the system inset already occupy — see `WanderApp`. */
+    dockBottom: Dp
 ) {
     // Clears the docked strip when one is up, so a card never covers the player it is offering to
     // replace.
-    val bottom = navBarHeight + 12.dp + if (hasTrack) MiniPlayerHeight + MiniPlayerGap else 0.dp
+    val bottom = dockBottom + 12.dp
     val slot = Modifier
         .align(Alignment.BottomCenter)
         .padding(horizontal = 12.dp)

@@ -45,12 +45,38 @@ class CatalogRepository @Inject constructor(
     /**
      * Pulls the album's tracks from its backend and persists them, so the flow above fills in.
      *
-     * Reuses [MusicRepository.getAlbumTracks], which already marks an album browsed on your own
-     * server as part of your library.
+     * Two paths, because there are two ways to arrive here. When Room knows the album,
+     * [MusicRepository.getAlbumTracks] is used — it marks an album browsed on your own server as
+     * part of your library, which is the right claim for a record you host yourself.
+     *
+     * When it does not, the album is resolved from its id prefix instead. That branch is not an
+     * edge case: an album tapped in an artist's shelf has no `AlbumEntity` row *and* no tracks, so
+     * [album] returns null for it, and this used to return here without ever asking the backend —
+     * leaving every YouTube Music album opened from an artist page permanently empty.
      */
     suspend fun refreshAlbum(albumId: String) {
-        val album = album(albumId) ?: return
-        musicRepository.getAlbumTracks(album)
+        val album = album(albumId)
+        if (album != null) {
+            musicRepository.getAlbumTracks(album)
+        } else {
+            musicRepository.getAlbumTracksById(albumId)
+        }
+    }
+
+    /**
+     * Writes album rows the app has seen but not browsed — the shelves on an artist's page.
+     *
+     * Without this the album screen has no header until its tracks land, and then only the one
+     * [albumFromTracks] can reconstruct from them. Non-library, for the same reason the tracks
+     * are: seeing a record on an artist page is not owning it.
+     */
+    suspend fun rememberAlbums(albums: List<UnifiedAlbum>) = withContext(Dispatchers.IO) {
+        // Only records Room has never seen. `insertAlbums` replaces on conflict, and a tile off an
+        // artist shelf carries no track count and no duration — writing it over a Navidrome album
+        // that has actually been browsed would blank fields the library screen shows.
+        val unknown = albums.filter { albumDao.getAlbumById(it.id) == null }
+        if (unknown.isEmpty()) return@withContext
+        albumDao.insertAlbums(unknown.map(AlbumEntity::fromUnifiedAlbum))
     }
 
     /**
@@ -120,6 +146,21 @@ class CatalogRepository @Inject constructor(
         } ?: return@withContext null
         source.getArtist(artistId).getOrNull()
     }
+
+    /**
+     * The whole of one album shelf on an artist's page.
+     *
+     * [browseId] and [params] are the coordinates the shelf's own "more" button carried, so the
+     * source that produced the shelf is the one asked to expand it. Empty on failure, which the
+     * screen treats as "nothing more arrived" and leaves the shelf as it was.
+     */
+    suspend fun artistAlbumPage(browseId: String, params: String?): List<UnifiedAlbum> =
+        withContext(Dispatchers.IO) {
+            val source = musicRepository.sources.firstOrNull {
+                it.capabilities.artists && browseId.startsWith(it.sourceType.idPrefix)
+            } ?: return@withContext emptyList()
+            source.getArtistAlbumPage(browseId, params).getOrDefault(emptyList())
+        }
 
     /** Cover for the artist header: whichever of their records has one. */
     fun artistImage(albums: List<UnifiedAlbum>, tracks: List<UnifiedTrack>): String? =

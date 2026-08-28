@@ -18,7 +18,9 @@ data class ArtistDetails(
     val imageUrl: String? = null,
     /** What the source says about them, in their own page's words. Null when it says nothing. */
     val bio: String? = null,
-    val sections: List<ArtistSection> = emptyList()
+    val sections: List<ArtistSection> = emptyList(),
+    /** Other artists the backend suggests. Empty when it suggests none, which is common. */
+    val related: List<RelatedArtist> = emptyList()
 )
 
 /** One titled block on an artist's page. */
@@ -35,5 +37,14 @@ data class ArtistTrackSection(
 /** Records — "Albums", "Singles", "EPs". */
 data class ArtistAlbumSection(
     override val title: String,
-    val albums: List<UnifiedAlbum>
+    val albums: List<UnifiedAlbum>,
+    /**
+     * Where the rest of this shelf lives, when the page only showed the first handful.
+     *
+     * An artist carousel carries about ten tiles; the full discography sits behind the shelf's
+     * "more" button, which is a browse id plus an opaque `params` blob. Null means the shelf is
+     * already complete — there is nothing further to fetch, and the UI offers no "See all".
+     */
+    val moreBrowseId: String? = null,
+    val moreParams: String? = null
 ) : ArtistSection

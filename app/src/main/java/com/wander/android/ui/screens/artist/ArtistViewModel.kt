@@ -4,9 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.data.model.ArtistAlbumSection
 import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.ArtistPageMerger
 import com.wander.android.data.repository.CatalogRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.ShareRepository
@@ -18,12 +20,12 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @HiltViewModel
-class ArtistViewModel @Inject constructor(
+internal class ArtistViewModel @Inject constructor(
     private val catalogRepository: CatalogRepository,
     private val musicRepository: MusicRepository,
     private val shareRepository: ShareRepository,
@@ -35,22 +37,100 @@ class ArtistViewModel @Inject constructor(
         .orEmpty()
         .let { runCatching { URLDecoder.decode(it, "UTF-8") }.getOrDefault(it) }
 
-    /** The discography, newest first. Room-backed, so it is there before the network answers. */
-    val albums: StateFlow<List<UnifiedAlbum>> = catalogRepository.artistAlbumsFlow(artist)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    val tracks: StateFlow<List<UnifiedTrack>> = catalogRepository.artistTracksFlow(artist)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    private val albums = catalogRepository.artistAlbumsFlow(artist)
+    private val tracks = catalogRepository.artistTracksFlow(artist)
+    private val details = MutableStateFlow<ArtistDetails?>(null)
+    private val loading = MutableStateFlow(true)
+    private val refreshing = MutableStateFlow(false)
+    private val expanded = MutableStateFlow<Map<String, List<UnifiedAlbum>>>(emptyMap())
+    private val loadingShelf = MutableStateFlow<String?>(null)
 
     /**
-     * The backend's own id for this artist, taken from a track that credits them.
+     * One state, assembled from Room and the backend page together.
      *
-     * This screen is keyed by *name* — it gathers everything by that artist across every source —
-     * so there is no single id to share until at least one track has loaded. Null means the
-     * action is not offered rather than offered and broken.
+     * The merge runs here rather than in the repository because it is a *view* decision — which
+     * shelves this screen shows and in what order — and the repository has no business holding it.
      */
-    private fun artistTarget(): ShareTarget? {
-        val track = tracks.value.firstOrNull { !it.artistId.isNullOrBlank() } ?: return null
+    val state: StateFlow<ArtistUiState> = combine(
+        albums,
+        tracks,
+        details,
+        combine(loading, refreshing, expanded, loadingShelf) { l, r, e, s -> Progress(l, r, e, s) }
+    ) { albums, tracks, details, progress ->
+        val page = ArtistPageMerger.merge(details, albums, tracks)
+        ArtistUiState(
+            artist = artist,
+            page = page,
+            heroImage = page.imageUrl ?: catalogRepository.artistImage(albums, tracks),
+            albumCount = page.albums?.albums?.size ?: 0,
+            trackCount = page.topSongs.size,
+            // Content beats the flag: Room can answer before the network does, and a page that
+            // already has records must not be replaced by a skeleton.
+            isLoading = progress.loading && page.isEmpty,
+            isRefreshing = progress.refreshing || (progress.loading && !page.isEmpty),
+            canShare = artistTarget(tracks)?.let { shareRepository.canShare(it.source) } == true,
+            expandedShelves = progress.expanded,
+            loadingShelf = progress.loadingShelf
+        )
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        ArtistUiState(artist = artist)
+    )
+
+    private data class Progress(
+        val loading: Boolean,
+        val refreshing: Boolean,
+        val expanded: Map<String, List<UnifiedAlbum>>,
+        val loadingShelf: String?
+    )
+
+    init {
+        refresh()
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            loading.value = true
+            catalogRepository.refreshArtist(artist)
+            // *After* the search, not before: the artist's backend id comes off a track, and until
+            // the search has persisted one there is nothing to ask the backend about. The loading
+            // flag stays raised across both halves — clearing it here was what made the screen
+            // render its library-only self and then reflow.
+            val page = artistId()?.let { catalogRepository.artistDetails(it) }
+            details.value = page
+            // Remember the records the shelves named, so tapping one opens a page with a real
+            // header instead of one reconstructed from whatever tracks happen to arrive.
+            page?.sections?.filterIsInstance<ArtistAlbumSection>()
+                ?.flatMap { it.albums }
+                ?.let { catalogRepository.rememberAlbums(it) }
+            loading.value = false
+        }
+    }
+
+    /**
+     * Fetches the whole of one album shelf.
+     *
+     * Only offered for a shelf that told us where its remainder lives; see
+     * [ArtistAlbumSection.moreBrowseId]. A failure leaves the shelf as it was rather than emptying
+     * it — the tiles already on screen are still true.
+     */
+    fun expandShelf(section: ArtistAlbumSection) {
+        val browseId = section.moreBrowseId ?: return
+        if (section.title in expanded.value || loadingShelf.value != null) return
+        viewModelScope.launch {
+            loadingShelf.value = section.title
+            val all = catalogRepository.artistAlbumPage(browseId, section.moreParams)
+            if (all.isNotEmpty()) {
+                catalogRepository.rememberAlbums(all)
+                expanded.value = expanded.value + (section.title to all)
+            }
+            loadingShelf.value = null
+        }
+    }
+
+    private fun artistTarget(from: List<UnifiedTrack>): ShareTarget? {
+        val track = from.firstOrNull { !it.artistId.isNullOrBlank() } ?: return null
         return ShareTarget(
             kind = ShareKind.ARTIST,
             source = track.source,
@@ -59,63 +139,26 @@ class ArtistViewModel @Inject constructor(
         )
     }
 
-    /** Their portrait from the backend if there is one, else a cover off one of their records. */
-    fun heroImage(): String? = _details.value?.imageUrl ?: image()
-
-    fun canShareArtist(): Boolean =
-        artistTarget()?.let { shareRepository.canShare(it.source) } ?: false
+    private fun artistId(): String? = state.value.page.topSongs
+        .firstNotNullOfOrNull { it.artistId?.takeIf(String::isNotBlank) }
 
     fun shareArtist() {
-        val target = artistTarget() ?: return
+        val target = artistTarget(state.value.page.topSongs) ?: return
         viewModelScope.launch { shareRepository.share(target) }
     }
 
-    private val _isLoading = MutableStateFlow(true)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    private fun topSongs() = state.value.page.topSongs
 
-    /**
-     * The artist's page from the backend, when one of them serves it.
-     *
-     * Null is the ordinary state, not a failure: an artist known only from local files has no page
-     * anywhere, and the library-derived discography below is the whole of what is true about them.
-     */
-    private val _details = MutableStateFlow<ArtistDetails?>(null)
-    val details: StateFlow<ArtistDetails?> = _details.asStateFlow()
+    fun playTop() = topSongs().takeIf { it.isNotEmpty() }?.let { playerConnection.play(it) }
 
-    init {
-        refresh()
-    }
-
-    fun refresh() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            catalogRepository.refreshArtist(artist)
-            _isLoading.value = false
-            // After the search, not before: the artist's backend id comes off a track, and until
-            // the search has persisted one there is nothing to ask the backend about.
-            _details.value = artistId()?.let { catalogRepository.artistDetails(it) }
-        }
-    }
-
-    /** The backend's own id for this artist, taken from a track that credits them. */
-    private fun artistId(): String? =
-        tracks.value.firstNotNullOfOrNull { it.artistId?.takeIf(String::isNotBlank) }
-
-    fun image(): String? = catalogRepository.artistImage(albums.value, tracks.value)
-
-    /** The artist's most played, which is what "play" on an artist page should mean. */
-    fun playTop() = tracks.value.takeIf { it.isNotEmpty() }?.let { playerConnection.play(it) }
-
-    fun shuffle() = tracks.value.takeIf { it.isNotEmpty() }
+    fun shuffle() = topSongs().takeIf { it.isNotEmpty() }
         ?.let { playerConnection.play(it.shuffled()) }
 
-    fun play(index: Int) = playerConnection.play(tracks.value, index)
+    fun play(index: Int) = playerConnection.play(topSongs(), index)
 
     /**
-     * Plays one track on its own.
-     *
-     * The backend's shelves are not the library list, so an index into that list means nothing for
-     * a song that only appears on the artist's own page.
+     * Plays one track on its own — for a song that only appears on a shelf, where an index into
+     * the merged song list means nothing.
      */
     fun playOne(track: UnifiedTrack) = playerConnection.play(listOf(track))
 
@@ -125,7 +168,7 @@ class ArtistViewModel @Inject constructor(
 
     /** Radio for the artist as a whole, seeded from their most played. */
     fun startArtistRadio() {
-        tracks.value.firstOrNull()?.let(::startRadio)
+        topSongs().firstOrNull()?.let(::startRadio)
     }
 
     fun startRadio(track: UnifiedTrack) {

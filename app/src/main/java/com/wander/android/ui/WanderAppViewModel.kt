@@ -11,6 +11,7 @@ import com.wander.android.data.repository.InstantRadioRepository
 import com.wander.android.data.repository.LibrarySyncRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.PlaylistWriteRepository
+import com.wander.android.data.repository.SearchQueryHolder
 import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.sources.agro.AgroSessionApi
 import com.wander.android.data.sources.agro.MissingTrack
@@ -47,8 +48,19 @@ class WanderAppViewModel @Inject constructor(
     connectivity: ConnectivityObserver,
     private val updateChecker: UpdateChecker,
     private val instantRadio: InstantRadioRepository,
-    private val playerConnection: PlayerConnection
+    private val playerConnection: PlayerConnection,
+    private val searchQueryHolder: SearchQueryHolder
 ) : ViewModel() {
+
+    /**
+     * The dock's search text.
+     *
+     * Owned by a singleton rather than by `SearchViewModel`, because the field is in the dock and
+     * the dock outlives the Search destination — see [SearchQueryHolder].
+     */
+    val searchQuery: StateFlow<String> = searchQueryHolder.query
+
+    fun setSearchQuery(value: String) = searchQueryHolder.set(value)
 
     /**
      * The instant-radio button, hoisted to the shell.

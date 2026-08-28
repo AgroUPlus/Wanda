@@ -3,6 +3,7 @@ package com.wander.android.data.sources
 import com.wander.android.data.model.LyricsData
 import com.wander.android.data.model.RecommendedShelf
 import com.wander.android.data.model.SourceType
+import com.wander.android.data.model.ArtistAlbumSection
 import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
@@ -88,6 +89,18 @@ interface IMusicSource {
      */
     suspend fun getArtist(artistId: String): Result<ArtistDetails> =
         Result.failure(UnsupportedOperationException("$sourceType has no artist pages"))
+
+    /**
+     * The whole of one shelf on an artist's page, when the page itself only showed the start of it.
+     *
+     * Addressed by the coordinates the shelf's own "more" button carries
+     * ([ArtistAlbumSection.moreBrowseId] and [ArtistAlbumSection.moreParams]) rather than by an
+     * offset, because these backends page by opaque token, not by index. Failing by default is
+     * deliberate: a source that cannot expand a shelf must not answer "there is nothing more",
+     * which is what an empty success would mean.
+     */
+    suspend fun getArtistAlbumPage(browseId: String, params: String?): Result<List<UnifiedAlbum>> =
+        Result.failure(UnsupportedOperationException("$sourceType cannot expand artist shelves"))
 
     suspend fun getPlaylists(): Result<List<UnifiedPlaylist>> = Result.success(emptyList())
     suspend fun getPlaylistTracks(playlistId: String): Result<List<UnifiedTrack>> =

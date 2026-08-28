@@ -30,6 +30,7 @@ import androidx.compose.ui.util.lerp
 import com.wander.android.ui.components.MiniArtworkSize
 import com.wander.android.ui.components.MiniProgressBarHeight
 import com.wander.android.ui.components.MiniRowVerticalPadding
+import com.wander.android.ui.navigation.DockRowHeight
 import kotlinx.coroutines.launch
 
 /**
@@ -40,7 +41,17 @@ import kotlinx.coroutines.launch
  * below, so the bottom of the play controls was cut off, and every screen's list padding is derived
  * from it, so the last row of covers ended up under the strip.
  */
-val MiniPlayerHeight: Dp = MiniProgressBarHeight + MiniRowVerticalPadding * 2 + MiniArtworkSize
+val MiniStripHeight: Dp = MiniProgressBarHeight + MiniRowVerticalPadding * 2 + MiniArtworkSize
+
+/**
+ * The whole docked block: the player strip *and* the dock row of destinations or search beneath it.
+ *
+ * The navigation bar used to be a separate `bottomBar` under a floating player card. Fusing them
+ * means the sheet's docked area is taller by exactly one dock row, and because every content inset
+ * in `WanderApp` is derived from this constant, widening it here is what moves every list's bottom
+ * padding with it.
+ */
+val MiniPlayerHeight: Dp = MiniStripHeight + DockRowHeight
 
 /** Gap between the docked strip and the navigation bar, so the strip reads as floating over it. */
 val MiniPlayerGap: Dp = 8.dp
