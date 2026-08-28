@@ -13,6 +13,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Tab
+import androidx.compose.ui.unit.Dp
+import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,6 +42,8 @@ internal fun SettingsScreen(
     contentPadding: PaddingValues,
     onNavidromeLogin: () -> Unit,
     onYouTubeLogin: () -> Unit,
+    onOpenImport: () -> Unit = {},
+    onOpenMergePreview: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val state = rememberSettingsUiState(viewModel)
@@ -83,7 +87,23 @@ internal fun SettingsScreen(
             modifier = Modifier.padding(start = 20.dp, top = 16.dp, bottom = 8.dp)
         )
 
-        PrimaryScrollableTabRow(selectedTabIndex = pagerState.currentPage, edgePadding = 12.dp) {
+        // The same expressive indicator the Library header uses: a pill under the label rather
+        // than a bar under the whole tab, so which section you are in reads from its silhouette.
+        PrimaryScrollableTabRow(
+            selectedTabIndex = pagerState.currentPage,
+            edgePadding = 12.dp,
+            indicator = {
+                TabRowDefaults.PrimaryIndicator(
+                    modifier = Modifier.tabIndicatorOffset(
+                        pagerState.currentPage,
+                        matchContentSize = true
+                    ),
+                    width = Dp.Unspecified,
+                    height = 3.dp,
+                    shape = MaterialTheme.shapes.extraSmall
+                )
+            }
+        ) {
             tabs.forEachIndexed { index, tab ->
                 Tab(
                     selected = pagerState.currentPage == index,
@@ -163,7 +183,8 @@ internal fun SettingsScreen(
                         onClearCache = viewModel::clearCache
                     )
 
-                    SettingsTab.SHARING -> sharingTab(
+                    SettingsTab.EXTERNAL -> externalTab(
+                        onOpenImport = onOpenImport,
                         shareDomain = state.shareDomain,
                         agroShareDomain = state.agroShareDomain,
                         onEditDomain = { dialogs.showShareDomainDialog = true },
@@ -187,7 +208,8 @@ internal fun SettingsScreen(
                         onAutoUpdateCheckChange = viewModel::setAutoUpdateCheckEnabled,
                         onCheckForUpdate = viewModel::checkForUpdate,
                         onOpenRelease = { uriHandler.openUri(it) },
-                        onOpenUrl = { uriHandler.openUri(it) }
+                        onOpenUrl = { uriHandler.openUri(it) },
+                        onOpenMergePreview = onOpenMergePreview
                     )
                 }
             }

@@ -2,6 +2,9 @@ package com.wander.android.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -146,8 +149,15 @@ private val AVATAR_PALETTES = listOf(
 
 /**
  * Procedural cute avatar / identicon.
- * When [avatarUrl] is provided, loads the remote image.
- * Otherwise, renders a deterministic, cheerful character based on [seed].
+ *
+ * When [avatarUrl] is provided, loads the remote image. Otherwise renders a deterministic,
+ * cheerful character based on [seed] — the same name always gets the same face, which is the
+ * point: it is a picture of *who* this is.
+ *
+ * A blank [seed] gets a plain placeholder instead. There is no one to draw before you have paired
+ * with Agro, and generating a face from the empty string produced a specific, cheerful stranger
+ * who appeared to be you — sitting in the Friends header and on your own profile — and who changed
+ * the moment you signed in. A neutral silhouette says "nobody yet", which is the truth.
  */
 @Composable
 internal fun CuteAvatar(
@@ -158,7 +168,7 @@ internal fun CuteAvatar(
     showBorder: Boolean = false,
     borderColor: Color = MaterialTheme.colorScheme.surface
 ) {
-    val cleanSeed = seed.trim().ifEmpty { "wanderer" }
+    val cleanSeed = seed.trim()
 
     Box(
         modifier = modifier
@@ -177,9 +187,30 @@ internal fun CuteAvatar(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.size(size).clip(CircleShape)
             )
+        } else if (cleanSeed.isEmpty()) {
+            PlaceholderAvatar(size = size)
         } else {
             ProceduralCanvasAvatar(seed = cleanSeed, size = size)
         }
+    }
+}
+
+/** Nobody, drawn as nobody. */
+@Composable
+private fun PlaceholderAvatar(size: Dp) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Person,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(size * 0.6f)
+        )
     }
 }
 

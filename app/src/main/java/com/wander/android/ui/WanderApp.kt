@@ -7,9 +7,16 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -21,6 +28,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
@@ -49,7 +57,11 @@ import com.wander.android.ui.components.player.PlayerSheetValue
 import com.wander.android.ui.components.player.rememberPlayerSheetState
 import com.wander.android.ui.navigation.Routes
 import com.wander.android.ui.navigation.TopLevelDestination
-import com.wander.android.ui.navigation.WanderNavigationBar
+import com.wander.android.ui.navigation.DockRowHeight
+import com.wander.android.core.permissions.hasPermission
+import com.wander.android.ui.components.listen.ListenSheet
+import com.wander.android.ui.navigation.WanderDock
+import com.wander.android.ui.navigation.WanderDockRow
 import com.wander.android.ui.navigation.wanderNavGraph
 import com.wander.android.ui.screens.home.InstantRadioFab
 import com.wander.android.ui.screens.social.JamViewModel
@@ -149,9 +161,35 @@ fun WanderApp(
         agroViewModel.clearError()
     }
 
-    // Measured, not assumed: ShortNavigationBar is shorter than the classic bar and its height
-    // varies with the system gesture inset, so a constant left the sheet misaligned against it.
-    var navBarHeight by remember { mutableStateOf(0.dp) }
+    // The navigation destinations moved *into* the dock (see `WanderDockRow`), so there is no
+    // `bottomBar` left to measure — what has to be cleared at the bottom of the screen is the
+    // system's own gesture area, and the dock floats above it.
+    // Read once, here, and handed to the nav graph: its transition lambdas are not composable and
+    // cannot reach the theme themselves. See `NavTransitions`.
+    val motionScheme = MaterialTheme.motionScheme
+
+    val systemBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+    // What the dock itself has to clear, which is not the same thing. The dock's search field is
+    // the reason the keyboard is up, so the dock rides above it — the window is edge-to-edge and
+    // never resizes, and without this the keyboard covered the field being typed into.
+    //
+    // The larger of the two, not their sum: the IME draws over the gesture area, so adding both
+    // left a nav-bar-sized gap between the keyboard and the dock. `WindowInsets.ime` animates with
+    // the keyboard, so the dock rides up with it rather than jumping when it lands.
+    val imeBottomInset = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+    val dockInset = maxOf(systemBottomInset, imeBottomInset)
+
+    // What every bottom-anchored thing has to clear: the system inset, then whichever dock is
+    // actually on screen. Derived once here rather than re-summed at each call site, which is how
+    // the old `navBarHeight + if (hasTrack) ...` arithmetic drifted between them.
+    val dockBottom = systemBottomInset + MiniPlayerGap + if (hasTrack && showChrome) {
+        MiniPlayerHeight
+    } else if (showChrome) {
+        DockRowHeight
+    } else {
+        0.dp
+    }
 
     val offlinePlayback by viewModel.offlinePlayback.collectAsStateWithLifecycle()
 
@@ -159,22 +197,6 @@ fun WanderApp(
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 containerColor = MaterialTheme.colorScheme.background,
-                bottomBar = {
-                    if (showChrome) {
-                        WanderNavigationBar(
-                            currentRoute = currentRoute?.substringBefore("?"),
-                            onNavigate = { destination -> navController.switchTab(destination) },
-                            onHeightChanged = { navBarHeight = it },
-                            modifier = Modifier.graphicsLayer {
-                                val p = sheetState.progress
-                                translationY = p * size.height
-                                // Eased on the same curve as the sheet, so the bar leaves with it
-                                // rather than snapping out in the first fraction of the drag.
-                                alpha = 1f - (p * p * (3f - 2f * p))
-                            }
-                        )
-                    }
-                }
             ) { padding ->
                 // Remembered because `NavHost` keys its `remember(builder)` on the graph-building
                 // lambda, which captures this. A fresh PaddingValues on every recomposition meant the
@@ -189,15 +211,15 @@ fun WanderApp(
                 // The bar sits above the mini player rather than replacing it: you should still be
                 // able to open the player and see what you are hearing, so both are on screen and
                 // both are reserved for.
+                // `dockBottom` already covers the system inset and whichever dock is showing;
+                // the Scaffold no longer contributes a bottom bar of its own. Only the extra bars
+                // that stack on top of the dock are added here.
                 val extraBottom = when {
                     !showChrome -> 0.dp
-                    activeJam != null ->
-                        MiniPlayerHeight + JamBarHeight + MiniPlayerGap + MiniPlayerShadowInset
-                    hasTrack && listenAlongSession != null ->
-                        MiniPlayerHeight + ListenAlongBarHeight + MiniPlayerGap + MiniPlayerShadowInset
-                    hasTrack -> MiniPlayerHeight + MiniPlayerGap + MiniPlayerShadowInset
-                    listenAlongSession != null -> ListenAlongBarHeight + MiniPlayerGap
-                    else -> 0.dp
+                    activeJam != null -> dockBottom + JamBarHeight + MiniPlayerShadowInset
+                    listenAlongSession != null ->
+                        dockBottom + ListenAlongBarHeight + MiniPlayerShadowInset
+                    else -> dockBottom + MiniPlayerShadowInset
                 }
                 val direction = LocalLayoutDirection.current
                 val contentPadding = remember(padding, extraBottom, direction) {
@@ -211,6 +233,7 @@ fun WanderApp(
                 ) {
                     wanderNavGraph(
                         navController = navController,
+                        motion = motionScheme,
                         playerConnection = playerConnection,
                         contentPadding = contentPadding,
                         onCollapsePlayer = { scope.launch { sheetState.collapse() } }
@@ -218,9 +241,73 @@ fun WanderApp(
                 }
             }
 
+            // One dock row, two possible hosts: the player sheet when something is loaded, and a
+            // standalone card when nothing is. Defined once so the two can never drift apart.
+            val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+            val dockRoute = currentRoute?.substringBefore("?")
+            // "What is this?" — the microphone, matched against the user's own library. The
+            // permission is asked for here, on the tap, rather than at startup with the others:
+            // it is used for the few seconds the sheet is open, and a microphone prompt on first
+            // launch of a music player is the kind of thing that gets an app uninstalled.
+            val context = LocalContext.current
+            var showListen by remember { mutableStateOf(false) }
+            val micLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { granted -> showListen = granted }
+            val onListen: () -> Unit = {
+                if (context.hasPermission(Manifest.permission.RECORD_AUDIO)) {
+                    showListen = true
+                } else {
+                    micLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                }
+            }
+            if (showListen) {
+                ListenSheet(
+                    onDismiss = { showListen = false },
+                    onOpenTrack = { showListen = false }
+                )
+            }
+
+            // Focusing the field is what opens the library, and typing is what turns it into
+            // results — so `onQueryChange` navigates too, for the case where text arrives without
+            // the field ever taking focus (a hardware keyboard, an autofill).
+            val openLibrary = { navController.switchTab(TopLevelDestination.LIBRARY) }
+            val onQueryChange: (String) -> Unit = { value ->
+                if (value.isNotBlank() && dockRoute != TopLevelDestination.LIBRARY.route) {
+                    openLibrary()
+                }
+                viewModel.setSearchQuery(value)
+            }
+            val dockRow: @Composable () -> Unit = {
+                WanderDockRow(
+                    currentRoute = dockRoute,
+                    query = searchQuery,
+                    onOpenLibrary = openLibrary,
+                    onOpenFriends = { navController.switchTab(TopLevelDestination.FRIENDS) },
+                    onQueryChange = onQueryChange,
+                    onSearch = openLibrary,
+                    onListen = onListen
+                )
+            }
+
+            if (showChrome && !hasTrack) {
+                WanderDock(
+                    currentRoute = dockRoute,
+                    query = searchQuery,
+                    onOpenLibrary = openLibrary,
+                    onOpenFriends = { navController.switchTab(TopLevelDestination.FRIENDS) },
+                    onQueryChange = onQueryChange,
+                    onSearch = openLibrary,
+                    onListen = onListen,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = dockInset + MiniPlayerGap)
+                )
+            }
+
             PlayerSheet(
                 sheetState = sheetState,
-                bottomInset = if (showChrome) navBarHeight else 0.dp,
+                bottomInset = if (showChrome) dockInset else 0.dp,
                 isVisible = hasTrack && showChrome
             ) { progress, rawProgress, expandedHeight ->
                 PlayerSheetContent(
@@ -234,9 +321,9 @@ fun WanderApp(
                     onOpenQueue = { navController.navigate(Routes.QUEUE) },
                     // The sheet collapses first: the destination sits underneath it, and navigating
                     // while the player is still expanded left the user staring at the player.
-                    onOpenArtist = { artist ->
+                    onOpenArtist = { artist, artistId ->
                         scope.launch { sheetState.collapse() }
-                        navController.navigate(Routes.artist(artist))
+                        navController.navigate(Routes.artist(artist, artistId))
                     },
                     onOpenAlbum = { albumId ->
                         scope.launch { sheetState.collapse() }
@@ -245,7 +332,8 @@ fun WanderApp(
                     onOpenJam = {
                         scope.launch { sheetState.collapse() }
                         navController.navigate(Routes.JAM)
-                    }
+                    },
+                    dockRow = dockRow
                 )
             }
 
@@ -269,27 +357,21 @@ fun WanderApp(
             val playerDocked by remember(sheetState) {
                 derivedStateOf { sheetState.progress <= DockedEpsilon }
             }
-            // Only the route gates composition. `playerDocked` is passed *in* rather than wrapped
-            // around the call, because an `if` here would tear the button out before its exit
-            // transition could run — which is what made it pop rather than leave.
-            if (currentRoute == TopLevelDestination.HOME.route) {
-                InstantRadioFab(
-                    isStarting = isStartingRadio,
-                    isPlayerDocked = playerDocked,
-                    onClick = viewModel::startInstantRadio,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        // Clears whatever the shell has parked at the bottom: the navigation bar
-                        // always, and the docked strip when there is a track. Both are measured
-                        // rather than assumed, so the button sits the same distance clear of the
-                        // strip as it does of the bar on its own.
-                        .padding(
-                            start = 20.dp,
-                            bottom = navBarHeight + RadioFabClearance +
-                                if (hasTrack) MiniPlayerHeight + MiniPlayerGap else 0.dp
-                        )
-                )
-            }
+            // Nothing here gates composition. Both conditions are passed *in*, because an `if`
+            // would tear the button out before its exit transition could run — which is what made
+            // it pop rather than leave.
+            InstantRadioFab(
+                isStarting = isStartingRadio,
+                visible = playerDocked && currentRoute == TopLevelDestination.HOME.route,
+                onClick = viewModel::startInstantRadio,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    // Clears whatever the shell has parked at the bottom: the navigation bar
+                    // always, and the docked strip when there is a track. Both are measured
+                    // rather than assumed, so the button sits the same distance clear of the
+                    // strip as it does of the bar on its own.
+                    .padding(start = 20.dp, bottom = dockBottom + RadioFabClearance)
+            )
 
             // Offered whenever this device is idle — not merely when it has never played anything.
             // The gate used to be "no track loaded", and a track stays loaded after it finishes, so
@@ -305,8 +387,7 @@ fun WanderApp(
                 sessionArtwork = sessionArtwork,
                 onResume = agroViewModel::resume,
                 onDismissHandoff = agroViewModel::dismiss,
-                navBarHeight = navBarHeight,
-                hasTrack = hasTrack
+                dockBottom = dockBottom
             )
 
             // Follows the user across every screen, because the session does. It is the only place
@@ -321,7 +402,7 @@ fun WanderApp(
                     onLeave = jamViewModel::leave,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = navBarHeight + (if (hasTrack) MiniPlayerHeight + MiniPlayerGap else 0.dp))
+                        .padding(bottom = dockBottom)
                 )
             }
 
@@ -331,7 +412,7 @@ fun WanderApp(
                     onLeave = socialViewModel::stopListenAlong,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = navBarHeight + MiniPlayerHeight + MiniPlayerGap)
+                        .padding(bottom = dockBottom)
                 )
             }
 
@@ -342,11 +423,7 @@ fun WanderApp(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(
-                        bottom = if (hasTrack && showChrome) {
-                            navBarHeight + MiniPlayerHeight + MiniPlayerGap + 8.dp
-                        } else {
-                            navBarHeight + 8.dp
-                        }
+                        bottom = dockBottom + 8.dp
                     )
             )
         }
@@ -368,8 +445,9 @@ private fun PaddingValues.plusBottom(
 /**
  * Tab switching keeps each tab's own state — and lands on the tab itself.
  *
- * `restoreState` brings back the whole saved stack, detail pages included, so tapping "Search"
- * after opening an artist from it put you straight back on that artist page: the tab looked stuck.
+ * `restoreState` brings back the whole saved stack, detail pages included, so opening the library
+ * after reaching an artist from it put you straight back on that artist page: the field looked
+ * stuck.
  * The stack is still restored, for the screen state it carries — a typed query, a scroll position —
  * and then popped down to the tab's own destination, which is what the tap asked for.
  */
@@ -379,8 +457,6 @@ private fun androidx.navigation.NavHostController.switchTab(destination: TopLeve
         launchSingleTop = true
         restoreState = true
     }
-    // By id, not route: Search's destination is registered as `search?query={query}`, which no
-    // plain "search" string will match.
     graph.findNode(destination.route)?.id?.let { popBackStack(it, inclusive = false) }
 }
 

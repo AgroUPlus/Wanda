@@ -24,6 +24,16 @@ interface TrackDao {
     @Query("SELECT * FROM tracks WHERE isLibrary = 1 ORDER BY title ASC")
     fun getAllTracksFlow(): Flow<List<TrackEntity>>
 
+    /**
+     * Every row, library or not, once.
+     *
+     * Unfiltered on purpose: the recording migration has to account for *all* renditions, including
+     * the non-library rows a search or an artist page left behind — those carry likes and play
+     * counts too, and a migration that skipped them would strand them.
+     */
+    @Query("SELECT * FROM tracks")
+    suspend fun getAllTracksOnce(): List<TrackEntity>
+
     @Query("SELECT * FROM tracks WHERE isLibrary = 1 AND source = :source ORDER BY title ASC")
     fun getTracksBySourceFlow(source: SourceType): Flow<List<TrackEntity>>
 
@@ -40,6 +50,10 @@ interface TrackDao {
 
     @Query("SELECT * FROM tracks WHERE isDownloaded = 1 AND source != 'LOCAL' ORDER BY title ASC")
     fun getDownloadedTracksFlow(): Flow<List<TrackEntity>>
+
+    /** Everything playable with no network: local files, and anything the downloader has written. */
+    @Query("SELECT * FROM tracks WHERE isDownloaded = 1 OR source = 'LOCAL'")
+    suspend fun getOfflineTracksOnce(): List<TrackEntity>
 
     @Query("SELECT * FROM tracks WHERE albumId = :albumId ORDER BY discNumber ASC, trackNumber ASC")
     fun getTracksByAlbumFlow(albumId: String): Flow<List<TrackEntity>>
@@ -65,6 +79,19 @@ interface TrackDao {
         """
     )
     fun getTracksByArtistFlow(artist: String): Flow<List<TrackEntity>>
+
+    /**
+     * Everything under one artist name, once.
+     *
+     * The candidate set for finding a track's other renditions. Name-matched and case-folded on
+     * purpose — it is a net, not an answer; `TrackDeduplicator.isSameRecording` decides which of
+     * the catch is actually the same performance.
+     */
+    @Query("SELECT * FROM tracks WHERE artist = :artist COLLATE NOCASE")
+    suspend fun getTracksByArtistOnce(artist: String): List<TrackEntity>
+
+    @Query("SELECT * FROM tracks WHERE isLiked = 1")
+    suspend fun getLikedTracksOnce(): List<TrackEntity>
 
     @Query(
         """
@@ -191,6 +218,39 @@ interface TrackDao {
 
     @Query("UPDATE tracks SET isLiked = :isLiked WHERE id = :trackId")
     suspend fun setLiked(trackId: String, isLiked: Boolean)
+
+    /**
+     * Everything with a file on this device — music stored locally, and anything downloaded.
+     *
+     * The set the fingerprint index can be built from: recognition matches against audio it can
+     * actually read, and a track that only exists on a server has no bytes here to fingerprint.
+     */
+    @Query("SELECT * FROM tracks WHERE localFilePath IS NOT NULL AND localFilePath != ''")
+    suspend fun getTracksWithLocalFiles(): List<TrackEntity>
+
+    @Query("SELECT * FROM tracks WHERE localFilePath IS NOT NULL AND localFilePath != '' AND title = :title COLLATE NOCASE LIMIT 1")
+    suspend fun findDownloadedMatch(title: String): TrackEntity?
+
+    @Query(
+        """
+        SELECT * FROM tracks 
+        WHERE ((localFilePath IS NOT NULL AND localFilePath != '') OR source = 'LOCAL')
+          AND title = :title COLLATE NOCASE 
+        ORDER BY CASE WHEN (localFilePath IS NOT NULL AND localFilePath != '') THEN 0 ELSE 1 END
+        LIMIT 1
+        """
+    )
+    suspend fun findLocalOrDownloadedMatch(title: String): TrackEntity?
+
+    @Query(
+        """
+        SELECT * FROM tracks 
+        WHERE source = 'NAVIDROME' 
+          AND title = :title COLLATE NOCASE 
+        LIMIT 1
+        """
+    )
+    suspend fun findNavidromeMatch(title: String): TrackEntity?
 
     @Query("UPDATE tracks SET isDownloaded = :isDownloaded, localFilePath = :localPath WHERE id = :trackId")
     suspend fun setDownloaded(trackId: String, isDownloaded: Boolean, localPath: String?)

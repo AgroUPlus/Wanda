@@ -26,7 +26,16 @@ data class AlbumEntity(
     val durationMs: Long = 0L,
     val year: Int? = null,
     val genre: String? = null,
-    val isLiked: Boolean = false
+    val isLiked: Boolean = false,
+    /**
+     * Whether this record is part of the user's collection, as opposed to one merely seen.
+     *
+     * The albums table is both a library and a cache. Every tile on an artist's page is written
+     * here so the album screen has a header before its tracks land — which meant browsing an
+     * artist filed their entire discography into your Library tab. Browsing is not owning, and
+     * this is the flag that says which is which. Only the library-browse path sets it.
+     */
+    val isLibrary: Boolean = false
 ) {
     fun toUnifiedAlbum() = UnifiedAlbum(
         id = id,
@@ -43,7 +52,12 @@ data class AlbumEntity(
     )
 
     companion object {
-        fun fromUnifiedAlbum(album: UnifiedAlbum) = AlbumEntity(
+        /**
+         * [isLibrary] is a property of how the album was *found*, not of the album, so it is a
+         * parameter here rather than a field on `UnifiedAlbum` — the same record is library when
+         * your server lists it and not library when it turns up on an artist's page.
+         */
+        fun fromUnifiedAlbum(album: UnifiedAlbum, isLibrary: Boolean = false) = AlbumEntity(
             id = album.id,
             sourceAlbumId = album.id.substringAfter(':', album.id),
             source = album.source,
@@ -55,7 +69,8 @@ data class AlbumEntity(
             durationMs = album.durationMs,
             year = album.year,
             genre = album.genre,
-            isLiked = album.isLiked
+            isLiked = album.isLiked,
+            isLibrary = isLibrary
         )
     }
 }

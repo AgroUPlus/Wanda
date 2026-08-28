@@ -1,5 +1,6 @@
 package com.wander.android.ui.components
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -54,7 +55,7 @@ private fun skeletonAlpha(): Float {
 @Composable
 internal fun SkeletonBox(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(8.dp)
+    shape: Shape = MaterialTheme.shapes.extraSmall
 ) {
     Box(
         modifier = modifier

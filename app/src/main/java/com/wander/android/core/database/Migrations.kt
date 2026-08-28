@@ -184,8 +184,173 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
     }
 }
 
+/**
+ * The landmark index behind microphone recognition.
+ *
+ * Created empty. The index is built from the user's own files in the background and can always be
+ * rebuilt from them, so there is nothing here worth carrying forward from an earlier schema — and
+ * a migration that tried to would be inventing fingerprints it never computed.
+ */
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `fingerprints` (
+                `hash` INTEGER NOT NULL,
+                `trackId` TEXT NOT NULL,
+                `anchorFrame` INTEGER NOT NULL,
+                PRIMARY KEY(`hash`, `trackId`, `anchorFrame`)
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_fingerprints_hash` ON `fingerprints` (`hash`)")
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_fingerprints_trackId` ON `fingerprints` (`trackId`)"
+        )
+    }
+}
+
+/**
+ * Adds the local and imported playlist store.
+ */
+val MIGRATION_11_12 = object : Migration(11, 12) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `local_playlists` (
+                `id` TEXT NOT NULL,
+                `name` TEXT NOT NULL,
+                `comment` TEXT,
+                `coverArtUrl` TEXT,
+                `trackIds` TEXT NOT NULL,
+                `createdAt` INTEGER NOT NULL,
+                `updatedAt` INTEGER NOT NULL,
+                PRIMARY KEY(`id`)
+            )
+            """.trimIndent()
+        )
+    }
+}
+
+/**
+ * Separates albums you own from albums you have merely looked at.
+ *
+ * Defaults to 0 — not owned. The Library tab therefore looks empty of albums until the next
+ * library refresh marks the real ones, which is the correct trade: an album wrongly absent for a
+ * few seconds is recoverable, while the previous behaviour filed every artist page you opened into
+ * your collection permanently.
+ *
+ * The delete is the other half. Album rows credited to "Unknown Artist" were written by the
+ * artist-tile parser before it learned to read a tile's subtitle properly, and `rememberAlbums`
+ * only ever *inserts* rows Room has not seen — so those rows could never be corrected by any
+ * amount of re-browsing. They are pure cache and regenerate on next fetch.
+ */
+val MIGRATION_12_13 = object : Migration(12, 13) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `albums` ADD COLUMN `isLibrary` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("DELETE FROM `albums` WHERE `artist` = 'Unknown Artist'")
+    }
+}
+
+/**
+ * What we already know about an artist — see [com.wander.android.core.database.entity.ArtistEntity].
+ *
+ * Created empty. Every column is re-derivable from the backend, so there is nothing to carry
+ * forward; the first visit to each artist fills their row in.
+ */
+val MIGRATION_13_14 = object : Migration(13, 14) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `artists` (
+                `nameKey` TEXT NOT NULL,
+                `name` TEXT NOT NULL,
+                `artistId` TEXT,
+                `imageUrl` TEXT,
+                `bio` TEXT,
+                `fetchedAt` INTEGER NOT NULL,
+                PRIMARY KEY(`nameKey`)
+            )
+            """.trimIndent()
+        )
+    }
+}
+
+/**
+ * Throws away the browsed-album cache, so mislabelled rows are refetched.
+ *
+ * `InnerTubeSubtitle` used to read an artist by position, so a release line — `Single • 2023` —
+ * credited the record to an artist called "Single". The parser no longer does that, but
+ * `CatalogRepository.rememberAlbums` only ever *inserts* albums Room has not seen, so every row
+ * already written that way was permanent: one library here had seventy-five albums filed under an
+ * artist named "Single".
+ *
+ * Deleting by `isLibrary = 0` rather than by matching the bad names is deliberate. The labels
+ * arrive translated — `hl` is the device language — so a list of English words would miss exactly
+ * the users whose language is not English. Non-library rows are pure cache: they carry nothing the
+ * next browse cannot rebuild, and rebuilding them is now correct.
+ */
+val MIGRATION_14_15 = object : Migration(14, 15) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DELETE FROM `albums` WHERE `isLibrary` = 0")
+    }
+}
+
+/**
+ * Drops cached tracks that were credited to nobody.
+ *
+ * An artist's own page does not repeat their name on every row — you are already on it — so songs
+ * parsed off a "Songs" shelf reached Room as "Unknown Artist". The parser now stamps the page's
+ * artist onto them, but rows already written that way never correct themselves.
+ *
+ * Guarded so nothing the user has touched is lost: a liked, downloaded or played row survives its
+ * bad credit rather than being deleted for tidiness. What goes is pure cache, and the next fetch
+ * rebuilds it correctly.
+ */
+val MIGRATION_15_16 = object : Migration(15, 16) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            DELETE FROM `tracks`
+            WHERE `artist` = 'Unknown Artist'
+              AND `isLiked` = 0
+              AND `isDownloaded` = 0
+              AND `playCount` = 0
+              AND `isLibrary` = 0
+            """.trimIndent()
+        )
+    }
+}
+
+/**
+ * Clears album names that are actually view counts.
+ *
+ * `InnerTubeSubtitle.album` took the token after the artist and rejected only durations, so a row
+ * reading `Artist • 15M views` filed the song under a record called "15M views" — 242 of them in
+ * one library. The same song found twice then looked like two different releases, which is also
+ * what the recording-merge preview flagged it as.
+ *
+ * Nulled rather than deleted: the row itself is fine, and its like, play count and downloaded file
+ * are all worth keeping. Only the wrong field goes, and the next fetch fills it in properly.
+ */
+val MIGRATION_16_17 = object : Migration(16, 17) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            UPDATE `tracks` SET `album` = NULL
+            WHERE `album` IS NOT NULL
+              AND (
+                `album` GLOB '*[0-9] view*' OR `album` GLOB '*[0-9] play*'
+                OR `album` GLOB '*[0-9][KMB] view*' OR `album` GLOB '*[0-9][KMB] play*'
+                OR TRIM(`album`) NOT GLOB '*[A-Za-z0-9]*'
+              )
+            """.trimIndent()
+        )
+    }
+}
+
 /** Every migration, in order. Room applies whichever ones a given database still needs. */
 val WANDER_MIGRATIONS: Array<Migration> = arrayOf(
     MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
-    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10
+    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17
 )

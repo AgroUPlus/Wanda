@@ -11,6 +11,9 @@ import com.wander.android.data.repository.InstantRadioRepository
 import com.wander.android.data.repository.LibrarySyncRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.PlaylistWriteRepository
+import com.wander.android.core.audio.fingerprint.FingerprintIndexWorker
+import com.wander.android.data.repository.SearchQueryHolder
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.sources.agro.AgroSessionApi
 import com.wander.android.data.sources.agro.MissingTrack
@@ -37,7 +40,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class WanderAppViewModel @Inject constructor(
     private val localSource: LocalMusicSource,
-    musicRepository: MusicRepository,
+    private val musicRepository: MusicRepository,
     shareRepository: ShareRepository,
     private val librarySync: LibrarySyncRepository,
     playlistWriter: PlaylistWriteRepository,
@@ -47,8 +50,20 @@ class WanderAppViewModel @Inject constructor(
     connectivity: ConnectivityObserver,
     private val updateChecker: UpdateChecker,
     private val instantRadio: InstantRadioRepository,
-    private val playerConnection: PlayerConnection
+    private val playerConnection: PlayerConnection,
+    private val searchQueryHolder: SearchQueryHolder,
+    @ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
+
+    /**
+     * The dock's search text.
+     *
+     * Owned by a singleton rather than by `SearchViewModel`, because the field is in the dock and
+     * the dock outlives the Search destination — see [SearchQueryHolder].
+     */
+    val searchQuery: StateFlow<String> = searchQueryHolder.query
+
+    fun setSearchQuery(value: String) = searchQueryHolder.set(value)
 
     /**
      * The instant-radio button, hoisted to the shell.
@@ -263,8 +278,22 @@ class WanderAppViewModel @Inject constructor(
      * Runs once the audio permission is granted. The scan is incremental, so calling it on every
      * cold start costs almost nothing after the first time.
      */
+    init {
+        // Repairs likes made before a like meant the recording rather than the row. Idempotent and
+        // additive — it can only spread an existing like to other copies of the same performance,
+        // never remove one — so it is safe to run on every launch rather than needing a flag.
+        viewModelScope.launch { musicRepository.unifySplitLikes() }
+    }
+
     fun onAudioPermissionGranted() {
-        viewModelScope.launch { localSource.refresh() }
+        viewModelScope.launch {
+            localSource.refresh()
+            // The scan is what discovers the files, so the fingerprint index can only usefully be
+            // asked for afterwards. `KEEP` inside means the repeated calls this makes across
+            // launches join one run rather than restarting it. Constrained to charging, so asking
+            // costs the user nothing right now.
+            FingerprintIndexWorker.enqueue(context)
+        }
     }
 }
 

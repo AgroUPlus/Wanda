@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -64,7 +65,7 @@ internal fun AgroRegisteredMessage(signup: AgroSignup, server: String) {
             modifier = Modifier.fillMaxWidth().padding(16.dp)
         )
     }
-    TextButton(onClick = { context.copyPassphrase(signup.passphrase) }) {
+    TextButton(onClick = { context.copyPassphrase(signup.passphrase) }, shapes = ButtonDefaults.shapes()) {
         Text("Copy passphrase")
     }
 

@@ -118,7 +118,6 @@ internal fun MediaItem.toUnifiedTrack(): UnifiedTrack? {
     val resolvedSource = when {
         trackId.startsWith(SourceType.NAVIDROME.idPrefix) -> SourceType.NAVIDROME
         trackId.startsWith(SourceType.YTMUSIC.idPrefix) -> SourceType.YTMUSIC
-        trackId.startsWith(SourceType.INTERNET_ARCHIVE.idPrefix) -> SourceType.INTERNET_ARCHIVE
         trackId.startsWith(SourceType.LOCAL.idPrefix) -> SourceType.LOCAL
         else -> SourceType.LOCAL
     }

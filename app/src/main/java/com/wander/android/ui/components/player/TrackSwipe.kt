@@ -7,6 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -117,6 +118,17 @@ internal fun Modifier.swipeToChangeTrack(
 ): Modifier {
     val scope = rememberCoroutineScope()
 
+    // Read here, in composition, and captured by the gesture coroutines below — which run inside
+    // `draggable` and cannot reach the theme themselves.
+    //
+    // Two specs, because the two settles mean different things. A completed swipe *hands over* to
+    // the neighbouring cover and must arrive exactly, so it takes the non-overshooting effects
+    // spec — a spring would carry the artwork past its slot and back, and the swap underneath it
+    // would show. An abandoned swipe springs back, because overshoot is precisely what says the
+    // gesture did not take.
+    val handoffSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+    val settleSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+
     return draggable(
         orientation = Orientation.Horizontal,
         state = rememberDraggableState { delta ->
@@ -141,7 +153,7 @@ internal fun Modifier.swipeToChangeTrack(
                         val travel = state.stepPx.takeIf { it > 0f } ?: exitDistance
                         state.offsetX.animateTo(
                             targetValue = if (skipNext) -travel else travel,
-                            animationSpec = tween(durationMillis = 180)
+                            animationSpec = handoffSpec
                         )
 
                         // The neighbour is now sitting exactly in the slot. Adopt its cover and
@@ -158,10 +170,7 @@ internal fun Modifier.swipeToChangeTrack(
                         // rather than gliding, which is what says the gesture did not take.
                         state.offsetX.animateTo(
                             targetValue = 0f,
-                            animationSpec = spring(
-                                dampingRatio = PlayerSheetState.ExpressiveDamping,
-                                stiffness = Spring.StiffnessMediumLow
-                            )
+                            animationSpec = settleSpec
                         )
                     }
                 } finally {

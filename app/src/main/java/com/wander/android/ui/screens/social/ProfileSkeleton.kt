@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.social
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,11 +42,11 @@ internal fun ProfileSkeleton() {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
             SkeletonBox(
                 modifier = Modifier.weight(1f).height(72.dp),
-                shape = RoundedCornerShape(18.dp)
+                shape = MaterialTheme.shapes.medium
             )
             SkeletonBox(
                 modifier = Modifier.weight(1f).height(72.dp),
-                shape = RoundedCornerShape(18.dp)
+                shape = MaterialTheme.shapes.medium
             )
         }
     }

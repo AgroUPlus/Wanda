@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -88,7 +89,7 @@ internal fun AgroPairingDialog(
         },
         confirmButton = {
             when (state) {
-                is AgroPairingState.Paired -> TextButton(onClick = onDismiss) { Text("Done") }
+                is AgroPairingState.Paired -> TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text("Done") }
 
                 is AgroPairingState.Registered -> TextButton(
                     onClick = {
@@ -99,7 +100,8 @@ internal fun AgroPairingDialog(
                     },
                     // A queued account cannot log in yet; offering the button would only produce
                     // an error the previous screen already explained.
-                    enabled = !state.signup.isPending
+                    enabled = !state.signup.isPending,
+                    shapes = ButtonDefaults.shapes()
                 ) {
                     Text(if (state.signup.isPending) "Waiting for approval" else "Pair this device")
                 }
@@ -113,7 +115,8 @@ internal fun AgroPairingDialog(
                         }
                     },
                     enabled = !busy && !throttled && username.isNotBlank() &&
-                        (mode == AgroPairingMode.CREATE || passphrase.isNotBlank())
+                        (mode == AgroPairingMode.CREATE || passphrase.isNotBlank()),
+                    shapes = ButtonDefaults.shapes()
                 ) {
                     Text(
                         when {
@@ -129,9 +132,9 @@ internal fun AgroPairingDialog(
             // "Check again" is the only useful move while an account waits for approval: nothing
             // about what was typed is wrong, so re-submitting the form would be theatre.
             if ((state as? AgroPairingState.Failed)?.error is AgroAuthError.NotActive) {
-                TextButton(onClick = onRecheck, enabled = !busy) { Text("Check again") }
+                TextButton(onClick = onRecheck, enabled = !busy, shapes = ButtonDefaults.shapes()) { Text("Check again") }
             } else {
-                TextButton(onClick = onDismiss, enabled = !busy) { Text("Cancel") }
+                TextButton(onClick = onDismiss, enabled = !busy, shapes = ButtonDefaults.shapes()) { Text("Cancel") }
             }
         }
     )

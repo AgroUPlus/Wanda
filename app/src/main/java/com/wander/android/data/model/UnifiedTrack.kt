@@ -61,7 +61,6 @@ data class UnifiedTrack(
                 bitRateKbps != null && bitRateKbps >= 320 -> "320 kbps"
                 bitRateKbps != null && bitRateKbps > 0 -> "$bitRateKbps kbps"
                 !fmt.isNullOrBlank() -> fmt
-                source == SourceType.INTERNET_ARCHIVE -> "Lossless"
                 else -> null
             }
         }

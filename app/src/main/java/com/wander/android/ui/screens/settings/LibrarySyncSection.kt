@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -84,14 +84,14 @@ internal fun LazyListScope.librarySyncSection(
                 // Determinate only once a total is known; an indeterminate bar that later jumps to
                 // a percentage reads as a restart.
                 if (progress.total > 0) {
-                    LinearProgressIndicator(
+                    LinearWavyProgressIndicator(
                         progress = { progress.done.toFloat() / progress.total },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 6.dp)
                     )
                 } else {
-                    LinearProgressIndicator(
+                    LinearWavyProgressIndicator(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 6.dp)
@@ -143,7 +143,7 @@ private fun StorageQuotaRow(usage: StorageUsage) {
 
         val fraction = usage.fraction
         if (fraction != null) {
-            LinearProgressIndicator(
+            LinearWavyProgressIndicator(
                 progress = { fraction },
                 color = if (fraction >= NearlyFull) {
                     MaterialTheme.colorScheme.error

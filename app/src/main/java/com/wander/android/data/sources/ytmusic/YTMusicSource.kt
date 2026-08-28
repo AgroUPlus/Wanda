@@ -19,6 +19,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -53,6 +54,13 @@ class YTMusicSource @Inject constructor(
      * keeps unauthenticated failures out of the library and settings surfaces.
      */
     override val isConfigured: StateFlow<Boolean> = accountManager.isLoggedIn
+
+    /**
+     * Always. InnerTube serves search to anonymous callers, and it is the half of this backend
+     * that needs no account at all — so a signed-out user still gets YouTube Music results
+     * alongside their own library, while Home, likes and Settings stay quiet until they sign in.
+     */
+    override val isSearchable: StateFlow<Boolean> = MutableStateFlow(true)
 
     override suspend fun search(query: String): Result<List<UnifiedTrack>> =
         search(query, SearchKind.TRACKS)
@@ -227,9 +235,60 @@ class YTMusicSource @Inject constructor(
         }
     }
 
+    /**
+     * One artist shelf, expanded.
+     *
+     * The "more" page answers with a grid of the same `musicTwoRowItemRenderer` tiles the carousel
+     * held, so it reuses the carousel's own parser — including its filter, which drops any tile
+     * that is not an album.
+     */
+    override suspend fun getArtistAlbumPage(
+        browseId: String,
+        params: String?,
+        artist: String
+    ): Result<List<UnifiedAlbum>> =
+        innerTube.browse(browseId.removePrefix(YTM_PREFIX), params).map { root ->
+            root.artistAlbumGrid(artist, browseId)
+        }
+
+    /**
+     * An album's tracklist.
+     *
+     * The rows are stamped with the album they were asked for, and this is not cosmetic: an album
+     * page's rows carry a subtitle of `Artist • 3:45` with no album name in it, so the parser had
+     * nothing to fill `albumId` from and every track landed in Room with a null one. The album
+     * screen reads its tracklist with `WHERE albumId = :albumId`, so the tracks were fetched,
+     * persisted, and then never found again — the page showed its header and an empty list.
+     *
+     * The position is stamped for the same reason. The same query orders by disc and track number,
+     * which YouTube does not publish on these rows; left at zero the tracklist came back in
+     * whatever order SQLite happened to return, which is not the order of the record.
+     */
     override suspend fun getAlbumTracks(albumId: String): Result<List<UnifiedTrack>> =
         innerTube.browse(albumId.removePrefix(YTM_PREFIX)).map { root ->
-            root.responsiveListItems().mapNotNull(::parseResponsiveListItem)
+            // The page names the artist and shows the sleeve once, at the top; the rows below
+            // repeat neither. Without this every track off an album came back credited to
+            // "Unknown Artist" and with no cover.
+            val header = root.albumHeader()
+            root.responsiveListItems()
+                .mapNotNull(::parseResponsiveListItem)
+                .mapIndexed { index, track ->
+                    track.copy(
+                        albumId = albumId,
+                        trackNumber = index + 1,
+                        // Only where the row could not speak for itself. A featured artist on one
+                        // track of a compilation is named on that row, and the header's credit
+                        // must not overwrite them.
+                        artist = track.artist.takeUnless { it == UNKNOWN_ARTIST }
+                            ?: header?.artist
+                            ?: track.artist,
+                        artistId = track.artistId ?: header?.artistId,
+                        // Album rows carry no thumbnail of their own — the sleeve is printed once
+                        // at the top of the page. Without this the same song had a cover when
+                        // found by search and none when opened from its own record.
+                        artworkUrl = track.artworkUrl ?: header?.coverArtUrl
+                    )
+                }
         }
 
     override suspend fun getPlaylists(): Result<List<UnifiedPlaylist>> = Result.success(

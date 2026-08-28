@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -60,7 +61,7 @@ internal fun ListenAlongBar(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.secondaryContainer)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -81,7 +82,7 @@ internal fun ListenAlongBar(
                 modifier = Modifier.scrollingTitle()
             )
         }
-        TextButton(onClick = onLeave) { Text("Leave") }
+        TextButton(onClick = onLeave, shapes = ButtonDefaults.shapes()) { Text("Leave") }
     }
 }
 

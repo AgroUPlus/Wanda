@@ -56,7 +56,6 @@ Rules of the road:
 - No polling loops. Position updates come from `Player.Listener` + a ticker that runs **only**
   while playing **and** while the UI is `STARTED` (`repeatOnLifecycle`).
 - Audio offload enabled; `WAKE_MODE_NETWORK` only while streaming, `WAKE_MODE_NONE` for local.
-- Visualizer FFT subscribes only while Now Playing is on screen.
 - Background work is WorkManager with `UNMETERED + charging + !battery-low` constraints.
 
 ## Security

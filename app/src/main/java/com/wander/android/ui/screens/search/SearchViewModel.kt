@@ -1,13 +1,13 @@
 package com.wander.android.ui.screens.search
 
 import com.wander.android.data.model.SearchKind
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MusicRepository
+import com.wander.android.data.repository.SearchQueryHolder
 import com.wander.android.data.repository.ShareRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,7 +23,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.net.URLDecoder
 import javax.inject.Inject
 
 data class SearchUiState(
@@ -38,26 +37,49 @@ class SearchViewModel @Inject constructor(
     private val musicRepository: MusicRepository,
     private val playerConnection: PlayerConnection,
     private val shareRepository: ShareRepository,
-    savedStateHandle: SavedStateHandle
+    private val queryHolder: SearchQueryHolder
 ) : ViewModel() {
 
-    private val rawInitialQuery = savedStateHandle.get<String>("query").orEmpty()
-    private val decodedInitialQuery = runCatching { URLDecoder.decode(rawInitialQuery, "UTF-8") }.getOrDefault(rawInitialQuery)
-
-    private val _query = MutableStateFlow(decodedInitialQuery)
-    val query: StateFlow<String> = _query.asStateFlow()
+    /**
+     * The field lives in the dock at the bottom of the app, which outlives this ViewModel, so the
+     * text is owned by [SearchQueryHolder] and only observed here. It is also what decides whether
+     * this screen is on show at all — see `LibrarySurface`.
+     */
+    val query: StateFlow<String> = queryHolder.query
 
     /**
-     * The backends this search queries. Everything except the Internet Archive by default: its
-     * search is slow enough to hold up every other source's results, and it is the one backend
-     * that is not the user's own music.
+     * The backends a search can reach right now.
+     *
+     * A flow, not a snapshot. This used to read `isConfigured.value` once when the ViewModel was
+     * constructed, so a backend that finished signing in a moment later never gained a chip and
+     * was never searched until the screen was recreated — and since the search surface is now part
+     * of the library destination, that could be a long time.
+     *
+     * Keyed on `isSearchable` rather than `isConfigured`: YouTube Music answers a search without
+     * an account, and excluding it while signed out was the reason its results went missing.
      */
-    private val _selectedSources = MutableStateFlow(
-        searchableSources()
-            .filterNot { it == SourceType.INTERNET_ARCHIVE }
-            .toSet()
-    )
-    val selectedSources: StateFlow<Set<SourceType>> = _selectedSources.asStateFlow()
+    val availableSources: StateFlow<List<SourceType>> =
+        combine(musicRepository.sources.map { it.isSearchable }) { flags ->
+            musicRepository.sources
+                .filterIndexed { index, source -> flags[index] && source.capabilities.search }
+                .map { it.sourceType }
+                .sorted()
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * Which of those the user has narrowed to, or null for "whatever is available".
+     *
+     * Null is not the same as the full set. A user who has never touched the chips wants every
+     * source, *including* one that connects later; a user who explicitly selected every chip has
+     * made a choice about the sources that existed then. Only the second is a set.
+     */
+    private val _selectedSources = MutableStateFlow<Set<SourceType>?>(null)
+
+    val selectedSources: StateFlow<Set<SourceType>> =
+        combine(_selectedSources, availableSources) { explicit, available ->
+            explicit?.intersect(available.toSet())?.ifEmpty { available.toSet() }
+                ?: available.toSet()
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     /**
      * What kind of thing this search is for. Only YouTube Music serves anything but [
@@ -69,22 +91,15 @@ class SearchViewModel @Inject constructor(
 
     fun selectKind(kind: SearchKind) { _kind.value = kind }
 
-    /**
-     * Only sources that can search *and* are set up right now. A backend the user signed out of
-     * has nothing to offer, so offering its chip — pre-selected, no less — only promised results
-     * that could never arrive.
-     */
-    val availableSources: List<SourceType> = searchableSources().sorted()
-
-    private fun searchableSources() = musicRepository.sources
-        .filter { it.capabilities.search && it.isConfigured.value }
-        .map { it.sourceType }
-
     // Re-runs when the sources change as well as the query: toggling a backend on has to go and
     // ask it, not just unhide results that were never fetched.
     private val searchResults: StateFlow<SearchUiState> = combine(
-        _query,
-        _selectedSources,
+        query,
+        // The *resolved* selection, not the raw nullable one. While the user has made no explicit
+        // choice the raw flow holds a constant null, so a backend finishing its sign-in mid-search
+        // changed what "everything" means without this flow noticing — the results stayed as they
+        // were until the next keystroke.
+        selectedSources,
         _kind
     ) { query, sources, kind -> Triple(query, sources, kind) }
         .debounce { (query, _, _) -> if (query.isBlank()) 0L else DEBOUNCE_MS }
@@ -115,20 +130,18 @@ class SearchViewModel @Inject constructor(
         state.copy(results = state.results.map { it.copy(isLiked = it.id in likedIds) })
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState())
 
-    fun onQueryChange(value: String) { _query.value = value }
-
     fun toggleSource(source: SourceType) {
-        _selectedSources.update { current ->
-            if (source in current) {
-                // Never empty: a search with no sources would just silently return nothing.
-                current.minus(source).ifEmpty { current }
-            } else {
-                current + source
-            }
+        val current = selectedSources.value
+        _selectedSources.value = if (source in current) {
+            // Never empty: a search with no sources would just silently return nothing.
+            current.minus(source).ifEmpty { current }
+        } else {
+            current + source
         }
     }
 
-    fun selectAllSources() { _selectedSources.value = availableSources.toSet() }
+    /** Back to "everything", including sources that connect later — see [_selectedSources]. */
+    fun selectAllSources() { _selectedSources.value = null }
 
     fun play(tracks: List<UnifiedTrack>, index: Int) = playerConnection.play(tracks, index)
 

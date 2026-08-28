@@ -55,16 +55,10 @@ internal class ListenAlongResolver @Inject constructor(
         }
 
         // Then YouTube Music, so a friend playing something you do not own is still joinable.
-        musicRepository
+        return musicRepository
             .searchAllSources(query, onlySources = setOf(SourceType.YTMUSIC), kind = SearchKind.TRACKS)
             .bestMatch(title, artist)
-            ?.let { return ResolvedTrack(it, ResolvedFrom.YOUTUBE_MUSIC) }
-
-        // Finally fallback to other configured sources (e.g. Internet Archive)
-        return musicRepository
-            .searchAllSources(query, onlySources = setOf(SourceType.INTERNET_ARCHIVE), kind = SearchKind.TRACKS)
-            .bestMatch(title, artist)
-            ?.let { ResolvedTrack(it, ResolvedFrom.YOUR_LIBRARY) }
+            ?.let { ResolvedTrack(it, ResolvedFrom.YOUTUBE_MUSIC) }
     }
 
     /**

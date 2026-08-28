@@ -147,7 +147,7 @@ class TrackDeduplicatorTest {
         val result = TrackDeduplicator.deduplicate(
             listOf(
                 track(SourceType.LOCAL, durationMs = 383_000L),
-                track(SourceType.INTERNET_ARCHIVE, durationMs = 0L)
+                track(SourceType.YTMUSIC, durationMs = 0L)
             )
         )
 

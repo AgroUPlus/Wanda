@@ -37,10 +37,6 @@ offering ones that quietly do nothing.
 **Lyrics.** Source-native first (Navidrome's structured lyrics), then LRCLIB. Synced lines
 highlight as you listen and are tappable to seek.
 
-**Visualizers.** Five Compose Canvas renderers fed by a real PCM tap on the audio pipeline —
-Aurora Ribbon, Embers, Bloom Rings, Oscilloscope, Spectrogram Waterfall. Off by default, because
-a visualizer requires decoded PCM and therefore disables audio offload (see below).
-
 **Smart mixes.** Endless Radio, Forgotten Favourites, Never Played, and Internet Archive Gems,
 built from your own listening history. A mix with no tracks is not shown.
 
@@ -50,12 +46,9 @@ built from your own listening history. A mix with no tracks is not shown.
 
 - **No polling.** Playback state arrives via `Player.Listener`; the position ticks only while
   something is playing *and* the screen is showing it (`repeatOnLifecycle`).
-- **Audio offload** is on by default, so the DSP plays while the CPU sleeps. Enabling a
-  visualizer turns it off for the duration, because offloaded audio never reaches the processor
-  chain — that trade-off is explicit, not hidden.
+- **Audio offload** is on by default, so the DSP plays while the CPU sleeps.
 - Wake mode is `NETWORK` while streaming and unset for local files.
 - Downloads run under WorkManager with unmetered + charging + battery-not-low constraints.
-- FFT work stops the moment Now Playing leaves the screen.
 
 ## Privacy and security
 

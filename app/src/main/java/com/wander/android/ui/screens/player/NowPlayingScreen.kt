@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.ui.components.LikeButton
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.AudioQualityBadge
 import com.wander.android.ui.components.scrollingTitle
@@ -75,7 +76,7 @@ internal fun NowPlayingScreen(
     onCollapse: () -> Unit,
     onOpenQueue: () -> Unit,
     modifier: Modifier = Modifier,
-    onOpenArtist: ((String) -> Unit)? = null,
+    onOpenArtist: ((String, String?) -> Unit)? = null,
     onOpenAlbum: ((String) -> Unit)? = null,
     onOpenJam: () -> Unit = {},
     contentAlpha: () -> Float = { 1f },
@@ -93,10 +94,32 @@ internal fun NowPlayingScreen(
     val state by playerConnection.state.collectAsStateWithLifecycle()
     val lyrics by viewModel.lyrics.collectAsStateWithLifecycle()
     val likedTrackIds by viewModel.likedTrackIds.collectAsStateWithLifecycle()
+    var showSourcePicker by remember { mutableStateOf(false) }
+    val renditions by viewModel.renditions.collectAsStateWithLifecycle()
+    val isFindingRenditions by viewModel.isFindingRenditions.collectAsStateWithLifecycle()
     val jam by viewModel.jam.collectAsStateWithLifecycle()
     val track = state.currentTrack
 
     if (track == null) return
+
+    if (showSourcePicker) {
+        SourcePickerDialog(
+            current = track,
+            renditions = renditions,
+            isSearching = isFindingRenditions,
+            onSelect = { rendition ->
+                // Read at the moment of the swap, not when the picker opened — the song has been
+                // playing the whole time the search was running.
+                viewModel.playFrom(rendition, playerConnection.currentPositionMs() ?: 0L)
+                showSourcePicker = false
+                viewModel.clearRenditions()
+            },
+            onDismiss = {
+                showSourcePicker = false
+                viewModel.clearRenditions()
+            }
+        )
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -126,7 +149,7 @@ internal fun NowPlayingScreen(
                     Surface(
                         color = MaterialTheme.colorScheme.primaryContainer,
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                        shape = MaterialTheme.shapes.small,
                         modifier = Modifier.clickable(onClick = onOpenJam)
                     ) {
                         Row(
@@ -154,11 +177,27 @@ internal fun NowPlayingScreen(
                         }
                     }
                 } else {
+                    // The source name is a control, not a caption: the same recording usually
+                    // exists in more than one place, and which one plays used to depend entirely
+                    // on the list you happened to tap it in.
+                    val canSwitch = viewModel.canSwitchSource(track, state.durationMs)
                     Text(
                         text = track.source.displayName,
                         style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
+                        color = if (canSwitch) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = if (canSwitch) {
+                            Modifier
+                                .clip(MaterialTheme.shapes.small)
+                                .clickable {
+                                    showSourcePicker = true
+                                    viewModel.findRenditions(track, state.durationMs)
+                                }
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        } else {
+                            Modifier
+                        }
                     )
                     track.audioQualityLabel?.let { quality ->
                         AudioQualityBadge(
@@ -294,10 +333,10 @@ internal fun NowPlayingScreen(
                             maxLines = 1,
                             overflow = TextOverflow.Clip,
                             modifier = Modifier.scrollingTitle()
-                                .clip(RoundedCornerShape(4.dp))
+                                .clip(MaterialTheme.shapes.extraSmall)
                                 .clickable(
                                     enabled = onOpenArtist != null && track.artist.isNotBlank()
-                                ) { onOpenArtist?.invoke(track.artist) }
+                                ) { onOpenArtist?.invoke(track.artist, track.artistId) }
                         )
                         // Only linked when the track carries an album id: without one there is no
                         // page to open, and a tap that goes nowhere is worse than plain text.
@@ -311,7 +350,7 @@ internal fun NowPlayingScreen(
                                 maxLines = 1,
                                 overflow = TextOverflow.Clip,
                                 modifier = Modifier.scrollingTitle()
-                                    .clip(RoundedCornerShape(4.dp))
+                                    .clip(MaterialTheme.shapes.extraSmall)
                                     .clickable(enabled = albumId != null && onOpenAlbum != null) {
                                         albumId?.let { onOpenAlbum?.invoke(it) }
                                     }
@@ -320,14 +359,11 @@ internal fun NowPlayingScreen(
                     }
                 }
 
-                val isLiked = track.id in likedTrackIds
-                IconButton(onClick = { viewModel.toggleLike(track) }) {
-                    Icon(
-                        imageVector = if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                        contentDescription = if (isLiked) "Unlike" else "Like",
-                        tint = if (isLiked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                LikeButton(
+                    isLiked = track.id in likedTrackIds,
+                    onToggle = { viewModel.toggleLike(track) },
+                    size = 28.dp
+                )
             }
 
             PlayerSeekBar(

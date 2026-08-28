@@ -11,10 +11,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -90,20 +91,20 @@ internal fun ProfileScreen(
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
             ) {
                 when (profile.friendState) {
-                    FriendState.NONE -> Button(onClick = viewModel::sendRequest) {
+                    FriendState.NONE -> Button(onClick = viewModel::sendRequest, shapes = ButtonDefaults.shapes()) {
                         Text("Add friend")
                     }
                     FriendState.PENDING -> if (profile.outgoing) {
-                        OutlinedButton(onClick = viewModel::remove) { Text("Cancel request") }
+                        OutlinedButton(onClick = viewModel::remove, shapes = ButtonDefaults.shapes()) { Text("Cancel request") }
                     } else {
-                        Button(onClick = viewModel::accept) { Text("Accept") }
-                        OutlinedButton(onClick = viewModel::remove) { Text("Decline") }
+                        Button(onClick = viewModel::accept, shapes = ButtonDefaults.shapes()) { Text("Accept") }
+                        OutlinedButton(onClick = viewModel::remove, shapes = ButtonDefaults.shapes()) { Text("Decline") }
                     }
-                    FriendState.ACCEPTED -> OutlinedButton(onClick = viewModel::remove) {
+                    FriendState.ACCEPTED -> OutlinedButton(onClick = viewModel::remove, shapes = ButtonDefaults.shapes()) {
                         Text("Remove friend")
                     }
                 }
-                TextButton(onClick = viewModel::block) { Text("Block") }
+                TextButton(onClick = viewModel::block, shapes = ButtonDefaults.shapes()) { Text("Block") }
             }
         }
 
@@ -120,12 +121,14 @@ internal fun ProfileScreen(
                         if (state.isListeningAlong) {
                             Button(
                                 onClick = viewModel::stopListenAlong,
-                                modifier = Modifier.padding(top = 8.dp)
+                                modifier = Modifier.padding(top = 8.dp),
+                                shapes = ButtonDefaults.shapes()
                             ) { Text("Stop listening along") }
                         } else {
                             Button(
                                 onClick = viewModel::startListenAlong,
-                                modifier = Modifier.padding(top = 8.dp)
+                                modifier = Modifier.padding(top = 8.dp),
+                                shapes = ButtonDefaults.shapes()
                             ) { Text("Listen along") }
                         }
                     }
@@ -189,7 +192,7 @@ internal fun ProfileScreen(
                             text = match.score.toString() + "% in common",
                             style = MaterialTheme.typography.headlineMedium
                         )
-                        LinearProgressIndicator(
+                        LinearWavyProgressIndicator(
                             progress = { match.score / 100f },
                             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                         )

@@ -257,11 +257,17 @@ class InnerTubeClient @Inject constructor(
         buildJsonObject { put("context", webContext()) }
     ).map { body -> body.activeAccountName() }
 
-    suspend fun browse(browseId: String): Result<JsonObject> = post(
+    /**
+     * [params] is the opaque blob a "more" button carries alongside its browse id. Browsing with
+     * it returns the *full* shelf — an artist's whole discography rather than the handful of tiles
+     * their page happens to show. Absent, this is an ordinary browse.
+     */
+    suspend fun browse(browseId: String, params: String? = null): Result<JsonObject> = post(
         "browse",
         buildJsonObject {
             put("context", webContext())
             put("browseId", browseId)
+            params?.takeIf { it.isNotBlank() }?.let { put("params", it) }
         }
     )
 

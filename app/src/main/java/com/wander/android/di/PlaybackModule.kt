@@ -2,7 +2,6 @@ package com.wander.android.di
 
 import android.content.Context
 import com.wander.android.core.cache.AudioCacheManager
-import com.wander.android.core.playback.PcmTap
 import com.wander.android.core.playback.PlayerFactory
 import com.wander.android.core.playback.StreamResolver
 import dagger.Module
@@ -29,7 +28,6 @@ object PlaybackModule {
     fun providePlayerFactory(
         @ApplicationContext context: Context,
         cacheManager: AudioCacheManager,
-        streamResolver: StreamResolver,
-        pcmTap: PcmTap
-    ): PlayerFactory = PlayerFactory(context, cacheManager, streamResolver, pcmTap)
+        streamResolver: StreamResolver
+    ): PlayerFactory = PlayerFactory(context, cacheManager, streamResolver)
 }
