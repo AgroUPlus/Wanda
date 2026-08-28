@@ -40,7 +40,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class WanderAppViewModel @Inject constructor(
     private val localSource: LocalMusicSource,
-    musicRepository: MusicRepository,
+    private val musicRepository: MusicRepository,
     shareRepository: ShareRepository,
     private val librarySync: LibrarySyncRepository,
     playlistWriter: PlaylistWriteRepository,
@@ -278,6 +278,13 @@ class WanderAppViewModel @Inject constructor(
      * Runs once the audio permission is granted. The scan is incremental, so calling it on every
      * cold start costs almost nothing after the first time.
      */
+    init {
+        // Repairs likes made before a like meant the recording rather than the row. Idempotent and
+        // additive — it can only spread an existing like to other copies of the same performance,
+        // never remove one — so it is safe to run on every launch rather than needing a flag.
+        viewModelScope.launch { musicRepository.unifySplitLikes() }
+    }
+
     fun onAudioPermissionGranted() {
         viewModelScope.launch {
             localSource.refresh()

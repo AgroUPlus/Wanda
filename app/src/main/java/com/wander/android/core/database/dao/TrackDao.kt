@@ -80,6 +80,19 @@ interface TrackDao {
     )
     fun getTracksByArtistFlow(artist: String): Flow<List<TrackEntity>>
 
+    /**
+     * Everything under one artist name, once.
+     *
+     * The candidate set for finding a track's other renditions. Name-matched and case-folded on
+     * purpose — it is a net, not an answer; `TrackDeduplicator.isSameRecording` decides which of
+     * the catch is actually the same performance.
+     */
+    @Query("SELECT * FROM tracks WHERE artist = :artist COLLATE NOCASE")
+    suspend fun getTracksByArtistOnce(artist: String): List<TrackEntity>
+
+    @Query("SELECT * FROM tracks WHERE isLiked = 1")
+    suspend fun getLikedTracksOnce(): List<TrackEntity>
+
     @Query(
         """
         SELECT * FROM tracks
