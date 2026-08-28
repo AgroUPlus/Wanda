@@ -44,6 +44,7 @@ import com.wander.android.ui.components.TrackActionsSheet
 fun HomeScreen(
     contentPadding: PaddingValues,
     onOpenSettings: () -> Unit,
+    onOpenArtist: (String, String?) -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -107,6 +108,9 @@ fun HomeScreen(
             onStartRadio = { viewModel.startRadio(track) },
             onToggleLike = { viewModel.toggleLike(track) },
             onRemove = null,
+            onOpenArtist = track.artist
+                .takeIf { it.isNotBlank() }
+                ?.let { artist -> { onOpenArtist(artist, track.artistId) } },
             onDismiss = { actionsFor = null },
             onShare = if (viewModel.canShare(track)) {
                 { viewModel.share(track) }

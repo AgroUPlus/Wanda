@@ -20,6 +20,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -272,7 +274,7 @@ internal fun NotPairedNotice(onOpenSettings: () -> Unit) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        androidx.compose.material3.FilledTonalButton(onClick = onOpenSettings) {
+        FilledTonalButton(onClick = onOpenSettings, shapes = ButtonDefaults.shapes()) {
             Text("Open Settings")
         }
     }

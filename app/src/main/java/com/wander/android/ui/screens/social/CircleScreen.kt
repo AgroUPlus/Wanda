@@ -38,9 +38,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.ButtonGroup
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -104,20 +103,19 @@ internal fun CircleScreen(
             }
         }
 
-        SingleChoiceSegmentedButtonRow(
+        // A connected group, like the search-kind toggle: the periods are mutually exclusive and
+        // cover the whole range, and its members give way as one is pressed.
+        ButtonGroup(
+            overflowIndicator = {},
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)
         ) {
-            PERIODS.forEachIndexed { index, period ->
-                SegmentedButton(
-                    selected = state.period == period,
-                    onClick = { viewModel.setPeriod(period) },
-                    shape = SegmentedButtonDefaults.itemShape(index, PERIODS.size)
-                ) {
-                    Text(
-                        text = period.lowercase().replaceFirstChar { it.uppercase() },
-                        fontWeight = if (state.period == period) FontWeight.Bold else FontWeight.Normal
-                    )
-                }
+            PERIODS.forEach { period ->
+                toggleableItem(
+                    checked = state.period == period,
+                    label = period.lowercase().replaceFirstChar { it.uppercase() },
+                    onCheckedChange = { viewModel.setPeriod(period) },
+                    weight = 1f
+                )
             }
         }
 
@@ -210,7 +208,7 @@ private fun AnthemHeroCard(anthem: AgroAnthem) {
                 Surface(
                     color = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = MaterialTheme.shapes.small
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -279,14 +277,14 @@ private fun AnthemHeroCard(anthem: AgroAnthem) {
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(8.dp)
-                                    .clip(RoundedCornerShape(4.dp))
+                                    .clip(MaterialTheme.shapes.extraSmall)
                                     .background(MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f))
                             ) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth(fraction = ratio)
                                         .height(8.dp)
-                                        .clip(RoundedCornerShape(4.dp))
+                                        .clip(MaterialTheme.shapes.extraSmall)
                                         .background(MaterialTheme.colorScheme.primary)
                                 )
                             }
@@ -315,7 +313,7 @@ private fun TrendsetterCard(trendsetter: AgroTrendsetter) {
             containerColor = MaterialTheme.colorScheme.tertiaryContainer,
             contentColor = MaterialTheme.colorScheme.onTertiaryContainer
         ),
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.large,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
@@ -327,7 +325,7 @@ private fun TrendsetterCard(trendsetter: AgroTrendsetter) {
                 Surface(
                     color = MaterialTheme.colorScheme.tertiary,
                     contentColor = MaterialTheme.colorScheme.onTertiary,
-                    shape = RoundedCornerShape(10.dp)
+                    shape = MaterialTheme.shapes.extraSmall
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -368,7 +366,7 @@ private fun TrendsetterCard(trendsetter: AgroTrendsetter) {
                     trendsetter.examples.forEach { trackName ->
                         Surface(
                             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-                            shape = RoundedCornerShape(8.dp)
+                            shape = MaterialTheme.shapes.extraSmall
                         ) {
                             Text(
                                 text = trackName,
@@ -395,7 +393,7 @@ private fun CircleLeaderboards(
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.large,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -443,14 +441,14 @@ private fun LeaderboardSection(title: String, entries: List<StatEntry>) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp))
+                            .clip(MaterialTheme.shapes.extraSmall)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth(fraction = ratio)
                                 .height(6.dp)
-                                .clip(RoundedCornerShape(3.dp))
+                                .clip(MaterialTheme.shapes.extraSmall)
                                 .background(MaterialTheme.colorScheme.primary)
                         )
                     }
@@ -472,7 +470,7 @@ private fun LeaderboardSection(title: String, entries: List<StatEntry>) {
 private fun TasteMatrixSection(matrix: List<AgroTasteMatrixEntry>) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.large,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -508,7 +506,7 @@ private fun TasteMatrixSection(matrix: List<AgroTasteMatrixEntry>) {
                             entry.score >= 40 -> MaterialTheme.colorScheme.secondaryContainer
                             else -> MaterialTheme.colorScheme.surfaceVariant
                         },
-                        shape = RoundedCornerShape(10.dp)
+                        shape = MaterialTheme.shapes.extraSmall
                     ) {
                         Text(
                             text = "${entry.score}% Match",

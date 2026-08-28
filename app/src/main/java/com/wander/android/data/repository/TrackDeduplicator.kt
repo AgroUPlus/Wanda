@@ -60,12 +60,20 @@ object TrackDeduplicator {
     fun deduplicate(tracks: List<UnifiedTrack>): List<UnifiedTrack> {
         if (tracks.size < 2) return tracks
 
+        // The same id twice is not a "recording match" to be judged — it is literally one track,
+        // and it must be collapsed before anything else looks at it. The unmergeable path below
+        // keeps every zero-duration track as-is, and YouTube Music's artist shelves publish song
+        // rows with no length, so one video listed by two shelves reached a LazyColumn as two
+        // items sharing a key, which throws rather than merely looking wrong.
+        val distinct = tracks.distinctBy { it.id }
+        if (distinct.size < 2) return distinct
+
         // Group by the exact-match part of the key first, so the duration comparison — the only
         // part needing a tolerance — runs within small buckets instead of across every pair.
         val buckets = LinkedHashMap<RecordingKey, MutableList<UnifiedTrack>>()
         val unmergeable = mutableListOf<UnifiedTrack>()
 
-        for (track in tracks) {
+        for (track in distinct) {
             // An unknown duration is not evidence of a match, so it never merges with anything.
             if (track.durationMs <= 0L) {
                 unmergeable += track
@@ -74,9 +82,47 @@ object TrackDeduplicator {
             buckets.getOrPut(keyOf(track)) { mutableListOf() } += track
         }
 
-        val originalOrder = tracks.withIndex().associate { (index, track) -> track.id to index }
+        val originalOrder = distinct.withIndex().associate { (index, track) -> track.id to index }
         return (buckets.values.flatMap(::collapseByDuration) + unmergeable)
             .sortedBy { originalOrder[it.id] }
+    }
+
+    /**
+     * The same tracks, gathered into one list per recording.
+     *
+     * Where [deduplicate] answers "which single row should be shown", this answers "which rows are
+     * the same performance" and keeps every one of them. That is the shape the recording model
+     * needs — a recording owns its renditions — and it is also what a migration preview has to show
+     * before anything is written.
+     *
+     * Tracks with no known duration are each their own group. An unknown length is not evidence of
+     * a match, and this is the function whose mistakes would be written to disk.
+     */
+    fun groupRecordings(tracks: List<UnifiedTrack>): List<List<UnifiedTrack>> {
+        val buckets = LinkedHashMap<RecordingKey, MutableList<UnifiedTrack>>()
+        val alone = mutableListOf<List<UnifiedTrack>>()
+
+        for (track in tracks.distinctBy { it.id }) {
+            if (track.durationMs <= 0L) {
+                alone += listOf(track)
+                continue
+            }
+            buckets.getOrPut(keyOf(track)) { mutableListOf() } += track
+        }
+
+        // Within a key, lengths still have to agree — two takes of one song share an artist and a
+        // title and are not the same recording.
+        val grouped = buckets.values.flatMap { bucket ->
+            val groups = mutableListOf<MutableList<UnifiedTrack>>()
+            for (track in bucket) {
+                val match = groups.firstOrNull { group ->
+                    abs(group.first().durationMs - track.durationMs) <= DURATION_TOLERANCE_MS
+                }
+                if (match == null) groups += mutableListOf(track) else match += track
+            }
+            groups.map { group -> group.sortedBy { it.source.priority } }
+        }
+        return grouped + alone
     }
 
     /** Within one bucket, merge tracks whose lengths agree and keep the best-ranked of each. */
@@ -107,6 +153,23 @@ object TrackDeduplicator {
      */
     fun recordingKey(track: UnifiedTrack): String = with(keyOf(track)) {
         "$artist|$title|${variants.sorted().joinToString(",")}"
+    }
+
+    /**
+     * Whether two tracks are the same performance.
+     *
+     * The whole of what "the same song" means, in one place: the same normalised artist and title,
+     * the same variant markers, and lengths that agree within [DURATION_TOLERANCE_MS]. Extracted
+     * from the bucketing below because identity is needed outside deduplication too — picking which
+     * source to play a recording from, and eventually keying likes and play counts on it.
+     *
+     * A track with no known duration matches nothing: an unknown length is not evidence, and
+     * treating it as agreement is how a live take gets folded into a studio cut.
+     */
+    fun isSameRecording(a: UnifiedTrack, b: UnifiedTrack): Boolean {
+        if (a.durationMs <= 0L || b.durationMs <= 0L) return false
+        if (keyOf(a) != keyOf(b)) return false
+        return abs(a.durationMs - b.durationMs) <= DURATION_TOLERANCE_MS
     }
 
     internal fun keyOf(track: UnifiedTrack) = RecordingKey(

@@ -1,6 +1,7 @@
 package com.wander.android.ui.screens.library
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,12 +22,19 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
+import androidx.compose.ui.unit.Dp
+import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -56,11 +64,14 @@ import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
     contentPadding: PaddingValues,
     onOpenAlbum: (String) -> Unit,
+    onOpenArtist: (String, String?) -> Unit,
+    onOpenHistory: () -> Unit,
+    onOpenPlaylist: (String) -> Unit = {},
+    onOpenImport: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val tab by viewModel.tab.collectAsStateWithLifecycle()
@@ -79,6 +90,9 @@ fun LibraryScreen(
             onStartRadio = { viewModel.startRadio(track) },
             onToggleLike = { viewModel.toggleLike(track) },
             onRemove = null,
+            onOpenArtist = track.artist
+                .takeIf { it.isNotBlank() }
+                ?.let { artist -> { onOpenArtist(artist, track.artistId) } },
             onDismiss = { actionsFor = null },
             onShare = if (viewModel.canShare(track)) {
                 { viewModel.share(track) }
@@ -126,16 +140,43 @@ fun LibraryScreen(
             // Top inset here rather than on the lists, so the title and tabs clear the status bar.
             .padding(contentPadding.headerInset())
     ) {
-        Text(
-            text = "Library",
-            style = MaterialTheme.typography.headlineLarge,
-            modifier = Modifier.padding(start = 20.dp, top = 16.dp, bottom = 8.dp)
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)
+        ) {
+            Text(
+                text = "Library",
+                style = MaterialTheme.typography.headlineLarge,
+                modifier = Modifier.weight(1f)
+            )
+            // Where Home keeps Settings. History is a log rather than a collection, so it reads
+            // better as one thing you can go and look at than as a sixth tab competing with them.
+            IconButton(onClick = onOpenHistory) {
+                Icon(Icons.Rounded.History, contentDescription = "Listening history")
+            }
+        }
 
-        PrimaryTabRow(selectedTabIndex = selectedPage) {
-            LibraryTab.entries.forEachIndexed { index, entry ->
+        // The expressive indicator, and the reason it is worth spelling out: the stock one is a bar
+        // spanning the whole tab, which on a row of six clipped labels read as a highlight on a
+        // column rather than as a marker under a word. `matchContentSize` shrinks it to the label
+        // it belongs to, and a rounded shape makes it a pill instead of a rule — so the selected
+        // tab is legible from its silhouette before any text is read.
+        PrimaryTabRow(
+            selectedTabIndex = selectedPage,
+            indicator = {
+                TabRowDefaults.PrimaryIndicator(
+                    modifier = Modifier.tabIndicatorOffset(selectedPage, matchContentSize = true),
+                    width = Dp.Unspecified,
+                    height = 3.dp,
+                    shape = MaterialTheme.shapes.extraSmall
+                )
+            }
+        ) {
+            LibraryTab.entries.forEach { entry ->
                 Tab(
-                    selected = index == selectedPage,
+                    selected = LibraryTab.entries.indexOf(entry) == selectedPage,
                     onClick = { viewModel.selectTab(entry) },
                     text = { Text(entry.label, maxLines = 1, softWrap = false) }
                 )
@@ -168,9 +209,8 @@ fun LibraryScreen(
                 when (val pageTab = LibraryTab.entries[page]) {
                     LibraryTab.ALBUMS ->
                         AlbumGrid(albums, recentAlbums, contentPadding, onOpenAlbum)
-                    LibraryTab.PLAYLISTS -> PlaylistList(playlists, contentPadding, viewModel)
+                    LibraryTab.PLAYLISTS -> PlaylistList(playlists, contentPadding, viewModel, addToPlaylist, onOpenPlaylist, onOpenImport)
                     LibraryTab.LIKED -> TrackList(likedTracks, pageTab, isRefreshing, contentPadding, viewModel) { actionsFor = it }
-                    LibraryTab.HISTORY -> TrackList(historyTracks, pageTab, isRefreshing, contentPadding, viewModel) { actionsFor = it }
                     LibraryTab.DOWNLOADS -> TrackList(downloadedTracks, pageTab, isRefreshing, contentPadding, viewModel) { actionsFor = it }
                     LibraryTab.TRACKS -> Column(modifier = Modifier.fillMaxSize()) {
                         if (viewModel.availableSources.size > 1) {
@@ -216,20 +256,19 @@ private fun AlbumGrid(
         if (recentAlbums.size >= MinRecentAlbums && albums.size > recentAlbums.size) {
             item(span = { GridItemSpan(maxLineSpan) }, key = "recent_header") {
                 Text(
-                    text = "Recently added",
+                    text = "Recent",
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             }
             item(span = { GridItemSpan(maxLineSpan) }, key = "recent_row") {
-                LazyRow(contentPadding = PaddingValues(horizontal = 8.dp)) {
-                    items(recentAlbums, key = { "recent_" + it.id }) { album ->
-                        AlbumCard(
-                            album = album,
-                            onClick = { onOpenAlbum(album.id) },
-                            artworkSize = 140.dp,
-                            modifier = Modifier.width(156.dp)
-                        )
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(bottom = 16.dp)
+                ) {
+                    items(recentAlbums, key = { "recent_${it.id}" }) { album ->
+                        AlbumCard(album = album, onClick = { onOpenAlbum(album.id) })
                     }
                 }
             }
@@ -237,15 +276,11 @@ private fun AlbumGrid(
                 Text(
                     text = "All albums",
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 4.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             }
         }
-
-        items(albums, key = { it.id }, contentType = { "album" }) { album ->
-            // Opens the record rather than immediately playing it. Tapping an album to see what
-            // is on it is at least as common as tapping it to hear it, and the page has a Play
-            // button right at the top for the other case.
+        items(albums, key = { it.id }) { album ->
             AlbumCard(album = album, onClick = { onOpenAlbum(album.id) })
         }
     }
@@ -255,9 +290,13 @@ private fun AlbumGrid(
 private fun PlaylistList(
     playlists: List<com.wander.android.data.model.UnifiedPlaylist>,
     contentPadding: PaddingValues,
-    viewModel: LibraryViewModel
+    viewModel: LibraryViewModel,
+    addToPlaylist: com.wander.android.ui.components.AddToPlaylistController,
+    onOpenPlaylist: (String) -> Unit,
+    onOpenImport: () -> Unit
 ) {
     var naming by remember { mutableStateOf(false) }
+    var actionsForPlaylist by remember { mutableStateOf<com.wander.android.data.model.UnifiedPlaylist?>(null) }
 
     if (naming) {
         NewPlaylistDialog(
@@ -269,23 +308,52 @@ private fun PlaylistList(
         )
     }
 
+    actionsForPlaylist?.let { playlist ->
+        com.wander.android.ui.components.PlaylistActionsSheet(
+            playlist = playlist,
+            onPlay = { viewModel.openPlaylist(playlist) },
+            onPlayNext = { viewModel.playPlaylistNext(playlist) },
+            onAddToQueue = { viewModel.addPlaylistToQueue(playlist) },
+            onAddToPlaylist = { viewModel.addPlaylistToAnother(playlist, addToPlaylist) },
+            onShare = { viewModel.sharePlaylist(playlist) }
+                .takeIf { viewModel.canShare(playlist.source) },
+            onDelete = { viewModel.deletePlaylist(playlist) }
+                .takeIf { playlist.source == com.wander.android.data.model.SourceType.LOCAL || viewModel.canCreatePlaylists },
+            onDismiss = { actionsForPlaylist = null }
+        )
+    }
+
     // The empty case used to return early, which meant a source that *can* make playlists offered
     // no way to make the first one — the only state in which you most need it.
     if (playlists.isEmpty()) {
         Centered {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 EmptyState(
                     title = "No playlists",
-                    message = "Playlists from Navidrome, YouTube Music and the Internet Archive " +
-                        "appear here once those sources are connected."
+                    message = "Playlists from your sources and imported playlists appear here."
                 )
-                if (viewModel.canCreatePlaylists) {
-                    Button(
-                        onClick = { naming = true },
-                        modifier = Modifier.padding(top = 16.dp)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.padding(top = 16.dp)
+                ) {
+                    if (viewModel.canCreatePlaylists) {
+                        Button(
+                            onClick = { naming = true },
+                            shapes = ButtonDefaults.shapes()
+                        ) {
+                            Icon(Icons.Rounded.Add, contentDescription = null)
+                            Text("New playlist", modifier = Modifier.padding(start = 8.dp))
+                        }
+                    }
+                    FilledTonalButton(
+                        onClick = onOpenImport,
+                        shapes = ButtonDefaults.shapes()
                     ) {
-                        Icon(Icons.Rounded.Add, contentDescription = null)
-                        Text("New playlist", modifier = Modifier.padding(start = 8.dp))
+                        Icon(Icons.Rounded.Download, contentDescription = null)
+                        Text("Import", modifier = Modifier.padding(start = 8.dp))
                     }
                 }
             }
@@ -294,35 +362,39 @@ private fun PlaylistList(
     }
 
     LazyColumn(contentPadding = contentPadding.listInset(), modifier = Modifier.fillMaxSize()) {
-        if (viewModel.canCreatePlaylists) {
-            item(key = "new_playlist", contentType = "action") {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { naming = true }
-                        .padding(horizontal = 16.dp, vertical = 14.dp)
+        item(key = "playlist_actions", contentType = "action") {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+            ) {
+                if (viewModel.canCreatePlaylists) {
+                    FilledTonalButton(
+                        onClick = { naming = true },
+                        modifier = Modifier.weight(1f),
+                        shapes = ButtonDefaults.shapes()
+                    ) {
+                        Icon(imageVector = Icons.Rounded.Add, contentDescription = null)
+                        Text(text = "New playlist", modifier = Modifier.padding(start = 6.dp))
+                    }
+                }
+                FilledTonalButton(
+                    onClick = onOpenImport,
+                    modifier = Modifier.weight(1f),
+                    shapes = ButtonDefaults.shapes()
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Add,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "New playlist",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 20.dp)
-                    )
+                    Icon(imageVector = Icons.Rounded.Download, contentDescription = null)
+                    Text(text = "Import", modifier = Modifier.padding(start = 6.dp))
                 }
             }
         }
         items(playlists, key = { it.id }, contentType = { "playlist" }) { playlist ->
             PlaylistRow(
                 playlist = playlist,
-                onPlay = { viewModel.openPlaylist(playlist) },
-                onShare = { viewModel.sharePlaylist(playlist) }
-                    .takeIf { viewModel.canShare(playlist.source) }
+                onClick = { onOpenPlaylist(playlist.id) },
+                onLongPress = { actionsForPlaylist = playlist }
             )
         }
     }
@@ -347,7 +419,7 @@ private fun TrackList(
                     .padding(contentPadding.listInset())
             ) {
                 repeat(SKELETON_ROWS) {
-                    SkeletonRow(leadingSize = 48.dp, leadingShape = RoundedCornerShape(8.dp))
+                    SkeletonRow(leadingSize = 48.dp, leadingShape = MaterialTheme.shapes.extraSmall)
                 }
             }
             return
@@ -374,14 +446,12 @@ private fun TrackList(
 }
 
 private fun emptyTitleFor(tab: LibraryTab) = when (tab) {
-    LibraryTab.HISTORY -> "Nothing played yet"
     LibraryTab.LIKED -> "Nothing liked yet"
     LibraryTab.DOWNLOADS -> "Nothing saved offline"
     else -> "Your library is empty"
 }
 
 private fun emptyMessageFor(tab: LibraryTab) = when (tab) {
-    LibraryTab.HISTORY -> "Everything you play turns up here, newest first."
     LibraryTab.LIKED -> "Tap the heart on any track to keep it here."
     LibraryTab.DOWNLOADS ->
         "Liked tracks download automatically on Wi-Fi while your phone is charging."

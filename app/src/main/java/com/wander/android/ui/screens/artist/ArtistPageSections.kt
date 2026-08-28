@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -52,7 +53,7 @@ internal fun LazyListScope.artistPageSections(
     onLongPressTrack: (UnifiedTrack) -> Unit,
     onToggleLike: (UnifiedTrack) -> Unit,
     onOpenAlbum: (String) -> Unit,
-    onOpenArtist: (String) -> Unit
+    onOpenArtist: (String, String?) -> Unit
 ) {
     if (page.topSongs.isNotEmpty()) {
         val shown = if (showAllSongs) page.topSongs else page.topSongs.take(TopSongsPreview)
@@ -140,7 +141,7 @@ internal fun LazyListScope.artistPageSections(
                 contentPadding = PaddingValues(horizontal = 20.dp)
             ) {
                 items(page.related, key = { it.id }, contentType = { "artist" }) { artist ->
-                    RelatedArtistCard(artist, onClick = { onOpenArtist(artist.name) })
+                    RelatedArtistCard(artist, onClick = { onOpenArtist(artist.name, artist.id) })
                 }
             }
         }
@@ -216,7 +217,7 @@ internal fun ArtistSectionTitle(
         )
         when {
             isBusy -> LoadingIndicator(modifier = Modifier.padding(horizontal = 12.dp))
-            action != null -> TextButton(onClick = onAction) { Text(action) }
+            action != null -> TextButton(onClick = onAction, shapes = ButtonDefaults.shapes()) { Text(action) }
         }
     }
 }

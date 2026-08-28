@@ -12,6 +12,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -97,7 +98,11 @@ internal fun ResumeHandoffCard(
                 )
             }
 
-            FilledTonalButton(onClick = onResume, enabled = !isResuming) {
+            FilledTonalButton(
+                onClick = onResume,
+                enabled = !isResuming,
+                shapes = ButtonDefaults.shapes()
+            ) {
                 Icon(
                     imageVector = Icons.Rounded.PlayArrow,
                     contentDescription = null,

@@ -126,15 +126,7 @@ fun TrackRow(
                 tint = MaterialTheme.colorScheme.primary
             )
         } else if (onToggleLike != null) {
-            IconButton(onClick = onToggleLike) {
-                Icon(
-                    imageVector = if (track.isLiked) Icons.Rounded.Favorite
-                    else Icons.Rounded.FavoriteBorder,
-                    contentDescription = if (track.isLiked) "Remove from liked" else "Add to liked",
-                    tint = if (track.isLiked) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            LikeButton(isLiked = track.isLiked, onToggle = onToggleLike)
         }
     }
 }

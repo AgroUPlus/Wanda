@@ -51,7 +51,7 @@ internal fun FeedItemCard(
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.medium,
         onClick = { onOpenProfile(item.username) },
         modifier = modifier.fillMaxWidth()
     ) {

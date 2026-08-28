@@ -76,6 +76,16 @@ fun MiniPlayer(
     track: UnifiedTrack?,
     isPlaying: Boolean,
     playerConnection: PlayerConnection,
+    /**
+     * The length the *player* reports, not the one the metadata claimed.
+     *
+     * These disagree, and only one of them is reliable. A YouTube Music row whose subtitle carried
+     * no `3:45` reaches Room with `durationMs = 0`, so a progress bar driven from the track ran at
+     * zero for the whole song — and since the wave is drawn along the *elapsed* portion, that is a
+     * bar with no wave in it at all. The full player never had the bug because it was already
+     * reading the player's own duration; this is that same number.
+     */
+    durationMs: Long,
     modifier: Modifier = Modifier,
     contentAlpha: () -> Float = { 1f },
     swipeOffset: () -> Float = { 0f },
@@ -99,7 +109,7 @@ fun MiniPlayer(
         Column {
             PlaybackProgressBar(
                 playerConnection = playerConnection,
-                durationMs = track.durationMs,
+                durationMs = durationMs,
                 isPlaying = isPlaying,
                 modifier = Modifier.graphicsLayer { alpha = contentAlpha() }
             )

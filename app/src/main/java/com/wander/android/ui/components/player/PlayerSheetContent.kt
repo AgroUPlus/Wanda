@@ -19,6 +19,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
@@ -52,7 +54,7 @@ fun PlayerSheetContent(
     onExpand: () -> Unit,
     onCollapse: () -> Unit,
     onOpenQueue: () -> Unit,
-    onOpenArtist: (String) -> Unit = {},
+    onOpenArtist: (String, String?) -> Unit = { _, _ -> },
     onOpenAlbum: (String) -> Unit = {},
     onOpenJam: () -> Unit = {},
     /**
@@ -161,6 +163,7 @@ fun PlayerSheetContent(
         MiniPlayer(
             track = playback.currentTrack,
             isPlaying = playback.isPlaying,
+            durationMs = playback.durationMs,
             playerConnection = playerConnection,
             contentAlpha = { 1f - smoothStep(progress(), 0f, 0.30f) },
             // Only the title and artist slide; see MiniPlayer.
@@ -189,9 +192,15 @@ fun PlayerSheetContent(
         )
 
         // Directly under the strip, inside the same surface, so the two read as one block. It
-        // fades on the same curve the strip's own contents do and stops taking input as soon as
-        // the sheet starts opening — a navigation bar that still worked while sliding out from
-        // under the full player would send you to Home mid-gesture.
+        // fades on the same curve the strip's own contents do.
+        //
+        // Always composed, and that is the fix: this used to be `if (docked) dockRow()`, and
+        // `docked` flips at the *first pixel* of the drag — so the search field and the Friends
+        // button were cut out of the tree instantly while the alpha they were supposed to fade on
+        // never got to run. They vanished rather than left. Now only input is withdrawn on that
+        // first pixel, which is the part that has to be immediate: a search field that still
+        // worked while sliding out from under the full player would take focus and raise the
+        // keyboard mid-gesture. The pixels fade out over the first third of the drag.
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -199,8 +208,9 @@ fun PlayerSheetContent(
                 .offset(y = MiniStripHeight)
                 .height(DockRowHeight)
                 .graphicsLayer { alpha = 1f - smoothStep(progress(), 0f, 0.30f) }
+                .then(if (docked) Modifier else Modifier.swallowPointerInput())
         ) {
-            if (docked) dockRow()
+            dockRow()
         }
 
         MorphingArtwork(
@@ -279,3 +289,19 @@ private fun swipeFade(offsetX: Float): Float =
     1f - smoothStep(kotlin.math.abs(offsetX), SwipeFadeStart, DistanceThreshold)
 
 private const val SwipeFadeStart = 12f
+
+
+/**
+ * Takes every pointer event and gives nothing to the content beneath.
+ *
+ * Consumed on the initial pass, so children never see the gesture at all rather than seeing it and
+ * being asked to behave. Used for content that is still on screen — mid-fade — but no longer
+ * belongs to the user.
+ */
+private fun Modifier.swallowPointerInput(): Modifier = pointerInput(Unit) {
+    awaitPointerEventScope {
+        while (true) {
+            awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+        }
+    }
+}

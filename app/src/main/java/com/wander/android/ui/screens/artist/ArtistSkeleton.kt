@@ -53,7 +53,7 @@ internal fun ArtistSkeleton(contentPadding: PaddingValues, modifier: Modifier = 
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
             )
         }
-        items(3) { SkeletonRow(leadingSize = 44.dp, leadingShape = RoundedCornerShape(10.dp)) }
+        items(3) { SkeletonRow(leadingSize = 44.dp, leadingShape = MaterialTheme.shapes.extraSmall) }
 
         item(key = "albums-title") {
             SkeletonLine(
@@ -113,7 +113,7 @@ private fun HeroSkeleton() {
                 repeat(2) {
                     SkeletonBox(
                         modifier = Modifier.size(ShapedActionSize),
-                        shape = RoundedCornerShape(14.dp)
+                        shape = MaterialTheme.shapes.small
                     )
                 }
                 Column(modifier = Modifier.weight(1f)) {}

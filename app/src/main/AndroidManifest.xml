@@ -18,6 +18,13 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+
+    <!--
+      Recognising music playing in the room, against the user's own library. Requested on demand
+      from the listening sheet, never at startup: it is used for the seconds that sheet is open and
+      the recording never leaves the device. See `RecognitionRepository`.
+    -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />

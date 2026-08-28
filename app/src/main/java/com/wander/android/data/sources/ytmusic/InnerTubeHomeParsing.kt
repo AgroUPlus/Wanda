@@ -65,7 +65,7 @@ private fun parseTwoRowItem(renderer: JsonObject): UnifiedTrack? {
         id = "$YTM_PREFIX$videoId",
         source = SourceType.YTMUSIC,
         title = renderer["title"].runText() ?: return null,
-        artist = subtitle.artist ?: "Unknown Artist",
+        artist = subtitle.artist ?: UNKNOWN_ARTIST,
         artworkUrl = renderer
             .path("thumbnailRenderer", "musicThumbnailRenderer", "thumbnail")
             .bestThumbnail(),

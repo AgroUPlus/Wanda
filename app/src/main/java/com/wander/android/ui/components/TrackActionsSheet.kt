@@ -19,6 +19,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.LibraryAdd
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -77,7 +78,15 @@ fun TrackActionsSheet(
      */
     onAddToPlaylist: (() -> Unit)? = null,
     /** Told what to say once a drop has been sent, or failed to be. */
-    onDropSent: (String) -> Unit = {}
+    onDropSent: (String) -> Unit = {},
+    /**
+     * Opens the artist's page. Null when the track names no artist — there is nowhere to go.
+     *
+     * Every screen that shows a track shows this sheet, so this is the way to an artist from
+     * anywhere: a queue, a search result, a shelf on Home. Previously the only route in was
+     * tapping the name on the full player, which meant the track had to be the one playing.
+     */
+    onOpenArtist: (() -> Unit)? = null
 ) {
     val playable = track.isPlayableNow()
 
@@ -178,6 +187,9 @@ fun TrackActionsSheet(
                 SheetAction(Icons.AutoMirrored.Rounded.PlaylistAdd, "Play next") { onPlayNext(); onDismiss() }
                 SheetAction(Icons.AutoMirrored.Rounded.QueueMusic, "Add to queue") { onAddToQueue(); onDismiss() }
 
+                onOpenArtist?.let {
+                    SheetAction(Icons.Rounded.Person, "Go to artist") { it(); onDismiss() }
+                }
                 onStartRadio?.let {
                     SheetAction(Icons.Rounded.Radio, "Start radio from this") { it(); onDismiss() }
                 }

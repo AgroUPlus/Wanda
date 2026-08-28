@@ -29,6 +29,7 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -141,7 +142,7 @@ private fun JamQueueContent(
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
-                    shape = RoundedCornerShape(20.dp),
+                    shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
                 ) {
                     Row(
@@ -152,7 +153,7 @@ private fun JamQueueContent(
                             url = now.artworkUrl,
                             contentDescription = now.title,
                             sizeDp = 56.dp,
-                            shape = RoundedCornerShape(12.dp),
+                            shape = MaterialTheme.shapes.small,
                             modifier = Modifier.size(56.dp)
                         )
                         Spacer(Modifier.width(12.dp))
@@ -221,7 +222,7 @@ private fun JamQueueContent(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                 ) {
                     Text(
@@ -254,7 +255,7 @@ private fun JamQueueItem(
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.small,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -271,7 +272,7 @@ private fun JamQueueItem(
                 url = track.artworkUrl,
                 contentDescription = track.title,
                 sizeDp = 44.dp,
-                shape = RoundedCornerShape(8.dp),
+                shape = MaterialTheme.shapes.extraSmall,
                 modifier = Modifier.size(44.dp)
             )
             Spacer(Modifier.width(12.dp))
@@ -321,7 +322,7 @@ private fun JamProposalItem(
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.medium,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -332,7 +333,7 @@ private fun JamProposalItem(
                 url = track.artworkUrl,
                 contentDescription = track.title,
                 sizeDp = 44.dp,
-                shape = RoundedCornerShape(8.dp),
+                shape = MaterialTheme.shapes.extraSmall,
                 modifier = Modifier.size(44.dp)
             )
             Spacer(Modifier.width(10.dp))
@@ -361,7 +362,7 @@ private fun JamProposalItem(
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
             } else {
-                FilledTonalButton(onClick = onApprove) {
+                FilledTonalButton(onClick = onApprove, shapes = ButtonDefaults.shapes()) {
                     Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("Vote")

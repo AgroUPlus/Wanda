@@ -34,10 +34,12 @@ import com.wander.android.ui.components.listInset
 @Composable
 fun SearchScreen(
     contentPadding: PaddingValues,
+    onOpenArtist: (String, String?) -> Unit,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val availableSources by viewModel.availableSources.collectAsStateWithLifecycle()
     val selectedSources by viewModel.selectedSources.collectAsStateWithLifecycle()
     val kind by viewModel.kind.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
@@ -53,6 +55,9 @@ fun SearchScreen(
             onStartRadio = { viewModel.startRadio(track) },
             onToggleLike = { viewModel.toggleLike(track) },
             onRemove = null,
+            onOpenArtist = track.artist
+                .takeIf { it.isNotBlank() }
+                ?.let { artist -> { onOpenArtist(artist, track.artistId) } },
             onDismiss = { actionsFor = null },
             onShare = if (viewModel.canShare(track)) {
                 { viewModel.share(track) }
@@ -70,9 +75,7 @@ fun SearchScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            // Top inset here rather than on the list, so the search field clears the status bar.
-            .padding(contentPadding.headerInset())
-            .imePadding()
+            .padding(top = contentPadding.calculateTopPadding())
     ) {
         // The field itself is in the dock at the bottom of the app — one search box, always in the
         // same place, whether or not you are on this screen. What stays here is everything that
@@ -83,9 +86,9 @@ fun SearchScreen(
             modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 12.dp)
         )
 
-        if (viewModel.availableSources.size > 1) {
+        if (availableSources.size > 1) {
             SourceToggleChips(
-                sources = viewModel.availableSources,
+                sources = availableSources,
                 selected = selectedSources,
                 onToggle = viewModel::toggleSource,
                 onSelectAll = viewModel::selectAllSources,

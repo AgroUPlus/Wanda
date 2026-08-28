@@ -102,7 +102,6 @@ class HomeViewModel @Inject constructor(
                 val liked = async { homeShelfRepository.getLikedTracks(CarouselSize) }
                 val discover = async { homeShelfRepository.getNeverPlayed(CarouselSize) }
                 sources = musicRepository.configuredSources()
-                    .filterNot { it == SourceType.INTERNET_ARCHIVE }
                 val perSource = sources
                     .map { source ->
                         source to async {

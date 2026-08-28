@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
@@ -96,12 +97,13 @@ fun NavidromeLoginScreen(
         Button(
             onClick = viewModel::signIn,
             enabled = state.canSubmit,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            shapes = ButtonDefaults.shapes()
         ) {
             if (state.isConnecting) LoadingIndicator() else Text("Sign in")
         }
 
-        TextButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) {
+        TextButton(onClick = onDone, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
             Text("Cancel")
         }
     }

@@ -77,4 +77,14 @@ class PlaylistWriteRepository @Inject constructor(
             .onSuccess { _messages.tryEmit("Added to \"${playlist.name}\".") }
             .onFailure { _messages.tryEmit(it.message ?: "Couldn't add to that playlist.") }
     }
+
+    suspend fun deletePlaylist(playlist: UnifiedPlaylist): Result<Unit> = withContext(Dispatchers.IO) {
+        val source = writableSource(playlist.source)
+            ?: return@withContext Result.failure(
+                IllegalStateException("${playlist.source} cannot delete playlists")
+            )
+        source.deletePlaylist(playlist.id)
+            .onSuccess { _messages.tryEmit("Deleted \"${playlist.name}\".") }
+            .onFailure { _messages.tryEmit(it.message ?: "Couldn't delete that playlist.") }
+    }
 }

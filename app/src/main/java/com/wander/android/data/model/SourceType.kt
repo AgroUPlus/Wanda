@@ -23,6 +23,5 @@ enum class SourceType(
 ) {
     LOCAL("On this device", "local:", priority = 0, isPersonalLibrary = true),
     NAVIDROME("Navidrome", "navidrome:", priority = 1, isPersonalLibrary = true),
-    YTMUSIC("YouTube Music", "ytm:", priority = 2, isPersonalLibrary = false),
-    INTERNET_ARCHIVE("Internet Archive", "archive:", priority = 3, isPersonalLibrary = false)
+    YTMUSIC("YouTube Music", "ytm:", priority = 2, isPersonalLibrary = false)
 }

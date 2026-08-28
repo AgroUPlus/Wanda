@@ -3,6 +3,7 @@ package com.wander.android.ui.components
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.CloudQueue
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -49,12 +50,12 @@ fun NetworkStateDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
+            TextButton(onClick = onConfirm, shapes = ButtonDefaults.shapes()) {
                 Text(if (goingOffline) "Go offline" else "Go online")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Not now") }
+            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text("Not now") }
         }
     )
 }

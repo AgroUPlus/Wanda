@@ -2,9 +2,8 @@ package com.wander.android.ui.navigation
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.material3.MotionScheme
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -19,7 +18,6 @@ import androidx.compose.animation.slideOutHorizontally
  * Tabs move along X because they are peers; detail screens move along Z (a scale-and-fade) because
  * they sit on top of what opened them.
  */
-private const val FADE_MS = 200
 private const val Z_SCALE_IN = 0.92f
 private const val Z_SCALE_OUT = 1.06f
 
@@ -28,22 +26,25 @@ private const val X_TRAVEL = 6
 
 /**
  * Movement is a spring, so destinations arrive with a little overshoot instead of easing flatly
- * into place. The duration this replaced was 350 ms of `tween`, which is the same *length* of
- * motion but none of the character.
+ * into place.
+ *
+ * Taken from the theme's [MotionScheme] rather than hand-rolled, which is the project's rule and
+ * was being broken in the one place it mattered most: these six functions animate *every*
+ * navigation in the app, so a spring invented here quietly overrode the expressive scheme
+ * everywhere at once.
+ *
+ * The scheme has to be threaded in as a parameter. These are called from `NavGraphBuilder`
+ * transition lambdas, which are not `@Composable` and so cannot read `MaterialTheme` themselves —
+ * `WanderApp` reads it once and passes it down.
  */
-private fun <T> spatial() = spring<T>(
-    // Lighter than the player's: a screen transition is a smaller visual move, and it can carry a
-    // little more spring without reading as slack.
-    dampingRatio = 0.85f,
-    stiffness = Spring.StiffnessMediumLow,
-    visibilityThreshold = null
-)
+private fun <T> MotionScheme.spatial(): FiniteAnimationSpec<T> = defaultSpatialSpec()
 
 /**
- * Fades stay a tween on purpose. An overshooting alpha would have to pass 1 and come back, which
- * reads as a flicker rather than as motion.
+ * Fades come from the effects track, not the spatial one. An overshooting alpha would have to pass
+ * 1 and come back, which reads as a flicker rather than as motion — and the effects specs are the
+ * scheme's non-overshooting half, chosen for exactly that.
  */
-private fun <T> effects() = tween<T>(durationMillis = FADE_MS)
+private fun <T> MotionScheme.effects(): FiniteAnimationSpec<T> = defaultEffectsSpec()
 
 /**
  * A tab arriving, from the side it sits on in the navigation bar: Library → Home comes in from the
@@ -53,29 +54,31 @@ private fun <T> effects() = tween<T>(durationMillis = FADE_MS)
  * being dismissed, or the queue closing — so the tab comes back along Z instead, matching the way
  * that screen left.
  */
-fun tabEnter(from: String?, to: String?): EnterTransition {
-    val direction = tabDirection(from, to) ?: return detailPopEnter()
-    return slideInHorizontally(spatial()) { width -> direction * width / X_TRAVEL } +
-        fadeIn(effects())
+fun tabEnter(from: String?, to: String?, motion: MotionScheme): EnterTransition {
+    val direction = tabDirection(from, to) ?: return detailPopEnter(motion)
+    return slideInHorizontally(motion.spatial()) { width -> direction * width / X_TRAVEL } +
+        fadeIn(motion.effects())
 }
 
 /** The counterpart: the outgoing tab leaves towards the side the incoming one came from. */
-fun tabExit(from: String?, to: String?): ExitTransition {
-    val direction = tabDirection(from, to) ?: return detailExit()
-    return slideOutHorizontally(spatial()) { width -> -direction * width / X_TRAVEL } +
-        fadeOut(effects())
+fun tabExit(from: String?, to: String?, motion: MotionScheme): ExitTransition {
+    val direction = tabDirection(from, to) ?: return detailExit(motion)
+    return slideOutHorizontally(motion.spatial()) { width -> -direction * width / X_TRAVEL } +
+        fadeOut(motion.effects())
 }
 
 /** Detail screens grow in from slightly behind the caller. */
-fun detailEnter(): EnterTransition = scaleIn(spatial(), initialScale = Z_SCALE_IN) + fadeIn(effects())
+fun detailEnter(motion: MotionScheme): EnterTransition =
+    scaleIn(motion.spatial(), initialScale = Z_SCALE_IN) + fadeIn(motion.effects())
 
-fun detailExit(): ExitTransition = scaleOut(spatial(), targetScale = Z_SCALE_OUT) + fadeOut(effects())
+fun detailExit(motion: MotionScheme): ExitTransition =
+    scaleOut(motion.spatial(), targetScale = Z_SCALE_OUT) + fadeOut(motion.effects())
 
-fun detailPopEnter(): EnterTransition =
-    scaleIn(spatial(), initialScale = Z_SCALE_OUT) + fadeIn(effects())
+fun detailPopEnter(motion: MotionScheme): EnterTransition =
+    scaleIn(motion.spatial(), initialScale = Z_SCALE_OUT) + fadeIn(motion.effects())
 
-fun detailPopExit(): ExitTransition =
-    scaleOut(spatial(), targetScale = Z_SCALE_IN) + fadeOut(effects())
+fun detailPopExit(motion: MotionScheme): ExitTransition =
+    scaleOut(motion.spatial(), targetScale = Z_SCALE_IN) + fadeOut(motion.effects())
 
 /**
  * Which way the bar is being travelled: +1 rightwards, -1 leftwards, 0 for a tab to itself.

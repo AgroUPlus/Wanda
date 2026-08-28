@@ -23,13 +23,14 @@ import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -260,7 +261,7 @@ private fun NowPlayingCard(
                     delay(500)
                 }
             }
-            LinearProgressIndicator(
+            LinearWavyProgressIndicator(
                 progress = { progress },
                 modifier = Modifier.fillMaxWidth()
             )
@@ -283,7 +284,7 @@ private fun NowPlayingCard(
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 } else {
-                    FilledTonalButton(onClick = viewModel::voteSkip) {
+                    FilledTonalButton(onClick = viewModel::voteSkip, shapes = ButtonDefaults.shapes()) {
                         Icon(
                             Icons.Rounded.SkipNext,
                             contentDescription = null,
@@ -314,7 +315,7 @@ private fun NowPlayingCard(
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.weight(1f)
                     )
-                    FilledTonalButton(onClick = viewModel::resync) { Text("Rejoin") }
+                    FilledTonalButton(onClick = viewModel::resync, shapes = ButtonDefaults.shapes()) { Text("Rejoin") }
                 }
             }
 
@@ -464,7 +465,8 @@ private fun RoomCard(jam: Jam, isRadioEnabled: Boolean, viewModel: JamViewModel)
 
             OutlinedButton(
                 onClick = viewModel::leave,
-                modifier = Modifier.padding(top = 16.dp)
+                modifier = Modifier.padding(top = 16.dp),
+                shapes = ButtonDefaults.shapes()
             ) {
                 Text(if (jam.isHost) "End jam" else "Leave")
             }
@@ -498,7 +500,7 @@ private fun ProposalRow(track: JamTrack, jam: Jam, viewModel: JamViewModel) {
                 modifier = Modifier.padding(horizontal = 12.dp)
             )
         } else {
-            FilledTonalButton(onClick = { viewModel.approve(track.id) }) { Text("Accept") }
+            FilledTonalButton(onClick = { viewModel.approve(track.id) }, shapes = ButtonDefaults.shapes()) { Text("Accept") }
         }
     }
 }
@@ -594,7 +596,7 @@ private fun StartOrJoin(
             Spacer(Modifier.height(8.dp))
         }
 
-        Button(onClick = { onCreate(JamMode.DEMOCRACY) }, modifier = Modifier.fillMaxWidth()) {
+        Button(onClick = { onCreate(JamMode.DEMOCRACY) }, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
             Text("Start a jam")
         }
 
@@ -603,13 +605,13 @@ private fun StartOrJoin(
             onValueChange = { code = it.uppercase() },
             label = { Text("Join code") },
             singleLine = true,
-            shape = MaterialTheme.shapes.large,
             modifier = Modifier.fillMaxWidth()
         )
         OutlinedButton(
             onClick = { onJoin(code) },
             enabled = code.isNotBlank(),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            shapes = ButtonDefaults.shapes()
         ) {
             Text("Join")
         }
