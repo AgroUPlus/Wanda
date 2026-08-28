@@ -4,6 +4,7 @@ import com.wander.android.data.model.ArtistAlbumSection
 import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.ArtistSection
 import com.wander.android.data.model.ArtistTrackSection
+import com.wander.android.data.model.RelatedArtist
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import kotlinx.serialization.json.JsonObject
@@ -36,7 +37,8 @@ internal fun JsonObject.artistPage(browseId: String): ArtistDetails? {
             ?: header.path("foregroundThumbnail", "musicThumbnailRenderer", "thumbnail")
                 .bestThumbnail(),
         bio = artistBio(header) ?: descriptionShelfBio(),
-        sections = artistSections()
+        sections = artistSections(),
+        related = relatedArtists()
     )
 }
 
@@ -79,7 +81,13 @@ private fun JsonObject.artistSections(): List<ArtistSection> {
         val tiles = shelf.renderers("musicTwoRowItemRenderer")
         val albums = tiles.mapNotNull(::parseArtistPageAlbum)
         if (albums.isNotEmpty()) {
-            sections += ArtistAlbumSection(title, albums.distinctBy { it.id })
+            val more = shelf.moreEndpoint()
+            sections += ArtistAlbumSection(
+                title = title,
+                albums = albums.distinctBy { it.id },
+                moreBrowseId = more?.first,
+                moreParams = more?.second
+            )
             return@forEach
         }
 
@@ -125,3 +133,73 @@ private fun parseArtistPageAlbum(renderer: JsonObject): UnifiedAlbum? {
 }
 
 private const val ALBUM_PAGE_TYPE = "MUSIC_PAGE_TYPE_ALBUM"
+
+/**
+ * The shelf's "more" button, as a browse id and its params.
+ *
+ * Both halves are required: the browse id alone lands on a generic page, and it is the params blob
+ * that says *which* of the artist's shelves to expand. A shelf without the button is a shelf that
+ * was already complete.
+ */
+private fun JsonObject.moreEndpoint(): Pair<String, String?>? {
+    val endpoint = path(
+        "header",
+        "musicCarouselShelfBasicHeaderRenderer",
+        "moreContentButton",
+        "buttonRenderer",
+        "navigationEndpoint",
+        "browseEndpoint"
+    ) ?: return null
+    val browseId = endpoint.path("browseId").text()?.takeIf { it.isNotBlank() } ?: return null
+    // Namespaced like every other id this source hands out, so the repository can tell which
+    // backend a shelf belongs to without being told separately.
+    return "$YTM_PREFIX$browseId" to endpoint.path("params").text()
+}
+
+/**
+ * The tiles on an expanded shelf page.
+ *
+ * Same renderer, same parser as the carousel it came from — the "more" page differs only in that
+ * it lays them out as a grid and holds all of them.
+ */
+internal fun JsonObject.artistAlbumGrid(): List<UnifiedAlbum> =
+    renderers("musicTwoRowItemRenderer")
+        .mapNotNull(::parseArtistPageAlbum)
+        .distinctBy { it.id }
+
+/**
+ * The "Fans might also like" shelf.
+ *
+ * These tiles ride in the same carousels as the record tiles and were previously discarded
+ * wholesale by [parseArtistPageAlbum]'s page-type filter — correctly, since rendering a channel as
+ * an album gives the user a record that opens onto nothing. Collected separately here instead, so
+ * the suggestion survives without being mistaken for a release.
+ */
+private fun JsonObject.relatedArtists(): List<RelatedArtist> =
+    renderers("musicTwoRowItemRenderer")
+        .mapNotNull(::parseRelatedArtist)
+        .distinctBy { it.id }
+
+private fun parseRelatedArtist(renderer: JsonObject): RelatedArtist? {
+    val pageType = renderer.path(
+        "navigationEndpoint",
+        "browseEndpoint",
+        "browseEndpointContextSupportedConfigs",
+        "browseEndpointContextMusicConfig",
+        "pageType"
+    ).text()
+    if (pageType != ARTIST_PAGE_TYPE) return null
+
+    val browseId = renderer.path("navigationEndpoint", "browseEndpoint", "browseId").text()
+        ?: return null
+
+    return RelatedArtist(
+        id = "$YTM_PREFIX$browseId",
+        name = renderer["title"].runText() ?: return null,
+        imageUrl = renderer
+            .path("thumbnailRenderer", "musicThumbnailRenderer", "thumbnail")
+            .bestThumbnail()
+    )
+}
+
+private const val ARTIST_PAGE_TYPE = "MUSIC_PAGE_TYPE_ARTIST"

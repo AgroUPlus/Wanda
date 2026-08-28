@@ -24,7 +24,10 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.graphics.graphicsLayer
 import com.wander.android.ui.components.MiniArtworkSize
+import com.wander.android.ui.navigation.DockRowHeight
 import com.wander.android.ui.components.MiniPlayer
 import com.wander.android.ui.screens.player.NowPlayingScreen
 
@@ -51,7 +54,13 @@ fun PlayerSheetContent(
     onOpenQueue: () -> Unit,
     onOpenArtist: (String) -> Unit = {},
     onOpenAlbum: (String) -> Unit = {},
-    onOpenJam: () -> Unit = {}
+    onOpenJam: () -> Unit = {},
+    /**
+     * The dock row drawn under the player strip while docked — the app's destinations, or the
+     * search field. Passed in rather than built here so the sheet keeps knowing nothing about
+     * navigation; it only knows how tall the row is and when to fade it.
+     */
+    dockRow: @Composable () -> Unit = {}
 ) {
     val anchors = remember { PlayerArtworkAnchors() }
     // Owned here, not in `NowPlayingScreen`. The sheet is what draws the cover the lyrics replace,
@@ -169,7 +178,7 @@ fun PlayerSheetContent(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .height(MiniPlayerHeight)
+                .height(MiniStripHeight)
                 .then(if (docked) miniSwipe else Modifier)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -178,6 +187,21 @@ fun PlayerSheetContent(
                     onClick = onExpand
                 )
         )
+
+        // Directly under the strip, inside the same surface, so the two read as one block. It
+        // fades on the same curve the strip's own contents do and stops taking input as soon as
+        // the sheet starts opening — a navigation bar that still worked while sliding out from
+        // under the full player would send you to Home mid-gesture.
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .offset(y = MiniStripHeight)
+                .height(DockRowHeight)
+                .graphicsLayer { alpha = 1f - smoothStep(progress(), 0f, 0.30f) }
+        ) {
+            if (docked) dockRow()
+        }
 
         MorphingArtwork(
             url = currentArtwork,

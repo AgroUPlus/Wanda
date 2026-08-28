@@ -227,6 +227,21 @@ class YTMusicSource @Inject constructor(
         }
     }
 
+    /**
+     * One artist shelf, expanded.
+     *
+     * The "more" page answers with a grid of the same `musicTwoRowItemRenderer` tiles the carousel
+     * held, so it reuses the carousel's own parser — including its filter, which drops any tile
+     * that is not an album.
+     */
+    override suspend fun getArtistAlbumPage(
+        browseId: String,
+        params: String?
+    ): Result<List<UnifiedAlbum>> =
+        innerTube.browse(browseId.removePrefix(YTM_PREFIX), params).map { root ->
+            root.artistAlbumGrid()
+        }
+
     override suspend fun getAlbumTracks(albumId: String): Result<List<UnifiedTrack>> =
         innerTube.browse(albumId.removePrefix(YTM_PREFIX)).map { root ->
             root.responsiveListItems().mapNotNull(::parseResponsiveListItem)

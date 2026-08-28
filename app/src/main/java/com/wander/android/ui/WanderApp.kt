@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -49,7 +52,9 @@ import com.wander.android.ui.components.player.PlayerSheetValue
 import com.wander.android.ui.components.player.rememberPlayerSheetState
 import com.wander.android.ui.navigation.Routes
 import com.wander.android.ui.navigation.TopLevelDestination
-import com.wander.android.ui.navigation.WanderNavigationBar
+import com.wander.android.ui.navigation.DockRowHeight
+import com.wander.android.ui.navigation.WanderDock
+import com.wander.android.ui.navigation.WanderDockRow
 import com.wander.android.ui.navigation.wanderNavGraph
 import com.wander.android.ui.screens.home.InstantRadioFab
 import com.wander.android.ui.screens.social.JamViewModel
@@ -149,9 +154,21 @@ fun WanderApp(
         agroViewModel.clearError()
     }
 
-    // Measured, not assumed: ShortNavigationBar is shorter than the classic bar and its height
-    // varies with the system gesture inset, so a constant left the sheet misaligned against it.
-    var navBarHeight by remember { mutableStateOf(0.dp) }
+    // The navigation destinations moved *into* the dock (see `WanderDockRow`), so there is no
+    // `bottomBar` left to measure — what has to be cleared at the bottom of the screen is the
+    // system's own gesture area, and the dock floats above it.
+    val systemBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+    // What every bottom-anchored thing has to clear: the system inset, then whichever dock is
+    // actually on screen. Derived once here rather than re-summed at each call site, which is how
+    // the old `navBarHeight + if (hasTrack) ...` arithmetic drifted between them.
+    val dockBottom = systemBottomInset + MiniPlayerGap + if (hasTrack && showChrome) {
+        MiniPlayerHeight
+    } else if (showChrome) {
+        DockRowHeight
+    } else {
+        0.dp
+    }
 
     val offlinePlayback by viewModel.offlinePlayback.collectAsStateWithLifecycle()
 
@@ -159,22 +176,6 @@ fun WanderApp(
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 containerColor = MaterialTheme.colorScheme.background,
-                bottomBar = {
-                    if (showChrome) {
-                        WanderNavigationBar(
-                            currentRoute = currentRoute?.substringBefore("?"),
-                            onNavigate = { destination -> navController.switchTab(destination) },
-                            onHeightChanged = { navBarHeight = it },
-                            modifier = Modifier.graphicsLayer {
-                                val p = sheetState.progress
-                                translationY = p * size.height
-                                // Eased on the same curve as the sheet, so the bar leaves with it
-                                // rather than snapping out in the first fraction of the drag.
-                                alpha = 1f - (p * p * (3f - 2f * p))
-                            }
-                        )
-                    }
-                }
             ) { padding ->
                 // Remembered because `NavHost` keys its `remember(builder)` on the graph-building
                 // lambda, which captures this. A fresh PaddingValues on every recomposition meant the
@@ -189,15 +190,15 @@ fun WanderApp(
                 // The bar sits above the mini player rather than replacing it: you should still be
                 // able to open the player and see what you are hearing, so both are on screen and
                 // both are reserved for.
+                // `dockBottom` already covers the system inset and whichever dock is showing;
+                // the Scaffold no longer contributes a bottom bar of its own. Only the extra bars
+                // that stack on top of the dock are added here.
                 val extraBottom = when {
                     !showChrome -> 0.dp
-                    activeJam != null ->
-                        MiniPlayerHeight + JamBarHeight + MiniPlayerGap + MiniPlayerShadowInset
-                    hasTrack && listenAlongSession != null ->
-                        MiniPlayerHeight + ListenAlongBarHeight + MiniPlayerGap + MiniPlayerShadowInset
-                    hasTrack -> MiniPlayerHeight + MiniPlayerGap + MiniPlayerShadowInset
-                    listenAlongSession != null -> ListenAlongBarHeight + MiniPlayerGap
-                    else -> 0.dp
+                    activeJam != null -> dockBottom + JamBarHeight + MiniPlayerShadowInset
+                    listenAlongSession != null ->
+                        dockBottom + ListenAlongBarHeight + MiniPlayerShadowInset
+                    else -> dockBottom + MiniPlayerShadowInset
                 }
                 val direction = LocalLayoutDirection.current
                 val contentPadding = remember(padding, extraBottom, direction) {
@@ -218,9 +219,36 @@ fun WanderApp(
                 }
             }
 
+            // One dock row, two possible hosts: the player sheet when something is loaded, and a
+            // standalone card when nothing is. Defined once so the two can never drift apart.
+            val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+            val dockRoute = currentRoute?.substringBefore("?")
+            val dockRow: @Composable () -> Unit = {
+                WanderDockRow(
+                    currentRoute = dockRoute,
+                    query = searchQuery,
+                    onNavigate = { destination -> navController.switchTab(destination) },
+                    onQueryChange = viewModel::setSearchQuery,
+                    onSearch = { navController.switchTab(TopLevelDestination.SEARCH) }
+                )
+            }
+
+            if (showChrome && !hasTrack) {
+                WanderDock(
+                    currentRoute = dockRoute,
+                    query = searchQuery,
+                    onNavigate = { destination -> navController.switchTab(destination) },
+                    onQueryChange = viewModel::setSearchQuery,
+                    onSearch = { navController.switchTab(TopLevelDestination.SEARCH) },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = systemBottomInset + MiniPlayerGap)
+                )
+            }
+
             PlayerSheet(
                 sheetState = sheetState,
-                bottomInset = if (showChrome) navBarHeight else 0.dp,
+                bottomInset = if (showChrome) systemBottomInset else 0.dp,
                 isVisible = hasTrack && showChrome
             ) { progress, rawProgress, expandedHeight ->
                 PlayerSheetContent(
@@ -245,7 +273,8 @@ fun WanderApp(
                     onOpenJam = {
                         scope.launch { sheetState.collapse() }
                         navController.navigate(Routes.JAM)
-                    }
+                    },
+                    dockRow = dockRow
                 )
             }
 
@@ -285,8 +314,7 @@ fun WanderApp(
                         // strip as it does of the bar on its own.
                         .padding(
                             start = 20.dp,
-                            bottom = navBarHeight + RadioFabClearance +
-                                if (hasTrack) MiniPlayerHeight + MiniPlayerGap else 0.dp
+                            bottom = dockBottom + RadioFabClearance
                         )
                 )
             }
@@ -305,8 +333,7 @@ fun WanderApp(
                 sessionArtwork = sessionArtwork,
                 onResume = agroViewModel::resume,
                 onDismissHandoff = agroViewModel::dismiss,
-                navBarHeight = navBarHeight,
-                hasTrack = hasTrack
+                dockBottom = dockBottom
             )
 
             // Follows the user across every screen, because the session does. It is the only place
@@ -321,7 +348,7 @@ fun WanderApp(
                     onLeave = jamViewModel::leave,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = navBarHeight + (if (hasTrack) MiniPlayerHeight + MiniPlayerGap else 0.dp))
+                        .padding(bottom = dockBottom)
                 )
             }
 
@@ -331,7 +358,7 @@ fun WanderApp(
                     onLeave = socialViewModel::stopListenAlong,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = navBarHeight + MiniPlayerHeight + MiniPlayerGap)
+                        .padding(bottom = dockBottom)
                 )
             }
 
@@ -342,11 +369,7 @@ fun WanderApp(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(
-                        bottom = if (hasTrack && showChrome) {
-                            navBarHeight + MiniPlayerHeight + MiniPlayerGap + 8.dp
-                        } else {
-                            navBarHeight + 8.dp
-                        }
+                        bottom = dockBottom + 8.dp
                     )
             )
         }

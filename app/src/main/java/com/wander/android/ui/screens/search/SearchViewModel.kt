@@ -8,6 +8,7 @@ import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MusicRepository
+import com.wander.android.data.repository.SearchQueryHolder
 import com.wander.android.data.repository.ShareRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -38,14 +39,24 @@ class SearchViewModel @Inject constructor(
     private val musicRepository: MusicRepository,
     private val playerConnection: PlayerConnection,
     private val shareRepository: ShareRepository,
+    private val queryHolder: SearchQueryHolder,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val rawInitialQuery = savedStateHandle.get<String>("query").orEmpty()
-    private val decodedInitialQuery = runCatching { URLDecoder.decode(rawInitialQuery, "UTF-8") }.getOrDefault(rawInitialQuery)
+    private val decodedInitialQuery =
+        runCatching { URLDecoder.decode(rawInitialQuery, "UTF-8") }.getOrDefault(rawInitialQuery)
 
-    private val _query = MutableStateFlow(decodedInitialQuery)
-    val query: StateFlow<String> = _query.asStateFlow()
+    init {
+        queryHolder.seed(decodedInitialQuery)
+    }
+
+    /**
+     * The field itself lives in the dock at the bottom of the app, which outlives this ViewModel,
+     * so the text is owned by [SearchQueryHolder] and only observed here. A deep link's query is
+     * seeded rather than assigned — see the holder.
+     */
+    val query: StateFlow<String> = queryHolder.query
 
     /**
      * The backends this search queries. Everything except the Internet Archive by default: its
@@ -83,7 +94,7 @@ class SearchViewModel @Inject constructor(
     // Re-runs when the sources change as well as the query: toggling a backend on has to go and
     // ask it, not just unhide results that were never fetched.
     private val searchResults: StateFlow<SearchUiState> = combine(
-        _query,
+        query,
         _selectedSources,
         _kind
     ) { query, sources, kind -> Triple(query, sources, kind) }
@@ -115,7 +126,7 @@ class SearchViewModel @Inject constructor(
         state.copy(results = state.results.map { it.copy(isLiked = it.id in likedIds) })
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState())
 
-    fun onQueryChange(value: String) { _query.value = value }
+    fun onQueryChange(value: String) = queryHolder.set(value)
 
     fun toggleSource(source: SourceType) {
         _selectedSources.update { current ->

@@ -171,7 +171,8 @@ fun NavGraphBuilder.wanderNavGraph(
         ArtistScreen(
             contentPadding = contentPadding,
             onBack = navController::popBackStack,
-            onOpenAlbum = { navController.navigateSettled(Routes.album(it)) }
+            onOpenAlbum = { navController.navigateSettled(Routes.album(it)) },
+            onOpenArtist = { navController.navigateSettled(Routes.artist(it)) }
         )
     }
 

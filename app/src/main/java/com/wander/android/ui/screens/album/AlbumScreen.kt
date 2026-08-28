@@ -11,7 +11,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -81,17 +80,22 @@ fun AlbumScreen(
             Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
         }
 
+        // A skeleton while nothing is known, the empty state once the sources have answered with
+        // nothing, and the page itself otherwise. A spinner over a blank screen could not tell the
+        // first two apart, and letting a partly-loaded album through showed a tracklist that was
+        // still growing as if it were the whole record.
+        if (isLoading && album == null && tracks.isEmpty()) {
+            AlbumSkeleton(contentPadding.listInset())
+            return@Column
+        }
+
         // Nothing in Room and nothing from the server: an id that resolves to no album at all.
         if (album == null && tracks.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                if (isLoading) {
-                    LoadingIndicator()
-                } else {
-                    EmptyState(
-                        title = "Album unavailable",
-                        message = "This album isn't on any of your connected sources."
-                    )
-                }
+                EmptyState(
+                    title = "Album unavailable",
+                    message = "This album isn't on any of your connected sources."
+                )
             }
             return@Column
         }

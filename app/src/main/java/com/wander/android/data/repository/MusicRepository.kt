@@ -359,6 +359,31 @@ class MusicRepository @Inject constructor(
         }
     }
 
+    /**
+     * The tracks of an album Room has never seen, resolved from the id alone.
+     *
+     * [getAlbumTracks] needs a [UnifiedAlbum] to know which backend to ask, and there is no such
+     * row for an album opened straight out of an artist's shelf — the usual case for YouTube
+     * Music, whose album rows only ever arrive by browsing the library. The id prefix is the one
+     * thing that is always there, and it names the source; the same resolution [getStreamInfo]
+     * already does at playback time.
+     *
+     * Persisted as **non-library**: browsing a record on a streaming service is not the same as
+     * adding it to your collection, which is the rule [CatalogRepository.refreshArtist] already
+     * follows for the artist page.
+     */
+    suspend fun getAlbumTracksById(albumId: String): List<UnifiedTrack> = withContext(Dispatchers.IO) {
+        val type = SourceType.entries.firstOrNull { albumId.startsWith(it.idPrefix) }
+            ?: return@withContext emptyList()
+        val tracks = sourceFor(type)?.getAlbumTracks(albumId)?.getOrDefault(emptyList())
+        if (tracks.isNullOrEmpty()) {
+            trackDao.getTracksInAlbum(albumId).map(TrackEntity::toUnifiedTrack)
+        } else {
+            persist(tracks, asLibrary = false)
+            tracks
+        }
+    }
+
     suspend fun getPlaylists(): List<UnifiedPlaylist> = coroutineScope {
         activeSources()
             .filter { it.capabilities.playlists }
