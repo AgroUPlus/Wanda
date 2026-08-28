@@ -2,7 +2,9 @@ package com.wander.android.data.repository
 
 import com.wander.android.core.database.dao.AlbumDao
 import com.wander.android.core.database.dao.TrackDao
+import com.wander.android.core.database.dao.ArtistDao
 import com.wander.android.core.database.entity.AlbumEntity
+import com.wander.android.core.database.entity.ArtistEntity
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.SourceType
@@ -30,6 +32,7 @@ import javax.inject.Singleton
 class CatalogRepository @Inject constructor(
     private val trackDao: TrackDao,
     private val albumDao: AlbumDao,
+    private val artistDao: ArtistDao,
     private val musicRepository: MusicRepository
 ) {
 
@@ -45,12 +48,51 @@ class CatalogRepository @Inject constructor(
     /**
      * Pulls the album's tracks from its backend and persists them, so the flow above fills in.
      *
-     * Reuses [MusicRepository.getAlbumTracks], which already marks an album browsed on your own
-     * server as part of your library.
+     * Two paths, because there are two ways to arrive here. When Room knows the album,
+     * [MusicRepository.getAlbumTracks] is used — it marks an album browsed on your own server as
+     * part of your library, which is the right claim for a record you host yourself.
+     *
+     * When it does not, the album is resolved from its id prefix instead. That branch is not an
+     * edge case: an album tapped in an artist's shelf has no `AlbumEntity` row *and* no tracks, so
+     * [album] returns null for it, and this used to return here without ever asking the backend —
+     * leaving every YouTube Music album opened from an artist page permanently empty.
      */
     suspend fun refreshAlbum(albumId: String) {
-        val album = album(albumId) ?: return
-        musicRepository.getAlbumTracks(album)
+        val album = album(albumId)
+        if (album != null) {
+            musicRepository.getAlbumTracks(album)
+        } else {
+            musicRepository.getAlbumTracksById(albumId)
+        }
+    }
+
+    /**
+     * Writes album rows the app has seen but not browsed — the shelves on an artist's page.
+     *
+     * Without this the album screen has no header until its tracks land, and then only the one
+     * [albumFromTracks] can reconstruct from them. Non-library, for the same reason the tracks
+     * are: seeing a record on an artist page is not owning it.
+     */
+    suspend fun rememberAlbums(albums: List<UnifiedAlbum>) = withContext(Dispatchers.IO) {
+        // Only records Room has never seen. `insertAlbums` replaces on conflict, and a tile off an
+        // artist shelf carries no track count and no duration — writing it over a Navidrome album
+        // that has actually been browsed would blank fields the library screen shows.
+        val known = albums.mapNotNull { album -> albumDao.getAlbumById(album.id)?.let { album to it } }
+
+        // Rows Room already has get their credit corrected if it has changed. Without this a bad
+        // one was permanent — inserts skip known albums, so an album once filed under an artist
+        // called "Single" stayed there however many times its artist's page was opened.
+        for ((incoming, stored) in known) {
+            if (incoming.artist.isNotBlank() && incoming.artist != stored.artist) {
+                albumDao.updateAlbumArtist(stored.id, incoming.artist, incoming.artistId)
+            }
+        }
+
+        val unknown = albums.filter { album -> known.none { it.second.id == album.id } }
+        if (unknown.isEmpty()) return@withContext
+        // Left non-library: a tile on an artist's page is a record you have looked at, and
+        // filing those into the Library tab is what made it list every artist you ever opened.
+        albumDao.insertAlbums(unknown.map { AlbumEntity.fromUnifiedAlbum(it, isLibrary = false) })
     }
 
     /**
@@ -77,17 +119,29 @@ class CatalogRepository @Inject constructor(
 
     // ── Artist ──────────────────────────────────────────────────────────────────────────────
 
-    fun artistAlbumsFlow(artist: String): Flow<List<UnifiedAlbum>> =
-        albumDao.getAlbumsByArtistFlow(artist).map { it.map(AlbumEntity::toUnifiedAlbum) }
+    /**
+     * [artistId] is the backend's id for whoever's page this is, once it is known. Items credited
+     * to a *different* id are a different artist who happens to share the name — see
+     * [ArtistIdentity].
+     */
+    fun artistAlbumsFlow(artist: String, artistId: String? = null): Flow<List<UnifiedAlbum>> =
+        albumDao.getAlbumsByArtistFlow(artist).map { entities ->
+            ArtistIdentity.sameArtist(entities, artistId) { it.artistId }
+                .map(AlbumEntity::toUnifiedAlbum)
+        }
 
     /**
      * Deduplicated: the artist page is fed by a cross-source search, so the same song arrives once
      * from Navidrome and once from YouTube Music. [TrackDeduplicator] keeps the copy from the
      * lowest-priority source — your own files and your own server before anything streamed.
      */
-    fun artistTracksFlow(artist: String): Flow<List<UnifiedTrack>> =
-        trackDao.getTracksByArtistFlow(artist)
-            .map { entities -> TrackDeduplicator.deduplicate(entities.map(TrackEntity::toUnifiedTrack)) }
+    fun artistTracksFlow(artist: String, artistId: String? = null): Flow<List<UnifiedTrack>> =
+        trackDao.getTracksByArtistFlow(artist).map { entities ->
+            TrackDeduplicator.deduplicate(
+                ArtistIdentity.sameArtist(entities, artistId) { it.artistId }
+                    .map(TrackEntity::toUnifiedTrack)
+            )
+        }
 
     /**
      * Fills in an artist Room only partly knows, by searching every configured backend for their
@@ -101,6 +155,42 @@ class CatalogRepository @Inject constructor(
     suspend fun refreshArtist(artist: String) {
         musicRepository.searchAllSources(artist)
     }
+
+    /** What is already known about this artist, or null if they have never been opened. */
+    suspend fun cachedArtist(artist: String): ArtistEntity? = withContext(Dispatchers.IO) {
+        artistDao.getByName(artist.lowercase())
+    }
+
+    /**
+     * Remembers the identity half of an artist's page.
+     *
+     * Called after a successful fetch, including one that found no backend page — a null
+     * [details] still records that we looked, which is what stops the next visit paying for the
+     * same disappointment behind a skeleton.
+     */
+    suspend fun cacheArtist(artist: String, details: ArtistDetails?) = withContext(Dispatchers.IO) {
+        artistDao.upsert(
+            ArtistEntity(
+                nameKey = artist.lowercase(),
+                name = details?.name ?: artist,
+                artistId = details?.id,
+                imageUrl = details?.imageUrl,
+                bio = details?.bio,
+                fetchedAt = System.currentTimeMillis()
+            )
+        )
+    }
+
+    /**
+     * Whether a cached artist is recent enough to skip the cross-source search on this visit.
+     *
+     * The search is the expensive half — it asks every configured backend for the artist's name —
+     * and a discography does not change between two visits a few minutes apart. Stale entries
+     * still render instantly from cache; they simply refresh underneath the page rather than in
+     * front of it.
+     */
+    fun isFresh(cached: ArtistEntity): Boolean =
+        System.currentTimeMillis() - cached.fetchedAt < ARTIST_CACHE_MS
 
     /**
      * The artist's own page from the backend that has one.
@@ -121,6 +211,24 @@ class CatalogRepository @Inject constructor(
         source.getArtist(artistId).getOrNull()
     }
 
+    /**
+     * The whole of one album shelf on an artist's page.
+     *
+     * [browseId] and [params] are the coordinates the shelf's own "more" button carried, so the
+     * source that produced the shelf is the one asked to expand it. Empty on failure, which the
+     * screen treats as "nothing more arrived" and leaves the shelf as it was.
+     */
+    suspend fun artistAlbumPage(
+        browseId: String,
+        params: String?,
+        artist: String
+    ): List<UnifiedAlbum> = withContext(Dispatchers.IO) {
+        val source = musicRepository.sources.firstOrNull {
+            it.capabilities.artists && browseId.startsWith(it.sourceType.idPrefix)
+        } ?: return@withContext emptyList()
+        source.getArtistAlbumPage(browseId, params, artist).getOrDefault(emptyList())
+    }
+
     /** Cover for the artist header: whichever of their records has one. */
     fun artistImage(albums: List<UnifiedAlbum>, tracks: List<UnifiedTrack>): String? =
         albums.firstNotNullOfOrNull { it.coverArtUrl }
@@ -130,3 +238,6 @@ class CatalogRepository @Inject constructor(
     fun sourcesOf(tracks: List<UnifiedTrack>): List<SourceType> =
         tracks.map { it.source }.distinct().sorted()
 }
+
+/** How long an artist page is reused before the backend is asked again. */
+private const val ARTIST_CACHE_MS = 6 * 60 * 60 * 1000L

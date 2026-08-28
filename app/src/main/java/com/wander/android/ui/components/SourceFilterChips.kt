@@ -4,7 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -28,20 +29,18 @@ fun SourceFilterChips(
         modifier = modifier
     ) {
         item(key = "all") {
-            FilterChip(
-                selected = selected == null,
+            ToggleButton(
+                checked = selected == null,
                 enabled = enabled,
-                onClick = { onSelect(null) },
-                label = { Text("All") }
-            )
+                onCheckedChange = { onSelect(null) }
+            ) { Text("All") }
         }
         items(sources, key = { it.name }) { source ->
-            FilterChip(
-                selected = selected == source,
+            ToggleButton(
+                checked = selected == source,
                 enabled = enabled,
-                onClick = { onSelect(if (selected == source) null else source) },
-                label = { Text(source.displayName) }
-            )
+                onCheckedChange = { onSelect(if (selected == source) null else source) }
+            ) { Text(source.displayName) }
         }
     }
 }

@@ -45,7 +45,7 @@ private fun StatTile(value: String, label: String, modifier: Modifier = Modifier
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        shape = RoundedCornerShape(18.dp),
+        shape = MaterialTheme.shapes.medium,
         modifier = modifier
     ) {
         Column(
@@ -104,7 +104,7 @@ private fun StatBar(rank: Int, entry: StatEntry, fraction: Float) {
                         .height(BarHeight)
                         .background(
                             MaterialTheme.colorScheme.secondaryContainer,
-                            RoundedCornerShape(10.dp)
+                            MaterialTheme.shapes.extraSmall
                         )
                 )
             },

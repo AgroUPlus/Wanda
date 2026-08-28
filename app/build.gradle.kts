@@ -157,7 +157,9 @@ dependencies {
     implementation("com.jakewharton.timber:timber:5.0.1")
 
     testImplementation(libs.junit)
+    implementation(libs.androidx.webkit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.ktor.client.mock)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

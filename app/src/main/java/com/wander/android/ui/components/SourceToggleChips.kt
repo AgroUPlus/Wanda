@@ -6,7 +6,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,31 +41,18 @@ fun SourceToggleChips(
         modifier = modifier
     ) {
         item(key = "all") {
-            FilterChip(
-                selected = allSelected,
-                onClick = onSelectAll,
-                label = { Text("All") },
-                leadingIcon = if (allSelected) {
-                    { Icon(Icons.Rounded.Check, contentDescription = null) }
-                } else {
-                    null
-                }
-            )
+            ToggleButton(checked = allSelected, onCheckedChange = { onSelectAll() }) {
+                Text("All")
+            }
         }
         items(sources, key = { it.name }) { source ->
             val isOn = source in selected
-            FilterChip(
-                selected = isOn,
+            ToggleButton(
+                checked = isOn,
                 // Turning the last one off would search nothing, so the row always keeps one on.
                 enabled = !isOn || selected.size > 1,
-                onClick = { onToggle(source) },
-                label = { Text(source.displayName) },
-                leadingIcon = if (isOn) {
-                    { Icon(Icons.Rounded.Check, contentDescription = null) }
-                } else {
-                    null
-                }
-            )
+                onCheckedChange = { onToggle(source) }
+            ) { Text(source.displayName) }
         }
     }
 }

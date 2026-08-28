@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -64,11 +66,10 @@ fun StatsScreen(
                     .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
                 StatsPeriod.entries.forEach { period ->
-                    FilterChip(
-                        selected = state.period == period,
-                        onClick = { viewModel.setPeriod(period) },
-                        label = { Text(period.label) }
-                    )
+                    ToggleButton(
+                        checked = state.period == period,
+                        onCheckedChange = { viewModel.setPeriod(period) }
+                    ) { Text(period.label) }
                 }
             }
         }
@@ -85,7 +86,7 @@ fun StatsScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(text = message, style = MaterialTheme.typography.bodyMedium)
-                        TextButton(onClick = viewModel::retry) { Text("Try again") }
+                        TextButton(onClick = viewModel::retry, shapes = ButtonDefaults.shapes()) { Text("Try again") }
                     }
                 }
             }

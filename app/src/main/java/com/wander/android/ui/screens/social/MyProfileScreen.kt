@@ -12,6 +12,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.BarChart
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilledTonalButton
@@ -83,7 +84,9 @@ internal fun MyProfileScreen(
             modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
         ) {
             CuteAvatar(
-                seed = state.username.ifBlank { "wanda" },
+                // Blank until paired, which is what draws the placeholder rather than a
+                // generated face for a name that is not yours. See `CuteAvatar`.
+                seed = state.username,
                 avatarUrl = state.profile?.avatarUrl,
                 size = 88.dp
             )
@@ -102,7 +105,8 @@ internal fun MyProfileScreen(
 
         FilledTonalButton(
             onClick = onOpenStats,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+            shapes = ButtonDefaults.shapes()
         ) {
             Icon(Icons.Rounded.BarChart, contentDescription = null)
             Text("My listening", modifier = Modifier.padding(start = 8.dp))
@@ -158,7 +162,8 @@ internal fun MyProfileScreen(
             enabled = !state.isSaving,
             modifier = Modifier
                 .align(Alignment.End)
-                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            shapes = ButtonDefaults.shapes()
         ) {
             Text(if (state.isSaving) "Saving…" else "Save")
         }

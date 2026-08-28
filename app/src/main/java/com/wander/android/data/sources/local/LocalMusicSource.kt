@@ -1,12 +1,15 @@
 package com.wander.android.data.sources.local
 
 import android.content.Context
+import com.wander.android.core.database.dao.PlaylistDao
 import com.wander.android.core.database.dao.TrackDao
+import com.wander.android.core.database.entity.PlaylistEntity
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.permissions.hasAudioPermission
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
+import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.IMusicSource
 import com.wander.android.data.sources.SourceCapabilities
@@ -18,27 +21,34 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.IOException
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * On-device audio, via MediaStore.
  *
- * The scan writes into Room once and every read comes back out of Room. The previous version
- * re-walked the entire MediaStore cursor on every search, stream lookup and album query.
+ * The scan writes into Room once and every read comes back out of Room.
  */
 @Singleton
 class LocalMusicSource @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val scanner: MediaStoreScanner,
     private val trackDao: TrackDao,
+    private val playlistDao: PlaylistDao,
     private val secureStorage: SecureStorage
 ) : IMusicSource {
 
     override val sourceType = SourceType.LOCAL
     override val displayName = "On this device"
 
-    override val capabilities = SourceCapabilities(search = true, albums = true, radio = true)
+    override val capabilities = SourceCapabilities(
+        search = true,
+        albums = true,
+        radio = true,
+        playlists = true,
+        playlistWrite = true
+    )
 
     private val _isConfigured = MutableStateFlow(context.hasAudioPermission())
     override val isConfigured: StateFlow<Boolean> = _isConfigured.asStateFlow()
@@ -105,4 +115,56 @@ class LocalMusicSource @Inject constructor(
 
     override suspend fun getAlbumTracks(albumId: String): Result<List<UnifiedTrack>> =
         Result.success(trackDao.getTracksInAlbum(albumId).map(TrackEntity::toUnifiedTrack))
+
+    override suspend fun getPlaylists(): Result<List<UnifiedPlaylist>> {
+        val lists = playlistDao.getAllPlaylists().map { entity ->
+            val firstTrackId = entity.trackIds.split(',').firstOrNull { it.isNotBlank() }
+            val fallbackCover = if (entity.coverArtUrl.isNullOrBlank() && firstTrackId != null) {
+                trackDao.getTrackById(firstTrackId)?.artworkUrl
+            } else {
+                entity.coverArtUrl
+            }
+            entity.toUnifiedPlaylist().copy(coverArtUrl = fallbackCover)
+        }
+        return Result.success(lists)
+    }
+
+    override suspend fun getPlaylistTracks(playlistId: String): Result<List<UnifiedTrack>> {
+        val entity = playlistDao.getPlaylistById(playlistId) ?: return Result.success(emptyList())
+        val ids = entity.trackIds.split(',').filter { it.isNotBlank() }
+        if (ids.isEmpty()) return Result.success(emptyList())
+        val tracksById = trackDao.getTracksByIds(ids).associateBy { it.id }
+        val tracks = ids.mapNotNull { id -> tracksById[id]?.toUnifiedTrack() }
+        return Result.success(tracks)
+    }
+
+    override suspend fun createPlaylist(name: String, trackIds: List<String>): Result<String> {
+        val id = "local:playlist:${UUID.randomUUID()}"
+        val playlist = PlaylistEntity(
+            id = id,
+            name = name,
+            trackIds = trackIds.joinToString(",")
+        )
+        playlistDao.insertPlaylist(playlist)
+        return Result.success(id)
+    }
+
+    override suspend fun addToPlaylist(playlistId: String, trackIds: List<String>): Result<Unit> {
+        val existing = playlistDao.getPlaylistById(playlistId)
+            ?: return Result.failure(IOException("Playlist not found"))
+        val currentIds = existing.trackIds.split(',').filter { it.isNotBlank() }
+        val updatedIds = (currentIds + trackIds).distinct()
+        playlistDao.updatePlaylist(
+            existing.copy(
+                trackIds = updatedIds.joinToString(","),
+                updatedAt = System.currentTimeMillis()
+            )
+        )
+        return Result.success(Unit)
+    }
+
+    override suspend fun deletePlaylist(playlistId: String): Result<Unit> {
+        playlistDao.deletePlaylist(playlistId)
+        return Result.success(Unit)
+    }
 }

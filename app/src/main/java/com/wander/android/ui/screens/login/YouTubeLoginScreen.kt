@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -109,11 +110,12 @@ fun YouTubeLoginScreen(
         Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
             TextButton(
                 onClick = viewModel::submitManualCookie,
-                enabled = state.manualCookie.isNotBlank()
+                enabled = state.manualCookie.isNotBlank(),
+                shapes = ButtonDefaults.shapes()
             ) {
                 Text("Use pasted cookie")
             }
-            TextButton(onClick = onDone) { Text("Cancel") }
+            TextButton(onClick = onDone, shapes = ButtonDefaults.shapes()) { Text("Cancel") }
         }
     }
 }

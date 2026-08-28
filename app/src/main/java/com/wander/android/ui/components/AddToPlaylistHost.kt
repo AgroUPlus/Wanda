@@ -23,6 +23,9 @@ class AddToPlaylistController internal constructor(
     fun canAdd(track: UnifiedTrack): Boolean = viewModel.canAdd(track)
 
     fun open(track: UnifiedTrack) = viewModel.open(track)
+
+    fun openForTracks(tracks: List<UnifiedTrack>, source: com.wander.android.data.model.SourceType) =
+        viewModel.openForTracks(tracks, source)
 }
 
 /**

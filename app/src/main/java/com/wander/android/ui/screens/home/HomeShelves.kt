@@ -14,6 +14,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -69,7 +70,11 @@ internal fun LazyListScope.homeSection(
             SectionTitle(
                 text = section.title,
                 action = {
-                    OutlinedButton(onClick = { viewModel.play(section.tracks, 0) }) {
+                    OutlinedButton(
+                        onClick = { viewModel.play(section.tracks, 0) },
+                        // Squares off under the finger, like every other control in the app.
+                        shapes = ButtonDefaults.shapes()
+                    ) {
                         Text("Play all")
                     }
                 }

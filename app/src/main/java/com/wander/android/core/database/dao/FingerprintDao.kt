@@ -1,0 +1,42 @@
+package com.wander.android.core.database.dao
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import com.wander.android.core.database.entity.FingerprintEntity
+
+@Dao
+interface FingerprintDao {
+
+    /**
+     * Bulk insert. `IGNORE`, not `REPLACE`: the same landmark can legitimately be produced twice
+     * for one track, and the row would be identical either way — ignoring skips a needless delete
+     * and re-insert on a table this large.
+     */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAll(fingerprints: List<FingerprintEntity>)
+
+    /**
+     * Every landmark matching any of [hashes].
+     *
+     * The whole match is this one query. `IN` over a few hundred hashes against an indexed column
+     * is a handful of B-tree descents, which is what keeps recognition inside a second even with a
+     * large library behind it.
+     */
+    @Query("SELECT * FROM fingerprints WHERE hash IN (:hashes)")
+    suspend fun matching(hashes: List<Int>): List<FingerprintEntity>
+
+    @Query("DELETE FROM fingerprints WHERE trackId = :trackId")
+    suspend fun deleteTrack(trackId: String)
+
+    /** The tracks already indexed, so a rebuild does only what is left to do. */
+    @Query("SELECT DISTINCT trackId FROM fingerprints")
+    suspend fun indexedTrackIds(): List<String>
+
+    @Query("SELECT COUNT(DISTINCT trackId) FROM fingerprints")
+    fun indexedTrackCountFlow(): kotlinx.coroutines.flow.Flow<Int>
+
+    @Query("DELETE FROM fingerprints")
+    suspend fun clear()
+}

@@ -25,11 +25,15 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/**
+ * The library's tabs.
+ *
+ * History is deliberately not among them. It is not a *collection* — it is a log, it is never
+ * curated, and it was costing a sixth of a tab row that was already clipping its labels. It lives
+ * behind an icon in the header instead, the way Settings does on Home.
+ */
 enum class LibraryTab(val label: String) {
     TRACKS("Tracks"),
-    // Next to Liked rather than at the end: both are lists of songs you have a relationship with,
-    // and the two after them are collections rather than tracks.
-    HISTORY("History"),
     LIKED("Liked"),
     ALBUMS("Albums"),
     PLAYLISTS("Playlists"),
@@ -143,6 +147,37 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             val tracks = musicRepository.getPlaylistTracks(playlist)
             if (tracks.isNotEmpty()) playerConnection.play(tracks)
+        }
+    }
+
+    fun playPlaylistNext(playlist: UnifiedPlaylist) {
+        viewModelScope.launch {
+            val tracks = musicRepository.getPlaylistTracks(playlist)
+            if (tracks.isNotEmpty()) playerConnection.playNext(tracks)
+        }
+    }
+
+    fun addPlaylistToQueue(playlist: UnifiedPlaylist) {
+        viewModelScope.launch {
+            val tracks = musicRepository.getPlaylistTracks(playlist)
+            if (tracks.isNotEmpty()) playerConnection.addToQueue(tracks)
+        }
+    }
+
+    fun addPlaylistToAnother(playlist: UnifiedPlaylist, controller: com.wander.android.ui.components.AddToPlaylistController) {
+        viewModelScope.launch {
+            val tracks = musicRepository.getPlaylistTracks(playlist)
+            if (tracks.isNotEmpty()) {
+                controller.openForTracks(tracks, playlist.source)
+            }
+        }
+    }
+
+    fun deletePlaylist(playlist: UnifiedPlaylist) {
+        viewModelScope.launch {
+            playlistWriter.deletePlaylist(playlist).onSuccess {
+                _playlists.value = musicRepository.getPlaylists()
+            }
         }
     }
 

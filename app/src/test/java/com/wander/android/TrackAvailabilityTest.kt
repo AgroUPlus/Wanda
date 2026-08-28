@@ -42,7 +42,7 @@ class TrackAvailabilityTest {
     @Test
     fun `remote tracks that were never downloaded do not play offline`() {
         assertFalse(track(SourceType.NAVIDROME).isPlayableOffline())
-        assertFalse(track(SourceType.INTERNET_ARCHIVE).isPlayableOffline())
+        assertFalse(track(SourceType.YTMUSIC).isPlayableOffline())
     }
 
     /**

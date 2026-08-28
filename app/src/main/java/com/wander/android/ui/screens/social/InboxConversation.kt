@@ -201,10 +201,10 @@ private fun ConversationDropMessage(
                         containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
                         contentColor = MaterialTheme.colorScheme.onSurface
                     ),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = MaterialTheme.shapes.small,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .clickable(onClick = onPlay)
                 ) {
                     Row(
@@ -215,7 +215,7 @@ private fun ConversationDropMessage(
                             url = drop.artworkUrl,
                             contentDescription = drop.trackTitle,
                             sizeDp = 52.dp,
-                            shape = RoundedCornerShape(10.dp),
+                            shape = MaterialTheme.shapes.extraSmall,
                             modifier = Modifier.size(52.dp)
                         )
 

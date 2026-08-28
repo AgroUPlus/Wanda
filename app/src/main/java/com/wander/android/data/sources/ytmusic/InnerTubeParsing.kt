@@ -14,6 +14,15 @@ import java.io.IOException
 internal const val YTM_PREFIX = "ytm:"
 
 /** Walks a chain of object keys, returning null as soon as one is missing. */
+/**
+ * What a track is credited to when nothing in the response names anybody.
+ *
+ * A named constant because it is also a *test*: callers with better information — an album page
+ * knows its own artist — check for this value to decide whether a row needs filling in. A literal
+ * repeated in six files could not be checked against safely.
+ */
+internal const val UNKNOWN_ARTIST = "Unknown Artist"
+
 internal fun JsonElement?.path(vararg keys: String): JsonElement? =
     keys.fold(this) { node, key -> (node as? JsonObject)?.get(key) }
 
@@ -113,7 +122,7 @@ internal fun parseResponsiveListItem(renderer: JsonObject): UnifiedTrack? {
         id = "$YTM_PREFIX$videoId",
         source = SourceType.YTMUSIC,
         title = title,
-        artist = subtitle.artist ?: "Unknown Artist",
+        artist = subtitle.artist ?: UNKNOWN_ARTIST,
         artistId = subtitle.artistId?.let { "$YTM_PREFIX$it" },
         album = subtitle.album,
         artworkUrl = renderer.path("thumbnail", "musicThumbnailRenderer", "thumbnail")
@@ -137,7 +146,7 @@ internal fun parsePlaylistPanelVideo(renderer: JsonObject): UnifiedTrack? {
         id = "$YTM_PREFIX$videoId",
         source = SourceType.YTMUSIC,
         title = renderer["title"].runText() ?: return null,
-        artist = byline.artist ?: "Unknown Artist",
+        artist = byline.artist ?: UNKNOWN_ARTIST,
         artistId = byline.artistId?.let { "$YTM_PREFIX$it" },
         album = byline.album,
         artworkUrl = renderer["thumbnail"].bestThumbnail(),
@@ -162,7 +171,7 @@ internal fun parseLibraryAlbum(renderer: JsonObject): UnifiedAlbum? {
         id = "$YTM_PREFIX$browseId",
         source = SourceType.YTMUSIC,
         title = title,
-        artist = InnerTubeSubtitle.of(column(1).path("runs")?.array()).artist ?: "Unknown Artist",
+        artist = InnerTubeSubtitle.of(column(1).path("runs")?.array()).artist ?: UNKNOWN_ARTIST,
         coverArtUrl = renderer.path("thumbnail", "musicThumbnailRenderer", "thumbnail")
             .bestThumbnail()
     )

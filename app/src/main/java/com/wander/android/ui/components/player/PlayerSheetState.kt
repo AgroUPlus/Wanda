@@ -5,6 +5,7 @@ import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.runtime.Composable
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -69,8 +70,10 @@ class PlayerSheetState(
     internal suspend fun updateMaxOffset(newMaxOffset: Float) {
         if (newMaxOffset <= 0f) return
         val isFirstMeasure = maxOffsetPx <= 0f
+        val wasCollapsed = targetValue == PlayerSheetValue.COLLAPSED
+        val wasAtMax = abs(offset.value - maxOffsetPx) < 10f
         maxOffsetPx = newMaxOffset
-        if (isFirstMeasure || offset.value > newMaxOffset) {
+        if (isFirstMeasure || wasCollapsed || wasAtMax || offset.value > newMaxOffset) {
             if (targetValue == PlayerSheetValue.EXPANDED) {
                 offset.snapTo(0f)
             } else {
@@ -147,7 +150,12 @@ class PlayerSheetState(
 fun rememberPlayerSheetState(
     initialValue: PlayerSheetValue = PlayerSheetValue.COLLAPSED
 ): PlayerSheetState {
+    // The spec comes from the theme rather than the class's own default. `PlayerSheetState` is a
+    // plain class and cannot read `MaterialTheme`, which is why the default exists at all — but
+    // every real instance is created here, in composition, where the scheme is available. The
+    // hand-rolled fallback stays for tests and previews that construct one directly.
+    val spec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     return rememberSaveable(saver = PlayerSheetState.Saver) {
-        PlayerSheetState(initialValue)
+        PlayerSheetState(initialValue, spec)
     }
 }

@@ -1,6 +1,10 @@
 package com.wander.android.ui.screens.player
 
 import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.data.repository.RenditionFinder
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.playback.PlaybackCoordinator
 import com.wander.android.data.model.UnifiedTrack
@@ -19,8 +23,60 @@ internal class NowPlayingViewModel @Inject constructor(
     private val coordinator: PlaybackCoordinator,
     private val musicRepository: MusicRepository,
     private val shareRepository: ShareRepository,
+    private val renditionFinder: RenditionFinder,
+    private val playerConnection: PlayerConnection,
     jamRepository: JamRepository
 ) : ViewModel() {
+
+    /**
+     * Every source that has the playing recording, once the picker has asked.
+     *
+     * Empty until the label is tapped: finding renditions costs a search per backend, and the
+     * answer is only ever looked at by a user who has opened the picker.
+     */
+    private val _renditions = MutableStateFlow<List<UnifiedTrack>>(emptyList())
+    val renditions: StateFlow<List<UnifiedTrack>> = _renditions.asStateFlow()
+
+    private val _isFindingRenditions = MutableStateFlow(false)
+    val isFindingRenditions: StateFlow<Boolean> = _isFindingRenditions.asStateFlow()
+
+    /**
+     * [durationMs] comes from the player rather than the track — see [RenditionFinder.canSwitch].
+     * Stamped onto the track before matching, so a rendition is compared against the length that is
+     * actually playing instead of a zero the metadata never filled in.
+     */
+    fun findRenditions(track: UnifiedTrack, durationMs: Long) {
+        // Seeded with what is playing so the picker opens with a row already in it, rather than
+        // an empty panel that fills in a second later.
+        val known = if (track.durationMs > 0L) track else track.copy(durationMs = durationMs)
+        _renditions.value = listOf(known)
+        _isFindingRenditions.value = true
+        viewModelScope.launch {
+            try {
+                _renditions.value = renditionFinder.findRenditions(known)
+            } finally {
+                _isFindingRenditions.value = false
+            }
+        }
+    }
+
+    fun clearRenditions() {
+        _renditions.value = emptyList()
+        _isFindingRenditions.value = false
+    }
+
+    /**
+     * Switches source without losing your place.
+     *
+     * The position is read before the swap and handed to the new rendition, so changing where a
+     * song comes from mid-listen is a change of source and not a restart.
+     */
+    fun playFrom(rendition: UnifiedTrack, positionMs: Long) {
+        playerConnection.play(listOf(rendition), startPositionMs = positionMs)
+    }
+
+    fun canSwitchSource(track: UnifiedTrack, durationMs: Long): Boolean =
+        renditionFinder.canSwitch(track, durationMs)
 
     val lyrics = coordinator.lyrics
     val jam = jamRepository.jam

@@ -21,18 +21,16 @@ import com.wander.android.ui.components.scrollingTitle
 @Composable
 fun PlaylistRow(
     playlist: UnifiedPlaylist,
-    onPlay: () -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    /** Null when this playlist's backend cannot publish a link for it. */
-    onShare: (() -> Unit)? = null
+    /** Long press handler for actions sheet. */
+    onLongPress: (() -> Unit)? = null
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
-            // Long press to share, matching the track rows on every other tab — the same gesture
-            // means the same thing wherever it is used.
-            .combinedClickable(onClick = onPlay, onLongClick = onShare)
+            .combinedClickable(onClick = onClick, onLongClick = onLongPress)
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Artwork(

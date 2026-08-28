@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -70,7 +71,7 @@ fun SourceSetupCard(
                     tint = MaterialTheme.colorScheme.primary
                 )
             } else {
-                TextButton(onClick = onAction) { Text(actionLabel) }
+                TextButton(onClick = onAction, shapes = ButtonDefaults.shapes()) { Text(actionLabel) }
             }
         }
     }
