@@ -34,6 +34,20 @@ interface IMusicSource {
     /** Whether this source has everything it needs (credentials, permissions) to be queried. */
     val isConfigured: StateFlow<Boolean>
 
+    /**
+     * Whether this source will answer a *search* right now, which is not the same question.
+     *
+     * Some backends serve search to anyone and reserve credentials for the things that are
+     * genuinely personal — your library, your likes, your history. YouTube Music is one, and
+     * conflating the two meant that signing out removed it from search as well, even though search
+     * was the part still working perfectly.
+     *
+     * Defaults to [isConfigured], which is the right answer for a source whose search needs an
+     * account. Only the search path consults this; browsing, recommendations and library writes
+     * stay on [isConfigured], so a signed-out backend still contributes nothing it cannot back up.
+     */
+    val isSearchable: StateFlow<Boolean> get() = isConfigured
+
     suspend fun search(query: String): Result<List<UnifiedTrack>>
 
     /**
@@ -98,8 +112,15 @@ interface IMusicSource {
      * offset, because these backends page by opaque token, not by index. Failing by default is
      * deliberate: a source that cannot expand a shelf must not answer "there is nothing more",
      * which is what an empty success would mean.
+     *
+     * [artist] is whose page the shelf was on. Passed in rather than read off the tiles, because
+     * an expanded shelf's tiles print `Album • 2023` and name nobody — see `InnerTubeSubtitle`.
      */
-    suspend fun getArtistAlbumPage(browseId: String, params: String?): Result<List<UnifiedAlbum>> =
+    suspend fun getArtistAlbumPage(
+        browseId: String,
+        params: String?,
+        artist: String
+    ): Result<List<UnifiedAlbum>> =
         Result.failure(UnsupportedOperationException("$sourceType cannot expand artist shelves"))
 
     suspend fun getPlaylists(): Result<List<UnifiedPlaylist>> = Result.success(emptyList())
@@ -119,6 +140,10 @@ interface IMusicSource {
     /** Appends [trackIds] to an existing playlist. See [createPlaylist]. */
     suspend fun addToPlaylist(playlistId: String, trackIds: List<String>): Result<Unit> =
         Result.failure(UnsupportedOperationException("$displayName cannot modify playlists"))
+
+    /** Deletes a playlist. */
+    suspend fun deletePlaylist(playlistId: String): Result<Unit> =
+        Result.failure(UnsupportedOperationException("$displayName cannot delete playlists"))
 
     /**
      * A public link to [target] that anyone can open, for sharing.

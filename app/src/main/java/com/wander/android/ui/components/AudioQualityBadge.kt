@@ -27,7 +27,7 @@ fun AudioQualityBadge(
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
+            .clip(MaterialTheme.shapes.extraSmall)
             .background(containerColor)
             .padding(horizontal = 6.dp, vertical = 2.dp)
     ) {

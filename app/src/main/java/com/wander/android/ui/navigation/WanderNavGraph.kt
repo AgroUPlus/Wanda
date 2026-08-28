@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
+import androidx.compose.material3.MotionScheme
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
@@ -14,11 +15,10 @@ import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.ui.screens.album.AlbumScreen
 import com.wander.android.ui.screens.artist.ArtistScreen
 import com.wander.android.ui.screens.home.HomeScreen
-import com.wander.android.ui.screens.library.LibraryScreen
+import com.wander.android.ui.screens.library.LibrarySurface
 import com.wander.android.ui.screens.login.NavidromeLoginScreen
 import com.wander.android.ui.screens.login.YouTubeLoginScreen
 import com.wander.android.ui.screens.queue.QueueScreen
-import com.wander.android.ui.screens.search.SearchScreen
 import com.wander.android.ui.screens.settings.SettingsScreen
 import com.wander.android.ui.screens.social.CircleScreen
 import com.wander.android.ui.screens.social.InboxScreen
@@ -31,6 +31,13 @@ import com.wander.android.ui.screens.welcome.WelcomeScreen
 
 fun NavGraphBuilder.wanderNavGraph(
     navController: NavHostController,
+    /**
+     * The theme's motion scheme, read once by `WanderApp`.
+     *
+     * Passed rather than read here because the transition lambdas below are not `@Composable` —
+     * see `NavTransitions`. Stable across recompositions, so it does not churn the graph.
+     */
+    motion: MotionScheme,
     playerConnection: PlayerConnection,
     contentPadding: PaddingValues,
     /**
@@ -42,34 +49,28 @@ fun NavGraphBuilder.wanderNavGraph(
      */
     onCollapsePlayer: () -> Unit
 ) {
-    tabDestination(TopLevelDestination.HOME.route) {
+    tabDestination(motion, TopLevelDestination.HOME.route) {
         HomeScreen(
             contentPadding = contentPadding,
+            onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) },
             onOpenSettings = { navController.navigateSettled(Routes.SETTINGS) }
         )
     }
 
-    tabDestination(TopLevelDestination.LIBRARY.route) {
-        LibraryScreen(
+    // The library and the search results are one destination: the dock's field turns the first
+    // into the second without moving on the back stack. See `LibrarySurface`.
+    tabDestination(motion, TopLevelDestination.LIBRARY.route) {
+        LibrarySurface(
             contentPadding = contentPadding,
-            onOpenAlbum = { navController.navigateSettled(Routes.album(it)) }
+            onOpenAlbum = { navController.navigateSettled(Routes.album(it)) },
+            onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) },
+            onOpenHistory = { navController.navigateSettled(Routes.HISTORY) },
+            onOpenPlaylist = { navController.navigateSettled(Routes.playlist(it)) },
+            onOpenImport = { navController.navigateSettled(Routes.IMPORT_PLAYLIST) }
         )
     }
 
-    tabDestination(
-        route = "${TopLevelDestination.SEARCH.route}?query={query}",
-        arguments = listOf(
-            navArgument("query") {
-                type = NavType.StringType
-                defaultValue = ""
-                nullable = true
-            }
-        )
-    ) {
-        SearchScreen(contentPadding = contentPadding)
-    }
-
-    tabDestination(TopLevelDestination.FRIENDS.route) {
+    tabDestination(motion, TopLevelDestination.FRIENDS.route) {
         SocialScreen(
             contentPadding = contentPadding,
             onOpenProfile = { navController.navigateSettled(Routes.profile(it)) },
@@ -83,7 +84,7 @@ fun NavGraphBuilder.wanderNavGraph(
 
     // Registered before `PROFILE`, whose `profile/{username}` pattern would otherwise swallow
     // `profile/me` and open a page about a friend called "me".
-    tabDestination(Routes.MY_PROFILE) {
+    tabDestination(motion, Routes.MY_PROFILE) {
         MyProfileScreen(
             contentPadding = contentPadding,
             onBack = navController::popBackStack,
@@ -91,32 +92,68 @@ fun NavGraphBuilder.wanderNavGraph(
         )
     }
 
-    tabDestination(Routes.STATS) {
-        StatsScreen(contentPadding = contentPadding)
-    }
-
-    tabDestination(Routes.SETTINGS) {
-        SettingsScreen(
+    tabDestination(motion, Routes.HISTORY) {
+        com.wander.android.ui.screens.library.HistoryScreen(
             contentPadding = contentPadding,
-            onNavidromeLogin = { navController.navigateSettled(Routes.NAVIDROME_LOGIN) },
-            onYouTubeLogin = { navController.navigateSettled(Routes.YTMUSIC_LOGIN) }
+            onBack = navController::popBackStack,
+            onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) }
         )
     }
 
-    detailDestination(
+    tabDestination(motion, Routes.MERGE_PREVIEW) {
+        com.wander.android.ui.screens.settings.MergePreviewScreen(
+            contentPadding = contentPadding,
+            onBack = navController::popBackStack
+        )
+    }
+
+    tabDestination(motion, Routes.STATS) {
+        StatsScreen(contentPadding = contentPadding)
+    }
+
+    tabDestination(motion, Routes.SETTINGS) {
+        SettingsScreen(
+            contentPadding = contentPadding,
+            onNavidromeLogin = { navController.navigateSettled(Routes.NAVIDROME_LOGIN) },
+            onYouTubeLogin = { navController.navigateSettled(Routes.YTMUSIC_LOGIN) },
+            onOpenImport = { navController.navigateSettled(Routes.IMPORT_PLAYLIST) },
+            onOpenMergePreview = { navController.navigateSettled(Routes.MERGE_PREVIEW) }
+        )
+    }
+
+    detailDestination(motion, Routes.IMPORT_PLAYLIST) {
+        com.wander.android.ui.screens.importer.PlaylistImportScreen(
+            contentPadding = contentPadding,
+            onBack = navController::popBackStack,
+            onOpenPlaylist = { navController.navigateSettled(Routes.playlist(it)) }
+        )
+    }
+
+    detailDestination(motion, 
         route = Routes.ALBUM,
         arguments = listOf(navArgument("albumId") { type = NavType.StringType })
     ) {
         AlbumScreen(
             contentPadding = contentPadding,
             onBack = navController::popBackStack,
-            onOpenArtist = { navController.navigateSettled(Routes.artist(it)) }
+            onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) }
+        )
+    }
+
+    detailDestination(motion, 
+        route = Routes.PLAYLIST,
+        arguments = listOf(navArgument("playlistId") { type = NavType.StringType })
+    ) {
+        com.wander.android.ui.screens.playlist.PlaylistScreen(
+            contentPadding = contentPadding,
+            onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) },
+            onBack = navController::popBackStack
         )
     }
 
     // A profile keeps the chrome — you arrive from a friend's now-playing card, and the player
     // that card is about must stay reachable.
-    tabDestination(
+    tabDestination(motion, 
         route = Routes.PROFILE,
         arguments = listOf(navArgument("username") { type = NavType.StringType })
     ) {
@@ -126,21 +163,21 @@ fun NavGraphBuilder.wanderNavGraph(
         )
     }
 
-    detailDestination(route = Routes.INBOX) {
+    detailDestination(motion, route = Routes.INBOX) {
         InboxScreen(
             contentPadding = contentPadding,
             onBack = navController::popBackStack
         )
     }
 
-    detailDestination(route = Routes.CIRCLE) {
+    detailDestination(motion, route = Routes.CIRCLE) {
         CircleScreen(
             contentPadding = contentPadding,
             onBack = navController::popBackStack
         )
     }
 
-    detailDestination(
+    detailDestination(motion, 
         route = Routes.JAM_ROUTE,
         arguments = listOf(
             navArgument("code") {
@@ -164,19 +201,28 @@ fun NavGraphBuilder.wanderNavGraph(
         )
     }
 
-    detailDestination(
+    detailDestination(motion, 
         route = Routes.ARTIST,
-        arguments = listOf(navArgument("artist") { type = NavType.StringType })
+        arguments = listOf(
+            navArgument("artist") { type = NavType.StringType },
+            // Optional: callers that know who they mean pass it, and the page believes them over
+            // anything it could infer from the name. See `Routes.artist`.
+            navArgument("artistId") {
+                type = NavType.StringType
+                defaultValue = ""
+                nullable = true
+            }
+        )
     ) {
         ArtistScreen(
             contentPadding = contentPadding,
             onBack = navController::popBackStack,
             onOpenAlbum = { navController.navigateSettled(Routes.album(it)) },
-            onOpenArtist = { navController.navigateSettled(Routes.artist(it)) }
+            onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) }
         )
     }
 
-    detailDestination(Routes.QUEUE) {
+    detailDestination(motion, Routes.QUEUE) {
         QueueScreen(
             playerConnection = playerConnection,
             onClose = navController::popBackStack,
@@ -192,7 +238,7 @@ fun NavGraphBuilder.wanderNavGraph(
         )
     }
 
-    detailDestination(Routes.WELCOME) {
+    detailDestination(motion, Routes.WELCOME) {
         WelcomeScreen(
             onNavidromeLogin = { navController.navigateSettled(Routes.NAVIDROME_LOGIN) },
             onYouTubeLogin = { navController.navigateSettled(Routes.YTMUSIC_LOGIN) },
@@ -205,17 +251,18 @@ fun NavGraphBuilder.wanderNavGraph(
         )
     }
 
-    detailDestination(Routes.NAVIDROME_LOGIN) {
+    detailDestination(motion, Routes.NAVIDROME_LOGIN) {
         NavidromeLoginScreen(onDone = navController::popBackStack)
     }
 
-    detailDestination(Routes.YTMUSIC_LOGIN) {
+    detailDestination(motion, Routes.YTMUSIC_LOGIN) {
         YouTubeLoginScreen(onDone = navController::popBackStack)
     }
 }
 
 /** A top-level tab: peers, so they slide along X in the direction of the bar. */
 private fun NavGraphBuilder.tabDestination(
+    motion: MotionScheme,
     route: String,
     arguments: List<NamedNavArgument> = emptyList(),
     content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit
@@ -225,10 +272,10 @@ private fun NavGraphBuilder.tabDestination(
     // Always the actual movement — where the transition comes from, where it goes — rather than
     // this destination's own route. The exits used to be handed the *leaving* screen as their
     // target, so a tab slid out as though every switch went the same way.
-    enterTransition = { tabEnter(initialState.route(), targetState.route()) },
-    exitTransition = { tabExit(initialState.route(), targetState.route()) },
-    popEnterTransition = { tabEnter(initialState.route(), targetState.route()) },
-    popExitTransition = { tabExit(initialState.route(), targetState.route()) },
+    enterTransition = { tabEnter(initialState.route(), targetState.route(), motion) },
+    exitTransition = { tabExit(initialState.route(), targetState.route(), motion) },
+    popEnterTransition = { tabEnter(initialState.route(), targetState.route(), motion) },
+    popExitTransition = { tabExit(initialState.route(), targetState.route(), motion) },
     content = content
 )
 
@@ -236,15 +283,16 @@ private fun NavBackStackEntry.route(): String? = destination.route
 
 /** A screen opened on top of another: shared-axis Z. */
 private fun NavGraphBuilder.detailDestination(
+    motion: MotionScheme,
     route: String,
     arguments: List<NamedNavArgument> = emptyList(),
     content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit
 ) = composable(
     route = route,
     arguments = arguments,
-    enterTransition = { detailEnter() },
-    exitTransition = { detailExit() },
-    popEnterTransition = { detailPopEnter() },
-    popExitTransition = { detailPopExit() },
+    enterTransition = { detailEnter(motion) },
+    exitTransition = { detailExit(motion) },
+    popEnterTransition = { detailPopEnter(motion) },
+    popExitTransition = { detailPopExit(motion) },
     content = content
 )

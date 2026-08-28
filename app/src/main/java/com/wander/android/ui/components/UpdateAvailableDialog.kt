@@ -1,5 +1,6 @@
 package com.wander.android.ui.components
 
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -22,10 +23,12 @@ internal fun UpdateAvailableDialog(
             TextButton(onClick = {
                 uriHandler.openUri(update.releaseUrl)
                 onDismiss()
-            }) { Text("View release") }
+            },
+                shapes = ButtonDefaults.shapes()
+            ) { Text("View release") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Not now") }
+            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text("Not now") }
         }
     )
 }

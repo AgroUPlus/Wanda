@@ -1,5 +1,6 @@
 package com.wander.android.ui.components
 
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -39,11 +40,12 @@ fun NewPlaylistDialog(
             // it leaves no hint that a name is what is missing.
             TextButton(
                 onClick = { onConfirm(name) },
-                enabled = name.isNotBlank()
+                enabled = name.isNotBlank(),
+                shapes = ButtonDefaults.shapes()
             ) { Text("Create") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text("Cancel") }
         }
     )
 }

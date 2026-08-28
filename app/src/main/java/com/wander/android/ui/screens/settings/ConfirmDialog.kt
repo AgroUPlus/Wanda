@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.settings
 
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,13 +31,14 @@ internal fun ConfirmDialog(
                 onClick = {
                     onConfirm()
                     onDismiss()
-                }
+                },
+                shapes = ButtonDefaults.shapes()
             ) {
                 Text(confirmLabel, color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text("Cancel") }
         }
     )
 }

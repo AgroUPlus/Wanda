@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.QrCode2
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
@@ -66,7 +67,7 @@ internal fun UserSearchSheet(
                 // The other way in, for two people in the same room — where searching by
                 // username needs one of them to be publicly listed, and being added once is not
                 // a reason to be listed forever.
-                TextButton(onClick = onToggleCode) {
+                TextButton(onClick = onToggleCode, shapes = ButtonDefaults.shapes()) {
                     Icon(
                         imageVector = Icons.Rounded.QrCode2,
                         contentDescription = null,

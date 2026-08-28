@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -100,7 +101,7 @@ internal fun FriendCodePanel(
                 textAlign = TextAlign.Center
             )
 
-            TextButton(onClick = onRefresh, enabled = code != null) {
+            TextButton(onClick = onRefresh, enabled = code != null, shapes = ButtonDefaults.shapes()) {
                 Text("New code")
             }
         }

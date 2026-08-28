@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -55,10 +56,10 @@ internal fun ShareDomainDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(domain) }) { Text("Save") }
+            TextButton(onClick = { onSave(domain) }, shapes = ButtonDefaults.shapes()) { Text("Save") }
         },
         dismissButton = {
-            TextButton(onClick = { onSave("") }) { Text("Use default") }
+            TextButton(onClick = { onSave("") }, shapes = ButtonDefaults.shapes()) { Text("Use default") }
         }
     )
 }

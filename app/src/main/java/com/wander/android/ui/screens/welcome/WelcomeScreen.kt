@@ -15,6 +15,7 @@ import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Public
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -107,7 +108,8 @@ fun WelcomeScreen(
                 viewModel.finish()
                 onDone()
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            shapes = ButtonDefaults.shapes()
         ) {
             Text("Start listening")
         }
@@ -117,7 +119,8 @@ fun WelcomeScreen(
                 viewModel.finish()
                 onDone()
             },
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            shapes = ButtonDefaults.shapes()
         ) {
             Text("Set this up later")
         }

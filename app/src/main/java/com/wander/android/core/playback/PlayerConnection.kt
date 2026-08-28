@@ -540,13 +540,10 @@ class PlayerConnection @Inject constructor(
     }
 
     /**
-     * Offload saves power but starves the visualizer, so the two are mutually exclusive.
+     * Offload lets the DSP handle decoding to save power.
      *
-     * A livestream vetoes it outright, whoever asked: offload expects a track that ends, and an
-     * HLS live window is not one — with it on the player reaches the end of the first window and
-     * declares the item finished. `PlaybackCoordinator` is where the decision normally lives, but
-     * `setSpeedAndPitch` also turns offload back on when the rate returns to 1.0x, and that must
-     * not quietly re-break a live stream.
+     * A livestream vetoes it outright: offload expects a track that ends, and an
+     * HLS live window is not one.
      */
     fun setOffloadEnabled(enabled: Boolean) {
         val ctrl = _controller.value ?: return

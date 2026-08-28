@@ -40,7 +40,7 @@ internal fun ArtistScreen(
     contentPadding: PaddingValues,
     onBack: () -> Unit,
     onOpenAlbum: (String) -> Unit,
-    onOpenArtist: (String) -> Unit,
+    onOpenArtist: (String, String?) -> Unit,
     viewModel: ArtistViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()

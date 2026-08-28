@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -96,7 +97,8 @@ internal fun SpeedPitchPopup(
                 TextButton(
                     onClick = { onChange(SpeedAndPitch()) },
                     enabled = !value.isDefault,
-                    modifier = Modifier.align(Alignment.End)
+                    modifier = Modifier.align(Alignment.End),
+                    shapes = ButtonDefaults.shapes()
                 ) {
                     Text("Reset")
                 }

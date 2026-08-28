@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.settings
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -112,7 +113,8 @@ internal fun AgroPairingForm(
                 if (mode == AgroPairingMode.CREATE) AgroPairingMode.PAIR else AgroPairingMode.CREATE
             )
         },
-        enabled = enabled
+        enabled = enabled,
+        shapes = ButtonDefaults.shapes()
     ) {
         Text(
             if (mode == AgroPairingMode.CREATE) {

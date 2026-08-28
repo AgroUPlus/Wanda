@@ -24,7 +24,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistHost
-import com.wander.android.ui.components.DetailHeader
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.TrackRow
@@ -39,7 +38,7 @@ import com.wander.android.ui.components.listInset
 fun AlbumScreen(
     contentPadding: PaddingValues,
     onBack: () -> Unit,
-    onOpenArtist: (String) -> Unit,
+    onOpenArtist: (String, String?) -> Unit,
     viewModel: AlbumViewModel = hiltViewModel()
 ) {
     val album by viewModel.album.collectAsStateWithLifecycle()
@@ -58,6 +57,9 @@ fun AlbumScreen(
             onStartRadio = { viewModel.startRadio(track) },
             onToggleLike = { viewModel.toggleLike(track) },
             onRemove = null,
+            onOpenArtist = track.artist
+                .takeIf { it.isNotBlank() }
+                ?.let { artist -> { onOpenArtist(artist, track.artistId) } },
             onDismiss = { actionsFor = null },
             onShare = if (viewModel.canShare(track)) {
                 { viewModel.share(track) }
@@ -106,7 +108,7 @@ fun AlbumScreen(
         ) {
             item(key = "header", contentType = "header") {
                 val current = album
-                DetailHeader(
+                AlbumHero(
                     title = current?.title ?: tracks.firstOrNull()?.album.orEmpty(),
                     subtitle = albumSubtitle(
                         artist = current?.artist ?: tracks.firstOrNull()?.artist.orEmpty(),
@@ -115,7 +117,6 @@ fun AlbumScreen(
                     ),
                     artworkUrl = current?.coverArtUrl
                         ?: tracks.firstNotNullOfOrNull { it.artworkUrl },
-                    artworkShape = MaterialTheme.shapes.large,
                     onPlay = viewModel::playAll,
                     onShuffle = viewModel::shuffle,
                     onShare = viewModel::shareAlbum.takeIf { viewModel.canShareAlbum() },
@@ -127,7 +128,10 @@ fun AlbumScreen(
             item(key = "artist-link", contentType = "artist-link") {
                 val artist = album?.artist ?: tracks.firstOrNull()?.artist
                 if (!artist.isNullOrBlank()) {
-                    ArtistLinkRow(artist = artist, onClick = { onOpenArtist(artist) })
+                    ArtistLinkRow(
+                        artist = artist,
+                        onClick = { onOpenArtist(artist, album?.artistId) }
+                    )
                 }
             }
 

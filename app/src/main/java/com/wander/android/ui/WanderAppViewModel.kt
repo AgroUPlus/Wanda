@@ -11,7 +11,9 @@ import com.wander.android.data.repository.InstantRadioRepository
 import com.wander.android.data.repository.LibrarySyncRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.PlaylistWriteRepository
+import com.wander.android.core.audio.fingerprint.FingerprintIndexWorker
 import com.wander.android.data.repository.SearchQueryHolder
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.sources.agro.AgroSessionApi
 import com.wander.android.data.sources.agro.MissingTrack
@@ -49,7 +51,8 @@ class WanderAppViewModel @Inject constructor(
     private val updateChecker: UpdateChecker,
     private val instantRadio: InstantRadioRepository,
     private val playerConnection: PlayerConnection,
-    private val searchQueryHolder: SearchQueryHolder
+    private val searchQueryHolder: SearchQueryHolder,
+    @ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
 
     /**
@@ -276,7 +279,14 @@ class WanderAppViewModel @Inject constructor(
      * cold start costs almost nothing after the first time.
      */
     fun onAudioPermissionGranted() {
-        viewModelScope.launch { localSource.refresh() }
+        viewModelScope.launch {
+            localSource.refresh()
+            // The scan is what discovers the files, so the fingerprint index can only usefully be
+            // asked for afterwards. `KEEP` inside means the repeated calls this makes across
+            // launches join one run rather than restarting it. Constrained to charging, so asking
+            // costs the user nothing right now.
+            FingerprintIndexWorker.enqueue(context)
+        }
     }
 }
 

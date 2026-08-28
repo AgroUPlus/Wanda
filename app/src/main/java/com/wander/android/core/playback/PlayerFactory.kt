@@ -10,9 +10,6 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.audio.AudioSink
-import androidx.media3.exoplayer.audio.DefaultAudioSink
-import androidx.media3.exoplayer.audio.TeeAudioProcessor
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.wander.android.core.cache.AudioCacheManager
@@ -26,8 +23,7 @@ import javax.inject.Inject
 class PlayerFactory @Inject constructor(
     private val context: Context,
     private val cacheManager: AudioCacheManager,
-    private val streamResolver: StreamResolver,
-    private val pcmTap: PcmTap
+    private val streamResolver: StreamResolver
 ) {
 
     fun create(): ExoPlayer {
@@ -49,17 +45,8 @@ class PlayerFactory @Inject constructor(
                 .setAllowChunklessPreparation(true)
         )
 
-        val renderersFactory = object : DefaultRenderersFactory(context) {
-            override fun buildAudioSink(
-                context: Context,
-                enableFloatOutput: Boolean,
-                enableAudioTrackPlaybackParams: Boolean
-            ): AudioSink = DefaultAudioSink.Builder(context)
-                .setEnableFloatOutput(enableFloatOutput)
-                // The tee passes audio through untouched and copies it to the FFT processor.
-                .setAudioProcessors(arrayOf(TeeAudioProcessor(pcmTap)))
-                .build()
-        }.setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+        val renderersFactory = DefaultRenderersFactory(context)
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
 
         val audioAttributes = AudioAttributes.Builder()
             .setUsage(C.USAGE_MEDIA)

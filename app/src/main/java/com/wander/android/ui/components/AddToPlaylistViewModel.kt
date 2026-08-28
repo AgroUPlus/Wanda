@@ -2,6 +2,7 @@ package com.wander.android.ui.components
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.PlaylistWriteRepository
@@ -27,6 +28,8 @@ class AddToPlaylistViewModel @Inject constructor(
     private val _target = MutableStateFlow<UnifiedTrack?>(null)
     val target: StateFlow<UnifiedTrack?> = _target.asStateFlow()
 
+    private val _targetTracks = MutableStateFlow<List<UnifiedTrack>>(emptyList())
+
     private val _playlists = MutableStateFlow<List<UnifiedPlaylist>>(emptyList())
     val playlists: StateFlow<List<UnifiedPlaylist>> = _playlists.asStateFlow()
 
@@ -37,8 +40,7 @@ class AddToPlaylistViewModel @Inject constructor(
 
     fun open(track: UnifiedTrack) {
         _target.value = track
-        // Fetched per open rather than cached: a playlist made on another device between two long
-        // presses is exactly the destination the user is reaching for.
+        _targetTracks.value = listOf(track)
         _playlists.value = emptyList()
         _isLoading.value = true
         viewModelScope.launch {
@@ -47,19 +49,35 @@ class AddToPlaylistViewModel @Inject constructor(
         }
     }
 
+    fun openForTracks(tracks: List<UnifiedTrack>, source: SourceType) {
+        if (tracks.isEmpty()) return
+        _target.value = tracks.first()
+        _targetTracks.value = tracks
+        _playlists.value = emptyList()
+        _isLoading.value = true
+        viewModelScope.launch {
+            _playlists.value = playlistWriter.writableTargets(source)
+            _isLoading.value = false
+        }
+    }
+
     fun dismiss() {
         _target.value = null
+        _targetTracks.value = emptyList()
     }
 
     fun addToExisting(playlist: UnifiedPlaylist) {
-        val track = _target.value ?: return
+        val trackIds = if (_targetTracks.value.isNotEmpty()) _targetTracks.value.map { it.id } else listOfNotNull(_target.value?.id)
+        if (trackIds.isEmpty()) return
         dismiss()
-        viewModelScope.launch { playlistWriter.addToPlaylist(playlist, listOf(track.id)) }
+        viewModelScope.launch { playlistWriter.addToPlaylist(playlist, trackIds) }
     }
 
     fun createWith(name: String) {
-        val track = _target.value ?: return
+        val trackIds = if (_targetTracks.value.isNotEmpty()) _targetTracks.value.map { it.id } else listOfNotNull(_target.value?.id)
+        val source = _target.value?.source ?: SourceType.LOCAL
+        if (trackIds.isEmpty()) return
         dismiss()
-        viewModelScope.launch { playlistWriter.createPlaylist(track.source, name, listOf(track.id)) }
+        viewModelScope.launch { playlistWriter.createPlaylist(source, name, trackIds) }
     }
 }

@@ -20,8 +20,17 @@ internal fun LazyListScope.aboutTab(
     onAutoUpdateCheckChange: (Boolean) -> Unit,
     onCheckForUpdate: () -> Unit,
     onOpenRelease: (String) -> Unit,
-    onOpenUrl: (String) -> Unit
+    onOpenUrl: (String) -> Unit,
+    onOpenMergePreview: () -> Unit
 ) {
+    item(key = "merge_preview") {
+        SettingsRow(
+            title = "Merge preview",
+            subtitle = "See which of your tracks are the same recording, before anything changes",
+            onClick = onOpenMergePreview
+        )
+    }
+
     item(key = "version") {
         SettingsRow(
             title = "Version",

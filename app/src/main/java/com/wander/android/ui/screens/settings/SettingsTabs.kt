@@ -13,7 +13,7 @@ internal enum class SettingsTab(val label: String) {
     SYNC("Sync"),
     APPEARANCE("Appearance"),
     PLAYBACK("Playback"),
-    SHARING("Sharing"),
+    EXTERNAL("External"),
     PRIVACY("Privacy"),
     ABOUT("About")
 }
