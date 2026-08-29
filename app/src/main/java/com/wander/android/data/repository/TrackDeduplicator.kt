@@ -97,8 +97,14 @@ object TrackDeduplicator {
      *
      * Tracks with no known duration are each their own group. An unknown length is not evidence of
      * a match, and this is the function whose mistakes would be written to disk.
+     *
+     * [splits] is the user's veto over exactly those mistakes: a pinned pair never lands in one
+     * group, however well the rest of the evidence agrees.
      */
-    fun groupRecordings(tracks: List<UnifiedTrack>): List<List<UnifiedTrack>> {
+    fun groupRecordings(
+        tracks: List<UnifiedTrack>,
+        splits: SplitSet = SplitSet.EMPTY
+    ): List<List<UnifiedTrack>> {
         val buckets = LinkedHashMap<RecordingKey, MutableList<UnifiedTrack>>()
         val alone = mutableListOf<List<UnifiedTrack>>()
 
@@ -115,14 +121,40 @@ object TrackDeduplicator {
         val grouped = buckets.values.flatMap { bucket ->
             val groups = mutableListOf<MutableList<UnifiedTrack>>()
             for (track in bucket) {
+                // A pin beats the measurement. Joining a group means being pinned apart from
+                // none of the rows already in it — one member is enough to keep a track out,
+                // because the user said those two are different performances and the whole group
+                // will later be folded onto one row.
                 val match = groups.firstOrNull { group ->
-                    abs(group.first().durationMs - track.durationMs) <= DURATION_TOLERANCE_MS
+                    abs(group.first().durationMs - track.durationMs) <= DURATION_TOLERANCE_MS &&
+                        group.none { splits.isApart(it.id, track.id) }
                 }
                 if (match == null) groups += mutableListOf(track) else match += track
             }
             groups.map { group -> group.sortedBy { it.source.priority } }
         }
         return grouped + alone
+    }
+
+    /**
+     * The same list with later copies of a recording already in it removed.
+     *
+     * Order-preserving, unlike [deduplicate], and it keeps whichever copy came *first* rather than
+     * whichever is best-ranked. That is what a history needs: the list is newest-first, so the
+     * first copy of a recording is the most recent time it was played, and replacing it with a
+     * better-ranked copy would move the entry to the wrong moment.
+     *
+     * Split-aware, so a pair the user has pinned apart stays as two entries.
+     */
+    fun distinctRecordings(
+        tracks: List<UnifiedTrack>,
+        splits: SplitSet = SplitSet.EMPTY
+    ): List<UnifiedTrack> {
+        val kept = mutableListOf<UnifiedTrack>()
+        for (track in tracks) {
+            if (kept.none { isSameRecording(it, track, splits) }) kept += track
+        }
+        return kept
     }
 
     /** Within one bucket, merge tracks whose lengths agree and keep the best-ranked of each. */
@@ -165,8 +197,16 @@ object TrackDeduplicator {
      *
      * A track with no known duration matches nothing: an unknown length is not evidence, and
      * treating it as agreement is how a live take gets folded into a studio cut.
+     *
+     * [splits] overrules all of it. Where the user has said two rows are different performances,
+     * no amount of agreement between their titles and lengths makes them one.
      */
-    fun isSameRecording(a: UnifiedTrack, b: UnifiedTrack): Boolean {
+    fun isSameRecording(
+        a: UnifiedTrack,
+        b: UnifiedTrack,
+        splits: SplitSet = SplitSet.EMPTY
+    ): Boolean {
+        if (splits.isApart(a.id, b.id)) return false
         if (a.durationMs <= 0L || b.durationMs <= 0L) return false
         if (keyOf(a) != keyOf(b)) return false
         return abs(a.durationMs - b.durationMs) <= DURATION_TOLERANCE_MS
