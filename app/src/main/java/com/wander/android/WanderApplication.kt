@@ -28,6 +28,7 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var downloadScheduler: DownloadScheduler
     @Inject lateinit var scrobbleSyncScheduler: ScrobbleSyncScheduler
+    @Inject lateinit var p2pServer: com.wander.android.core.sync.P2PServer
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -63,6 +64,8 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
         downloadScheduler.scheduleAutoDownload()
         // Cheap and self-gating: the worker does nothing until an Agro server is paired.
         scrobbleSyncScheduler.schedule()
+        // Embedded P2P server for direct high-speed LAN audio transfers
+        p2pServer.start()
         // Needed for YT Music's PO Token / signature-cipher deobfuscation (see InnerTubeClient).
         val isDebuggable = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         ZemerCipher.initialize(context = this, debugLogging = isDebuggable)
