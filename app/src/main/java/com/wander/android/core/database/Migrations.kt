@@ -349,8 +349,34 @@ val MIGRATION_16_17 = object : Migration(16, 17) {
     }
 }
 
+/**
+ * Adds the table that lets a user overrule the matcher.
+ *
+ * Two rows the deduplicator calls one recording move together — a like written against either
+ * lands on both — and the play-count migration will eventually fold them into a single row. That
+ * is right almost always and unappealable when it is wrong. A pinned pair is the appeal, and it
+ * has to exist before anything merges: once a year of history sits on the wrong row there is
+ * nothing left to pin apart.
+ *
+ * Purely additive. No existing row is read, changed or deleted.
+ */
+val MIGRATION_17_18 = object : Migration(17, 18) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `recording_splits` (
+                `idA` TEXT NOT NULL,
+                `idB` TEXT NOT NULL,
+                `pinnedAt` INTEGER NOT NULL,
+                PRIMARY KEY(`idA`, `idB`)
+            )
+            """.trimIndent()
+        )
+    }
+}
+
 /** Every migration, in order. Room applies whichever ones a given database still needs. */
 val WANDER_MIGRATIONS: Array<Migration> = arrayOf(
     MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
-    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17
+    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18
 )
