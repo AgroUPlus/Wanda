@@ -1,6 +1,7 @@
 package com.wander.android.ui.components.player
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -31,6 +32,8 @@ import com.wander.android.ui.components.MiniArtworkSize
 import com.wander.android.ui.components.MiniProgressBarHeight
 import com.wander.android.ui.components.MiniRowVerticalPadding
 import com.wander.android.ui.navigation.DockRowHeight
+import kotlinx.coroutines.flow.distinctUntilChanged
+import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -93,6 +96,13 @@ fun PlayerSheet(
     bottomInset: Dp,
     isVisible: Boolean,
     modifier: Modifier = Modifier,
+    /**
+     * How tall the sheet is while docked: [MiniPlayerHeight] with a dock row beneath the strip,
+     * [MiniStripHeight] on the screens that show the player alone. It decides both where the
+     * sheet rests and how far it has to travel, so it cannot be assumed — a sheet that rests one
+     * dock row lower than it measures leaves a strip-sized hole above the navigation bar.
+     */
+    dockedHeight: Dp = MiniPlayerHeight,
     content: @Composable (progress: () -> Float, rawProgress: () -> Float, expandedHeight: Dp) -> Unit
 ) {
     if (!isVisible) return
@@ -100,14 +110,36 @@ fun PlayerSheet(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
+    // Navigating between a root and a page beneath it takes a dock row out from under the strip,
+    // so the sheet's resting height changes by that much. Springing it — rather than cutting —
+    // is what makes the player *settle* onto the screen it landed on instead of teleporting, and
+    // the strip's own contents ride down with it because they are laid out from its top edge.
+    //
+    // Deliberately never read in composition scope: this file measures the player exactly once
+    // and animates the drawn box, and a `by` here would recompose the whole player on every frame
+    // of the spring. Every read below is inside a `layout`, a `graphicsLayer` or an effect.
+    val dockedHeightState = animateDpAsState(
+        targetValue = dockedHeight,
+        animationSpec = MaterialTheme.motionScheme.slowSpatialSpec(),
+        label = "docked-height"
+    )
+
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val sheetHeight = maxHeight
-        val totalTravelPx = with(density) {
-            (sheetHeight - MiniPlayerHeight - bottomInset - MiniPlayerGap).toPx()
-        }
 
-        LaunchedEffect(totalTravelPx) {
-            sheetState.updateMaxOffset(totalTravelPx)
+        // How far the sheet has to travel, which the animated resting height moves. Collected
+        // rather than computed in composition, for the reason above: `updateMaxOffset` snaps a
+        // collapsed sheet onto the new anchor, so following the spring here is what carries the
+        // docked strip down to its new resting place.
+        LaunchedEffect(sheetHeight, bottomInset, density) {
+            snapshotFlow { dockedHeightState.value }
+                .distinctUntilChanged()
+                .collect { docked ->
+                    val travel = with(density) {
+                        (sheetHeight - docked - bottomInset - MiniPlayerGap).toPx()
+                    }
+                    sheetState.updateMaxOffset(travel)
+                }
         }
 
         BackHandler(enabled = sheetState.isExpanded) {
@@ -136,7 +168,7 @@ fun PlayerSheet(
                     translationY = if (sheetState.maxOffsetPx > 0f) {
                         sheetState.offset.value
                     } else {
-                        totalTravelPx
+                        (sheetHeight - dockedHeightState.value - bottomInset - MiniPlayerGap).toPx()
                     }
                     val radius = DockedCorner.toPx() * (1f - progress)
                     shape = RoundedCornerShape(
@@ -158,7 +190,7 @@ fun PlayerSheet(
                     val fullWidth = constraints.maxWidth
                     val dockedWidth = fullWidth - DockedSideInset.roundToPx() * 2
                     val fullHeight = sheetHeight.roundToPx()
-                    val miniHeight = MiniPlayerHeight.roundToPx()
+                    val miniHeight = dockedHeightState.value.roundToPx()
 
                     // One measurement for the whole gesture.
                     val placeable = measurable.measure(
