@@ -8,10 +8,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.CallSplit
+import androidx.compose.material.icons.rounded.Undo
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
@@ -26,6 +29,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.KeptApartPair
 import com.wander.android.data.repository.MergeGroup
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
@@ -39,6 +44,10 @@ import com.wander.android.ui.components.listInset
  *
  * Ordered worst-first: groups whose lengths disagree, or whose rows name different albums, come
  * before the obvious merges. Those are where a live take or an alternate mix would be hiding.
+ *
+ * Flagging a wrong merge without offering anything to do about it would leave the matcher's
+ * judgement unappealable, so each rendition can be pinned apart from its group here. That write is
+ * the one thing on this screen that touches the database, and it only ever keeps rows *separate*.
  */
 @Composable
 internal fun MergePreviewScreen(
@@ -89,7 +98,8 @@ internal fun MergePreviewScreen(
                         Text(
                             text = "${current.merged} rows folded together · " +
                                 "${current.splitLikes} likes currently split across copies · " +
-                                "${current.reviewable.size} worth checking",
+                                "${current.reviewable.size} worth checking" +
+                                keptApartSummary(current.keptApart.size),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 6.dp)
@@ -105,68 +115,23 @@ internal fun MergePreviewScreen(
             }
 
             items(current.groups, key = { it.renditions.first().id }) { group ->
-                MergeGroupRow(group)
+                MergeGroupRow(group, onKeepApart = { viewModel.keepApart(group, it) })
+            }
+
+            // A pinned pair is absent from every group above — that is what pinning does — so
+            // without this the user could make a pin and then have no way to find or undo it.
+            if (current.keptApart.isNotEmpty()) {
+                item(key = "kept-apart-header") {
+                    Text(
+                        text = "Kept apart",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp)
+                    )
+                }
+                items(current.keptApart, key = { "${it.a.id}|${it.b.id}" }) { pair ->
+                    KeptApartRow(pair, onRejoin = { viewModel.rejoin(pair) })
+                }
             }
         }
     }
 }
-
-@Composable
-private fun MergeGroupRow(group: MergeGroup) {
-    Surface(
-        color = if (group.needsReview) MaterialTheme.colorScheme.errorContainer
-        else MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = group.title,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = group.artist,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            group.renditions.forEach { rendition ->
-                Text(
-                    text = "· ${rendition.source.displayName} — ${format(rendition.durationMs)}" +
-                        if (rendition.isLiked) "  ♥" else "",
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-
-            if (group.needsReview) {
-                Text(
-                    text = reviewReason(group),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
-            if (group.combinedPlays > 0) {
-                Text(
-                    text = "${group.combinedPlays} plays would combine",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 6.dp)
-                )
-            }
-        }
-    }
-}
-
-/** Says which signal tripped, so the row can be judged without opening anything. */
-private fun reviewReason(group: MergeGroup): String = when {
-    group.albums.size > 1 -> "Different albums: ${group.albums.joinToString(", ")}"
-    else -> "Lengths differ by ${group.durationSpreadMs / 1000}s"
-}
-
-private fun format(ms: Long): String = "%d:%02d".format(ms / 60_000, (ms % 60_000) / 1000)

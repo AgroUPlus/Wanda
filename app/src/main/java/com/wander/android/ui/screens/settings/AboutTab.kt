@@ -17,6 +17,8 @@ internal fun LazyListScope.aboutTab(
     updateCheck: UpdateCheckResult?,
     isChecking: Boolean,
     autoUpdateCheck: Boolean,
+    releaseNotifications: Boolean,
+    onReleaseNotificationsChange: (Boolean) -> Unit,
     onAutoUpdateCheckChange: (Boolean) -> Unit,
     onCheckForUpdate: () -> Unit,
     onOpenRelease: (String) -> Unit,
@@ -78,6 +80,17 @@ internal fun LazyListScope.aboutTab(
                 "Off by default: this is a network call at startup.",
             checked = autoUpdateCheck,
             onCheckedChange = onAutoUpdateCheckChange
+        )
+    }
+
+    item(key = "release_notifications") {
+        SettingsToggle(
+            title = "Notify me about new releases",
+            subtitle = "Checks once a day on Wi-Fi and posts a notification when a new version " +
+                "is published. Off by default: it is a network call you did not ask for, and a " +
+                "notification you did not ask for.",
+            checked = releaseNotifications,
+            onCheckedChange = onReleaseNotificationsChange
         )
     }
 }
