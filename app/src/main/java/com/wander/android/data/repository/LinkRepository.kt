@@ -33,7 +33,11 @@ class LinkRepository @Inject constructor(
 
     /** Whether [uri] is a link this app can do something with. Cheap, no network. */
     fun canOpen(uri: Uri): Boolean {
-        if (uri.getQueryParameter("id") != null && uri.scheme in setOf("wanda", "https")) return true
+        // `http` too: a self-hosted Agro on a LAN address serves `/listen` over plain http, and
+        // that is now one of the places share links are minted.
+        if (uri.getQueryParameter("id") != null && uri.scheme in setOf("wanda", "https", "http")) {
+            return true
+        }
         val targetUri = target(uri)
         return youTubeVideoId(targetUri) != null || isNavidromeLink(targetUri)
     }

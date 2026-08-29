@@ -20,8 +20,11 @@ import com.wander.android.data.sources.agro.StorageUsage
  * cannot do anything is worse than no toggle.
  */
 internal fun LazyListScope.librarySyncSection(
-    enabled: Boolean,
-    onEnabledChange: (Boolean) -> Unit,
+    p2pEnabled: Boolean,
+    onP2pEnabledChange: (Boolean) -> Unit,
+    archiveEnabled: Boolean,
+    canArchive: Boolean,
+    onArchiveEnabledChange: (Boolean) -> Unit,
     pendingCount: Int,
     syncedCount: Int,
     progress: SyncProgress,
@@ -35,23 +38,40 @@ internal fun LazyListScope.librarySyncSection(
     storageUsage: StorageUsage?,
     incognito: Boolean
 ) {
-    item(key = "library_sync_section") { SettingsSection("Library sync") }
+    item(key = "library_sync_section") { SettingsSection("Device & library sync") }
 
-    item(key = "library_sync_toggle") {
+    item(key = "p2p_sync_toggle") {
         SettingsToggle(
-            title = "Send my music to Agro",
+            title = "P2P Device Sync",
             subtitle = if (incognito) {
                 "Paused — incognito is on"
             } else {
-                "Local files only, on Wi-Fi while charging"
+                "Share library index for direct LAN & relay transfers. 0 server disk used."
             },
-            checked = enabled && !incognito,
-            onCheckedChange = onEnabledChange,
+            checked = p2pEnabled && !incognito,
+            onCheckedChange = onP2pEnabledChange,
             enabled = !incognito
         )
     }
 
-    if (!enabled || incognito) return
+    item(key = "server_archive_toggle") {
+        SettingsToggle(
+            title = "Archive to server",
+            // The permission is the server's to grant, so the row says whether *this* account has
+            // it rather than naming a role. "(Admin)" was a guess at why it might not work, shown
+            // even to accounts that could archive perfectly well.
+            subtitle = when {
+                incognito -> "Paused — incognito is on"
+                !canArchive -> "Your account is not allowed to upload files to this server."
+                else -> "Upload full audio files to server storage."
+            },
+            checked = archiveEnabled && !incognito && canArchive,
+            onCheckedChange = onArchiveEnabledChange,
+            enabled = !incognito && canArchive
+        )
+    }
+
+    if ((!p2pEnabled && !archiveEnabled) || incognito) return
 
     item(key = "library_sync_status") {
         Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
@@ -108,7 +128,15 @@ internal fun LazyListScope.librarySyncSection(
     item(key = "library_sync_now") {
         SettingsRow(
             title = "Sync now",
-            subtitle = if (progress.running) "Running…" else "Upload straight away",
+            // "Upload straight away" was shown whether or not anything would be uploaded. With
+            // archiving off the run only fingerprints files and tells the server which ones this
+            // device has — no audio leaves the phone, and saying otherwise made a metadata sync
+            // look like it was shipping the library somewhere.
+            subtitle = when {
+                progress.running -> "Running…"
+                archiveEnabled -> "Send files to the server now"
+                else -> "Update what your other devices can see. No files are sent."
+            },
             onClick = onSyncNow
         )
     }

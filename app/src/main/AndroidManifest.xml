@@ -4,6 +4,16 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!--
+      Android 16 took local-network traffic out of INTERNET and put it behind its own runtime
+      grant. Without it, connecting to another device on the same Wi-Fi fails as a plain connect
+      timeout — indistinguishable from the peer being switched off, which is exactly how it
+      presented: `adb shell` could reach the peer's port while the app could not.
+
+      Peer-to-peer sync is the only thing that needs it. Everything else the app talks to is on the
+      internet, so a user who never pairs a second device can refuse this and lose nothing.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
@@ -45,7 +55,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Wanda"
-        android:usesCleartextTraffic="false"
+        android:usesCleartextTraffic="true"
         tools:targetApi="37">
 
         <activity

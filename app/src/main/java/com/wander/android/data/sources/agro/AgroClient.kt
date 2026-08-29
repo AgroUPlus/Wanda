@@ -19,14 +19,33 @@ class AgroClient @Inject constructor(
 ) {
     val isConfigured: Boolean get() = graphQl.isConfigured
 
+    private fun getLocalIpAddress(): String? {
+        try {
+            val interfaces = java.net.NetworkInterface.getNetworkInterfaces()
+            while (interfaces.hasMoreElements()) {
+                val iface = interfaces.nextElement()
+                if (iface.isLoopback || !iface.isUp) continue
+                val addresses = iface.inetAddresses
+                while (addresses.hasMoreElements()) {
+                    val addr = addresses.nextElement()
+                    if (!addr.isLoopbackAddress && addr is java.net.Inet4Address) {
+                        return addr.hostAddress
+                    }
+                }
+            }
+        } catch (ignored: Exception) {}
+        return null
+    }
+
     /**
      * Battery-first one-shot registration: called on app launch or pairing only.
      * Never runs in an unconstrained background loop.
      */
     suspend fun registerNode(currentTrack: String? = null): Result<String?> {
+        val lanAddress = getLocalIpAddress()?.let { "$it:8702" }
         val mutation = """
-            mutation RegisterNode(${'$'}userId: String!, ${'$'}deviceId: String!, ${'$'}clientType: String!, ${'$'}deviceName: String, ${'$'}currentTrack: String) {
-                registerNode(userId: ${'$'}userId, deviceId: ${'$'}deviceId, clientType: ${'$'}clientType, deviceName: ${'$'}deviceName, currentTrack: ${'$'}currentTrack) {
+            mutation RegisterNode(${'$'}userId: String!, ${'$'}deviceId: String!, ${'$'}clientType: String!, ${'$'}deviceName: String, ${'$'}lanAddress: String, ${'$'}currentTrack: String) {
+                registerNode(userId: ${'$'}userId, deviceId: ${'$'}deviceId, clientType: ${'$'}clientType, deviceName: ${'$'}deviceName, lanAddress: ${'$'}lanAddress, currentTrack: ${'$'}currentTrack) {
                     petname
                 }
             }
@@ -37,6 +56,7 @@ class AgroClient @Inject constructor(
             put("deviceId", secureStorage.agroDeviceId)
             put("clientType", "wanda")
             secureStorage.agroDevicePetname.ifEmpty { null }?.let { put("deviceName", it) }
+            lanAddress?.let { put("lanAddress", it) }
             currentTrack?.let { put("currentTrack", it) }
         }
 
@@ -58,6 +78,7 @@ class AgroClient @Inject constructor(
         album: String?,
         artworkUrl: String?,
         positionMs: Long,
+        durationMs: Long,
         isPlaying: Boolean
     ): Result<Unit> {
         val mutation = """
@@ -77,6 +98,9 @@ class AgroClient @Inject constructor(
                 // right cover without looking the track up again.
                 artworkUrl?.let { put("artworkUrl", it) }
                 put("positionMs", positionMs)
+                // What the position is measured against. Without it anything rendering this
+                // session can only show an elapsed count — a progress bar needs both ends.
+                put("durationMs", durationMs)
                 put("isPlaying", isPlaying)
                 put("deviceId", secureStorage.agroDeviceId)
             })

@@ -18,32 +18,147 @@ route, and the recording work.
 
 ---
 
-## Next, in order
+## Status
 
-### 1. Build `Split` before finishing the recording migration
+### Done, verified
 
-The remaining half of the recording model folds **play counts and history** onto
-a shared recording row. That means deleting rows and summing counts, and it is
-the one step with no way back: a wrong merge silently hides a recording the user
-owns, with nothing on screen to say so.
+- **Recording identity** — likes, artist pages, parsing. Shipped earlier.
+- **`Split`** — pin two rows apart so they never merge. Verified on the Pixel against 3000 real
+  rows: pin honoured by likes, unpinned groups still merge, undo works, library restored.
+- **Play counts and history, per recording** — the last half of the recording model. See below for
+  why it is not the migration this file used to describe.
+- **Share chain** — custom domain → Agro server → backend, with speed/pitch on track links.
+  `SHARE_LINKS.md` in the Agro repo is the normative spec; three implementations conform.
+- **Licensing** — Agro is AGPL-3.0 with a LICENSE file; both repos have a CLA. `AGRO_PREMIUM.md`
+  records the reasoning: one repo, sell hosting, do not split into open-core.
+- **Security** — two XSS holes fixed (`share.rs`, `listen.rs`), an open redirect closed on
+  frwd.top, Agro's database and its `-wal`/`-shm` chmod 0600, Wander's `config.toml` 0600.
+- **Incognito** — account-wide and server-owned when Agro is paired, device-local otherwise.
+- **Release notifications** — a daily WorkManager check, off by default, one notification per
+  version.
 
-`Split` — pinning a recording's renditions permanently apart — is cheap now and
-impossible to retrofit once a year of history has merged onto the wrong row.
-`ArtistEntity`-style `pinned_apart` column is already sketched in the design.
+### P2P: why every track "arrived corrupted"
 
-**Check the numbers first.** Settings → About → **Merge preview** is a dry run
-that writes nothing. Last measured, with Navidrome connected:
+Three independent faults, none of them corruption.
+
+**1. The message was wrong, which hid the rest.** `MediaStoreWriter` returned `null` for *any*
+failure and the caller called all of them "arrived corrupted". A transfer that delivered **zero
+bytes** was reported as a damaged file. It now distinguishes `Empty`, `HashMismatch` and `Failed`,
+and says which.
+
+**2. `relay.rs` tore the session down on a five-second timer.** `receive_relay` spawned a task that
+slept 5s, recorded the holding, and dropped the session — regardless of whether anything had
+transferred. Dropping the session releases the last `Arc`, and with it the sender's half of the
+channel, so a sender that had not connected within five seconds found its session gone and the
+receiver's stream simply ended: **HTTP 200, no bytes**. The client hashed zero bytes, got a
+mismatch, and said "corrupted". The same timer also recorded the receiver as *holding* a track it
+never got. Cleanup now happens when the stream ends, and the holding is recorded only if bytes
+actually moved.
+
+**3. `send_relay` answered before reading the request body.** It spawned the pump and returned 200
+immediately. HTTP does not promise the body survives a completed response — the connection may be
+reused or closed. Now pumped inline, with `tx` dropped afterwards to signal completion.
+
+**Where it actually stops, traced on the device (15:19):**
 
 ```
-track rows        : 2838
-recordings after  : 2775
-rows folded away  : 63
-likes split today : 9   → now 0, repaired
+LAN P2P  192.168.1.141:8701     connect timeout after 3s
+relay    POST /api/v1/relay/open   HTTP 200, session created
+relay    GET  /relay/{id}/receive  hangs — no headers, ever
 ```
 
-Only 63 rows fold. If that is still small, the migration is not urgent — its
-value grows as more Navidrome/local music arrives. Decide on the number, not on
-the idea.
+So the relay session opens fine and the receiver never gets a byte.
+
+**The LAN leg: Tailscale is routing this machine's own LAN over the tailnet.**
+
+```
+$ ip route get 192.168.1.128
+192.168.1.128 dev tailscale0 table 52 src 100.120.165.35
+```
+
+Some node advertises `192.168.1.0/24` as a subnet route, this machine runs with `RouteAll: true`
+(`--accept-routes`), and the policy rule `5270: from all lookup 52` outranks
+`32766: from all lookup main`. So packets to the local LAN leave through `tailscale0` carrying a
+`100.x` source address.
+
+Inbound connections arrive on `enp6s0` perfectly well — `INPUT` policy is `accept` and the only
+`DROP` is for `100.64.0.0/10` arriving off-tailnet. It is the **replies** that go the wrong way, so
+every peer sees a connect timeout. Host-to-phone `ping` appeared to work only because it detoured
+through the tailnet in both directions.
+
+Not a firewall, not AP isolation, not GrapheneOS — all three were wrong guesses along the way,
+including two of mine about `ufw`.
+
+```bash
+sudo tailscale up --accept-routes=false
+ip route get 192.168.1.128        # should now say: dev enp6s0
+```
+
+Better still, stop advertising `192.168.1.0/24` from whichever node does: a subnet route for a LAN
+this machine is *already on* can only do harm here.
+
+**The relay leg most likely dies at the reverse proxy.** `agro.kolbxyz.xyz` resolves to a public
+address fronted by **openresty**, and the relay is a long-lived duplex stream — exactly what nginx
+buffering breaks. Two directives, for the relay paths only:
+
+The front end is **Nginx Proxy Manager**: edit the `agro.kolbxyz.xyz` proxy host → **Advanced** tab
+→ Custom Nginx Configuration:
+
+```nginx
+location /api/v1/relay/ {
+    proxy_pass http://192.168.1.16:1674;
+    proxy_http_version 1.1;
+    proxy_buffering off;          # or the receiver gets no headers until a buffer fills
+    proxy_request_buffering off;  # or the sender's whole file is buffered before Agro sees it
+    proxy_read_timeout 1h;
+    proxy_send_timeout 1h;
+    client_max_body_size 0;       # a relayed track is one request, not chunked like an upload
+}
+```
+
+Unconfirmed — that host was not reachable from here. It is a hypothesis with good evidence, not a
+finding. The sender is healthy: Wander holds two live connections to Agro (one is the WebSocket),
+its `local_index.json` is populated, and it does implement `RELAY_REQUEST`.
+
+**The fetch no longer hangs forever.** `AgroUploader` used `readTimeout(0)` — infinite — for the
+relay, so a relay that delivered nothing showed "Syncing…" indefinitely, which is
+indistinguishable from working. Relay calls now use their own client with a 45-second stall
+timeout; uploads keep the infinite one, because a library upload legitimately takes hours.
+
+**Untested end to end.** The relay fixes are verified by reasoning, a clean build and 201 passing
+tests — there is no integration test that stands up a session and streams through it.
+
+### Left to do
+
+1. **Re-pair the phone with Agro.** The old client/server skew is resolved (the server now takes
+   both `ipAddress` and `lanAddress`), but the earlier pairing attempts all aborted, so the device
+   is unpaired. Scan the QR again.
+2. **`TrackDeduplicator.deduplicate` is still not split-aware** — the display filter behind search
+   and library lists. A pinned pair still collapses to one row *in a list*, while staying apart
+   everywhere identity is written or counted. `distinctRecordings` now exists and is split-aware;
+   wiring the list path to it is the remaining piece.
+3. **Agro playlist sync** — designed, not started. See below.
+
+### Not done, on purpose
+
+**The row-deleting merge migration.** This file used to describe folding renditions together by
+summing play counts onto one survivor and deleting the rest, and called it the half with no way
+back. That shape was wrong, and it is why it kept being deferred:
+
+- Deleting a rendition also deletes a source `RenditionFinder` can offer — including, potentially,
+  the only copy that plays offline.
+- It decides once, at migration time, and is wrong forever afterwards for anything pinned apart
+  later.
+- A wrong merge destroys a recording the user owns, silently.
+
+**Totalling on the way out costs one grouping pass and has none of those failure modes.**
+`RecordingPlayCounts` sums a recording's plays across its copies when the list is built, and
+`TrackDeduplicator.distinctRecordings` collapses history the same way. Both honour `SplitSet` and
+duration. Nothing is written, so there is nothing to undo — and the user-visible outcome is the one
+the migration was for: a song held twice counts once, with the right number.
+
+The merge preview stays as it is. It is still the place to audit what the matcher thinks, and it is
+where pins are made and undone.
 
 ### 2. Agro playlist sync
 
@@ -96,6 +211,10 @@ nobody and coverless.
 backends stays together. That is why a *name* is not an identity and why
 `artistId` now travels in the route.
 
+**Run the wrapper as `sh ./gradlew`.** Bare `./gradlew` got rewritten to the system Gradle
+mid-session and failed with `Cannot find module 'gradle-public-api-legacy'` — the same breakage as
+before, arriving by a different route. The wrapper itself is fine.
+
 **The build has a Gradle wrapper now.** It previously used whatever Gradle the
 system had; a package upgrade broke `gradle-public-api-legacy` mid-session. The
 wrapper pins 9.5.0, which is what the build script and README already asked for.
@@ -116,7 +235,8 @@ UI change end to end needs it kept awake.
 
 ## Deliberately not done
 
-- **Play-count and history re-keying.** See `Split`, above.
+- **Play-count and history re-keying.** `Split` now exists to make it survivable;
+  the number, not the idea, is what decides whether to run it.
 - **Five `infiniteRepeatable(tween(…))` loops** (shimmer, live chip, pulsing mic,
   radio FAB, social tiles) still hold hand-picked periods. `MotionScheme` has no
   notion of a loop duration, so forcing them through it would be cargo cult.

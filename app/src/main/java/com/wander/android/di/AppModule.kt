@@ -59,4 +59,6 @@ object AppModule {
     @Provides fun provideDropDao(db: WanderDatabase): DropDao = db.dropDao()
     @Provides fun provideFingerprintDao(db: WanderDatabase): FingerprintDao = db.fingerprintDao()
     @Provides fun providePlaylistDao(db: WanderDatabase): com.wander.android.core.database.dao.PlaylistDao = db.playlistDao()
+
+    @Provides fun provideRecordingSplitDao(db: WanderDatabase): com.wander.android.core.database.dao.RecordingSplitDao = db.recordingSplitDao()
 }
