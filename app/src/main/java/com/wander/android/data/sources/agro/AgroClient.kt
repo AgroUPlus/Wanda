@@ -1,5 +1,6 @@
 package com.wander.android.data.sources.agro
 
+import com.wander.android.core.security.AgroVault
 import com.wander.android.core.security.SecureStorage
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -179,6 +180,20 @@ class AgroClient @Inject constructor(
             ?: secureStorage.agroServerUrl.takeIf { it.isNotBlank() }
             ?: DEFAULT_SERVER_URL
 
+        val vaultKeyParam = uri.getQueryParameter("vaultKey") ?: uri.getQueryParameter("vault_key")
+        if (!vaultKeyParam.isNullOrBlank()) {
+            val decodedKey = runCatching {
+                if (vaultKeyParam.length == 64 && vaultKeyParam.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) {
+                    hexToBytes(vaultKeyParam)
+                } else {
+                    AgroVault.decodeBase64(vaultKeyParam)
+                }
+            }.getOrNull()
+            if (decodedKey != null && decodedKey.size == 32) {
+                secureStorage.agroVaultKey = decodedKey
+            }
+        }
+
         uri.getQueryParameter("token")?.takeIf { it.isNotBlank() }?.let { token ->
             return pairWithToken(server, user, token)
         }
@@ -190,11 +205,11 @@ class AgroClient @Inject constructor(
     }
 
     /**
-     * Exchanges a passphrase for a device token, then pairs with it.
+     * Exchanges a passphrase for a device token, unwrap or enrols the account vault key, then pairs.
      *
      * This is what the manual Settings entry does. The passphrase is never stored: it buys a
      * credential scoped to this device — revocable on its own, without changing the passphrase
-     * every other device is using — and then it is discarded.
+     * every other device is using — derives the vault wrapping key, and then it is discarded.
      */
     suspend fun pairWithPassphrase(
         serverUrl: String,
@@ -206,10 +221,67 @@ class AgroClient @Inject constructor(
             return Result.failure(IOException("Server, username and passphrase are all required"))
         }
         return login.exchange(server, username, passphrase).fold(
-            onSuccess = { token -> pairWithToken(server, username, token) },
+            onSuccess = { loginResult ->
+                val pairResult = pairWithToken(server, username, loginResult.token)
+                if (pairResult.isSuccess) {
+                    setupVaultKey(username, passphrase, loginResult.vaultSalt, loginResult.vaultKeyWrapped)
+                }
+                pairResult
+            },
             onFailure = { Result.failure(it) }
         )
     }
+
+    private suspend fun setupVaultKey(
+        username: String,
+        passphrase: String,
+        vaultSalt: String?,
+        vaultKeyWrapped: String?
+    ) {
+        if (!vaultSalt.isNullOrBlank() && !vaultKeyWrapped.isNullOrBlank()) {
+            runCatching {
+                val salt = hexToBytes(vaultSalt)
+                val kek = AgroVault.deriveWrappingKey(passphrase, salt)
+                val vaultKey = AgroVault.unwrapKey(vaultKeyWrapped, kek)
+                secureStorage.agroVaultKey = vaultKey
+            }
+        } else {
+            runCatching {
+                val vaultKey = AgroVault.newVaultKey()
+                val salt = AgroVault.newSalt()
+                val kek = AgroVault.deriveWrappingKey(passphrase, salt)
+                val wrapped = AgroVault.wrapKey(vaultKey, kek)
+                val saltHex = bytesToHex(salt)
+                val mutation = """
+                    mutation EnrolVaultKey(${'$'}userId: String!, ${'$'}vaultSalt: String!, ${'$'}vaultKeyWrapped: String!) {
+                        enrolVaultKey(userId: ${'$'}userId, vaultSalt: ${'$'}vaultSalt, vaultKeyWrapped: ${'$'}vaultKeyWrapped)
+                    }
+                """.trimIndent()
+                val variables = buildJsonObject {
+                    put("userId", username)
+                    put("vaultSalt", saltHex)
+                    put("vaultKeyWrapped", wrapped)
+                }
+                graphQl.execute(mutation, variables)
+                secureStorage.agroVaultKey = vaultKey
+            }
+        }
+    }
+
+    private fun hexToBytes(hex: String): ByteArray {
+        val clean = hex.trim()
+        val len = clean.length
+        val data = ByteArray(len / 2)
+        var i = 0
+        while (i < len) {
+            data[i / 2] = ((Character.digit(clean[i], 16) shl 4) + Character.digit(clean[i + 1], 16)).toByte()
+            i += 2
+        }
+        return data
+    }
+
+    private fun bytesToHex(bytes: ByteArray): String =
+        bytes.joinToString("") { "%02x".format(it) }
 
     /**
      * Stores a device token and proves it by registering.

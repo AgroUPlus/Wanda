@@ -21,6 +21,9 @@ ktor = "3.5.2"
 androidxWebkit = "1.12.1"
 workManager = "2.11.2"
 securityCrypto = "1.1.0"
+# Argon2id for the Agro settings vault. Pure Java, so no JNI or ABI splits; only the low-level
+# `Argon2BytesGenerator` is used and R8 strips the rest.
+bouncycastle = "1.85.2"
 coil = "3.5.0"
 coroutines = "1.11.0"
 serialization = "1.11.0"
@@ -75,6 +78,7 @@ androidx-webkit = { module = "androidx.webkit:webkit", version.ref = "androidxWe
 
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workManager" }
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
+bouncycastle = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
 

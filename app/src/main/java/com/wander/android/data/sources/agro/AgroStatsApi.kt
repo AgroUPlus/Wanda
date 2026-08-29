@@ -9,6 +9,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.security.MessageDigest
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -28,9 +31,9 @@ class AgroStatsApi @Inject constructor(
     /**
      * Reports a batch of plays.
      *
-     * The server is idempotent on (account, artist, title, time), so a batch this device is unsure
-     * about can simply be sent again — which is what lets the worker retry a timed-out upload
-     * without having to know whether it landed.
+     * The server is idempotent on the `playUid` each entry carries, so a batch this device is
+     * unsure about can simply be sent again — which is what lets the worker retry a timed-out
+     * upload without having to know whether it landed. See [playUid].
      */
     suspend fun recordScrobbles(
         deviceName: String,
@@ -66,6 +69,7 @@ class AgroStatsApi @Inject constructor(
                                 // stamp it would pile a week of offline listening onto the
                                 // afternoon it was finally uploaded.
                                 put("playedAt", Instant.ofEpochMilli(play.playedAt).toString())
+                                put("playUid", playUid(play))
                             }
                         )
                     }
@@ -73,6 +77,37 @@ class AgroStatsApi @Inject constructor(
             )
         }
     ).map { data -> data["recordScrobbles"]?.jsonPrimitive?.intOrNull ?: 0 }
+
+    /**
+     * A stable name for one play, so the server can recognise a repeat of it.
+     *
+     * Agro used to deduplicate on (account, artist, title, time), which worked only because it
+     * stored the play time to the second. It no longer does — an exact play time reconstructs when
+     * someone sleeps, wakes and commutes, so the server rounds it to the hour — and an hour is far
+     * too coarse to tell four plays of one track apart. The identity has to travel with the play
+     * rather than being inferred from where it landed.
+     *
+     * Derived from the play's own contents rather than random, because [ScrobbleSyncWorker] retries
+     * a batch it could not confirm. A fresh id per attempt would make the second attempt look like
+     * new listening and double every play in it.
+     *
+     * The exact millisecond goes into the digest and never leaves the device, which is the point:
+     * the server gets something that tells two plays apart without being told when either happened.
+     */
+    private fun playUid(play: PendingScrobble): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        // Length-prefixed, so a title ending in what looks like a separator cannot be rearranged
+        // into a different play with the same digest.
+        for (field in listOf(play.artist, play.title)) {
+            val bytes = field.toByteArray(Charsets.UTF_8)
+            digest.update(ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN).putLong(bytes.size.toLong()).array())
+            digest.update(bytes)
+        }
+        digest.update(ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN).putLong(play.playedAt).array())
+        // Halved to 128 bits: far past the point a collision within one account's history is worth
+        // thinking about, and it keeps the column small.
+        return digest.digest().take(16).joinToString("") { "%02x".format(it) }
+    }
 
     /**
      * The account's listening, across every device.
