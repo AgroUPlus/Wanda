@@ -39,13 +39,26 @@ data class MergeGroup(
     }
 }
 
+/**
+ * A pair the user has declared to be different performances.
+ *
+ * Carried in the report because a pinned pair *disappears* from the groups above — that is the
+ * whole point of it — and a pin the user cannot see is a pin they cannot undo.
+ */
+data class KeptApartPair(
+    val a: UnifiedTrack,
+    val b: UnifiedTrack
+)
+
 /** What migrating to recordings would do, without doing any of it. */
 data class MergeReport(
     val trackRows: Int,
     val recordings: Int,
     val groups: List<MergeGroup>,
     /** Likes currently split across rows that would become one. */
-    val splitLikes: Int
+    val splitLikes: Int,
+    /** Pairs the user has pinned apart, which is why some obvious-looking merges are absent. */
+    val keptApart: List<KeptApartPair>
 ) {
     val merged: Int get() = trackRows - recordings
     val reviewable: List<MergeGroup> get() = groups.filter { it.needsReview }
@@ -64,14 +77,33 @@ data class MergeReport(
  */
 @Singleton
 class RecordingMergePreview @Inject constructor(
-    private val trackDao: TrackDao
+    private val trackDao: TrackDao,
+    private val splitRepository: RecordingSplitRepository
 ) {
+
+    /**
+     * The pinned pairs, resolved back to the tracks they name.
+     *
+     * A pair whose rows are no longer cached is left out rather than shown as a blank: the pin
+     * stays on disk and takes effect again if the row returns, but there is nothing useful to
+     * render or to undo in the meantime.
+     */
+    private suspend fun keptApart(tracks: List<UnifiedTrack>): List<KeptApartPair> {
+        val byId = tracks.associateBy { it.id }
+        return splitRepository.pinnedPairs().mapNotNull { (idA, idB) ->
+            val a = byId[idA] ?: return@mapNotNull null
+            val b = byId[idB] ?: return@mapNotNull null
+            KeptApartPair(a, b)
+        }
+    }
 
     suspend fun preview(): MergeReport = withContext(Dispatchers.Default) {
         val tracks = withContext(Dispatchers.IO) {
             trackDao.getAllTracksOnce().map(TrackEntity::toUnifiedTrack)
         }
-        val groups = TrackDeduplicator.groupRecordings(tracks)
+        // The user's pins come first: a pair kept apart must not reappear in the preview, or the
+        // one confirmation that the override took effect is missing from the screen that offers it.
+        val groups = TrackDeduplicator.groupRecordings(tracks, splitRepository.splits())
 
         val merges = groups
             .filter { it.size > 1 }
@@ -94,7 +126,8 @@ class RecordingMergePreview @Inject constructor(
             trackRows = tracks.size,
             recordings = groups.size,
             groups = merges,
-            splitLikes = merges.count { it.likedRenditions in 1 until it.renditions.size }
+            splitLikes = merges.count { it.likedRenditions in 1 until it.renditions.size },
+            keptApart = keptApart(tracks)
         )
     }
 }
