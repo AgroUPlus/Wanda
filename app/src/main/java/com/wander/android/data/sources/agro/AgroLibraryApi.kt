@@ -187,6 +187,28 @@ class AgroLibraryApi @Inject constructor(
         }
     }
 
+    /**
+     * Every hash the server believes this device is holding.
+     *
+     * The other half of `reportHoldings`, which only ever adds. Without being able to read back
+     * what the server thinks, a phone has no way to notice that its own record and the server's
+     * have drifted — and they drift on any deletion whose notice was lost.
+     */
+    suspend fun deviceHoldings(): Result<List<String>> {
+        val query = """
+            query DeviceHoldings(${'$'}userId: String!, ${'$'}deviceId: String!) {
+              deviceHoldings(userId: ${'$'}userId, deviceId: ${'$'}deviceId)
+            }
+        """.trimIndent()
+        val variables = buildJsonObject {
+            put("userId", graphQl.userId)
+            put("deviceId", graphQl.deviceId)
+        }
+        return graphQl.execute(query, variables).map { data ->
+            data["deviceHoldings"]?.jsonArray.orEmpty().mapNotNull { it.jsonPrimitive.contentOrNull }
+        }
+    }
+
     /** Forgets holdings this device no longer has — deleted locally, or moved to the server. */
     suspend fun forgetHoldings(hashes: List<String>): Result<Int> {
         if (hashes.isEmpty()) return Result.success(0)
