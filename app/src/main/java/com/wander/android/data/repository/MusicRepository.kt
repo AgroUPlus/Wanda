@@ -43,6 +43,7 @@ class MusicRepository @Inject constructor(
     private val connectivity: ConnectivityObserver,
     private val scrobbleSyncScheduler: ScrobbleSyncScheduler,
     private val scrobbleSuppression: ScrobbleSuppression,
+    private val splitRepository: RecordingSplitRepository,
     val sources: Set<@JvmSuppressWildcards IMusicSource>
 ) {
     /**
@@ -97,7 +98,13 @@ class MusicRepository @Inject constructor(
      * anywhere in the UI.
      */
     fun getRecentlyPlayedFlow(): Flow<List<UnifiedTrack>> =
-        historyDao.getRecentlyPlayedTracksFlow().mapToTracks()
+        historyDao.getRecentlyPlayedTracksFlow()
+            .mapToTracks()
+            // The SQL groups by row id, which is one entry per *copy*: a song played once on
+            // Navidrome and once on YouTube Music appeared twice, as if it were two songs. The
+            // collapse cannot be done in SQL because whether two rows are one recording depends on
+            // their durations and on what the user has pinned apart.
+            .map { tracks -> TrackDeduplicator.distinctRecordings(tracks, splitRepository.splits()) }
 
     fun getDownloadedTracksFlow(): Flow<List<UnifiedTrack>> =
         trackDao.getDownloadedTracksFlow().mapToTracks()
@@ -440,11 +447,17 @@ class MusicRepository @Inject constructor(
      * Name-matched in SQL to get a small candidate set, then judged by
      * [TrackDeduplicator.isSameRecording] — the artist name alone cannot tell two same-named
      * artists apart, and the title alone cannot tell a live take from a studio one.
+     *
+     * The user's pins are applied here rather than at the call sites, because this is the one
+     * place a like learns which other rows it belongs to. A pair kept apart stays apart for
+     * `toggleLike` and `unifySplitLikes` alike, without either having to remember to ask.
      */
-    private suspend fun renditionsOf(track: UnifiedTrack): List<UnifiedTrack> =
-        trackDao.getTracksByArtistOnce(track.artist)
+    private suspend fun renditionsOf(track: UnifiedTrack): List<UnifiedTrack> {
+        val splits = splitRepository.splits()
+        return trackDao.getTracksByArtistOnce(track.artist)
             .map(TrackEntity::toUnifiedTrack)
-            .filter { it.id != track.id && TrackDeduplicator.isSameRecording(track, it) }
+            .filter { it.id != track.id && TrackDeduplicator.isSameRecording(track, it, splits) }
+    }
 
     /**
      * Brings existing likes onto every copy of the recording they belong to.

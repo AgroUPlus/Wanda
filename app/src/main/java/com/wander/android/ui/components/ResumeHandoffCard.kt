@@ -72,14 +72,17 @@ internal fun ResumeHandoffCard(
             )
 
             Column(modifier = Modifier.weight(1f)) {
+                // One line, and short enough to be one. The longer wording wrapped to three lines
+                // on an ordinary device name, which pushed the card to twice its height and left
+                // the track title — the part you actually need to read — squashed underneath it.
+                // The marquee is the safety net for a device name long enough to overflow anyway.
                 Text(
-                    text = if (isLive) {
-                        "Continue from $deviceName"
-                    } else {
-                        "Pick up where you left off on $deviceName"
-                    },
+                    text = if (isLive) "Playing on $deviceName" else "Left off on $deviceName",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.scrollingTitle()
                 )
                 Text(
                     text = handoff.trackTitle,

@@ -39,6 +39,28 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         MutableStateFlow(prefs.getBoolean(KEY_AUTO_UPDATE_CHECK, false))
     val isAutoUpdateCheckEnabled: StateFlow<Boolean> = _isAutoUpdateCheckEnabled.asStateFlow()
 
+    /**
+     * Whether a new release should raise a notification.
+     *
+     * Separate from [isAutoUpdateCheckEnabled], which only decides whether the app looks while it
+     * happens to be open. This one puts something on the lock screen, so it is its own consent and
+     * defaults off like every other switch that reaches outside the app.
+     */
+    private val _isReleaseNotificationEnabled =
+        MutableStateFlow(prefs.getBoolean(KEY_RELEASE_NOTIFICATIONS, false))
+    val isReleaseNotificationEnabled: StateFlow<Boolean> =
+        _isReleaseNotificationEnabled.asStateFlow()
+
+    fun setReleaseNotificationEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_RELEASE_NOTIFICATIONS, enabled) }
+        _isReleaseNotificationEnabled.value = enabled
+    }
+
+    /** The release already announced, so the same one is not announced again every day. */
+    var lastNotifiedRelease: String
+        get() = prefs.getString(KEY_LAST_NOTIFIED_RELEASE, "").orEmpty()
+        set(value) = prefs.edit { putString(KEY_LAST_NOTIFIED_RELEASE, value) }
+
     private val _navidromeConfigured = MutableStateFlow(hasNavidromeCredentials())
     val navidromeConfigured: StateFlow<Boolean> = _navidromeConfigured.asStateFlow()
 
@@ -118,6 +140,22 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     var localScanWatermark: Long
         get() = prefs.getLong(KEY_LOCAL_WATERMARK, 0L)
         set(value) = prefs.edit { putLong(KEY_LOCAL_WATERMARK, value) }
+
+    /**
+     * Content hashes of files that have left this device and that the server has not been told
+     * about yet.
+     *
+     * Persisted rather than signalled, because both plausible ways of signalling lose it. An
+     * unreplayed `SharedFlow` drops the value when the scan finishes before anything is
+     * collecting, which is exactly what happens during startup; and an in-memory queue loses it
+     * when the process dies, or when the deletion is noticed while offline. Either way the server
+     * goes on believing a copy exists here, and never offers the track back.
+     *
+     * Cleared only once the report succeeds, so a failed call is retried rather than forgotten.
+     */
+    var pendingForget: Set<String>
+        get() = prefs.getStringSet(KEY_PENDING_FORGET, emptySet()).orEmpty()
+        set(value) = prefs.edit { putStringSet(KEY_PENDING_FORGET, value) }
 
     /**
      * The one folder the on-device scan is allowed to look in, as a MediaStore `RELATIVE_PATH`
@@ -233,6 +271,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _shareDomain.value = ""
         _agroShareDomain.value = ""
         _isAutoUpdateCheckEnabled.value = false
+        _isReleaseNotificationEnabled.value = false
     }
 
     private val _agroConfigured = MutableStateFlow(hasAgroCredentials())
@@ -283,12 +322,34 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     }
 
     /**
-     * Whether this device uploads its local music to Agro.
-     *
-     * Off by default and never inferred from pairing: sending a music library to a server is the
-     * user's decision, and pairing was for playback handoff.
+     * P2P device sync: hash and report local holdings for direct device-to-device transfers.
+     * Zero server storage used. Default: true.
      */
-    private val _agroLibrarySync = MutableStateFlow(prefs.getBoolean(KEY_AGRO_LIBRARY_SYNC, false))
+    private val _agroP2pSync = MutableStateFlow(prefs.getBoolean(KEY_AGRO_P2P_SYNC, true))
+    val agroP2pSyncFlow: StateFlow<Boolean> = _agroP2pSync.asStateFlow()
+    val agroP2pSync: Boolean get() = _agroP2pSync.value
+
+    fun setAgroP2pSync(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_AGRO_P2P_SYNC, enabled) }
+        _agroP2pSync.value = enabled
+        _agroLibrarySync.value = enabled || agroServerArchive
+    }
+
+    /**
+     * Upload local audio files to the Agro / Navidrome server storage.
+     * Admin-only. Default: false.
+     */
+    private val _agroServerArchive = MutableStateFlow(prefs.getBoolean(KEY_AGRO_SERVER_ARCHIVE, false))
+    val agroServerArchiveFlow: StateFlow<Boolean> = _agroServerArchive.asStateFlow()
+    val agroServerArchive: Boolean get() = _agroServerArchive.value
+
+    fun setAgroServerArchive(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_AGRO_SERVER_ARCHIVE, enabled) }
+        _agroServerArchive.value = enabled
+        _agroLibrarySync.value = agroP2pSync || enabled
+    }
+
+    private val _agroLibrarySync = MutableStateFlow(prefs.getBoolean(KEY_AGRO_LIBRARY_SYNC, true))
     val agroLibrarySyncFlow: StateFlow<Boolean> = _agroLibrarySync.asStateFlow()
     val agroLibrarySync: Boolean get() = _agroLibrarySync.value
 
@@ -341,13 +402,18 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_AGRO_PETNAME = "key_agro_petname"
         private const val KEY_AGRO_SYNC_SETTINGS = "key_agro_sync_settings"
         private const val KEY_AGRO_DEVICE_ID = "key_agro_device_id"
+        private const val KEY_AGRO_P2P_SYNC = "key_agro_p2p_sync"
+        private const val KEY_AGRO_SERVER_ARCHIVE = "key_agro_server_archive"
         private const val KEY_AGRO_LIBRARY_SYNC = "key_agro_library_sync"
         private const val KEY_OFFLINE_MODE = "key_offline_mode"
         private const val KEY_RADIO_MODE = "key_radio_mode"
         private const val KEY_AMOLED_BLACK = "key_amoled_black"
         private const val KEY_MONET_DYNAMIC = "key_monet_dynamic"
         private const val KEY_AUTO_UPDATE_CHECK = "key_auto_update_check"
+        private const val KEY_RELEASE_NOTIFICATIONS = "key_release_notifications"
+        private const val KEY_LAST_NOTIFIED_RELEASE = "key_last_notified_release"
         private const val KEY_INCOGNITO = "key_incognito"
+        private const val KEY_PENDING_FORGET = "key_pending_forget"
         private const val KEY_LOCAL_WATERMARK = "key_local_scan_watermark"
         private const val KEY_LOCAL_FOLDER = "key_local_scan_folder"
         private const val KEY_LOCAL_FOLDER_LABEL = "key_local_scan_folder_label"

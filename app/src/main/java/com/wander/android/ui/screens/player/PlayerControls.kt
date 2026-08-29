@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material.icons.rounded.Shuffle
@@ -26,6 +24,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.ui.components.player.PlayPauseIcon
 import com.wander.android.core.playback.RepeatMode
 
 /**
@@ -71,10 +70,10 @@ fun PlayerControls(
             shape = MaterialTheme.shapes.large,
             modifier = Modifier.size(playButtonSize)
         ) {
-            Icon(
-                imageVector = if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                contentDescription = if (state.isPlaying) "Pause" else "Play",
-                modifier = Modifier.size(38.dp)
+            PlayPauseIcon(
+                isPlaying = state.isPlaying,
+                isBuffering = state.isBuffering,
+                iconSize = 38.dp
             )
         }
 

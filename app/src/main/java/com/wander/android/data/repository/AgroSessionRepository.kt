@@ -107,11 +107,13 @@ class AgroSessionRepository @Inject constructor(
                 val fromElsewhere = handoff?.takeIf {
                     it.deviceId != graphQl.deviceId && it.trackTitle.isNotBlank()
                 }
-                // The server holds one session per user, so this device publishing its own
-                // playback *replaces* the other device's entry. That is not the other session
-                // ending, and treating it as such is what made the session vanish for a few
-                // seconds — then come back, offer and all, the moment the other device sent its
-                // next update. Only a genuinely empty server session clears it.
+                // Held rather than cleared when the answer is this device's own row. Newer
+                // servers keep a session per device and can be asked for the rest of the fleet
+                // directly, but older ones hold exactly one per account — so this device
+                // publishing its own playback *replaces* the other device's entry. That is not
+                // the other session ending, and treating it as such is what made the session
+                // vanish for a few seconds, then come back offer and all when the other device
+                // sent its next update. Only a genuinely empty server session clears it.
                 if (fromElsewhere != null || handoff == null) _latestSession.value = fromElsewhere
                 _incomingHandoff.value = _latestSession.value?.takeIf(::isOfferable)
             }
@@ -334,8 +336,9 @@ class AgroSessionRepository @Inject constructor(
                     payload.toPushedDrop(recipient = graphQl.userId)
                 )
             }
-            // SETTINGS_SYNC and anything a newer server adds are ignored by name rather than by
-            // accident, so adding one later is a single branch.
+            "SETTINGS_SYNC" -> AgroLiveMessage.Settings
+            // Anything a newer server adds is ignored by name rather than by accident, so adding
+            // one later is a single branch.
             else -> null
         }
     }
