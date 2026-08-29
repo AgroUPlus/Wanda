@@ -27,13 +27,19 @@ fun rememberPlaybackPosition(
         initialValue = PlaybackPosition(),
         controller,
         state.isPlaying,
-        state.currentTrack?.id
+        state.currentTrack?.id,
+        // A seek while paused changes nothing else about playback, so without this the producer
+        // was never restarted and the emit below never ran again: the playhead moved and every
+        // reader — the seek bar, the lyric highlight — went on showing where it used to be.
+        state.seekEpoch
     ) {
         val ctrl = controller ?: run {
             value = PlaybackPosition()
             return@produceState
         }
-        // Emit once even while paused, so a seek or track change shows up immediately.
+        // Emit once even while paused, so a seek or track change shows up immediately. This is
+        // the whole update while paused — the loop below does not run — which is why the seek
+        // epoch has to be a key.
         val initialPos = runCatching { ctrl.currentPosition }.getOrDefault(0L)
         val initialBuffered = runCatching { ctrl.bufferedPosition }.getOrDefault(0L)
         value = PlaybackPosition(initialPos, initialBuffered)

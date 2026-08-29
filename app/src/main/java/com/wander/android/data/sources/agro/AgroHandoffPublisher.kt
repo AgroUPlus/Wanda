@@ -51,7 +51,12 @@ class AgroHandoffPublisher @Inject constructor(
      * tick. Media3 requires that read on the application thread, so it happens on [Dispatchers.Main]
      * while the request itself stays on IO.
      */
-    fun publish(track: UnifiedTrack, positionMs: () -> Long, isPlaying: Boolean) {
+    fun publish(
+        track: UnifiedTrack,
+        positionMs: () -> Long,
+        durationMs: () -> Long,
+        isPlaying: Boolean
+    ) {
         if (!agroClient.isConfigured) return
 
         heartbeat?.cancel()
@@ -68,13 +73,13 @@ class AgroHandoffPublisher @Inject constructor(
         val stateChanged = handoff != lastSent
         lastSent = handoff
 
-        if (stateChanged) scope.launch { send(track, positionMs, isPlaying) }
+        if (stateChanged) scope.launch { send(track, positionMs, durationMs, isPlaying) }
         if (!isPlaying) return
 
         heartbeat = scope.launch {
             while (isActive) {
                 delay(HEARTBEAT_INTERVAL_MS)
-                send(track, positionMs, isPlaying = true)
+                send(track, positionMs, durationMs, isPlaying = true)
             }
         }
     }
@@ -86,8 +91,15 @@ class AgroHandoffPublisher @Inject constructor(
         lastSent = null
     }
 
-    private suspend fun send(track: UnifiedTrack, positionMs: () -> Long, isPlaying: Boolean) {
-        val position = withContext(Dispatchers.Main) { positionMs() }
+    private suspend fun send(
+        track: UnifiedTrack,
+        positionMs: () -> Long,
+        durationMs: () -> Long,
+        isPlaying: Boolean
+    ) {
+        // Both reads in one hop to the main thread, so the position cannot belong to a different
+        // track than the length it is measured against.
+        val (position, duration) = withContext(Dispatchers.Main) { positionMs() to durationMs() }
         agroClient.sendHandoffState(
             trackUri = track.id,
             title = track.title,
@@ -95,6 +107,9 @@ class AgroHandoffPublisher @Inject constructor(
             album = track.album,
             artworkUrl = track.artworkUrl,
             positionMs = position,
+            // Media3 answers `TIME_UNSET` until the source is prepared, and a livestream has no
+            // length at all. Both become 0, which is the fleet's word for "no bar, just a clock".
+            durationMs = duration.coerceAtLeast(0L),
             isPlaying = isPlaying
         ).onFailure { log("handoff", it) }
     }
