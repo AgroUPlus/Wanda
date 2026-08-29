@@ -18,16 +18,35 @@ import javax.inject.Singleton
  */
 @Singleton
 class HomeShelfRepository @Inject constructor(
-    private val trackDao: TrackDao
+    private val trackDao: TrackDao,
+    private val recordingPlayCounts: RecordingPlayCounts,
+    private val splitRepository: RecordingSplitRepository
 ) {
 
-    suspend fun getRecentlyPlayed(limit: Int = 20): List<UnifiedTrack> = withContext(Dispatchers.IO) {
-        trackDao.getRecentlyPlayedTracks(limit).map(TrackEntity::toUnifiedTrack)
+    /**
+     * "Recently played", one entry per recording.
+     *
+     * Over-fetched and then collapsed: several copies of one song near the top of the list would
+     * otherwise fill the carousel with the same track, and taking the limit first would leave
+     * fewer than [limit] distinct recordings behind.
+     */
+    suspend fun getRecentlyPlayed(limit: Int = 20): List<UnifiedTrack> {
+        val tracks = withContext(Dispatchers.IO) {
+            trackDao.getRecentlyPlayedTracks(limit * OVERFETCH).map(TrackEntity::toUnifiedTrack)
+        }
+        return TrackDeduplicator
+            .distinctRecordings(tracks, splitRepository.splits())
+            .take(limit)
     }
 
-    suspend fun getTopTracks(limit: Int = 20): List<UnifiedTrack> = withContext(Dispatchers.IO) {
-        trackDao.getTopPlayedTracks(limit).map(TrackEntity::toUnifiedTrack)
-    }
+    /**
+     * "On repeat", counted per recording rather than per row.
+     *
+     * A song held on two backends used to appear twice, each with a fraction of its real count,
+     * and rank below songs played less. See [RecordingPlayCounts].
+     */
+    suspend fun getTopTracks(limit: Int = 20): List<UnifiedTrack> =
+        recordingPlayCounts.topRecordings(limit)
 
     suspend fun getLikedTracks(limit: Int = 20): List<UnifiedTrack> = withContext(Dispatchers.IO) {
         trackDao.getLikedTracksList(limit).map(TrackEntity::toUnifiedTrack)
@@ -55,4 +74,9 @@ class HomeShelfRepository @Inject constructor(
                 .distinctBy { it.album?.takeIf { name -> name.isNotBlank() } ?: it.id }
                 .take(limit)
         }
+
+    private companion object {
+        /** How much wider to cast the net before collapsing copies down to recordings. */
+        const val OVERFETCH = 3
+    }
 }

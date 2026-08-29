@@ -1,6 +1,13 @@
 package com.wander.android.ui.components.player
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -62,7 +69,15 @@ fun PlayerSheetContent(
      * search field. Passed in rather than built here so the sheet keeps knowing nothing about
      * navigation; it only knows how tall the row is and when to fade it.
      */
-    dockRow: @Composable () -> Unit = {}
+    dockRow: @Composable () -> Unit = {},
+    /**
+     * Whether this screen has a dock row at all.
+     *
+     * A boolean rather than an empty [dockRow] on the screens without one: swapping the content
+     * out gives the row nothing to leave *with*, and it disappeared in a frame while the sheet
+     * spent the next half-second shrinking over the hole it left. Passed in, it gets an exit.
+     */
+    showDockRow: Boolean = true
 ) {
     val anchors = remember { PlayerArtworkAnchors() }
     // Owned here, not in `NowPlayingScreen`. The sheet is what draws the cover the lyrics replace,
@@ -164,6 +179,7 @@ fun PlayerSheetContent(
             track = playback.currentTrack,
             isPlaying = playback.isPlaying,
             durationMs = playback.durationMs,
+            isBuffering = playback.isBuffering,
             playerConnection = playerConnection,
             contentAlpha = { 1f - smoothStep(progress(), 0f, 0.30f) },
             // Only the title and artist slide; see MiniPlayer.
@@ -201,7 +217,22 @@ fun PlayerSheetContent(
         // first pixel, which is the part that has to be immediate: a search field that still
         // worked while sliding out from under the full player would take focus and raise the
         // keyboard mid-gesture. The pixels fade out over the first third of the drag.
-        Box(
+        //
+        // The visibility above it is the *other* axis: dragging the player open fades this row on
+        // `progress`, while navigating to a screen that has no dock row takes it away entirely.
+        // The two compose — a row can be halfway faded by a drag and on its way out at once —
+        // which is why one is an alpha and the other a transition rather than both being either.
+        AnimatedVisibility(
+            visible = showDockRow,
+            // Drops away under the strip and shrinks slightly as it goes, so the row reads as
+            // being tucked back into the player rather than blinking out. Coming back it springs
+            // up into place; the sheet is growing to meet it on the same spatial spec.
+            enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()) +
+                slideInVertically(MaterialTheme.motionScheme.slowSpatialSpec()) { it / 2 } +
+                scaleIn(MaterialTheme.motionScheme.slowSpatialSpec(), initialScale = 0.92f),
+            exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
+                slideOutVertically(MaterialTheme.motionScheme.slowSpatialSpec()) { it / 2 } +
+                scaleOut(MaterialTheme.motionScheme.slowSpatialSpec(), targetScale = 0.92f),
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()

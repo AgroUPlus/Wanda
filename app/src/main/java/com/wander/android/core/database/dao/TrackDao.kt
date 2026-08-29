@@ -166,6 +166,16 @@ interface TrackDao {
     @Query("SELECT * FROM tracks WHERE playCount > 0 ORDER BY playCount DESC LIMIT :limit")
     suspend fun getTopPlayedTracks(limit: Int = 30): List<TrackEntity>
 
+    /**
+     * Every row that has ever been played, so plays can be totalled per *recording*.
+     *
+     * Unlimited on purpose. A recording's total is the sum over its copies, and a copy played
+     * twice can sit far down a list ordered by row — taking the top N rows first and grouping
+     * afterwards would drop exactly the small contributions that make a total large.
+     */
+    @Query("SELECT * FROM tracks WHERE playCount > 0")
+    suspend fun getPlayedTracksOnce(): List<TrackEntity>
+
     /** Well-loved tracks the user has not returned to lately — the "forgotten favourites" mix. */
     @Query(
         """
@@ -311,10 +321,33 @@ interface TrackDao {
     @Query("SELECT COUNT(*) FROM tracks WHERE source = 'LOCAL'")
     fun countLocalFlow(): Flow<Int>
 
+    /**
+     * Drops local rows whose file is gone.
+     *
+     * Passed the ids that still exist rather than the ones that do not: MediaStore is the
+     * authority on what is on the device, and asking it "what is there" is one cheap query while
+     * asking "is this one still there" is one query per row.
+     */
+    /** The hashes about to be pruned, read before the delete so they can be reported as gone. */
+    @Query(
+        """
+        SELECT contentHash FROM tracks
+        WHERE source = 'LOCAL' AND id NOT IN (:keepIds) AND contentHash IS NOT NULL
+        """
+    )
+    suspend fun localContentHashesNotIn(keepIds: List<String>): List<String>
+
+    @Query("DELETE FROM tracks WHERE source = 'LOCAL' AND id NOT IN (:keepIds)")
+    suspend fun deleteLocalTracksNotIn(keepIds: List<String>): Int
+
     @Query("DELETE FROM tracks WHERE source = :source")
     suspend fun clearBySource(source: SourceType)
 
     /** Bulk lookup for rebuilding a cached shelf, in one query rather than one per track. */
     @Query("SELECT * FROM tracks WHERE id IN (:ids)")
     suspend fun getTracksByIds(ids: List<String>): List<TrackEntity>
+
+    /** Resolves a local track entity by its content SHA-256 hash. */
+    @Query("SELECT * FROM tracks WHERE contentHash = :hash LIMIT 1")
+    suspend fun findByContentHash(hash: String): TrackEntity?
 }

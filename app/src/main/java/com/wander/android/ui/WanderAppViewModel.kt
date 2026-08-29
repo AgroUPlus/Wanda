@@ -8,7 +8,9 @@ import com.wander.android.core.security.SecureStorage
 import com.wander.android.core.update.UpdateCheckResult
 import com.wander.android.core.update.UpdateChecker
 import com.wander.android.data.repository.InstantRadioRepository
+import com.wander.android.data.repository.FetchProgress
 import com.wander.android.data.repository.LibrarySyncRepository
+import com.wander.android.data.repository.SyncOfferArtwork
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.PlaylistWriteRepository
 import com.wander.android.core.audio.fingerprint.FingerprintIndexWorker
@@ -16,6 +18,8 @@ import com.wander.android.data.repository.SearchQueryHolder
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.sources.agro.AgroSessionApi
+import com.wander.android.data.sources.agro.PeerReachability
+import com.wander.android.data.sources.agro.SyncRoute
 import com.wander.android.data.sources.agro.MissingTrack
 import com.wander.android.data.sources.local.LocalMusicSource
 import com.wander.android.ui.navigation.DeepLinkRouter
@@ -43,6 +47,8 @@ class WanderAppViewModel @Inject constructor(
     private val musicRepository: MusicRepository,
     shareRepository: ShareRepository,
     private val librarySync: LibrarySyncRepository,
+    private val syncOfferArtwork: SyncOfferArtwork,
+    private val peerReachability: PeerReachability,
     playlistWriter: PlaylistWriteRepository,
     private val sessionApi: AgroSessionApi,
     private val secureStorage: SecureStorage,
@@ -127,6 +133,32 @@ class WanderAppViewModel @Inject constructor(
     private val _isFetching = MutableStateFlow(false)
     val isFetchingSync: StateFlow<Boolean> = _isFetching.asStateFlow()
 
+    /** Covers for the first few offered tracks, so the card can show what is on offer. */
+    private val _syncCovers = MutableStateFlow<List<String>>(emptyList())
+    val syncCovers: StateFlow<List<String>> = _syncCovers.asStateFlow()
+
+    /**
+     * The route the *next* fetch would actually take, measured rather than assumed.
+     *
+     * Null until it has been worked out. See [PeerReachability]: a peer that publishes a LAN
+     * address is not necessarily reachable from here, and saying "Direct Wi-Fi" when it is not is
+     * a promise the transfer then breaks.
+     */
+    private val _offerRoute = MutableStateFlow<SyncRoute?>(null)
+    val offerRoute: StateFlow<SyncRoute?> = _offerRoute.asStateFlow()
+
+    /** Which tracks are done, which is in flight, and how it is travelling. */
+    private val _fetchProgress = MutableStateFlow(FetchProgress())
+    val fetchProgress: StateFlow<FetchProgress> = _fetchProgress.asStateFlow()
+
+    /** Whether the full list is open. The card is a summary; this is the detail behind it. */
+    private val _syncDetailsOpen = MutableStateFlow(false)
+    val syncDetailsOpen: StateFlow<Boolean> = _syncDetailsOpen.asStateFlow()
+
+    fun openSyncDetails() { _syncDetailsOpen.value = true }
+
+    fun closeSyncDetails() { _syncDetailsOpen.value = false }
+
     /**
      * Dismissed for this visit only, mirroring how the resume card behaves: an offer declined now
      * should be offerable again next time the app is opened, not suppressed forever.
@@ -137,7 +169,27 @@ class WanderAppViewModel @Inject constructor(
     fun refreshSyncOffer() {
         if (dismissedOffer || !librarySync.isEnabled) return
         viewModelScope.launch {
-            _syncOffer.value = librarySync.missingHere().getOrDefault(emptyList())
+            // Deletions first. A file that has left this device has to be un-reported *before* the
+            // server is asked what is missing, or the answer is computed from an index that still
+            // believes a copy exists here — which is why a deleted track was never offered back.
+            librarySync.flushPendingForget()
+            val offered = librarySync.missingHere().getOrDefault(emptyList())
+            _syncOffer.value = offered
+            _syncCovers.value = syncOfferArtwork.covers(offered)
+            _offerRoute.value = routeFor(offered)
+        }
+    }
+
+    /**
+     * How the tracks on offer would travel, decided by trying the local address rather than by
+     * trusting that one was published.
+     */
+    private suspend fun routeFor(offered: List<MissingTrack>): SyncRoute? {
+        val source = offered.firstOrNull()?.peerSources?.firstOrNull() ?: return null
+        return when {
+            peerReachability.canReach(source.lanAddress) -> SyncRoute.DIRECT
+            source.isServerArchive -> SyncRoute.ARCHIVE
+            else -> SyncRoute.RELAY
         }
     }
 
@@ -146,16 +198,32 @@ class WanderAppViewModel @Inject constructor(
         if (tracks.isEmpty() || _isFetching.value) return
         viewModelScope.launch {
             _isFetching.value = true
-            librarySync.fetchMissing(tracks)
-                .onSuccess { _syncOffer.value = emptyList() }
+            librarySync.fetchMissing(tracks) { _fetchProgress.value = it }
+                .onSuccess { count ->
+                    _syncOffer.value = emptyList()
+                    _syncCovers.value = emptyList()
+                    _syncDetailsOpen.value = false
+                    _offerRoute.value = null
+                    // Says so when it is done. A card that simply disappears leaves the user to
+                    // guess whether the transfer finished or was dismissed.
+                    if (count > 0) {
+                        _writeErrors.tryEmit(
+                            if (count == 1) "1 track added to this device"
+                            else "$count tracks added to this device"
+                        )
+                    }
+                }
                 .onFailure { _writeErrors.tryEmit(it.message ?: "Couldn't fetch those tracks.") }
             _isFetching.value = false
+            _fetchProgress.value = FetchProgress()
         }
     }
 
     fun dismissSyncOffer() {
         dismissedOffer = true
         _syncOffer.value = emptyList()
+        _syncCovers.value = emptyList()
+        _syncDetailsOpen.value = false
     }
 
     /**

@@ -13,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.repository.LinkRepository
+import com.wander.android.data.repository.ShareLinkRewriter
 import com.wander.android.data.repository.SocialRepository
 import com.wander.android.data.sources.agro.AgroAuthError
 import com.wander.android.data.sources.agro.AgroClient
@@ -40,6 +41,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var agroClient: AgroClient
     @Inject lateinit var agroHandoffPublisher: AgroHandoffPublisher
     @Inject lateinit var linkRepository: LinkRepository
+    @Inject lateinit var shareLinkRewriter: ShareLinkRewriter
     @Inject lateinit var deepLinkRouter: DeepLinkRouter
     @Inject internal lateinit var socialRepository: SocialRepository
 
@@ -136,11 +138,19 @@ class MainActivity : ComponentActivity() {
     private fun openSharedLink(uri: Uri) {
         lifecycleScope.launch {
             linkRepository.resolve(uri).fold(
-                onSuccess = { playerConnection.play(listOf(it)) },
-                onFailure = {
+                onSuccess = { track ->
+                    playerConnection.play(listOf(track))
+                    // Applied after `play`, not before: `setSpeedAndPitch` needs a controller and
+                    // writes straight to it, so a rate set against the outgoing track would be
+                    // overwritten — or dropped entirely when nothing is playing yet.
+                    shareLinkRewriter.playbackOf(uri)?.let {
+                        playerConnection.setSpeedAndPitch(it.speed, it.pitch)
+                    }
+                },
+                onFailure = { cause ->
                     Toast.makeText(
                         this@MainActivity,
-                        it.message ?: "Couldn't open that link.",
+                        cause.message ?: "Couldn't open that link.",
                         Toast.LENGTH_LONG
                     ).show()
                 }

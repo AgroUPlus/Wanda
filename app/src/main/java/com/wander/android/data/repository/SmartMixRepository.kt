@@ -17,7 +17,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class SmartMixRepository @Inject constructor(
-    private val trackDao: TrackDao
+    private val trackDao: TrackDao,
+    private val recordingPlayCounts: RecordingPlayCounts
 ) {
     suspend fun getSmartMixes(): List<SmartMix> = withContext(Dispatchers.IO) {
         listOfNotNull(
@@ -28,7 +29,9 @@ class SmartMixRepository @Inject constructor(
                 subtitle = "Built from what you play most",
                 iconName = "radio",
                 gradient = listOf(0xFF6366F1, 0xFFEC4899),
-                tracks = trackDao.getTopPlayedTracks(40).toTracks().shuffled().take(20)
+                // Per recording: a song split across two backends was under-counted and could
+                // miss its own radio, while both of its copies could also turn up in it.
+                tracks = recordingPlayCounts.topRecordings(40).shuffled().take(20)
             ),
             mix(
                 id = "forgotten_favorites",
@@ -36,7 +39,13 @@ class SmartMixRepository @Inject constructor(
                 subtitle = "Loved once, not heard lately",
                 iconName = "history",
                 gradient = listOf(0xFFF59E0B, 0xFFEF4444),
-                tracks = trackDao.getForgottenFavorites(forgottenThreshold()).toTracks()
+                // Totalled before the threshold is applied: a recording played five times across
+                // two copies belongs here even though neither copy passes the bar alone.
+                tracks = recordingPlayCounts.forgottenFavourites(
+                    thresholdTimestamp = forgottenThreshold(),
+                    minPlays = FORGOTTEN_MIN_PLAYS,
+                    limit = 30
+                )
             ),
             mix(
                 id = "fresh_discoveries",
@@ -72,6 +81,9 @@ class SmartMixRepository @Inject constructor(
 
     private companion object {
         val FORGOTTEN_AFTER_DAYS = TimeUnit.DAYS.toMillis(30)
+
+        /** The bar the old SQL used, kept so the mix means the same thing it always did. */
+        const val FORGOTTEN_MIN_PLAYS = 3
 
         fun forgottenThreshold() = System.currentTimeMillis() - FORGOTTEN_AFTER_DAYS
     }

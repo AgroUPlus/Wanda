@@ -1,5 +1,12 @@
 package com.wander.android.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -51,6 +58,7 @@ import com.wander.android.ui.components.UpdateAvailableDialog
 import com.wander.android.ui.components.player.MiniPlayerGap
 import com.wander.android.ui.components.player.MiniPlayerHeight
 import com.wander.android.ui.components.player.MiniPlayerShadowInset
+import com.wander.android.ui.components.player.MiniStripHeight
 import com.wander.android.ui.components.player.PlayerSheet
 import com.wander.android.ui.components.player.PlayerSheetContent
 import com.wander.android.ui.components.player.PlayerSheetValue
@@ -59,7 +67,9 @@ import com.wander.android.ui.navigation.Routes
 import com.wander.android.ui.navigation.TopLevelDestination
 import com.wander.android.ui.navigation.DockRowHeight
 import com.wander.android.core.permissions.hasPermission
+import com.wander.android.core.permissions.rememberLocalNetworkGate
 import com.wander.android.ui.components.listen.ListenSheet
+import com.wander.android.ui.components.SyncOfferSheet
 import com.wander.android.ui.navigation.WanderDock
 import com.wander.android.ui.navigation.WanderDockRow
 import com.wander.android.ui.navigation.wanderNavGraph
@@ -105,9 +115,13 @@ fun WanderApp(
 
     val playbackState = playerConnection.state.collectAsStateWithLifecycle()
     val playback = playbackState.value
-    val showChrome = remember(currentRoute) {
-        currentRoute?.substringBefore("?") in Routes.withChrome
-    }
+    val showChrome = remember(currentRoute) { Routes.showsChrome(currentRoute) }
+    // Two tiers, not one. An artist or album page keeps the player — the controls for what is
+    // playing must stay reachable from the page you opened out of it — but not the dock row: the
+    // search field belongs to the library you searched from, and a page reached from there is not
+    // somewhere you search. So those screens get the strip alone, and it opens to the full player
+    // the same way.
+    val showDockRow = remember(currentRoute) { Routes.showsDock(currentRoute) }
     // Derived, not read straight off `playback`: PlaybackState carries isBuffering and durationMs,
     // which flip constantly while streaming, and every one of those recomposed this composable —
     // which reallocates contentPadding and so rebuilds the whole nav graph (see below).
@@ -139,6 +153,13 @@ fun WanderApp(
     val agroError by agroViewModel.error.collectAsStateWithLifecycle()
     val sessionArtwork by agroViewModel.sessionArtwork.collectAsStateWithLifecycle()
     val syncOffer by viewModel.syncOffer.collectAsStateWithLifecycle()
+    val syncCovers by viewModel.syncCovers.collectAsStateWithLifecycle()
+    // Android 16 put local-network traffic behind its own grant, and peer-to-peer sync is the only
+    // thing in the app that needs it. Asked on the tap that needs it, not at launch.
+    val acceptSyncWithLocalNetwork = rememberLocalNetworkGate(viewModel::acceptSyncOffer)
+    val syncDetailsOpen by viewModel.syncDetailsOpen.collectAsStateWithLifecycle()
+    val fetchProgress by viewModel.fetchProgress.collectAsStateWithLifecycle()
+    val offerRoute by viewModel.offerRoute.collectAsStateWithLifecycle()
     val isFetchingSync by viewModel.isFetchingSync.collectAsStateWithLifecycle()
 
     LifecycleStartEffect(agroViewModel) {
@@ -178,17 +199,21 @@ fun WanderApp(
     // left a nav-bar-sized gap between the keyboard and the dock. `WindowInsets.ime` animates with
     // the keyboard, so the dock rides up with it rather than jumping when it lands.
     val imeBottomInset = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
-    val dockInset = maxOf(systemBottomInset, imeBottomInset)
+    // Only where there *is* a field to type into. Without the dock row the keyboard belongs to
+    // something else on the screen, and riding the strip up on it would move the transport out
+    // from under the thumb for no reason.
+    val dockInset = if (showDockRow) maxOf(systemBottomInset, imeBottomInset) else systemBottomInset
 
     // What every bottom-anchored thing has to clear: the system inset, then whichever dock is
     // actually on screen. Derived once here rather than re-summed at each call site, which is how
     // the old `navBarHeight + if (hasTrack) ...` arithmetic drifted between them.
-    val dockBottom = systemBottomInset + MiniPlayerGap + if (hasTrack && showChrome) {
-        MiniPlayerHeight
-    } else if (showChrome) {
-        DockRowHeight
-    } else {
-        0.dp
+    /** How tall the docked player is here — with a dock row under the strip, or without one. */
+    val dockedPlayerHeight = if (showDockRow) MiniPlayerHeight else MiniStripHeight
+
+    val dockBottom = systemBottomInset + MiniPlayerGap + when {
+        hasTrack && showChrome -> dockedPlayerHeight
+        showDockRow -> DockRowHeight
+        else -> 0.dp
     }
 
     val offlinePlayback by viewModel.offlinePlayback.collectAsStateWithLifecycle()
@@ -290,7 +315,22 @@ fun WanderApp(
                 )
             }
 
-            if (showChrome && !hasTrack) {
+            // The same arrival the dock row gets inside the player, for the case where there is
+            // no player to put it in. `AnimatedVisibility` rather than an `if`: the card is the
+            // only thing at the bottom of these screens, and cutting it left the screen visibly
+            // empty for a frame on the way to an artist page.
+            AnimatedVisibility(
+                visible = showDockRow && !hasTrack,
+                enter = fadeIn(motionScheme.defaultEffectsSpec()) +
+                    slideInVertically(motionScheme.slowSpatialSpec()) { it / 2 } +
+                    scaleIn(motionScheme.slowSpatialSpec(), initialScale = 0.92f),
+                exit = fadeOut(motionScheme.fastEffectsSpec()) +
+                    slideOutVertically(motionScheme.slowSpatialSpec()) { it / 2 } +
+                    scaleOut(motionScheme.slowSpatialSpec(), targetScale = 0.92f),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = dockInset + MiniPlayerGap)
+            ) {
                 WanderDock(
                     currentRoute = dockRoute,
                     query = searchQuery,
@@ -298,17 +338,15 @@ fun WanderApp(
                     onOpenFriends = { navController.switchTab(TopLevelDestination.FRIENDS) },
                     onQueryChange = onQueryChange,
                     onSearch = openLibrary,
-                    onListen = onListen,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = dockInset + MiniPlayerGap)
+                    onListen = onListen
                 )
             }
 
             PlayerSheet(
                 sheetState = sheetState,
                 bottomInset = if (showChrome) dockInset else 0.dp,
-                isVisible = hasTrack && showChrome
+                isVisible = hasTrack && showChrome,
+                dockedHeight = dockedPlayerHeight
             ) { progress, rawProgress, expandedHeight ->
                 PlayerSheetContent(
                     progress = progress,
@@ -333,7 +371,8 @@ fun WanderApp(
                         scope.launch { sheetState.collapse() }
                         navController.navigate(Routes.JAM)
                     },
-                    dockRow = dockRow
+                    dockRow = dockRow,
+                    showDockRow = showDockRow
                 )
             }
 
@@ -379,7 +418,11 @@ fun WanderApp(
             BottomOffers(
                 syncOffer = if (showChrome && sheetCollapsed) syncOffer else emptyList(),
                 isFetchingSync = isFetchingSync,
-                onAcceptSync = viewModel::acceptSyncOffer,
+                onAcceptSync = acceptSyncWithLocalNetwork,
+                onOpenSyncDetails = viewModel::openSyncDetails,
+                syncCovers = syncCovers,
+                fetchProgress = fetchProgress,
+                offerRoute = offerRoute,
                 onDismissSync = viewModel::dismissSyncOffer,
                 handoff = incomingHandoff?.takeIf { !isPlayingHere && showChrome && sheetCollapsed },
                 agroDevices = agroDevices,
@@ -389,6 +432,20 @@ fun WanderApp(
                 onDismissHandoff = agroViewModel::dismiss,
                 dockBottom = dockBottom
             )
+
+            // The full list behind the offer card. A sheet rather than a screen: it is a decision
+            // about something transient, and backing out of it should leave the user exactly where
+            // they were.
+            if (syncDetailsOpen) {
+                SyncOfferSheet(
+                    tracks = syncOffer,
+                    isFetching = isFetchingSync,
+                    progress = fetchProgress,
+                    route = fetchProgress.route ?: offerRoute,
+                    onAccept = acceptSyncWithLocalNetwork,
+                    onDismiss = viewModel::closeSyncDetails
+                )
+            }
 
             // Follows the user across every screen, because the session does. It is the only place
             // the app says which source the track was matched from, or that it could not find one.

@@ -26,7 +26,8 @@ class StatsRepository @Inject constructor(
     private val statsApi: AgroStatsApi,
     private val trackDao: TrackDao,
     private val historyDao: HistoryDao,
-    private val secureStorage: SecureStorage
+    private val secureStorage: SecureStorage,
+    private val recordingPlayCounts: RecordingPlayCounts
 ) {
     /** Whether the figures can cover more than this device. */
     val isFleetWide: Boolean get() = secureStorage.agroConfigured.value
@@ -80,7 +81,9 @@ class StatsRepository @Inject constructor(
         var streak = 0
         while (streak in playedDays) streak++
 
-        val topTracks = trackDao.getTopPlayedTracks(TOP_N).map { track ->
+        // Per recording. These numbers are also what a friend sees on a shared stats card, so a
+        // song counted twice was wrong in public as well as on the user's own screen.
+        val topTracks = recordingPlayCounts.topRecordings(TOP_N).map { track ->
             StatEntry("${track.title} — ${track.artist}", track.playCount.toLong())
         }
 

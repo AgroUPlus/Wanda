@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,6 +31,7 @@ import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.progressOf
 import com.wander.android.core.playback.rememberPlaybackPosition
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.ui.components.player.PlayPauseIcon
 import kotlin.math.abs
 
 /** The edge of the docked strip's cover art. */
@@ -55,6 +54,9 @@ val MiniProgressBarHeight = 12.dp
 
 /** Padding above and below the artwork row. Summed into `MiniPlayerHeight`. */
 val MiniRowVerticalPadding = 8.dp
+
+/** The strip's transport icons. `IconButton`'s own default, stated so the loading shape matches. */
+private val MiniPlayIconSize = 24.dp
 
 /**
  * The docked strip at the top of the player sheet.
@@ -86,6 +88,8 @@ fun MiniPlayer(
      * reading the player's own duration; this is that same number.
      */
     durationMs: Long,
+    /** Whether the engine is still fetching audio — see [PlayPauseIcon]. */
+    isBuffering: Boolean = false,
     modifier: Modifier = Modifier,
     contentAlpha: () -> Float = { 1f },
     swipeOffset: () -> Float = { 0f },
@@ -154,9 +158,10 @@ fun MiniPlayer(
 
                 Row(modifier = Modifier.graphicsLayer { alpha = contentAlpha() }) {
                     IconButton(onClick = playerConnection::togglePlayPause) {
-                        Icon(
-                            imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                            contentDescription = if (isPlaying) "Pause" else "Play"
+                        PlayPauseIcon(
+                            isPlaying = isPlaying,
+                            isBuffering = isBuffering,
+                            iconSize = MiniPlayIconSize
                         )
                     }
                     IconButton(onClick = playerConnection::next) {

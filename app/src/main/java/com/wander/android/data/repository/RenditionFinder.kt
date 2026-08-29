@@ -26,7 +26,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class RenditionFinder @Inject constructor(
-    private val musicRepository: MusicRepository
+    private val musicRepository: MusicRepository,
+    private val splitRepository: RecordingSplitRepository
 ) {
 
     /**
@@ -42,6 +43,8 @@ class RenditionFinder @Inject constructor(
      * presenting.
      */
     suspend fun findRenditions(track: UnifiedTrack): List<UnifiedTrack> = coroutineScope {
+        // A copy the user has said is a different performance is not an alternative to this one.
+        val splits = splitRepository.splits()
         val query = listOf(track.artist, track.title)
             .filter { it.isNotBlank() }
             .joinToString(" ")
@@ -57,13 +60,13 @@ class RenditionFinder @Inject constructor(
                     runCatching {
                         musicRepository
                             .searchAllSources(query, onlySources = setOf(source), kind = SearchKind.TRACKS)
-                            .firstOrNull { TrackDeduplicator.isSameRecording(track, it) }
+                            .firstOrNull { TrackDeduplicator.isSameRecording(track, it, splits) }
                     }.getOrNull()
                 }
             }
             .mapNotNull { it.await() }
 
-        (listOf(track) + found + downloadedCopies(track))
+        (listOf(track) + found + downloadedCopies(track, splits))
             .distinctBy { it.source }
             .sortedWith(
                 compareByDescending<UnifiedTrack> { it.isPlayableOffline() }
@@ -79,10 +82,13 @@ class RenditionFinder @Inject constructor(
      * source of its own — it is an ordinary rendition that happens to have a file behind it — so
      * nothing else would have looked for it.
      */
-    private suspend fun downloadedCopies(track: UnifiedTrack): List<UnifiedTrack> =
+    private suspend fun downloadedCopies(
+        track: UnifiedTrack,
+        splits: SplitSet
+    ): List<UnifiedTrack> =
         withContext(Dispatchers.IO) {
             musicRepository.downloadedTracks()
-                .filter { it.id != track.id && TrackDeduplicator.isSameRecording(track, it) }
+                .filter { it.id != track.id && TrackDeduplicator.isSameRecording(track, it, splits) }
         }
 
     /**

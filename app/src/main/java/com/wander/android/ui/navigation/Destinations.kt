@@ -98,13 +98,42 @@ object Routes {
     val topLevel: Set<String> = TopLevelDestination.entries.map { it.route }.toSet()
 
     /**
-     * Routes that keep the dock and the docked player.
+     * A route pattern without its optional arguments.
+     *
+     * `artist/{artist}?artistId={artistId}` and `artist/{artist}` are the same destination — the
+     * query half is what the caller *may* pass, not part of the address. Both sides of every
+     * lookup below go through this, which is the bug it exists for: the caller stripped the tail
+     * off the current route and then looked it up in a set that still had it, so the artist page
+     * matched nothing and lost its player and its dock.
+     */
+    private fun String.withoutArgs(): String = substringBefore("?")
+
+    /**
+     * Routes that keep the dock row — the search field and the Friends button — under the player.
+     *
+     * Only the roots. The dock row is how you get *between* the three of them and how you search
+     * from the library; on a page reached from one of them it is neither, and it pushed the thing
+     * the page was opened to show a dock row further up the screen for nothing.
+     */
+    private val withDock: Set<String> = topLevel.map { it.withoutArgs() }.toSet()
+
+    /**
+     * Routes that keep the docked player.
      *
      * Album and artist pages are browsing, not a modal task: hiding the player to show a
      * tracklist would stop the music's controls being reachable from the very screen you opened
-     * *from* the player. The queue and the login flows still take the screen over.
+     * *from* the player. On those the strip stands alone — see [showsDock]. The queue and the
+     * login flows still take the screen over.
      */
-    val withChrome: Set<String> =
-        topLevel + ALBUM + PLAYLIST + ARTIST + PROFILE + MY_PROFILE + SETTINGS + STATS + HISTORY + MERGE_PREVIEW + JAM + "jam" +
-            INBOX + CIRCLE
+    private val withChrome: Set<String> =
+        (topLevel + ALBUM + PLAYLIST + ARTIST + PROFILE + MY_PROFILE + SETTINGS + STATS +
+            HISTORY + MERGE_PREVIEW + JAM + JAM_ROUTE + INBOX + CIRCLE)
+            .map { it.withoutArgs() }
+            .toSet()
+
+    /** Whether [route] keeps the docked player. */
+    fun showsChrome(route: String?): Boolean = route?.withoutArgs() in withChrome
+
+    /** Whether [route] keeps the dock row under the player. */
+    fun showsDock(route: String?): Boolean = route?.withoutArgs() in withDock
 }

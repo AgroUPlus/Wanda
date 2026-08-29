@@ -9,6 +9,7 @@ import com.wander.android.data.repository.JamPlaybackController
 import com.wander.android.data.repository.DropsRepository
 import com.wander.android.data.repository.JamRepository
 import com.wander.android.data.repository.ListenAlongController
+import com.wander.android.data.repository.IncognitoRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.SocialRepository
 import com.wander.android.data.sources.agro.AgroHandoffState
@@ -41,7 +42,8 @@ internal class AgroSessionViewModel @Inject constructor(
     private val jamRepository: JamRepository,
     private val jamPlayback: JamPlaybackController,
     private val dropsRepository: DropsRepository,
-    private val friendNotifier: FriendNotifier
+    private val friendNotifier: FriendNotifier,
+    private val incognitoRepository: IncognitoRepository
 ) : ViewModel() {
 
     val devices: StateFlow<List<AgroNode>> = sessionRepository.devices
@@ -110,9 +112,15 @@ internal class AgroSessionViewModel @Inject constructor(
      */
     suspend fun observeLiveUpdates(onLibraryChanged: () -> Unit = {}) {
         sessionRepository.refresh()
+        // The account may have been made quiet from another device while this one was away.
+        incognitoRepository.refresh()
         sessionRepository.liveUpdates().collectLatest { message ->
             when (message) {
                 is AgroLiveMessage.Session -> sessionRepository.refresh()
+                // Incognito is owned by the account, not by a device, so a switch flipped on
+                // another one has to reach this one — otherwise this device carries on recording
+                // and announcing after the user has gone quiet somewhere else.
+                is AgroLiveMessage.Settings -> incognitoRepository.refresh()
                 // Library messages used to be dropped on the floor, so music uploaded from another
                 // device only appeared when this one was next foregrounded.
                 is AgroLiveMessage.Library -> onLibraryChanged()
