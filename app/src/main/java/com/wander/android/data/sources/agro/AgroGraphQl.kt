@@ -106,10 +106,12 @@ class AgroGraphQl @Inject constructor(
      */
     fun syncSocketUrl(): String? {
         val server = secureStorage.agroServerUrl.takeIf { it.isNotBlank() } ?: return null
-        return when {
+        val base = when {
             server.startsWith("https://") -> server.replaceFirst("https://", "wss://")
             server.startsWith("http://") -> server.replaceFirst("http://", "ws://")
             else -> return null
         } + "/ws/sync"
+        val deviceId = secureStorage.agroDeviceId
+        return if (deviceId.isNotBlank()) "$base?device=$deviceId" else base
     }
 }

@@ -25,8 +25,11 @@ internal fun LazyListScope.syncTab(
     handoff: AgroHandoffState?,
     isResuming: Boolean,
     onResume: (AgroHandoffState) -> Unit,
-    librarySyncEnabled: Boolean,
-    onLibrarySyncChange: (Boolean) -> Unit,
+    p2pSyncEnabled: Boolean,
+    onP2pSyncChange: (Boolean) -> Unit,
+    serverArchiveEnabled: Boolean,
+    canArchive: Boolean,
+    onServerArchiveChange: (Boolean) -> Unit,
     pendingUploads: Int,
     syncedTracks: Int,
     localTracks: Int,
@@ -73,15 +76,22 @@ internal fun LazyListScope.syncTab(
     )
 
     librarySyncSection(
-        enabled = librarySyncEnabled,
-        onEnabledChange = onLibrarySyncChange,
+        p2pEnabled = p2pSyncEnabled,
+        onP2pEnabledChange = onP2pSyncChange,
+        archiveEnabled = serverArchiveEnabled,
+        canArchive = canArchive,
+        onArchiveEnabledChange = onServerArchiveChange,
         pendingCount = pendingUploads,
         syncedCount = syncedTracks,
         progress = syncProgress,
-        serverSummary = if (filesLandInNavidrome) {
-            "Filed into your Navidrome library."
-        } else {
-            "Held on your Agro server for your other devices."
+        // Describes what the switches above actually do. Both of these name the *server* storing
+        // your files, which is archiving — with archiving off, nothing is stored there at all and
+        // the line was simply untrue.
+        serverSummary = when {
+            !serverArchiveEnabled ->
+                "Sent straight between your devices. Nothing is kept on the server."
+            filesLandInNavidrome -> "Filed into your Navidrome library."
+            else -> "Held on your Agro server for your other devices."
         },
         onSyncNow = onSyncNow,
         onReviewDeletions = onReviewDeletions,

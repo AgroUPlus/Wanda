@@ -1,7 +1,9 @@
 package com.wander.android.data.sources.agro
 
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -79,6 +81,39 @@ internal class AgroProfileApi @Inject constructor(
             put("showActivity", visibility.showActivity)
         }
     ).mapCatching { data -> data["setVisibility"]!!.jsonObject.toProfile() }
+
+    /**
+     * Whether this account is currently quiet.
+     *
+     * Only ever answered for the signed-in account. An incognito account is not returned to
+     * anybody else at all, so there is no version of this question about a friend — that a friend
+     * has gone quiet is itself a disclosure, and the server declines to make it.
+     */
+    suspend fun incognito(): Result<Boolean> = graphQl.execute(
+        "query Incognito { incognito }",
+        buildJsonObject { }
+    ).mapCatching { data ->
+        data["incognito"]!!.jsonPrimitive.boolean
+    }
+
+    /**
+     * Goes quiet, or stops being quiet, for the whole account.
+     *
+     * Its own mutation rather than a fifth switch on [setVisibility]: the others are standing
+     * consents, and this is a temporary override of all of them. Bundling them would mean leaving
+     * incognito had to restore the rest from this client's idea of what they were, and a stale
+     * copy would silently turn a privacy switch back on.
+     */
+    suspend fun setIncognito(enabled: Boolean): Result<Boolean> = graphQl.execute(
+        """
+        mutation SetIncognito(${'$'}incognito: Boolean!) {
+            setIncognito(incognito: ${'$'}incognito)
+        }
+        """.trimIndent(),
+        buildJsonObject { put("incognito", enabled) }
+    ).mapCatching { data ->
+        data["setIncognito"]!!.jsonPrimitive.boolean
+    }
 
     /**
      * How far your listening overlaps theirs.

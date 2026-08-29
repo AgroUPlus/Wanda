@@ -33,6 +33,9 @@ internal data class SettingsUiState(
     val agroVisibility: com.wander.android.data.sources.agro.AgroVisibility?,
     val agroSyncSettings: Boolean,
     val librarySync: Boolean,
+    val p2pSync: Boolean,
+    val serverArchive: Boolean,
+    val canArchive: Boolean,
     val syncProgress: SyncProgress,
     val pendingUploads: Int,
     val syncedTracks: Int,
@@ -44,7 +47,8 @@ internal data class SettingsUiState(
     val appVersion: String,
     val updateCheck: UpdateCheckResult?,
     val isCheckingForUpdate: Boolean,
-    val autoUpdateCheckEnabled: Boolean
+    val autoUpdateCheckEnabled: Boolean,
+    val releaseNotificationsEnabled: Boolean
 )
 
 @Composable
@@ -65,6 +69,9 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val agroVisibility by viewModel.agroVisibility.collectAsStateWithLifecycle()
     val agroSyncSettings by viewModel.agroSyncSettings.collectAsStateWithLifecycle()
     val librarySync by viewModel.librarySyncEnabled.collectAsStateWithLifecycle()
+    val p2pSync by viewModel.p2pSyncEnabled.collectAsStateWithLifecycle()
+    val serverArchive by viewModel.serverArchiveEnabled.collectAsStateWithLifecycle()
+    val canArchive by viewModel.canArchive.collectAsStateWithLifecycle()
     val syncProgress by viewModel.librarySyncProgress.collectAsStateWithLifecycle()
     val pendingUploads by viewModel.pendingUploads.collectAsStateWithLifecycle()
     val syncedTracks by viewModel.syncedTracks.collectAsStateWithLifecycle()
@@ -76,6 +83,8 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val updateCheck by viewModel.updateCheck.collectAsStateWithLifecycle()
     val isCheckingForUpdate by viewModel.isCheckingForUpdate.collectAsStateWithLifecycle()
     val autoUpdateCheckEnabled by viewModel.isAutoUpdateCheckEnabled.collectAsStateWithLifecycle()
+    val releaseNotificationsEnabled by
+        viewModel.isReleaseNotificationEnabled.collectAsStateWithLifecycle()
 
     return SettingsUiState(
         navidrome = navidrome,
@@ -94,6 +103,9 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         agroVisibility = agroVisibility,
         agroSyncSettings = agroSyncSettings,
         librarySync = librarySync,
+        p2pSync = p2pSync,
+        serverArchive = serverArchive,
+        canArchive = canArchive,
         syncProgress = syncProgress,
         pendingUploads = pendingUploads,
         syncedTracks = syncedTracks,
@@ -105,6 +117,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         appVersion = viewModel.appVersion,
         updateCheck = updateCheck,
         isCheckingForUpdate = isCheckingForUpdate,
-        autoUpdateCheckEnabled = autoUpdateCheckEnabled
+        autoUpdateCheckEnabled = autoUpdateCheckEnabled,
+        releaseNotificationsEnabled = releaseNotificationsEnabled
     )
 }
