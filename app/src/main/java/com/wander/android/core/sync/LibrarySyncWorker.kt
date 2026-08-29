@@ -75,6 +75,16 @@ class LibrarySyncWorker @AssistedInject constructor(
             kotlin.Result.success(0)
         }
         if (isStopped) return@withContext Result.retry()
+
+        // Last, and after reporting: the queue above only covers deletions this phone noticed and
+        // managed to record. This catches the drift nothing recorded — including everything lost
+        // before the queue was flushed from here at all.
+        val reconciled = if (secureStorage.agroP2pSync) {
+            syncRepository.reconcileHoldings()
+        } else {
+            kotlin.Result.success(0)
+        }
+        if (isStopped) return@withContext Result.retry()
         runCatching { setForeground(foregroundInfo(2, 3)) }
 
         // Server archiving: uploads audio bytes to Agro / Navidrome server (Admin only).
@@ -95,7 +105,7 @@ class LibrarySyncWorker @AssistedInject constructor(
         // A failed forget is retried like a failed report. The queue survives the failure, but
         // leaving it undelivered until the next scheduled run means the fleet keeps being offered
         // files this phone has already deleted.
-        else if (reported.isFailure || forgotten.isFailure) Result.retry()
+        else if (reported.isFailure || forgotten.isFailure || reconciled.isFailure) Result.retry()
         else Result.success()
     }
 

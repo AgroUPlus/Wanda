@@ -140,6 +140,36 @@ class LibrarySyncRepository @Inject constructor(
         }
     }
 
+    /**
+     * Makes the server's picture of this device match reality, and returns how many claims it
+     * dropped.
+     *
+     * `reportHoldings` only ever adds, and a deletion is only ever announced once — through the
+     * prune's queue. Any notice that was lost before it landed left the server permanently
+     * convinced this phone still held files it had deleted, offering them to every other device
+     * from a source that could not serve them. Nothing existed to notice the drift, because the
+     * phone never asked what the server thought.
+     *
+     * So it asks, and forgets whatever it cannot account for locally.
+     *
+     * Skipped while any local track is still unhashed. Content hashes are what the comparison is
+     * made of, so reconciling mid-hash would read a file that is present but not yet hashed as
+     * absent and forget a holding that was perfectly good — then re-report it on the next run, for
+     * ever. A partial answer is worse than waiting for a complete one.
+     */
+    suspend fun reconcileHoldings(): Result<Int> = withContext(Dispatchers.IO) {
+        if (!isEnabled) return@withContext Result.success(0)
+        if (trackDao.getUnsyncedLocalTracks(1).isNotEmpty()) {
+            return@withContext Result.success(0)
+        }
+
+        val known = trackDao.getSyncedLocalTracks().mapNotNullTo(mutableSetOf()) { it.contentHash }
+        libraryApi.deviceHoldings().mapCatching { onServer ->
+            val stale = onServer.filterNot { it in known }
+            if (stale.isEmpty()) 0 else libraryApi.forgetHoldings(stale).getOrThrow()
+        }
+    }
+
     /** Tells the server what this device holds. Metadata only — no audio moves. */
     suspend fun reportHoldings(): Result<Int> = withContext(Dispatchers.IO) {
         val hashed = trackDao.getUnsyncedLocalTracks(REPORT_BATCH)
