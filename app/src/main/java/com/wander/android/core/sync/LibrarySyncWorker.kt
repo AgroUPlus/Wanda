@@ -56,6 +56,19 @@ class LibrarySyncWorker @AssistedInject constructor(
         runCatching { setForeground(foregroundInfo(1, 3)) }
 
         // Metadata next: reports index for P2P sync across devices.
+        //
+        // Deletions before additions, and both here rather than only one. `reportHoldings` is
+        // purely additive — the server keeps every hash it has ever been told about until it is
+        // told otherwise — so a worker that reported without ever flushing the forget queue left
+        // deleted files advertised from this phone until someone happened to open the app, which
+        // is the one thing a background sync exists not to require.
+        val forgotten = if (secureStorage.agroP2pSync) {
+            syncRepository.flushPendingForget()
+        } else {
+            kotlin.Result.success(0)
+        }
+        if (isStopped) return@withContext Result.retry()
+
         val reported = if (secureStorage.agroP2pSync) {
             syncRepository.reportHoldings()
         } else {
@@ -79,7 +92,10 @@ class LibrarySyncWorker @AssistedInject constructor(
 
         // More to do: come back rather than declaring the library synced.
         if (hashed > 0 || uploaded > 0) Result.retry()
-        else if (reported.isFailure) Result.retry()
+        // A failed forget is retried like a failed report. The queue survives the failure, but
+        // leaving it undelivered until the next scheduled run means the fleet keeps being offered
+        // files this phone has already deleted.
+        else if (reported.isFailure || forgotten.isFailure) Result.retry()
         else Result.success()
     }
 
