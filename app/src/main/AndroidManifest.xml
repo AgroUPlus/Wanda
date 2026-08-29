@@ -40,6 +40,10 @@
         android:maxSdkVersion="32" />
 
     <!--
+      No usesCleartextTraffic here: with a networkSecurityConfig declared it is ignored from API 24
+      on (minSdk is 26), and leaving it set only advertised a blanket plain-HTTP policy the app
+      does not actually run under. @xml/network_security_config is the single source of truth.
+
       allowBackup=false disables cloud backup on every supported version, which is why no
       fullBackupContent companion is declared. dataExtractionRules is still required: on Android
       12+ it is what governs device-to-device transfer, which allowBackup does not cover.
@@ -55,7 +59,6 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Wanda"
-        android:usesCleartextTraffic="true"
         tools:targetApi="37">
 
         <activity
