@@ -112,6 +112,22 @@ class AgroGraphQl @Inject constructor(
             else -> return null
         } + "/ws/sync"
         val deviceId = secureStorage.agroDeviceId
-        return if (deviceId.isNotBlank()) "$base?device=$deviceId" else base
+        if (deviceId.isBlank()) return base
+
+        // The LAN address rides the handshake because the server holds it only in memory, for as
+        // long as this socket is open. `registerNode` sends it too, but that runs once at app
+        // start, so on its own an address cleared by a redeploy or a dropped socket never came
+        // back and peer transfers silently fell back to the relay. Reconnecting restores it now,
+        // which this client already does with backoff.
+        //
+        // Re-read on every connection: a phone changes network often, and the address it had when
+        // the process started is the wrong one by the time it reconnects elsewhere.
+        val lan = LocalNetwork.lanAddress()
+        val encodedDevice = java.net.URLEncoder.encode(deviceId, "UTF-8")
+        return if (lan != null) {
+            "$base?device=$encodedDevice&lan=" + java.net.URLEncoder.encode(lan, "UTF-8")
+        } else {
+            "$base?device=$encodedDevice"
+        }
     }
 }

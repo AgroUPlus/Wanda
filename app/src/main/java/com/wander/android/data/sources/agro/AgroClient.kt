@@ -20,30 +20,12 @@ class AgroClient @Inject constructor(
 ) {
     val isConfigured: Boolean get() = graphQl.isConfigured
 
-    private fun getLocalIpAddress(): String? {
-        try {
-            val interfaces = java.net.NetworkInterface.getNetworkInterfaces()
-            while (interfaces.hasMoreElements()) {
-                val iface = interfaces.nextElement()
-                if (iface.isLoopback || !iface.isUp) continue
-                val addresses = iface.inetAddresses
-                while (addresses.hasMoreElements()) {
-                    val addr = addresses.nextElement()
-                    if (!addr.isLoopbackAddress && addr is java.net.Inet4Address) {
-                        return addr.hostAddress
-                    }
-                }
-            }
-        } catch (ignored: Exception) {}
-        return null
-    }
-
     /**
      * Battery-first one-shot registration: called on app launch or pairing only.
      * Never runs in an unconstrained background loop.
      */
     suspend fun registerNode(currentTrack: String? = null): Result<String?> {
-        val lanAddress = getLocalIpAddress()?.let { "$it:8702" }
+        val lanAddress = LocalNetwork.lanAddress()
         val mutation = """
             mutation RegisterNode(${'$'}userId: String!, ${'$'}deviceId: String!, ${'$'}clientType: String!, ${'$'}deviceName: String, ${'$'}lanAddress: String, ${'$'}currentTrack: String) {
                 registerNode(userId: ${'$'}userId, deviceId: ${'$'}deviceId, clientType: ${'$'}clientType, deviceName: ${'$'}deviceName, lanAddress: ${'$'}lanAddress, currentTrack: ${'$'}currentTrack) {
