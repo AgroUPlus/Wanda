@@ -97,8 +97,15 @@ internal class NowPlayingViewModel @Inject constructor(
     /** Whether this track's backend can mint a public link — decides if the button is shown. */
     fun canShare(track: UnifiedTrack) = shareRepository.canShare(track)
 
-    /** The link is published on a shared flow and raised as a share sheet by `WanderApp`. */
+    /**
+     * The link is published on a shared flow and raised as a share sheet by `WanderApp`.
+     *
+     * Carries the current speed and pitch, which is why the player shares differently from every
+     * other screen: this is the one place that knows a track is being played at 1.25x.
+     */
     fun share(track: UnifiedTrack) {
-        viewModelScope.launch { shareRepository.share(track) }
+        viewModelScope.launch {
+            shareRepository.share(track, playerConnection.speedAndPitch.value)
+        }
     }
 }

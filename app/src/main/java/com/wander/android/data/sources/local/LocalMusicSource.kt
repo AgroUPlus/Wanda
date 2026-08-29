@@ -70,7 +70,41 @@ class LocalMusicSource @Inject constructor(
             )
             trackDao.markAsLibrary(scan.tracks.map { it.id })
         }
+        prune()
         secureStorage.localScanWatermark = scan.watermarkSeconds
+    }
+
+    /**
+     * Forgets local tracks whose file is no longer on the device.
+     *
+     * An incremental scan only ever *adds*: it asks MediaStore for files modified since the last
+     * watermark, so a file that has been deleted is simply absent from the answer and its row
+     * stays in Room forever. Until this existed the only cure was a full rescan, which throws the
+     * whole local library away and rebuilds it.
+     *
+     * It bit hardest after a peer-to-peer fetch. Each download wrote a new MediaStore row, and
+     * when an older row went the library kept pointing at it — playback then failed with
+     * `FileNotFoundException: No item at content://media/external/audio/media/470` on a song whose
+     * file was sitting on disk perfectly well under a different id.
+     *
+     * A MediaStore that answers with nothing is not evidence that the library is empty — it is far
+     * more likely to be a permission that has just been revoked — so an empty answer prunes
+     * nothing.
+     */
+    private suspend fun prune() {
+        val existing = scanner.existingIds()
+        if (existing.isEmpty()) return
+        val keep = existing.map { "${SourceType.LOCAL.idPrefix}$it" }
+        // Read before the delete, so the server can be told what went. Afterwards there is nothing
+        // left to read the hashes from.
+        val gone = trackDao.localContentHashesNotIn(keep)
+        trackDao.deleteLocalTracksNotIn(keep)
+        // Recorded rather than announced. The sync layer drains this when it next talks to the
+        // server, which may be much later than now — the file can just as easily have gone while
+        // this device was offline.
+        if (gone.isNotEmpty()) {
+            secureStorage.pendingForget = secureStorage.pendingForget + gone
+        }
     }
 
     override suspend fun search(query: String): Result<List<UnifiedTrack>> =

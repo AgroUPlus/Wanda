@@ -83,6 +83,10 @@ class PlayerConnection @Inject constructor(
     val state: StateFlow<PlaybackState> = _controller
         .flatMapLatest { ctrl ->
             if (ctrl == null) flowOf(PlaybackState()) else callbackFlow {
+                // Counted here rather than read off the player: nothing on `Player` remembers that
+                // a seek happened, and the snapshot is otherwise identical to the one before it.
+                // See `PlaybackState.seekEpoch`.
+                var seekEpoch = 0L
                 val listener = object : Player.Listener {
                     override fun onEvents(player: Player, events: Player.Events) {
                         val timelineChanged = events.contains(Player.EVENT_TIMELINE_CHANGED) ||
@@ -91,7 +95,15 @@ class PlayerConnection @Inject constructor(
                         if (timelineChanged) {
                             lastQueue = player.queueTracks(trackCache)
                         }
-                        trySend(player.buildSnapshot(secureStorage.isRadioMode.value, lastQueue, trackCache))
+                        if (events.contains(Player.EVENT_POSITION_DISCONTINUITY)) seekEpoch++
+                        trySend(
+                            player.buildSnapshot(
+                                secureStorage.isRadioMode.value,
+                                lastQueue,
+                                trackCache,
+                                seekEpoch
+                            )
+                        )
                     }
 
                     override fun onPlayerError(error: PlaybackException) {
@@ -102,7 +114,14 @@ class PlayerConnection @Inject constructor(
                 }
                 ctrl.addListener(listener)
                 lastQueue = ctrl.queueTracks(trackCache)
-                trySend(ctrl.buildSnapshot(secureStorage.isRadioMode.value, lastQueue, trackCache))
+                trySend(
+                    ctrl.buildSnapshot(
+                        secureStorage.isRadioMode.value,
+                        lastQueue,
+                        trackCache,
+                        seekEpoch
+                    )
+                )
                 awaitClose { ctrl.removeListener(listener) }
             }
         }
@@ -531,8 +550,8 @@ class PlayerConnection @Inject constructor(
     fun setSpeedAndPitch(speed: Float, pitch: Float) {
         val ctrl = _controller.value ?: return
         val clamped = SpeedAndPitch(
-            speed = speed.coerceIn(MIN_RATE, MAX_RATE),
-            pitch = pitch.coerceIn(MIN_RATE, MAX_RATE)
+            speed = speed.coerceIn(SpeedAndPitch.RANGE),
+            pitch = pitch.coerceIn(SpeedAndPitch.RANGE)
         )
         setOffloadEnabled(clamped.isDefault)
         ctrl.playbackParameters = PlaybackParameters(clamped.speed, clamped.pitch)
@@ -573,8 +592,6 @@ class PlayerConnection @Inject constructor(
             PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED
         )
 
-        const val MIN_RATE = 0.5f
-        const val MAX_RATE = 2.0f
     }
 }
 
@@ -633,7 +650,8 @@ private fun String.asActionableMessage(): String = when {
 private fun Player.buildSnapshot(
     radio: Boolean,
     cachedQueue: List<UnifiedTrack>,
-    cache: java.util.concurrent.ConcurrentHashMap<String, UnifiedTrack>
+    cache: java.util.concurrent.ConcurrentHashMap<String, UnifiedTrack>,
+    seekEpoch: Long
 ): PlaybackState {
     val activeItem = runCatching { currentMediaItem }.getOrNull()
     val playing = runCatching { isPlaying }.getOrDefault(false)
@@ -656,7 +674,8 @@ private fun Player.buildSnapshot(
             Player.REPEAT_MODE_ONE -> RepeatMode.ONE
             else -> RepeatMode.OFF
         },
-        isRadioMode = radio
+        isRadioMode = radio,
+        seekEpoch = seekEpoch
     )
 }
 

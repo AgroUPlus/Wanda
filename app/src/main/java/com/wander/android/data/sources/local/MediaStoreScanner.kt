@@ -49,6 +49,32 @@ class MediaStoreScanner @Inject constructor(
      * @param sinceSeconds only return items modified after this `DATE_MODIFIED`. Pass 0 for a
      *   full scan.
      */
+    /**
+     * Every audio id MediaStore currently holds, and nothing else.
+     *
+     * Ids only, so this stays cheap enough to run on every scan: no metadata is read and no
+     * `UnifiedTrack` is built. It answers the one question an incremental scan cannot — which of
+     * the files we already know about have *gone*.
+     *
+     * Not restricted by the chosen folder. A track that left the folder is still a track this
+     * device has, and deleting it from the library because the picker moved would lose a row that
+     * still plays.
+     */
+    suspend fun existingIds(): Set<Long> = withContext(Dispatchers.IO) {
+        val ids = HashSet<Long>()
+        context.contentResolver.query(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            arrayOf(MediaStore.Audio.Media._ID),
+            "${MediaStore.Audio.Media.IS_MUSIC} != 0",
+            null,
+            null
+        )?.use { c ->
+            val idCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+            while (c.moveToNext()) ids += c.getLong(idCol)
+        }
+        ids
+    }
+
     suspend fun scan(sinceSeconds: Long = 0L): MediaStoreScan = withContext(Dispatchers.IO) {
         val projection = arrayOf(
             MediaStore.Audio.Media._ID,
