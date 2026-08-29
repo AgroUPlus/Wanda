@@ -1,6 +1,7 @@
 package com.wander.android.data.repository
 
 import android.net.Uri
+import com.wander.android.core.playback.SpeedAndPitch
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.sources.agro.AgroGraphQl
 import com.wander.android.data.sources.ytmusic.youTubeVideoId
@@ -21,12 +22,25 @@ internal const val LISTEN_PATH = "listen"
 internal const val APP_SCHEME = "wanda"
 
 /**
- * Sends share links through a domain of the user's own, when they have set one.
+ * Sends share links through the best address the user has, in that order.
  *
- * The rewrite is deliberately silent in both directions. A link that can be carried through the
- * domain is; anything else is shared exactly as its backend minted it, with no warning and no
- * refusal — the user asked for their domain on their links, not for a lecture about the ones it
- * cannot carry.
+ * **The minting half of Agro's `SHARE_LINKS.md`, which is normative.** The tier order, the
+ * parameter names and the speed/pitch bounds are specified there and implemented again in Rust
+ * (`agro/src/listen.rs`) and JavaScript (`frwd.top/listen/index.html`). Nothing checks that the
+ * three agree, so a change to any of them is a change to the document first.
+ *
+ * Three tiers, most personal first:
+ *
+ * 1. **A domain of their own**, when one is set — theirs is the name on the link.
+ * 2. **Their Agro server**, when one is paired. It serves `/listen` itself, so this needs no
+ *    custom domain and no extra endpoint; it only needs the server to be reachable by whoever
+ *    opens the link. Previously missing entirely: the rewrite bailed to the backend's URL the
+ *    moment no domain was set, so a paired Agro with no domain got nothing.
+ * 3. **Whatever the backend minted** — Navidrome's share, YouTube's watch URL.
+ *
+ * The rewrite is deliberately silent in every direction. A link that can be carried is; anything
+ * else is shared exactly as its backend minted it, with no warning and no refusal — the user asked
+ * for their address on their links, not for a lecture about the ones it cannot carry.
  */
 @Singleton
 class ShareLinkRewriter @Inject constructor(
@@ -41,9 +55,8 @@ class ShareLinkRewriter @Inject constructor(
     internal fun domain(): String =
         secureStorage.agroShareDomain.value.ifBlank { secureStorage.shareDomain.value }
 
-    suspend fun rewrite(url: String): String {
-        val domain = domain()
-        if (domain.isBlank()) return url
+    suspend fun rewrite(url: String, speedPitch: SpeedAndPitch = SpeedAndPitch()): String {
+        val base = shareBase() ?: return url
 
         val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return url
         if (!uri.isAllowed()) return url
@@ -67,18 +80,49 @@ class ShareLinkRewriter @Inject constructor(
                     ?.get("createShortLink")?.jsonPrimitive?.contentOrNull
             }.getOrNull()
             if (!shortId.isNullOrBlank()) {
-                return "https://$domain/$LISTEN_PATH?id=$shortId"
+                return "$base/$LISTEN_PATH?id=$shortId".withPlayback(speedPitch)
             }
         }
 
         // Fallback for YouTube links when Agro is not paired
         youTubeVideoId(uri)?.let { videoId ->
-            return "https://$domain/$LISTEN_PATH?v=$videoId"
+            return "$base/$LISTEN_PATH?v=$videoId".withPlayback(speedPitch)
         }
 
         val target = URLEncoder.encode(url, Charsets.UTF_8.name())
-        return "https://$domain/$LISTEN_PATH?u=$target"
+        return "$base/$LISTEN_PATH?u=$target".withPlayback(speedPitch)
     }
+
+    /**
+     * The origin share links are minted on, or null when there is nowhere but the backend.
+     *
+     * The Agro tier keeps whatever scheme the server was configured with rather than forcing
+     * `https`, so a link is minted on the address the server actually answers on.
+     *
+     * In practice that scheme is almost always `https`: `network_security_config.xml` permits
+     * cleartext only for `localhost`, `127.0.0.1` and `10.0.2.2`, so a plain-`http` Agro on the
+     * LAN is not reachable by this app at all and never becomes a configured server. The `http`
+     * branch therefore exists for the `adb reverse` development flow, not for self-hosting — a
+     * self-hosted Agro needs a certificate, which is what the network config documents.
+     */
+    private fun shareBase(): String? {
+        domain().takeIf { it.isNotBlank() }?.let { return "https://$it" }
+        if (!agroGraphQl.isConfigured) return null
+        val server = runCatching { Uri.parse(secureStorage.agroServerUrl) }.getOrNull() ?: return null
+        val scheme = server.scheme?.lowercase()?.takeIf { it == "http" || it == "https" } ?: return null
+        val authority = server.authority?.takeIf(String::isNotBlank) ?: return null
+        return "$scheme://$authority"
+    }
+
+    /**
+     * Carries the listener's speed and pitch on the link, when they are not the defaults.
+     *
+     * Sharing a track you are playing at 1.25x and a tone lower is sharing *that* — the version
+     * you meant, not the one the file happens to hold. Omitted entirely at the defaults so an
+     * ordinary share stays an ordinary URL.
+     */
+    private fun String.withPlayback(speedPitch: SpeedAndPitch): String =
+        this + playbackSuffix(speedPitch)
 
     /**
      * The real link behind one of our short links, or null when [uri] is not one.
@@ -107,9 +151,30 @@ class ShareLinkRewriter @Inject constructor(
         if (!isListen) return false
         return when (scheme?.lowercase()) {
             APP_SCHEME -> true
-            "https" -> host?.lowercase() == domain().ifBlank { null }
+            // Both minting tiers, or a link this device made would not be one it can open.
+            "http", "https" -> host?.lowercase() in ownHosts()
             else -> false
         }
+    }
+
+    /** The hosts this device mints links on: the user's domain, and their Agro server. */
+    private fun ownHosts(): Set<String> = setOfNotNull(
+        domain().lowercase().takeIf(String::isNotBlank),
+        runCatching { Uri.parse(secureStorage.agroServerUrl).host?.lowercase() }
+            .getOrNull()?.takeIf(String::isNotBlank)
+    )
+
+    /**
+     * The speed and pitch a link asks to be played at, or null when it carries neither.
+     *
+     * Read off the wrapper rather than the unwrapped target: the target is the backend's own URL
+     * and knows nothing about how the person sharing it was listening. Values outside the range
+     * the player accepts are dropped rather than clamped — a link asking for 40x is not a link
+     * whose intent is recoverable.
+     */
+    fun playbackOf(uri: Uri): SpeedAndPitch? {
+        if (!uri.isShortLink()) return null
+        return playbackFrom(uri.getQueryParameter("s"), uri.getQueryParameter("p"))
     }
 
     /**
@@ -158,4 +223,29 @@ class ShareLinkRewriter @Inject constructor(
     private companion object {
         val YOUTUBE_HOSTS = setOf("youtube.com", "music.youtube.com", "youtu.be")
     }
+}
+
+/**
+ * The `&s=…&p=…` a minted link carries, or an empty string at the defaults.
+ *
+ * `SHARE_LINKS.md` §3.2. A top-level function rather than a method so the rule can be tested
+ * without an Android `Uri` — the spec is implemented three times in three languages, and this is
+ * the half of it that can be pinned down by a plain unit test.
+ */
+internal fun playbackSuffix(speedPitch: SpeedAndPitch): String =
+    if (speedPitch.isDefault) ""
+    else "&s=${speedPitch.speed}&p=${speedPitch.pitch}"
+
+/**
+ * The speed and pitch a link asks for, or null when it carries none this player will honour.
+ *
+ * `SHARE_LINKS.md` §3.2: both or neither, both within [SpeedAndPitch.RANGE], and **dropped rather
+ * than clamped** when out of range — a link asking for 40x is not one whose intent is recoverable.
+ * Takes the raw strings so the parsing and the bounds are testable together.
+ */
+internal fun playbackFrom(speed: String?, pitch: String?): SpeedAndPitch? {
+    val s = speed?.toFloatOrNull() ?: return null
+    val p = pitch?.toFloatOrNull() ?: return null
+    if (s !in SpeedAndPitch.RANGE || p !in SpeedAndPitch.RANGE) return null
+    return SpeedAndPitch(speed = s, pitch = p).takeIf { !it.isDefault }
 }

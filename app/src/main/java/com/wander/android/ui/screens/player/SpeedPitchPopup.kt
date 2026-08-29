@@ -130,15 +130,12 @@ private fun RateSlider(label: String, rate: Float, onRate: (Float) -> Unit) {
     Slider(
         value = rate,
         onValueChange = onRate,
-        valueRange = MIN_RATE..MAX_RATE,
+        valueRange = SpeedAndPitch.RANGE,
         // 0.05× apart: fine enough to find 0.9 for a slow listen, coarse enough that a thumb
         // lands on a round number rather than 1.03.
         steps = STEPS
     )
 }
-
-private const val MIN_RATE = 0.5f
-private const val MAX_RATE = 2.0f
 
 /** Interior stops only, which is what `Slider` counts. */
 private const val STEPS = 29
