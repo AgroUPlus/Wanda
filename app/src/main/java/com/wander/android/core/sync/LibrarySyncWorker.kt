@@ -33,7 +33,8 @@ import kotlinx.coroutines.withContext
 class LibrarySyncWorker @AssistedInject constructor(
     @Assisted private val context: Context,
     @Assisted params: WorkerParameters,
-    private val syncRepository: LibrarySyncRepository
+    private val syncRepository: LibrarySyncRepository,
+    private val secureStorage: com.wander.android.core.security.SecureStorage
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -54,13 +55,21 @@ class LibrarySyncWorker @AssistedInject constructor(
         // whole run however long it took. Re-posted between steps so it says something true.
         runCatching { setForeground(foregroundInfo(1, 3)) }
 
-        // Metadata next. Cheap, and it is what powers the "you're missing this" diff — worth doing
-        // even for a user who never uploads a byte.
-        val reported = syncRepository.reportHoldings()
+        // Metadata next: reports index for P2P sync across devices.
+        val reported = if (secureStorage.agroP2pSync) {
+            syncRepository.reportHoldings()
+        } else {
+            kotlin.Result.success(0)
+        }
         if (isStopped) return@withContext Result.retry()
         runCatching { setForeground(foregroundInfo(2, 3)) }
 
-        val uploaded = runCatching { syncRepository.uploadBatch() }.getOrDefault(0)
+        // Server archiving: uploads audio bytes to Agro / Navidrome server (Admin only).
+        val uploaded = if (secureStorage.agroServerArchive) {
+            runCatching { syncRepository.uploadBatch() }.getOrDefault(0)
+        } else {
+            0
+        }
         if (isStopped) return@withContext Result.retry()
 
         // Finally, say if another device has put something here worth having. The in-app card only
@@ -88,21 +97,34 @@ class LibrarySyncWorker @AssistedInject constructor(
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         ensureOfferChannel()
 
-        val albums = missing.mapNotNull { it.album }.distinct()
-        val summary = when {
-            albums.size == 1 -> albums.first()
-            albums.size > 1 -> "${albums.first()} and ${albums.size - 1} more"
-            else -> missing.joinToString(", ") { it.title }.take(80)
+        val sampleText = missing.take(3).joinToString("\n") { "• ${it.artist} — ${it.title}" }
+        val title = if (missing.size == 1) "1 track available to sync" else "${missing.size} tracks available to sync"
+        val subtitle = missing.firstOrNull()?.peerSources?.firstOrNull()?.petname?.let { "From $it" } ?: "From your other devices"
+
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        val pendingIntent = launchIntent?.let {
+            android.app.PendingIntent.getActivity(
+                context,
+                0,
+                it,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
         }
 
         val notification = NotificationCompat.Builder(context, OFFER_CHANNEL_ID)
-            .setContentTitle(
-                if (missing.size == 1) "1 track from your other devices"
-                else "${missing.size} tracks from your other devices"
+            .setContentTitle(title)
+            .setContentText(subtitle)
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .setBigContentTitle(title)
+                    .setSummaryText(subtitle)
+                    .bigText(sampleText)
             )
-            .setContentText(summary)
             .setSmallIcon(R.drawable.ic_stat_sync)
             .setAutoCancel(true)
+            .apply {
+                if (pendingIntent != null) setContentIntent(pendingIntent)
+            }
             .build()
 
         runCatching { manager.notify(OFFER_NOTIFICATION_ID, notification) }

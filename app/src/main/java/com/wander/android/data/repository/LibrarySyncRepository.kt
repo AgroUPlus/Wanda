@@ -5,9 +5,14 @@ import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.core.sync.ContentHasher
 import com.wander.android.core.sync.MediaStoreWriter
+import com.wander.android.core.sync.WriteResult
 import com.wander.android.data.sources.agro.AgroLibraryApi
 import com.wander.android.data.sources.agro.AgroUploader
+import android.content.ContentUris
+import com.wander.android.data.model.SourceType
+import com.wander.android.data.sources.local.LocalMusicSource
 import com.wander.android.data.sources.agro.MissingTrack
+import com.wander.android.data.sources.agro.SyncRoute
 import com.wander.android.data.sources.agro.SyncMode
 import com.wander.android.data.sources.agro.UploadOutcome
 import com.wander.android.data.sources.navidrome.NavidromeSource
@@ -22,6 +27,23 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * Where a *download* run got to.
+ *
+ * Separate from [SyncProgress], which is the upload direction. Keyed on content hash rather than
+ * on position, so the detail list can mark each track done, in flight, or still waiting without
+ * caring what order they were fetched in.
+ */
+data class FetchProgress(
+    val done: Set<String> = emptySet(),
+    val current: String? = null,
+    val total: Int = 0,
+    /** How the track in flight is actually travelling. Null until the stream opens. */
+    val route: SyncRoute? = null
+) {
+    val running: Boolean get() = current != null
+}
 
 /** Where a sync run got to, for the Settings screen. */
 data class SyncProgress(
@@ -52,7 +74,8 @@ class LibrarySyncRepository @Inject constructor(
     private val uploader: AgroUploader,
     private val navidromeSource: NavidromeSource,
     private val mediaStoreWriter: MediaStoreWriter,
-    private val secureStorage: SecureStorage
+    private val secureStorage: SecureStorage,
+    private val localSource: LocalMusicSource
 ) {
 
     private val _progress = MutableStateFlow(SyncProgress())
@@ -88,6 +111,33 @@ class LibrarySyncRepository @Inject constructor(
             // been deleted since the scan, and the next scan will drop the row.
         }
         hashed
+    }
+
+    /**
+     * Tells the server this device no longer holds these files.
+     *
+     * The mirror of [reportHoldings], and it had no caller at all: a track deleted from the phone
+     * stayed in the server's index as something this device holds, so the fleet went on believing
+     * a copy existed here and never offered it back. Called by the local scan's prune, which is
+     * the one place that learns a file has gone.
+     */
+    suspend fun forgetHoldings(hashes: List<String>): Result<Int> = withContext(Dispatchers.IO) {
+        if (hashes.isEmpty()) Result.success(0) else libraryApi.forgetHoldings(hashes)
+    }
+
+    /**
+     * Reports every deletion the local scan has recorded but not yet sent.
+     *
+     * Cleared only on success. A failed call — offline, server down — leaves the queue intact so
+     * the next attempt sends it again; dropping it would leave the server permanently wrong about
+     * what this device holds, and there would be nothing left to recompute it from.
+     */
+    suspend fun flushPendingForget(): Result<Int> = withContext(Dispatchers.IO) {
+        val pending = secureStorage.pendingForget
+        if (pending.isEmpty() || !isEnabled) return@withContext Result.success(0)
+        libraryApi.forgetHoldings(pending.toList()).onSuccess {
+            secureStorage.pendingForget = emptySet()
+        }
     }
 
     /** Tells the server what this device holds. Metadata only — no audio moves. */
@@ -159,7 +209,7 @@ class LibrarySyncRepository @Inject constructor(
      * here, and downloading a copy of something you can already hear is not a feature. The server
      * decides which case this is, so the phone and the desktop cannot disagree about it.
      */
-    suspend fun missingHere(limit: Int = 50): Result<List<MissingTrack>> {
+    suspend fun missingHere(limit: Int = 500): Result<List<MissingTrack>> {
         val mode = libraryApi.syncMode().getOrDefault(SyncMode.PEER_TO_PEER)
         if (!mode.offersDownloads) return Result.success(emptyList())
         return libraryApi.missingOnDevice(limit)
@@ -179,13 +229,20 @@ class LibrarySyncRepository @Inject constructor(
      * whatever went wrong is very unlikely to be specific to one file. Whatever arrived before
      * that is real and is kept; the rest is offered again next time.
      */
-    suspend fun fetchMissing(tracks: List<MissingTrack>): Result<Int> = withContext(Dispatchers.IO) {
+    suspend fun fetchMissing(
+        tracks: List<MissingTrack>,
+        onProgress: (FetchProgress) -> Unit = {}
+    ): Result<Int> = withContext(Dispatchers.IO) {
         var fetched = 0
+        val done = mutableSetOf<String>()
+        val arrivedHashes = mutableListOf<Pair<String, String>>()
         for (track in tracks) {
-            val response = uploader.fetch(track.contentHash).getOrElse { error ->
+            onProgress(FetchProgress(done.toSet(), track.contentHash, tracks.size, null))
+            val stream = uploader.fetchP2POrRelay(track).getOrElse { error ->
                 return@withContext if (fetched > 0) Result.success(fetched) else Result.failure(error)
             }
-            val written = response.use { body ->
+            onProgress(FetchProgress(done.toSet(), track.contentHash, tracks.size, stream.route))
+            val written = stream.response.use { body ->
                 mediaStoreWriter.write(
                     source = body.body.byteStream(),
                     title = track.title,
@@ -198,14 +255,44 @@ class LibrarySyncRepository @Inject constructor(
                     expectedHash = track.contentHash
                 )
             }
-            if (written == null) {
+            // Named for what actually happened. "Corrupted" was reported for an empty transfer
+            // too, which sent a broken relay looking like a damaged file for as long as it took
+            // somebody to read the hashing code.
+            val problem = when (written) {
+                is WriteResult.Written -> null
+                WriteResult.Empty ->
+                    "Nothing arrived for \"${track.title}\" — the device holding it did not send."
+                WriteResult.HashMismatch -> "\"${track.title}\" arrived corrupted."
+                is WriteResult.Failed -> "Couldn't save \"${track.title}\": ${written.reason}."
+            }
+            if (problem != null) {
                 return@withContext if (fetched > 0) {
                     Result.success(fetched)
                 } else {
-                    Result.failure(java.io.IOException("\"${track.title}\" arrived corrupted"))
+                    Result.failure(java.io.IOException(problem))
                 }
             }
             fetched++
+            done += track.contentHash
+            // Told to the server immediately. Waiting for the local scan to rediscover the file
+            // meant the next pass was still offered the same track, and fetched it again.
+            (written as? WriteResult.Written)?.let { result ->
+                libraryApi.reportFetchedHolding(track, result.uri.toString())
+                // Remember which file this is. The offer told us its hash, and hashing it again
+                // locally would mean reading every byte back off the disk — the expensive pass
+                // that runs only on charge. Without it the row sits with a null `contentHash`,
+                // and everything keyed on that hash silently skips the file: it can never be
+                // reported as gone, so deleting it is invisible to the fleet.
+                arrivedHashes += "${SourceType.LOCAL.idPrefix}${ContentUris.parseId(result.uri)}" to
+                    track.contentHash
+            }
+            onProgress(FetchProgress(done.toSet(), null, tracks.size, null))
+        }
+        // Applied after the scan, not before it: the rows are created by the local library scan
+        // from MediaStore, and until that has run there is nothing to attach a hash to.
+        if (arrivedHashes.isNotEmpty()) {
+            localSource.refresh()
+            arrivedHashes.forEach { (id, hash) -> trackDao.setContentHash(id, hash) }
         }
         Result.success(fetched)
     }
