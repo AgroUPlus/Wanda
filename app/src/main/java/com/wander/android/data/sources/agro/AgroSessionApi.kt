@@ -1,5 +1,8 @@
 package com.wander.android.data.sources.agro
 
+import com.wander.android.core.security.AgroVault
+import com.wander.android.core.security.SecureStorage
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
@@ -19,7 +22,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class AgroSessionApi @Inject constructor(
-    private val graphQl: AgroGraphQl
+    private val graphQl: AgroGraphQl,
+    private val secureStorage: SecureStorage
 ) {
 
     suspend fun activeNodes(): Result<List<AgroNode>> = graphQl.execute(
@@ -55,19 +59,37 @@ class AgroSessionApi @Inject constructor(
         """
         query SyncedSettings(${'$'}userId: String!) {
             syncedSettings(userId: ${'$'}userId) {
-                serverUrl serverUsername shareDomain shareHosts shareEnabled
+                settingsBlob hasServerUrl shareDomain shareHosts shareEnabled
             }
         }
         """.trimIndent(),
         buildJsonObject { put("userId", graphQl.userId) }
     ).map { data ->
-        (data["syncedSettings"] as? JsonObject)?.let {
+        (data["syncedSettings"] as? JsonObject)?.let { obj ->
+            val blob = obj.string("settingsBlob")
+            var serverUrl: String? = null
+            var serverUsername: String? = null
+
+            if (!blob.isNullOrBlank()) {
+                val vaultKey = secureStorage.agroVaultKey
+                if (vaultKey != null) {
+                    runCatching {
+                        val plaintext = AgroVault.openSettings(blob, vaultKey)
+                        val parsed = Json.parseToJsonElement(plaintext).jsonObject
+                        serverUrl = parsed["server_url"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+                            ?: parsed["serverUrl"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+                        serverUsername = parsed["server_username"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+                            ?: parsed["serverUsername"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+                    }
+                }
+            }
+
             AgroSyncedSettings(
-                serverUrl = it.string("serverUrl"),
-                serverUsername = it.string("serverUsername"),
-                shareDomain = it.string("shareDomain"),
-                shareHosts = it.string("shareHosts"),
-                shareEnabled = it.bool("shareEnabled")
+                serverUrl = serverUrl,
+                serverUsername = serverUsername,
+                shareDomain = obj.string("shareDomain"),
+                shareHosts = obj.string("shareHosts"),
+                shareEnabled = obj.bool("shareEnabled")
             )
         }
     }
@@ -75,9 +97,20 @@ class AgroSessionApi @Inject constructor(
     /**
      * Only the Navidrome address travels. The token is a credential, and `SyncedSettingsInput` has
      * nowhere to put one anyway — the other device still signs in for itself.
+     * Settings are sealed client-side under the account's vault key before sending.
      */
-    suspend fun pushSyncedSettings(serverUrl: String, serverUsername: String): Result<Unit> =
-        graphQl.execute(
+    suspend fun pushSyncedSettings(serverUrl: String, serverUsername: String): Result<Unit> {
+        val vaultKey = secureStorage.agroVaultKey
+            ?: return Result.failure(IllegalStateException("No vault key available to seal settings"))
+
+        val plaintextJson = buildJsonObject {
+            put("server_url", serverUrl)
+            put("server_username", serverUsername)
+        }.toString()
+
+        val sealedBlob = AgroVault.sealSettings(plaintextJson, vaultKey)
+
+        return graphQl.execute(
             """
             mutation UpdateSyncedSettings(${'$'}input: SyncedSettingsInput!) {
                 updateSyncedSettings(input: ${'$'}input) { updatedAt }
@@ -86,11 +119,30 @@ class AgroSessionApi @Inject constructor(
             buildJsonObject {
                 put("input", buildJsonObject {
                     put("userId", graphQl.userId)
-                    put("serverUrl", serverUrl)
-                    put("serverUsername", serverUsername)
+                    put("settingsBlob", sealedBlob)
+                    put("hasServerUrl", serverUrl.isNotBlank())
                 })
             }
         ).map { }
+    }
+
+    /** Enrols the account's vault key envelope with the Agro server. */
+    suspend fun enrolVaultKey(
+        userId: String = graphQl.userId,
+        vaultSalt: String,
+        vaultKeyWrapped: String
+    ): Result<Boolean> = graphQl.execute(
+        """
+        mutation EnrolVaultKey(${'$'}userId: String!, ${'$'}vaultSalt: String!, ${'$'}vaultKeyWrapped: String!) {
+            enrolVaultKey(userId: ${'$'}userId, vaultSalt: ${'$'}vaultSalt, vaultKeyWrapped: ${'$'}vaultKeyWrapped)
+        }
+        """.trimIndent(),
+        buildJsonObject {
+            put("userId", userId)
+            put("vaultSalt", vaultSalt)
+            put("vaultKeyWrapped", vaultKeyWrapped)
+        }
+    ).map { data -> data["enrolVaultKey"]?.jsonPrimitive?.booleanOrNull ?: false }
 
     /** Unregisters a device node from the Agro server. */
     suspend fun unregisterNode(deviceId: String = graphQl.deviceId): Result<Unit> =

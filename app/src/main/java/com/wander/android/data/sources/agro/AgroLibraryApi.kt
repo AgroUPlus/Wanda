@@ -56,7 +56,7 @@ enum class SyncMode {
     INDEX_ONLY;
 
     /** Whether a device without a track should be offered the bytes. */
-    val offersDownloads: Boolean get() = true
+    val offersDownloads: Boolean get() = this != NAVIDROME
 
     /** Whether a redundant local copy is safe to suggest removing. */
     val offersReclaim: Boolean get() = this == NAVIDROME

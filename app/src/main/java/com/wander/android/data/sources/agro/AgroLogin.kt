@@ -35,6 +35,15 @@ internal data class AgroSignup(
 )
 
 /**
+ * The device token and optional vault envelope returned by `/api/v1/login`.
+ */
+internal data class AgroLoginResult(
+    val token: String,
+    val vaultSalt: String?,
+    val vaultKeyWrapped: String?
+)
+
+/**
  * The endpoints that can be reached without an existing bearer token: signing up, and trading an
  * account passphrase for a device token.
  *
@@ -50,7 +59,7 @@ class AgroLogin @Inject constructor(
         serverUrl: String,
         username: String,
         passphrase: String
-    ): Result<String> = post(
+    ): Result<AgroLoginResult> = post(
         url = "$serverUrl/api/v1/login",
         body = buildJsonObject {
             put("username", username.trim())
@@ -58,10 +67,17 @@ class AgroLogin @Inject constructor(
             put("label", secureStorage.agroDevicePetname.ifEmpty { "Wanda Android" })
         }
     ).mapCatching { json ->
-        json["token"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+        val token = json["token"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
             ?: throw AgroAuthError.Server(
                 json["error"]?.jsonPrimitive?.contentOrNull ?: "Server returned no device token"
             )
+        val vaultSalt = json["vaultSalt"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+        val vaultKeyWrapped = json["vaultKeyWrapped"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+        AgroLoginResult(
+            token = token,
+            vaultSalt = vaultSalt,
+            vaultKeyWrapped = vaultKeyWrapped
+        )
     }
 
     /**
