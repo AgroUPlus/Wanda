@@ -362,6 +362,15 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         prefs.edit { putString(KEY_AGRO_PETNAME, petname.trim()) }
     }
 
+    var agroVaultKey: ByteArray?
+        get() = prefs.getString(KEY_AGRO_VAULT_KEY, null)?.let {
+            runCatching { AgroVault.decodeBase64(it) }.getOrNull()
+        }
+        set(value) = prefs.edit {
+            if (value == null) remove(KEY_AGRO_VAULT_KEY)
+            else putString(KEY_AGRO_VAULT_KEY, AgroVault.encodeBase64(value))
+        }
+
     private val _agroSyncSettings = MutableStateFlow(prefs.getBoolean(KEY_AGRO_SYNC_SETTINGS, false))
     val agroSyncSettings: StateFlow<Boolean> = _agroSyncSettings.asStateFlow()
 
@@ -372,7 +381,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
 
     fun clearAgroCredentials() {
         prefs.edit {
-            remove(KEY_AGRO_URL); remove(KEY_AGRO_USER); remove(KEY_AGRO_KEY); remove(KEY_AGRO_PETNAME)
+            remove(KEY_AGRO_URL); remove(KEY_AGRO_USER); remove(KEY_AGRO_KEY); remove(KEY_AGRO_PETNAME); remove(KEY_AGRO_VAULT_KEY)
         }
         _agroConfigured.value = false
     }
@@ -400,6 +409,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_AGRO_USER = "key_agro_user"
         private const val KEY_AGRO_KEY = "key_agro_key"
         private const val KEY_AGRO_PETNAME = "key_agro_petname"
+        private const val KEY_AGRO_VAULT_KEY = "key_agro_vault_key"
         private const val KEY_AGRO_SYNC_SETTINGS = "key_agro_sync_settings"
         private const val KEY_AGRO_DEVICE_ID = "key_agro_device_id"
         private const val KEY_AGRO_P2P_SYNC = "key_agro_p2p_sync"
