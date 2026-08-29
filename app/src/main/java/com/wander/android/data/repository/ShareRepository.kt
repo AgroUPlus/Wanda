@@ -1,5 +1,6 @@
 package com.wander.android.data.repository
 
+import com.wander.android.core.playback.SpeedAndPitch
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.ShareKind
@@ -41,24 +42,32 @@ class ShareRepository @Inject constructor(
     fun canShare(source: SourceType): Boolean =
         musicRepository.sources.any { it.sourceType == source && it.capabilities.share }
 
-    suspend fun share(track: UnifiedTrack) = share(
+    /**
+     * [speedPitch] is how the sharer was listening, and travels on the link.
+     *
+     * Only the player knows it, so every other screen shares at the defaults and the parameter
+     * never appears in their links. Sharing a track you have pitched down is sharing the version
+     * you meant rather than the one the file happens to hold.
+     */
+    suspend fun share(track: UnifiedTrack, speedPitch: SpeedAndPitch = SpeedAndPitch()) = share(
         ShareTarget(
             kind = ShareKind.TRACK,
             source = track.source,
             id = track.id,
             title = track.title,
             subtitle = track.artist
-        )
+        ),
+        speedPitch
     )
 
-    suspend fun share(target: ShareTarget) {
+    suspend fun share(target: ShareTarget, speedPitch: SpeedAndPitch = SpeedAndPitch()) {
         val source = musicRepository.sources
             .firstOrNull { it.sourceType == target.source && it.capabilities.share }
             ?: return
 
         source.createShareLink(target).fold(
             onSuccess = { url ->
-                _links.tryEmit(ShareLink(target = target, url = shareLinkRewriter.rewrite(url)))
+                _links.tryEmit(ShareLink(target = target, url = shareLinkRewriter.rewrite(url, speedPitch)))
             },
             onFailure = {
                 // Sharing is off by default on a fresh Navidrome, and the server says so — which

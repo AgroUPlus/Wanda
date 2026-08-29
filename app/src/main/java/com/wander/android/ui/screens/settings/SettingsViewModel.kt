@@ -8,10 +8,13 @@ import com.wander.android.core.security.SecureStorage
 import com.wander.android.core.sync.LibrarySyncScheduler
 import com.wander.android.core.sync.LocalFileDeleter
 import com.wander.android.core.update.UpdateCheckResult
+import com.wander.android.core.update.ReleaseCheckScheduler
 import com.wander.android.core.update.UpdateChecker
+import com.wander.android.data.repository.IncognitoRepository
 import com.wander.android.data.repository.LibrarySyncRepository
 import com.wander.android.data.repository.SyncProgress
 import com.wander.android.data.sources.agro.AgroClient
+import com.wander.android.data.sources.agro.AgroAccountApi
 import com.wander.android.data.sources.agro.AgroProfileApi
 import com.wander.android.data.sources.agro.AgroSessionApi
 import com.wander.android.data.sources.agro.AgroSyncedSettings
@@ -48,7 +51,10 @@ internal class SettingsViewModel @Inject constructor(
     private val librarySync: LibrarySyncRepository,
     private val librarySyncScheduler: LibrarySyncScheduler,
     private val localFileDeleter: LocalFileDeleter,
-    private val updateChecker: UpdateChecker
+    private val updateChecker: UpdateChecker,
+    private val incognitoRepository: IncognitoRepository,
+    private val releaseCheckScheduler: ReleaseCheckScheduler,
+    private val accountApi: AgroAccountApi
 ) : ViewModel() {
 
     val appVersion: String get() = com.wander.android.BuildConfig.VERSION_NAME
@@ -69,6 +75,20 @@ internal class SettingsViewModel @Inject constructor(
     }
 
     val isAutoUpdateCheckEnabled: StateFlow<Boolean> = secureStorage.isAutoUpdateCheckEnabled
+
+    val isReleaseNotificationEnabled: StateFlow<Boolean> =
+        secureStorage.isReleaseNotificationEnabled
+
+    /**
+     * Turning it on schedules the daily check; turning it off cancels it.
+     *
+     * The work is scheduled here rather than left to the next launch, so the switch takes effect
+     * when it is touched — a setting that only starts working after a restart reads as broken.
+     */
+    fun setReleaseNotificationEnabled(enabled: Boolean) {
+        secureStorage.setReleaseNotificationEnabled(enabled)
+        if (enabled) releaseCheckScheduler.enable() else releaseCheckScheduler.disable()
+    }
     fun setAutoUpdateCheckEnabled(enabled: Boolean) = secureStorage.setAutoUpdateCheckEnabled(enabled)
 
     val navidromeConnected: StateFlow<Boolean> = secureStorage.navidromeConfigured
@@ -105,8 +125,11 @@ internal class SettingsViewModel @Inject constructor(
 
     fun setShareDomain(domain: String) = secureStorage.setShareDomain(domain)
 
-    private val _isIncognito = MutableStateFlow(secureStorage.isIncognitoMode)
-    val isIncognito: StateFlow<Boolean> = _isIncognito.asStateFlow()
+    /**
+     * Read from the repository, not from storage, so a switch flipped on another of this account's
+     * devices is reflected here rather than only after a restart.
+     */
+    val isIncognito: StateFlow<Boolean> = incognitoRepository.isIncognito
 
     private val _cacheBytes = MutableStateFlow(0L)
     val cacheBytes: StateFlow<Long> = _cacheBytes.asStateFlow()
@@ -218,6 +241,17 @@ internal class SettingsViewModel @Inject constructor(
     // ── Library sync ────────────────────────────────────────────────────────────────────────
 
     val librarySyncEnabled: StateFlow<Boolean> = secureStorage.agroLibrarySyncFlow
+    val p2pSyncEnabled: StateFlow<Boolean> = secureStorage.agroP2pSyncFlow
+    val serverArchiveEnabled: StateFlow<Boolean> = secureStorage.agroServerArchiveFlow
+
+    /**
+     * Whether the server lets this account archive.
+     *
+     * Starts false so the row is never briefly offered to an account that cannot use it: showing
+     * it enabled and then disabling it a moment later reads as the app changing its mind.
+     */
+    private val _canArchive = MutableStateFlow(false)
+    val canArchive: StateFlow<Boolean> = _canArchive.asStateFlow()
     val librarySyncProgress: StateFlow<SyncProgress> = librarySync.progress
 
     val pendingUploads: StateFlow<Int> = librarySync.pendingUploadCount
@@ -268,6 +302,26 @@ internal class SettingsViewModel @Inject constructor(
     /** Whether this device can delete other apps' media at all — API 30+ only. */
     val canDeleteLocalFiles: Boolean get() = localFileDeleter.isSupported
 
+    fun setP2pSync(enabled: Boolean) {
+        secureStorage.setAgroP2pSync(enabled)
+        if (enabled || secureStorage.agroServerArchive) {
+            librarySyncScheduler.enablePeriodicSync()
+            librarySyncScheduler.syncNow()
+        } else {
+            librarySyncScheduler.disablePeriodicSync()
+        }
+    }
+
+    fun setServerArchive(enabled: Boolean) {
+        secureStorage.setAgroServerArchive(enabled)
+        if (enabled || secureStorage.agroP2pSync) {
+            librarySyncScheduler.enablePeriodicSync()
+            librarySyncScheduler.syncNow()
+        } else {
+            librarySyncScheduler.disablePeriodicSync()
+        }
+    }
+
     /**
      * Turning it on schedules the background pass *and* kicks one off now, so the user sees
      * something happen rather than waiting for the next time the phone is charging on Wi-Fi.
@@ -308,15 +362,33 @@ internal class SettingsViewModel @Inject constructor(
     init {
         refreshCacheSize()
         refreshSyncedSettings()
+        // The account may have been made quiet from another device since this one last looked.
+        viewModelScope.launch { incognitoRepository.refresh() }
+        refreshPermissions()
+    }
+
+    /** Asked once per screen. The permission changes on the server, not on this device. */
+    private fun refreshPermissions() {
+        if (!secureStorage.agroConfigured.value) return
+        viewModelScope.launch {
+            accountApi.permissions().onSuccess { _canArchive.value = it.canArchive }
+        }
     }
 
     fun setMonetDynamic(enabled: Boolean) = secureStorage.setMonetDynamic(enabled)
     fun setAmoledBlack(enabled: Boolean) = secureStorage.setAmoledBlack(enabled)
     fun setOfflineMode(enabled: Boolean) = secureStorage.setOfflineMode(enabled)
 
+    /**
+     * Goes quiet, or stops.
+     *
+     * Routed through [IncognitoRepository] rather than written straight to storage, because with
+     * an Agro server paired the setting belongs to the *account*: going quiet here while another
+     * signed-in device keeps announcing is not going quiet at all. With no server it still lands
+     * in local storage exactly as before.
+     */
     fun setIncognito(enabled: Boolean) {
-        secureStorage.isIncognitoMode = enabled
-        _isIncognito.value = enabled
+        viewModelScope.launch { incognitoRepository.set(enabled) }
     }
 
     fun disconnectNavidrome() = navidromeSource.logout()
