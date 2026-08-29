@@ -101,6 +101,15 @@ internal sealed interface AgroLiveMessage {
     /** The playing session or the device list moved. */
     data object Session : AgroLiveMessage
 
+    /**
+     * A synced setting changed on another of this account's devices.
+     *
+     * Carries nothing. The values are small, the server owns them, and a payload here would be a
+     * second place they could be read from — one that goes stale the moment a frame is missed.
+     * The app re-asks instead.
+     */
+    data object Settings : AgroLiveMessage
+
     /** The library changed, or this device is being offered something it lacks. */
     data class Library(val newTrackCount: Int, val albums: List<String>) : AgroLiveMessage
 

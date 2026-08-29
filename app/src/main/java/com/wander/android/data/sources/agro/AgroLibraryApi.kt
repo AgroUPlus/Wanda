@@ -17,6 +17,15 @@ import kotlinx.serialization.json.put
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** A peer source device that holds this track. */
+data class PeerSource(
+    val deviceId: String,
+    val petname: String,
+    val lanAddress: String? = null,
+    val isOnline: Boolean = false,
+    val isServerArchive: Boolean = false
+)
+
 /** A track another device holds that this one does not. */
 data class MissingTrack(
     val contentHash: String,
@@ -26,7 +35,8 @@ data class MissingTrack(
     val durationMs: Long,
     val sizeBytes: Long,
     /** Container as the server indexed it — "flac", "mp3", "m4a". Null when it never learned. */
-    val format: String? = null
+    val format: String? = null,
+    val peerSources: List<PeerSource> = emptyList()
 )
 
 /**
@@ -46,7 +56,7 @@ enum class SyncMode {
     INDEX_ONLY;
 
     /** Whether a device without a track should be offered the bytes. */
-    val offersDownloads: Boolean get() = this != NAVIDROME
+    val offersDownloads: Boolean get() = true
 
     /** Whether a redundant local copy is safe to suggest removing. */
     val offersReclaim: Boolean get() = this == NAVIDROME
@@ -137,6 +147,46 @@ class AgroLibraryApi @Inject constructor(
         }
     }
 
+    /**
+     * Tells the server this device now holds a track it has just fetched.
+     *
+     * Reported the moment the bytes land, rather than waiting for the local library scan to
+     * rediscover the file and the next sync pass to report it. Without this the server went on
+     * listing the track as missing here, so the very next pass fetched it again — the same songs
+     * arrived two and three times, landing as "Wedding Hall.mp3" and "Wedding Hall (1).mp3".
+     *
+     * The metadata comes from the offer, which is the server's own index entry for the file, so
+     * nothing has to be re-read from disk to send it.
+     */
+    suspend fun reportFetchedHolding(track: MissingTrack, localRef: String?): Result<Int> {
+        val mutation = """
+            mutation ReportHoldings(${'$'}userId: String!, ${'$'}deviceId: String!, ${'$'}tracks: [HoldingInput!]!) {
+              reportHoldings(userId: ${'$'}userId, deviceId: ${'$'}deviceId, tracks: ${'$'}tracks)
+            }
+        """.trimIndent()
+
+        val variables = buildJsonObject {
+            put("userId", graphQl.userId)
+            put("deviceId", graphQl.deviceId)
+            put("tracks", buildJsonArray {
+                add(buildJsonObject {
+                    put("contentHash", track.contentHash)
+                    put("title", track.title)
+                    put("artist", track.artist)
+                    track.album?.let { put("album", it) }
+                    put("durationMs", track.durationMs)
+                    put("sizeBytes", track.sizeBytes)
+                    track.format?.let { put("format", it) }
+                    localRef?.let { put("localRef", it) }
+                })
+            })
+        }
+
+        return graphQl.execute(mutation, variables).map { data ->
+            data["reportHoldings"]?.jsonPrimitive?.int ?: 0
+        }
+    }
+
     /** Forgets holdings this device no longer has — deleted locally, or moved to the server. */
     suspend fun forgetHoldings(hashes: List<String>): Result<Int> {
         if (hashes.isEmpty()) return Result.success(0)
@@ -167,6 +217,7 @@ class AgroLibraryApi @Inject constructor(
             query Missing(${'$'}userId: String!, ${'$'}deviceId: String!, ${'$'}limit: Int) {
               missingOnDevice(userId: ${'$'}userId, deviceId: ${'$'}deviceId, limit: ${'$'}limit) {
                 contentHash title artist album durationMs sizeBytes format
+                peerSources { deviceId petname lanAddress isOnline isServerArchive }
               }
             }
         """.trimIndent()
@@ -223,6 +274,17 @@ class AgroLibraryApi @Inject constructor(
 
     private fun parseTrack(element: kotlinx.serialization.json.JsonElement): MissingTrack? {
         val obj = element as? JsonObject ?: return null
+        val peerSources = obj["peerSources"]?.jsonArray?.mapNotNull { item ->
+            val p = item as? JsonObject ?: return@mapNotNull null
+            PeerSource(
+                deviceId = p["deviceId"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null,
+                petname = p["petname"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                lanAddress = p["lanAddress"]?.jsonPrimitive?.contentOrNull,
+                isOnline = p["isOnline"]?.jsonPrimitive?.contentOrNull?.toBooleanStrictOrNull() ?: false,
+                isServerArchive = p["isServerArchive"]?.jsonPrimitive?.contentOrNull?.toBooleanStrictOrNull() ?: false
+            )
+        } ?: emptyList()
+
         return MissingTrack(
             contentHash = obj["contentHash"]?.jsonPrimitive?.contentOrNull ?: return null,
             title = obj["title"]?.jsonPrimitive?.contentOrNull.orEmpty(),
@@ -230,7 +292,8 @@ class AgroLibraryApi @Inject constructor(
             album = obj["album"]?.jsonPrimitive?.contentOrNull,
             durationMs = obj["durationMs"]?.jsonPrimitive?.long ?: 0L,
             sizeBytes = obj["sizeBytes"]?.jsonPrimitive?.long ?: 0L,
-            format = obj["format"]?.jsonPrimitive?.contentOrNull
+            format = obj["format"]?.jsonPrimitive?.contentOrNull,
+            peerSources = peerSources
         )
     }
 
