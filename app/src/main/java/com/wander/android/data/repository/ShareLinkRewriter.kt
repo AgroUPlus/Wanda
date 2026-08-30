@@ -55,7 +55,11 @@ class ShareLinkRewriter @Inject constructor(
     internal fun domain(): String =
         secureStorage.agroShareDomain.value.ifBlank { secureStorage.shareDomain.value }
 
-    suspend fun rewrite(url: String, speedPitch: SpeedAndPitch = SpeedAndPitch()): String {
+    suspend fun rewrite(
+        url: String,
+        speedPitch: SpeedAndPitch = SpeedAndPitch(),
+        expiresAt: Long? = null
+    ): String {
         val base = shareBase() ?: return url
 
         val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return url
@@ -69,12 +73,15 @@ class ShareLinkRewriter @Inject constructor(
                 // Agro's link manager; without the source, deleting it there cannot say whether
                 // anything is left behind on Navidrome.
                 val mutation = "mutation CreateShortLink(\$userId: String, \$targetUrl: String!, " +
-                    "\$source: String) { createShortLink(userId: \$userId, targetUrl: " +
-                    "\$targetUrl, source: \$source) }"
+                    "\$source: String, \$expiresAt: Int) { createShortLink(userId: \$userId, targetUrl: " +
+                    "\$targetUrl, source: \$source, expiresAt: \$expiresAt) }"
                 val vars = buildJsonObject {
                     put("userId", agroGraphQl.userId)
                     put("targetUrl", url)
                     put("source", sourceOf(uri))
+                    if (expiresAt != null) {
+                        put("expiresAt", expiresAt)
+                    }
                 }
                 agroGraphQl.execute(mutation, vars).getOrNull()
                     ?.get("createShortLink")?.jsonPrimitive?.contentOrNull
