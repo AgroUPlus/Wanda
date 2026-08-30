@@ -271,13 +271,13 @@ internal class SettingsViewModel @Inject constructor(
      * runs. Null is left null on failure — an unknown quota drawn as an empty bar would be a
      * claim, and a wrong one.
      */
-    private val _storageUsage = MutableStateFlow<StorageUsage?>(null)
-    val storageUsage: StateFlow<StorageUsage?> = _storageUsage.asStateFlow()
+    private val _serverTotalTracks = MutableStateFlow(0)
+    val serverTotalTracks: StateFlow<Int> = _serverTotalTracks.asStateFlow()
 
-    fun refreshStorageUsage() {
+    fun refreshServerTotalTracks() {
         if (!secureStorage.agroLibrarySync) return
         viewModelScope.launch {
-            _storageUsage.value = librarySync.storageUsage().getOrNull()
+            _serverTotalTracks.value = librarySync.stats().getOrNull()?.trackCount ?: 0
         }
     }
 

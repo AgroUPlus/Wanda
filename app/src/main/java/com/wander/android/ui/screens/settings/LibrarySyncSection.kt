@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -11,7 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.repository.SyncProgress
-import com.wander.android.data.sources.agro.StorageUsage
+import kotlin.math.max
 
 /**
  * Library sync in Settings.
@@ -34,8 +35,8 @@ internal fun LazyListScope.librarySyncSection(
     canDelete: Boolean,
     /** Audio files stored on this device. Zero means there is nothing here to send. */
     localTrackCount: Int,
-    /** Null until the server has answered, or when it could not be asked. */
-    storageUsage: StorageUsage?,
+    /** The total number of tracks the server knows about, from any device or archive. */
+    serverTotalTracks: Int,
     incognito: Boolean
 ) {
     item(key = "library_sync_section") { SettingsSection("Device & library sync") }
@@ -46,7 +47,7 @@ internal fun LazyListScope.librarySyncSection(
             subtitle = if (incognito) {
                 "Paused — incognito is on"
             } else {
-                "Share library index for direct LAN & relay transfers. 0 server disk used."
+                "Share songs between devices and index with server"
             },
             checked = p2pEnabled && !incognito,
             onCheckedChange = onP2pEnabledChange,
@@ -57,9 +58,6 @@ internal fun LazyListScope.librarySyncSection(
     item(key = "server_archive_toggle") {
         SettingsToggle(
             title = "Archive to server",
-            // The permission is the server's to grant, so the row says whether *this* account has
-            // it rather than naming a role. "(Admin)" was a guess at why it might not work, shown
-            // even to accounts that could archive perfectly well.
             subtitle = when {
                 incognito -> "Paused — incognito is on"
                 !canArchive -> "Your account is not allowed to upload files to this server."
@@ -71,6 +69,21 @@ internal fun LazyListScope.librarySyncSection(
         )
     }
 
+    if (canArchive) {
+        item(key = "library_sync_delete") {
+            SettingsRow(
+                title = "Free up space on this device",
+                subtitle = if (canDelete) {
+                    "Delete the $syncedCount files your server already holds"
+                } else {
+                    "Nothing to remove — the server has confirmed no files yet"
+                },
+                onClick = onReviewDeletions,
+                destructive = canDelete
+            )
+        }
+    }
+
     if ((!p2pEnabled && !archiveEnabled) || incognito) return
 
     item(key = "library_sync_status") {
@@ -80,29 +93,45 @@ internal fun LazyListScope.librarySyncSection(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text(
-                text = if (localTrackCount == 0) {
-                    // The single most confusing state: everything is configured correctly, the
-                    // counters read zero, and nothing explains why. This feature only ever sends
-                    // files stored *on this device* — a library streamed from Navidrome has
-                    // nothing for it to do. One line is enough to say so.
-                    "Nothing to send — no music files stored on this device"
-                } else {
-                    "$syncedCount of $localTrackCount local tracks on the server · " +
-                        "$pendingCount still to send"
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 2.dp)
-            )
+            
+            if (localTrackCount == 0 && serverTotalTracks == 0) {
+                Text(
+                    text = "Nothing to send — no music files stored on this device",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            } else {
+                val maxTracks = maxOf(serverTotalTracks, localTrackCount)
+                val label = buildString {
+                    append("$localTrackCount on this device")
+                    if (serverTotalTracks > 0) append(" · $serverTotalTracks on server")
+                    if (pendingCount > 0) append(" · $pendingCount pending sync")
+                }
+                
+                LinearProgressIndicator(
+                    progress = { if (maxTracks > 0) syncedCount.toFloat() / maxTracks else 0f },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp, bottom = 4.dp),
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+            
             if (progress.running) {
                 Text(
                     text = progress.currentTitle?.let { "Uploading $it" } ?: "Working…",
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(top = 6.dp)
+                    modifier = Modifier.padding(top = 8.dp)
                 )
-                // Determinate only once a total is known; an indeterminate bar that later jumps to
-                // a percentage reads as a restart.
                 if (progress.total > 0) {
                     LinearWavyProgressIndicator(
                         progress = { progress.done.toFloat() / progress.total },
@@ -121,17 +150,9 @@ internal fun LazyListScope.librarySyncSection(
         }
     }
 
-    storageUsage?.let { usage ->
-        item(key = "library_sync_quota") { StorageQuotaRow(usage) }
-    }
-
     item(key = "library_sync_now") {
         SettingsRow(
             title = "Sync now",
-            // "Upload straight away" was shown whether or not anything would be uploaded. With
-            // archiving off the run only fingerprints files and tells the server which ones this
-            // device has — no audio leaves the phone, and saying otherwise made a metadata sync
-            // look like it was shipping the library somewhere.
             subtitle = when {
                 progress.running -> "Running…"
                 archiveEnabled -> "Send files to the server now"
@@ -140,62 +161,4 @@ internal fun LazyListScope.librarySyncSection(
             onClick = onSyncNow
         )
     }
-
-    item(key = "library_sync_delete") {
-        SettingsRow(
-            title = "Free up space on this device",
-            // The wording is the safety argument: only files the server has *confirmed* are
-            // offered, so nothing is ever the last copy.
-            subtitle = if (canDelete) {
-                "Delete the $syncedCount files your server already holds"
-            } else {
-                "Nothing to remove — the server has confirmed no files yet"
-            },
-            onClick = onReviewDeletions,
-            destructive = canDelete
-        )
-    }
 }
-
-/**
- * The storage pool: how much of the account's allowance is gone.
- *
- * An uncapped account gets no bar at all rather than an empty or a full one. Both would be a
- * claim about a limit that does not exist — the admin owns the disk, and drawing a bar for them
- * invents a ceiling to worry about.
- */
-@Composable
-private fun StorageQuotaRow(usage: StorageUsage) {
-    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
-        Text(text = "Storage pool", style = MaterialTheme.typography.titleMedium)
-
-        val fraction = usage.fraction
-        if (fraction != null) {
-            LinearWavyProgressIndicator(
-                progress = { fraction },
-                color = if (fraction >= NearlyFull) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.primary
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp, bottom = 6.dp)
-            )
-        }
-
-        Text(
-            text = when {
-                usage.quotaBytes == null ->
-                    "${formatBytes(usage.usedBytes)} used · no limit on this account"
-                else ->
-                    "${formatBytes(usage.usedBytes)} of ${formatBytes(usage.quotaBytes)} used"
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-/** Where the bar turns red — late enough not to nag, early enough to still act on. */
-private const val NearlyFull = 0.9f

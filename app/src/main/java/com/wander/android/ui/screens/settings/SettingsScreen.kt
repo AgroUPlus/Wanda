@@ -67,7 +67,7 @@ internal fun SettingsScreen(
     LaunchedEffect(state.agroPaired) {
         viewModel.refreshAgroConnection()
         viewModel.refreshAgroVisibility()
-        viewModel.refreshStorageUsage()
+        viewModel.refreshServerTotalTracks()
         viewModel.refreshYouTubeAccount()
     }
 
@@ -157,7 +157,7 @@ internal fun SettingsScreen(
                         syncedTracks = state.syncedTracks,
                         localTracks = state.localTracks,
                         incognito = state.incognito,
-                        storageUsage = state.storageUsage,
+                        serverTotalTracks = state.serverTotalTracks,
                         syncProgress = state.syncProgress,
                         filesLandInNavidrome = state.navidrome,
                         onSyncNow = viewModel::syncLibraryNow,
