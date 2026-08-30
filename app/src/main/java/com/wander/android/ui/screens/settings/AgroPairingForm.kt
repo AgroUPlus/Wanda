@@ -69,6 +69,7 @@ internal fun AgroPairingForm(
                 }
             },
             enabled = enabled,
+            shapes = ButtonDefaults.shapes(),
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(
