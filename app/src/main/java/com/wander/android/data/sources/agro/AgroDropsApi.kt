@@ -53,7 +53,7 @@ internal class AgroDropsApi @Inject constructor(
     ).map { data -> data["unreadDropCount"]?.jsonPrimitive?.longOrNull ?: 0L }
 
     /**
-     * Hands a track to a friend, encrypting notes with recipient's public key.
+     * Hands a track to a friend, encrypting notes with recipient's public key if available.
      */
     suspend fun drop(
         to: String,
@@ -66,20 +66,24 @@ internal class AgroDropsApi @Inject constructor(
         note: String? = null,
         recipientPublicKey: String? = null
     ): Result<AgroDrop> {
-        val (sealedCiphertext, isEncrypted) = if (!note.isNullOrBlank()) {
-            if (recipientPublicKey.isNullOrBlank()) {
-                return Result.failure(
-                    IllegalStateException("Recipient @$to has not published their E2EE public key yet. Plaintext notes are disabled.")
-                )
+        val trimmedNote = note?.trim()?.takeIf { it.isNotEmpty() }
+        val (sealedCiphertext, plainNote, isEncrypted) = if (trimmedNote != null) {
+            val sealed = if (!recipientPublicKey.isNullOrBlank()) {
+                try {
+                    identityKeyManager.sealNote(recipientPublicKey, trimmedNote)
+                } catch (e: Exception) {
+                    null
+                }
+            } else {
+                null
             }
-            val sealed = try {
-                identityKeyManager.sealNote(recipientPublicKey, note)
-            } catch (e: Exception) {
-                return Result.failure(e)
+            if (sealed != null) {
+                Triple(sealed, null, true)
+            } else {
+                Triple(null, trimmedNote, false)
             }
-            Pair(sealed, true)
         } else {
-            Pair(null, false)
+            Triple(null, null, false)
         }
 
         return graphQl.execute(
@@ -87,13 +91,13 @@ internal class AgroDropsApi @Inject constructor(
             mutation Drop(
                 ${'$'}to: String!, ${'$'}trackTitle: String!, ${'$'}artistName: String!,
                 ${'$'}albumName: String, ${'$'}artworkUrl: String, ${'$'}contentHash: String,
-                ${'$'}trackUri: String, ${'$'}noteCiphertext: String, ${'$'}isEncrypted: Boolean
+                ${'$'}trackUri: String, ${'$'}note: String, ${'$'}noteCiphertext: String, ${'$'}isEncrypted: Boolean
             ) {
                 dropTrack(
                     to: ${'$'}to, trackTitle: ${'$'}trackTitle, artistName: ${'$'}artistName,
                     albumName: ${'$'}albumName, artworkUrl: ${'$'}artworkUrl,
                     contentHash: ${'$'}contentHash, trackUri: ${'$'}trackUri,
-                    noteCiphertext: ${'$'}noteCiphertext, isEncrypted: ${'$'}isEncrypted
+                    note: ${'$'}note, noteCiphertext: ${'$'}noteCiphertext, isEncrypted: ${'$'}isEncrypted
                 ) { $DROP_FIELDS }
             }
             """.trimIndent(),
@@ -105,6 +109,7 @@ internal class AgroDropsApi @Inject constructor(
                 put("artworkUrl", artworkUrl)
                 put("contentHash", contentHash)
                 put("trackUri", trackUri)
+                put("note", plainNote)
                 put("noteCiphertext", sealedCiphertext)
                 put("isEncrypted", isEncrypted)
             }

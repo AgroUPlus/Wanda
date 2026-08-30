@@ -51,6 +51,7 @@ internal class DropToFriendViewModel @Inject constructor(
         if (_sending.value) return
         _sending.value = true
         viewModelScope.launch {
+            val recipientPublicKey = friends.value.find { it.username.equals(to, ignoreCase = true) }?.publicKey
             val result = drops.drop(
                 to = to,
                 trackTitle = track.title,
@@ -60,7 +61,8 @@ internal class DropToFriendViewModel @Inject constructor(
                 // Only ever the id this device already publishes for handoff. There is no hash for
                 // a streamed track, and inventing one would be a reference that resolves nowhere.
                 trackUri = track.id,
-                note = note.takeIf { it.isNotBlank() }
+                note = note.takeIf { it.isNotBlank() },
+                recipientPublicKey = recipientPublicKey
             )
             _sending.value = false
             onDone(result.exceptionOrNull())
