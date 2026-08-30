@@ -22,7 +22,8 @@ import javax.inject.Singleton
  */
 @Singleton
 internal class AgroDropsApi @Inject constructor(
-    private val graphQl: AgroGraphQl
+    private val graphQl: AgroGraphQl,
+    private val identityKeyManager: com.wander.android.core.security.IdentityKeyManager
 ) {
     suspend fun inbox(limit: Int = 100): Result<List<AgroDrop>> = graphQl.execute(
         """
@@ -30,7 +31,9 @@ internal class AgroDropsApi @Inject constructor(
         """.trimIndent(),
         buildJsonObject { put("limit", limit) }
     ).map { data ->
-        (data["inbox"] as? JsonArray).orEmpty().map { it.jsonObject.toDrop() }
+        (data["inbox"] as? JsonArray).orEmpty().map {
+            decryptDropIfNeeded(it.jsonObject.toDrop())
+        }
     }
 
     suspend fun sent(limit: Int = 100): Result<List<AgroDrop>> = graphQl.execute(
@@ -39,7 +42,9 @@ internal class AgroDropsApi @Inject constructor(
         """.trimIndent(),
         buildJsonObject { put("limit", limit) }
     ).map { data ->
-        (data["sentDrops"] as? JsonArray).orEmpty().map { it.jsonObject.toDrop() }
+        (data["sentDrops"] as? JsonArray).orEmpty().map {
+            decryptDropIfNeeded(it.jsonObject.toDrop())
+        }
     }
 
     suspend fun unreadCount(): Result<Long> = graphQl.execute(
@@ -48,11 +53,7 @@ internal class AgroDropsApi @Inject constructor(
     ).map { data -> data["unreadDropCount"]?.jsonPrimitive?.longOrNull ?: 0L }
 
     /**
-     * Hands a track to a friend.
-     *
-     * [contentHash] and [trackUri] are sent when this device happens to know them and omitted when
-     * it does not — a drop from a backend with no stable identity is still a drop, and refusing to
-     * send one would make the action available only for local files.
+     * Hands a track to a friend, encrypting notes with recipient's public key.
      */
     suspend fun drop(
         to: String,
@@ -62,42 +63,59 @@ internal class AgroDropsApi @Inject constructor(
         artworkUrl: String? = null,
         contentHash: String? = null,
         trackUri: String? = null,
-        note: String? = null
-    ): Result<AgroDrop> = graphQl.execute(
-        """
-        mutation Drop(
-            ${'$'}to: String!, ${'$'}trackTitle: String!, ${'$'}artistName: String!,
-            ${'$'}albumName: String, ${'$'}artworkUrl: String, ${'$'}contentHash: String,
-            ${'$'}trackUri: String, ${'$'}note: String
-        ) {
-            dropTrack(
-                to: ${'$'}to, trackTitle: ${'$'}trackTitle, artistName: ${'$'}artistName,
-                albumName: ${'$'}albumName, artworkUrl: ${'$'}artworkUrl,
-                contentHash: ${'$'}contentHash, trackUri: ${'$'}trackUri, note: ${'$'}note
-            ) { $DROP_FIELDS }
+        note: String? = null,
+        recipientPublicKey: String? = null
+    ): Result<AgroDrop> {
+        val (sealedCiphertext, isEncrypted) = if (!note.isNullOrBlank()) {
+            if (recipientPublicKey.isNullOrBlank()) {
+                return Result.failure(
+                    IllegalStateException("Recipient @$to has not published their E2EE public key yet. Plaintext notes are disabled.")
+                )
+            }
+            val sealed = try {
+                identityKeyManager.sealNote(recipientPublicKey, note)
+            } catch (e: Exception) {
+                return Result.failure(e)
+            }
+            Pair(sealed, true)
+        } else {
+            Pair(null, false)
         }
-        """.trimIndent(),
-        buildJsonObject {
-            put("to", to.trim().lowercase())
-            put("trackTitle", trackTitle)
-            put("artistName", artistName)
-            put("albumName", albumName)
-            put("artworkUrl", artworkUrl)
-            put("contentHash", contentHash)
-            put("trackUri", trackUri)
-            put("note", note?.takeIf { it.isNotBlank() })
+
+        return graphQl.execute(
+            """
+            mutation Drop(
+                ${'$'}to: String!, ${'$'}trackTitle: String!, ${'$'}artistName: String!,
+                ${'$'}albumName: String, ${'$'}artworkUrl: String, ${'$'}contentHash: String,
+                ${'$'}trackUri: String, ${'$'}noteCiphertext: String, ${'$'}isEncrypted: Boolean
+            ) {
+                dropTrack(
+                    to: ${'$'}to, trackTitle: ${'$'}trackTitle, artistName: ${'$'}artistName,
+                    albumName: ${'$'}albumName, artworkUrl: ${'$'}artworkUrl,
+                    contentHash: ${'$'}contentHash, trackUri: ${'$'}trackUri,
+                    noteCiphertext: ${'$'}noteCiphertext, isEncrypted: ${'$'}isEncrypted
+                ) { $DROP_FIELDS }
+            }
+            """.trimIndent(),
+            buildJsonObject {
+                put("to", to.trim().lowercase())
+                put("trackTitle", trackTitle)
+                put("artistName", artistName)
+                put("albumName", albumName)
+                put("artworkUrl", artworkUrl)
+                put("contentHash", contentHash)
+                put("trackUri", trackUri)
+                put("noteCiphertext", sealedCiphertext)
+                put("isEncrypted", isEncrypted)
+            }
+        ).mapCatching { data ->
+            data["dropTrack"]?.jsonObject?.toDrop()?.let { decryptDropIfNeeded(it) }
+                ?: error("the server accepted the drop but did not describe it")
         }
-    ).mapCatching { data ->
-        data["dropTrack"]?.jsonObject?.toDrop()
-            ?: error("the server accepted the drop but did not describe it")
     }
 
     /**
      * Everything exchanged with one person, oldest first, both directions in one list.
-     *
-     * One request rather than intersecting `inbox` and `sentDrops` on the device: the server can
-     * order the two sides against each other, and a thread stitched together from two separately
-     * paged lists would be missing whichever half fell off the end of its page.
      */
     suspend fun conversation(username: String, limit: Int = 200): Result<List<AgroDrop>> =
         graphQl.execute(
@@ -111,8 +129,20 @@ internal class AgroDropsApi @Inject constructor(
                 put("limit", limit)
             }
         ).mapCatching { data ->
-            (data["conversation"] as? JsonArray).orEmpty().map { it.jsonObject.toDrop() }
+            (data["conversation"] as? JsonArray).orEmpty().map {
+                decryptDropIfNeeded(it.jsonObject.toDrop())
+            }
         }
+
+    private fun decryptDropIfNeeded(drop: AgroDrop): AgroDrop {
+        if (!drop.isEncrypted || drop.noteCiphertext.isNullOrBlank()) return drop
+        return try {
+            val decrypted = identityKeyManager.openNote(drop.noteCiphertext)
+            drop.copy(note = decrypted)
+        } catch (_: Exception) {
+            drop.copy(note = "[Encrypted Note]")
+        }
+    }
 
     /**
      * Reacts to a received drop. A null or blank [emoji] clears the reaction, so tapping the same
