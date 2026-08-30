@@ -34,7 +34,7 @@ internal fun LazyListScope.syncTab(
     syncedTracks: Int,
     localTracks: Int,
     incognito: Boolean,
-    storageUsage: com.wander.android.data.sources.agro.StorageUsage?,
+    serverTotalTracks: Int,
     syncProgress: SyncProgress,
     filesLandInNavidrome: Boolean,
     onSyncNow: () -> Unit,
@@ -89,16 +89,16 @@ internal fun LazyListScope.syncTab(
         // the line was simply untrue.
         serverSummary = when {
             !serverArchiveEnabled ->
-                "Sent straight between your devices. Nothing is kept on the server."
-            filesLandInNavidrome -> "Filed into your Navidrome library."
-            else -> "Held on your Agro server for your other devices."
+                "Direct peer-to-peer sharing."
+            filesLandInNavidrome -> "Archived to Navidrome."
+            else -> "Archived to Agro server."
         },
         onSyncNow = onSyncNow,
         onReviewDeletions = onReviewDeletions,
         canDelete = canDelete,
         localTrackCount = localTracks,
         incognito = incognito,
-        storageUsage = storageUsage
+        serverTotalTracks = serverTotalTracks
     )
 }
 
