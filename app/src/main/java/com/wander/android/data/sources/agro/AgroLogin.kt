@@ -131,9 +131,16 @@ class AgroLogin @Inject constructor(
                 }.getOrNull()
 
                 if (!response.status.isSuccess()) {
+                    val isTotp = json?.get("totpRequired")?.jsonPrimitive?.contentOrNull == "true"
+                    val errorMsg = json?.get("error")?.jsonPrimitive?.contentOrNull
+                    if (isTotp) {
+                        throw AgroAuthError.TwoFactorRequired(
+                            errorMsg ?: "Two-factor authentication is enabled. Pair with a Device Token or QR Code from Devices & Sign-ins in the Agro dashboard."
+                        )
+                    }
                     throw AgroAuthError.of(
                         status = response.status.value,
-                        serverMessage = json?.get("error")?.jsonPrimitive?.contentOrNull
+                        serverMessage = errorMsg
                     )
                 }
                 json ?: throw AgroAuthError.Server("The server did not answer with JSON")
