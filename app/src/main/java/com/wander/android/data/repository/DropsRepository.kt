@@ -138,7 +138,8 @@ internal class DropsRepository @Inject constructor(
         artworkUrl: String? = null,
         contentHash: String? = null,
         trackUri: String? = null,
-        note: String? = null
+        note: String? = null,
+        recipientPublicKey: String? = null
     ): Result<AgroDrop> = dropsApi.drop(
         to = to,
         trackTitle = trackTitle,
@@ -147,7 +148,8 @@ internal class DropsRepository @Inject constructor(
         artworkUrl = artworkUrl,
         contentHash = contentHash,
         trackUri = trackUri,
-        note = note
+        note = note,
+        recipientPublicKey = recipientPublicKey
     ).onSuccess { drop ->
         dropDao.insert(drop.toEntity(incoming = false, syncedAt = Instant.now().toEpochMilli()))
     }
