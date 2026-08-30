@@ -60,6 +60,7 @@ class MediaStoreWriter @Inject constructor(
             append(sanitize(artist))
             append('/')
             append(sanitize(album ?: "Unknown Album"))
+            append('/')
         }
 
         val values = ContentValues().apply {
