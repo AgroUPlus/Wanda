@@ -165,10 +165,26 @@ class AgroClient @Inject constructor(
      * credential, but it is a thing a user can reasonably still be holding.
      */
     suspend fun parseQrCodePayload(qrString: String): Result<String?> {
-        if (!qrString.startsWith("agro://connect")) {
+        val trimmed = qrString.trim()
+        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+            val json = runCatching {
+                com.wander.android.core.network.HttpClientFactory.jsonConfig.parseToJsonElement(trimmed).jsonObject
+            }.getOrNull()
+            if (json != null) {
+                val token = json["token"]?.jsonPrimitive?.contentOrNull
+                val user = json["username"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                val server = json["server"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+                    ?: secureStorage.agroServerUrl.takeIf { it.isNotBlank() }
+                    ?: DEFAULT_SERVER_URL
+                if (!token.isNullOrBlank()) {
+                    return pairWithToken(server, user, token)
+                }
+            }
+        }
+        if (!trimmed.startsWith("agro://connect")) {
             return Result.failure(IOException("Invalid QR: expected agro://connect"))
         }
-        val uri = runCatching { android.net.Uri.parse(qrString) }.getOrNull()
+        val uri = runCatching { android.net.Uri.parse(trimmed) }.getOrNull()
             ?: return Result.failure(IOException("Invalid URI format in QR"))
         val user = uri.getQueryParameter("username").orEmpty()
         val server = uri.getQueryParameter("server")?.takeIf { it.isNotBlank() }
@@ -205,6 +221,8 @@ class AgroClient @Inject constructor(
      * This is what the manual Settings entry does. The passphrase is never stored: it buys a
      * credential scoped to this device — revocable on its own, without changing the passphrase
      * every other device is using — derives the vault wrapping key, and then it is discarded.
+     *
+     * Also accepts a direct device token or `agro://` pairing URI in the passphrase field.
      */
     suspend fun pairWithPassphrase(
         serverUrl: String,
@@ -212,14 +230,27 @@ class AgroClient @Inject constructor(
         passphrase: String
     ): Result<String?> {
         val server = normalizeServerUrl(serverUrl)
-        if (server == null || username.isBlank() || passphrase.isBlank()) {
+            ?: return Result.failure(IOException("Server URL is invalid"))
+        val trimmedUser = username.trim()
+        val trimmedPass = passphrase.trim()
+
+        if (trimmedPass.startsWith("agro://connect")) {
+            return parseQrCodePayload(trimmedPass)
+        }
+
+        // If the user entered or pasted a bare device token (length >= 32, no spaces)
+        if (trimmedPass.length >= 32 && !trimmedPass.contains(' ') && trimmedPass.all { it.isLetterOrDigit() || it in "-_+=/" }) {
+            return pairWithToken(server, trimmedUser, trimmedPass)
+        }
+
+        if (trimmedUser.isBlank() || trimmedPass.isBlank()) {
             return Result.failure(IOException("Server, username and passphrase are all required"))
         }
-        return login.exchange(server, username, passphrase).fold(
+        return login.exchange(server, trimmedUser, trimmedPass).fold(
             onSuccess = { loginResult ->
-                val pairResult = pairWithToken(server, username, loginResult.token)
+                val pairResult = pairWithToken(server, trimmedUser, loginResult.token)
                 if (pairResult.isSuccess) {
-                    setupVaultKey(username, passphrase, loginResult.vaultSalt, loginResult.vaultKeyWrapped)
+                    setupVaultKey(trimmedUser, trimmedPass, loginResult.vaultSalt, loginResult.vaultKeyWrapped)
                 }
                 pairResult
             },

@@ -84,9 +84,9 @@ internal fun AgroPairingForm(
         OutlinedTextField(
             value = passphrase,
             onValueChange = onPassphraseChange,
-            label = { Text("Passphrase") },
+            label = { Text("Passphrase or Device Token") },
             supportingText = {
-                Text("Your account passphrase. It is traded for a token this device alone can use.")
+                Text("Account passphrase, or a Device Token / App Password from Agro Dashboard.")
             },
             singleLine = true,
             enabled = enabled,
