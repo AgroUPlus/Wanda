@@ -114,7 +114,7 @@ internal fun DropToFriendSheet(
                                         if (error == null) {
                                             "Sent to ${friend.name}"
                                         } else {
-                                            "That could not be sent"
+                                            error.message ?: "That could not be sent"
                                         }
                                     )
                                     onDismiss()
