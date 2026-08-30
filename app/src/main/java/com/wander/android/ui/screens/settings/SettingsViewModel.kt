@@ -71,7 +71,11 @@ internal class SettingsViewModel @Inject constructor(
             _isCheckingForUpdate.value = true
             _updateCheck.value = updateChecker.checkForUpdate()
             _isCheckingForUpdate.value = false
-        }
+        
+    fun setAgroProxyEnabled(enabled: Boolean) {
+        secureStorage.setAgroProxyEnabled(enabled)
+    }
+}
     }
 
     val isAutoUpdateCheckEnabled: StateFlow<Boolean> = secureStorage.isAutoUpdateCheckEnabled
@@ -198,6 +202,7 @@ internal class SettingsViewModel @Inject constructor(
     }
 
     val agroSyncSettings: StateFlow<Boolean> = secureStorage.agroSyncSettings
+    val agroProxyEnabled: StateFlow<Boolean> = secureStorage.agroProxyEnabled
 
     /**
      * What Agro currently holds for Navidrome. Surfaced rather than silently applied: signing in
@@ -432,5 +437,8 @@ internal class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _cacheBytes.value = withContext(Dispatchers.IO) { cacheManager.cacheSizeBytes() }
         }
+    }
+    fun setAgroProxyEnabled(enabled: Boolean) {
+        secureStorage.setAgroProxyEnabled(enabled)
     }
 }

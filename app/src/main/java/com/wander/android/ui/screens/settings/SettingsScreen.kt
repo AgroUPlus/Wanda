@@ -200,6 +200,8 @@ internal fun SettingsScreen(
                         agroPaired = state.agroPaired,
                         visibility = state.agroVisibility,
                         onVisibilityChange = viewModel::setAgroVisibility,
+                        proxyEnabled = state.agroProxyEnabled,
+                        onProxyChange = viewModel::setAgroProxyEnabled,
                         onForgetEverything = { dialogs.confirmForgetEverything = true }
                     )
 
