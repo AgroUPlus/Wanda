@@ -40,7 +40,7 @@ import com.wander.android.core.database.converter.SourceTypeConverter
         PlaylistEntity::class,
         RecordingSplitEntity::class
     ],
-    version = 18,
+    version = 19,
     exportSchema = true
 )
 @TypeConverters(SourceTypeConverter::class)

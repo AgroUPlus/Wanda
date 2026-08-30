@@ -45,4 +45,25 @@ internal class AgroAccountApi @Inject constructor(
             canArchive = data["me"]!!.jsonObject["canArchive"]!!.jsonPrimitive.boolean
         )
     }
+
+    /**
+     * Purges listening history from Agro for a given year or cutoff date.
+     */
+    suspend fun purgeScrobbles(year: Int? = null, before: String? = null): Result<Int> = graphQl.execute(
+        """
+        mutation PurgeScrobbles(${'$'}userId: String!, ${'$'}year: Int, ${'$'}before: String) {
+            purgeScrobbles(userId: ${'$'}userId, year: ${'$'}year, before: ${'$'}before) {
+                purgedCount
+                success
+            }
+        }
+        """.trimIndent(),
+        buildJsonObject {
+            put("userId", graphQl.userId)
+            year?.let { put("year", it) }
+            before?.let { put("before", it) }
+        }
+    ).mapCatching { data ->
+        data["purgeScrobbles"]?.jsonObject?.get("purgedCount")?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+    }
 }
