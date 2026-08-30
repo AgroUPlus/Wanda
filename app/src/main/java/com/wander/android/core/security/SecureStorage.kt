@@ -357,6 +357,14 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         prefs.edit { putBoolean(KEY_AGRO_LIBRARY_SYNC, enabled) }
         _agroLibrarySync.value = enabled
     }
+    private val _agroProxyEnabled = MutableStateFlow(prefs.getBoolean(KEY_AGRO_PROXY_ENABLED, true))
+    val agroProxyEnabled: StateFlow<Boolean> = _agroProxyEnabled.asStateFlow()
+
+    fun setAgroProxyEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_AGRO_PROXY_ENABLED, enabled) }
+        _agroProxyEnabled.value = enabled
+    }
+
 
     fun setAgroDevicePetname(petname: String) {
         prefs.edit { putString(KEY_AGRO_PETNAME, petname.trim()) }
@@ -426,6 +434,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_AGRO_P2P_SYNC = "key_agro_p2p_sync"
         private const val KEY_AGRO_SERVER_ARCHIVE = "key_agro_server_archive"
         private const val KEY_AGRO_LIBRARY_SYNC = "key_agro_library_sync"
+        private const val KEY_AGRO_PROXY_ENABLED = "key_agro_proxy_enabled"
         private const val KEY_OFFLINE_MODE = "key_offline_mode"
         private const val KEY_RADIO_MODE = "key_radio_mode"
         private const val KEY_AMOLED_BLACK = "key_amoled_black"
