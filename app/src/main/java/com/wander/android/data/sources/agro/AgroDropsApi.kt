@@ -68,20 +68,17 @@ internal class AgroDropsApi @Inject constructor(
     ): Result<AgroDrop> {
         val trimmedNote = note?.trim()?.takeIf { it.isNotEmpty() }
         val (sealedCiphertext, plainNote, isEncrypted) = if (trimmedNote != null) {
-            val sealed = if (!recipientPublicKey.isNullOrBlank()) {
-                try {
-                    identityKeyManager.sealNote(recipientPublicKey, trimmedNote)
-                } catch (e: Exception) {
-                    null
-                }
-            } else {
-                null
+            if (recipientPublicKey.isNullOrBlank()) {
+                return Result.failure(
+                    IllegalStateException("Recipient @$to has not published their E2EE public key yet. Plaintext notes are disabled.")
+                )
             }
-            if (sealed != null) {
-                Triple(sealed, null, true)
-            } else {
-                Triple(null, trimmedNote, false)
+            val sealed = try {
+                identityKeyManager.sealNote(recipientPublicKey, trimmedNote)
+            } catch (e: Exception) {
+                return Result.failure(e)
             }
+            Triple(sealed, null, true)
         } else {
             Triple(null, null, false)
         }
