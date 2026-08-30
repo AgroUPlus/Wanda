@@ -166,21 +166,6 @@ class AgroClient @Inject constructor(
      */
     suspend fun parseQrCodePayload(qrString: String): Result<String?> {
         val trimmed = qrString.trim()
-        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-            val json = runCatching {
-                com.wander.android.core.network.HttpClientFactory.jsonConfig.parseToJsonElement(trimmed).jsonObject
-            }.getOrNull()
-            if (json != null) {
-                val token = json["token"]?.jsonPrimitive?.contentOrNull
-                val user = json["username"]?.jsonPrimitive?.contentOrNull.orEmpty()
-                val server = json["server"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
-                    ?: secureStorage.agroServerUrl.takeIf { it.isNotBlank() }
-                    ?: DEFAULT_SERVER_URL
-                if (!token.isNullOrBlank()) {
-                    return pairWithToken(server, user, token)
-                }
-            }
-        }
         if (!trimmed.startsWith("agro://connect")) {
             return Result.failure(IOException("Invalid QR: expected agro://connect"))
         }
