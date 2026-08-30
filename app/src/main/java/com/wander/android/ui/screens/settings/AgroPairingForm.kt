@@ -1,17 +1,28 @@
 package com.wander.android.ui.screens.settings
 
+import android.content.Intent
+import android.provider.MediaStore
+import android.widget.Toast
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.QrCode2
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
 import com.wander.android.data.sources.agro.AgroAuthError
 import com.wander.android.data.sources.agro.explain
 
@@ -38,6 +49,39 @@ internal fun AgroPairingForm(
     onInviteCodeChange: (String) -> Unit,
     onModeChange: (AgroPairingMode) -> Unit
 ) {
+    if (mode == AgroPairingMode.PAIR) {
+        val context = LocalContext.current
+        OutlinedButton(
+            onClick = {
+                val intent = Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                runCatching {
+                    context.startActivity(intent)
+                }.onFailure {
+                    runCatching {
+                        context.startActivity(Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        })
+                    }.onFailure {
+                        Toast.makeText(context, "Could not open camera app", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.QrCode2,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 8.dp)
+            )
+            Text("Scan Pairing QR Code")
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+    }
+
     OutlinedTextField(
         value = server,
         onValueChange = onServerChange,
