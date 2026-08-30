@@ -21,6 +21,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.retryWhen
+import com.wander.android.data.sources.agro.LocalNetwork
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -169,6 +172,18 @@ class AgroSessionRepository @Inject constructor(
         val socket = HttpClientFactory.okHttpClient.newWebSocket(
             request,
             object : WebSocketListener() {
+                override fun onOpen(webSocket: WebSocket, response: Response) {
+                    val authFrame = buildJsonObject {
+                        put("msg_type", "AUTH")
+                        put("payload", buildJsonObject {
+                            put("token", graphQl.apiKey)
+                            put("device", graphQl.deviceId)
+                            put("lan", LocalNetwork.lanAddress())
+                        })
+                    }
+                    webSocket.send(authFrame.toString())
+                }
+
                 override fun onMessage(webSocket: WebSocket, text: String) {
                     parse(text)?.let { trySend(it) }
                 }

@@ -15,7 +15,7 @@ import kotlinx.serialization.json.jsonPrimitive
 /** The fields every profile query selects. Written once so the queries cannot disagree. */
 internal const val PROFILE_FIELDS =
     "username displayName bio avatarUrl createdAt friendState outgoing " +
-        "showNowPlaying showStats discoverable showActivity"
+        "showNowPlaying showStats discoverable showActivity publicKey"
 
 internal const val NOW_PLAYING_FIELDS =
     "username trackUri trackTitle artistName albumName artworkUrl positionMs isPlaying updatedAt"
@@ -31,7 +31,8 @@ internal fun JsonObject.toProfile(): AgroProfile = AgroProfile(
     showNowPlaying = bool("showNowPlaying"),
     showStats = bool("showStats"),
     discoverable = bool("discoverable"),
-    showActivity = bool("showActivity")
+    showActivity = bool("showActivity"),
+    publicKey = str("publicKey")
 )
 
 internal fun JsonObject.toNowPlaying(): AgroFriendNowPlaying = AgroFriendNowPlaying(
