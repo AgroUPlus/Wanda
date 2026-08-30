@@ -16,7 +16,8 @@ import javax.inject.Singleton
 class AgroClient @Inject constructor(
     private val login: AgroLogin,
     private val graphQl: AgroGraphQl,
-    private val secureStorage: SecureStorage
+    private val secureStorage: SecureStorage,
+    private val identityKeyManager: com.wander.android.core.security.IdentityKeyManager
 ) {
     val isConfigured: Boolean get() = graphQl.isConfigured
 
@@ -26,6 +27,18 @@ class AgroClient @Inject constructor(
      */
     suspend fun registerNode(currentTrack: String? = null): Result<String?> {
         val lanAddress = LocalNetwork.lanAddress()
+
+        // Publish E2EE identity public key
+        runCatching {
+            val pubKeyB64 = identityKeyManager.getPublicKeyBase64()
+            val keyMutation = """
+                mutation SetPublicKey(${'$'}publicKey: String) {
+                    setPublicKey(publicKey: ${'$'}publicKey) { publicKey }
+                }
+            """.trimIndent()
+            graphQl.execute(keyMutation, buildJsonObject { put("publicKey", pubKeyB64) })
+        }
+
         val mutation = """
             mutation RegisterNode(${'$'}userId: String!, ${'$'}deviceId: String!, ${'$'}clientType: String!, ${'$'}deviceName: String, ${'$'}lanAddress: String, ${'$'}currentTrack: String) {
                 registerNode(userId: ${'$'}userId, deviceId: ${'$'}deviceId, clientType: ${'$'}clientType, deviceName: ${'$'}deviceName, lanAddress: ${'$'}lanAddress, currentTrack: ${'$'}currentTrack) {

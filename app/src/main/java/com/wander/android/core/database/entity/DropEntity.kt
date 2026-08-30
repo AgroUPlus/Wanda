@@ -43,6 +43,8 @@ data class DropEntity(
     val contentHash: String?,
     val trackUri: String?,
     val note: String?,
+    val noteCiphertext: String? = null,
+    val isEncrypted: Boolean = false,
     val createdAt: String,
     val readAt: String?,
     val archived: Boolean,

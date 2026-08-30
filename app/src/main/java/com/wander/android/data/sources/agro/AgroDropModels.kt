@@ -27,6 +27,8 @@ internal data class AgroDrop(
     val contentHash: String?,
     val trackUri: String?,
     val note: String?,
+    val noteCiphertext: String? = null,
+    val isEncrypted: Boolean = false,
     val createdAt: String,
     /**
      * When this account read it, or null while unread.

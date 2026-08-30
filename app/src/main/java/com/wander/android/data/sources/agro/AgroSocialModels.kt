@@ -39,7 +39,9 @@ internal data class AgroProfile(
     val showStats: Boolean,
     val discoverable: Boolean,
     /** Whether this account lets friends read its listening history. */
-    val showActivity: Boolean = false
+    val showActivity: Boolean = false,
+    /** X25519 public identity key for E2EE drops. */
+    val publicKey: String? = null
 ) {
     /** What to put on screen. Falls back to the username, which always exists. */
     val name: String get() = displayName?.takeIf { it.isNotBlank() } ?: username

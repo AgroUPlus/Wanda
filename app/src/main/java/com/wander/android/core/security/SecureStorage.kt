@@ -379,9 +379,18 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _agroSyncSettings.value = enabled
     }
 
+    var agroIdentityPrivateKey: String?
+        get() = prefs.getString(KEY_AGRO_IDENTITY_PRIV, null)
+        set(value) = prefs.edit { putString(KEY_AGRO_IDENTITY_PRIV, value) }
+
+    var agroIdentityPublicKey: String?
+        get() = prefs.getString(KEY_AGRO_IDENTITY_PUB, null)
+        set(value) = prefs.edit { putString(KEY_AGRO_IDENTITY_PUB, value) }
+
     fun clearAgroCredentials() {
         prefs.edit {
             remove(KEY_AGRO_URL); remove(KEY_AGRO_USER); remove(KEY_AGRO_KEY); remove(KEY_AGRO_PETNAME); remove(KEY_AGRO_VAULT_KEY)
+            remove(KEY_AGRO_IDENTITY_PRIV); remove(KEY_AGRO_IDENTITY_PUB)
         }
         _agroConfigured.value = false
     }
@@ -410,6 +419,8 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_AGRO_KEY = "key_agro_key"
         private const val KEY_AGRO_PETNAME = "key_agro_petname"
         private const val KEY_AGRO_VAULT_KEY = "key_agro_vault_key"
+        private const val KEY_AGRO_IDENTITY_PRIV = "key_agro_identity_priv"
+        private const val KEY_AGRO_IDENTITY_PUB = "key_agro_identity_pub"
         private const val KEY_AGRO_SYNC_SETTINGS = "key_agro_sync_settings"
         private const val KEY_AGRO_DEVICE_ID = "key_agro_device_id"
         private const val KEY_AGRO_P2P_SYNC = "key_agro_p2p_sync"

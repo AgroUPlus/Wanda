@@ -16,7 +16,7 @@ import kotlinx.serialization.json.jsonPrimitive
 /** The fields every drop query selects. Written once so the queries cannot drift apart. */
 internal const val DROP_FIELDS =
     "id fromUser toUser trackTitle artistName albumName artworkUrl " +
-        "contentHash trackUri note createdAt readAt archived reaction"
+        "contentHash trackUri note noteCiphertext isEncrypted createdAt readAt archived reaction"
 
 internal const val FEED_FIELDS = "username at kind summary artist title count"
 
@@ -31,6 +31,8 @@ internal fun JsonObject.toDrop(): AgroDrop = AgroDrop(
     contentHash = str("contentHash"),
     trackUri = str("trackUri"),
     note = str("note"),
+    noteCiphertext = str("noteCiphertext"),
+    isEncrypted = bool("isEncrypted"),
     createdAt = str("createdAt").orEmpty(),
     readAt = str("readAt"),
     archived = bool("archived"),
@@ -56,6 +58,8 @@ internal fun JsonObject.toPushedDrop(recipient: String): AgroDrop = AgroDrop(
     contentHash = str("contentHash"),
     trackUri = str("trackUri"),
     note = str("note"),
+    noteCiphertext = str("noteCiphertext"),
+    isEncrypted = bool("isEncrypted"),
     createdAt = str("createdAt").orEmpty(),
     readAt = null,
     archived = false

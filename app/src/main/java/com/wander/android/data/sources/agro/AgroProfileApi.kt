@@ -140,4 +140,16 @@ internal class AgroProfileApi @Inject constructor(
             sharedTracks = match.entries("sharedTracks")
         )
     }
+
+    /**
+     * Publishes this account's X25519 identity public key for E2EE drops.
+     */
+    suspend fun setPublicKey(publicKey: String): Result<Boolean> = graphQl.execute(
+        """
+        mutation SetPublicKey(${'$'}publicKey: String) {
+            setPublicKey(publicKey: ${'$'}publicKey) { publicKey }
+        }
+        """.trimIndent(),
+        buildJsonObject { put("publicKey", publicKey.trim()) }
+    ).map { true }
 }
