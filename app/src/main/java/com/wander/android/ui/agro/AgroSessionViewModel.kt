@@ -43,7 +43,8 @@ internal class AgroSessionViewModel @Inject constructor(
     private val jamPlayback: JamPlaybackController,
     private val dropsRepository: DropsRepository,
     private val friendNotifier: FriendNotifier,
-    private val incognitoRepository: IncognitoRepository
+    private val incognitoRepository: IncognitoRepository,
+    private val identityKeyManager: com.wander.android.core.security.IdentityKeyManager
 ) : ViewModel() {
 
     val devices: StateFlow<List<AgroNode>> = sessionRepository.devices
@@ -151,8 +152,17 @@ internal class AgroSessionViewModel @Inject constructor(
                     // Stored from the frame rather than re-fetched. The socket closes when the app
                     // leaves the screen, and a round trip is one more thing that might not finish
                     // before it does — the frame already carries the whole drop.
-                    dropsRepository.onPushed(message.drop)
-                    friendNotifier.notifyDrop(message.drop)
+                    val decrypted = if (message.drop.isEncrypted && !message.drop.noteCiphertext.isNullOrBlank()) {
+                        try {
+                            message.drop.copy(note = identityKeyManager.openNote(message.drop.noteCiphertext))
+                        } catch (e: Exception) {
+                            message.drop
+                        }
+                    } else {
+                        message.drop
+                    }
+                    dropsRepository.onPushed(decrypted)
+                    friendNotifier.notifyDrop(decrypted)
                 }
             }
         }
