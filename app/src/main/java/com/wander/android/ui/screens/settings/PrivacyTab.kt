@@ -18,6 +18,8 @@ internal fun LazyListScope.privacyTab(
     agroPaired: Boolean,
     visibility: AgroVisibility?,
     onVisibilityChange: (AgroVisibility) -> Unit,
+    proxyEnabled: Boolean,
+    onProxyChange: (Boolean) -> Unit,
     onForgetEverything: () -> Unit
 ) {
     item(key = "incognito") {
@@ -77,6 +79,17 @@ internal fun LazyListScope.privacyTab(
                 checked = visibility.discoverable && !incognito,
                 onCheckedChange = { onVisibilityChange(visibility.copy(discoverable = it)) },
                 enabled = !incognito
+            )
+        }
+    }
+
+    if (agroPaired) {
+        item(key = "proxy_relay") {
+            SettingsToggle(
+                title = "Agro Privacy Relay",
+                subtitle = "Route metadata and lyric requests through your Agro server to mask your IP from external services like LRCLIB and Archive.org.",
+                checked = proxyEnabled,
+                onCheckedChange = onProxyChange
             )
         }
     }
