@@ -245,6 +245,17 @@ class MusicRepository @Inject constructor(
         if (libraryIds.isNotEmpty()) trackDao.markAsLibrary(libraryIds)
     }
 
+    /** Deletes an offline downloaded file from storage and clears its downloaded flag in Room. */
+    suspend fun deleteDownloadedTrack(trackId: String) = withContext(Dispatchers.IO) {
+        val entity = trackDao.getTrackById(trackId)
+        if (entity != null) {
+            entity.localFilePath?.takeIf { it.isNotBlank() }?.let { path ->
+                runCatching { java.io.File(path).delete() }
+            }
+            trackDao.setDownloaded(trackId, isDownloaded = false, localPath = null)
+        }
+    }
+
     // ── Searching ───────────────────────────────────────────────────────────────────────────
 
     /**
