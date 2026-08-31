@@ -2,6 +2,7 @@ package com.wander.android.di
 
 import android.content.Context
 import com.wander.android.core.cache.AudioCacheManager
+import com.wander.android.core.security.IdentityKeyManager
 import com.wander.android.core.playback.PlayerFactory
 import com.wander.android.core.playback.StreamResolver
 import dagger.Module
@@ -20,8 +21,9 @@ object PlaybackModule {
     @Singleton
     fun provideAudioCacheManager(
         @ApplicationContext context: Context,
-        okHttpClient: OkHttpClient
-    ): AudioCacheManager = AudioCacheManager(context, okHttpClient)
+        okHttpClient: OkHttpClient,
+        identityKeyManager: IdentityKeyManager
+    ): AudioCacheManager = AudioCacheManager(context, okHttpClient, identityKeyManager)
 
     @Provides
     @Singleton
