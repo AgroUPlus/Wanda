@@ -7,6 +7,8 @@ import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.cache.CacheDataSource
+import com.wander.android.core.playback.RelayDecryptingDataSource
+import com.wander.android.core.security.IdentityKeyManager
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
@@ -21,6 +23,7 @@ import java.io.File
 class AudioCacheManager(
     private val context: Context,
     private val okHttpClient: OkHttpClient,
+    private val identityKeyManager: IdentityKeyManager,
     maxSizeBytes: Long = DEFAULT_MAX_SIZE
 ) {
     private val cacheDir = File(context.cacheDir, "audio_stream_cache")
@@ -43,8 +46,18 @@ class AudioCacheManager(
      * played once and never referenced again, so caching them only evicts music somebody might
      * actually replay.
      */
+    /**
+     * The network source, with relay streams decrypted on the way in.
+     *
+     * Decryption sits here rather than above the cache so that ciphertext is never written to it:
+     * a relay's key lasts one track and is gone within the minute, so a cached encrypted file
+     * could never be played again.
+     */
     fun getUpstreamDataSourceFactory(): DataSource.Factory =
-        DefaultDataSource.Factory(context, OkHttpDataSource.Factory(okHttpClient))
+        RelayDecryptingDataSource.Factory(
+            DefaultDataSource.Factory(context, OkHttpDataSource.Factory(okHttpClient)),
+            identityKeyManager
+        )
 
     fun getCacheDataSourceFactory(): DataSource.Factory =
         CacheDataSource.Factory()
