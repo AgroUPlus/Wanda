@@ -112,3 +112,28 @@ internal fun SkeletonRow(
         }
     }
 }
+
+/**
+ * Album/card shaped placeholder for grid pagination and initial loads.
+ */
+@Composable
+internal fun SkeletonCard(
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .padding(8.dp)
+            .fillMaxWidth()
+    ) {
+        SkeletonBox(
+            modifier = Modifier
+                .fillMaxWidth()
+                .androidx.compose.foundation.layout.aspectRatio(1f),
+            shape = MaterialTheme.shapes.small
+        )
+        Spacer(Modifier.height(8.dp))
+        SkeletonLine(widthFraction = 0.7f, height = 14.dp)
+        Spacer(Modifier.height(4.dp))
+        SkeletonLine(widthFraction = 0.45f, height = 12.dp)
+    }
+}
