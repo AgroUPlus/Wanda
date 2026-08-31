@@ -66,15 +66,39 @@ class RecordingIdentityRepository @Inject constructor(
      */
     suspend fun matchesFor(trackId: String): List<Match> = withContext(Dispatchers.IO) {
         val mine = fingerprintDao.forTrack(trackId) ?: return@withContext emptyList()
-        val hashes = mine.subHashes.toHashes()
+        matchesForFingerprint(mine.subHashes.toHashes(), excluding = trackId)
+    }
 
-        val candidateIds = fingerprintDao.candidates(halvesOf(hashes).toList(), trackId)
+    /**
+     * Local tracks holding the recording [hashes] describes, best first.
+     *
+     * Takes the fingerprint rather than a track id so a fingerprint that arrived from elsewhere —
+     * the shared catalogue, say — can be matched against this device without first being stored.
+     */
+    suspend fun matchesForFingerprint(
+        hashes: IntArray,
+        excluding: String = ""
+    ): List<Match> = withContext(Dispatchers.IO) {
+        if (hashes.isEmpty()) return@withContext emptyList()
+
+        val candidateIds = fingerprintDao.candidates(halvesOf(hashes).toList(), excluding)
         if (candidateIds.isEmpty()) return@withContext emptyList()
 
         fingerprintDao.forTracks(candidateIds)
             .map { Match(it.trackId, RecordingFingerprinter.similarity(hashes, it.subHashes.toHashes())) }
             .filter { it.similarity >= matchThreshold }
             .sortedByDescending { it.similarity }
+    }
+
+    /** Of [trackIds], those with no fingerprint yet. */
+    suspend fun needingIndex(trackIds: List<String>): List<String> = withContext(Dispatchers.IO) {
+        val indexed = fingerprintDao.indexedTrackIds().toSet()
+        trackIds.filterNot { it in indexed }
+    }
+
+    /** Every fingerprint held here, for publishing to a catalogue. */
+    suspend fun all(): List<RecordingFingerprintEntity> = withContext(Dispatchers.IO) {
+        fingerprintDao.forTracks(fingerprintDao.indexedTrackIds())
     }
 
     suspend fun isIndexed(trackId: String): Boolean =
