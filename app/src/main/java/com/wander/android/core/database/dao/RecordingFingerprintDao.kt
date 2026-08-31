@@ -68,6 +68,9 @@ interface RecordingFingerprintDao {
         limit: Int = 20
     ): List<String>
 
+    @Query("SELECT trackId FROM recording_fingerprints")
+    suspend fun indexedTrackIds(): List<String>
+
     @Query("SELECT COUNT(*) FROM recording_fingerprints")
     suspend fun count(): Int
 

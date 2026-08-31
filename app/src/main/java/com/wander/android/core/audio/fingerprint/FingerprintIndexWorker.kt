@@ -9,6 +9,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.wander.android.data.repository.RecognitionRepository
+import com.wander.android.data.repository.RecordingIdentityRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
@@ -34,11 +35,19 @@ class FingerprintIndexWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val recognitionRepository: RecognitionRepository,
+    private val recordingIdentity: RecordingIdentityRepository,
     private val decoder: PcmDecoder
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.Default) {
-        val pending = recognitionRepository.tracksNeedingIndex()
+        // Both fingerprints come off one decode. They answer different questions and share
+        // nothing but the samples, and decoding is by far the expensive part — doing it twice for
+        // one file would double the cost of indexing a library to no purpose.
+        val needsLandmark = recognitionRepository.tracksNeedingIndex()
+        val needsCanonical = recordingIdentity
+            .needingIndex(needsLandmark.map { it.id })
+            .toSet()
+        val pending = needsLandmark
         if (pending.isEmpty()) return@withContext Result.success()
 
         for (track in pending.take(BATCH_SIZE)) {
@@ -46,6 +55,9 @@ class FingerprintIndexWorker @AssistedInject constructor(
             val path = track.localFilePath ?: continue
             val samples = decoder.decode(path) ?: continue
             recognitionRepository.index(track, samples)
+            if (track.id in needsCanonical) {
+                recordingIdentity.index(track.id, samples, track.durationMs)
+            }
         }
 
         if (pending.size > BATCH_SIZE) Result.retry() else Result.success()
