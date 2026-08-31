@@ -79,6 +79,10 @@ class AgroHandoffPublisher @Inject constructor(
         heartbeat = scope.launch {
             while (isActive) {
                 delay(HEARTBEAT_INTERVAL_MS)
+                if (secureStorage.isIncognitoMode) {
+                    stop()
+                    break
+                }
                 send(track, positionMs, durationMs, isPlaying = true)
             }
         }
@@ -97,6 +101,7 @@ class AgroHandoffPublisher @Inject constructor(
         durationMs: () -> Long,
         isPlaying: Boolean
     ) {
+        if (secureStorage.isIncognitoMode) return
         // Both reads in one hop to the main thread, so the position cannot belong to a different
         // track than the length it is measured against.
         val (position, duration) = withContext(Dispatchers.Main) { positionMs() to durationMs() }
