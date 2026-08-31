@@ -19,12 +19,17 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.data.sources.ytmusic.GoogleAccountManager
+import com.wander.android.ui.components.WebViewLifecycle
+import com.wander.android.ui.components.release
 
 private const val YT_MUSIC_URL = "https://music.youtube.com"
 
@@ -48,6 +53,9 @@ fun YouTubeLoginScreen(
     viewModel: YouTubeLoginViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var webViewInstance by remember { mutableStateOf<WebView?>(null) }
+
+    WebViewLifecycle(webViewInstance)
 
     LaunchedEffect(state.isSignedIn) {
         if (state.isSignedIn) onDone()
@@ -69,6 +77,7 @@ fun YouTubeLoginScreen(
             factory = { context ->
                 CookieManager.getInstance().setAcceptCookie(true)
                 WebView(context).apply {
+                    webViewInstance = this
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     webViewClient = object : WebViewClient() {
@@ -86,6 +95,10 @@ fun YouTubeLoginScreen(
                     }
                     loadUrl(YT_MUSIC_URL)
                 }
+            },
+            onRelease = { webView ->
+                webViewInstance = null
+                webView.release()
             },
             modifier = Modifier
                 .fillMaxWidth()

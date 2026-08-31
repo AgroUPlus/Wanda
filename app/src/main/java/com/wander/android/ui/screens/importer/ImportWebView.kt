@@ -42,6 +42,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.wander.android.data.importer.IMPORT_WEB_USER_AGENT
+import com.wander.android.ui.components.WebViewLifecycle
+import com.wander.android.ui.components.release
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -63,6 +65,8 @@ fun ImportWebView(
     var pageProgress by remember { mutableIntStateOf(0) }
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
     var lastLoad by remember { mutableStateOf(webUrl to reloadToken) }
+
+    WebViewLifecycle(webViewInstance)
 
     val reload: () -> Unit = {
         onClearPageError()
@@ -123,7 +127,10 @@ fun ImportWebView(
                         settings.useWideViewPort = true
                         settings.setSupportMultipleWindows(true)
                         settings.javaScriptCanOpenWindowsAutomatically = true
-                        settings.mediaPlaybackRequiresUserGesture = false
+                        // The importer only ever reads cookies and URLs off these pages; it
+                        // has no reason to start media. Left false, a playlist page begins
+                        // playing on load and keeps going once the screen is gone.
+                        settings.mediaPlaybackRequiresUserGesture = true
                         CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
 
                         val shimAtDocumentStart = installStorageAccessShim(this)
@@ -151,6 +158,10 @@ fun ImportWebView(
                         lastLoad = target
                         webView.loadUrl(webUrl)
                     }
+                },
+                onRelease = { webView ->
+                    webViewInstance = null
+                    webView.release()
                 },
                 modifier = Modifier.fillMaxSize()
             )
