@@ -9,7 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Download
@@ -25,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +41,7 @@ import com.wander.android.ui.components.SkeletonRow
 import com.wander.android.ui.components.listInset
 
 private const val PLAYLISTS_PAGE_SIZE = 30
+private const val PAGE_PREFETCH_DISTANCE = 4
 
 @Composable
 internal fun PlaylistList(
@@ -116,8 +119,26 @@ internal fun PlaylistList(
     var playlistPageSize by remember(playlists) { mutableIntStateOf(PLAYLISTS_PAGE_SIZE) }
     val visiblePlaylists = remember(playlists, playlistPageSize) { playlists.take(playlistPageSize) }
     val hasMorePlaylists = visiblePlaylists.size < playlists.size
+    val listState = rememberLazyListState()
 
-    LazyColumn(contentPadding = contentPadding.listInset(), modifier = Modifier.fillMaxSize()) {
+    // Driven by the scroll position rather than by a row composing: an effect inside the item
+    // lambda keyed on the page size it mutates walks the whole list on the first frame.
+    LaunchedEffect(listState, playlists) {
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
+            .collect { lastVisible ->
+                // One leading action row sits above the playlists.
+                if (lastVisible - 1 >= playlistPageSize - PAGE_PREFETCH_DISTANCE) {
+                    playlistPageSize =
+                        (playlistPageSize + PLAYLISTS_PAGE_SIZE).coerceAtMost(playlists.size)
+                }
+            }
+    }
+
+    LazyColumn(
+        state = listState,
+        contentPadding = contentPadding.listInset(),
+        modifier = Modifier.fillMaxSize()
+    ) {
         item(key = "playlist_actions", contentType = "action") {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -146,12 +167,7 @@ internal fun PlaylistList(
                 }
             }
         }
-        itemsIndexed(visiblePlaylists, key = { _, it -> it.id }, contentType = { _, _ -> "playlist" }) { index, playlist ->
-            if (index >= visiblePlaylists.size - 4 && hasMorePlaylists) {
-                LaunchedEffect(playlistPageSize) {
-                    playlistPageSize = (playlistPageSize + PLAYLISTS_PAGE_SIZE).coerceAtMost(playlists.size)
-                }
-            }
+        items(visiblePlaylists, key = { it.id }, contentType = { "playlist" }) { playlist ->
             PlaylistRow(
                 playlist = playlist,
                 onClick = { onOpenPlaylist(playlist.id) },
