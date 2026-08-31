@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -128,7 +129,7 @@ internal fun SkeletonCard(
         SkeletonBox(
             modifier = Modifier
                 .fillMaxWidth()
-                .androidx.compose.foundation.layout.aspectRatio(1f),
+                .aspectRatio(1f),
             shape = MaterialTheme.shapes.small
         )
         Spacer(Modifier.height(8.dp))
