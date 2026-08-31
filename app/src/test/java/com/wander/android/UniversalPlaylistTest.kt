@@ -18,7 +18,7 @@ class UniversalPlaylistTest {
         artist: String = "Radiohead",
         durationMs: Long = 299_000L,
         isDownloaded: Boolean = false,
-        localFilePath: String? = null
+        streamUri: String? = null
     ) = UnifiedTrack(
         id = id,
         source = source,
@@ -26,7 +26,7 @@ class UniversalPlaylistTest {
         artist = artist,
         durationMs = durationMs,
         isDownloaded = isDownloaded,
-        localFilePath = localFilePath
+        streamUri = streamUri
     )
 
     @Test
@@ -46,7 +46,7 @@ class UniversalPlaylistTest {
             title = "Let Down",
             artist = "Radiohead",
             isDownloaded = true,
-            localFilePath = "/storage/emulated/0/Music/Radiohead - Let Down.flac"
+            streamUri = "/storage/emulated/0/Music/Radiohead - Let Down.flac"
         )
         assertTrue(downloadedLocalTrack.isPlayableOffline())
 

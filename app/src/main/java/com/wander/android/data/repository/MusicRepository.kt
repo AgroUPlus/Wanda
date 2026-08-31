@@ -15,6 +15,7 @@ import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.model.isPlayableOffline
 import com.wander.android.data.sources.IMusicSource
 import com.wander.android.data.sources.StreamInfo
 import java.io.IOException
@@ -539,7 +540,7 @@ class MusicRepository @Inject constructor(
             val ids = localEntity.trackIds.split(',').filter { it.isNotBlank() }
             val tracksById = trackDao.getTracksByIds(ids).associateBy { it.id }
             val baseTracks = ids.mapNotNull { id -> tracksById[id]?.toUnifiedTrack() }
-            val downloadedTracks = trackDao.getDownloadedTracksOnce().map(TrackEntity::toUnifiedTrack)
+            val downloadedTracks = trackDao.getOfflineTracksOnce().map(TrackEntity::toUnifiedTrack)
             return@withContext baseTracks.map { track ->
                 if (track.isPlayableOffline()) return@map track
                 val offlineCopy = downloadedTracks.firstOrNull { TrackDeduplicator.isSameRecording(track, it) }
