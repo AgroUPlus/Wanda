@@ -222,6 +222,10 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch { musicRepository.toggleLike(track) }
     }
 
+    fun deleteDownloadedTrack(track: UnifiedTrack) {
+        viewModelScope.launch { musicRepository.deleteDownloadedTrack(track.id) }
+    }
+
     private companion object {
         /** How many recently added tracks a refresh pulls into Room from every active source. */
         const val LIBRARY_TRACK_REFRESH = 200

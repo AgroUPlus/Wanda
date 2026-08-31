@@ -79,6 +79,8 @@ fun TrackActionsSheet(
     onAddToPlaylist: (() -> Unit)? = null,
     /** Told what to say once a drop has been sent, or failed to be. */
     onDropSent: (String) -> Unit = {},
+    /** Deletes an offline downloaded file from device storage. */
+    onDeleteDownload: (() -> Unit)? = null,
     /**
      * Opens the artist's page. Null when the track names no artist — there is nowhere to go.
      *
@@ -229,6 +231,13 @@ fun TrackActionsSheet(
                 SheetAction(
                     icon = Icons.Rounded.Delete,
                     label = "Remove from queue",
+                    tint = MaterialTheme.colorScheme.error
+                ) { it(); onDismiss() }
+            }
+            onDeleteDownload?.let {
+                SheetAction(
+                    icon = Icons.Rounded.Delete,
+                    label = "Delete offline file",
                     tint = MaterialTheme.colorScheme.error
                 ) { it(); onDismiss() }
             }
