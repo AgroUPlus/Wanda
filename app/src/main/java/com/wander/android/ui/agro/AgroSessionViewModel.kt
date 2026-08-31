@@ -120,6 +120,16 @@ internal class AgroSessionViewModel @Inject constructor(
         sessionRepository.liveUpdates().collectLatest { message ->
             when (message) {
                 is AgroLiveMessage.Session -> sessionRepository.refresh()
+                // Everything, because the server could not say what was missed. This is the same
+                // work the screen does when it is opened cold, which is exactly the situation:
+                // nothing local can be assumed to still be true.
+                is AgroLiveMessage.Resync -> {
+                    sessionRepository.refresh()
+                    incognitoRepository.refresh()
+                    socialRepository.refresh()
+                    jamRepository.refresh()
+                    onLibraryChanged()
+                }
                 // Incognito is owned by the account, not by a device, so a switch flipped on
                 // another one has to reach this one — otherwise this device carries on recording
                 // and announcing after the user has gone quiet somewhere else.

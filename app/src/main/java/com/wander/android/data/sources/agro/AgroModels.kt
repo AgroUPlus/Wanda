@@ -114,6 +114,16 @@ internal sealed interface AgroLiveMessage {
     data object Session : AgroLiveMessage
 
     /**
+     * The socket came back too late to be told what it missed, so nothing local can be trusted.
+     *
+     * The server keeps only a short window of recent messages. Past it, the honest answer is that
+     * the gap cannot be filled, and the only correct response is to re-ask for everything rather
+     * than carry on from state that may have moved. Rare by design: it takes an outage longer than
+     * the window, not an ordinary handover.
+     */
+    data object Resync : AgroLiveMessage
+
+    /**
      * A synced setting changed on another of this account's devices.
      *
      * Carries nothing. The values are small, the server owns them, and a payload here would be a

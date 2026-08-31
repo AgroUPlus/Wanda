@@ -54,7 +54,11 @@ internal fun AlbumGrid(
     val visibleAlbums = remember(albums, albumPageSize) { albums.take(albumPageSize) }
     val hasMoreAlbums = visibleAlbums.size < albums.size
     val gridState = rememberLazyGridState()
-    val showsRecentRow = recentAlbums.size >= MIN_RECENT_ALBUMS && albums.size > recentAlbums.size
+    // Only the count of recents gates the row. It used to also require `albums.size >
+    // recentAlbums.size`, which meant a library no larger than the recent limit — every library
+    // during its first sync — never saw the row at all, and the row reappeared later for no
+    // reason the user could see. The row repeating albums the grid also shows is the point of it.
+    val showsRecentRow = recentAlbums.size >= MIN_RECENT_ALBUMS
     val headerCount = if (showsRecentRow) 3 else 0
 
     // Paging is driven by where the grid has actually been scrolled to, not by an item composing.

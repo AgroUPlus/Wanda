@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -108,7 +109,13 @@ class LibraryViewModel @Inject constructor(
     ) { albums, recentIds ->
         val byId = albums.associateBy { it.id }
         recentIds.mapNotNull(byId::get)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    }
+        // The two flows emit independently, so a scan that touches both produces an intermediate
+        // pairing — new ids against stale albums, or the reverse — that resolves to a list
+        // identical to the one already on screen. Without this the row rebuilds and its scroll
+        // position jumps for an update that changed nothing.
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val albums: StateFlow<List<UnifiedAlbum>> = musicRepository.getAlbumsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

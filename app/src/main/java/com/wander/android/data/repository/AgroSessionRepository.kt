@@ -155,6 +155,17 @@ class AgroSessionRepository @Inject constructor(
         true
     }
 
+    /**
+     * The highest sequence number this device has seen, across connections.
+     *
+     * Deliberately in memory rather than on disk: it is only meaningful against a server that
+     * still has the matching messages buffered, which it will not after the seconds a process
+     * death takes. Persisting it would ask to resume from a position that no longer exists and be
+     * answered with a resync anyway — the same outcome, having written to disk to reach it.
+     */
+    @Volatile
+    private var lastSeq: Long = 0L
+
     /** One connection's lifetime. Fails rather than completes, so [liveUpdates] can retry it. */
     private fun connectOnce(): Flow<AgroLiveMessage> = callbackFlow {
         val url = graphQl.syncSocketUrl().takeIf { connectivity.isOnline.value }
@@ -185,6 +196,22 @@ class AgroSessionRepository @Inject constructor(
                 }
 
                 override fun onMessage(webSocket: WebSocket, text: String) {
+                    // Sent after AUTH_SUCCESS rather than alongside AUTH: the server only starts
+                    // reading ordinary frames once the credential is accepted, and asking to
+                    // resume before that races the handshake it depends on.
+                    if (isAuthSuccess(text)) {
+                        if (lastSeq > 0L) webSocket.send(resumeFrame(lastSeq))
+                        return
+                    }
+                    if (needsResync(text)) {
+                        // The gap is longer than the server can account for, so the remembered
+                        // position is meaningless and keeping it would ask for the same answer on
+                        // every future reconnect.
+                        lastSeq = 0L
+                        trySend(AgroLiveMessage.Resync)
+                        return
+                    }
+                    sequenceOf(text)?.let { seq -> if (seq > lastSeq) lastSeq = seq }
                     parse(text)?.let { trySend(it) }
                 }
 
@@ -264,6 +291,38 @@ class AgroSessionRepository @Inject constructor(
      * anywhere in the text, which both missed the library messages entirely and would have matched
      * a track called "HANDOFF" in someone's album title.
      */
+    /** The server's answer to AUTH, which is what tells this socket it may resume. */
+    private fun isAuthSuccess(text: String): Boolean = msgType(text) == "AUTH_SUCCESS"
+
+    /**
+     * Whether the server answered a RESUME by saying it cannot fill the gap.
+     *
+     * Read from the answer rather than inferred from an empty replay: no missed messages and no
+     * *record* of them are opposite situations, and only one of them means the local state is
+     * unreliable.
+     */
+    private fun needsResync(text: String): Boolean {
+        if (msgType(text) != "RESUMED") return false
+        val payload = runCatching {
+            Json.parseToJsonElement(text).jsonObject["payload"]?.jsonObject
+        }.getOrNull()
+        return payload?.get("resync_required")?.jsonPrimitive?.booleanOrNull == true
+    }
+
+    /** The position of an ordered frame, or null for one the server wrote straight to this socket. */
+    private fun sequenceOf(text: String): Long? = runCatching {
+        Json.parseToJsonElement(text).jsonObject["seq"]?.jsonPrimitive?.longOrNull
+    }.getOrNull()
+
+    private fun msgType(text: String): String? = runCatching {
+        Json.parseToJsonElement(text).jsonObject["msg_type"]?.jsonPrimitive?.contentOrNull
+    }.getOrNull()
+
+    private fun resumeFrame(after: Long): String = buildJsonObject {
+        put("msg_type", "RESUME")
+        put("payload", buildJsonObject { put("last_seq", after) })
+    }.toString()
+
     private fun parse(text: String): AgroLiveMessage? {
         val envelope = runCatching { Json.parseToJsonElement(text).jsonObject }.getOrNull()
             ?: return null
