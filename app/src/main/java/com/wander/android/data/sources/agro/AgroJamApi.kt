@@ -48,7 +48,14 @@ internal data class JamNowPlaying(
     /** Votes to skip this track, and how many the room needs. */
     val skipVotes: Long,
     val skipsNeeded: Long,
-    val youSkipped: Boolean
+    val youSkipped: Boolean,
+    /** The member who queued it, the device of theirs holding it, and the bytes it names. */
+    val addedBy: String? = null,
+    val deviceId: String? = null,
+    val contentHash: String? = null,
+    /** Where to reach that device on this network, and the token for it. Both, or neither. */
+    val peerLanAddress: String? = null,
+    val peerLanToken: String? = null
 )
 
 /** A friend's jam, before you are in it. No code, no queue — seeing it is not being in it. */
@@ -86,7 +93,8 @@ internal data class Jam(
  */
 @Singleton
 internal class AgroJamApi @Inject constructor(
-    private val graphQl: AgroGraphQl
+    private val graphQl: AgroGraphQl,
+    private val secureStorage: com.wander.android.core.security.SecureStorage
 ) {
     private val trackFields =
         "id addedBy trackUri title artist artworkUrl durationMs approvals approved stillNeeded"
@@ -98,6 +106,7 @@ internal class AgroJamApi @Inject constructor(
         nowPlaying {
             trackId title artist artworkUrl durationMs positionMs
             skipVotes skipsNeeded youSkipped
+            addedBy deviceId contentHash peerLanAddress peerLanToken
         }
     """.trimIndent()
 
@@ -127,16 +136,21 @@ internal class AgroJamApi @Inject constructor(
      * The duration is not optional in practice: the server advances the room on it, so a track sent
      * without one would be retired the instant it started.
      */
-    suspend fun addTrack(track: com.wander.android.data.model.UnifiedTrack): Result<Jam> =
+    suspend fun addTrack(
+        track: com.wander.android.data.model.UnifiedTrack,
+        contentHash: String? = null
+    ): Result<Jam> =
         graphQl.execute(
             """
             mutation AddJamTrack(
                 ${'$'}uri: String!, ${'$'}title: String!, ${'$'}artist: String!, ${'$'}art: String,
-                ${'$'}duration: Int, ${'$'}isLive: Boolean
+                ${'$'}duration: Int, ${'$'}isLive: Boolean,
+                ${'$'}deviceId: String, ${'$'}contentHash: String
             ) {
                 addJamTrack(
                     trackUri: ${'$'}uri, title: ${'$'}title, artist: ${'$'}artist,
-                    artworkUrl: ${'$'}art, durationMs: ${'$'}duration, isLive: ${'$'}isLive
+                    artworkUrl: ${'$'}art, durationMs: ${'$'}duration, isLive: ${'$'}isLive,
+                    deviceId: ${'$'}deviceId, contentHash: ${'$'}contentHash
                 ) {
                     $jamFields
                 }
@@ -153,6 +167,14 @@ internal class AgroJamApi @Inject constructor(
                 // have. Without it a radio looks exactly like a track whose length failed to
                 // parse, and those want the opposite treatment.
                 put("isLive", track.isLive)
+                // Only when this device actually holds the file. Both together or neither: they
+                // are what lets the rest of the room play this exact copy instead of hunting for
+                // the track by name in their own sources.
+                val hash = contentHash?.takeIf { it.isNotBlank() }
+                if (hash != null) {
+                    put("deviceId", secureStorage.agroDeviceId)
+                    put("contentHash", hash)
+                }
             }
         ).mapCatching { data -> data["addJamTrack"]!!.jsonObject.toJam() }
 
@@ -235,7 +257,12 @@ private fun JsonObject.toJam(): Jam = Jam(
             positionMs = now["positionMs"]?.jsonPrimitive?.longOrNull ?: 0L,
             skipVotes = now["skipVotes"]?.jsonPrimitive?.longOrNull ?: 0L,
             skipsNeeded = now["skipsNeeded"]?.jsonPrimitive?.longOrNull ?: 1L,
-            youSkipped = now["youSkipped"]?.jsonPrimitive?.booleanOrNull ?: false
+            youSkipped = now["youSkipped"]?.jsonPrimitive?.booleanOrNull ?: false,
+            addedBy = now["addedBy"]?.jsonPrimitive?.contentOrNull,
+            deviceId = now["deviceId"]?.jsonPrimitive?.contentOrNull,
+            contentHash = now["contentHash"]?.jsonPrimitive?.contentOrNull,
+            peerLanAddress = now["peerLanAddress"]?.jsonPrimitive?.contentOrNull,
+            peerLanToken = now["peerLanToken"]?.jsonPrimitive?.contentOrNull
         )
     },
     approvalsNeeded = this["approvalsNeeded"]?.jsonPrimitive?.longOrNull ?: 1L,

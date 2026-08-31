@@ -37,6 +37,49 @@ class P2PServer @Inject constructor(
     private var wifiLock: WifiManager.WifiLock? = null
     private var isRunning = false
 
+    /**
+     * Grants Agro has issued for this device, by token.
+     *
+     * This server listens on every interface, and a LAN is not a trust boundary — a hotel, a
+     * campus or a coffee shop is one network in exactly the sense that matters here. Without this
+     * anyone on the same Wi-Fi could read the whole library a track at a time, and asking by track
+     * id rather than by content hash makes that a guess rather than a search.
+     *
+     * Agro mints the token, tells this device about it over the WebSocket before handing it to the
+     * listener, and drops it when either socket closes, so nothing here has to be persisted or
+     * expire on its own.
+     */
+    private val grants = java.util.concurrent.ConcurrentHashMap<String, Grant>()
+
+    private data class Grant(val forUser: String, val expiresAtMs: Long)
+
+    /** Records a grant pushed by Agro as `P2P_GRANT`. */
+    fun acceptGrant(token: String, forUser: String, ttlSeconds: Long) {
+        if (token.isBlank()) return
+        grants.entries.removeAll { it.value.expiresAtMs <= System.currentTimeMillis() }
+        grants[token] = Grant(forUser, System.currentTimeMillis() + ttlSeconds * 1000L)
+    }
+
+    /** Drops every grant. Called when the session that justified them ends. */
+    fun clearGrants() = grants.clear()
+
+    private fun isAuthorised(request: String): Boolean {
+        val token = request.lineSequence()
+            .firstOrNull { it.startsWith("Authorization:", ignoreCase = true) }
+            ?.substringAfter(':')
+            ?.trim()
+            ?.removePrefix("Bearer ")
+            ?.trim()
+            .orEmpty()
+        if (token.isEmpty()) return false
+        val grant = grants[token] ?: return false
+        if (grant.expiresAtMs <= System.currentTimeMillis()) {
+            grants.remove(token)
+            return false
+        }
+        return true
+    }
+
     fun start(port: Int = 8702) {
         if (isRunning) return
         isRunning = true
@@ -112,31 +155,70 @@ class P2PServer @Inject constructor(
                 return
             }
 
-            if (method == "GET" && path.startsWith("/p2p/fetch/")) {
-                val hash = path.removePrefix("/p2p/fetch/").substringBefore("?")
-                val track = trackDao.findByContentHash(hash)
-                if (track != null && track.streamUri != null) {
-                    try {
-                        val uri = Uri.parse(track.streamUri)
-                        val fileStream = context.contentResolver.openInputStream(uri)
-                        if (fileStream != null) {
-                            fileStream.use { fileIn ->
-                                val available = fileIn.available().toLong()
-                                val lengthHeader = if (available > 0) "Content-Length: $available\r\n" else ""
-                                val header = "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\n${lengthHeader}Connection: close\r\n\r\n"
-                                output.write(header.toByteArray())
+            if (method == "GET" && (path.startsWith("/p2p/fetch/") || path.startsWith("/p2p/stream"))) {
+                // The ping above is deliberately open — it answers "something is listening" and
+                // nothing else. Everything that returns audio needs a grant.
+                if (!isAuthorised(request)) {
+                    val body = "forbidden"
+                    output.write(
+                        ("HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\n" +
+                            "Content-Length: ${body.length}\r\nConnection: close\r\n\r\n$body")
+                            .toByteArray()
+                    )
+                    output.flush()
+                    return
+                }
 
-                                val streamBuf = ByteArray(64 * 1024)
-                                var read: Int
-                                while (fileIn.read(streamBuf).also { read = it } != -1) {
-                                    output.write(streamBuf, 0, read)
-                                }
-                                output.flush()
-                                return
+                val fetchHash = if (path.startsWith("/p2p/fetch/")) {
+                    path.removePrefix("/p2p/fetch/").substringBefore("?")
+                } else null
+
+                // Addressed by content hash only. Looking a track up by *id* was a far wider
+                // door for no caller: an id is short and guessable where a SHA-256 is neither, and
+                // nothing asks this server for one.
+                val queryUri = Uri.parse("http://localhost$path")
+                val queryHash = queryUri.getQueryParameter("hash") ?: fetchHash
+                val track = queryHash?.let { trackDao.findByContentHash(it) }
+
+                val (inputStream, totalLength) = when {
+                    track?.localFilePath != null && java.io.File(track.localFilePath).exists() -> {
+                        val f = java.io.File(track.localFilePath)
+                        Pair(f.inputStream(), f.length())
+                    }
+                    track?.streamUri != null -> {
+                        val uri = Uri.parse(track.streamUri)
+                        val s = runCatching { context.contentResolver.openInputStream(uri) }.getOrNull()
+                        val len = runCatching {
+                            context.contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize }
+                        }.getOrNull() ?: -1L
+                        if (s != null) Pair(s, len) else Pair(null, -1L)
+                    }
+                    else -> Pair(null, -1L)
+                }
+
+                if (inputStream != null) {
+                    try {
+                        inputStream.use { fileIn ->
+                            val mime = when (track?.format?.lowercase()) {
+                                "flac" -> "audio/flac"
+                                "opus", "webm" -> "audio/ogg"
+                                "m4a", "mp4" -> "audio/mp4"
+                                else -> "audio/mpeg"
                             }
+                            val lengthHeader = if (totalLength > 0L) "Content-Length: $totalLength\r\n" else ""
+                            val header = "HTTP/1.1 200 OK\r\nContent-Type: $mime\r\nAccept-Ranges: bytes\r\n${lengthHeader}Connection: close\r\n\r\n"
+                            output.write(header.toByteArray())
+
+                            val streamBuf = ByteArray(64 * 1024)
+                            var read: Int
+                            while (fileIn.read(streamBuf).also { read = it } != -1) {
+                                output.write(streamBuf, 0, read)
+                            }
+                            output.flush()
+                            return
                         }
                     } catch (e: Exception) {
-                        Log.w(TAG, "Failed streaming track $hash", e)
+                        Log.w(TAG, "Failed streaming track $path", e)
                     }
                 }
 

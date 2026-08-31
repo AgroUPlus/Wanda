@@ -18,7 +18,8 @@ internal const val PROFILE_FIELDS =
         "showNowPlaying showStats discoverable showActivity publicKey"
 
 internal const val NOW_PLAYING_FIELDS =
-    "username trackUri trackTitle artistName albumName artworkUrl positionMs isPlaying updatedAt"
+    "username trackUri trackTitle artistName albumName artworkUrl positionMs isPlaying updatedAt " +
+        "deviceId contentHash peerLanAddress peerLanToken"
 
 internal fun JsonObject.toProfile(): AgroProfile = AgroProfile(
     username = str("username").orEmpty(),
@@ -44,7 +45,11 @@ internal fun JsonObject.toNowPlaying(): AgroFriendNowPlaying = AgroFriendNowPlay
     artworkUrl = str("artworkUrl"),
     positionMs = long("positionMs"),
     isPlaying = bool("isPlaying"),
-    updatedAt = str("updatedAt").orEmpty()
+    updatedAt = str("updatedAt").orEmpty(),
+    deviceId = str("deviceId"),
+    contentHash = str("contentHash"),
+    peerLanAddress = str("peerLanAddress"),
+    peerLanToken = str("peerLanToken")
 )
 
 internal fun JsonObject.toFriend(): AgroFriend = AgroFriend(
