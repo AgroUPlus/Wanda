@@ -37,6 +37,49 @@ class P2PServer @Inject constructor(
     private var wifiLock: WifiManager.WifiLock? = null
     private var isRunning = false
 
+    /**
+     * Grants Agro has issued for this device, by token.
+     *
+     * This server listens on every interface, and a LAN is not a trust boundary — a hotel, a
+     * campus or a coffee shop is one network in exactly the sense that matters here. Without this
+     * anyone on the same Wi-Fi could read the whole library a track at a time, and asking by track
+     * id rather than by content hash makes that a guess rather than a search.
+     *
+     * Agro mints the token, tells this device about it over the WebSocket before handing it to the
+     * listener, and drops it when either socket closes, so nothing here has to be persisted or
+     * expire on its own.
+     */
+    private val grants = java.util.concurrent.ConcurrentHashMap<String, Grant>()
+
+    private data class Grant(val forUser: String, val expiresAtMs: Long)
+
+    /** Records a grant pushed by Agro as `P2P_GRANT`. */
+    fun acceptGrant(token: String, forUser: String, ttlSeconds: Long) {
+        if (token.isBlank()) return
+        grants.entries.removeAll { it.value.expiresAtMs <= System.currentTimeMillis() }
+        grants[token] = Grant(forUser, System.currentTimeMillis() + ttlSeconds * 1000L)
+    }
+
+    /** Drops every grant. Called when the session that justified them ends. */
+    fun clearGrants() = grants.clear()
+
+    private fun isAuthorised(request: String): Boolean {
+        val token = request.lineSequence()
+            .firstOrNull { it.startsWith("Authorization:", ignoreCase = true) }
+            ?.substringAfter(':')
+            ?.trim()
+            ?.removePrefix("Bearer ")
+            ?.trim()
+            .orEmpty()
+        if (token.isEmpty()) return false
+        val grant = grants[token] ?: return false
+        if (grant.expiresAtMs <= System.currentTimeMillis()) {
+            grants.remove(token)
+            return false
+        }
+        return true
+    }
+
     fun start(port: Int = 8702) {
         if (isRunning) return
         isRunning = true
@@ -113,16 +156,29 @@ class P2PServer @Inject constructor(
             }
 
             if (method == "GET" && (path.startsWith("/p2p/fetch/") || path.startsWith("/p2p/stream"))) {
+                // The ping above is deliberately open — it answers "something is listening" and
+                // nothing else. Everything that returns audio needs a grant.
+                if (!isAuthorised(request)) {
+                    val body = "forbidden"
+                    output.write(
+                        ("HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\n" +
+                            "Content-Length: ${body.length}\r\nConnection: close\r\n\r\n$body")
+                            .toByteArray()
+                    )
+                    output.flush()
+                    return
+                }
+
                 val fetchHash = if (path.startsWith("/p2p/fetch/")) {
                     path.removePrefix("/p2p/fetch/").substringBefore("?")
                 } else null
 
+                // Addressed by content hash only. Looking a track up by *id* was a far wider
+                // door for no caller: an id is short and guessable where a SHA-256 is neither, and
+                // nothing asks this server for one.
                 val queryUri = Uri.parse("http://localhost$path")
-                val trackId = queryUri.getQueryParameter("id")
                 val queryHash = queryUri.getQueryParameter("hash") ?: fetchHash
-
-                val track = (queryHash?.let { trackDao.findByContentHash(it) }
-                    ?: trackId?.let { trackDao.getTrackById(it) })
+                val track = queryHash?.let { trackDao.findByContentHash(it) }
 
                 val (inputStream, totalLength) = when {
                     track?.localFilePath != null && java.io.File(track.localFilePath).exists() -> {

@@ -48,7 +48,8 @@ internal class ListenAlongController @Inject constructor(
     private val api: AgroListenAlongApi,
     private val resolver: ListenAlongResolver,
     private val playerConnection: PlayerConnection,
-    private val suppression: ScrobbleSuppression
+    private val suppression: ScrobbleSuppression,
+    private val musicRepository: MusicRepository
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -106,6 +107,9 @@ internal class ListenAlongController @Inject constructor(
         _session.value = null
         playingKey = null
         pending = null
+        // The URLs resolved for this session name a private address and carry a bearer token. They
+        // are worth exactly as long as the session was.
+        musicRepository.clearEphemeralStreams()
         return api.stopListenAlong().map { }
     }
 
@@ -138,7 +142,11 @@ internal class ListenAlongController @Inject constructor(
             artworkUrl = frame.artworkUrl,
             positionMs = frame.positionMs,
             isPlaying = frame.isPlaying,
-            updatedAt = ""
+            updatedAt = "",
+            deviceId = frame.deviceId,
+            contentHash = frame.contentHash,
+            peerLanAddress = frame.peerLanAddress,
+            peerLanToken = frame.peerLanToken
         )
         scope.launch {
             followMutex.withLock {
@@ -164,7 +172,10 @@ internal class ListenAlongController @Inject constructor(
         val resolved = resolver.resolve(
             title = now.trackTitle,
             artist = now.artistName,
-            hostUsername = now.username
+            hostDevice = now.deviceId,
+            hostLanAddress = now.peerLanAddress,
+            hostLanToken = now.peerLanToken,
+            contentHash = now.contentHash
         )
         if (resolved == null) {
             // No fallback and no placeholder. Naming the track that could not be found is the only

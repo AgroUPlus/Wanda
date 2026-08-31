@@ -325,7 +325,12 @@ class AgroSessionRepository @Inject constructor(
                         artist = payload["artist"]?.jsonPrimitive?.contentOrNull.orEmpty(),
                         artworkUrl = payload["artworkUrl"]?.jsonPrimitive?.contentOrNull,
                         durationMs = payload["durationMs"]?.jsonPrimitive?.longOrNull ?: 0L,
-                        positionMs = payload["positionMs"]?.jsonPrimitive?.longOrNull ?: 0L
+                        positionMs = payload["positionMs"]?.jsonPrimitive?.longOrNull ?: 0L,
+                        addedBy = payload["addedBy"]?.jsonPrimitive?.contentOrNull,
+                        deviceId = payload["deviceId"]?.jsonPrimitive?.contentOrNull,
+                        contentHash = payload["contentHash"]?.jsonPrimitive?.contentOrNull,
+                        peerLanAddress = payload["peerLanAddress"]?.jsonPrimitive?.contentOrNull,
+                        peerLanToken = payload["peerLanToken"]?.jsonPrimitive?.contentOrNull
                     )
                 )
             }
@@ -341,7 +346,11 @@ class AgroSessionRepository @Inject constructor(
                     positionMs = payload?.get("positionMs")?.jsonPrimitive?.longOrNull ?: 0L,
                     isPlaying = payload?.get("isPlaying")?.jsonPrimitive?.booleanOrNull ?: false,
                     // The host's own frames carry a track; the stop frame carries only this.
-                    stopped = payload?.get("stopped")?.jsonPrimitive?.booleanOrNull ?: false
+                    stopped = payload?.get("stopped")?.jsonPrimitive?.booleanOrNull ?: false,
+                    deviceId = payload?.get("deviceId")?.jsonPrimitive?.contentOrNull,
+                    contentHash = payload?.get("contentHash")?.jsonPrimitive?.contentOrNull,
+                    peerLanAddress = payload?.get("peerLanAddress")?.jsonPrimitive?.contentOrNull,
+                    peerLanToken = payload?.get("peerLanToken")?.jsonPrimitive?.contentOrNull
                 )
             }
             "TRACK_DROP" -> (envelope["payload"] as? JsonObject)?.let { payload ->
@@ -352,6 +361,18 @@ class AgroSessionRepository @Inject constructor(
                 )
             }
             "SETTINGS_SYNC" -> AgroLiveMessage.Settings
+            "P2P_GRANT" -> {
+                val payload = envelope["payload"] as? JsonObject
+                val token = payload?.get("token")?.jsonPrimitive?.contentOrNull
+                val forUser = payload?.get("forUser")?.jsonPrimitive?.contentOrNull
+                if (token != null && forUser != null) {
+                    AgroLiveMessage.P2PGrant(
+                        token = token,
+                        forUser = forUser,
+                        ttlSeconds = payload["ttlSeconds"]?.jsonPrimitive?.longOrNull ?: 600L
+                    )
+                } else null
+            }
             "RELAY_REQUEST" -> {
                 val payload = envelope["payload"] as? JsonObject
                 val sessionId = payload?.get("sessionId")?.jsonPrimitive?.contentOrNull

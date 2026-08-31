@@ -75,7 +75,8 @@ class AgroClient @Inject constructor(
         artworkUrl: String?,
         positionMs: Long,
         durationMs: Long,
-        isPlaying: Boolean
+        isPlaying: Boolean,
+        contentHash: String? = null
     ): Result<Unit> {
         val mutation = """
             mutation UpdateHandoff(${'$'}input: HandoffInput!) {
@@ -99,6 +100,10 @@ class AgroClient @Inject constructor(
                 put("durationMs", durationMs)
                 put("isPlaying", isPlaying)
                 put("deviceId", secureStorage.agroDeviceId)
+                // Only sent when this device actually has the file and has hashed it. Omitted
+                // rather than nulled: the server keeps the hash a track change established instead
+                // of erasing it on the next heartbeat.
+                contentHash?.takeIf { it.isNotBlank() }?.let { put("contentHash", it) }
             })
         }
 
