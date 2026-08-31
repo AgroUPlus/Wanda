@@ -177,7 +177,11 @@ internal class AgroSessionViewModel @Inject constructor(
                     friendNotifier.notifyDrop(decrypted)
                 }
                 is AgroLiveMessage.RelayRequest -> {
-                    agroRelayClient.handleRelayRequest(message.sessionId, message.contentHash)
+                    agroRelayClient.handleRelayRequest(
+                        message.sessionId,
+                        message.contentHash,
+                        message.listenerPublicKey
+                    )
                 }
                 is AgroLiveMessage.P2PGrant -> {
                     // Recorded before the listener can present it: Agro pushes the grant here

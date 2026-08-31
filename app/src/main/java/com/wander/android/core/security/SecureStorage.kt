@@ -295,6 +295,22 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
      * id already stored — including an old model-derived one — is kept, so pairing survives the
      * upgrade.
      */
+    /**
+     * How far this device has read the shared fingerprint catalogue, and how much it has sent.
+     *
+     * Neither is a secret, and they are here only because this is the app's one device-scoped
+     * key-value store. They are device state rather than account state on purpose: two devices on
+     * one account read the catalogue at their own pace, and a cursor shared between them would
+     * make whichever synced last skip what the other had already taken.
+     */
+    var catalogCursor: Long
+        get() = prefs.getLong(KEY_CATALOG_CURSOR, 0L)
+        set(value) = prefs.edit { putLong(KEY_CATALOG_CURSOR, value) }
+
+    var catalogLastPublishedAt: Long
+        get() = prefs.getLong(KEY_CATALOG_PUBLISHED_AT, 0L)
+        set(value) = prefs.edit { putLong(KEY_CATALOG_PUBLISHED_AT, value) }
+
     val agroDeviceId: String
         get() = prefs.getString(KEY_AGRO_DEVICE_ID, null)?.takeIf { it.isNotBlank() }
             ?: ("wanda-" + java.util.UUID.randomUUID().toString().take(12)).also { generated ->
@@ -431,6 +447,8 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_AGRO_IDENTITY_PUB = "key_agro_identity_pub"
         private const val KEY_AGRO_SYNC_SETTINGS = "key_agro_sync_settings"
         private const val KEY_AGRO_DEVICE_ID = "key_agro_device_id"
+        const val KEY_CATALOG_CURSOR = "catalog_cursor"
+        const val KEY_CATALOG_PUBLISHED_AT = "catalog_published_at"
         private const val KEY_AGRO_P2P_SYNC = "key_agro_p2p_sync"
         private const val KEY_AGRO_SERVER_ARCHIVE = "key_agro_server_archive"
         private const val KEY_AGRO_LIBRARY_SYNC = "key_agro_library_sync"
