@@ -135,7 +135,11 @@ internal class JamPlaybackController @Inject constructor(
         // The same track again — a re-announcement, or a second listener joining. Already playing.
         if (now.trackId == playingTrackId) return
 
-        val resolved = resolver.resolve(now.title, now.artist)
+        val resolved = resolver.resolve(
+            title = now.title,
+            artist = now.artist,
+            contentHash = now.trackId
+        )
         if (resolved == null) {
             Log.i(TAG, "no source here has \"${now.title}\"")
             _unresolvable.value = now.title

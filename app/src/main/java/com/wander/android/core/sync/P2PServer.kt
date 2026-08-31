@@ -112,31 +112,57 @@ class P2PServer @Inject constructor(
                 return
             }
 
-            if (method == "GET" && path.startsWith("/p2p/fetch/")) {
-                val hash = path.removePrefix("/p2p/fetch/").substringBefore("?")
-                val track = trackDao.findByContentHash(hash)
-                if (track != null && track.streamUri != null) {
-                    try {
-                        val uri = Uri.parse(track.streamUri)
-                        val fileStream = context.contentResolver.openInputStream(uri)
-                        if (fileStream != null) {
-                            fileStream.use { fileIn ->
-                                val available = fileIn.available().toLong()
-                                val lengthHeader = if (available > 0) "Content-Length: $available\r\n" else ""
-                                val header = "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\n${lengthHeader}Connection: close\r\n\r\n"
-                                output.write(header.toByteArray())
+            if (method == "GET" && (path.startsWith("/p2p/fetch/") || path.startsWith("/p2p/stream"))) {
+                val fetchHash = if (path.startsWith("/p2p/fetch/")) {
+                    path.removePrefix("/p2p/fetch/").substringBefore("?")
+                } else null
 
-                                val streamBuf = ByteArray(64 * 1024)
-                                var read: Int
-                                while (fileIn.read(streamBuf).also { read = it } != -1) {
-                                    output.write(streamBuf, 0, read)
-                                }
-                                output.flush()
-                                return
+                val queryUri = Uri.parse("http://localhost$path")
+                val trackId = queryUri.getQueryParameter("id")
+                val queryHash = queryUri.getQueryParameter("hash") ?: fetchHash
+
+                val track = (queryHash?.let { trackDao.findByContentHash(it) }
+                    ?: trackId?.let { trackDao.getTrackById(it) })
+
+                val (inputStream, totalLength) = when {
+                    track?.localFilePath != null && java.io.File(track.localFilePath).exists() -> {
+                        val f = java.io.File(track.localFilePath)
+                        Pair(f.inputStream(), f.length())
+                    }
+                    track?.streamUri != null -> {
+                        val uri = Uri.parse(track.streamUri)
+                        val s = runCatching { context.contentResolver.openInputStream(uri) }.getOrNull()
+                        val len = runCatching {
+                            context.contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize }
+                        }.getOrNull() ?: -1L
+                        if (s != null) Pair(s, len) else Pair(null, -1L)
+                    }
+                    else -> Pair(null, -1L)
+                }
+
+                if (inputStream != null) {
+                    try {
+                        inputStream.use { fileIn ->
+                            val mime = when (track?.format?.lowercase()) {
+                                "flac" -> "audio/flac"
+                                "opus", "webm" -> "audio/ogg"
+                                "m4a", "mp4" -> "audio/mp4"
+                                else -> "audio/mpeg"
                             }
+                            val lengthHeader = if (totalLength > 0L) "Content-Length: $totalLength\r\n" else ""
+                            val header = "HTTP/1.1 200 OK\r\nContent-Type: $mime\r\nAccept-Ranges: bytes\r\n${lengthHeader}Connection: close\r\n\r\n"
+                            output.write(header.toByteArray())
+
+                            val streamBuf = ByteArray(64 * 1024)
+                            var read: Int
+                            while (fileIn.read(streamBuf).also { read = it } != -1) {
+                                output.write(streamBuf, 0, read)
+                            }
+                            output.flush()
+                            return
                         }
                     } catch (e: Exception) {
-                        Log.w(TAG, "Failed streaming track $hash", e)
+                        Log.w(TAG, "Failed streaming track $path", e)
                     }
                 }
 

@@ -352,6 +352,15 @@ class AgroSessionRepository @Inject constructor(
                 )
             }
             "SETTINGS_SYNC" -> AgroLiveMessage.Settings
+            "RELAY_REQUEST" -> {
+                val payload = envelope["payload"] as? JsonObject
+                val sessionId = payload?.get("sessionId")?.jsonPrimitive?.contentOrNull
+                val contentHash = payload?.get("contentHash")?.jsonPrimitive?.contentOrNull
+                val toDevice = payload?.get("toDevice")?.jsonPrimitive?.contentOrNull.orEmpty()
+                if (sessionId != null && contentHash != null) {
+                    AgroLiveMessage.RelayRequest(sessionId, contentHash, toDevice)
+                } else null
+            }
             // Anything a newer server adds is ignored by name rather than by accident, so adding
             // one later is a single branch.
             else -> null
