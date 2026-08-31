@@ -37,18 +37,21 @@ class PlaylistWriteRepository @Inject constructor(
         it.sourceType == type && it.isConfigured.value && it.capabilities.playlistWrite
     }
 
-    /** Whether tracks from [type] can be put in a playlist at all. Drives the UI's action list. */
-    fun canWrite(type: SourceType): Boolean = writableSource(type) != null
+    /** Whether tracks from [type] can be put in a playlist at all (either on its source or in local universal playlists). */
+    fun canWrite(type: SourceType): Boolean =
+        writableSource(type) != null || writableSource(SourceType.LOCAL) != null
 
     /**
-     * Playlists that could receive [type]'s tracks.
-     *
-     * Filtered by source, not merged: adding a Navidrome track to a YouTube Music playlist is not
-     * something any backend here can do, so offering it would be inviting a failure.
+     * Playlists that can receive [type]'s tracks: local universal playlists (which accept tracks
+     * from any source) plus any playlist on [type]'s own backend if writable.
      */
     suspend fun writableTargets(type: SourceType): List<UnifiedPlaylist> =
         withContext(Dispatchers.IO) {
-            writableSource(type)?.getPlaylists()?.getOrDefault(emptyList()).orEmpty()
+            val local = writableSource(SourceType.LOCAL)?.getPlaylists()?.getOrDefault(emptyList()).orEmpty()
+            val specific = if (type != SourceType.LOCAL) {
+                writableSource(type)?.getPlaylists()?.getOrDefault(emptyList()).orEmpty()
+            } else emptyList()
+            (local + specific).distinctBy { it.id }
         }
 
     suspend fun createPlaylist(
