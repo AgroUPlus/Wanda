@@ -67,17 +67,19 @@ class AddToPlaylistViewModel @Inject constructor(
     }
 
     fun addToExisting(playlist: UnifiedPlaylist) {
-        val trackIds = if (_targetTracks.value.isNotEmpty()) _targetTracks.value.map { it.id } else listOfNotNull(_target.value?.id)
+        val tracks = _targetTracks.value.ifEmpty { listOfNotNull(_target.value) }
+        val trackIds = tracks.map { it.id }
         if (trackIds.isEmpty()) return
         dismiss()
-        viewModelScope.launch { playlistWriter.addToPlaylist(playlist, trackIds) }
+        viewModelScope.launch { playlistWriter.addToPlaylist(playlist, trackIds, tracks) }
     }
 
     fun createWith(name: String) {
-        val trackIds = if (_targetTracks.value.isNotEmpty()) _targetTracks.value.map { it.id } else listOfNotNull(_target.value?.id)
-        val source = _target.value?.source ?: SourceType.LOCAL
+        val tracks = _targetTracks.value.ifEmpty { listOfNotNull(_target.value) }
+        val trackIds = tracks.map { it.id }
+        val source = _target.value?.source?.takeIf { it == SourceType.LOCAL || it == SourceType.NAVIDROME } ?: SourceType.LOCAL
         if (trackIds.isEmpty()) return
         dismiss()
-        viewModelScope.launch { playlistWriter.createPlaylist(source, name, trackIds) }
+        viewModelScope.launch { playlistWriter.createPlaylist(source, name, trackIds, tracks) }
     }
 }
