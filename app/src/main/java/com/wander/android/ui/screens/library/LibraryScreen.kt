@@ -103,7 +103,10 @@ fun LibraryScreen(
                 { addToPlaylist.open(track) }
             } else {
                 null
-            }
+            },
+            onDeleteDownload = if (tab == LibraryTab.DOWNLOADS || track.isDownloaded) {
+                { viewModel.deleteDownloadedTrack(track) }
+            } else null
         )
     }
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
