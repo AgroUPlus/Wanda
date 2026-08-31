@@ -1,6 +1,12 @@
 package com.wander.android.ui.screens.social
 
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -20,14 +26,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.headerInset
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Songs friends handed you, and the ones you handed out, presented as a conversation feed.
@@ -35,10 +45,8 @@ import com.wander.android.ui.components.headerInset
  * Drops are messages centered around music — styled as conversational speech bubbles with
  * rich attached playable track cards.
  *
- * The open conversation is *state*, not a destination, which is why back is handled twice over:
- * the button in the bar closes the thread first, and so does the system gesture. Without the
- * second one the two disagreed — the gesture left the inbox entirely from inside a conversation,
- * which is not what going back from a conversation means anywhere else.
+ * The open conversation is *state*, not a destination, which is why back is handled smoothly:
+ * tapping back or swiping back with predictive gesture closes the thread with expressive motion.
  */
 @Composable
 internal fun InboxScreen(
@@ -55,7 +63,20 @@ internal fun InboxScreen(
         }
     }
 
-    BackHandler(enabled = state.openWith != null) { viewModel.closeThread() }
+    var backProgress by remember { mutableFloatStateOf(0f) }
+
+    PredictiveBackHandler(enabled = state.openWith != null) { progressFlow ->
+        try {
+            progressFlow.collect { backEvent ->
+                backProgress = backEvent.progress
+            }
+            viewModel.closeThread()
+        } catch (e: CancellationException) {
+            backProgress = 0f
+        } finally {
+            backProgress = 0f
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -91,29 +112,53 @@ internal fun InboxScreen(
                 }
             }
 
-            val openWith = state.openWith
-            when {
-                openWith != null -> InboxConversation(
-                    state = state,
-                    contentPadding = contentPadding,
-                    onPlay = viewModel::play,
-                    onReact = viewModel::react,
-                    onRemove = viewModel::remove
-                )
+            AnimatedContent(
+                targetState = state.openWith,
+                transitionSpec = {
+                    if (targetState != null) {
+                        (slideInHorizontally { width -> width / 3 } + fadeIn()) togetherWith
+                            (slideOutHorizontally { width -> -width / 6 } + fadeOut())
+                    } else {
+                        (slideInHorizontally { width -> -width / 6 } + fadeIn()) togetherWith
+                            (slideOutHorizontally { width -> width / 3 } + fadeOut())
+                    }
+                },
+                label = "inbox_thread_transition",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        if (state.openWith != null && backProgress > 0f) {
+                            val scale = 1f - (backProgress * 0.08f)
+                            scaleX = scale
+                            scaleY = scale
+                            translationX = backProgress * 120f
+                            alpha = 1f - (backProgress * 0.3f)
+                        }
+                    }
+            ) { openWith ->
+                when {
+                    openWith != null -> InboxConversation(
+                        state = state,
+                        contentPadding = contentPadding,
+                        onPlay = viewModel::play,
+                        onReact = viewModel::react,
+                        onRemove = viewModel::remove
+                    )
 
-                state.loading && state.threads.isEmpty() ->
-                    InboxThreadListSkeleton(contentPadding = contentPadding)
+                    state.loading && state.threads.isEmpty() ->
+                        InboxThreadListSkeleton(contentPadding = contentPadding)
 
-                state.threads.isEmpty() -> EmptyState(
-                    title = "No conversations yet",
-                    message = "Press and hold any track to send it to a friend with a note."
-                )
+                    state.threads.isEmpty() -> EmptyState(
+                        title = "No conversations yet",
+                        message = "Press and hold any track to send it to a friend with a note."
+                    )
 
-                else -> InboxThreadList(
-                    state = state,
-                    contentPadding = contentPadding,
-                    onOpenThread = viewModel::openThread
-                )
+                    else -> InboxThreadList(
+                        state = state,
+                        contentPadding = contentPadding,
+                        onOpenThread = viewModel::openThread
+                    )
+                }
             }
         }
 
