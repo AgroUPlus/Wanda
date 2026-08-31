@@ -75,7 +75,7 @@ class AddToPlaylistViewModel @Inject constructor(
 
     fun createWith(name: String) {
         val trackIds = if (_targetTracks.value.isNotEmpty()) _targetTracks.value.map { it.id } else listOfNotNull(_target.value?.id)
-        val source = _target.value?.source ?: SourceType.LOCAL
+        val source = _target.value?.source?.takeIf { it == SourceType.LOCAL || it == SourceType.NAVIDROME } ?: SourceType.LOCAL
         if (trackIds.isEmpty()) return
         dismiss()
         viewModelScope.launch { playlistWriter.createPlaylist(source, name, trackIds) }
