@@ -147,6 +147,11 @@ class MusicRepository @Inject constructor(
     private val ephemeralStreams = java.util.concurrent.ConcurrentHashMap<String, StreamInfo>()
 
     /** Registers a stream that only [getStreamInfo] within this session should know about. */
+    /** One track as Room holds it, for a caller that has an id and needs its tags. */
+    suspend fun trackById(trackId: String): UnifiedTrack? = withContext(Dispatchers.IO) {
+        trackDao.getTrackById(trackId)?.toUnifiedTrack()
+    }
+
     fun registerEphemeralStream(trackId: String, info: StreamInfo) {
         // A listening session produces one of these per track change; the cap is only here so a
         // very long session cannot grow the map without bound.

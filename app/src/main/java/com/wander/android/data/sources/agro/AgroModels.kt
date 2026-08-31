@@ -217,7 +217,14 @@ internal sealed interface AgroLiveMessage {
     data class RelayRequest(
         val sessionId: String,
         val contentHash: String,
-        val toDevice: String
+        val toDevice: String,
+        /**
+         * The asking device's X25519 identity key, when it has one.
+         *
+         * Null means that device cannot decrypt, and the audio is relayed in the clear as it was
+         * before — the alternative being to send it something it can only hear as noise.
+         */
+        val listenerPublicKey: String? = null
     ) : AgroLiveMessage
 
     /**

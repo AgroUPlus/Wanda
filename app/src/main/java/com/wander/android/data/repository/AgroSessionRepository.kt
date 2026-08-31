@@ -437,8 +437,9 @@ class AgroSessionRepository @Inject constructor(
                 val sessionId = payload?.get("sessionId")?.jsonPrimitive?.contentOrNull
                 val contentHash = payload?.get("contentHash")?.jsonPrimitive?.contentOrNull
                 val toDevice = payload?.get("toDevice")?.jsonPrimitive?.contentOrNull.orEmpty()
+                val listenerKey = payload?.get("listenerPublicKey")?.jsonPrimitive?.contentOrNull
                 if (sessionId != null && contentHash != null) {
-                    AgroLiveMessage.RelayRequest(sessionId, contentHash, toDevice)
+                    AgroLiveMessage.RelayRequest(sessionId, contentHash, toDevice, listenerKey)
                 } else null
             }
             // Anything a newer server adds is ignored by name rather than by accident, so adding
