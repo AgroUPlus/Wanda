@@ -44,7 +44,9 @@ internal class AgroSessionViewModel @Inject constructor(
     private val dropsRepository: DropsRepository,
     private val friendNotifier: FriendNotifier,
     private val incognitoRepository: IncognitoRepository,
-    private val identityKeyManager: com.wander.android.core.security.IdentityKeyManager
+    private val identityKeyManager: com.wander.android.core.security.IdentityKeyManager,
+    private val agroRelayClient: com.wander.android.data.sources.agro.AgroRelayClient,
+    private val p2pServer: com.wander.android.core.sync.P2PServer
 ) : ViewModel() {
 
     val devices: StateFlow<List<AgroNode>> = sessionRepository.devices
@@ -164,6 +166,14 @@ internal class AgroSessionViewModel @Inject constructor(
                     dropsRepository.onPushed(decrypted)
                     friendNotifier.notifyDrop(decrypted)
                 }
+                is AgroLiveMessage.RelayRequest -> {
+                    agroRelayClient.handleRelayRequest(message.sessionId, message.contentHash)
+                }
+                is AgroLiveMessage.P2PGrant -> {
+                    // Recorded before the listener can present it: Agro pushes the grant here
+                    // first for exactly that reason.
+                    p2pServer.acceptGrant(message.token, message.forUser, message.ttlSeconds)
+                }
             }
         }
     }
@@ -257,5 +267,10 @@ private fun com.wander.android.data.sources.agro.AgroJamNowPlaying.toApi() =
         // track. Skip counts come from the jam itself, which is re-read on the same event.
         skipVotes = 0,
         skipsNeeded = 1,
-        youSkipped = false
+        youSkipped = false,
+        addedBy = addedBy,
+        deviceId = deviceId,
+        contentHash = contentHash,
+        peerLanAddress = peerLanAddress,
+        peerLanToken = peerLanToken
     )

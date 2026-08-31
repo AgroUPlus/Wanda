@@ -63,7 +63,19 @@ internal data class AgroFriendNowPlaying(
     val artworkUrl: String?,
     val positionMs: Long,
     val isPlaying: Boolean,
-    val updatedAt: String
+    val updatedAt: String,
+    /** Which of the host's devices is playing, so a direct transfer has something to address. */
+    val deviceId: String? = null,
+    /** SHA-256 of the host's file, when they have one. Null for anything they are streaming. */
+    val contentHash: String? = null,
+    /**
+     * Where to reach the host's device on this network, and the token to present when doing so.
+     *
+     * Both are set only when the server judged the two devices to share a local network. Neither
+     * is usable without the other: the address alone reaches a server that will refuse it.
+     */
+    val peerLanAddress: String? = null,
+    val peerLanToken: String? = null
 )
 
 /** A friend, with whatever they are playing when they allow that to be seen. */

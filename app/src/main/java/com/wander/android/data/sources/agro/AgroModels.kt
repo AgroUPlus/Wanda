@@ -94,7 +94,19 @@ internal data class AgroJamNowPlaying(
     val artist: String,
     val artworkUrl: String?,
     val durationMs: Long,
-    val positionMs: Long
+    val positionMs: Long,
+    /** The member who queued it, and so the one holding the file. */
+    val addedBy: String? = null,
+    /** Which of their devices holds it. Null for anything queued from a streaming source. */
+    val deviceId: String? = null,
+    /**
+     * SHA-256 of the bytes. Null when the queueing member had no file, which is what sends the
+     * rest of the room back to matching the track by name.
+     */
+    val contentHash: String? = null,
+    /** Where to reach [deviceId] on this network, and the token for it. Set only when reachable. */
+    val peerLanAddress: String? = null,
+    val peerLanToken: String? = null
 )
 
 internal sealed interface AgroLiveMessage {
@@ -167,7 +179,15 @@ internal sealed interface AgroLiveMessage {
         val artworkUrl: String?,
         val positionMs: Long,
         val isPlaying: Boolean,
-        val stopped: Boolean
+        val stopped: Boolean,
+        /** Which of the host's devices is playing, so a direct transfer has something to address. */
+        val deviceId: String? = null,
+        /** SHA-256 of the host's file, when they have one. Null for anything they are streaming. */
+        val contentHash: String? = null,
+        /** Set only when the server judged both devices to be on one local network. */
+        val peerLanAddress: String? = null,
+        /** The bearer token to present to [peerLanAddress]. Useless, and absent, without it. */
+        val peerLanToken: String? = null
     ) : AgroLiveMessage
 
     /**
@@ -180,4 +200,25 @@ internal sealed interface AgroLiveMessage {
      * app is foregrounded and the round trip might not finish before it closes.
      */
     data class TrackDrop(val drop: AgroDrop) : AgroLiveMessage
+
+    /**
+     * An ephemeral relay stream request from the server to stream a local file to a peer.
+     */
+    data class RelayRequest(
+        val sessionId: String,
+        val contentHash: String,
+        val toDevice: String
+    ) : AgroLiveMessage
+
+    /**
+     * Agro has authorised one account to fetch audio from this device over the local network.
+     *
+     * Pushed before the token reaches the listener, so a grant is never presented here before it
+     * is known.
+     */
+    data class P2PGrant(
+        val token: String,
+        val forUser: String,
+        val ttlSeconds: Long
+    ) : AgroLiveMessage
 }

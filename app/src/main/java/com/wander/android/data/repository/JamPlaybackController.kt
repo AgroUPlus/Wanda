@@ -34,7 +34,8 @@ import javax.inject.Singleton
 @Singleton
 internal class JamPlaybackController @Inject constructor(
     private val resolver: ListenAlongResolver,
-    private val playerConnection: PlayerConnection
+    private val playerConnection: PlayerConnection,
+    private val musicRepository: MusicRepository
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -129,13 +130,25 @@ internal class JamPlaybackController @Inject constructor(
         pending = null
         _unresolvable.value = null
         _outOfSync.value = false
+        // See ListenAlongController.stop: these outlive nothing.
+        musicRepository.clearEphemeralStreams()
     }
 
     private suspend fun follow(now: JamNowPlaying, arrivedAt: Long) {
         // The same track again — a re-announcement, or a second listener joining. Already playing.
         if (now.trackId == playingTrackId) return
 
-        val resolved = resolver.resolve(now.title, now.artist)
+        val resolved = resolver.resolve(
+            title = now.title,
+            artist = now.artist,
+            // `trackId` names a row in the room's queue, not a file — passing it as a content hash
+            // asked every peer for bytes nobody has. The hash and the device come from whoever
+            // queued the track, and are absent unless they had a real file.
+            hostDevice = now.deviceId,
+            hostLanAddress = now.peerLanAddress,
+            hostLanToken = now.peerLanToken,
+            contentHash = now.contentHash
+        )
         if (resolved == null) {
             Log.i(TAG, "no source here has \"${now.title}\"")
             _unresolvable.value = now.title
