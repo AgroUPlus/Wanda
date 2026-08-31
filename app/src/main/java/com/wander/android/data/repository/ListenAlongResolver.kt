@@ -121,7 +121,7 @@ internal class ListenAlongResolver @Inject constructor(
         }
 
         // 5. Agro Ephemeral Server Relay
-        if (!hostDevice.isNullOrBlank() && secureStorage.agroServerUrl.value != null) {
+        if (!hostDevice.isNullOrBlank() && secureStorage.agroServerUrl.isNotBlank()) {
             val myDevice = secureStorage.agroDeviceId
             val hash = contentHash ?: "stream_${title.hashCode()}"
             val relayStreamUrl = agroRelayClient.openRelayReceiveStream(

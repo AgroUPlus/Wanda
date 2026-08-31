@@ -35,7 +35,7 @@ class AgroRelayClient @Inject constructor(
     private val trackDao: TrackDao
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val base get() = secureStorage.agroServerUrl.value?.trimEnd('/')
+    private val base: String? get() = secureStorage.agroServerUrl.trimEnd('/').takeIf { it.isNotBlank() }
     private val apiKey get() = secureStorage.agroApiKey
 
     private val relayClient = OkHttpClient.Builder()
@@ -91,10 +91,17 @@ class AgroRelayClient @Inject constructor(
                 }
                 track.streamUri != null -> {
                     val uri = Uri.parse(track.streamUri)
-                    val s = runCatching { context.contentResolver.openInputStream(uri) }.getOrNull()
-                    if (s != null) {
-                        val avail = runCatching { s.available().toLong() }.getOrDefault(0L)
-                        Pair({ context.contentResolver.openInputStream(uri)!! }, avail)
+                    // Size comes from the file descriptor, not from `available()` on a probe
+                    // stream: `available()` reports what can be read without blocking rather than
+                    // the length, and the probe stream was being opened and never closed.
+                    val size = runCatching {
+                        context.contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize }
+                    }.getOrNull() ?: -1L
+                    val canOpen = runCatching {
+                        context.contentResolver.openInputStream(uri)?.use { true } ?: false
+                    }.getOrDefault(false)
+                    if (canOpen) {
+                        Pair({ context.contentResolver.openInputStream(uri)!! }, size)
                     } else null
                 }
                 else -> null
