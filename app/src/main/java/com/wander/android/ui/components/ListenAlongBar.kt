@@ -97,8 +97,11 @@ private fun ListenAlongSession.statusLine(): String {
     unresolvable?.let { return "Can't find “$it” in any of your sources" }
     val track = nowPlaying ?: return "Waiting for them to play something"
     val where = when (resolvedFrom) {
-        ResolvedFrom.YOUR_LIBRARY -> "from your library"
+        ResolvedFrom.LOCAL_STORAGE -> "from local storage"
+        ResolvedFrom.NAVIDROME -> "streamed from Navidrome"
         ResolvedFrom.YOUTUBE_MUSIC -> "matched on YouTube Music"
+        ResolvedFrom.P2P_DIRECT -> "streamed over Wi-Fi (P2P)"
+        ResolvedFrom.AGRO_RELAY -> "streamed via Agro relay"
         null -> "finding it…"
     }
     return "${track.trackTitle} — ${track.artistName} · $where"

@@ -180,4 +180,13 @@ internal sealed interface AgroLiveMessage {
      * app is foregrounded and the round trip might not finish before it closes.
      */
     data class TrackDrop(val drop: AgroDrop) : AgroLiveMessage
+
+    /**
+     * An ephemeral relay stream request from the server to stream a local file to a peer.
+     */
+    data class RelayRequest(
+        val sessionId: String,
+        val contentHash: String,
+        val toDevice: String
+    ) : AgroLiveMessage
 }

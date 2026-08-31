@@ -44,7 +44,8 @@ internal class AgroSessionViewModel @Inject constructor(
     private val dropsRepository: DropsRepository,
     private val friendNotifier: FriendNotifier,
     private val incognitoRepository: IncognitoRepository,
-    private val identityKeyManager: com.wander.android.core.security.IdentityKeyManager
+    private val identityKeyManager: com.wander.android.core.security.IdentityKeyManager,
+    private val agroRelayClient: com.wander.android.data.sources.agro.AgroRelayClient
 ) : ViewModel() {
 
     val devices: StateFlow<List<AgroNode>> = sessionRepository.devices
@@ -163,6 +164,9 @@ internal class AgroSessionViewModel @Inject constructor(
                     }
                     dropsRepository.onPushed(decrypted)
                     friendNotifier.notifyDrop(decrypted)
+                }
+                is AgroLiveMessage.RelayRequest -> {
+                    agroRelayClient.handleRelayRequest(message.sessionId, message.contentHash)
                 }
             }
         }

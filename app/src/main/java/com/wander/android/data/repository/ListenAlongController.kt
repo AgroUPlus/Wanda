@@ -161,7 +161,11 @@ internal class ListenAlongController @Inject constructor(
             return
         }
 
-        val resolved = resolver.resolve(now.trackTitle, now.artistName)
+        val resolved = resolver.resolve(
+            title = now.trackTitle,
+            artist = now.artistName,
+            hostUsername = now.username
+        )
         if (resolved == null) {
             // No fallback and no placeholder. Naming the track that could not be found is the only
             // honest thing left, and it is more useful than silence.
