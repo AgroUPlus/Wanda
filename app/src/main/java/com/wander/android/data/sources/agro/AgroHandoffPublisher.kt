@@ -32,7 +32,8 @@ import javax.inject.Singleton
 @Singleton
 class AgroHandoffPublisher @Inject constructor(
     private val agroClient: AgroClient,
-    private val secureStorage: SecureStorage
+    private val secureStorage: SecureStorage,
+    private val trackDao: com.wander.android.core.database.dao.TrackDao
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var lastSent: Handoff? = null
@@ -110,7 +111,11 @@ class AgroHandoffPublisher @Inject constructor(
             // Media3 answers `TIME_UNSET` until the source is prepared, and a livestream has no
             // length at all. Both become 0, which is the fleet's word for "no bar, just a clock".
             durationMs = duration.coerceAtLeast(0L),
-            isPlaying = isPlaying
+            isPlaying = isPlaying,
+            // Present only for a local file the hashing worker has already reached. That is
+            // exactly the set of tracks a peer could be handed directly, so a listener learning
+            // there is no hash learns the truth: there is nothing here to transfer.
+            contentHash = trackDao.getTrackById(track.id)?.contentHash
         ).onFailure { log("handoff", it) }
     }
 

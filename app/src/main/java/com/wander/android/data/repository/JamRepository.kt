@@ -24,7 +24,8 @@ import javax.inject.Singleton
 internal class JamRepository @Inject constructor(
     private val api: AgroJamApi,
     private val playerConnection: PlayerConnection,
-    private val playback: JamPlaybackController
+    private val playback: JamPlaybackController,
+    private val trackDao: com.wander.android.core.database.dao.TrackDao
 ) {
     private val _jam = MutableStateFlow<Jam?>(null)
     val jam: StateFlow<Jam?> = _jam.asStateFlow()
@@ -100,7 +101,14 @@ internal class JamRepository @Inject constructor(
         borrowedFrom = null
     }
 
-    suspend fun add(track: UnifiedTrack): Result<Unit> = api.addTrack(track).store()
+    /**
+     * Queues a track, naming the local file behind it when there is one.
+     *
+     * The hash is what lets the rest of the room play *this* copy rather than each hunting for the
+     * track by name in their own sources. Absent for anything streamed, which is most of a queue.
+     */
+    suspend fun add(track: UnifiedTrack): Result<Unit> =
+        api.addTrack(track, contentHash = trackDao.getTrackById(track.id)?.contentHash).store()
 
     suspend fun approve(trackId: String): Result<Unit> = api.approve(trackId).store()
 

@@ -5,6 +5,7 @@ import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.sources.StreamInfo
 import com.wander.android.data.sources.agro.AgroRelayClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -59,9 +60,9 @@ internal class ListenAlongResolver @Inject constructor(
     suspend fun resolve(
         title: String,
         artist: String,
-        hostUsername: String? = null,
         hostDevice: String? = null,
         hostLanAddress: String? = null,
+        hostLanToken: String? = null,
         contentHash: String? = null
     ): ResolvedTrack? {
         if (title.isBlank()) return null
@@ -97,47 +98,82 @@ internal class ListenAlongResolver @Inject constructor(
             return ResolvedTrack(bestYtm, ResolvedFrom.YOUTUBE_MUSIC)
         }
 
-        // 4. Direct LAN P2P audio streaming
-        if (!hostLanAddress.isNullOrBlank()) {
-            val lanUrl = "http://${hostLanAddress.trim()}:8702/p2p/stream?hash=${contentHash.orEmpty()}"
-            val pingUrl = "http://${hostLanAddress.trim()}:8702/p2p/ping"
+        // 4. Direct transfer over the local network.
+        //
+        // Needs all three: somewhere to connect (the server only supplies an address when it
+        // judged both devices to be on one network), a grant to present when connecting, and a
+        // hash naming which bytes to ask for. A title is not enough here — the host's server
+        // answers for files, not for names.
+        //
+        // `hostLanAddress` already carries its port: it is the `host:port` the host's device
+        // reported to Agro, which validates the shape before storing it.
+        // Normalised once so the gate and the request below agree on what "present" means.
+        val lanAddress = hostLanAddress?.trim().orEmpty()
+        val lanToken = hostLanToken?.trim().orEmpty()
+        val hash = contentHash?.trim().orEmpty()
+
+        if (canTryDirect(lanAddress, lanToken, hash)) {
+            val base = "http://$lanAddress"
             val isLanAlive = withContext(Dispatchers.IO) {
                 runCatching {
-                    val req = Request.Builder().url(pingUrl).build()
+                    val req = Request.Builder().url("$base/p2p/ping").build()
                     probeClient.newCall(req).execute().use { it.isSuccessful }
                 }.getOrDefault(false)
             }
             if (isLanAlive) {
-                Log.i(TAG, "Resolved track via LAN P2P from $hostLanAddress")
+                Log.i(TAG, "Resolved track over the local network from the host's device")
+                val streamUrl = "$base/p2p/stream?hash=$hash"
                 val track = UnifiedTrack(
-                    id = "p2p:${contentHash ?: title.hashCode()}",
+                    id = "p2p:$hash",
                     source = SourceType.LOCAL,
                     title = title,
                     artist = artist,
-                    streamUri = lanUrl
+                    streamUri = streamUrl
+                )
+                // The grant travels as a header, registered for this id only. It is not put on the
+                // track: a bearer token has no business in a model that gets serialised into a
+                // MediaItem and handed across IPC.
+                musicRepository.registerEphemeralStream(
+                    track.id,
+                    StreamInfo(
+                        uri = streamUrl,
+                        headers = mapOf("Authorization" to "Bearer $lanToken")
+                    )
                 )
                 return ResolvedTrack(track, ResolvedFrom.P2P_DIRECT)
             }
         }
 
-        // 5. Agro Ephemeral Server Relay
-        if (!hostDevice.isNullOrBlank() && secureStorage.agroServerUrl.isNotBlank()) {
-            val myDevice = secureStorage.agroDeviceId
-            val hash = contentHash ?: "stream_${title.hashCode()}"
+        // 5. Through Agro's relay, when a direct connection is not on offer.
+        //
+        // Also needs a real hash: the relay asks the host's device for specific bytes, and a hash
+        // invented from the title would name a file nobody has. Without one there is nothing left
+        // to try, which is what tier 6 says.
+        val relayDevice = hostDevice?.trim().orEmpty()
+        if (canTryRelay(relayDevice, hash, secureStorage.agroServerUrl.isNotBlank())) {
             val relayStreamUrl = agroRelayClient.openRelayReceiveStream(
-                fromDevice = hostDevice.trim(),
-                toDevice = myDevice,
+                fromDevice = relayDevice,
+                toDevice = secureStorage.agroDeviceId,
                 contentHash = hash
             ).getOrNull()
 
             if (relayStreamUrl != null) {
-                Log.i(TAG, "Resolved track via Agro Relay from $hostDevice")
+                Log.i(TAG, "Resolved track through the Agro relay")
                 val track = UnifiedTrack(
                     id = "relay:$hash",
                     source = SourceType.LOCAL,
                     title = title,
                     artist = artist,
                     streamUri = relayStreamUrl
+                )
+                musicRepository.registerEphemeralStream(
+                    track.id,
+                    StreamInfo(
+                        uri = relayStreamUrl,
+                        headers = mapOf(
+                            "Authorization" to "Bearer ${secureStorage.agroApiKey}"
+                        )
+                    )
                 )
                 return ResolvedTrack(track, ResolvedFrom.AGRO_RELAY)
             }
@@ -179,8 +215,33 @@ internal class ListenAlongResolver @Inject constructor(
         return clean in GENERIC_ARTISTS || clean.startsWith("<") && clean.endsWith(">")
     }
 
-    private companion object {
+    internal companion object {
         const val TAG = "ListenAlongResolver"
+
+        /**
+         * Whether a direct transfer over the local network is worth attempting.
+         *
+         * All three or none. The address says the server judged the two devices to share a
+         * network, the token is what the peer's server will actually check, and the hash names
+         * which bytes to ask for — a peer answers for files, not for titles. Missing any one of
+         * them means the tier cannot work, and trying anyway costs a timeout on every track.
+         */
+        fun canTryDirect(address: String?, token: String?, contentHash: String?): Boolean =
+            !address.isNullOrBlank() && !token.isNullOrBlank() && !contentHash.isNullOrBlank()
+
+        /**
+         * Whether the relay is worth attempting.
+         *
+         * No LAN address needed — that is the point of the relay — but still a device to address
+         * and a hash to ask for. A hash invented from the title would name a file nobody has, so
+         * its absence is a real answer: there is nothing to transfer, only a name to match.
+         */
+        fun canTryRelay(
+            hostDevice: String?,
+            contentHash: String?,
+            serverConfigured: Boolean
+        ): Boolean =
+            !hostDevice.isNullOrBlank() && !contentHash.isNullOrBlank() && serverConfigured
         val BRACKETED = Regex("""[\(\[].*?[\)\]]""")
         val WHITESPACE = Regex("""\s+""")
         val AUDIO_EXTENSIONS = Regex("""\.(mp3|flac|wav|ogg|m4a|aac|opus|wma|alac)$""", RegexOption.IGNORE_CASE)

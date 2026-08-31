@@ -134,7 +134,32 @@ class MusicRepository @Inject constructor(
     // ── Playback ────────────────────────────────────────────────────────────────────────────
 
     /** Called by [com.wander.android.core.playback.StreamResolver] at load time. */
+    /**
+     * Streams that exist only for as long as the session that produced them.
+     *
+     * A track fetched from a peer over the local network, or through Agro's relay, has no row in
+     * Room and no source that can be asked for it a second time: it is one URL, valid while the
+     * host is playing and while the grant behind it lasts. Persisting that would be wrong — the
+     * URL names a private address and carries a bearer token — and leaving it unregistered meant
+     * the placeholder resolved to nothing at all.
+     */
+    private val ephemeralStreams = java.util.concurrent.ConcurrentHashMap<String, StreamInfo>()
+
+    /** Registers a stream that only [getStreamInfo] within this session should know about. */
+    fun registerEphemeralStream(trackId: String, info: StreamInfo) {
+        // A listening session produces one of these per track change; the cap is only here so a
+        // very long session cannot grow the map without bound.
+        if (ephemeralStreams.size > MAX_EPHEMERAL_STREAMS) ephemeralStreams.clear()
+        ephemeralStreams[trackId] = info
+    }
+
+    /** Forgets them. Called when a session ends, so a grant cannot outlive the thing it was for. */
+    fun clearEphemeralStreams() = ephemeralStreams.clear()
+
     suspend fun getStreamInfo(trackId: String): Result<StreamInfo> = withContext(Dispatchers.IO) {
+        // Before Room: these ids are deliberately not in it.
+        ephemeralStreams[trackId]?.let { return@withContext Result.success(it) }
+
         val cached = trackDao.getTrackById(trackId)
         
         // ── Tier 1: Internal / Downloaded local file ─────────────────────────────────────────
@@ -572,4 +597,9 @@ class MusicRepository @Inject constructor(
                     .take(count)
             }
         }
+
+    private companion object {
+        /** Roughly a very long listening session's worth of track changes. */
+        const val MAX_EPHEMERAL_STREAMS = 256
+    }
 }
