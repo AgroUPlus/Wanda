@@ -100,10 +100,15 @@ object TrackDeduplicator {
      *
      * [splits] is the user's veto over exactly those mistakes: a pinned pair never lands in one
      * group, however well the rest of the evidence agrees.
+     *
+     * [links] is the fingerprinter's finding, and it joins groups the metadata rules left apart —
+     * see [foldLinkedGroups]. Order of authority throughout: a split refuses, then a link joins,
+     * then the metadata rules decide.
      */
     fun groupRecordings(
         tracks: List<UnifiedTrack>,
-        splits: SplitSet = SplitSet.EMPTY
+        splits: SplitSet = SplitSet.EMPTY,
+        links: RecordingLinkSet = RecordingLinkSet.EMPTY
     ): List<List<UnifiedTrack>> {
         val buckets = LinkedHashMap<RecordingKey, MutableList<UnifiedTrack>>()
         val alone = mutableListOf<List<UnifiedTrack>>()
@@ -133,8 +138,10 @@ object TrackDeduplicator {
             }
             groups.map { group -> group.sortedBy { it.source.priority } }
         }
-        return grouped + alone
+        return foldLinkedGroups(grouped + alone, splits, links)
+            .map { group -> group.sortedBy { it.source.priority } }
     }
+
 
     /**
      * The same list with later copies of a recording already in it removed.
@@ -144,15 +151,17 @@ object TrackDeduplicator {
      * first copy of a recording is the most recent time it was played, and replacing it with a
      * better-ranked copy would move the entry to the wrong moment.
      *
-     * Split-aware, so a pair the user has pinned apart stays as two entries.
+     * Split-aware and link-aware, so a pair the user has pinned apart stays as two entries and a
+     * pair the fingerprinter matched collapses to one however far apart their tags are.
      */
     fun distinctRecordings(
         tracks: List<UnifiedTrack>,
-        splits: SplitSet = SplitSet.EMPTY
+        splits: SplitSet = SplitSet.EMPTY,
+        links: RecordingLinkSet = RecordingLinkSet.EMPTY
     ): List<UnifiedTrack> {
         val kept = mutableListOf<UnifiedTrack>()
         for (track in tracks) {
-            if (kept.none { isSameRecording(it, track, splits) }) kept += track
+            if (kept.none { isSameRecording(it, track, splits, links) }) kept += track
         }
         return kept
     }
@@ -200,13 +209,22 @@ object TrackDeduplicator {
      *
      * [splits] overrules all of it. Where the user has said two rows are different performances,
      * no amount of agreement between their titles and lengths makes them one.
+     *
+     * [links] overrules everything below it. Where the fingerprinter has compared the samples of
+     * two rows and found one recording, no amount of disagreement between their titles makes them
+     * two — which is the whole reason the fingerprints exist, since the rows this rescues are
+     * exactly the ones whose tags are wrong.
      */
     fun isSameRecording(
         a: UnifiedTrack,
         b: UnifiedTrack,
-        splits: SplitSet = SplitSet.EMPTY
+        splits: SplitSet = SplitSet.EMPTY,
+        links: RecordingLinkSet = RecordingLinkSet.EMPTY
     ): Boolean {
         if (splits.isApart(a.id, b.id)) return false
+        // The audio outranks the tags, including the duration check: a link is a comparison of the
+        // samples themselves, which is the evidence everything below is trying to approximate.
+        if (links.isLinked(a.id, b.id)) return true
         if (a.durationMs <= 0L || b.durationMs <= 0L) return false
         if (keyOf(a) != keyOf(b)) return false
         return abs(a.durationMs - b.durationMs) <= DURATION_TOLERANCE_MS

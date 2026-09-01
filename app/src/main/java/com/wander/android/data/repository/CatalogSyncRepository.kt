@@ -25,6 +25,7 @@ internal class CatalogSyncRepository @Inject constructor(
     private val catalogApi: AgroCatalogApi,
     private val recordingIdentity: RecordingIdentityRepository,
     private val musicRepository: MusicRepository,
+    private val canonicalMetadata: CanonicalMetadataRepository,
     private val secureStorage: SecureStorage
 ) {
 
@@ -42,7 +43,11 @@ internal class CatalogSyncRepository @Inject constructor(
         runCatching {
             val published = publishLocal()
             val received = pullCatalogue()
-            SyncOutcome(published = published, received = received)
+            // Unconditional, and after the pull. A library refetch since the last run will have
+            // restored each source's own metadata over corrections applied then, so this is a
+            // repair pass as much as it is the delivery of what arrived just now.
+            val corrected = canonicalMetadata.applyToLibrary()
+            SyncOutcome(published = published, received = received, corrected = corrected)
         }.onFailure { error ->
             // Never surfaced as a failure the user has to act on: the catalogue is an
             // optimisation, and the app identifies music perfectly well without having reached it.
@@ -79,6 +84,11 @@ internal class CatalogSyncRepository @Inject constructor(
     /**
      * Reads what the fleet has learned and keeps whatever names a recording this device holds.
      *
+     * "Keeps" means recorded against the local rows the fingerprint matches — not applied to them
+     * here. [CanonicalMetadataRepository] decides which of the catalogue's values actually improve
+     * on what the source gave, and [CanonicalMetadataRepository.applyToLibrary] is what puts them
+     * on screen.
+     *
      * Entries for audio this device has never seen are counted and dropped. Storing the whole
      * fleet's catalogue on every phone would make a shared server's size everyone's problem, and
      * the entry is still there to be re-read on the day the audio does arrive.
@@ -93,14 +103,29 @@ internal class CatalogSyncRepository @Inject constructor(
             val hashes = entry.subHashesHex.hexToHashes() ?: continue
             val local = recordingIdentity.matchesForFingerprint(hashes)
             if (local.isEmpty()) continue
-            applied += local.size
+            for (match in local) {
+                val recorded = canonicalMetadata.record(
+                    trackId = match.trackId,
+                    recordingId = entry.recordingId,
+                    title = entry.title,
+                    artist = entry.artist,
+                    album = entry.album
+                )
+                if (recorded) applied++
+            }
         }
         secureStorage.catalogCursor = entries.maxOf { it.updatedAt }
         return applied
     }
 
     /** What one sync did. */
-    data class SyncOutcome(val published: Int, val received: Int) {
+    data class SyncOutcome(
+        val published: Int,
+        /** Catalogue entries that improved on a local row's metadata. */
+        val received: Int,
+        /** Rows whose displayed metadata was written this run, corrections and repairs alike. */
+        val corrected: Int = 0
+    ) {
         companion object {
             /** No server configured, which is a supported way to run and not a failure. */
             val NOT_CONFIGURED = SyncOutcome(0, 0)

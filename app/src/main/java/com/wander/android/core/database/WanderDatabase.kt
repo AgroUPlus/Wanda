@@ -4,6 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.wander.android.core.database.dao.AlbumDao
 import com.wander.android.core.database.dao.ArtistDao
+import com.wander.android.core.database.dao.CanonicalMetadataDao
 import com.wander.android.core.database.dao.DropDao
 import com.wander.android.core.database.dao.FingerprintDao
 import com.wander.android.core.database.dao.FriendDao
@@ -12,15 +13,18 @@ import com.wander.android.core.database.dao.ShelfDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.dao.PlaylistDao
 import com.wander.android.core.database.dao.RecordingFingerprintDao
+import com.wander.android.core.database.dao.RecordingLinkDao
 import com.wander.android.core.database.dao.RecordingSplitDao
 import com.wander.android.core.database.entity.AlbumEntity
 import com.wander.android.core.database.entity.ArtistEntity
+import com.wander.android.core.database.entity.CanonicalMetadataEntity
 import com.wander.android.core.database.entity.DropEntity
 import com.wander.android.core.database.entity.FingerprintEntity
 import com.wander.android.core.database.entity.FriendEntity
 import com.wander.android.core.database.entity.HistoryEntity
 import com.wander.android.core.database.entity.PlaylistEntity
 import com.wander.android.core.database.entity.RecordingFingerprintEntity
+import com.wander.android.core.database.entity.RecordingLinkEntity
 import com.wander.android.core.database.entity.RecordingSplitEntity
 import com.wander.android.core.database.entity.RecordingSubHashEntity
 import com.wander.android.core.database.entity.ShelfEntity
@@ -42,10 +46,12 @@ import com.wander.android.core.database.converter.SourceTypeConverter
         FingerprintEntity::class,
         PlaylistEntity::class,
         RecordingSplitEntity::class,
+        RecordingLinkEntity::class,
+        CanonicalMetadataEntity::class,
         RecordingFingerprintEntity::class,
         RecordingSubHashEntity::class
     ],
-    version = 20,
+    version = 21,
     exportSchema = true
 )
 @TypeConverters(SourceTypeConverter::class)
@@ -60,6 +66,8 @@ abstract class WanderDatabase : RoomDatabase() {
     abstract fun fingerprintDao(): FingerprintDao
     abstract fun playlistDao(): PlaylistDao
     abstract fun recordingSplitDao(): RecordingSplitDao
+    abstract fun recordingLinkDao(): RecordingLinkDao
+    abstract fun canonicalMetadataDao(): CanonicalMetadataDao
 
     abstract fun recordingFingerprintDao(): RecordingFingerprintDao
 }
