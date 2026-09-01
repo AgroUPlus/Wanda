@@ -29,6 +29,8 @@ internal fun LazyListScope.syncTab(
     onP2pSyncChange: (Boolean) -> Unit,
     serverArchiveEnabled: Boolean,
     canArchive: Boolean,
+    popularityEnabled: Boolean,
+    onPopularityChange: (Boolean) -> Unit,
     onServerArchiveChange: (Boolean) -> Unit,
     pendingUploads: Int,
     syncedTracks: Int,
@@ -64,6 +66,21 @@ internal fun LazyListScope.syncTab(
             subtitle = "Share the Navidrome address between devices.",
             checked = syncSettings && !incognito,
             onCheckedChange = onSyncSettingsChange,
+            enabled = !incognito
+        )
+    }
+
+    item(key = "agro_popularity") {
+        SettingsToggle(
+            title = "Contribute to \u201cPopular on Agro\u201d",
+            // Says what leaves the device and who ends up able to see it. "Anonymous" alone would
+            // be the sort of reassurance that is technically true and still misleading: the server
+            // already knows this account's plays from scrobbling, and what changes here is that
+            // other accounts on it can see the total.
+            subtitle = "Adds play counts to the server's shared totals, with no account or times attached. " +
+                "Other people on this server see the totals, not you. The shelf works either way.",
+            checked = popularityEnabled && !incognito,
+            onCheckedChange = onPopularityChange,
             enabled = !incognito
         )
     }
