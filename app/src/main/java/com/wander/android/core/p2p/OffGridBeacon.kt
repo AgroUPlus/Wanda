@@ -69,8 +69,13 @@ internal data class OffGridBeacon(
          * Wanda's service UUID. Scanners filter on it, so a phone is not woken by every fitness
          * tracker in the room — which is the difference between BLE discovery costing nothing and
          * costing a battery.
+         *
+         * A randomly generated 128-bit UUID, not a short one in the Bluetooth base range: those
+         * are SIG-assigned, and every character of a UUID must be hexadecimal. `0000w4nd-...`
+         * spelled a word rather than hex and threw in `ParcelUuid.fromString` at construction —
+         * and because `BleDiscovery` is a `@Singleton`, that took the whole graph down on launch.
          */
-        const val SERVICE_UUID = "0000w4nd-0000-1000-8000-00805f9b34fb"
+        const val SERVICE_UUID = "b7d4a1e6-3c92-4f08-9a5d-6e21c8f47b0a"
 
         /**
          * Reads a beacon, or null if this is not one of ours.
