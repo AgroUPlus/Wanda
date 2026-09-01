@@ -41,6 +41,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var agroClient: AgroClient
     @Inject lateinit var agroHandoffPublisher: AgroHandoffPublisher
     @Inject lateinit var linkRepository: LinkRepository
+    @Inject lateinit var musicRepository: com.wander.android.data.repository.MusicRepository
     @Inject lateinit var shareLinkRewriter: ShareLinkRewriter
     @Inject lateinit var deepLinkRouter: DeepLinkRouter
     @Inject internal lateinit var socialRepository: SocialRepository
@@ -85,6 +86,7 @@ class MainActivity : ComponentActivity() {
             // in-app scanner would mean a camera permission for a feature used once.
             uri.scheme == "wanda" && uri.host == "friend" -> handleFriendCode(uri)
             isJamLink(uri) -> handleJamLink(uri)
+            linkRepository.isAlbumLink(uri) -> openSharedAlbum(uri)
             linkRepository.canOpen(uri) -> openSharedLink(uri)
             uri.scheme == "https" || uri.scheme == "wanda" -> Toast.makeText(
                 this,
@@ -128,6 +130,39 @@ class MainActivity : ComponentActivity() {
             deepLinkRouter.request(Routes.jam(code))
         } else {
             deepLinkRouter.request(Routes.jam())
+        }
+    }
+
+    /**
+     * Resolves a shared album against this device's own sources and plays it.
+     *
+     * The link names no backend, so what plays is whatever *this* device has: the user's own copy
+     * if they have one, a stream otherwise. A miss is reported by name — "that record isn't in any
+     * of your sources" is something the recipient can act on, where silence is not.
+     */
+    private fun openSharedAlbum(uri: Uri) {
+        lifecycleScope.launch {
+            linkRepository.resolveAlbum(uri).fold(
+                onSuccess = { album ->
+                    val tracks = musicRepository.getAlbumTracks(album)
+                    if (tracks.isEmpty()) {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Found “${album.title}” but couldn't load its tracks.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    } else {
+                        playerConnection.play(tracks)
+                    }
+                },
+                onFailure = { cause ->
+                    Toast.makeText(
+                        this@MainActivity,
+                        cause.message ?: "Couldn't open that album link.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            )
         }
     }
 

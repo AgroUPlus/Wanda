@@ -38,7 +38,8 @@ internal fun AlbumGrid(
     albums: List<UnifiedAlbum>,
     recentAlbums: List<UnifiedAlbum>,
     contentPadding: PaddingValues,
-    onOpenAlbum: (String) -> Unit
+    onOpenAlbum: (String) -> Unit,
+    onAlbumLongPress: (UnifiedAlbum) -> Unit = {}
 ) {
     if (albums.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -94,7 +95,11 @@ internal fun AlbumGrid(
                     modifier = Modifier.padding(bottom = 16.dp)
                 ) {
                     items(recentAlbums, key = { "recent_${it.id}" }) { album ->
-                        AlbumCard(album = album, onClick = { onOpenAlbum(album.id) })
+                        AlbumCard(
+                            album = album,
+                            onClick = { onOpenAlbum(album.id) },
+                            onLongClick = { onAlbumLongPress(album) }
+                        )
                     }
                 }
             }
@@ -107,7 +112,11 @@ internal fun AlbumGrid(
             }
         }
         items(visibleAlbums, key = { album -> album.id }) { album ->
-            AlbumCard(album = album, onClick = { onOpenAlbum(album.id) })
+            AlbumCard(
+                album = album,
+                onClick = { onOpenAlbum(album.id) },
+                onLongClick = { onAlbumLongPress(album) }
+            )
         }
         if (hasMoreAlbums) {
             items(count = 4, key = { "skeleton_album_$it" }) {
