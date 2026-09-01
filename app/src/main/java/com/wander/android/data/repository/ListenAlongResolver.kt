@@ -1,6 +1,8 @@
 package com.wander.android.data.repository
 
 import android.util.Log
+import com.wander.android.core.p2p.OffGridTransport
+import com.wander.android.core.security.IdentityKeyManager
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.SourceType
@@ -29,6 +31,13 @@ internal enum class ResolvedFrom {
     /** Streamed directly over LAN from the host/peer device via P2P HTTP chunks. */
     P2P_DIRECT,
 
+    /**
+     * Streamed over a direct radio link with no router involved at all — a car, a plane, a
+     * festival. Distinct from [P2P_DIRECT] because the guarantee is different: that one needs a
+     * network both devices are already on, this one needs nothing.
+     */
+    P2P_OFFGRID,
+
     /** Streamed via Agro ephemeral server relay pipe. */
     AGRO_RELAY
 }
@@ -43,14 +52,22 @@ internal data class ResolvedTrack(val track: UnifiedTrack, val from: ResolvedFro
  * 2. Navidrome server (SourceType.NAVIDROME)
  * 3. YouTube Music (SourceType.YTMUSIC)
  * 4. Direct LAN P2P audio chunks (port 8702)
- * 5. Agro Ephemeral Relay audio chunks
- * 6. Unresolved (null)
+ * 5. Off-grid direct radio link — Wi-Fi Direct, no router (port 8702 again)
+ * 6. Agro Ephemeral Relay audio chunks
+ * 7. Unresolved (null)
+ *
+ * Tier 5 sits below the LAN and above the relay on purpose. It is strictly better than the relay —
+ * nothing leaves the two devices, and it is an order of magnitude faster — but it costs a radio
+ * link and, on most devices, a tap on a system dialog, so it must not be attempted while a network
+ * both devices are already on would have done.
  */
 @Singleton
 internal class ListenAlongResolver @Inject constructor(
     private val musicRepository: MusicRepository,
     private val agroRelayClient: AgroRelayClient,
-    private val secureStorage: SecureStorage
+    private val secureStorage: SecureStorage,
+    private val offGrid: OffGridTransport,
+    private val identityKeyManager: IdentityKeyManager
 ) {
     private val probeClient = OkHttpClient.Builder()
         .connectTimeout(1500, TimeUnit.MILLISECONDS)
@@ -122,29 +139,27 @@ internal class ListenAlongResolver @Inject constructor(
             }
             if (isLanAlive) {
                 Log.i(TAG, "Resolved track over the local network from the host's device")
-                val streamUrl = "$base/p2p/stream?hash=$hash"
-                val track = UnifiedTrack(
-                    id = "p2p:$hash",
-                    source = SourceType.LOCAL,
-                    title = title,
-                    artist = artist,
-                    streamUri = streamUrl
-                )
-                // The grant travels as a header, registered for this id only. It is not put on the
-                // track: a bearer token has no business in a model that gets serialised into a
-                // MediaItem and handed across IPC.
-                musicRepository.registerEphemeralStream(
-                    track.id,
-                    StreamInfo(
-                        uri = streamUrl,
-                        headers = mapOf("Authorization" to "Bearer $lanToken")
-                    )
-                )
-                return ResolvedTrack(track, ResolvedFrom.P2P_DIRECT)
+                return encryptedPeerStream(base, hash, title, artist, lanToken, ResolvedFrom.P2P_DIRECT)
             }
         }
 
-        // 5. Through Agro's relay, when a direct connection is not on offer.
+        // 5. An off-grid radio link, when there is no shared network to have used.
+        //
+        // Only when a link is already up. Forming one takes a system dialog and up to half a
+        // minute, and a resolver is called while a listener is waiting for audio — raising a radio
+        // link from here would look like the app having frozen. The user starts the link; this
+        // tier notices that they did.
+        if (hash.isNotBlank() && lanToken.isNotBlank()) {
+            val offGridBase = offGrid.connectedBaseUrl()
+            if (offGridBase != null) {
+                Log.i(TAG, "Resolved track over a direct radio link with no network involved")
+                return encryptedPeerStream(
+                    offGridBase, hash, title, artist, lanToken, ResolvedFrom.P2P_OFFGRID
+                )
+            }
+        }
+
+        // 6. Through Agro's relay, when a direct connection is not on offer.
         //
         // Also needs a real hash: the relay asks the host's device for specific bytes, and a hash
         // invented from the title would name a file nobody has. Without one there is nothing left
@@ -194,6 +209,53 @@ internal class ListenAlongResolver @Inject constructor(
                     || candidate.artist.matches(artist)
             )
         }
+
+
+    /**
+     * A peer's track, encrypted end to end, over whichever link reached it.
+     *
+     * One method for both peer tiers because the difference between them is which radio carried the
+     * bytes, and nothing above the socket should care. The session id is fresh per stream and goes
+     * in the URL, where the decrypting source reads it back off the URL it actually fetched — so
+     * the two ends cannot disagree about which key derivation they meant.
+     *
+     * This device's identity public key goes up with the request, and the peer seals the audio key
+     * to it. Before this, the LAN tier sent the audio in the clear while the far slower relay tier
+     * encrypted it, which is the wrong way round: the network your phone is sharing with strangers
+     * is the one that needs it.
+     */
+    private fun encryptedPeerStream(
+        base: String,
+        hash: String,
+        title: String,
+        artist: String,
+        grantToken: String,
+        from: ResolvedFrom
+    ): ResolvedTrack {
+        val session = java.util.UUID.randomUUID().toString()
+        val streamUrl = "$base/p2p/stream?hash=$hash&session=$session"
+        val track = UnifiedTrack(
+            id = "p2p:$hash",
+            source = SourceType.LOCAL,
+            title = title,
+            artist = artist,
+            streamUri = streamUrl
+        )
+        // Both secrets travel as headers, registered for this id only. Neither is put on the track:
+        // a bearer token has no business in a model that gets serialised into a MediaItem and handed
+        // across IPC.
+        musicRepository.registerEphemeralStream(
+            track.id,
+            StreamInfo(
+                uri = streamUrl,
+                headers = mapOf(
+                    "Authorization" to "Bearer $grantToken",
+                    "X-Wanda-Identity" to identityKeyManager.getPublicKeyBase64()
+                )
+            )
+        )
+        return ResolvedTrack(track, from)
+    }
 
     private fun String.matches(other: String): Boolean {
         val a = normalise()

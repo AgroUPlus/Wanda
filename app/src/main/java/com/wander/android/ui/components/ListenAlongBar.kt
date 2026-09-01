@@ -68,11 +68,19 @@ internal fun ListenAlongBar(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "Listening along with ${session.host}",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = "Listening along with ${session.host}",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                // Only once something is playing: a badge on the row while the resolver is still
+                // deciding would flicker through tiers as it falls down them.
+                if (session.nowPlaying != null) TransportBadge(from = session.resolvedFrom)
+            }
             Text(
                 text = session.statusLine(),
                 style = MaterialTheme.typography.bodySmall,
@@ -96,15 +104,9 @@ internal fun ListenAlongBar(
 private fun ListenAlongSession.statusLine(): String {
     unresolvable?.let { return "Can't find “$it” in any of your sources" }
     val track = nowPlaying ?: return "Waiting for them to play something"
-    val where = when (resolvedFrom) {
-        ResolvedFrom.LOCAL_STORAGE -> "from local storage"
-        ResolvedFrom.NAVIDROME -> "streamed from Navidrome"
-        ResolvedFrom.YOUTUBE_MUSIC -> "matched on YouTube Music"
-        ResolvedFrom.P2P_DIRECT -> "streamed over Wi-Fi (P2P)"
-        ResolvedFrom.AGRO_RELAY -> "streamed via Agro relay"
-        null -> "finding it…"
-    }
-    return "${track.trackTitle} — ${track.artistName} · $where"
+    // The transport used to be spelled out here as well; it is the badge's job now, and repeating
+    // it cost the half of the line that says what is actually playing.
+    return "${track.trackTitle} — ${track.artistName}"
 }
 
 val JamBarHeight: Dp = 44.dp

@@ -98,19 +98,31 @@ internal class RelayDecryptingDataSource(
     }
 
     private companion object {
+        /**
+         * Named for the relay because that is where it started, and kept when the peer server
+         * learned to encrypt too: one header means one code path here, and a second name would
+         * have bought a second branch and a way for the two to drift.
+         */
         const val SEALED_KEY_HEADER = "x-agro-sealed-key"
     }
 }
 
 /**
- * The session id out of a relay URL, `…/api/v1/relay/{sessionId}/receive`.
+ * The session id out of an encrypted stream's URL.
  *
- * It is half of what derives the stream's key, so it is read from the URL actually fetched rather
- * than remembered from when the session was opened — the two cannot disagree that way.
+ * Two shapes, because two transports carry the same encrypted stream: Agro's relay puts it in the
+ * path, `…/api/v1/relay/{sessionId}/receive`, and a peer's own server puts it in a `session` query
+ * parameter. Both are read from the URL actually fetched rather than remembered from when the
+ * stream was opened — the two cannot disagree that way.
+ *
+ * It is half of what derives the key, so a stream whose URL has lost it cannot be decrypted, which
+ * is why the caller treats a null here as a failure rather than as "not encrypted".
  */
 internal fun Uri.relaySessionId(): String? {
-    val segments = pathSegments ?: return null
+    val segments = pathSegments.orEmpty()
     val relayAt = segments.indexOf("relay")
-    if (relayAt < 0 || relayAt + 1 >= segments.size) return null
-    return segments[relayAt + 1].takeIf { it.isNotBlank() }
+    if (relayAt >= 0 && relayAt + 1 < segments.size) {
+        segments[relayAt + 1].takeIf { it.isNotBlank() }?.let { return it }
+    }
+    return runCatching { getQueryParameter("session") }.getOrNull()?.takeIf { it.isNotBlank() }
 }
