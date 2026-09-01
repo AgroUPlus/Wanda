@@ -63,6 +63,46 @@ internal class SocialRepository @Inject constructor(
     private val _feed = MutableStateFlow<List<AgroFeedItem>>(emptyList())
     val feed: StateFlow<List<AgroFeedItem>> = _feed.asStateFlow()
 
+    /** True while a longer page is in flight, so the list can show it is still coming. */
+    private val _feedLoadingMore = MutableStateFlow(false)
+    val feedLoadingMore: StateFlow<Boolean> = _feedLoadingMore.asStateFlow()
+
+    /**
+     * True once the server has answered with fewer items than were asked for.
+     *
+     * That is the only end-of-feed signal available: `friendActivity` takes a window and a limit
+     * and has no cursor, so a short page is what "there is no more" looks like.
+     */
+    private val _feedExhausted = MutableStateFlow(false)
+    val feedExhausted: StateFlow<Boolean> = _feedExhausted.asStateFlow()
+
+    /** How many items the feed is currently asking for. Grows as the list is scrolled. */
+    private var feedLimit = FEED_PAGE
+
+    /**
+     * Asks for a longer feed.
+     *
+     * The window grows rather than an offset advancing, because the server's `friendActivity`
+     * takes only `days` and `limit` — there is no cursor to continue from. Re-reading a longer
+     * prefix is more traffic than a cursor would be, and it is what the existing schema supports;
+     * a real cursor belongs on the Agro side and is not something a client can fake safely, since
+     * an offset into a feed that is recomputed per request would silently skip items.
+     *
+     * Once the window covers everything the server has, this stops asking.
+     */
+    suspend fun loadMoreFeed() {
+        if (!secureStorage.agroConfigured.value) return
+        if (_feedExhausted.value || _feedLoadingMore.value) return
+        _feedLoadingMore.value = true
+        val want = feedLimit + FEED_PAGE
+        feedApi.friendActivity(days = FEED_DAYS, limit = want).onSuccess { items ->
+            feedLimit = want
+            _feed.value = items
+            _feedExhausted.value = items.size < want
+        }
+        _feedLoadingMore.value = false
+    }
+
     private val _nowPlaying = MutableStateFlow<List<AgroFriendNowPlaying>>(emptyList())
     val nowPlaying: StateFlow<List<AgroFriendNowPlaying>> = _nowPlaying.asStateFlow()
 
@@ -85,7 +125,12 @@ internal class SocialRepository @Inject constructor(
         val requestResult = friendsApi.friendRequests()
         // Failure leaves whatever was there. An empty feed and a feed that could not be fetched
         // look identical on screen, and only one of them means "nobody has done anything".
-        feedApi.friendActivity().onSuccess { _feed.value = it }
+        feedApi.friendActivity(days = FEED_DAYS, limit = feedLimit).onSuccess { items ->
+            _feed.value = items
+            // A refresh re-reads the window the user has already scrolled open, so scrolling back
+            // up and pulling to refresh does not collapse the feed to its first page.
+            _feedExhausted.value = items.size < feedLimit
+        }
 
         // The cache is only replaced when *both* answered. A partial write would delete every
         // pending request on a refresh whose second call happened to fail.
@@ -177,6 +222,17 @@ internal class SocialRepository @Inject constructor(
     suspend fun clear() {
         friendDao.clear()
         _nowPlaying.value = emptyList()
+    }
+
+    private companion object {
+        /**
+         * One page of activity. Large enough that the first screen is full on any phone, small
+         * enough that the first refresh of the tab is not a long request.
+         */
+        const val FEED_PAGE = 30
+
+        /** The window the feed covers. Unchanged from what the tab has always asked for. */
+        const val FEED_DAYS = 14
     }
 }
 

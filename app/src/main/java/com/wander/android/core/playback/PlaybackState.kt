@@ -18,6 +18,14 @@ data class PlaybackState(
     val repeatMode: RepeatMode = RepeatMode.OFF,
     val isRadioMode: Boolean = false,
     /**
+     * True when something else decides the running order — a jam, or a listen-along.
+     *
+     * Shuffle and repeat are inert while it is set, and the controls read it to say so rather than
+     * accepting a tap and doing nothing. Skip and seek are *not* covered: a jam tolerates a local
+     * seek and corrects it, which is a different rule from owning the order outright.
+     */
+    val orderLocked: Boolean = false,
+    /**
      * Bumped every time the position jumps rather than advances — a seek, a track boundary.
      *
      * Position is deliberately not in this snapshot (see the note above), and while paused it is

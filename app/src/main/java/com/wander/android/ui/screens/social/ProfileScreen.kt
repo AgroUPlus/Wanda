@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.core.permissions.rememberLocalNetworkGate
 import com.wander.android.data.sources.agro.FriendState
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
@@ -44,6 +45,12 @@ internal fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // Asked here, at the tap that needs it. Without local-network access Android silently refuses
+    // both halves of the peer tier — this device cannot open a connection to the host, and its own
+    // server cannot accept one — so the LAN tier fails its probe and every track takes the relay.
+    // The session starts either way: a refusal costs speed, not the feature.
+    val startListenAlong = rememberLocalNetworkGate(viewModel::startListenAlong)
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -126,7 +133,7 @@ internal fun ProfileScreen(
                             ) { Text("Stop listening along") }
                         } else {
                             Button(
-                                onClick = viewModel::startListenAlong,
+                                onClick = startListenAlong,
                                 modifier = Modifier.padding(top = 8.dp),
                                 shapes = ButtonDefaults.shapes()
                             ) { Text("Listen along") }

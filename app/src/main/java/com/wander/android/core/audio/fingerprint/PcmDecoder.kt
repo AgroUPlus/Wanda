@@ -27,12 +27,26 @@ class PcmDecoder @Inject constructor() {
      * Truncated rather than whole, and this is a judgement about what a fingerprint is for: a
      * minute of a song is thousands of landmarks, enough to identify it many times over, and
      * indexing the remaining three minutes triples the database to make an already-certain match
-     * more certain. Null when the file holds no audio track this device can decode.
+     * more certain. Null when the source holds no audio track this device can decode.
+     *
+     * [path] is a local file, a `content://` URI, **or an `http(s)` URL**. The truncation is what
+     * makes the last one affordable: `MediaExtractor` reads a remote source in ranges and stops
+     * where this stops, so indexing a streamed track costs about a minute of audio rather than a
+     * download. [headers] carries the authorisation a private server needs — without it a
+     * Navidrome URL answers 401 and nothing is indexed, silently.
      */
-    fun decode(path: String, maxSeconds: Int = DEFAULT_MAX_SECONDS): FloatArray? {
+    fun decode(
+        path: String,
+        headers: Map<String, String> = emptyMap(),
+        maxSeconds: Int = DEFAULT_MAX_SECONDS
+    ): FloatArray? {
         val extractor = MediaExtractor()
         return try {
-            extractor.setDataSource(path)
+            if (headers.isEmpty()) {
+                extractor.setDataSource(path)
+            } else {
+                extractor.setDataSource(path, headers)
+            }
             val trackIndex = (0 until extractor.trackCount).firstOrNull { index ->
                 extractor.getTrackFormat(index)
                     .getString(MediaFormat.KEY_MIME)

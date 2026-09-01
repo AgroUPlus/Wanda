@@ -145,7 +145,7 @@ internal fun MediaItem.toUnifiedTrack(): UnifiedTrack? {
  * out: it is the one part of a `MediaItem` guaranteed to survive the trip across IPC to the
  * playback service.
  */
-private fun MediaItem.isLiveUri(): Boolean =
+internal fun MediaItem.isLiveUri(): Boolean =
     requestMetadata.mediaUri?.toString()?.endsWith(LIVE_SUFFIX) == true ||
         localConfiguration?.uri?.toString()?.endsWith(LIVE_SUFFIX) == true
 

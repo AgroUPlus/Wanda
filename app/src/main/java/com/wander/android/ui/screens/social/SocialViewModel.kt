@@ -48,7 +48,9 @@ internal class SocialViewModel @Inject constructor(
             repository.nowPlaying,
             repository.isPaired,
             listenAlong.session,
-            repository.feed
+            repository.feed,
+            repository.feedLoadingMore,
+            repository.feedExhausted
         ) { values ->
             @Suppress("UNCHECKED_CAST")
             val friends = values[0] as List<AgroProfile>
@@ -60,6 +62,8 @@ internal class SocialViewModel @Inject constructor(
             val session = values[4] as ListenAlongSession?
             @Suppress("UNCHECKED_CAST")
             val feed = values[5] as List<AgroFeedItem>
+            val feedLoadingMore = values[6] as Boolean
+            val feedExhausted = values[7] as Boolean
             _state.value.copy(
                 loading = false,
                 myUsername = me,
@@ -69,7 +73,9 @@ internal class SocialViewModel @Inject constructor(
                 outgoing = requests.filter { it.outgoing },
                 nowPlaying = playing,
                 session = session,
-                feed = feed
+                feed = feed,
+                feedLoadingMore = feedLoadingMore,
+                feedExhausted = feedExhausted
             )
         }.onEach { _state.value = it }.launchIn(viewModelScope)
 
@@ -102,6 +108,16 @@ internal class SocialViewModel @Inject constructor(
                 error = result.exceptionOrNull()?.message
             )
         }
+    }
+
+    /**
+     * Asks for more activity, which is what reaching the end of the list means.
+     *
+     * Safe to call repeatedly: the repository ignores a request while one is in flight or once
+     * the server has run out, so the scroll listener does not need to debounce.
+     */
+    fun loadMoreFeed() {
+        viewModelScope.launch { repository.loadMoreFeed() }
     }
 
     /** Re-reads only the feed. What a `FRIEND_PRESENCE` frame warrants. */

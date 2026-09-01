@@ -25,6 +25,10 @@ internal data class SocialUiState(
     val session: ListenAlongSession? = null,
     /** What friends have been into lately. Empty while offline, and that is not an error. */
     val feed: List<AgroFeedItem> = emptyList(),
+    /** True while a longer page of activity is on its way, which is what draws the skeletons. */
+    val feedLoadingMore: Boolean = false,
+    /** True once the server has nothing further to add, so the list stops asking. */
+    val feedExhausted: Boolean = false,
     /** This account's own username, for the avatar that opens your own profile. */
     val myUsername: String = "",
     /** This account's own picture, when it has one. */

@@ -15,6 +15,7 @@ import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.model.isOneShotTrackId
 import com.wander.android.data.model.isPlayableOffline
 import com.wander.android.data.sources.IMusicSource
 import com.wander.android.data.sources.StreamInfo
@@ -167,6 +168,17 @@ class MusicRepository @Inject constructor(
     suspend fun getStreamInfo(trackId: String): Result<StreamInfo> = withContext(Dispatchers.IO) {
         // Before Room: these ids are deliberately not in it.
         ephemeralStreams[trackId]?.let { return@withContext Result.success(it) }
+
+        // A one-shot id that is no longer registered is a session that has ended. There is nothing
+        // to fall through to: the tiers below would answer with whatever Room happens to hold for
+        // it, and what Room held was the dead relay URL itself. Fail, and take the row with it —
+        // it is what shadowed the real file in every later search.
+        if (isOneShotTrackId(trackId)) {
+            trackDao.deleteOneShotTrackRows()
+            return@withContext Result.failure(
+                IllegalStateException("that transfer has ended; ask for the track again")
+            )
+        }
 
         val cached = trackDao.getTrackById(trackId)
         

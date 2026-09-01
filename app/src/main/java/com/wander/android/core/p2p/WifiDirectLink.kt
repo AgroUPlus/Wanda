@@ -56,6 +56,38 @@ internal class WifiDirectLink @Inject constructor(
             context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_WIFI_DIRECT)
 
     /**
+     * Makes this device visible to Wi-Fi Direct. Nothing more, and deliberately nothing more.
+     *
+     * Being findable has to be cheap, because *both* devices must be findable before either can
+     * see the other. An earlier version created a group here as well, which meant being findable
+     * made you a group owner — and a group owner cannot join anybody else's group, so two findable
+     * devices could never connect to each other. Holding an open Wi-Fi Direct group on both sides
+     * also spends a radio for a link that at most one of them will use.
+     *
+     * Ownership is decided at the moment somebody taps, by negotiation, with the tapper asking to
+     * be the client. See [connect].
+     */
+    @SuppressLint("MissingPermission")
+    fun makeDiscoverable() {
+        // Never during a negotiation: a scan started while a group is being formed puts the
+        // supplicant back into discovery and the negotiation stalls where it stands.
+        if (isConnecting) return
+        val manager = manager ?: return
+        val channel = manager.initialize(context, context.mainLooper, null) ?: return
+        manager.discoverPeers(channel, null)
+    }
+
+    /**
+     * True from the first scan of a connection attempt until it has a link or has given up.
+     *
+     * Guards [makeDiscoverable] rather than the framework: the sharing side keeps asking to be
+     * discoverable for as long as its screen is open, and one of those calls landing mid-negotiation
+     * is enough to stall it.
+     */
+    @Volatile
+    private var isConnecting: Boolean = false
+
+    /**
      * Forms a group and waits for it to carry an address, or gives up.
      *
      * The timeout is the point of the whole method. Group formation involves a user tapping a
@@ -67,19 +99,111 @@ internal class WifiDirectLink @Inject constructor(
         val manager = manager ?: return null
         val channel = manager.initialize(context, context.mainLooper, null) ?: return null
 
-        return withTimeoutOrNull(timeoutMs) {
-            val created = suspendCancellableCoroutine { continuation ->
-                manager.createGroup(
-                    channel,
-                    object : WifiP2pManager.ActionListener {
-                        override fun onSuccess() = continuation.resume(true)
-                        override fun onFailure(reason: Int) = continuation.resume(false)
-                    }
-                )
-            }
-            if (!created) return@withTimeoutOrNull null
-            awaitConnection(manager, channel)
+        isConnecting = true
+        return try {
+            connectInner(manager, channel, timeoutMs)
+        } finally {
+            isConnecting = false
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    private suspend fun connectInner(
+        manager: WifiP2pManager,
+        channel: WifiP2pManager.Channel,
+        timeoutMs: Long
+    ): DirectLink? {
+        return withTimeoutOrNull(timeoutMs) {
+            // Any group this device is still holding goes first.
+            //
+            // Nothing creates one on the findable path any more, but an abandoned attempt can
+            // leave one behind, and Wi-Fi Direct refuses to let a group owner join somebody else's
+            // group. `dumpsys wifip2p` shows that refusal as
+            // `CONNECT processed=GroupCreatedState dest=<null>` — no transition at all, which
+            // reads exactly like the connect never happening.
+            leaveOwnGroup(manager, channel)
+
+            // Discovery first. `connect` needs a peer's device address, and the peer list is empty
+            // until a scan has run — this used to call `createGroup`, which asks for no peer at
+            // all: the device formed a group of one, became its owner, and `groupOwnerAddress` was
+            // then its *own* address. Everything afterwards talked to itself, which the pairing
+            // check caught as "the link reached a different device".
+            val peers = withTimeoutOrNull(DISCOVERY_TIMEOUT_MS) {
+                discoverPeers(manager, channel)
+            }.orEmpty()
+            if (peers.isEmpty()) return@withTimeoutOrNull null
+
+            // Discovery is deliberately *not* stopped here, though stopping it looks like the
+            // tidy thing to do and was tried. `stopPeerDiscovery` flushes the framework's peer
+            // cache, so the address handed to `connect` a moment later names a device it no longer
+            // knows: the request is refused instantly and the state machine never leaves
+            // `InactiveState`. What must not happen is a *new* scan during negotiation, and
+            // [isConnecting] is what prevents that.
+            for (device in peers) {
+                val config = android.net.wifi.p2p.WifiP2pConfig().apply {
+                    deviceAddress = device.deviceAddress
+                    // Zero: this device asks to be the client, so the peer becomes the owner.
+                    //
+                    // Not a preference but a requirement. The framework only ever hands back the
+                    // *owner's* address, so if this device won ownership the address would be its
+                    // own and every fetch would go to itself.
+                    groupOwnerIntent = 0
+                }
+                val asked = suspendCancellableCoroutine { continuation ->
+                    manager.connect(
+                        channel,
+                        config,
+                        object : WifiP2pManager.ActionListener {
+                            override fun onSuccess() = continuation.resume(true)
+                            override fun onFailure(reason: Int) = continuation.resume(false)
+                        }
+                    )
+                }
+                if (!asked) continue
+                // Longer than it feels it should be. Provision discovery waits for a person to
+                // notice a system dialog and tap it, and only then does negotiation begin — the
+                // first attempt spent eight seconds on the tap and was killed twenty seconds into
+                // a negotiation that had not finished.
+                val link = withTimeoutOrNull(NEGOTIATION_TIMEOUT_MS) {
+                    awaitConnection(manager, channel)
+                }
+                if (link != null) return@withTimeoutOrNull link
+            }
+            null
+        }
+    }
+
+    /**
+     * The Wi-Fi Direct devices in range, once a scan has answered.
+     *
+     * Separate from the BLE list on purpose, and unmatched to it: a beacon is ten bytes and cannot
+     * carry a MAC address, so there is no way to know which of these is the phone the user tapped.
+     * The caller connects, then checks who it reached — see `OffGridPairing`.
+     */
+    @SuppressLint("MissingPermission")
+    private suspend fun discoverPeers(
+        manager: WifiP2pManager,
+        channel: WifiP2pManager.Channel
+    ): List<android.net.wifi.p2p.WifiP2pDevice> = suspendCancellableCoroutine { continuation ->
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(receivedContext: Context?, intent: Intent?) {
+                if (intent?.action != WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION) return
+                manager.requestPeers(channel) { list ->
+                    val found = list?.deviceList?.toList().orEmpty()
+                    if (found.isEmpty()) return@requestPeers
+                    runCatching { context.unregisterReceiver(this) }
+                    if (continuation.isActive) continuation.resume(found)
+                }
+            }
+        }
+        androidx.core.content.ContextCompat.registerReceiver(
+            context,
+            receiver,
+            IntentFilter(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION),
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        continuation.invokeOnCancellation { runCatching { context.unregisterReceiver(receiver) } }
+        manager.discoverPeers(channel, null)
     }
 
     /**
@@ -94,15 +218,32 @@ internal class WifiDirectLink @Inject constructor(
         manager: WifiP2pManager,
         channel: WifiP2pManager.Channel
     ): DirectLink? = suspendCancellableCoroutine { continuation ->
+        // Asked once up front as well as listened for. The broadcast is the reliable path, but a
+        // group that formed between `connect` returning and this receiver being registered would
+        // never broadcast again, and the wait would run to its timeout beside a working link.
+        //
+        // `!isGroupOwner` is not a detail: while this device owns a group, the framework answers
+        // "group formed" with *our own* address, and this probe would resolve the wait instantly
+        // onto ourselves. By design the peer owns the group — see [hostGroup].
+        manager.requestConnectionInfo(channel) { info ->
+            val address = info?.groupOwnerAddress?.hostAddress
+            if (info?.groupFormed == true && !info.isGroupOwner &&
+                !address.isNullOrBlank() && continuation.isActive
+            ) {
+                continuation.resume(DirectLink(address, isHost = false))
+            }
+        }
+
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(receivedContext: Context?, intent: Intent?) {
                 if (intent?.action != WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION) return
                 manager.requestConnectionInfo(channel) { info ->
                     val address = info?.groupOwnerAddress?.hostAddress
-                    if (info?.groupFormed == true && !address.isNullOrBlank()) {
+                    // Same guard as above: a group we own names us, not the peer.
+                    if (info?.groupFormed == true && !info.isGroupOwner && !address.isNullOrBlank()) {
                         runCatching { context.unregisterReceiver(this) }
                         if (continuation.isActive) {
-                            continuation.resume(DirectLink(address, info.isGroupOwner))
+                            continuation.resume(DirectLink(address, isHost = false))
                         }
                     }
                 }
@@ -119,6 +260,32 @@ internal class WifiDirectLink @Inject constructor(
         continuation.invokeOnCancellation { runCatching { context.unregisterReceiver(receiver) } }
     }
 
+    /**
+     * Stands down as a group owner, and waits for the framework to agree that we have.
+     *
+     * The wait is the point. `removeGroup` is asynchronous, and a `connect` issued before the state
+     * machine has left `GroupCreatedState` is refused exactly as it was before — the fix would look
+     * like no fix at all. A device that owned no group answers immediately.
+     */
+    @SuppressLint("MissingPermission")
+    private suspend fun leaveOwnGroup(
+        manager: WifiP2pManager,
+        channel: WifiP2pManager.Channel
+    ) {
+        withTimeoutOrNull(GROUP_REMOVAL_TIMEOUT_MS) {
+            suspendCancellableCoroutine { continuation ->
+                manager.removeGroup(
+                    channel,
+                    object : WifiP2pManager.ActionListener {
+                        // Failure is the ordinary answer when there was nothing to remove.
+                        override fun onSuccess() = continuation.resume(Unit)
+                        override fun onFailure(reason: Int) = continuation.resume(Unit)
+                    }
+                )
+            }
+        }
+    }
+
     /** Tears the group down. A group left up is a radio left on, and it will not stop by itself. */
     @SuppressLint("MissingPermission")
     fun disconnect() {
@@ -129,9 +296,25 @@ internal class WifiDirectLink @Inject constructor(
 
     private companion object {
         /**
-         * Long enough for somebody to notice a dialog and tap it, short enough that a device that
-         * was never going to answer does not hold the radio open.
+         * The whole exchange: scan, a person tapping a dialog, and group formation.
+         *
+         * Long, because every part of it is. Short enough that a device that was never going to
+         * answer does not hold the radio open indefinitely.
          */
-        const val CONNECT_TIMEOUT_MS = 30_000L
+        const val CONNECT_TIMEOUT_MS = 120_000L
+
+        /** Standing down is quick or it is stuck; either way the connect attempt should proceed. */
+        const val GROUP_REMOVAL_TIMEOUT_MS = 5_000L
+
+        /** A scan answers in a second or two or not at all; waiting longer finds nothing new. */
+        const val DISCOVERY_TIMEOUT_MS = 12_000L
+
+        /**
+         * From "connect" to an address, including the tap on the other phone.
+         *
+         * Measured rather than guessed: on a Pixel 10 and an S22 the tap landed eight seconds in
+         * and negotiation was still going twenty seconds after that.
+         */
+        const val NEGOTIATION_TIMEOUT_MS = 75_000L
     }
 }

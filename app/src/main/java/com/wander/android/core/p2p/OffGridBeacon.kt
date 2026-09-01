@@ -31,17 +31,23 @@ internal data class OffGridBeacon(
     val servesAudio: Boolean
 ) {
 
+    /**
+     * The wire form, and every byte of it is contested.
+     *
+     * A legacy BLE advertisement carries **31 bytes total**, and the 128-bit service UUID that
+     * identifies these packets eats 18 of them before any payload exists. What is left is ten
+     * bytes, so [deviceId] is not sent: it was the first four bytes of [fingerprint] restated, and
+     * the reader derives it back. An advertisement that does not fit is not truncated — the radio
+     * refuses it outright, and until [BleDiscovery] grew a real failure callback it did so in
+     * total silence.
+     */
     fun toBytes(): ByteArray {
         val bytes = ByteArray(SIZE)
         bytes[0] = VERSION
-        bytes[1] = (deviceId ushr 24).toByte()
-        bytes[2] = (deviceId ushr 16).toByte()
-        bytes[3] = (deviceId ushr 8).toByte()
-        bytes[4] = deviceId.toByte()
         for (i in 0 until FINGERPRINT_SIZE) {
-            bytes[5 + i] = fingerprint.getOrElse(i) { 0 }
+            bytes[1 + i] = fingerprint.getOrElse(i) { 0 }
         }
-        bytes[13] = if (servesAudio) 1 else 0
+        bytes[1 + FINGERPRINT_SIZE] = if (servesAudio) 1 else 0
         return bytes
     }
 
@@ -60,10 +66,34 @@ internal data class OffGridBeacon(
         return result
     }
 
+    /**
+     * The first bytes of the fingerprint, as a short readable string.
+     *
+     * What a peer is called on screen. There is no name to use — the beacon carries none on
+     * purpose, because a Bluetooth name is usually its owner's and this is broadcast to a whole
+     * room — and the fingerprint has the advantage of being the thing pairing actually verifies.
+     *
+     * Joined with dashes rather than colons: colon-separated hex pairs read as a MAC address, and
+     * this is not one. It is the head of an identity key, and a reader who takes it for a hardware
+     * address will look for it in the wrong place.
+     */
+    fun shortFingerprint(): String =
+        fingerprint.take(SHORT_FINGERPRINT_BYTES).joinToString("-") { "%02X".format(it) }
+
     internal companion object {
         const val VERSION: Byte = 1
+
+        /** Enough to tell apart the few devices in a room, short enough to read off a screen. */
+        const val SHORT_FINGERPRINT_BYTES = 3
         const val FINGERPRINT_SIZE = 8
-        const val SIZE = 14
+
+        /**
+         * Version, fingerprint, flags — and nothing else, because nothing else fits.
+         *
+         * See [toBytes]: eighteen of an advertisement's thirty-one bytes are spent on the service
+         * UUID, and ten is what remains.
+         */
+        const val SIZE = 1 + FINGERPRINT_SIZE + 1
 
         /**
          * Wanda's service UUID. Scanners filter on it, so a phone is not woken by every fitness
@@ -86,14 +116,13 @@ internal data class OffGridBeacon(
         fun fromBytes(bytes: ByteArray?): OffGridBeacon? {
             if (bytes == null || bytes.size < SIZE) return null
             if (bytes[0] != VERSION) return null
-            val deviceId = (bytes[1].toInt() and 0xFF shl 24) or
-                (bytes[2].toInt() and 0xFF shl 16) or
-                (bytes[3].toInt() and 0xFF shl 8) or
-                (bytes[4].toInt() and 0xFF)
+            val fingerprint = bytes.copyOfRange(1, 1 + FINGERPRINT_SIZE)
             return OffGridBeacon(
-                deviceId = deviceId,
-                fingerprint = bytes.copyOfRange(5, 5 + FINGERPRINT_SIZE),
-                servesAudio = bytes[13].toInt() != 0
+                // Derived, not read: it is the fingerprint's own first four bytes, and the wire had
+                // no room to say the same thing twice. See [toBytes].
+                deviceId = deviceIdFrom(fingerprint),
+                fingerprint = fingerprint,
+                servesAudio = bytes[1 + FINGERPRINT_SIZE].toInt() != 0
             )
         }
 
