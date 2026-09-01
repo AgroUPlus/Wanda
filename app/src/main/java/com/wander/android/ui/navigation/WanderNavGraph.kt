@@ -22,6 +22,7 @@ import com.wander.android.ui.screens.queue.QueueScreen
 import com.wander.android.ui.screens.settings.SettingsScreen
 import com.wander.android.ui.screens.social.CircleScreen
 import com.wander.android.ui.screens.social.InboxScreen
+import com.wander.android.ui.screens.social.OffGridScreen
 import com.wander.android.ui.screens.social.JamScreen
 import com.wander.android.ui.screens.social.MyProfileScreen
 import com.wander.android.ui.screens.social.ProfileScreen
@@ -77,6 +78,7 @@ fun NavGraphBuilder.wanderNavGraph(
             onOpenJam = { navController.navigateSettled(Routes.JAM) },
             onOpenInbox = { navController.navigateSettled(Routes.INBOX) },
             onOpenCircle = { navController.navigateSettled(Routes.CIRCLE) },
+            onOpenOffGrid = { navController.navigateSettled(Routes.OFFGRID) },
             onOpenMyProfile = { navController.navigateSettled(Routes.MY_PROFILE) },
             onOpenSettings = { navController.navigateSettled(Routes.SETTINGS) }
         )
@@ -158,6 +160,13 @@ fun NavGraphBuilder.wanderNavGraph(
         arguments = listOf(navArgument("username") { type = NavType.StringType })
     ) {
         ProfileScreen(
+            contentPadding = contentPadding,
+            onBack = navController::popBackStack
+        )
+    }
+
+    detailDestination(motion, route = Routes.OFFGRID) {
+        OffGridScreen(
             contentPadding = contentPadding,
             onBack = navController::popBackStack
         )

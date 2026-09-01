@@ -9,6 +9,7 @@ import com.wander.android.core.security.IdentityKeyManager
 import com.wander.android.core.security.RelayStreamFraming
 import com.wander.android.core.security.SecureStorage
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -37,7 +38,20 @@ class P2PServer @Inject constructor(
     private val secureStorage: SecureStorage,
     private val identityKeyManager: IdentityKeyManager
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /**
+     * Nothing served to a peer may take this process down.
+     *
+     * A `launch` whose exception nobody catches reaches the thread's default handler, and on
+     * Android that ends the app. Serving audio is full of ordinary, unavoidable throws — the
+     * commonest being a broken pipe when the listener's player closes the source, which it does on
+     * every seek, stop and error — so the device *sharing* its music was being crashed by the
+     * normal behaviour of the device receiving it.
+     */
+    private val scope = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO + CoroutineExceptionHandler { _, error ->
+            Log.w(TAG, "P2P request failed: ${error.javaClass.simpleName}")
+        }
+    )
     private var serverSocket: ServerSocket? = null
     private var wifiLock: WifiManager.WifiLock? = null
     private var isRunning = false
@@ -57,6 +71,40 @@ class P2PServer @Inject constructor(
     private val grants = java.util.concurrent.ConcurrentHashMap<String, Grant>()
 
     private data class Grant(val forUser: String, val expiresAtMs: Long)
+
+    /**
+     * Mints a grant for a peer that asked for one face to face, and seals it to their key.
+     *
+     * The off-grid tier has no Agro to issue grants: two phones in a car have never met a server
+     * and may never meet one. Without this the radio link came up and the very first request for
+     * audio was answered `403`, which is why tier 5 could not work no matter what the UI did.
+     *
+     * **Sealed, not returned in the clear.** A Wi-Fi Direct group is no more a confidentiality
+     * boundary than a LAN is — the same argument [writeEncrypted] already makes about the audio.
+     * Sealing to the caller's own public key means only the holder of the matching private key can
+     * read the token, so overhearing the handshake buys nothing.
+     *
+     * **The grant is bound to that key**, which is what lets the caller verify afterwards that the
+     * device it reached is the device it chose — and closes the substitution [writeEncrypted]
+     * warns about, where nothing yet tied the grant to an identity.
+     *
+     * Null when the key is unusable. Being advertised is the consent here: [BleDiscovery] treats
+     * advertising as a deliberate act with a lifetime, so a device that is findable has already
+     * said yes. A per-transfer prompt, the way AirDrop asks, would be a further step.
+     */
+    private fun mintPairingGrant(requesterPublicKeyB64: String): String? {
+        if (requesterPublicKeyB64.isBlank()) return null
+        val token = ByteArray(PAIR_TOKEN_BYTES)
+            .also { java.security.SecureRandom().nextBytes(it) }
+            .let { android.util.Base64.encodeToString(it, android.util.Base64.NO_WRAP) }
+        val sealed = runCatching {
+            identityKeyManager.sealNote(requesterPublicKeyB64, token)
+        }.getOrNull() ?: return null
+        // Recorded against the requester's key rather than an account name: off-grid, there are no
+        // accounts, and the key is the only identity either device has.
+        acceptGrant(token, forUser = requesterPublicKeyB64, ttlSeconds = PAIR_GRANT_TTL_SECONDS)
+        return sealed
+    }
 
     /** Records a grant pushed by Agro as `P2P_GRANT`. */
     fun acceptGrant(token: String, forUser: String, ttlSeconds: Long) {
@@ -145,6 +193,17 @@ class P2PServer @Inject constructor(
     }
 
     private suspend fun handleClient(socket: Socket) {
+        // Every write below can throw once the peer has gone away, and most of them sit outside
+        // the narrower guard around the audio path. A hung-up listener is not an error worth more
+        // than a line in the log.
+        try {
+            serve(socket)
+        } catch (e: Exception) {
+            Log.i(TAG, "peer went away mid-request: ${e.javaClass.simpleName}")
+        }
+    }
+
+    private suspend fun serve(socket: Socket) {
         socket.use { s ->
             s.soTimeout = 5000
             val input = s.getInputStream()
@@ -168,6 +227,28 @@ class P2PServer @Inject constructor(
 
             if (method == "GET" && path == "/p2p/ping") {
                 val response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 4\r\nConnection: close\r\n\r\npong"
+                output.write(response.toByteArray())
+                output.flush()
+                return
+            }
+
+            // Face-to-face pairing, open like the ping above and for the same reason: it is what
+            // a peer must be able to reach *before* it holds a grant. What it hands back is sealed,
+            // so being open costs nothing.
+            if (method == "GET" && path.startsWith("/p2p/pair")) {
+                val requesterKey = Uri.parse("http://localhost$path")
+                    .getQueryParameter("key")
+                    .orEmpty()
+                val sealed = mintPairingGrant(requesterKey)
+                val response = if (sealed == null) {
+                    "HTTP/1.1 400 Bad Request\r\nContent-Length: 11\r\nConnection: close\r\n\r\nBad Request"
+                } else {
+                    // The server's own identity travels back with it: the caller recomputes the
+                    // beacon fingerprint from it and checks it reached the device it picked.
+                    val body = identityKeyManager.getPublicKeyBase64() + "\n" + sealed
+                    "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n" +
+                        "Content-Length: ${body.toByteArray().size}\r\nConnection: close\r\n\r\n" + body
+                }
                 output.write(response.toByteArray())
                 output.flush()
                 return
@@ -321,5 +402,17 @@ class P2PServer @Inject constructor(
 
         /** Matches what `RelayDecryptingDataSource` looks for; see the note there on the name. */
         const val SEALED_KEY_HEADER = "x-agro-sealed-key"
+
+        /** 256 bits of grant. It is a bearer token on an open port; guessing must be hopeless. */
+        const val PAIR_TOKEN_BYTES = 32
+
+        /**
+         * How long a face-to-face grant lasts.
+         *
+         * The length of a shared listen, not of a friendship. An off-grid grant is handed to
+         * whoever asked over the radio link, so it must expire on its own — there is no server to
+         * revoke it and the link it was issued for may be gone long before the token would be.
+         */
+        const val PAIR_GRANT_TTL_SECONDS = 30L * 60L
     }
 }

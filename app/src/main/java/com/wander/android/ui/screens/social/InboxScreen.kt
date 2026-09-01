@@ -99,6 +99,12 @@ internal fun InboxScreen(
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.weight(1f).padding(start = 4.dp)
                 )
+                // Only inside a thread, and only one that is sealed throughout. A padlock over a
+                // conversation whose older half is in the clear would be a claim this app cannot
+                // make — the boundary line inside says it accurately instead.
+                if (state.openWith != null && isFullySealed(state.conversation)) {
+                    EncryptedThreadLock(modifier = Modifier.padding(end = 8.dp))
+                }
                 if (state.unread > 0) {
                     Badge(
                         containerColor = MaterialTheme.colorScheme.primary,

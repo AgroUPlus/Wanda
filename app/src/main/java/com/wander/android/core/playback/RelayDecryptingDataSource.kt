@@ -3,7 +3,6 @@ package com.wander.android.core.playback
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
-import androidx.media3.datasource.DataSourceInputStream
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.TransferListener
 import com.wander.android.core.security.AudioStreamCipher
@@ -21,8 +20,8 @@ import android.net.Uri
  * reach the cache — the key is per track and gone within the minute, so a cached encrypted file
  * could never be played again. And plaintext must not reach it either: this is somebody else's
  * track, borrowed for one playback, and writing it to disk would quietly turn a relay into a copy.
- * The relay spec is marked uncacheable for that second reason; this class's placement handles the
- * first.
+ * `StreamResolver` marks these specs uncacheable for that second reason; this class's placement
+ * handles the first. Both halves are needed, and for a long time only this one existed.
  *
  * A stream is decrypted only when the response says it is encrypted. Anything else — every
  * ordinary HTTP source the player opens — is passed through untouched, byte for byte.
@@ -52,8 +51,11 @@ internal class RelayDecryptingDataSource(
             AudioStreamKeys.decodeRoomKey(identityKeyManager.openNote(sealedKey))
         }.getOrElse { throw IOException("Could not open the relay's room key", it) }
 
+        // Over the *already open* upstream. `DataSourceInputStream` would open it a second time
+        // on its first read, and a relay session serves its receiving half exactly once — the
+        // second GET came back 409 while the first stream sat there unread.
         plaintext = DecryptingRelayStream(
-            DataSourceInputStream(upstream, dataSpec),
+            OpenDataSourceStream(upstream),
             AudioStreamCipher(AudioStreamKeys.derive(roomKey, sessionId))
         )
         // Encryption adds framing, so the byte count the server advertised is not the audio's.
@@ -66,6 +68,7 @@ internal class RelayDecryptingDataSource(
         val read = stream.read(buffer, offset, length)
         return if (read == -1) C.RESULT_END_OF_INPUT else read
     }
+
 
     override fun close() {
         try {

@@ -85,6 +85,7 @@ internal class ListenAlongResolver @Inject constructor(
         if (title.isBlank()) return null
         val query = listOf(artist, title).filter { it.isNotBlank() }.joinToString(" ")
 
+
         // 1. Local storage & downloaded files first (free, offline, identical file)
         val localMatches = musicRepository
             .searchAllSources(query, onlySources = setOf(SourceType.LOCAL), kind = SearchKind.TRACKS)
@@ -149,12 +150,20 @@ internal class ListenAlongResolver @Inject constructor(
         // minute, and a resolver is called while a listener is waiting for audio — raising a radio
         // link from here would look like the app having frozen. The user starts the link; this
         // tier notices that they did.
-        if (hash.isNotBlank() && lanToken.isNotBlank()) {
+        //
+        // The grant comes from the *peer*, not from Agro. That is the whole point of this tier:
+        // two devices with no server between them still have to authorise each other, and
+        // `OffGridPairing` is where that happened when the link was raised. Requiring Agro's token
+        // here — as this did — meant the one tier designed to work without a server could not.
+        // Agro's token is still accepted, for a link raised while the account happened to be
+        // online.
+        if (hash.isNotBlank()) {
             val offGridBase = offGrid.connectedBaseUrl()
-            if (offGridBase != null) {
+            val offGridToken = offGridToken(offGrid.grantToken(), lanToken)
+            if (offGridBase != null && offGridToken != null) {
                 Log.i(TAG, "Resolved track over a direct radio link with no network involved")
                 return encryptedPeerStream(
-                    offGridBase, hash, title, artist, lanToken, ResolvedFrom.P2P_OFFGRID
+                    offGridBase, hash, title, artist, offGridToken, ResolvedFrom.P2P_OFFGRID
                 )
             }
         }
@@ -298,6 +307,18 @@ internal class ListenAlongResolver @Inject constructor(
          * and a hash to ask for. A hash invented from the title would name a file nobody has, so
          * its absence is a real answer: there is nothing to transfer, only a name to match.
          */
+        /**
+         * Which bearer the off-grid tier should present, or null if it has none.
+         *
+         * The peer's own grant comes first, and it is the only one that exists in the case this
+         * tier was built for: two devices with no server between them. Agro's token is accepted
+         * behind it, for a radio link raised while the account happened to be online — but
+         * requiring it, as this once did, made the one tier designed to work without a server
+         * refuse to work without a server.
+         */
+        fun offGridToken(peerGrant: String?, agroToken: String?): String? =
+            peerGrant?.takeIf { it.isNotBlank() } ?: agroToken?.takeIf { it.isNotBlank() }
+
         fun canTryRelay(
             hostDevice: String?,
             contentHash: String?,

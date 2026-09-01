@@ -33,7 +33,7 @@ import javax.inject.Singleton
 class AgroHandoffPublisher @Inject constructor(
     private val agroClient: AgroClient,
     private val secureStorage: SecureStorage,
-    private val trackDao: com.wander.android.core.database.dao.TrackDao
+    private val sharedTrackHash: com.wander.android.core.sync.SharedTrackHash
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var lastSent: Handoff? = null
@@ -117,10 +117,11 @@ class AgroHandoffPublisher @Inject constructor(
             // length at all. Both become 0, which is the fleet's word for "no bar, just a clock".
             durationMs = duration.coerceAtLeast(0L),
             isPlaying = isPlaying,
-            // Present only for a local file the hashing worker has already reached. That is
-            // exactly the set of tracks a peer could be handed directly, so a listener learning
-            // there is no hash learns the truth: there is nothing here to transfer.
-            contentHash = trackDao.getTrackById(track.id)?.contentHash
+            // Computed here if the batch worker has not reached this file yet. Announcing a
+            // local file with no hash tells every listener there is nothing to transfer, and all
+            // three peer tiers then decline a transfer they have no way to name — which is what
+            // made two phones on one Wi-Fi unable to hand each other a song.
+            contentHash = sharedTrackHash.of(track.id)
         ).onFailure { log("handoff", it) }
     }
 
