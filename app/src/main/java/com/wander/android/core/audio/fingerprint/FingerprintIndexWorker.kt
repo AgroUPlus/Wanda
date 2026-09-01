@@ -8,6 +8,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.wander.android.data.repository.AcousticFeatureRepository
 import com.wander.android.data.repository.RecognitionRepository
 import com.wander.android.data.repository.RecordingIdentityRepository
 import com.wander.android.data.repository.RecordingLinkRepository
@@ -38,6 +39,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
     private val recognitionRepository: RecognitionRepository,
     private val recordingIdentity: RecordingIdentityRepository,
     private val recordingLinks: RecordingLinkRepository,
+    private val acousticFeatures: AcousticFeatureRepository,
     private val decoder: PcmDecoder
 ) : CoroutineWorker(context, params) {
 
@@ -49,6 +51,10 @@ class FingerprintIndexWorker @AssistedInject constructor(
         val needsCanonical = recordingIdentity
             .needingIndex(needsLandmark.map { it.id })
             .toSet()
+        // Three measurements, one decode. The acoustic vector answers a third question again —
+        // not "what is this" but "what does it sound like" — and asking it here is what keeps
+        // Smart Radio free: on its own it would be a second full pass over the library.
+        val needsFeatures = acousticFeatures.needingMeasurement(FEATURE_BATCH_LIMIT)
         val pending = needsLandmark
         if (pending.isEmpty()) return@withContext Result.success()
 
@@ -65,6 +71,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
                 // down, and it is the only thing that turns a stored fingerprint into a merge.
                 recordingLinks.record(track.id, recordingIdentity.matchesFor(track.id))
             }
+            if (track.id in needsFeatures) acousticFeatures.measure(track.id, samples)
         }
 
         if (pending.size > BATCH_SIZE) Result.retry() else Result.success()
@@ -78,6 +85,12 @@ class FingerprintIndexWorker @AssistedInject constructor(
          * with room for the slowest files in a collection.
          */
         private const val BATCH_SIZE = 25
+
+        /**
+         * How far ahead to ask which tracks still need a vector. Comfortably more than one batch,
+         * so the set covers everything this run could reach without listing a whole library.
+         */
+        private const val FEATURE_BATCH_LIMIT = 200
 
         /**
          * Asks for the index to be brought up to date.
