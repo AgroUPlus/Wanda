@@ -161,7 +161,16 @@ vert : 206 tests côté Wanda, 378 côté Agro.
    La contribution est opt-in, par défaut désactivée — vérifier que rien ne
    part avant que le réglage soit activé.
 
-8. **Migration 21 → 22.** Installer par-dessus une base existante et vérifier
+8. **PR #42 — fredonner un air.** Le seul point où la mesure est déjà
+   partiellement vérifiée : les tests couvrent YIN sur des tons de synthèse et
+   un triolet do-mi-sol ressort bien en `0, +4, +3`. Ce qui reste à voir sur
+   appareil, c'est l'inverse — les contours **stockés**, extraits de vrais
+   mixages. Le suivi de hauteur suppose une voix à la fois : une guitare-voix
+   ou un piano seul donneront un bon contour, un mur de production donnera
+   souvent la basse au lieu de la mélodie. Fredonner un air de chaque type et
+   voir lequel répond. Un échec attendu ici, pas un bug.
+
+9. **Migration 21 → 22, puis 22 → 23.** Installer par-dessus une base existante et vérifier
    que rien n'est perdu. La table `track_features` démarre vide par
    conception ; les vecteurs arrivent à la prochaine indexation.
 

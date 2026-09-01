@@ -3,6 +3,7 @@ package com.wander.android.data.repository
 import com.wander.android.core.audio.fingerprint.AudioFormat
 import com.wander.android.core.audio.fingerprint.Fingerprinter
 import com.wander.android.core.audio.fingerprint.MicRecorder
+import com.wander.android.core.audio.melody.ContourMatcher
 import com.wander.android.core.database.dao.FingerprintDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.TrackEntity
@@ -13,13 +14,23 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** Which engine produced an answer, so the UI can say how it knows. */
+enum class RecognitionEngine {
+    /** The record itself was playing, and its landmarks lined up. Exact. */
+    LANDMARK,
+
+    /** Somebody hummed the tune and its shape fitted. A good guess, not a certainty. */
+    MELODY
+}
+
 /** What the microphone heard, when it was recognised. */
 data class Recognition(
     val track: UnifiedTrack,
-    /** Where in the track the listener came in, in seconds. */
+    /** Where in the track the listener came in, in seconds. Zero for a melody match. */
     val positionSeconds: Int,
     /** Matching landmarks behind this answer. Higher is more certain. */
-    val score: Int
+    val score: Int,
+    val engine: RecognitionEngine = RecognitionEngine.LANDMARK
 )
 
 /**
@@ -38,7 +49,8 @@ class RecognitionRepository @Inject constructor(
     private val fingerprintDao: FingerprintDao,
     private val trackDao: TrackDao,
     private val micRecorder: MicRecorder,
-    private val fingerprinter: Fingerprinter
+    private val fingerprinter: Fingerprinter,
+    private val melodySearch: MelodySearchRepository
 ) {
 
     val indexedTrackCount: Flow<Int> = fingerprintDao.indexedTrackCountFlow()
@@ -56,7 +68,39 @@ class RecognitionRepository @Inject constructor(
      */
     suspend fun listen(seconds: Int = LISTEN_SECONDS): Recognition? {
         val samples = micRecorder.record(seconds) ?: return null
-        return withContext(Dispatchers.Default) { identify(samples) }
+        return withContext(Dispatchers.Default) { identifyOrHum(samples) }
+    }
+
+    /**
+     * Both engines, one capture.
+     *
+     * The microphone is opened once and the samples are handed to each engine in turn. Recording
+     * twice would mean asking the user to perform twice, and the two engines want exactly the same
+     * audio — a clip of a room, or a clip of somebody humming, is the same array of floats either
+     * way. Which of them can do anything with it is what differs.
+     *
+     * The landmark engine goes first and wins outright when it answers. It is comparing the audio
+     * against itself, so its answer is a fact; the melody engine is comparing a shape against a
+     * shape and its answer is an inference. Running them in the other order — or blending their
+     * scores — would let a plausible melody match override a certain acoustic one, and their
+     * scores are not on a common scale to be blended anyway.
+     */
+    private suspend fun identifyOrHum(samples: FloatArray): Recognition? {
+        identify(samples)?.let { return it }
+
+        val match = melodySearch.search(samples).firstOrNull() ?: return null
+        val entity = withContext(Dispatchers.IO) { trackDao.getTrackById(match.trackId) } ?: return null
+        return Recognition(
+            track = entity.toUnifiedTrack(),
+            // A hum says nothing about where in the track it came from: somebody humming the
+            // chorus is not listening to it, and reporting a position would be inventing one.
+            positionSeconds = 0,
+            // Distance is an error measure — lower is better — and `score` is a confidence, so it
+            // has to be turned around rather than passed through. Scaled to sit in the same
+            // rough range as a landmark score so a UI can render one bar for both.
+            score = ((ContourMatcher.MAX_DISTANCE - match.distance) * MELODY_SCORE_SCALE).toInt(),
+            engine = RecognitionEngine.MELODY
+        )
     }
 
     /**
@@ -171,5 +215,8 @@ class RecognitionRepository @Inject constructor(
 
         /** How far the winner must clear the runner-up. */
         const val MIN_MARGIN = 1.6
+
+        /** Puts a melody match's confidence on roughly the same scale as a landmark score. */
+        const val MELODY_SCORE_SCALE = 20
     }
 }
