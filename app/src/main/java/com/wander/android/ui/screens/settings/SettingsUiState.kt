@@ -36,6 +36,7 @@ internal data class SettingsUiState(
     val librarySync: Boolean,
     val p2pSync: Boolean,
     val serverArchive: Boolean,
+    val popularityContribution: Boolean,
     val canArchive: Boolean,
     val syncProgress: SyncProgress,
     val pendingUploads: Int,
@@ -73,6 +74,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val librarySync by viewModel.librarySyncEnabled.collectAsStateWithLifecycle()
     val p2pSync by viewModel.p2pSyncEnabled.collectAsStateWithLifecycle()
     val serverArchive by viewModel.serverArchiveEnabled.collectAsStateWithLifecycle()
+    val popularityContribution by viewModel.popularityEnabled.collectAsStateWithLifecycle()
     val canArchive by viewModel.canArchive.collectAsStateWithLifecycle()
     val syncProgress by viewModel.librarySyncProgress.collectAsStateWithLifecycle()
     val pendingUploads by viewModel.pendingUploads.collectAsStateWithLifecycle()
@@ -108,6 +110,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         librarySync = librarySync,
         p2pSync = p2pSync,
         serverArchive = serverArchive,
+        popularityContribution = popularityContribution,
         canArchive = canArchive,
         syncProgress = syncProgress,
         pendingUploads = pendingUploads,

@@ -151,6 +151,8 @@ internal fun SettingsScreen(
                         p2pSyncEnabled = state.p2pSync,
                         onP2pSyncChange = viewModel::setP2pSync,
                         serverArchiveEnabled = state.serverArchive,
+                        popularityEnabled = state.popularityContribution,
+                        onPopularityChange = viewModel::setPopularityContribution,
                         canArchive = state.canArchive,
                         onServerArchiveChange = viewModel::setServerArchive,
                         pendingUploads = state.pendingUploads,

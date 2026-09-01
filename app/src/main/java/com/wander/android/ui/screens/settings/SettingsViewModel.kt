@@ -249,6 +249,9 @@ internal class SettingsViewModel @Inject constructor(
     val p2pSyncEnabled: StateFlow<Boolean> = secureStorage.agroP2pSyncFlow
     val serverArchiveEnabled: StateFlow<Boolean> = secureStorage.agroServerArchiveFlow
 
+    /** Off until asked for, like everything else that sends something outward. */
+    val popularityEnabled: StateFlow<Boolean> = secureStorage.agroPopularityContributionFlow
+
     /**
      * Whether the server lets this account archive.
      *
@@ -315,6 +318,10 @@ internal class SettingsViewModel @Inject constructor(
         } else {
             librarySyncScheduler.disablePeriodicSync()
         }
+    }
+
+    fun setPopularityContribution(enabled: Boolean) {
+        secureStorage.setAgroPopularityContribution(enabled)
     }
 
     fun setServerArchive(enabled: Boolean) {
