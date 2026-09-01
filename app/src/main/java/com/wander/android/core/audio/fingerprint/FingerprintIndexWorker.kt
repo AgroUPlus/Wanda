@@ -9,6 +9,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.wander.android.data.repository.AcousticFeatureRepository
+import com.wander.android.data.repository.MelodySearchRepository
 import com.wander.android.data.repository.RecognitionRepository
 import com.wander.android.data.repository.RecordingIdentityRepository
 import com.wander.android.data.repository.RecordingLinkRepository
@@ -40,6 +41,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
     private val recordingIdentity: RecordingIdentityRepository,
     private val recordingLinks: RecordingLinkRepository,
     private val acousticFeatures: AcousticFeatureRepository,
+    private val melodySearch: MelodySearchRepository,
     private val decoder: PcmDecoder
 ) : CoroutineWorker(context, params) {
 
@@ -51,10 +53,11 @@ class FingerprintIndexWorker @AssistedInject constructor(
         val needsCanonical = recordingIdentity
             .needingIndex(needsLandmark.map { it.id })
             .toSet()
-        // Three measurements, one decode. The acoustic vector answers a third question again —
-        // not "what is this" but "what does it sound like" — and asking it here is what keeps
-        // Smart Radio free: on its own it would be a second full pass over the library.
+        // Four measurements, one decode. The acoustic vector answers a third question again —
+        // not "what is this" but "what does it sound like", and the melody contour asks a fourth,
+        // "how does it go". Each on its own would be another full pass over the library.
         val needsFeatures = acousticFeatures.needingMeasurement(FEATURE_BATCH_LIMIT)
+        val needsContour = melodySearch.needingIndex(needsLandmark.map { it.id })
         val pending = needsLandmark
         if (pending.isEmpty()) return@withContext Result.success()
 
@@ -72,6 +75,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
                 recordingLinks.record(track.id, recordingIdentity.matchesFor(track.id))
             }
             if (track.id in needsFeatures) acousticFeatures.measure(track.id, samples)
+            if (track.id in needsContour) melodySearch.index(track.id, samples)
         }
 
         if (pending.size > BATCH_SIZE) Result.retry() else Result.success()
