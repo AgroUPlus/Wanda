@@ -46,6 +46,7 @@ class MusicRepository @Inject constructor(
     private val scrobbleSuppression: ScrobbleSuppression,
     private val splitRepository: RecordingSplitRepository,
     private val linkRepository: RecordingLinkRepository,
+    private val acousticFeatures: AcousticFeatureRepository,
     val sources: Set<@JvmSuppressWildcards IMusicSource>
 ) {
     /**
@@ -607,20 +608,39 @@ class MusicRepository @Inject constructor(
      * Endless radio. Falls back to the user's own most-played tracks when the source has no
      * similarity API — that is a real playlist, not a placeholder.
      */
+    /**
+     * A queue that follows on from [seed].
+     *
+     * The candidates are what they have always been — the source's own radio where the backend has
+     * one, the library otherwise. What is new is that the acoustic vectors *order* them, so the
+     * queue moves by steps rather than jumping between whatever the backend returned first.
+     *
+     * The vectors are deliberately not allowed to choose the candidates. Only files stored on this
+     * device are ever measured, so a radio drawn from the acoustic index could only ever replay
+     * the library; see [SmartRadioBuilder]. Tracks with no vector keep a reserved share of every
+     * queue for the same reason — a song nobody has decoded is unknown, not unwanted.
+     */
     suspend fun generateRadio(seed: UnifiedTrack, count: Int = 20): List<UnifiedTrack> =
         withContext(Dispatchers.IO) {
             val source = sourceFor(seed.source)?.takeIf { it.capabilities.radio }
-            val tracks = source?.getRadio(seed.id, count)?.getOrNull().orEmpty()
-            if (tracks.isNotEmpty()) {
-                persist(tracks, asLibrary = false)
-                tracks
-            } else {
-                trackDao.getTopPlayedTracks(count * 2)
-                    .map(TrackEntity::toUnifiedTrack)
-                    .filter { it.id != seed.id }
-                    .shuffled()
-                    .take(count)
-            }
+            val fromSource = source?.getRadio(seed.id, count * 2)?.getOrNull().orEmpty()
+            if (fromSource.isNotEmpty()) persist(fromSource, asLibrary = false)
+
+            // The library is added to the pool rather than used only when the source fails: a
+            // track the user owns and has not heard in a year is a better neighbour than a
+            // stranger, and until now it could never appear beside one.
+            val fromLibrary = trackDao.getTopPlayedTracks(count * 2)
+                .map(TrackEntity::toUnifiedTrack)
+
+            val pool = (fromSource + fromLibrary).filter { it.id != seed.id }
+            if (pool.isEmpty()) return@withContext emptyList()
+
+            val vectors = acousticFeatures.allFeatures()
+            SmartRadioBuilder.build(
+                seed = vectors[seed.id] ?: acousticFeatures.featuresFor(seed.id),
+                candidates = pool.map { SmartRadioBuilder.Candidate(it, vectors[it.id]) },
+                count = count
+            )
         }
 
     private companion object {
