@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.data.repository.Recognition
+import com.wander.android.data.repository.RecognitionEngine
 import com.wander.android.ui.components.Artwork
 
 /**
@@ -111,8 +112,8 @@ private fun Listening(indexedTracks: Int) {
     Text("Listening…", style = MaterialTheme.typography.headlineSmall)
     Text(
         text = if (indexedTracks > 0) {
-            "Matching against $indexedTracks ${if (indexedTracks == 1) "track" else "tracks"} " +
-                "stored on this device."
+            "Play it, or hum it. Matching against $indexedTracks " +
+                "${if (indexedTracks == 1) "track" else "tracks"} stored on this device."
         } else {
             "Nothing is indexed yet. Recognition works on music saved to this device, and the " +
                 "index is built while charging."
@@ -147,10 +148,23 @@ private fun Matched(recognition: Recognition, onPlay: () -> Unit) {
         maxLines = 1,
         overflow = TextOverflow.Ellipsis
     )
+    if (recognition.engine == RecognitionEngine.MELODY) {
+        // Said out loud, because the two engines are not equally sure. A landmark match heard the
+        // record; this one matched the shape of a tune somebody hummed, and a listener shown a
+        // confident wrong answer has no way to know which kind they were given.
+        Text(
+            text = "Matched by melody — this is a guess from the tune, not the recording.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+    }
     Button(onClick = onPlay, shapes = ButtonDefaults.shapes()) {
         // Says where it will start, because it is not the beginning — picking the song up where
-        // the room has reached is the point, and a plain "Play" would look like a bug.
-        Text("Play from ${formatPosition(recognition.positionSeconds)}")
+        // the room has reached is the point, and a plain "Play" would look like a bug. A hummed
+        // match has no position to resume from, so it simply plays.
+        if (recognition.engine == RecognitionEngine.MELODY) Text("Play")
+        else Text("Play from ${formatPosition(recognition.positionSeconds)}")
     }
 }
 
@@ -160,7 +174,7 @@ private fun NoMatch(indexedTracks: Int, onRetry: () -> Unit) {
     Text(
         text = if (indexedTracks > 0) {
             "That is not one of the $indexedTracks tracks on this device — or the room was too " +
-                "loud to hear it clearly."
+                "loud to hear it clearly. Humming works too, if you know how it goes."
         } else {
             "Nothing is indexed yet, so there was nothing to match against. The index is built " +
                 "in the background while this phone is charging."
