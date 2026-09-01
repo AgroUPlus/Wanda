@@ -109,38 +109,88 @@ et `sync()` n'avaient aucun appelant. Désormais :
 
 ## Reste à faire
 
-### Bloquant avant de continuer
-1. **Tester #35 sur deux appareils réels.** La couture Media3 n'est couverte par
-   aucun test : `RelayDecryptingDataSource` n'est exercé nulle part, et je n'ai pas
-   pu lancer de lecture. Le chemin des en-têtes, l'envoi sans `Content-Length` et
-   la fin de flux sont les points qui mordront.
+### À tester à la main
+
+Tout ce qui suit ne peut pas être couvert par un test unitaire : il faut un
+appareil, des fichiers réels, ou deux téléphones. C'est la liste complète de ce
+qui reste à vérifier, du plus risqué au moins risqué. Le reste du dépôt est
+vert : 206 tests côté Wanda, 378 côté Agro.
+
+1. **#35 — relais E2EE, sur deux appareils réels.** Le plus risqué de la liste.
+   La couture Media3 n'est exercée par aucun test : `RelayDecryptingDataSource`
+   n'est appelé nulle part en test et aucune lecture n'a jamais été lancée. Les
+   points qui mordront : le chemin des en-têtes, l'envoi sans `Content-Length`,
+   et la fin de flux. Un échec ici est silencieux — la lecture s'arrête, sans
+   erreur.
+
+2. **PR #41 — les mesures acoustiques, sur une vraie bibliothèque.** Toute
+   l'arithmétique est testée, la *mesure* ne l'est pas. Ce qu'il faut vérifier :
+   qu'un morceau à 130 BPM ressort bien près de 130 (`AcousticFeatures.bpmOf`
+   sur la ligne stockée), qu'un morceau calme et un morceau compressé ne
+   tombent pas sur la même énergie, et qu'une radio lancée deux fois de suite
+   ne redonne pas la même file. Lancer l'indexation depuis Réglages
+   (`FingerprintIndexWorker.enqueueNow`), puis une radio.
+
+3. **PR #41 — la part de découverte tient.** Sur une bibliothèque entièrement
+   indexée, une radio doit **toujours** contenir des morceaux jamais mesurés.
+   Si elle ne rejoue que la bibliothèque, la garantie a sauté : c'est le mode
+   d'échec que tout le design évite, et il ressemble à un fonctionnement
+   normal.
+
+4. **PR #40 — le bug « Memories ».** Deux morceaux du même titre par des
+   artistes différents, l'un téléchargé et l'autre pas. Le second ne doit plus
+   jouer l'audio du premier. Vérifier aussi qu'un morceau *légitimement*
+   partagé entre deux sources se substitue toujours — la correction ne doit pas
+   avoir cassé le repli hors-ligne.
+
+5. **PR #25 (Agro) — les vecteurs traversent.** Deux appareils appairés au même
+   serveur : le second doit voir les mesures du premier via
+   `similarRecordings`. Un seed jamais mesuré doit renvoyer **vide**, pas les
+   morceaux les plus connus.
+
+6. **PR #37 — les liens d'empreinte fusionnent bien.** Deux copies d'un même
+   morceau avec des tags délibérément différents (l'une titrée
+   `Song (Official Video) [HQ]`, l'artiste étant le nom de la chaîne). Après
+   indexation, les deux lignes doivent se replier en une seule dans la
+   bibliothèque **et** dans l'aperçu de fusion — et « ce n'est pas le même
+   enregistrement » doit toujours les séparer ensuite.
+
+7. **PR #38 — l'étagère « Popular on Agro ».** Elle n'apparaît qu'au-dessus du
+   plancher d'exposition (5 écoutes). Sur un serveur neuf, elle est vide et
+   c'est correct : vérifier qu'elle est *absente* et non vide-mais-affichée.
+   La contribution est opt-in, par défaut désactivée — vérifier que rien ne
+   part avant que le réglage soit activé.
+
+8. **Migration 21 → 22.** Installer par-dessus une base existante et vérifier
+   que rien n'est perdu. La table `track_features` démarre vide par
+   conception ; les vecteurs arrivent à la prochaine indexation.
 
 ### Vague 5 — découverte
-2. **Agro #18 + Wanda #30** — vecteurs acoustiques et radio KNN.
-3. **Agro #19 + Wanda #31** — compteurs aveuglés et étagère « Popular on Agro ».
-   Côté client, c'est petit : `AgroLibraryApi.popularTracks()`, intégration dans
-   `RecommendationRepository`, une constante dans `HomeViewModel.SectionOrder`.
-   Aucune UI nouvelle (`TRACK_CAROUSEL` existe déjà).
-4. **Wanda #33 + #29 fusionnées** — reconnaissance extérieure. Il reste le moteur
+
+Les deux premiers points sont livrés et en attente de relecture : Wanda #41 et
+Agro #25 (vecteurs acoustiques, PR ouvertes), Wanda #38 et Agro #24 (compteurs,
+fusionnées). Reste :
+
+9. **Wanda #33 + #29 fusionnées** — reconnaissance extérieure. Il reste le moteur
    B : suivi de hauteur YIN, entité de contour mélodique, appariement DTW, puis
    refonte de `RecognitionRepository` pour que les deux moteurs consomment une
    seule capture micro et alimentent une seule liste classée.
 
 ### Vague 6 — les gros morceaux
-5. **Wanda #32** — transport hors-réseau Wi-Fi Direct / BLE / LocalOnlyHotspot.
+10. **Wanda #32** — transport hors-réseau Wi-Fi Direct / BLE / LocalOnlyHotspot.
    Entièrement absent aujourd'hui : zéro occurrence de `WifiP2pManager`,
    `NsdManager`, BLE ou mDNS. À construire derrière l'abstraction `ResolvedFrom`
    existante pour que `ListenAlongResolver` gagne un palier au lieu d'être réécrit.
    À découper en épopée : découverte BLE + poignée de main X25519, montée en
    Wi-Fi Direct, pair PC.
-6. **Wanda #25** — la feuille d'actions album est petite, mais les liens
+11. **Wanda #25** — la feuille d'actions album est petite, mais les liens
    universels inter-sources sont une vraie fonctionnalité. `ShareKind.ALBUM`
    existe déjà ; le blocage est que `AlbumCard` n'a pas d'appui long, et qu'il
    n'existe aucun lien « Wanda » agnostique — `ShareRepository` ne fait que
    relayer le lien forgé par chaque backend.
 
 ### Indépendant
-7. **Agro #13** — CrowdSec tourne **devant** Agro, pas dedans. Deux parties :
+12. **Agro #13** — CrowdSec tourne **devant** Agro, pas dedans. Deux parties :
    donner aux vérifications 2FA leur propre seau de limitation dans `login.rs`
    avec des codes HTTP distincts, puis fournir la configuration de parseur
    CrowdSec en artefact de déploiement. À noter : `audit.rs` tronque les IP en
@@ -149,20 +199,27 @@ et `sync()` n'avaient aucun appelant. Désormais :
 
 ---
 
-## Bug ouvert, hors vagues
+## Le bug « Memories » — résolu
 
-**« Memories » joue toujours le même morceau.** Diagnostic partiel :
-`TrackDeduplicator` inclut l'artiste dans sa clé et exige des durées à 3 s près, donc
-un repli sur le titre seul ne l'explique pas. Deux pistes restent : des métadonnées
-d'artiste vides ou fausses, ou — plus probable puisque le symptôme est à la lecture
-et non à l'affichage — le chemin de résolution qui choisit une source par recherche
-titre/artiste (`bestMatch`, `renditionsOf`), plus laxiste que le déduplicateur.
+Cause trouvée, corrigée dans la PR #40 (issue #39). Le diagnostic noté ici était
+juste sur un point et faux sur l'autre : `TrackDeduplicator` n'était pas en
+cause, parce que le chemin de résolution **ne l'appelait pas du tout**.
+
+`MusicRepository.getStreamInfo()` demandait à Room une seule ligne avec
+`title = :title COLLATE NOCASE LIMIT 1`, deux fois — une copie locale ou
+téléchargée, puis une copie Navidrome. Ni l'artiste, ni la durée, ni les
+scissions, ni les liens d'empreinte n'étaient consultés. Le troisième palier
+avait le même trou par un autre chemin : le repli par recherche Navidrome
+comparait les titres via un helper qui minuscule et retire la ponctuation.
+
+Les requêtes rendent désormais des *candidats* et `selectSameRecording` tranche
+avec le même test d'identité que la bibliothèque et l'aperçu de fusion.
+Conséquence assumée : un candidat sans durée ne se substitue plus, sauf si une
+empreinte le vouche.
 
 Côté Agro il n'y a **rien à réinitialiser** : `library_tracks` a `content_hash` en
 clé primaire, donc deux fichiers différents sont toujours deux lignes ; les colonnes
-`norm_*` ne servent qu'aux requêtes de correspondance. Les empreintes canoniques
-corrigeront la cause 1 pour l'avenir, mais pas rétroactivement, et pas la cause 2.
-`RecordingSplitRepository.keepApart()` est déjà le recours manuel.
+`norm_*` ne servent qu'aux requêtes de correspondance.
 
 ---
 
