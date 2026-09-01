@@ -45,8 +45,13 @@ class ListenAlongResolverTest {
     }
 
     /**
-     * The order is the contract the status line reports against, and the reason a listener is told
-     * "streamed over Wi-Fi" rather than being left to guess where the audio came from.
+     * The order is the contract the transport badge reports against, and the reason a listener can
+     * see whether the audio is costing data, needs a router, or is encrypted.
+     *
+     * Off-grid sits below the LAN and above the relay deliberately. It beats the relay on every
+     * axis that matters — nothing leaves the two devices, and it is an order of magnitude faster —
+     * but it costs a radio link and usually a tap on a system dialog, so it must not be attempted
+     * while a network both devices are already on would have done.
      */
     @Test
     fun `the tiers are ordered cheapest and most faithful first`() {
@@ -56,6 +61,7 @@ class ListenAlongResolverTest {
                 ResolvedFrom.NAVIDROME,
                 ResolvedFrom.YOUTUBE_MUSIC,
                 ResolvedFrom.P2P_DIRECT,
+                ResolvedFrom.P2P_OFFGRID,
                 ResolvedFrom.AGRO_RELAY
             ),
             ResolvedFrom.entries.toList()

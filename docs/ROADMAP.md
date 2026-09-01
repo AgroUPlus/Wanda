@@ -170,7 +170,21 @@ vert : 206 tests côté Wanda, 378 côté Agro.
    souvent la basse au lieu de la mélodie. Fredonner un air de chaque type et
    voir lequel répond. Un échec attendu ici, pas un bug.
 
-9. **Migration 21 → 22, puis 22 → 23.** Installer par-dessus une base existante et vérifier
+9. **PR #43 — le lien hors-réseau.** Rien de tout cela ne tourne sur la JVM :
+   BLE et Wi-Fi Direct sont du framework. Deux téléphones, Wi-Fi et données
+   coupées sur les deux : l'un partage, l'autre doit le voir apparaître en
+   quelques secondes, puis lire un morceau. À noter, ce ne sont pas des bugs :
+   la formation du groupe affiche une boîte de dialogue système sur la plupart
+   des appareils, certains constructeurs échouent en silence, et un téléphone
+   déjà en 2,4 GHz négociera parfois le groupe là et donnera une fraction du
+   débit annoncé.
+
+10. **PR #43 — le chiffrement LAN.** Vérifier qu'un morceau lu depuis un pair
+    sur le réseau local porte bien le cadenas dans le badge, et qu'une capture
+    réseau ne montre plus l'audio en clair. C'était le trou : le relais
+    lointain était chiffré, le lien local ne l'était pas.
+
+11. **Migration 21 → 22, puis 22 → 23.** Installer par-dessus une base existante et vérifier
    que rien n'est perdu. La table `track_features` démarre vide par
    conception ; les vecteurs arrivent à la prochaine indexation.
 
