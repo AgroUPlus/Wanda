@@ -29,6 +29,7 @@ class ScrobbleSyncWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val historyDao: HistoryDao,
     private val statsApi: AgroStatsApi,
+    private val popularityRepository: com.wander.android.data.repository.PopularityRepository,
     private val secureStorage: SecureStorage
 ) : CoroutineWorker(context, params) {
 
@@ -55,6 +56,12 @@ class ScrobbleSyncWorker @AssistedInject constructor(
                 return@withContext Result.retry()
             }
             historyDao.markAgroSynced(pending.map { it.historyId })
+
+            // After the history is safely reported and marked, never before. Counts are the
+            // losable half: they carry no submitter identity, so a failed contribution cannot be
+            // retried without inflating the total it is reporting, and it is dropped instead.
+            // Doing it first would risk the user's own history for a shelf.
+            popularityRepository.contribute(pending)
         }
 
         Result.success()

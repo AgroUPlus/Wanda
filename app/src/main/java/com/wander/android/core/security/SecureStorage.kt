@@ -352,6 +352,28 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     }
 
     /**
+     * Contribute anonymous play counts to the server's shared "Popular on Agro" totals.
+     *
+     * **Opt-in, default false**, like every other switch that sends something outward. Reporting
+     * scrobbles already tells *your* server what you played, so this adds nothing that server does
+     * not have — what it adds is that your listening becomes part of a total other accounts on the
+     * same server can see. That is a disclosure to other people, not to the server, and it is not
+     * one to make on a user's behalf.
+     *
+     * The shelf itself works either way: a device that reads the totals without contributing to
+     * them is a supported and slightly rude way to run.
+     */
+    private val _agroPopularityContribution =
+        MutableStateFlow(prefs.getBoolean(KEY_AGRO_POPULARITY, false))
+    val agroPopularityContributionFlow: StateFlow<Boolean> = _agroPopularityContribution.asStateFlow()
+    val agroPopularityContribution: Boolean get() = _agroPopularityContribution.value
+
+    fun setAgroPopularityContribution(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_AGRO_POPULARITY, enabled) }
+        _agroPopularityContribution.value = enabled
+    }
+
+    /**
      * Upload local audio files to the Agro / Navidrome server storage.
      * Admin-only. Default: false.
      */
@@ -451,6 +473,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         const val KEY_CATALOG_PUBLISHED_AT = "catalog_published_at"
         private const val KEY_AGRO_P2P_SYNC = "key_agro_p2p_sync"
         private const val KEY_AGRO_SERVER_ARCHIVE = "key_agro_server_archive"
+        private const val KEY_AGRO_POPULARITY = "key_agro_popularity_contribution"
         private const val KEY_AGRO_LIBRARY_SYNC = "key_agro_library_sync"
         private const val KEY_AGRO_PROXY_ENABLED = "key_agro_proxy_enabled"
         private const val KEY_OFFLINE_MODE = "key_offline_mode"
