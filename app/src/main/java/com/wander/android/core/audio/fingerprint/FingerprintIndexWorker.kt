@@ -10,6 +10,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.wander.android.data.repository.RecognitionRepository
 import com.wander.android.data.repository.RecordingIdentityRepository
+import com.wander.android.data.repository.RecordingLinkRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +37,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val recognitionRepository: RecognitionRepository,
     private val recordingIdentity: RecordingIdentityRepository,
+    private val recordingLinks: RecordingLinkRepository,
     private val decoder: PcmDecoder
 ) : CoroutineWorker(context, params) {
 
@@ -57,6 +59,11 @@ class FingerprintIndexWorker @AssistedInject constructor(
             recognitionRepository.index(track, samples)
             if (track.id in needsCanonical) {
                 recordingIdentity.index(track.id, samples, track.durationMs)
+                // Asked here and not lazily at read time: the comparison needs every candidate
+                // fingerprint in memory, which is affordable once per track in a background worker
+                // and not affordable on every library query. This is where the answer gets written
+                // down, and it is the only thing that turns a stored fingerprint into a merge.
+                recordingLinks.record(track.id, recordingIdentity.matchesFor(track.id))
             }
         }
 

@@ -11,6 +11,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.wander.android.R
+import com.wander.android.data.repository.CatalogSyncRepository
 import com.wander.android.data.repository.LibrarySyncRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -30,10 +31,11 @@ import kotlinx.coroutines.withContext
  * its refusal to report success it did not achieve.
  */
 @HiltWorker
-class LibrarySyncWorker @AssistedInject constructor(
+internal class LibrarySyncWorker @AssistedInject constructor(
     @Assisted private val context: Context,
     @Assisted params: WorkerParameters,
     private val syncRepository: LibrarySyncRepository,
+    private val catalogSync: CatalogSyncRepository,
     private val secureStorage: com.wander.android.core.security.SecureStorage
 ) : CoroutineWorker(context, params) {
 
@@ -93,6 +95,14 @@ class LibrarySyncWorker @AssistedInject constructor(
         } else {
             0
         }
+        if (isStopped) return@withContext Result.retry()
+
+        // Trade fingerprints with the catalogue, now that the metadata above is settled. Its own
+        // result is deliberately ignored: with no server it answers NOT_CONFIGURED, and on a
+        // failure it logs and returns rather than throwing, because a catalogue that could not be
+        // reached is an optimisation missed and not a sync that failed. Nothing here may make the
+        // worker retry on its account.
+        catalogSync.sync()
         if (isStopped) return@withContext Result.retry()
 
         // Finally, say if another device has put something here worth having. The in-app card only

@@ -29,7 +29,8 @@ import javax.inject.Singleton
 @Singleton
 class RecordingPlayCounts @Inject constructor(
     private val trackDao: TrackDao,
-    private val splitRepository: RecordingSplitRepository
+    private val splitRepository: RecordingSplitRepository,
+    private val linkRepository: RecordingLinkRepository
 ) {
 
     /**
@@ -64,8 +65,9 @@ class RecordingPlayCounts @Inject constructor(
             trackDao.getPlayedTracksOnce().map(TrackEntity::toUnifiedTrack)
         }
         val splits = splitRepository.splits()
+        val links = linkRepository.links()
         return withContext(Dispatchers.Default) {
-            TrackDeduplicator.groupRecordings(tracks, splits).mapNotNull { group ->
+            TrackDeduplicator.groupRecordings(tracks, splits, links).mapNotNull { group ->
                 // `groupRecordings` sorts a group by source priority, so the first is the one the
                 // rest of the app would have shown for this recording.
                 group.firstOrNull()?.copy(

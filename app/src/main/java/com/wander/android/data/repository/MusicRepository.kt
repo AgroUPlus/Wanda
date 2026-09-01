@@ -45,6 +45,7 @@ class MusicRepository @Inject constructor(
     private val scrobbleSyncScheduler: ScrobbleSyncScheduler,
     private val scrobbleSuppression: ScrobbleSuppression,
     private val splitRepository: RecordingSplitRepository,
+    private val linkRepository: RecordingLinkRepository,
     val sources: Set<@JvmSuppressWildcards IMusicSource>
 ) {
     /**
@@ -105,7 +106,7 @@ class MusicRepository @Inject constructor(
             // Navidrome and once on YouTube Music appeared twice, as if it were two songs. The
             // collapse cannot be done in SQL because whether two rows are one recording depends on
             // their durations and on what the user has pinned apart.
-            .map { tracks -> TrackDeduplicator.distinctRecordings(tracks, splitRepository.splits()) }
+            .map { tracks -> TrackDeduplicator.distinctRecordings(tracks, splitRepository.splits(), linkRepository.links()) }
 
     fun getDownloadedTracksFlow(): Flow<List<UnifiedTrack>> =
         trackDao.getDownloadedTracksFlow().mapToTracks()
@@ -496,9 +497,10 @@ class MusicRepository @Inject constructor(
      */
     private suspend fun renditionsOf(track: UnifiedTrack): List<UnifiedTrack> {
         val splits = splitRepository.splits()
+        val links = linkRepository.links()
         return trackDao.getTracksByArtistOnce(track.artist)
             .map(TrackEntity::toUnifiedTrack)
-            .filter { it.id != track.id && TrackDeduplicator.isSameRecording(track, it, splits) }
+            .filter { it.id != track.id && TrackDeduplicator.isSameRecording(track, it, splits, links) }
     }
 
     /**
