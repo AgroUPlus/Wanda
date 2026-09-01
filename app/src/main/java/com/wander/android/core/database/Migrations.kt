@@ -458,8 +458,36 @@ val MIGRATION_20_21 = object : Migration(20, 21) {
     }
 }
 
+/**
+ * The acoustic vectors behind Smart Radio.
+ *
+ * No backfill: these can only be produced by decoding the audio, so existing libraries acquire
+ * them the next time the fingerprint indexer runs. An empty table simply means the radio ranks
+ * nothing yet and falls back to the source's own, which is what it did before this existed.
+ */
+val MIGRATION_21_22 = object : Migration(21, 22) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `track_features` (
+                `trackId` TEXT NOT NULL,
+                `tempo` REAL NOT NULL,
+                `energy` REAL NOT NULL,
+                `brightness` REAL NOT NULL,
+                `danceability` REAL NOT NULL,
+                `keyX` REAL NOT NULL,
+                `keyY` REAL NOT NULL,
+                `version` INTEGER NOT NULL,
+                `measuredAt` INTEGER NOT NULL,
+                PRIMARY KEY(`trackId`)
+            )
+            """.trimIndent()
+        )
+    }
+}
+
 /** Every migration, in order. Room applies whichever ones a given database still needs. */
 val WANDER_MIGRATIONS: Array<Migration> = arrayOf(
     MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
-    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21
+    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22
 )

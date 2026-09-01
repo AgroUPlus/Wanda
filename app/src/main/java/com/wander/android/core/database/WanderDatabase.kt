@@ -11,6 +11,7 @@ import com.wander.android.core.database.dao.FriendDao
 import com.wander.android.core.database.dao.HistoryDao
 import com.wander.android.core.database.dao.ShelfDao
 import com.wander.android.core.database.dao.TrackDao
+import com.wander.android.core.database.dao.TrackFeatureDao
 import com.wander.android.core.database.dao.PlaylistDao
 import com.wander.android.core.database.dao.RecordingFingerprintDao
 import com.wander.android.core.database.dao.RecordingLinkDao
@@ -18,6 +19,7 @@ import com.wander.android.core.database.dao.RecordingSplitDao
 import com.wander.android.core.database.entity.AlbumEntity
 import com.wander.android.core.database.entity.ArtistEntity
 import com.wander.android.core.database.entity.CanonicalMetadataEntity
+import com.wander.android.core.database.entity.TrackFeatureEntity
 import com.wander.android.core.database.entity.DropEntity
 import com.wander.android.core.database.entity.FingerprintEntity
 import com.wander.android.core.database.entity.FriendEntity
@@ -48,10 +50,11 @@ import com.wander.android.core.database.converter.SourceTypeConverter
         RecordingSplitEntity::class,
         RecordingLinkEntity::class,
         CanonicalMetadataEntity::class,
+        TrackFeatureEntity::class,
         RecordingFingerprintEntity::class,
         RecordingSubHashEntity::class
     ],
-    version = 21,
+    version = 22,
     exportSchema = true
 )
 @TypeConverters(SourceTypeConverter::class)
@@ -68,6 +71,7 @@ abstract class WanderDatabase : RoomDatabase() {
     abstract fun recordingSplitDao(): RecordingSplitDao
     abstract fun recordingLinkDao(): RecordingLinkDao
     abstract fun canonicalMetadataDao(): CanonicalMetadataDao
+    abstract fun trackFeatureDao(): TrackFeatureDao
 
     abstract fun recordingFingerprintDao(): RecordingFingerprintDao
 }
