@@ -14,6 +14,10 @@ interface AlbumDao {
     @Query("SELECT * FROM albums ORDER BY title ASC")
     fun getAllAlbumsFlow(): Flow<List<AlbumEntity>>
 
+    /** The same set, read once. For a resolver that answers a question and is done. */
+    @Query("SELECT * FROM albums")
+    suspend fun getAllAlbumsOnce(): List<AlbumEntity>
+
     /**
      * The user's own records, for the Library tab.
      *

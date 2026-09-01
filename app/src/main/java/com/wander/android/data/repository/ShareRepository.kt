@@ -2,6 +2,7 @@ package com.wander.android.data.repository
 
 import com.wander.android.core.playback.SpeedAndPitch
 import com.wander.android.data.model.SourceType
+import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.ShareKind
 import com.wander.android.data.sources.ShareTarget
@@ -59,6 +60,39 @@ class ShareRepository @Inject constructor(
         ),
         speedPitch
     )
+
+    /**
+     * Shares an album as a link that does not name a backend.
+     *
+     * Albums do not go through [share] with the source's own link, and that is the decision here.
+     * Sending someone a record is the commonest reason to share one, and a Navidrome URL is a
+     * private address they cannot reach while a YouTube Music URL opens YouTube Music. A link
+     * describing the album itself works for the recipient whatever they have configured — see
+     * [UniversalAlbumLink].
+     *
+     * No network call, so unlike every other share this cannot fail. It also works for a source
+     * with no sharing capability at all, including the local library.
+     */
+    fun shareAlbum(album: UnifiedAlbum) {
+        val link = UniversalAlbumLink(
+            title = album.title,
+            artist = album.artist,
+            year = album.year,
+            trackCount = album.songCount.takeIf { it > 0 }
+        )
+        _links.tryEmit(
+            ShareLink(
+                target = ShareTarget(
+                    kind = ShareKind.ALBUM,
+                    source = album.source,
+                    id = album.id,
+                    title = album.title,
+                    subtitle = album.artist
+                ),
+                url = link.toUri()
+            )
+        )
+    }
 
     suspend fun share(target: ShareTarget, speedPitch: SpeedAndPitch = SpeedAndPitch()) {
         val source = musicRepository.sources

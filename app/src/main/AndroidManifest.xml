@@ -116,6 +116,11 @@
                 <data android:scheme="wanda" android:host="listen" />
                 <data android:scheme="wanda" android:host="jam" />
                 <data android:scheme="wanda" android:host="inbox" />
+                <!--
+                    A shared album, described rather than located. Resolved against whatever this
+                    device has configured — see `UniversalAlbumLink`.
+                -->
+                <data android:scheme="wanda" android:host="album" />
                 <!-- A friend code, scanned off someone's screen with the system camera. -->
                 <data android:scheme="wanda" android:host="friend" />
             </intent-filter>

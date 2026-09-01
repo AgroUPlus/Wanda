@@ -180,6 +180,47 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    // ── Albums ──────────────────────────────────────────────────────────────────────────────
+    //
+    // The same three verbs as playlists, against the same repository call. A record and a playlist
+    // are both "a list of tracks somebody assembled" as far as the queue is concerned.
+
+    fun playAlbum(album: UnifiedAlbum) {
+        viewModelScope.launch {
+            val tracks = musicRepository.getAlbumTracks(album)
+            if (tracks.isNotEmpty()) playerConnection.play(tracks)
+        }
+    }
+
+    fun playAlbumNext(album: UnifiedAlbum) {
+        viewModelScope.launch {
+            val tracks = musicRepository.getAlbumTracks(album)
+            if (tracks.isNotEmpty()) playerConnection.playNext(tracks)
+        }
+    }
+
+    fun addAlbumToQueue(album: UnifiedAlbum) {
+        viewModelScope.launch {
+            val tracks = musicRepository.getAlbumTracks(album)
+            if (tracks.isNotEmpty()) playerConnection.addToQueue(tracks)
+        }
+    }
+
+    fun addAlbumToPlaylist(album: UnifiedAlbum, controller: com.wander.android.ui.components.AddToPlaylistController) {
+        viewModelScope.launch {
+            val tracks = musicRepository.getAlbumTracks(album)
+            if (tracks.isNotEmpty()) controller.openForTracks(tracks, album.source)
+        }
+    }
+
+    /**
+     * Shares the album as a link that names no backend.
+     *
+     * Unconditional, unlike [canShare] for a track: the link describes the record rather than
+     * pointing at a server, so it works from a source that cannot mint links at all.
+     */
+    fun shareAlbum(album: UnifiedAlbum) = shareRepository.shareAlbum(album)
+
     fun deletePlaylist(playlist: UnifiedPlaylist) {
         viewModelScope.launch {
             playlistWriter.deletePlaylist(playlist).onSuccess {

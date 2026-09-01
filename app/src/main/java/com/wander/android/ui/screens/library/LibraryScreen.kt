@@ -36,6 +36,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistHost
+import com.wander.android.ui.components.AlbumActionsSheet
 import com.wander.android.ui.components.ExpressiveRefreshIndicator
 import com.wander.android.ui.components.SourceFilterChips
 import com.wander.android.ui.components.TrackActionsSheet
@@ -55,8 +56,26 @@ fun LibraryScreen(
     val sourceFilter by viewModel.sourceFilter.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<com.wander.android.data.model.UnifiedTrack?>(null) }
+    var albumActionsFor by remember { mutableStateOf<com.wander.android.data.model.UnifiedAlbum?>(null) }
 
     val addToPlaylist = AddToPlaylistHost()
+
+    albumActionsFor?.let { album ->
+        AlbumActionsSheet(
+            album = album,
+            onPlay = { viewModel.playAlbum(album) },
+            onPlayNext = { viewModel.playAlbumNext(album) },
+            onAddToQueue = { viewModel.addAlbumToQueue(album) },
+            onAddToPlaylist = { viewModel.addAlbumToPlaylist(album, addToPlaylist) },
+            onGoToArtist = album.artist
+                .takeIf { it.isNotBlank() }
+                ?.let { artist -> { onOpenArtist(artist, album.artistId) } },
+            // No `canShare` gate: an album link describes the record rather than naming a server,
+            // so it works from every source including the local library.
+            onShare = { viewModel.shareAlbum(album) },
+            onDismiss = { albumActionsFor = null }
+        )
+    }
 
     actionsFor?.let { track ->
         TrackActionsSheet(
@@ -188,7 +207,13 @@ fun LibraryScreen(
             ) {
                 when (val pageTab = LibraryTab.entries[page]) {
                     LibraryTab.ALBUMS ->
-                        AlbumGrid(albums, recentAlbums, contentPadding, onOpenAlbum)
+                        AlbumGrid(
+                            albums = albums,
+                            recentAlbums = recentAlbums,
+                            contentPadding = contentPadding,
+                            onOpenAlbum = onOpenAlbum,
+                            onAlbumLongPress = { albumActionsFor = it }
+                        )
                     LibraryTab.PLAYLISTS ->
                         PlaylistList(playlists, contentPadding, viewModel, addToPlaylist, onOpenPlaylist, onOpenImport)
                     LibraryTab.LIKED ->
