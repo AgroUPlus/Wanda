@@ -249,29 +249,39 @@ interface TrackDao {
     @Query("SELECT * FROM tracks WHERE localFilePath IS NOT NULL AND localFilePath != ''")
     suspend fun getTracksWithLocalFiles(): List<TrackEntity>
 
-    @Query("SELECT * FROM tracks WHERE localFilePath IS NOT NULL AND localFilePath != '' AND title = :title COLLATE NOCASE LIMIT 1")
-    suspend fun findDownloadedMatch(title: String): TrackEntity?
-
+    /**
+     * Every row on this device sharing a title, for the caller to judge.
+     *
+     * Deliberately *candidates*, not an answer. This used to be a single `LIMIT 1` row, which made
+     * a title the only thing standing between two recordings: every track called "Memories" played
+     * whichever one happened to be first, because the artist was never looked at. Picking the row
+     * is [com.wander.android.data.repository.TrackDeduplicator]'s job, so the query hands back the
+     * whole bucket and stays out of it.
+     *
+     * Ordered so a downloaded copy is preferred over a local-only one, which is the one preference
+     * the caller cannot reconstruct from the tags.
+     */
     @Query(
         """
         SELECT * FROM tracks 
         WHERE ((localFilePath IS NOT NULL AND localFilePath != '') OR source = 'LOCAL')
           AND title = :title COLLATE NOCASE 
         ORDER BY CASE WHEN (localFilePath IS NOT NULL AND localFilePath != '') THEN 0 ELSE 1 END
-        LIMIT 1
+        LIMIT :limit
         """
     )
-    suspend fun findLocalOrDownloadedMatch(title: String): TrackEntity?
+    suspend fun findLocalOrDownloadedCandidates(title: String, limit: Int): List<TrackEntity>
 
+    /** The Navidrome rows sharing a title. Same contract as [findLocalOrDownloadedCandidates]. */
     @Query(
         """
         SELECT * FROM tracks 
         WHERE source = 'NAVIDROME' 
           AND title = :title COLLATE NOCASE 
-        LIMIT 1
+        LIMIT :limit
         """
     )
-    suspend fun findNavidromeMatch(title: String): TrackEntity?
+    suspend fun findNavidromeCandidates(title: String, limit: Int): List<TrackEntity>
 
     @Query("UPDATE tracks SET isDownloaded = :isDownloaded, localFilePath = :localPath WHERE id = :trackId")
     suspend fun setDownloaded(trackId: String, isDownloaded: Boolean, localPath: String?)

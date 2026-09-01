@@ -174,7 +174,7 @@ class MusicRepository @Inject constructor(
             return@withContext Result.success(StreamInfo(uri = path, isDirectFile = true))
         }
         if (cached != null && cached.source != SourceType.LOCAL) {
-            val localMatch = trackDao.findLocalOrDownloadedMatch(cached.title)
+            val localMatch = sameRecordingAs(cached, trackDao.findLocalOrDownloadedCandidates(cached.title, TITLE_CANDIDATES))
             val localPath = localMatch?.localFilePath?.takeIf { it.isNotBlank() } ?: localMatch?.streamUri
             if (localPath != null && localPath.isNotBlank()) {
                 return@withContext Result.success(StreamInfo(uri = localPath, isDirectFile = true))
@@ -183,7 +183,7 @@ class MusicRepository @Inject constructor(
 
         // ── Tier 2: Navidrome (Personal Server) ──────────────────────────────────────────────
         if (cached != null && cached.source != SourceType.NAVIDROME && sourceFor(SourceType.NAVIDROME)?.isConfigured?.value == true) {
-            val navidromeMatch = trackDao.findNavidromeMatch(cached.title)
+            val navidromeMatch = sameRecordingAs(cached, trackDao.findNavidromeCandidates(cached.title, TITLE_CANDIDATES))
             if (navidromeMatch != null) {
                 sourceFor(SourceType.NAVIDROME)?.getStreamInfo(navidromeMatch.id)?.getOrNull()?.let { info ->
                     return@withContext Result.success(info)
@@ -191,7 +191,12 @@ class MusicRepository @Inject constructor(
             } else {
                 // Secondary check: query Navidrome search directly
                 val navResults = sourceFor(SourceType.NAVIDROME)?.search("${cached.title} ${cached.artist}")?.getOrNull().orEmpty()
-                val navHit = navResults.firstOrNull { it.title.matches(cached.title) }
+                val wanted = cached.toUnifiedTrack()
+                val splits = splitRepository.splits()
+                val links = linkRepository.links()
+                val navHit = navResults.firstOrNull {
+                    TrackDeduplicator.isSameRecording(wanted, it, splits, links)
+                }
                 if (navHit != null) {
                     sourceFor(SourceType.NAVIDROME)?.getStreamInfo(navHit.id)?.getOrNull()?.let { info ->
                         return@withContext Result.success(info)
@@ -623,8 +628,36 @@ class MusicRepository @Inject constructor(
             }
         }
 
+    /**
+     * The row that may stand in for [wanted], as [selectSameRecording] judges it, mapped back to
+     * the entity the caller needs a file path from.
+     *
+     * A candidate with no duration no longer substitutes unless a fingerprint link says it is the
+     * same audio. That is the intended loss: an untagged length used to be enough to hand back
+     * somebody else's song.
+     */
+    private suspend fun sameRecordingAs(
+        wanted: TrackEntity,
+        candidates: List<TrackEntity>
+    ): TrackEntity? {
+        if (candidates.isEmpty()) return null
+        val chosen = selectSameRecording(
+            wanted = wanted.toUnifiedTrack(),
+            candidates = candidates.map(TrackEntity::toUnifiedTrack),
+            splits = splitRepository.splits(),
+            links = linkRepository.links()
+        ) ?: return null
+        return candidates.first { it.id == chosen.id }
+    }
+
     private companion object {
         /** Roughly a very long listening session's worth of track changes. */
         const val MAX_EPHEMERAL_STREAMS = 256
+
+        /**
+         * How many same-title rows are worth judging. A title with more copies than this in one
+         * library is a tagging accident, not a track the extra reads would help find.
+         */
+        const val TITLE_CANDIDATES = 20
     }
 }
