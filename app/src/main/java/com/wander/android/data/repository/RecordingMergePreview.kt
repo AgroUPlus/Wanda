@@ -78,7 +78,8 @@ data class MergeReport(
 @Singleton
 class RecordingMergePreview @Inject constructor(
     private val trackDao: TrackDao,
-    private val splitRepository: RecordingSplitRepository
+    private val splitRepository: RecordingSplitRepository,
+    private val linkRepository: RecordingLinkRepository
 ) {
 
     /**
@@ -103,7 +104,7 @@ class RecordingMergePreview @Inject constructor(
         }
         // The user's pins come first: a pair kept apart must not reappear in the preview, or the
         // one confirmation that the override took effect is missing from the screen that offers it.
-        val groups = TrackDeduplicator.groupRecordings(tracks, splitRepository.splits())
+        val groups = TrackDeduplicator.groupRecordings(tracks, splitRepository.splits(), linkRepository.links())
 
         val merges = groups
             .filter { it.size > 1 }
