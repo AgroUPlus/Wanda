@@ -24,6 +24,7 @@ import javax.inject.Singleton
 @Singleton
 class RecommendationRepository @Inject constructor(
     private val musicRepository: MusicRepository,
+    private val popularityRepository: PopularityRepository,
     private val trackDao: TrackDao,
     private val shelfDao: ShelfDao
 ) {
@@ -56,10 +57,25 @@ class RecommendationRepository @Inject constructor(
     }
 
     private suspend fun fetchAndPersist(): List<RecommendedShelf> = coroutineScope {
-        val shelves = musicRepository.activeSources()
-            .filter { it.capabilities.recommendations }
-            .map { source -> async { source.getRecommendations().getOrDefault(emptyList()) } }
-            .flatMap { it.await() }
+        val backendShelves = async {
+            musicRepository.activeSources()
+                .filter { it.capabilities.recommendations }
+                .map { source -> async { source.getRecommendations().getOrDefault(emptyList()) } }
+                .flatMap { it.await() }
+        }
+        // Fetched alongside the backends rather than after them: it is one request to a server the
+        // app is already paired with, and making the feed wait for it would delay every other shelf
+        // for the one that is optional.
+        val popular = async { popularityRepository.popularTracks(CarouselTracks) }
+
+        val shelves = buildList {
+            addAll(backendShelves.await())
+            // Last, so a backend's own recommender leads the feed. This shelf is the household's
+            // listening, which is worth showing but is not what the user came to Home for.
+            popular.await().takeIf { it.isNotEmpty() }?.let {
+                add(RecommendedShelf(PopularShelfId, "Popular on Agro", it))
+            }
+        }
 
         if (shelves.isEmpty()) return@coroutineScope emptyList()
 
@@ -113,5 +129,14 @@ class RecommendationRepository @Inject constructor(
          * day's launches, short enough that "fresh" still means something.
          */
         const val CACHE_TTL_MS = 6 * 60 * 60 * 1000L
+
+        /**
+         * Stable, and not derived from the title like a backend's shelves are: it is this app that
+         * names this shelf, so the cached row has to survive the day the wording changes.
+         */
+        const val PopularShelfId = "popular_on_agro"
+
+        /** Matches Home's carousel size, so nothing is fetched that cannot be shown. */
+        const val CarouselTracks = 20
     }
 }
