@@ -27,7 +27,8 @@ import javax.inject.Singleton
 @Singleton
 class RenditionFinder @Inject constructor(
     private val musicRepository: MusicRepository,
-    private val splitRepository: RecordingSplitRepository
+    private val splitRepository: RecordingSplitRepository,
+    private val linkRepository: RecordingLinkRepository
 ) {
 
     /**
@@ -45,6 +46,7 @@ class RenditionFinder @Inject constructor(
     suspend fun findRenditions(track: UnifiedTrack): List<UnifiedTrack> = coroutineScope {
         // A copy the user has said is a different performance is not an alternative to this one.
         val splits = splitRepository.splits()
+        val links = linkRepository.links()
         val query = listOf(track.artist, track.title)
             .filter { it.isNotBlank() }
             .joinToString(" ")
@@ -60,13 +62,13 @@ class RenditionFinder @Inject constructor(
                     runCatching {
                         musicRepository
                             .searchAllSources(query, onlySources = setOf(source), kind = SearchKind.TRACKS)
-                            .firstOrNull { TrackDeduplicator.isSameRecording(track, it, splits) }
+                            .firstOrNull { TrackDeduplicator.isSameRecording(track, it, splits, links) }
                     }.getOrNull()
                 }
             }
             .mapNotNull { it.await() }
 
-        (listOf(track) + found + downloadedCopies(track, splits))
+        (listOf(track) + found + downloadedCopies(track, splits, links))
             .distinctBy { it.source }
             .sortedWith(
                 compareByDescending<UnifiedTrack> { it.isPlayableOffline() }
@@ -84,11 +86,12 @@ class RenditionFinder @Inject constructor(
      */
     private suspend fun downloadedCopies(
         track: UnifiedTrack,
-        splits: SplitSet
+        splits: SplitSet,
+        links: RecordingLinkSet
     ): List<UnifiedTrack> =
         withContext(Dispatchers.IO) {
             musicRepository.downloadedTracks()
-                .filter { it.id != track.id && TrackDeduplicator.isSameRecording(track, it, splits) }
+                .filter { it.id != track.id && TrackDeduplicator.isSameRecording(track, it, splits, links) }
         }
 
     /**

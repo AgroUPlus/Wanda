@@ -230,6 +230,17 @@ interface TrackDao {
     suspend fun setLiked(trackId: String, isLiked: Boolean)
 
     /**
+     * Writes corrected display metadata onto a row.
+     *
+     * Separate from [updateSourceFields] and deliberately not part of it: that method carries what
+     * a backend last said, and is overwritten wholesale by the next refetch. This carries what the
+     * shared catalogue worked out, which is re-applied from `canonical_metadata` after each sync
+     * precisely because the refetch will have undone it.
+     */
+    @Query("UPDATE tracks SET title = :title, artist = :artist, album = :album WHERE id = :trackId")
+    suspend fun setDisplayMetadata(trackId: String, title: String, artist: String, album: String?)
+
+    /**
      * Everything with a file on this device — music stored locally, and anything downloaded.
      *
      * The set the fingerprint index can be built from: recognition matches against audio it can
