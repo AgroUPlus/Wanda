@@ -3,6 +3,10 @@ package com.wander.android.core.sync
 import android.content.Context
 import android.net.Uri
 import com.wander.android.core.database.dao.TrackDao
+import com.wander.android.core.security.AudioStreamCipher
+import com.wander.android.core.security.AudioStreamKeys
+import com.wander.android.core.security.IdentityKeyManager
+import com.wander.android.core.security.RelayStreamFraming
 import com.wander.android.core.security.SecureStorage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -30,7 +34,8 @@ import javax.inject.Singleton
 class P2PServer @Inject constructor(
     @ApplicationContext private val context: Context,
     private val trackDao: TrackDao,
-    private val secureStorage: SecureStorage
+    private val secureStorage: SecureStorage,
+    private val identityKeyManager: IdentityKeyManager
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var serverSocket: ServerSocket? = null
@@ -79,6 +84,19 @@ class P2PServer @Inject constructor(
         }
         return true
     }
+
+    /**
+     * The requester's identity public key, when it sent one.
+     *
+     * Its presence is what turns encryption on. A peer that does not ask for it gets plaintext, so
+     * an older build on the other phone keeps working — but every current build asks, and the
+     * resolver has no path that does not.
+     */
+    private fun identityKeyOf(request: String): String? = request.lineSequence()
+        .firstOrNull { it.startsWith(IDENTITY_HEADER, ignoreCase = true) }
+        ?.substringAfter(':')
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
 
     fun start(port: Int = 8702) {
         if (isRunning) return
@@ -205,16 +223,13 @@ class P2PServer @Inject constructor(
                                 "m4a", "mp4" -> "audio/mp4"
                                 else -> "audio/mpeg"
                             }
-                            val lengthHeader = if (totalLength > 0L) "Content-Length: $totalLength\r\n" else ""
-                            val header = "HTTP/1.1 200 OK\r\nContent-Type: $mime\r\nAccept-Ranges: bytes\r\n${lengthHeader}Connection: close\r\n\r\n"
-                            output.write(header.toByteArray())
-
-                            val streamBuf = ByteArray(64 * 1024)
-                            var read: Int
-                            while (fileIn.read(streamBuf).also { read = it } != -1) {
-                                output.write(streamBuf, 0, read)
+                            val recipientKey = identityKeyOf(request)
+                            val session = queryUri.getQueryParameter("session").orEmpty()
+                            if (recipientKey != null && session.isNotBlank()) {
+                                writeEncrypted(output, fileIn, mime, recipientKey, session)
+                            } else {
+                                writePlain(output, fileIn, mime, totalLength)
                             }
-                            output.flush()
                             return
                         }
                     } catch (e: Exception) {
@@ -234,7 +249,77 @@ class P2PServer @Inject constructor(
         }
     }
 
+    /**
+     * The same encrypted stream the relay carries, over the local link.
+     *
+     * A LAN is not a trust boundary — that is already why this server needs a grant — and it is not
+     * a confidentiality boundary either. Everything on a hotel or campus network sees these packets,
+     * and until now they were the audio itself, in the clear. The relay path was encrypted while the
+     * *closer* path was not, which is precisely backwards from what anyone would assume.
+     *
+     * The key is sealed to the public key the requester sent, so it is readable by that peer and by
+     * nothing else on the wire. The framing and the cipher are the relay's, unchanged, which is what
+     * lets the player decrypt this with no idea which transport it came over.
+     *
+     * **What this defends against and what it does not.** A passive listener on the network learns
+     * nothing, which is the threat a shared Wi-Fi actually presents. An attacker able to intercept
+     * and rewrite the request as it goes could substitute their own public key — the grant proves
+     * the requester is authorised, but nothing yet binds it to that key. Closing that means carrying
+     * the peer's identity key through Agro's grant, which is the next step and is not this one.
+     */
+    private fun writeEncrypted(
+        output: OutputStream,
+        source: java.io.InputStream,
+        mime: String,
+        recipientPublicKeyB64: String,
+        sessionId: String
+    ) {
+        val roomKey = AudioStreamKeys.newRoomKey()
+        val sealed = identityKeyManager.sealNote(
+            recipientPublicKeyB64,
+            AudioStreamKeys.encodeRoomKey(roomKey)
+        )
+        // No Content-Length: framing makes the byte count differ from the file's, and an encrypted
+        // stream is not seekable anyway.
+        output.write(
+            ("HTTP/1.1 200 OK\r\nContent-Type: $mime\r\n$SEALED_KEY_HEADER: $sealed\r\n" +
+                "Connection: close\r\n\r\n").toByteArray()
+        )
+        RelayStreamFraming.encrypt(
+            source,
+            output,
+            AudioStreamCipher(AudioStreamKeys.derive(roomKey, sessionId))
+        )
+        output.flush()
+    }
+
+    /** The unencrypted path, kept only for a peer running a build that cannot decrypt. */
+    private fun writePlain(
+        output: OutputStream,
+        source: java.io.InputStream,
+        mime: String,
+        totalLength: Long
+    ) {
+        val lengthHeader = if (totalLength > 0L) "Content-Length: $totalLength\r\n" else ""
+        output.write(
+            ("HTTP/1.1 200 OK\r\nContent-Type: $mime\r\nAccept-Ranges: bytes\r\n" +
+                "${lengthHeader}Connection: close\r\n\r\n").toByteArray()
+        )
+        val buffer = ByteArray(64 * 1024)
+        var read: Int
+        while (source.read(buffer).also { read = it } != -1) {
+            output.write(buffer, 0, read)
+        }
+        output.flush()
+    }
+
     private companion object {
         const val TAG = "P2PServer"
+
+        /** The requester's X25519 identity public key, base64. Its presence turns encryption on. */
+        const val IDENTITY_HEADER = "X-Wanda-Identity"
+
+        /** Matches what `RelayDecryptingDataSource` looks for; see the note there on the name. */
+        const val SEALED_KEY_HEADER = "x-agro-sealed-key"
     }
 }
