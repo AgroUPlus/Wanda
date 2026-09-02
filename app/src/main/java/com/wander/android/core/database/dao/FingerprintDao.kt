@@ -34,6 +34,17 @@ interface FingerprintDao {
     @Query("SELECT DISTINCT trackId FROM fingerprints")
     suspend fun indexedTrackIds(): List<String>
 
+    /**
+     * How deep into each track its landmarks reach, in frames.
+     *
+     * The last anchor is the end of what has been indexed, which is not the same question as
+     * whether a track has been indexed at all. A track measured before the indexer read past the
+     * first minute has landmarks — so it looks done — and yet cannot be recognised from anywhere
+     * after them.
+     */
+    @Query("SELECT trackId, MAX(anchorFrame) AS lastFrame FROM fingerprints GROUP BY trackId")
+    suspend fun indexedDepth(): List<IndexedDepth>
+
     @Query("SELECT COUNT(DISTINCT trackId) FROM fingerprints")
     fun indexedTrackCountFlow(): kotlinx.coroutines.flow.Flow<Int>
 
@@ -50,3 +61,6 @@ interface FingerprintDao {
     @Query("DELETE FROM fingerprints")
     suspend fun clear()
 }
+
+/** One track, and the frame of the last landmark written for it. */
+data class IndexedDepth(val trackId: String, val lastFrame: Int)
