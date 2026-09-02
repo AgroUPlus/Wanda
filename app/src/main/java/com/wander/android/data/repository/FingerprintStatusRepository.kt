@@ -49,7 +49,10 @@ enum class FingerprintStatus {
  * lookup each would be dozens of round trips a frame; these are two queries the whole screen shares.
  */
 @Singleton
-internal class FingerprintStatusRepository @Inject constructor(
+// Public rather than internal only so the app-level view model can take it: the badge on the
+// player's cover is read there, because the cover the user looks at is drawn outside
+// `NowPlayingScreen`. Everything it exposes was already public.
+class FingerprintStatusRepository @Inject constructor(
     private val fingerprintDao: FingerprintDao,
     private val contourDao: MelodyContourDao,
     private val progress: FingerprintProgress

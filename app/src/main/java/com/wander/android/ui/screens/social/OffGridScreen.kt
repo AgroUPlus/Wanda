@@ -63,8 +63,10 @@ internal fun OffGridScreen(
     val withNearby = rememberNearbyGate()
     val haptics = rememberHaptics()
 
-    // Not `stop()` on every recomposition — only when the screen is actually leaving.
-    DisposableEffect(Unit) { onDispose { viewModel.stop() } }
+    // Only the scan is tied to the screen. Tearing the link down here is what made off-grid
+    // unusable: connecting and then walking to the player to play something killed the link on
+    // the way out. "Stop sharing" is the gesture that ends it, and it is the only one.
+    DisposableEffect(Unit) { onDispose { viewModel.onScreenLeft() } }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -151,6 +153,15 @@ internal fun OffGridScreen(
                 item(key = "links_header") { SectionHeader("Connected") }
                 items(state.links, key = { "link-${it.deviceId}" }) { link ->
                     ConnectedRow(link = link, onDisconnect = viewModel::disconnect)
+                }
+                item(key = "listen_along") {
+                    ListenAlongRow(
+                        isFollowing = state.isFollowing,
+                        nowPlaying = state.followingNowPlaying,
+                        unresolvable = state.followingUnresolvable,
+                        onStart = viewModel::listenAlongOffGrid,
+                        onStop = viewModel::stopListenAlong
+                    )
                 }
             }
 
@@ -256,6 +267,46 @@ private fun PeerRow(
                 Text("Connect")
             }
         }
+    }
+}
+
+/**
+ * Following what the linked peer plays, with no server in between.
+ *
+ * Its own row rather than a button on the link, because following is a separate decision from being
+ * connected: a link is also what a peer uses to fetch tracks from *you*, and the two should not be
+ * one switch.
+ */
+@Composable
+private fun ListenAlongRow(
+    isFollowing: Boolean,
+    nowPlaying: String?,
+    unresolvable: String?,
+    onStart: () -> Unit,
+    onStop: () -> Unit
+) {
+    ListItem(
+        headlineContent = { Text(if (isFollowing) "Listening along" else "Listen along") },
+        supportingContent = {
+            Text(
+                when {
+                    // Named rather than hidden: the listener should know the peer moved on to
+                    // something this phone has no copy of, which off-grid it cannot go and fetch.
+                    unresolvable != null -> "Can't find \"$unresolvable\" on this phone"
+                    nowPlaying != null -> nowPlaying
+                    isFollowing -> "Waiting for them to play something"
+                    else -> "Play whatever the linked device plays"
+                }
+            )
+        },
+        leadingContent = { Icon(Icons.Rounded.BluetoothSearching, contentDescription = null) },
+        modifier = Modifier.fillMaxWidth()
+    )
+    Row(modifier = Modifier.padding(start = 56.dp, end = 20.dp, bottom = 8.dp)) {
+        FilledTonalButton(
+            onClick = if (isFollowing) onStop else onStart,
+            shapes = ButtonDefaults.shapes()
+        ) { Text(if (isFollowing) "Stop following" else "Listen along") }
     }
 }
 

@@ -132,6 +132,7 @@ fun WanderApp(
 
     val scope = rememberCoroutineScope()
     val sheetState = rememberPlayerSheetState()
+    val playingFingerprintStatus by viewModel.playingFingerprintStatus.collectAsStateWithLifecycle()
     val socialViewModel: SocialViewModel = hiltViewModel()
     val listenAlongSession = socialViewModel.state.collectAsStateWithLifecycle().value.session
 
@@ -349,6 +350,7 @@ fun WanderApp(
                 dockedHeight = dockedPlayerHeight
             ) { progress, rawProgress, expandedHeight ->
                 PlayerSheetContent(
+                    fingerprintStatus = playingFingerprintStatus,
                     progress = progress,
                     rawProgress = rawProgress,
                     expandedHeight = expandedHeight,

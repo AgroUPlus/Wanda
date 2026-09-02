@@ -39,7 +39,16 @@ class P2PServer @Inject constructor(
     @ApplicationContext private val context: Context,
     private val trackDao: TrackDao,
     private val secureStorage: SecureStorage,
-    private val identityKeyManager: IdentityKeyManager
+    private val identityKeyManager: IdentityKeyManager,
+    /**
+     * Read only to answer `/p2p/now-playing`, and through a [javax.inject.Provider] so that this
+     * server does not have to be constructed after the player. The dependency is one-directional
+     * and shallow — a title, an artist and a position — but a direct injection would tie the
+     * lifetime of the thing that *serves* audio to the thing that *plays* it, and off-grid those
+     * are deliberately separate: a phone can serve a track it is not itself listening to.
+     */
+    private val playerConnection:
+        javax.inject.Provider<com.wander.android.core.playback.PlayerConnection>
 ) {
     /**
      * Nothing served to a peer may take this process down.
@@ -293,6 +302,50 @@ class P2PServer @Inject constructor(
             _pairedPeers.value.filterNot { it.publicKeyB64 == publicKeyB64 } + peer
     }
 
+    /**
+     * This device's playback, as a peer needs to see it.
+     *
+     * The content hash is looked up here rather than carried on the track: `UnifiedTrack` has no
+     * hash field, and the peer stream is addressed by hash alone — so without this lookup a
+     * follower would be told a title it could then not fetch. A track with no hash is reported
+     * with a null one, which is the honest form of "this one cannot be followed": it is something
+     * the host is streaming, and off-grid there is no network for the listener to stream it from
+     * either.
+     */
+    private suspend fun nowPlaying(): com.wander.android.core.p2p.OffGridNowPlaying {
+        val connection = playerConnection.get()
+        val state = connection.state.value
+        val track = state.currentTrack ?: return com.wander.android.core.p2p.OffGridNowPlaying.IDLE
+
+        // `PlaybackState` carries no playhead — it is sampled separately, off the controller, and
+        // Media3 insists that be done on the main thread. Read here rather than approximated, since
+        // the whole use of this number is to start a follower at the right second.
+        val positionMs = withContext(Dispatchers.Main) {
+            runCatching { connection.controller.value?.currentPosition }.getOrNull() ?: 0L
+        }.coerceAtLeast(0L)
+
+        val hash = runCatching { trackDao.getTrackById(track.id)?.contentHash }.getOrNull()
+        return com.wander.android.core.p2p.OffGridNowPlaying(
+            title = track.title,
+            artist = track.artist,
+            album = track.album,
+            contentHash = hash,
+            positionMs = positionMs,
+            durationMs = state.durationMs,
+            isPlaying = state.isPlaying
+        )
+    }
+
+    private fun writeForbidden(output: OutputStream) {
+        val body = "forbidden"
+        output.write(
+            ("HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\n" +
+                "Content-Length: ${body.length}\r\nConnection: close\r\n\r\n$body")
+                .toByteArray()
+        )
+        output.flush()
+    }
+
     private fun isAuthorised(request: String): Boolean {
         val token = tokenOf(request)
         if (token.isEmpty()) return false
@@ -462,6 +515,31 @@ class P2PServer @Inject constructor(
                         "Content-Length: ${body.toByteArray().size}\r\nConnection: close\r\n\r\n" + body
                 }
                 output.write(response.toByteArray())
+                output.flush()
+                return
+            }
+
+            // What this device is playing, for a peer following it with no server between them.
+            //
+            // Behind the grant, unlike `/p2p/ping`: what somebody is listening to is exactly the
+            // kind of thing the grant exists to gate, and a device on the same Wi-Fi that has not
+            // paired has no business reading it.
+            if (method == "GET" && path.startsWith("/p2p/now-playing")) {
+                if (!isAuthorised(request)) {
+                    writeForbidden(output)
+                    return
+                }
+                val body = kotlinx.serialization.json.Json.encodeToString(
+                    com.wander.android.core.p2p.OffGridNowPlaying.serializer(),
+                    nowPlaying()
+                )
+                val bytes = body.toByteArray()
+                output.write(
+                    ("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n" +
+                        "Content-Length: ${bytes.size}\r\nConnection: close\r\n\r\n")
+                        .toByteArray()
+                )
+                output.write(bytes)
                 output.flush()
                 return
             }

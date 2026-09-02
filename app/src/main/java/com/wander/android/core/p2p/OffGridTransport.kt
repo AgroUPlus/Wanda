@@ -5,6 +5,7 @@ import com.wander.android.core.sync.P2PServer
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -55,6 +56,17 @@ internal class OffGridTransport @Inject constructor(
 
     /** Watches the link this device made, so a peer that walks off stops being shown as present. */
     private var watchdog: kotlinx.coroutines.Job? = null
+
+    private val _isAdvertising = kotlinx.coroutines.flow.MutableStateFlow(false)
+
+    /**
+     * Whether this device is currently findable.
+     *
+     * Held here rather than in a view model because the radio outlives every screen. A view model
+     * rebuilt on the way back to the off-grid screen would otherwise start out believing nothing
+     * was running and offer to start what is already started.
+     */
+    val isAdvertising: kotlinx.coroutines.flow.StateFlow<Boolean> = _isAdvertising.asStateFlow()
 
     /**
      * Whether this device is linked to another, from either end.
@@ -127,10 +139,13 @@ internal class OffGridTransport @Inject constructor(
                 fingerprint = OffGridBeacon.fingerprintFrom(publicKey),
                 servesAudio = servesAudio
             )
-        )
+        ).onSuccess { _isAdvertising.value = true }
     }
 
-    fun stopAdvertising() = ble.stopAdvertising()
+    fun stopAdvertising() {
+        _isAdvertising.value = false
+        ble.stopAdvertising()
+    }
 
     /**
      * Devices in the room that will serve audio, nearest first, updated as they are heard.
