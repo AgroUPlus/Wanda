@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.lerp
@@ -25,6 +27,9 @@ import kotlin.math.roundToInt
  * "small blurry cover that grows, then gets replaced by a big one" bug. One size, one request,
  * one bitmap, for the whole gesture.
  */
+/** Clear of the rounded corner at full size, and off the artwork's busiest region. */
+private val BadgeInset = 14.dp
+
 private val MorphArtworkSize = 360.dp
 
 /**
@@ -60,7 +65,9 @@ internal fun MorphingArtwork(
     previousUrl: String?,
     nextUrl: String?,
     modifier: Modifier = Modifier,
-    alpha: () -> Float = { 1f }
+    alpha: () -> Float = { 1f },
+    fingerprintStatus: com.wander.android.data.repository.FingerprintStatus =
+        com.wander.android.data.repository.FingerprintStatus.MISSING
 ) {
     if (!visible) return
 
@@ -112,6 +119,21 @@ internal fun MorphingArtwork(
             // the hand-off visible.
             crossfade = false,
             modifier = Modifier.fillMaxSize()
+        )
+
+        // Bottom-left, and only once the sheet is open. On the docked strip the cover is a
+        // thumbnail and a six-pixel dot on it would be lint rather than information, so it fades in
+        // with the expansion rather than riding the cover all the way down.
+        //
+        // Drawn here rather than in `NowPlayingScreen` because this is the cover the user is
+        // looking at: that screen's artwork slot is an empty box reporting bounds, so the badge it
+        // contained was in a branch the real player never takes.
+        com.wander.android.ui.components.FingerprintBadge(
+            status = fingerprintStatus,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(BadgeInset)
+                .graphicsLayer { this.alpha = smoothStep(progress(), 0.75f, 1f) }
         )
     }
 }

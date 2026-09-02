@@ -25,6 +25,7 @@ import javax.inject.Inject
 sealed interface ListenState {
     data object Idle : ListenState
     data object Listening : ListenState
+
     data class Matched(val recognition: Recognition) : ListenState
     data object NoMatch : ListenState
     data object Failed : ListenState

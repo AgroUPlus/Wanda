@@ -46,6 +46,7 @@ fun LikeButton(
 ) {
     val scale = remember { Animatable(1f) }
     val burst = remember { Animatable(0f) }
+    val haptics = rememberHaptics()
 
     // The spec is read here, in composition, and held for the effect below — `Animatable.animateTo`
     // is not composable and cannot reach into the theme itself.
@@ -74,7 +75,13 @@ fun LikeButton(
     val ringColor = MaterialTheme.colorScheme.primary
 
     Box(contentAlignment = Alignment.Center, modifier = modifier) {
-        IconButton(onClick = onToggle) {
+        IconButton(
+            onClick = {
+                // The new state, not the old one: this fires before the caller has flipped it.
+                haptics.toggled(!isLiked)
+                onToggle()
+            }
+        ) {
             Box(contentAlignment = Alignment.Center) {
                 // Drawn behind the heart and only while it is travelling, so a settled row costs
                 // nothing to draw.

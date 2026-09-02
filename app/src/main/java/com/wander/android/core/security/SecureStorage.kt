@@ -32,6 +32,18 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     val isPreloadNextEnabled: StateFlow<Boolean> = _isPreloadNextEnabled.asStateFlow()
 
     /**
+     * Whether the fingerprint indexer may work over mobile data.
+     *
+     * Off by default, and the default is the whole point. Measuring a streamed library reads about
+     * a minute of audio per track, so a few thousand tracks is a real amount of data — not
+     * something to spend on somebody's plan without asking. On Wi-Fi it costs nothing and runs
+     * whenever the phone is not on its last few percent.
+     */
+    private val _isIndexOnMobileDataEnabled =
+        MutableStateFlow(prefs.getBoolean(KEY_INDEX_ON_MOBILE_DATA, false))
+    val isIndexOnMobileDataEnabled: StateFlow<Boolean> = _isIndexOnMobileDataEnabled.asStateFlow()
+
+    /**
      * Endless-radio queue top-up. Persisted because it was an in-memory flag on `PlayerConnection`,
      * so a mode the user had deliberately turned on silently reset on every launch.
      */
@@ -65,6 +77,18 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         prefs.edit { putBoolean(KEY_RELEASE_NOTIFICATIONS, enabled) }
         _isReleaseNotificationEnabled.value = enabled
     }
+
+    /**
+     * Which version of the fingerprint algorithm built the stored index.
+     *
+     * A landmark hash is only comparable with another built the same way, so changing how peaks
+     * are picked or packed makes every stored row meaningless rather than merely stale — they do
+     * not match less well, they match nothing. This is what lets the indexer notice that and start
+     * again instead of searching an index written in a language it no longer speaks.
+     */
+    var fingerprintIndexVersion: Int
+        get() = prefs.getInt(KEY_FINGERPRINT_VERSION, 0)
+        set(value) = prefs.edit { putInt(KEY_FINGERPRINT_VERSION, value) }
 
     /** The release already announced, so the same one is not announced again every day. */
     var lastNotifiedRelease: String
@@ -192,6 +216,35 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _isPreloadNextEnabled.value = enabled
     }
 
+    /**
+     * Whether a long-running job is suspended, keyed by `WorkProgressNotification.Kind.name`.
+     *
+     * A map of flows rather than a field per job, because the set of jobs is an enum that will grow
+     * and every addition would otherwise mean three more lines here. Created on demand and kept, so
+     * two callers asking about the same job observe the same flow — an important detail, since the
+     * notification action and the settings row both write to it and each must see the other's write.
+     */
+    private val workPausedFlows = mutableMapOf<String, MutableStateFlow<Boolean>>()
+
+    @Synchronized
+    fun workPaused(kindName: String): StateFlow<Boolean> =
+        workPausedFlows.getOrPut(kindName) {
+            MutableStateFlow(prefs.getBoolean(workPausedKey(kindName), false))
+        }.asStateFlow()
+
+    @Synchronized
+    fun setWorkPaused(kindName: String, paused: Boolean) {
+        prefs.edit { putBoolean(workPausedKey(kindName), paused) }
+        workPausedFlows.getOrPut(kindName) { MutableStateFlow(paused) }.value = paused
+    }
+
+    private fun workPausedKey(kindName: String) = "key_work_paused_$kindName"
+
+    fun setIndexOnMobileDataEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_INDEX_ON_MOBILE_DATA, enabled) }
+        _isIndexOnMobileDataEnabled.value = enabled
+    }
+
     fun setOfflineMode(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_OFFLINE_MODE, enabled) }
         _isOfflineMode.value = enabled
@@ -276,6 +329,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         }
         _isOfflineMode.value = false
         _isPreloadNextEnabled.value = true
+        _isIndexOnMobileDataEnabled.value = false
         _isRadioMode.value = false
         _navidromeConfigured.value = false
         _ytMusicConfigured.value = false
@@ -494,12 +548,14 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_AGRO_PROXY_ENABLED = "key_agro_proxy_enabled"
         private const val KEY_OFFLINE_MODE = "key_offline_mode"
         private const val KEY_PRELOAD_NEXT = "key_preload_next"
+        private const val KEY_INDEX_ON_MOBILE_DATA = "key_index_on_mobile_data"
         private const val KEY_RADIO_MODE = "key_radio_mode"
         private const val KEY_AMOLED_BLACK = "key_amoled_black"
         private const val KEY_MONET_DYNAMIC = "key_monet_dynamic"
         private const val KEY_AUTO_UPDATE_CHECK = "key_auto_update_check"
         private const val KEY_RELEASE_NOTIFICATIONS = "key_release_notifications"
         private const val KEY_LAST_NOTIFIED_RELEASE = "key_last_notified_release"
+        private const val KEY_FINGERPRINT_VERSION = "fingerprint_index_version"
         private const val KEY_INCOGNITO = "key_incognito"
         private const val KEY_PENDING_FORGET = "key_pending_forget"
         private const val KEY_LOCAL_WATERMARK = "key_local_scan_watermark"

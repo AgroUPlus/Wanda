@@ -44,6 +44,7 @@ internal fun SettingsScreen(
     onYouTubeLogin: () -> Unit,
     onOpenImport: () -> Unit = {},
     onOpenMergePreview: () -> Unit = {},
+    onOpenFingerprints: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val state = rememberSettingsUiState(viewModel)
@@ -188,6 +189,13 @@ internal fun SettingsScreen(
                         cacheBytes = state.cacheBytes,
                         onDownloadLiked = viewModel::downloadLikedNow,
                         onIndexFingerprints = viewModel::indexFingerprintsNow,
+                        onOpenFingerprints = onOpenFingerprints,
+                        indexOnMobileData = state.indexOnMobileData,
+                        onIndexOnMobileDataChange = viewModel::setIndexOnMobileDataEnabled,
+                        measuringPaused = state.measuringPaused,
+                        onMeasuringPausedChange = viewModel::setMeasuringPaused,
+                        downloadingPaused = state.downloadingPaused,
+                        onDownloadingPausedChange = viewModel::setDownloadingPaused,
                         onClearCache = viewModel::clearCache
                     )
 

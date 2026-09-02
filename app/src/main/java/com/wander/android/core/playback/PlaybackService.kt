@@ -61,8 +61,9 @@ class PlaybackService : MediaSessionService() {
      * Fetches the start of the next track, when the next track is one it is safe to fetch.
      *
      * Media3's preload configuration is a property of the whole player, not of an item, so it is
-     * re-decided every time the queue moves. Two seconds is the target: enough that a skip starts
-     * on the spot, small enough that it is not really a download.
+     * re-decided every time the queue moves — which is to say it is armed the moment a song starts,
+     * and the next track is fetched alongside it rather than when the skip arrives. See
+     * [PRELOAD_TARGET_US] for how much runway that buys.
      *
      * The refusals matter more than the feature. See [PreloadDecision] — a relay session serves its
      * receiving half exactly once, so preloading one would consume the transfer and leave the
@@ -200,10 +201,17 @@ class PlaybackService : MediaSessionService() {
         /**
          * How much of the next track to have ready.
          *
-         * Two seconds covers the gap a skip actually exposes: the round trip to resolve a URL and
-         * fill the first buffer. More would be data spent on audio that may never be played.
+         * Two seconds was sized for the gap in the abstract — the round trip to resolve a URL and
+         * fill the first buffer — and it is not what a skip actually feels like. Two seconds of
+         * audio is consumed in two seconds, so the player starts instantly and then stalls waiting
+         * for the rest, which reads as exactly the loading pause the preload was meant to remove.
+         *
+         * Fifteen seconds is enough runway for the loader to stay ahead on any connection worth
+         * streaming over, and it is still a small fraction of a track — the bound on wasted data
+         * is fifteen seconds per skip, not a whole song. Preloading remains off for anyone
+         * counting megabytes; that is what the switch is for.
          */
-        const val PRELOAD_TARGET_US = 2_000_000L
+        const val PRELOAD_TARGET_US = 15_000_000L
     }
 
 }

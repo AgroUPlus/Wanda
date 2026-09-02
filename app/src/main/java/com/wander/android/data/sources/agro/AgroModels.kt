@@ -236,6 +236,19 @@ internal sealed interface AgroLiveMessage {
     data class P2PGrant(
         val token: String,
         val forUser: String,
+        /**
+         * The listener's published identity keys, as Agro knows them.
+         *
+         * What binds the grant to an identity. The room key is sealed to a key the requester sends
+         * in a header, and until this arrived nothing tied that header to the grant — a bearer
+         * token proved the requester was *authorised*, never that they were the party whose key
+         * was in it.
+         *
+         * Empty against an older server, and empty is meaningful: it says Agro could not name the
+         * listener's keys, and the header is trusted as before rather than the stream being
+         * refused outright.
+         */
+        val forKeys: List<String>,
         val ttlSeconds: Long
     ) : AgroLiveMessage
 }

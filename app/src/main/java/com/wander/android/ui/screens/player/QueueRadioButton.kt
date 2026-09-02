@@ -21,8 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import com.wander.android.ui.components.rememberHaptics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -55,7 +54,7 @@ internal fun QueueRadioButton(
     onToggleRadio: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val haptics = LocalHapticFeedback.current
+    val haptics = rememberHaptics()
     val tint by animateColorAsState(
         targetValue = if (isRadioMode) MaterialTheme.colorScheme.primary
         else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -97,7 +96,7 @@ internal fun QueueRadioButton(
             .combinedClickable(
                 onClick = onOpenQueue,
                 onLongClick = {
-                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptics.heldDown()
                     onToggleRadio()
                 }
             )

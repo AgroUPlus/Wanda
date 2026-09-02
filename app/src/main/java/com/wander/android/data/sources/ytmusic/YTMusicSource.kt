@@ -1,6 +1,7 @@
 package com.wander.android.data.sources.ytmusic
 
 import androidx.media3.common.MimeTypes
+import com.wander.android.data.model.UNKNOWN_ARTIST
 import com.wander.android.data.model.RecommendedShelf
 import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.ArtistDetails

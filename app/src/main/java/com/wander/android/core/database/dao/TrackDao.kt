@@ -3,6 +3,7 @@ package com.wander.android.core.database.dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
+import androidx.paging.PagingSource
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
@@ -24,6 +25,34 @@ interface TrackDao {
      */
     @Query("SELECT * FROM tracks WHERE isLibrary = 1 ORDER BY title ASC")
     fun getAllTracksFlow(): Flow<List<TrackEntity>>
+
+    /**
+     * The same rows, a page at a time.
+     *
+     * Room reads only the window the list is showing and re-reads only the pages that changed, so a
+     * play count ticking over no longer costs a full re-read and a full re-map of the library. The
+     * flow above did exactly that on every single write to `tracks` — likes, play counts, a sync —
+     * and at a thousand rows it is what made scrolling stutter.
+     */
+    @Query("SELECT * FROM tracks WHERE isLibrary = 1 ORDER BY title ASC")
+    fun pagedTracks(): PagingSource<Int, TrackEntity>
+
+    @Query("SELECT * FROM tracks WHERE isLibrary = 1 AND source = :source ORDER BY title ASC")
+    fun pagedTracksBySource(source: SourceType): PagingSource<Int, TrackEntity>
+
+    /**
+     * Every library track's id, in the order the list shows them.
+     *
+     * What a tap needs and a page cannot give: playing a track means queueing the library around
+     * it, and with paging the screen no longer holds the whole list to hand over. Ids only, because
+     * the queue is built from ids and loading a thousand full rows to find a position would put
+     * back the cost paging just removed.
+     */
+    @Query("SELECT id FROM tracks WHERE isLibrary = 1 ORDER BY title ASC")
+    suspend fun libraryTrackIds(): List<String>
+
+    @Query("SELECT id FROM tracks WHERE isLibrary = 1 AND source = :source ORDER BY title ASC")
+    suspend fun libraryTrackIdsBySource(source: SourceType): List<String>
 
     /**
      * Every row, library or not, once.
@@ -327,6 +356,36 @@ interface TrackDao {
         """
     )
     suspend fun getUnhashedLocalTracks(limit: Int): List<TrackEntity>
+
+    /**
+     * Downloaded files that have never been hashed.
+     *
+     * The hashing pass only ever looked at `source = 'LOCAL'`, so a track downloaded from
+     * Navidrome or YouTube Music kept a null `contentHash` no matter how long it sat on the disk.
+     * That is the whole reason off-grid listen-along could not address them: the peer tier asks
+     * for audio by content hash, and 13 of the 24 files actually held on one real device had none.
+     */
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE source != 'LOCAL'
+          AND (contentHash IS NULL OR contentHash = '')
+          AND isDownloaded = 1
+          AND localFilePath IS NOT NULL
+        ORDER BY addedTimestamp DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun getUnhashedDownloads(limit: Int): List<TrackEntity>
+
+    /**
+     * Records a duration read from the audio itself.
+     *
+     * Only ever fills a gap — `durationMs > 0` is left alone — because the source's own answer is
+     * the better one where it exists, and this is measured from whatever the decoder could reach.
+     */
+    @Query("UPDATE tracks SET durationMs = :durationMs WHERE id = :trackId AND (durationMs IS NULL OR durationMs <= 0)")
+    suspend fun fillMissingDuration(trackId: String, durationMs: Long)
 
     @Query("UPDATE tracks SET contentHash = :hash WHERE id = :trackId")
     suspend fun setContentHash(trackId: String, hash: String)

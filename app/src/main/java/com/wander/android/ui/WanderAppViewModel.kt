@@ -13,7 +13,7 @@ import com.wander.android.data.repository.LibrarySyncRepository
 import com.wander.android.data.repository.SyncOfferArtwork
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.PlaylistWriteRepository
-import com.wander.android.core.audio.fingerprint.FingerprintIndexWorker
+import com.wander.android.core.audio.fingerprint.FingerprintIndexing
 import com.wander.android.data.repository.SearchQueryHolder
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.wander.android.data.repository.ShareRepository
@@ -58,8 +58,29 @@ class WanderAppViewModel @Inject constructor(
     private val instantRadio: InstantRadioRepository,
     private val playerConnection: PlayerConnection,
     private val searchQueryHolder: SearchQueryHolder,
+    fingerprintStatuses: com.wander.android.data.repository.FingerprintStatusRepository,
     @ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
+
+    /**
+     * Whether the track on the player's cover has been measured.
+     *
+     * Read here rather than in `NowPlayingScreen` because the cover the user actually looks at is
+     * not that screen's: the travelling cover is drawn by `MorphingArtwork`, outside it, and the
+     * badge sitting in `NowPlayingScreen` was in a branch the real player never takes.
+     */
+    val playingFingerprintStatus: StateFlow<com.wander.android.data.repository.FingerprintStatus> =
+        combine(
+            playerConnection.state,
+            fingerprintStatuses.statuses()
+        ) { playback, statuses ->
+            playback.currentTrack?.id?.let { statuses[it] }
+                ?: com.wander.android.data.repository.FingerprintStatus.MISSING
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            com.wander.android.data.repository.FingerprintStatus.MISSING
+        )
 
     /**
      * The dock's search text.
@@ -358,9 +379,13 @@ class WanderAppViewModel @Inject constructor(
             localSource.refresh()
             // The scan is what discovers the files, so the fingerprint index can only usefully be
             // asked for afterwards. `KEEP` inside means the repeated calls this makes across
-            // launches join one run rather than restarting it. Constrained to charging, so asking
-            // costs the user nothing right now.
-            FingerprintIndexWorker.enqueue(context)
+            // launches join one run rather than restarting it. It no longer waits for a charger —
+            // a streamed library is only reachable while the app is in use — so asking here can
+            // actually lead to work being done.
+            FingerprintIndexing.enqueue(
+                context,
+                allowMobileData = secureStorage.isIndexOnMobileDataEnabled.value
+            )
         }
     }
 }

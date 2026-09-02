@@ -81,6 +81,10 @@ class MainActivity : ComponentActivity() {
             uri.scheme == "agro" -> handleAgroPairing(uri)
             // A tapped drop notification.
             uri.scheme == "wanda" && uri.host == "inbox" -> deepLinkRouter.request(Routes.INBOX)
+            // A tapped "measuring your library" notification. The progress bar says how far along
+            // it is; this screen is where you find out what it is stuck on.
+            uri.scheme == "wanda" && uri.host == "fingerprints" ->
+                deepLinkRouter.request(Routes.FINGERPRINTS)
             // A friend code held up on someone else's screen. Scanned with the system camera
             // rather than one built into the app: the pairing QR already works this way, and an
             // in-app scanner would mean a camera permission for a feature used once.

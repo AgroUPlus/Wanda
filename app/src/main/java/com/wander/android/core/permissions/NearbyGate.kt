@@ -26,9 +26,20 @@ private val NEARBY_PERMISSIONS: List<String> = buildList {
         add(Manifest.permission.BLUETOOTH_ADVERTISE)
         add(Manifest.permission.BLUETOOTH_SCAN)
         add(Manifest.permission.BLUETOOTH_CONNECT)
+    } else {
+        // Not a fallback but the only thing that works here, and its absence is the same silent
+        // nothing described above. The `BLUETOOTH_*` grants are API 31 and later; on 26..30 a BLE
+        // scan is gated on location instead, and the legacy `BLUETOOTH`/`BLUETOOTH_ADMIN` pair the
+        // manifest declares for those releases is install-time and needs no asking. Without this
+        // branch the list was empty below 31 and the gate asked for nothing at all.
+        add(Manifest.permission.ACCESS_FINE_LOCATION)
     }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         add(Manifest.permission.NEARBY_WIFI_DEVICES)
+    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        // Wi-Fi Direct's own gate on 31..32, where `NEARBY_WIFI_DEVICES` does not yet exist:
+        // `discoverPeers` and `requestPeers` return an empty peer list without it.
+        add(Manifest.permission.ACCESS_FINE_LOCATION)
     }
 }
 

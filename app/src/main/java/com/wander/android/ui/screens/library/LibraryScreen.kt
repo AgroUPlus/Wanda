@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.library
 
+import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -105,7 +106,7 @@ fun LibraryScreen(
             } else null
         )
     }
-    val tracks by viewModel.tracks.collectAsStateWithLifecycle()
+    val tracks = viewModel.tracks.collectAsLazyPagingItems()
     val likedTracks by viewModel.likedTracks.collectAsStateWithLifecycle()
     val downloadedTracks by viewModel.downloadedTracks.collectAsStateWithLifecycle()
     val historyTracks by viewModel.historyTracks.collectAsStateWithLifecycle()
@@ -229,7 +230,7 @@ fun LibraryScreen(
                                 modifier = Modifier.padding(vertical = 8.dp)
                             )
                         }
-                        TrackList(tracks, pageTab, isRefreshing, contentPadding, viewModel) { actionsFor = it }
+                        PagedTrackList(tracks, pageTab, isRefreshing, contentPadding, viewModel) { actionsFor = it }
                     }
                 }
             }

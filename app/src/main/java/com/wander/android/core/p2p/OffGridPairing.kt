@@ -19,8 +19,8 @@ import javax.inject.Singleton
  *
  * ## Why the answer is checked and not just used
  *
- * A Wi-Fi Direct group is formed with whatever the framework negotiates. The beacon is fourteen
- * bytes and cannot carry a MAC address, so there is no way to *ask* for a particular peer — the
+ * A Wi-Fi Direct group is formed with whatever the framework negotiates. The beacon is ten bytes
+ * and cannot carry a MAC address, so there is no way to *ask* for a particular peer — the
  * link comes up and only then can this device find out whose it is. Rather than pretend to choose,
  * this verifies afterwards: the peer returns its identity key, the beacon's fingerprint is
  * recomputed from it, and a mismatch means the link reached somebody else and must be dropped.
@@ -90,6 +90,38 @@ internal class OffGridPairing @Inject constructor(
             return@withContext Result.failure(PairingException(Failure.Unreadable))
         }
         Result.success(token)
+    }
+
+    /**
+     * Whether the peer at [baseUrl] is still answering.
+     *
+     * `/p2p/ping` is the one endpoint that needs no grant, which is what makes it usable as a
+     * liveness check: a 403 would be indistinguishable from a dead link, and the question here is
+     * only whether anything is still there.
+     */
+    suspend fun ping(baseUrl: String): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            client.newCall(Request.Builder().url("$baseUrl/p2p/ping").build()).execute()
+                .use { it.isSuccessful }
+        }.getOrDefault(false)
+    }
+
+    /**
+     * Tells [baseUrl] this device is done, so the peer stops listing it and stops honouring its
+     * grant.
+     *
+     * Best effort by design, and the caller does not wait on the answer to tear its own side down.
+     * The link is often being dropped *because* the peer has gone, and a teardown that could be
+     * blocked by an unreachable peer would be a teardown that hangs exactly when it is needed. The
+     * grant expires on its own either way; this only makes the common case immediate.
+     */
+    suspend fun unpair(baseUrl: String): Unit = withContext(Dispatchers.IO) {
+        val myKey = identityKeyManager.getPublicKeyBase64()
+        val url = "$baseUrl/p2p/unpair?key=" + java.net.URLEncoder.encode(myKey, "UTF-8")
+        runCatching {
+            client.newCall(Request.Builder().url(url).build()).execute().close()
+        }
+        Unit
     }
 
     /**

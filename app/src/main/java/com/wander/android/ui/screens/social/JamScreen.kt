@@ -356,8 +356,13 @@ private fun RoomCard(jam: Jam, isRadioEnabled: Boolean, viewModel: JamViewModel)
                 }
                 IconButton(onClick = {
                     val shareUrl = viewModel.shareUrl(jam.code)
+                    val shareText = if (shareUrl != null) {
+                        "Join my music Jam on Wanda! $shareUrl"
+                    } else {
+                        "Join my music Jam on Wanda! Use code: ${jam.code}"
+                    }
                     val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                        putExtra(Intent.EXTRA_TEXT, "Join my music Jam on Wanda! $shareUrl")
+                        putExtra(Intent.EXTRA_TEXT, shareText)
                         type = "text/plain"
                     }
                     context.startActivity(Intent.createChooser(sendIntent, "Share Jam Link"))

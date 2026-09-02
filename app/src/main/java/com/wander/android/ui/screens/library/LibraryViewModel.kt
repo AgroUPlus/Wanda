@@ -23,6 +23,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -79,13 +83,38 @@ class LibraryViewModel @Inject constructor(
      *
      * All Room-backed, so the library is fully usable with no network.
      */
-    val tracks: StateFlow<List<UnifiedTrack>> = _sourceFilter
-        .flatMapLatest { filter ->
-            filter
-                ?.let(musicRepository::getTracksBySourceFlow)
-                ?: musicRepository.getAllTracksFlow()
+    val tracks: Flow<PagingData<UnifiedTrack>> = _sourceFilter
+        .flatMapLatest { filter -> musicRepository.pagedLibraryTracks(filter) }
+        // Survives the tab pager recomposing and the screen being rotated, so scrolling back does
+        // not refetch pages already on screen.
+        .cachedIn(viewModelScope)
+
+    /**
+     * Plays [track] with the rest of the library queued around it.
+     *
+     * The list is fetched here rather than held, because with paging the screen no longer has it —
+     * and that is the point: the position is needed once, on a tap, and keeping a thousand rows in
+     * memory to avoid one query is what paging was removing.
+     */
+    fun playFromLibrary(track: UnifiedTrack) {
+        viewModelScope.launch {
+            val ids = musicRepository.libraryTrackIds(_sourceFilter.value)
+            val index = ids.indexOf(track.id)
+            // Not found is possible and ordinary: the row was queued from a page loaded before a
+            // sync removed it. Playing the one track alone is better than playing nothing.
+            if (index < 0) playerConnection.play(listOf(track), 0) else playQueue(ids, index)
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    }
+
+    private suspend fun playQueue(ids: List<String>, index: Int) {
+        // `getTracksByIds` answers in whatever order SQLite pleases, not in `ids` order, so the
+        // rows are put back in the list's order before being queued — otherwise "play from here"
+        // would start at the right song and then continue through a shuffled library.
+        val byId = musicRepository.tracksByIds(ids).associateBy { it.id }
+        val ordered = ids.mapNotNull(byId::get)
+        val position = ordered.indexOfFirst { it.id == ids[index] }.coerceAtLeast(0)
+        playerConnection.play(ordered, position)
+    }
 
     val likedTracks: StateFlow<List<UnifiedTrack>> = musicRepository.getLikedTracksFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -110,6 +139,10 @@ class LibraryViewModel @Inject constructor(
         val byId = albums.associateBy { it.id }
         recentIds.mapNotNull(byId::get)
     }
+        // `combine` transforms on the collector's dispatcher, and the collector is
+        // `stateIn(viewModelScope)` — the main thread. Indexing every album to pick twelve of them
+        // is not much, but it was being done on the UI thread every time either flow moved.
+        .flowOn(kotlinx.coroutines.Dispatchers.Default)
         // The two flows emit independently, so a scan that touches both produces an intermediate
         // pairing — new ids against stale albums, or the reverse — that resolves to a list
         // identical to the one already on screen. Without this the row rebuilds and its scroll

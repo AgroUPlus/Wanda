@@ -16,24 +16,26 @@ import kotlinx.serialization.json.jsonPrimitive
 /** The fields every drop query selects. Written once so the queries cannot drift apart. */
 internal const val DROP_FIELDS =
     "id fromUser toUser trackTitle artistName albumName artworkUrl " +
-        "contentHash trackUri note noteCiphertext isEncrypted createdAt readAt archived reaction"
+        "contentHash trackUri note noteCiphertext noteCiphertexts { deviceId ciphertext } " +
+        "isEncrypted createdAt readAt archived reaction"
 
 internal const val FEED_FIELDS = "username at kind summary artist title count"
 
 internal fun JsonObject.toDrop(): AgroDrop = AgroDrop(
-    id = str("id").orEmpty(),
-    fromUser = str("fromUser").orEmpty(),
-    toUser = str("toUser").orEmpty(),
-    trackTitle = str("trackTitle").orEmpty(),
-    artistName = str("artistName").orEmpty(),
+    id = str("id") ?: error("drop has no id"),
+    fromUser = str("fromUser") ?: error("drop has no fromUser"),
+    toUser = str("toUser") ?: error("drop has no toUser"),
+    trackTitle = str("trackTitle") ?: error("drop has no trackTitle"),
+    artistName = str("artistName") ?: error("drop has no artistName"),
     albumName = str("albumName"),
     artworkUrl = str("artworkUrl"),
     contentHash = str("contentHash"),
     trackUri = str("trackUri"),
     note = str("note"),
     noteCiphertext = str("noteCiphertext"),
+    noteCiphertexts = sealedNotes(),
     isEncrypted = bool("isEncrypted"),
-    createdAt = str("createdAt").orEmpty(),
+    createdAt = str("createdAt") ?: error("drop has no createdAt"),
     readAt = str("readAt"),
     archived = bool("archived"),
     reaction = str("reaction")
@@ -48,19 +50,20 @@ internal fun JsonObject.toDrop(): AgroDrop = AgroDrop(
  * handles one shape.
  */
 internal fun JsonObject.toPushedDrop(recipient: String): AgroDrop = AgroDrop(
-    id = str("id").orEmpty(),
-    fromUser = str("from").orEmpty(),
+    id = str("id") ?: error("pushed drop has no id"),
+    fromUser = str("from") ?: error("pushed drop has no from"),
     toUser = recipient,
-    trackTitle = str("trackTitle").orEmpty(),
-    artistName = str("artistName").orEmpty(),
+    trackTitle = str("trackTitle") ?: error("pushed drop has no trackTitle"),
+    artistName = str("artistName") ?: error("pushed drop has no artistName"),
     albumName = str("albumName"),
     artworkUrl = str("artworkUrl"),
     contentHash = str("contentHash"),
     trackUri = str("trackUri"),
     note = str("note"),
     noteCiphertext = str("noteCiphertext"),
+    noteCiphertexts = sealedNotes(),
     isEncrypted = bool("isEncrypted"),
-    createdAt = str("createdAt").orEmpty(),
+    createdAt = str("createdAt") ?: error("pushed drop has no createdAt"),
     readAt = null,
     archived = false
 )
@@ -104,6 +107,45 @@ private fun JsonObject.toMatrixEntry(): AgroTasteMatrixEntry = AgroTasteMatrixEn
     score = long("score").toInt()
 )
 
+/**
+ * The per-device sealed copies, or empty against a server that does not send them.
+ *
+ * Absent rather than empty is the case that matters: it means the server predates the list, and
+ * the reader has to fall back to the single `noteCiphertext`.
+ */
+private fun JsonObject.sealedNotes(): List<AgroSealedNote> =
+    this["noteCiphertexts"]?.jsonArray.orEmpty().mapNotNull { entry ->
+        val obj = entry as? JsonObject ?: return@mapNotNull null
+        val deviceId = obj.str("deviceId") ?: return@mapNotNull null
+        val ciphertext = obj.str("ciphertext") ?: return@mapNotNull null
+        AgroSealedNote(deviceId = deviceId, ciphertext = ciphertext)
+    }
+
 /** A list of plain strings, tolerating anything that is not one. */
 private fun JsonObject.strings(key: String): List<String> =
     this[key]?.jsonArray.orEmpty().mapNotNull { it.jsonPrimitive.contentOrNull }
+
+/**
+ * Decrypts the note in-place when the drop is end-to-end encrypted.
+ *
+ * Called at every point a drop arrives — from the REST endpoints and from the live socket. A
+ * single definition here keeps the decryption semantics from drifting between those two paths.
+ *
+ * A decryption failure returns the drop unchanged (note still null, `isEncrypted` still true).
+ * The UI reads `isEncrypted` to decide whether to show the lock icon, so the user can see that
+ * a drop arrived but could not be opened rather than silently receiving an empty message.
+ */
+internal fun AgroDrop.decryptIfNeeded(
+    identityKeyManager: com.wander.android.core.security.IdentityKeyManager
+): AgroDrop {
+    if (!isEncrypted) return this
+
+    // Every copy, this device's own included. A note you *sent* has a copy sealed to you in here
+    // and nowhere else — the single `noteCiphertext` is the recipient's, which is why your own
+    // half of a conversation used to be unopenable rather than merely unopened.
+    val candidates = noteCiphertexts.map { it.ciphertext } + listOfNotNull(noteCiphertext)
+    if (candidates.isEmpty()) return this
+
+    val opened = identityKeyManager.openAnyNote(candidates) ?: return this
+    return copy(note = opened)
+}
