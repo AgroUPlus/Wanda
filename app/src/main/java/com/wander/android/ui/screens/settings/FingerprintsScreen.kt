@@ -70,15 +70,20 @@ internal fun FingerprintsScreen(
         ) {
             item(key = "summary") { Summary(state) }
 
-            items(state.rows, key = { it.track.id }) { row ->
-                TrackRow(
-                    track = row.track,
-                    onPlay = {},
-                    // Not playable from here: this is a report, and a tap that started music while
-                    // someone is auditing their index would be a surprise.
-                    enabled = false,
-                    fingerprintStatus = row.status
-                )
+            state.sections.forEach { section ->
+                item(key = "header_${section.title}") {
+                    SectionHeader(section, Modifier.padding(top = 20.dp))
+                }
+                items(section.rows, key = { it.track.id }) { row ->
+                    TrackRow(
+                        track = row.track,
+                        onPlay = {},
+                        // Not playable from here: this is a report, and a tap that started music
+                        // while someone is auditing their index would be a surprise.
+                        enabled = false,
+                        fingerprintStatus = row.status
+                    )
+                }
             }
         }
     }
@@ -114,5 +119,24 @@ private fun Summary(state: FingerprintsUiState) {
                 modifier = Modifier.padding(top = 8.dp)
             )
         }
+    }
+}
+
+@Composable
+private fun SectionHeader(section: FingerprintSection, modifier: Modifier = Modifier) {
+    Column(modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
+        Text(
+            // The count belongs in the heading, not in a badge: "3 of 812" is the answer someone
+            // opened this screen to get, per group.
+            text = "${section.title} — ${section.indexed} of ${section.rows.size}",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = section.subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp)
+        )
     }
 }

@@ -8,12 +8,16 @@ import com.wander.android.data.repository.RenditionFinder
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.playback.PlaybackCoordinator
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.core.audio.fingerprint.FingerprintProgress
+import com.wander.android.data.repository.FingerprintStatus
+import com.wander.android.data.repository.FingerprintStatusRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.repository.JamRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -25,8 +29,26 @@ internal class NowPlayingViewModel @Inject constructor(
     private val shareRepository: ShareRepository,
     private val renditionFinder: RenditionFinder,
     private val playerConnection: PlayerConnection,
+    fingerprintStatuses: FingerprintStatusRepository,
+    fingerprintProgress: FingerprintProgress,
     jamRepository: JamRepository
 ) : ViewModel() {
+
+    /** What has been measured about the track on screen. */
+    val fingerprintStatus: StateFlow<Map<String, FingerprintStatus>> = fingerprintStatuses
+        .statuses()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    /**
+     * Whether the indexer is decoding anything at all, which is the question the player answers.
+     *
+     * Not "is it measuring *this* track": the indexer works through whatever still needs
+     * measuring, which is almost never the song being played, so a light scoped to the current
+     * track would stay dark while the phone was plainly busy.
+     */
+    val isIndexing: StateFlow<Boolean> = fingerprintProgress.indexing
+        .map { it != null }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     /**
      * Every source that has the playing recording, once the picker has asked.

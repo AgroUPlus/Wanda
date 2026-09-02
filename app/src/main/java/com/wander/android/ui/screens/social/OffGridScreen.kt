@@ -32,6 +32,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -74,7 +75,12 @@ internal fun OffGridScreen(
             }
             Text(
                 text = "Off-grid",
+                // Weighted explicitly, because `displaySmall` is W400 in Material 3. At this size
+                // a normal weight reads *lighter* than the W500 `titleLarge` headings elsewhere in
+                // the app despite being much bigger, which is why this title looked unemphasised
+                // next to its own siblings.
                 style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = 4.dp)
             )
         }

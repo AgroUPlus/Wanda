@@ -48,6 +48,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.data.repository.FingerprintStatus
+import com.wander.android.ui.components.NowPlayingFingerprint
 import com.wander.android.ui.components.LikeButton
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.AudioQualityBadge
@@ -94,6 +96,8 @@ internal fun NowPlayingScreen(
     val state by playerConnection.state.collectAsStateWithLifecycle()
     val lyrics by viewModel.lyrics.collectAsStateWithLifecycle()
     val likedTrackIds by viewModel.likedTrackIds.collectAsStateWithLifecycle()
+    val fingerprintStatus by viewModel.fingerprintStatus.collectAsStateWithLifecycle()
+    val isIndexing by viewModel.isIndexing.collectAsStateWithLifecycle()
     var showSourcePicker by remember { mutableStateOf(false) }
     val renditions by viewModel.renditions.collectAsStateWithLifecycle()
     val isFindingRenditions by viewModel.isFindingRenditions.collectAsStateWithLifecycle()
@@ -358,6 +362,13 @@ internal fun NowPlayingScreen(
                         }
                     }
                 }
+
+                // Before the like button, so the row reads title → state → action.
+                NowPlayingFingerprint(
+                    status = fingerprintStatus[track.id] ?: FingerprintStatus.MISSING,
+                    isIndexerRunning = isIndexing,
+                    modifier = Modifier.padding(end = 12.dp)
+                )
 
                 LikeButton(
                     isLiked = track.id in likedTrackIds,

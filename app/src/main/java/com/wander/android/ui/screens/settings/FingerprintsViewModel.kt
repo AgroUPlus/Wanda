@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.database.dao.TrackDao
+import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.FingerprintStatus
 import com.wander.android.data.repository.FingerprintStatusRepository
@@ -20,16 +21,36 @@ internal data class FingerprintRow(
     val status: FingerprintStatus
 )
 
+/**
+ * One group of tracks that share a reason to be looked at together.
+ *
+ * Split local from streamed because the two fail for completely different reasons and the fix is
+ * different. A local file that will not measure has a codec this device cannot decode. A streamed
+ * track that will not measure was almost certainly never *reached* — measuring one downloads about
+ * a minute of it, so it waits on Wi-Fi, and before that it waited on a charger it rarely saw.
+ * Lumping them together turns two answerable questions into one shrug.
+ */
+@androidx.compose.runtime.Immutable
+internal data class FingerprintSection(
+    val title: String,
+    val subtitle: String,
+    val rows: List<FingerprintRow>
+) {
+    val indexed: Int get() = rows.count { it.status == FingerprintStatus.INDEXED }
+}
+
 @androidx.compose.runtime.Immutable
 internal data class FingerprintsUiState(
-    val rows: List<FingerprintRow> = emptyList(),
+    val sections: List<FingerprintSection> = emptyList(),
     val indexed: Int = 0,
     val total: Int = 0,
     val isLoading: Boolean = true
 ) {
     /** The one being decoded right now, if any — the line the screen leads with. */
     val processing: FingerprintRow?
-        get() = rows.firstOrNull { it.status == FingerprintStatus.PROCESSING }
+        get() = sections.firstNotNullOfOrNull { section ->
+            section.rows.firstOrNull { it.status == FingerprintStatus.PROCESSING }
+        }
 }
 
 /**
@@ -65,8 +86,29 @@ internal class FingerprintsViewModel @Inject constructor(
                 }.thenBy { it.track.title.lowercase() }
             )
 
+        val (local, streamed) = rows.partition { it.track.source == SourceType.LOCAL }
+
+        val sections = listOfNotNull(
+            streamed.takeIf { it.isNotEmpty() }?.let {
+                FingerprintSection(
+                    title = "Streaming",
+                    subtitle = "Navidrome and YouTube Music. Measuring one downloads about a " +
+                        "minute of it, so these fill in over Wi-Fi.",
+                    rows = it
+                )
+            },
+            local.takeIf { it.isNotEmpty() }?.let {
+                FingerprintSection(
+                    title = "On this device",
+                    subtitle = "Local files. These cost nothing but time; one that stays red has " +
+                        "a format this phone cannot decode.",
+                    rows = it
+                )
+            }
+        )
+
         FingerprintsUiState(
-            rows = rows,
+            sections = sections,
             indexed = rows.count { it.status == FingerprintStatus.INDEXED },
             total = rows.size,
             isLoading = false
