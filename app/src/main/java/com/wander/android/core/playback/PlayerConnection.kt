@@ -536,6 +536,20 @@ class PlayerConnection @Inject constructor(
         if (restartsOnPrevious) ctrl.seekTo(0L) else ctrl.seekToPreviousMediaItem()
     }
 
+    /**
+     * Always steps back a track, never restarts this one.
+     *
+     * For the full player's swipe, where the gesture has already slid the *previous cover* into
+     * place before this is called. The restart convention is right for a button, whose press says
+     * nothing about what should follow, and wrong for a filmstrip that has just shown the user
+     * which track they are moving to — obeying it there animated a handover and then stayed on the
+     * same song.
+     */
+    fun previousTrack() {
+        if (isFollowing) return
+        _controller.value?.seekToPreviousMediaItem()
+    }
+
     fun toggleShuffle() {
         if (isFollowing || isInJam) return
         val ctrl = _controller.value ?: return

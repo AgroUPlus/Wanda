@@ -49,7 +49,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.repository.FingerprintStatus
-import com.wander.android.ui.components.NowPlayingFingerprint
+import com.wander.android.ui.components.FingerprintBadge
 import com.wander.android.ui.components.LikeButton
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.AudioQualityBadge
@@ -275,14 +275,28 @@ internal fun NowPlayingScreen(
                     } else if (artworkSlot != null) {
                         artworkSlot(track.artworkUrl, track.title)
                     } else {
-                        Artwork(
-                            url = track.artworkUrl,
-                            contentDescription = track.title,
-                            sizeDp = FullArtworkSize,
-                            shape = MaterialTheme.shapes.extraLarge,
-                            crossfade = true,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        // The dot rides inside the cover rather than beside the title.
+                        //
+                        // It is a footnote about the track, and the cover is the track — putting it
+                        // in the title row gave a six-pixel status the same rank as the song's name.
+                        // Bottom-left because artwork is busiest in the middle and album text, when
+                        // there is any, tends to sit low-right.
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            Artwork(
+                                url = track.artworkUrl,
+                                contentDescription = track.title,
+                                sizeDp = FullArtworkSize,
+                                shape = MaterialTheme.shapes.extraLarge,
+                                crossfade = true,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            FingerprintBadge(
+                                status = fingerprintStatus[track.id] ?: FingerprintStatus.MISSING,
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .padding(14.dp)
+                            )
+                        }
                     }
                 }
 
@@ -361,12 +375,6 @@ internal fun NowPlayingScreen(
                         }
                     }
                 }
-
-                // Before the like button, so the row reads title → state → action.
-                NowPlayingFingerprint(
-                    status = fingerprintStatus[track.id] ?: FingerprintStatus.MISSING,
-                    modifier = Modifier.padding(end = 12.dp)
-                )
 
                 LikeButton(
                     isLiked = track.id in likedTrackIds,

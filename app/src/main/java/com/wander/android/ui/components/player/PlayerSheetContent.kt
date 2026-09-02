@@ -138,10 +138,23 @@ fun PlayerSheetContent(
     }
     val nextArtwork = playback.queue.getOrNull(playback.currentIndex + 1)?.artworkUrl
 
+    // The two surfaces disagree about what "previous" means, and they are both right.
+    //
+    // The docked strip shows no filmstrip, so it keeps the ordinary convention: far enough into a
+    // track, swiping back restarts it. The full player has just slid the *previous cover* into the
+    // slot, so restarting would contradict the thing the user watched happen — there it always
+    // steps back.
     val miniSwipe = Modifier.swipeToChangeTrack(
         state = swipe,
         onNext = playerConnection::next,
-        onPrevious = playerConnection::previous,
+        onPrevious = {
+            // Read at gesture time, never in composition: it changes with playback position.
+            val restarts = playerConnection.restartsOnPrevious
+            playerConnection.previous()
+            // A restart leaves the track — and so its cover — unchanged, so the peek cover the
+            // swipe adopted would otherwise sit there until the next real track change.
+            if (restarts) swipe.clearPending()
+        },
         nextArtworkUrl = nextArtwork,
         previousArtworkUrl = previousArtwork,
         exitDistance = DockedExitDistance
@@ -149,7 +162,7 @@ fun PlayerSheetContent(
     val fullSwipe = Modifier.swipeToChangeTrack(
         state = swipe,
         onNext = playerConnection::next,
-        onPrevious = playerConnection::previous,
+        onPrevious = playerConnection::previousTrack,
         nextArtworkUrl = nextArtwork,
         previousArtworkUrl = previousArtwork
     )

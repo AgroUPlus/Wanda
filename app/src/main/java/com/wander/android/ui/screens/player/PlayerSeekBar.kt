@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.wander.android.ui.components.rememberHaptics
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.rememberPlaybackPosition
 import com.wander.android.ui.components.LiveChip
@@ -63,6 +64,7 @@ private fun PlayerSeekBarInternal(
     isLive: Boolean = false
 ) {
     var scrubbing by remember { mutableFloatStateOf(-1f) }
+    val haptics = rememberHaptics()
     val fraction = if (scrubbing >= 0f) {
         scrubbing
     } else if (durationMs > 0L) {
@@ -98,7 +100,12 @@ private fun PlayerSeekBarInternal(
             value = fraction,
             onValueChange = { scrubbing = it },
             onValueChangeFinished = {
-                if (durationMs > 0L) onSeek((scrubbing * durationMs).toLong())
+                // On release only, never while dragging. A tick per pixel of travel is the
+                // definition of overdoing it; one on landing tells you the seek was taken.
+                if (durationMs > 0L) {
+                    haptics.settled()
+                    onSeek((scrubbing * durationMs).toLong())
+                }
                 scrubbing = -1f
             },
             enabled = durationMs > 0L

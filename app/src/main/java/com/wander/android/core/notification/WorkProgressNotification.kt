@@ -2,7 +2,10 @@ package com.wander.android.core.notification
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.content.pm.ServiceInfo
 import android.os.Build
 import androidx.core.app.NotificationCompat
@@ -40,11 +43,13 @@ class WorkProgressNotification @Inject constructor(
     enum class Kind(
         val channelId: String,
         val channelName: String,
-        val notificationId: Int
+        val notificationId: Int,
+        /** The `wanda://` host this notification opens, or null to just bring the app forward. */
+        val deepLinkHost: String?
     ) {
-        LIBRARY_SYNC("wanda_library_sync", "Library sync", 4711),
-        FINGERPRINT("wanda_fingerprint", "Measuring your library", 4713),
-        DOWNLOAD("wanda_downloads", "Downloads", 4714)
+        LIBRARY_SYNC("wanda_library_sync", "Library sync", 4711, deepLinkHost = null),
+        FINGERPRINT("wanda_fingerprint", "Measuring your library", 4713, "fingerprints"),
+        DOWNLOAD("wanda_downloads", "Downloads", 4714, deepLinkHost = null)
     }
 
     /**
@@ -65,10 +70,14 @@ class WorkProgressNotification @Inject constructor(
         val notification = NotificationCompat.Builder(context, kind.channelId)
             .setContentTitle(title)
             .setContentText(text)
+            // The long line, because a track title plus a countdown does not fit on one and the
+            // collapsed form truncates exactly the part that changes.
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setSmallIcon(R.drawable.ic_stat_sync)
             .setOngoing(true)
             .setSilent(true)
             .setProgress(if (total > 0) total else 0, done, total <= 0)
+            .setContentIntent(openIntent(kind))
             .build()
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -80,6 +89,36 @@ class WorkProgressNotification @Inject constructor(
         } else {
             ForegroundInfo(kind.notificationId, notification)
         }
+    }
+
+    /**
+     * Where tapping the notification lands.
+     *
+     * The screen that explains the work, when there is one — a progress bar you cannot interrogate
+     * is only half an answer, and "what is it actually doing" is the obvious next question. Where
+     * there is no such screen the intent still exists, so the tap brings the app forward instead of
+     * being inert, which reads as a broken notification.
+     *
+     * `IMMUTABLE` because nothing is meant to fill anything in, and it is required from API 31.
+     */
+    private fun openIntent(kind: Kind): PendingIntent? {
+        val launch = context.packageManager
+            .getLaunchIntentForPackage(context.packageName)
+            ?.apply {
+                kind.deepLinkHost?.let {
+                    action = Intent.ACTION_VIEW
+                    data = Uri.parse("wanda://$it")
+                }
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            ?: return null
+
+        return PendingIntent.getActivity(
+            context,
+            kind.notificationId,
+            launch,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
     }
 
     private fun ensureChannel(kind: Kind) {

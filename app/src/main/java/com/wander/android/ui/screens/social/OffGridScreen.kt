@@ -39,6 +39,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.core.p2p.NearbyPeers
 import com.wander.android.core.permissions.rememberNearbyGate
 import com.wander.android.ui.components.headerInset
+import com.wander.android.ui.components.rememberHaptics
 import com.wander.android.ui.components.listInset
 
 /**
@@ -59,6 +60,7 @@ internal fun OffGridScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val withNearby = rememberNearbyGate()
+    val haptics = rememberHaptics()
 
     // Not `stop()` on every recomposition — only when the screen is actually leaving.
     DisposableEffect(Unit) { onDispose { viewModel.stop() } }
@@ -128,7 +130,13 @@ internal fun OffGridScreen(
                         Button(
                             // The permissions are asked at this tap, where the screen above says
                             // what they are for. Denied, the action still runs and reports honestly.
-                            onClick = { withNearby { viewModel.startSharing() } },
+                            onClick = {
+                                // `confirmed`, not `toggled`: this does not flip a switch, it asks
+                                // two radios to start and may take seconds to show anything. The
+                                // tick acknowledges the tap while the screen still looks unchanged.
+                                haptics.confirmed()
+                                withNearby { viewModel.startSharing() }
+                            },
                             shapes = ButtonDefaults.shapes()
                         ) { Text("Be findable") }
                     }
