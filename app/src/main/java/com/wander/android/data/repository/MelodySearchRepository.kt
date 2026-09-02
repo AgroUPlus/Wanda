@@ -149,15 +149,20 @@ class MelodySearchRepository @Inject constructor(
 
     internal companion object {
         /**
-         * The contour contract. Bumped when note segmentation changes — a stored contour and a
-         * freshly measured one must have been cut into notes the same way, or the comparison is
-         * between two different alphabets.
+         * The contour contract. Bumped when note segmentation *or the pitch track under it*
+         * changes — a stored contour and a freshly measured one must have been cut into notes the
+         * same way, or the comparison is between two different alphabets.
+         *
+         * Version 2 folds octave slips out of the pitch track before segmenting. A quarter of the
+         * intervals in the version 1 contours were jumps of eleven semitones or more, which is the
+         * detector doubling a period rather than a tune moving, so the stored shapes were not
+         * comparable with a hum whatever the thresholds said.
          *
          * Visible past this class because the fingerprint badge asks the same question the search
          * does — "is there a contour at the current version" — and a badge reading a stale version
          * would call a track indexed that the search cannot use.
          */
-        const val CONTOUR_VERSION = 1
+        const val CONTOUR_VERSION = 2
 
         const val MAX_RESULTS = 5
 
