@@ -55,8 +55,21 @@ internal class OffGridViewModel @Inject constructor(
      */
     fun startSharing() {
         if (!transport.isSupported) return
-        p2pServer.start()
         viewModelScope.launch {
+            // Awaited, so `servesAudio` below is a fact rather than an intention. Starting the
+            // server used to be fire-and-forget: a port already taken by another build of Wanda
+            // failed in the log, this went on to advertise that it would serve audio, and peers
+            // paired with a device that could never answer them.
+            val serving = p2pServer.start()
+            if (serving.isFailure) {
+                _state.value = _state.value.copy(
+                    isAdvertising = false,
+                    error = serving.exceptionOrNull()?.message
+                        ?: "This phone could not start serving audio."
+                )
+                return@launch
+            }
+
             // Suspends now, and that is the fix rather than a detail. `startAdvertising` used to
             // return a boolean that was always true — the radio reports its refusal asynchronously,
             // so the message below could never appear no matter how thoroughly the advertisement

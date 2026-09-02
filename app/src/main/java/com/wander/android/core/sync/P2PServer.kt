@@ -15,8 +15,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.io.IOException
 import java.io.OutputStream
 import android.net.wifi.WifiManager
 import android.util.Log
@@ -315,9 +317,21 @@ class P2PServer @Inject constructor(
         ?.trim()
         ?.takeIf { it.isNotBlank() }
 
-    fun start(port: Int = 8702) {
-        if (isRunning) return
-        isRunning = true
+    /**
+     * Binds the port and starts accepting, answering whether it actually worked.
+     *
+     * **Suspending, and the bind happens before it returns.** It used to launch the whole thing and
+     * return immediately, so a caller could not find out whether the port was taken — the failure
+     * was one line in the log, and everything downstream carried on as though audio were being
+     * served. `startAdvertising(servesAudio = true)` then told the room a promise this device could
+     * not keep: peers found it, tapped it, paired with it, and got nothing.
+     *
+     * The common way to fail is [java.net.BindException] with `EADDRINUSE`, which on a developer's
+     * phone means another build of Wanda is installed and already holding 8702. That is worth
+     * saying in those words rather than as "off-grid does not work".
+     */
+    suspend fun start(port: Int = 8702): Result<Unit> {
+        if (isRunning) return Result.success(Unit)
 
         try {
             val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
@@ -329,32 +343,61 @@ class P2PServer @Inject constructor(
             Log.w(TAG, "Could not acquire WifiLock", e)
         }
 
+        val server = withContext(Dispatchers.IO) {
+            runCatching { ServerSocket(port, 50, InetAddress.getByName("0.0.0.0")) }
+        }.getOrElse { error ->
+            Log.e(TAG, "Failed to start P2PServer", error)
+            releaseWifiLock()
+            return Result.failure(bindFailure(port, error))
+        }
+
+        serverSocket = server
+        isRunning = true
+        Log.i(TAG, "P2PServer listening on port $port")
+
         scope.launch {
-            try {
-                val server = ServerSocket(port, 50, InetAddress.getByName("0.0.0.0"))
-                serverSocket = server
-                Log.i(TAG, "P2PServer listening on port $port")
-                while (isRunning && !server.isClosed) {
-                    try {
-                        val client = server.accept()
-                        scope.launch { handleClient(client) }
-                    } catch (e: Exception) {
-                        if (!isRunning) break
-                    }
+            while (isRunning && !server.isClosed) {
+                try {
+                    val client = server.accept()
+                    scope.launch { handleClient(client) }
+                } catch (e: Exception) {
+                    if (!isRunning) break
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to start P2PServer", e)
-                isRunning = false
             }
         }
+        return Result.success(Unit)
+    }
+
+    /**
+     * Why the port could not be taken, in words that name the cause.
+     *
+     * `EADDRINUSE` on this port has one overwhelmingly likely explanation and it is not something
+     * the user can guess: a second build of Wanda — a debug build beside a release one — installed
+     * and running. Both bind 8702, and the second one silently loses.
+     */
+    private fun bindFailure(port: Int, cause: Throwable): Throwable {
+        val inUse = cause is java.net.BindException ||
+            cause.message?.contains("EADDRINUSE", ignoreCase = true) == true
+        val message = if (inUse) {
+            "Port $port is already taken, usually by another copy of Wanda installed on this " +
+                "phone. Close or uninstall the other one and try again."
+        } else {
+            "This phone could not open the port that serves audio: ${cause.message}"
+        }
+        return IOException(message, cause)
+    }
+
+    private fun releaseWifiLock() {
+        try {
+            wifiLock?.release()
+        } catch (ignored: Exception) {
+        }
+        wifiLock = null
     }
 
     fun stop() {
         isRunning = false
-        try {
-            wifiLock?.release()
-        } catch (ignored: Exception) {}
-        wifiLock = null
+        releaseWifiLock()
         try {
             serverSocket?.close()
         } catch (ignored: Exception) {}
