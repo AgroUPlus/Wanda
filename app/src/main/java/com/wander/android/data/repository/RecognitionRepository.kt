@@ -54,7 +54,8 @@ class RecognitionRepository @Inject constructor(
     private val trackDao: TrackDao,
     private val micRecorder: MicRecorder,
     private val fingerprinter: Fingerprinter,
-    private val melodySearch: MelodySearchRepository
+    private val melodySearch: MelodySearchRepository,
+    private val secureStorage: com.wander.android.core.security.SecureStorage
 ) {
 
     val indexedTrackCount: Flow<Int> = fingerprintDao.indexedTrackCountFlow()
@@ -255,6 +256,27 @@ class RecognitionRepository @Inject constructor(
         )
     }
 
+    /**
+     * Throws away an index built by a different version of the algorithm.
+     *
+     * A landmark hash means nothing outside the scheme that produced it: change how peaks are
+     * picked or packed and the stored rows do not match *less well*, they match nothing at all.
+     * Keeping them would leave every track looking indexed while being unfindable — which is worse
+     * than an empty index, because nothing would ever go back and fix it.
+     *
+     * Called before the candidate list is built, so the very next sweep re-reads everything.
+     */
+    internal suspend fun clearIndexIfStale() = withContext(Dispatchers.IO) {
+        if (secureStorage.fingerprintIndexVersion == FINGERPRINT_VERSION) return@withContext
+        Log.i(
+            TAG,
+            "Index was built by version ${secureStorage.fingerprintIndexVersion}, " +
+                "this is $FINGERPRINT_VERSION — starting again"
+        )
+        fingerprintDao.clear()
+        secureStorage.fingerprintIndexVersion = FINGERPRINT_VERSION
+    }
+
     internal suspend fun tracksNeedingIndex(): List<TrackEntity> = withContext(Dispatchers.IO) {
         val depth = fingerprintDao.indexedDepth().associate { it.trackId to it.lastFrame }
         trackDao.getFingerprintableTracks().filter { track ->
@@ -322,6 +344,16 @@ class RecognitionRepository @Inject constructor(
         const val MELODY_SCORE_SCALE = 20
 
         private const val TAG = "Recognition"
+
+        /**
+         * The fingerprint contract.
+         *
+         * Bumped whenever peak picking or hash packing changes. Version 2 replaced a stateful
+         * per-band threshold with a constellation of local maxima, and linear frequency codes with
+         * logarithmic ones — measured against a real microphone capture, that moved the played
+         * track from 11th place to 1st.
+         */
+        const val FINGERPRINT_VERSION = 2
 
         /**
          * How far past the opening window a track's landmarks must reach to count as covered.
