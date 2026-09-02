@@ -85,6 +85,37 @@ class PcmDecoder @Inject constructor() {
         }
     }
 
+    /**
+     * How long [path] is, in seconds, or null when that cannot be read.
+     *
+     * Asked of the container rather than of the library row, because the row is often wrong: a
+     * YouTube Music track arrives with no duration at all, and 175 of them in one real library had
+     * `durationMs = 0`. Anything deciding how much of a track to read from that field silently does
+     * nothing for every one of them.
+     *
+     * Cheap: the extractor reads headers, which for a remote source is one small range request.
+     */
+    fun durationSeconds(path: String, headers: Map<String, String> = emptyMap()): Int? {
+        val extractor = MediaExtractor()
+        return try {
+            if (headers.isEmpty()) extractor.setDataSource(path)
+            else extractor.setDataSource(path, headers)
+            (0 until extractor.trackCount)
+                .map { extractor.getTrackFormat(it) }
+                .firstOrNull { it.getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true }
+                ?.takeIf { it.containsKey(MediaFormat.KEY_DURATION) }
+                ?.getLong(MediaFormat.KEY_DURATION)
+                ?.let { (it / 1_000_000L).toInt() }
+                ?.takeIf { it > 0 }
+        } catch (e: java.io.IOException) {
+            null
+        } catch (e: IllegalArgumentException) {
+            null
+        } finally {
+            extractor.release()
+        }
+    }
+
     private fun decodeTrack(
         extractor: MediaExtractor,
         format: MediaFormat,

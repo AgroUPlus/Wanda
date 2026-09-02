@@ -49,7 +49,8 @@ class FingerprintIndexWorker @AssistedInject constructor(
     private val progress: FingerprintProgress,
     private val notifications: WorkProgressNotification,
     private val workControls: WorkControls,
-    private val musicRepository: MusicRepository
+    private val musicRepository: MusicRepository,
+    private val trackDao: com.wander.android.core.database.dao.TrackDao
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.Default) {
@@ -173,7 +174,17 @@ class FingerprintIndexWorker @AssistedInject constructor(
      * has.
      */
     private suspend fun indexDeeperWindows(track: TrackEntity, source: Pair<String, Map<String, String>>) {
-        val durationSeconds = (track.durationMs / 1000L).toInt()
+        // The row's own duration first, then the container's. A YouTube Music track routinely
+        // arrives with none — 175 of them in one real library — and reading the field alone meant
+        // this returned immediately for every one of them, which is to say it never ran at all.
+        val durationSeconds = (track.durationMs / 1000L).toInt().takeIf { it > 0 }
+            ?: decoder.durationSeconds(source.first, source.second)?.also { measured ->
+                // Written back, so the next sweep can reason about this track without opening it
+                // again — and so everything else that gates on a duration stops seeing zero.
+                trackDao.fillMissingDuration(track.id, measured * 1000L)
+            }
+            ?: return
+
         // Nothing beyond the head to read. The `+ WINDOW_SECONDS` keeps a track that is barely
         // longer than the first pass from being decoded again for a sliver.
         if (durationSeconds <= PcmDecoder.DEFAULT_MAX_SECONDS + WINDOW_SECONDS) return

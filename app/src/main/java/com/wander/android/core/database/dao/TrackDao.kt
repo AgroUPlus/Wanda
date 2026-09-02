@@ -357,6 +357,15 @@ interface TrackDao {
     )
     suspend fun getUnhashedLocalTracks(limit: Int): List<TrackEntity>
 
+    /**
+     * Records a duration read from the audio itself.
+     *
+     * Only ever fills a gap — `durationMs > 0` is left alone — because the source's own answer is
+     * the better one where it exists, and this is measured from whatever the decoder could reach.
+     */
+    @Query("UPDATE tracks SET durationMs = :durationMs WHERE id = :trackId AND (durationMs IS NULL OR durationMs <= 0)")
+    suspend fun fillMissingDuration(trackId: String, durationMs: Long)
+
     @Query("UPDATE tracks SET contentHash = :hash WHERE id = :trackId")
     suspend fun setContentHash(trackId: String, hash: String)
 

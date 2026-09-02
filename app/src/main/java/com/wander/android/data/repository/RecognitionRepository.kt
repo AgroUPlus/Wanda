@@ -258,7 +258,13 @@ class RecognitionRepository @Inject constructor(
      */
     private fun reachesPastTheHead(track: TrackEntity, lastFrame: Int): Boolean {
         val durationSeconds = (track.durationMs / 1000L).toInt()
-        if (durationSeconds <= PcmDecoder.DEFAULT_MAX_SECONDS + SHALLOW_TOLERANCE_SECONDS) {
+        // An unknown length is not evidence of a short track. Treating zero as "nothing deeper to
+        // read" excused exactly the tracks most likely to need re-reading — every YouTube Music row
+        // arrives without one — so it is the depth alone that decides until a length is known. The
+        // indexer measures and records one on its next pass, after which this takes the real answer.
+        if (durationSeconds > 0 &&
+            durationSeconds <= PcmDecoder.DEFAULT_MAX_SECONDS + SHALLOW_TOLERANCE_SECONDS
+        ) {
             return true
         }
         val headEnd =
