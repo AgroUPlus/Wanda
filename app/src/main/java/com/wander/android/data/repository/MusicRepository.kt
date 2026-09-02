@@ -137,7 +137,6 @@ class MusicRepository @Inject constructor(
 
     // ── Playback ────────────────────────────────────────────────────────────────────────────
 
-    /** Called by [com.wander.android.core.playback.StreamResolver] at load time. */
     /**
      * Streams that exist only for as long as the session that produced them.
      *
@@ -149,12 +148,12 @@ class MusicRepository @Inject constructor(
      */
     private val ephemeralStreams = java.util.concurrent.ConcurrentHashMap<String, StreamInfo>()
 
-    /** Registers a stream that only [getStreamInfo] within this session should know about. */
     /** One track as Room holds it, for a caller that has an id and needs its tags. */
     suspend fun trackById(trackId: String): UnifiedTrack? = withContext(Dispatchers.IO) {
         trackDao.getTrackById(trackId)?.toUnifiedTrack()
     }
 
+    /** Registers a stream that only [getStreamInfo] within this session should know about. */
     fun registerEphemeralStream(trackId: String, info: StreamInfo) {
         // A listening session produces one of these per track change; the cap is only here so a
         // very long session cannot grow the map without bound.
@@ -660,10 +659,6 @@ class MusicRepository @Inject constructor(
     /** The backends the user actually has set up, for building per-source Home shelves. */
     fun configuredSources(): List<SourceType> = activeSources().map { it.sourceType }
 
-    /**
-     * Endless radio. Falls back to the user's own most-played tracks when the source has no
-     * similarity API — that is a real playlist, not a placeholder.
-     */
     /**
      * A queue that follows on from [seed].
      *

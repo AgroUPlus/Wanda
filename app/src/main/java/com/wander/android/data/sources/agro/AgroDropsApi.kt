@@ -32,7 +32,7 @@ internal class AgroDropsApi @Inject constructor(
         buildJsonObject { put("limit", limit) }
     ).map { data ->
         (data["inbox"] as? JsonArray).orEmpty().map {
-            decryptDropIfNeeded(it.jsonObject.toDrop())
+            it.jsonObject.toDrop().decryptIfNeeded(identityKeyManager)
         }
     }
 
@@ -43,7 +43,7 @@ internal class AgroDropsApi @Inject constructor(
         buildJsonObject { put("limit", limit) }
     ).map { data ->
         (data["sentDrops"] as? JsonArray).orEmpty().map {
-            decryptDropIfNeeded(it.jsonObject.toDrop())
+            it.jsonObject.toDrop().decryptIfNeeded(identityKeyManager)
         }
     }
 
@@ -114,7 +114,7 @@ internal class AgroDropsApi @Inject constructor(
                 put("isEncrypted", isEncrypted)
             }
         ).mapCatching { data ->
-            data["dropTrack"]?.jsonObject?.toDrop()?.let { decryptDropIfNeeded(it) }
+            data["dropTrack"]?.jsonObject?.toDrop()?.let { it.decryptIfNeeded(identityKeyManager) }
                 ?: error("the server accepted the drop but did not describe it")
         }
     }
@@ -135,19 +135,9 @@ internal class AgroDropsApi @Inject constructor(
             }
         ).mapCatching { data ->
             (data["conversation"] as? JsonArray).orEmpty().map {
-                decryptDropIfNeeded(it.jsonObject.toDrop())
+                it.jsonObject.toDrop().decryptIfNeeded(identityKeyManager)
             }
         }
-
-    private fun decryptDropIfNeeded(drop: AgroDrop): AgroDrop {
-        if (!drop.isEncrypted || drop.noteCiphertext.isNullOrBlank()) return drop
-        return try {
-            val decrypted = identityKeyManager.openNote(drop.noteCiphertext)
-            drop.copy(note = decrypted)
-        } catch (_: Exception) {
-            drop.copy(note = "[Encrypted Note]")
-        }
-    }
 
     /**
      * Reacts to a received drop. A null or blank [emoji] clears the reaction, so tapping the same

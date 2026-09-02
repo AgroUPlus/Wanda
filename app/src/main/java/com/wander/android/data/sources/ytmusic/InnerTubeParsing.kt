@@ -1,5 +1,6 @@
 package com.wander.android.data.sources.ytmusic
 
+import com.wander.android.data.model.UNKNOWN_ARTIST
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
@@ -14,14 +15,6 @@ import java.io.IOException
 internal const val YTM_PREFIX = "ytm:"
 
 /** Walks a chain of object keys, returning null as soon as one is missing. */
-/**
- * What a track is credited to when nothing in the response names anybody.
- *
- * A named constant because it is also a *test*: callers with better information — an album page
- * knows its own artist — check for this value to decide whether a row needs filling in. A literal
- * repeated in six files could not be checked against safely.
- */
-internal const val UNKNOWN_ARTIST = "Unknown Artist"
 
 internal fun JsonElement?.path(vararg keys: String): JsonElement? =
     keys.fold(this) { node, key -> (node as? JsonObject)?.get(key) }

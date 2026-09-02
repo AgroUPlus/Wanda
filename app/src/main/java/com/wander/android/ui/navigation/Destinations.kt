@@ -72,6 +72,7 @@ object Routes {
      * `isPaired` and this is the one social feature that deliberately needs no server.
      */
     const val OFFGRID = "offgrid"
+    const val FINGERPRINTS = "fingerprints"
 
     /**
      * Ids and names both contain `/` and `:` — a `navidrome:al-42` id, an artist called
@@ -135,7 +136,7 @@ object Routes {
      */
     private val withChrome: Set<String> =
         (topLevel + ALBUM + PLAYLIST + ARTIST + PROFILE + MY_PROFILE + SETTINGS + STATS +
-            HISTORY + MERGE_PREVIEW + JAM + JAM_ROUTE + INBOX + CIRCLE + OFFGRID)
+            HISTORY + MERGE_PREVIEW + JAM + JAM_ROUTE + INBOX + CIRCLE + OFFGRID + FINGERPRINTS)
             .map { it.withoutArgs() }
             .toSet()
 

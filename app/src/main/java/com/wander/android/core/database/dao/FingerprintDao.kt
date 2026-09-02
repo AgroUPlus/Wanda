@@ -37,6 +37,16 @@ interface FingerprintDao {
     @Query("SELECT COUNT(DISTINCT trackId) FROM fingerprints")
     fun indexedTrackCountFlow(): kotlinx.coroutines.flow.Flow<Int>
 
+    /**
+     * The ids that have landmarks, as a flow, for the badge on a row to follow.
+     *
+     * Ids rather than a per-row lookup: a list draws thirty rows at a scroll and a query each would
+     * be thirty round trips per frame. This is one query the whole screen shares, and at a few
+     * thousand short strings it is a set the UI can hold.
+     */
+    @Query("SELECT DISTINCT trackId FROM fingerprints")
+    fun indexedTrackIdsFlow(): kotlinx.coroutines.flow.Flow<List<String>>
+
     @Query("DELETE FROM fingerprints")
     suspend fun clear()
 }

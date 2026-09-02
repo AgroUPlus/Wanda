@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.FingerprintStatus
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -41,7 +42,15 @@ fun TrackRow(
      * Whether tapping the row would actually play something. Defaults to the offline rule, so
      * every list dims the same tracks without being told to; the queue passes its own value.
      */
-    enabled: Boolean = track.isPlayableNow()
+    enabled: Boolean = track.isPlayableNow(),
+    /**
+     * Whether this track has been fingerprinted. Null draws nothing at all.
+     *
+     * Null by default so the dozens of lists that have no opinion on it are unchanged, and so the
+     * status is never fetched by a row that is not showing it — see `FingerprintStatusRepository`
+     * on why this arrives as one map for a whole screen rather than a query per row.
+     */
+    fingerprintStatus: FingerprintStatus? = null
 ) {
     // Dimming the whole row rather than each piece: the row is one object, and fading the parts
     // separately made the artwork and the text disagree about how unavailable the track was.
@@ -75,15 +84,23 @@ fun TrackRow(
                 .padding(horizontal = 12.dp)
                 .graphicsLayer { alpha = rowAlpha }
         ) {
-            Text(
-                text = track.title,
-                style = MaterialTheme.typography.titleMedium,
-                color = if (isPlaying) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Clip,
-                modifier = Modifier.scrollingTitle()
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = track.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (isPlaying) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip,
+                    // `weight` rather than the bare scrolling modifier: the dot needs a reserved
+                    // place, and without this a long title would push it off the row entirely.
+                    modifier = Modifier.weight(1f, fill = false).scrollingTitle()
+                )
+                fingerprintStatus?.let {
+                    Spacer(Modifier.width(6.dp))
+                    FingerprintBadge(it)
+                }
+            }
             // No quality badge here: it belongs to the track you are listening to, not to every
             // row in every list. Now Playing is the one place that shows it.
             // The badge leads the subtitle rather than replacing it: which station this is still

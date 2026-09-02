@@ -15,9 +15,12 @@ import android.os.ParcelUuid
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import java.io.IOException
+import kotlin.coroutines.resume
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
  * Finding other Wanda devices in the room, and being findable.
@@ -48,7 +51,7 @@ internal class BleDiscovery @Inject constructor(
     private var advertiseCallback: AdvertiseCallback? = null
 
     /** The refusals worth telling apart, in the words of what the user could do about them. */
-    private fun describe(errorCode: Int): String = when (errorCode) {
+    private fun describeAdvertiseFailure(errorCode: Int): String = when (errorCode) {
         AdvertiseCallback.ADVERTISE_FAILED_DATA_TOO_LARGE ->
             "the beacon does not fit in an advertisement"
         AdvertiseCallback.ADVERTISE_FAILED_FEATURE_UNSUPPORTED ->
@@ -66,13 +69,17 @@ internal class BleDiscovery @Inject constructor(
     /**
      * Starts broadcasting [beacon] until [stopAdvertising].
      *
-     * Returns false when the radio refused — Bluetooth off, permission not granted, or a device
-     * whose chipset does not support peripheral mode, which is a real and unfixable category of
-     * Android device rather than an error to retry.
+     * Suspends until the radio has actually accepted or refused, which is the only way to know.
+     * `startAdvertising` returns `Unit` and reports through its callback, so the obvious
+     * `runCatching { ... }.isSuccess` that used to stand here was always `true` — the feature
+     * reported itself working while the refusal arrived somewhere nobody was reading. The failure
+     * carries the reason: Bluetooth off, permission declined, or a chipset with no peripheral
+     * mode, which is a real and unfixable category of Android device rather than a thing to retry.
      */
     @SuppressLint("MissingPermission")
-    fun advertise(beacon: OffGridBeacon): Boolean {
-        val advertiser = manager?.adapter?.bluetoothLeAdvertiser ?: return false
+    suspend fun advertise(beacon: OffGridBeacon): Result<Unit> {
+        val advertiser = manager?.adapter?.bluetoothLeAdvertiser
+            ?: return Result.failure(IOException("this phone cannot advertise over Bluetooth"))
         stopAdvertising()
 
         val settings = AdvertiseSettings.Builder()
@@ -94,17 +101,34 @@ internal class BleDiscovery @Inject constructor(
             .addServiceData(serviceUuid, beacon.toBytes())
             .build()
 
-        val callback = object : AdvertiseCallback() {
-            override fun onStartFailure(errorCode: Int) {
-                // The empty callback that used to sit here is why this feature failed in perfect
-                // silence: `startAdvertising` is asynchronous, so the call below always "succeeded"
-                // and the refusal arrived here, where nothing was listening. A radio that will not
-                // advertise is the whole feature not working, and it has to say so.
-                Log.w(TAG, "the radio refused to advertise: " + describe(errorCode))
+        return suspendCancellableCoroutine { continuation ->
+            val callback = object : AdvertiseCallback() {
+                override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
+                    if (continuation.isActive) continuation.resume(Result.success(Unit))
+                }
+
+                override fun onStartFailure(errorCode: Int) {
+                    val reason = describeAdvertiseFailure(errorCode)
+                    Log.w(TAG, "the radio refused to advertise: $reason")
+                    // Cleared here, so a refused attempt does not leave a callback registered that
+                    // `stopAdvertising` would later hand back to a radio that never started.
+                    advertiseCallback = null
+                    if (continuation.isActive) continuation.resume(Result.failure(IOException(reason)))
+                }
             }
+            advertiseCallback = callback
+
+            val started = runCatching { advertiser.startAdvertising(settings, data, callback) }
+            if (started.isFailure) {
+                advertiseCallback = null
+                if (continuation.isActive) {
+                    continuation.resume(Result.failure(started.exceptionOrNull()!!))
+                }
+            }
+
+            // A cancelled caller must not leave the radio broadcasting.
+            continuation.invokeOnCancellation { stopAdvertising() }
         }
-        advertiseCallback = callback
-        return runCatching { advertiser.startAdvertising(settings, data, callback) }.isSuccess
     }
 
     @SuppressLint("MissingPermission")
@@ -114,17 +138,30 @@ internal class BleDiscovery @Inject constructor(
         runCatching { manager?.adapter?.bluetoothLeAdvertiser?.stopAdvertising(callback) }
     }
 
+    /** The scan refusals, in the same terms as [describeAdvertiseFailure]. */
+    private fun describeScanFailure(errorCode: Int): String = when (errorCode) {
+        ScanCallback.SCAN_FAILED_ALREADY_STARTED -> "already scanning"
+        ScanCallback.SCAN_FAILED_APPLICATION_REGISTRATION_FAILED -> "the scan could not be registered"
+        ScanCallback.SCAN_FAILED_FEATURE_UNSUPPORTED -> "this chipset cannot scan this way"
+        ScanCallback.SCAN_FAILED_INTERNAL_ERROR -> "internal error"
+        else -> "error $errorCode"
+    }
+
     /**
      * Every Wanda beacon heard, with its signal strength, until the collector goes away.
      *
      * Filtered on the service UUID in the scanner itself rather than in this process: an unfiltered
      * scan wakes the app for every device in range, and in a city that is continuous.
+     *
+     * The flow **fails** when the radio refuses rather than staying open and empty. Those two look
+     * identical on screen — an empty list under "Looking for phones nearby…" — and only one of them
+     * is something the user can do anything about.
      */
     @SuppressLint("MissingPermission")
     fun scan(): Flow<Pair<OffGridBeacon, Int>> = callbackFlow {
         val scanner = manager?.adapter?.bluetoothLeScanner
         if (scanner == null) {
-            close()
+            close(IOException("this phone cannot scan for Bluetooth devices"))
             return@callbackFlow
         }
 
@@ -133,6 +170,12 @@ internal class BleDiscovery @Inject constructor(
                 val payload = result.scanRecord?.getServiceData(serviceUuid)
                 val beacon = OffGridBeacon.fromBytes(payload) ?: return
                 trySend(beacon to result.rssi)
+            }
+
+            override fun onScanFailed(errorCode: Int) {
+                val reason = describeScanFailure(errorCode)
+                Log.w(TAG, "the radio refused to scan: $reason")
+                close(IOException(reason))
             }
         }
 
@@ -150,8 +193,10 @@ internal class BleDiscovery @Inject constructor(
             .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
             .build()
 
-        val started = runCatching { scanner.startScan(listOf(filter), settings, callback) }.isSuccess
-        if (!started) close()
+        // Only the synchronous throw is caught here; an asynchronous refusal arrives at
+        // `onScanFailed` above, which closes the flow with the same kind of cause.
+        runCatching { scanner.startScan(listOf(filter), settings, callback) }
+            .onFailure { close(it) }
 
         awaitClose {
             runCatching { scanner.stopScan(callback) }

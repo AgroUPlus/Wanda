@@ -16,6 +16,7 @@ import com.wander.android.data.sources.agro.AgroHandoffState
 import com.wander.android.data.sources.agro.AgroLiveMessage
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.agro.AgroNode
+import com.wander.android.data.sources.agro.decryptIfNeeded
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -164,15 +165,7 @@ internal class AgroSessionViewModel @Inject constructor(
                     // Stored from the frame rather than re-fetched. The socket closes when the app
                     // leaves the screen, and a round trip is one more thing that might not finish
                     // before it does — the frame already carries the whole drop.
-                    val decrypted = if (message.drop.isEncrypted && !message.drop.noteCiphertext.isNullOrBlank()) {
-                        try {
-                            message.drop.copy(note = identityKeyManager.openNote(message.drop.noteCiphertext))
-                        } catch (e: Exception) {
-                            message.drop
-                        }
-                    } else {
-                        message.drop
-                    }
+                    val decrypted = message.drop.decryptIfNeeded(identityKeyManager)
                     dropsRepository.onPushed(decrypted)
                     friendNotifier.notifyDrop(decrypted)
                 }

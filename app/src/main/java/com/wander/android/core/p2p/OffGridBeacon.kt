@@ -12,11 +12,13 @@ package com.wander.android.core.p2p
  * So it carries the least that still works:
  *
  * ```
- * byte  0      protocol version
- * bytes 1..4   short device id, derived from the identity key
- * bytes 5..12  identity fingerprint, the first 8 bytes of the X25519 public key
- * byte  13     flags — currently only whether this device will serve audio
+ * byte  0     protocol version
+ * bytes 1..8  identity fingerprint, the first 8 bytes of the X25519 public key
+ * byte  9     flags — currently only whether this device will serve audio
  * ```
+ *
+ * Ten bytes, and [deviceId] is not among them: it was the fingerprint's own first four bytes
+ * restated, and the reader derives it back. See [toBytes] for why four bytes were worth reclaiming.
  *
  * The fingerprint is truncated because the advertisement cannot hold a whole key, and it does not
  * need to: it is a *hint* that lets a scanner recognise a device it has paired with before. The

@@ -10,6 +10,9 @@ internal fun LazyListScope.playbackStorageTab(
     cacheBytes: Long,
     onDownloadLiked: () -> Unit,
     onIndexFingerprints: () -> Unit,
+    onOpenFingerprints: () -> Unit,
+    indexOnMobileData: Boolean,
+    onIndexOnMobileDataChange: (Boolean) -> Unit,
     onClearCache: () -> Unit
 ) {
     item(key = "offline") {
@@ -43,6 +46,27 @@ internal fun LazyListScope.playbackStorageTab(
             subtitle = "Lets Wanda recognise your songs and build radios from how they sound. " +
                 "Otherwise this happens on Wi-Fi while charging.",
             onClick = onIndexFingerprints
+        )
+    }
+
+    item(key = "index_on_mobile_data") {
+        SettingsToggle(
+            title = "Measure over mobile data",
+            // The cost stated in the units it is actually paid in. "Uses data" is not something
+            // anyone can weigh; "a minute per song" is.
+            subtitle = "Measuring a streamed song reads about a minute of it. On Wi-Fi that is " +
+                "free, which is why this is off by default.",
+            checked = indexOnMobileData,
+            onCheckedChange = onIndexOnMobileDataChange
+        )
+    }
+
+    item(key = "view_fingerprints") {
+        SettingsRow(
+            title = "What has been measured",
+            subtitle = "See which songs Wanda can recognise and hum-search, and which are still " +
+                "waiting.",
+            onClick = onOpenFingerprints
         )
     }
 
