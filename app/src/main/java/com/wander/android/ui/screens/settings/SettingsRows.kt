@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.wander.android.ui.components.rememberHaptics
 
 @Composable
 fun SettingsSection(title: String) {
@@ -83,12 +84,23 @@ fun SettingsToggle(
     onCheckedChange: (Boolean) -> Unit,
     enabled: Boolean = true
 ) {
+    val haptics = rememberHaptics()
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .then(
-                if (enabled) Modifier.clickable { onCheckedChange(!checked) } else Modifier
+                if (enabled) {
+                    Modifier.clickable {
+                        // The row and the switch are one control, so the tick fires here rather
+                        // than only on the `Switch` — tapping the label must feel like tapping the
+                        // switch, because it is.
+                        haptics.toggled(!checked)
+                        onCheckedChange(!checked)
+                    }
+                } else {
+                    Modifier
+                }
             )
             .padding(horizontal = 20.dp, vertical = 10.dp)
     ) {

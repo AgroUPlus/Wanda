@@ -7,6 +7,8 @@ import com.wander.android.core.audio.melody.PitchDetector
 import com.wander.android.core.database.dao.MelodyContourDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.MelodyContourEntity
+import android.util.Log
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -55,10 +57,20 @@ class MelodySearchRepository @Inject constructor(
      */
     suspend fun search(samples: FloatArray, limit: Int = MAX_RESULTS): List<MelodyMatch> {
         val query = contourOf(samples)
-        if (query.size < MelodyContour.MIN_NOTES) return emptyList()
+        if (query.size < MIN_QUERY_NOTES) {
+            // Logged, like every other way this returns nothing. All four were silent and
+            // indistinguishable, so "it didn't find my song" could not be told from "it has never
+            // measured your songs" by anybody, including from a bug report.
+            Log.i(TAG, "No search: the hum gave ${query.size} notes, $MIN_QUERY_NOTES needed")
+            return emptyList()
+        }
 
         val stored = withContext(Dispatchers.IO) { contourDao.getAll(CONTOUR_VERSION) }
-        if (stored.isEmpty()) return emptyList()
+        if (stored.isEmpty()) {
+            Log.i(TAG, "No search: no track on this device has a melody contour yet")
+            return emptyList()
+        }
+        Log.i(TAG, "Humming ${query.size} notes against ${stored.size} measured tracks")
 
         return withContext(Dispatchers.Default) {
             val scored = stored
@@ -73,15 +85,24 @@ class MelodySearchRepository @Inject constructor(
                 }
                 .filter { it.distance <= ContourMatcher.MAX_DISTANCE }
                 .sortedBy { it.distance }
+            Log.i(TAG, "${scored.size} of ${stored.size} fitted within the distance limit")
 
             // The same margin rule the landmark engine applies. Two melodies fitting equally well
             // is common — a song and its own chorus repeated, two tracks sharing a cadence — and
             // naming one of them would be a guess wearing a result's clothes.
-            val best = scored.firstOrNull() ?: return@withContext emptyList()
-            val runnerUp = scored.getOrNull(1)
-            if (runnerUp != null && runnerUp.distance < best.distance * ContourMatcher.MIN_MARGIN) {
+            val best = scored.firstOrNull() ?: run {
+                Log.i(TAG, "Nothing fitted well enough to name")
                 return@withContext emptyList()
             }
+            val runnerUp = scored.getOrNull(1)
+            if (runnerUp != null && runnerUp.distance < best.distance * ContourMatcher.MIN_MARGIN) {
+                Log.i(
+                    TAG,
+                    "Refused as ambiguous: best ${best.distance}, runner-up ${runnerUp.distance}"
+                )
+                return@withContext emptyList()
+            }
+            Log.i(TAG, "Best fit ${best.trackId} at distance ${best.distance}")
             scored.take(limit)
         }
     }
@@ -111,19 +132,54 @@ class MelodySearchRepository @Inject constructor(
 
     suspend fun clearIndex() = withContext(Dispatchers.IO) { contourDao.clear() }
 
+    /**
+     * How many tracks can be found by humming.
+     *
+     * Its own number, and deliberately not the landmark count. The two indexes are built by the
+     * same pass but a track can easily be in one and not the other, so telling somebody "none of
+     * your 103 tracks matched" after a *hum* names a set the hum was never searching.
+     */
+    val hummableTrackCount: kotlinx.coroutines.flow.Flow<Int> =
+        contourDao.indexedTrackIdsFlow(CONTOUR_VERSION).map { it.size }
+
     private fun contourOf(samples: FloatArray) = MelodyContour.fromPitchTrack(
         pitches = pitchDetector.track(samples),
         framesPerSecond = AudioFormat.FRAMES_PER_SECOND
     )
 
-    private companion object {
+    internal companion object {
         /**
-         * The contour contract. Bumped when note segmentation changes — a stored contour and a
-         * freshly measured one must have been cut into notes the same way, or the comparison is
-         * between two different alphabets.
+         * The contour contract. Bumped when note segmentation *or the pitch track under it*
+         * changes — a stored contour and a freshly measured one must have been cut into notes the
+         * same way, or the comparison is between two different alphabets.
+         *
+         * Version 2 folds octave slips out of the pitch track before segmenting. A quarter of the
+         * intervals in the version 1 contours were jumps of eleven semitones or more, which is the
+         * detector doubling a period rather than a tune moving, so the stored shapes were not
+         * comparable with a hum whatever the thresholds said.
+         *
+         * Visible past this class because the fingerprint badge asks the same question the search
+         * does — "is there a contour at the current version" — and a badge reading a stale version
+         * would call a track indexed that the search cannot use.
          */
-        const val CONTOUR_VERSION = 1
+        const val CONTOUR_VERSION = 2
 
         const val MAX_RESULTS = 5
+
+        /**
+         * How many notes a *query* must have. Far more than a stored contour needs to be valid.
+         *
+         * The matcher aligns a subsequence: the hum may start anywhere in the stored melody and end
+         * anywhere after it, which is the only way somebody humming a chorus can match a whole
+         * track. The cost of that freedom is that a short query matches everything — with four
+         * notes there is a close-enough run of four somewhere in almost any song, and a real
+         * library duly reported all 71 measured tracks as fitting within the distance limit.
+         *
+         * Twelve notes is a few seconds of an actual tune, and long enough that finding it by
+         * coincidence in an unrelated melody is not something that just happens.
+         */
+        const val MIN_QUERY_NOTES = 12
+
+        private const val TAG = "MelodySearch"
     }
 }

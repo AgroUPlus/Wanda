@@ -17,6 +17,7 @@ navigationCompose = "2.9.8"
 media3 = "1.11.0"
 zxing-core = "3.5.3"
 room = "2.8.4"
+paging = "3.3.6"
 ktor = "3.5.2"
 androidxWebkit = "1.12.1"
 workManager = "2.11.2"
@@ -65,6 +66,9 @@ androidx-media3-exoplayer-hls = { module = "androidx.media3:media3-exoplayer-hls
 androidx-media3-session = { module = "androidx.media3:media3-session", version.ref = "media3" }
 androidx-media3-datasource-okhttp = { module = "androidx.media3:media3-datasource-okhttp", version.ref = "media3" }
 
+androidx-room-paging = { module = "androidx.room:room-paging", version.ref = "room" }
+androidx-paging-runtime = { module = "androidx.paging:paging-runtime", version.ref = "paging" }
+androidx-paging-compose = { module = "androidx.paging:paging-compose", version.ref = "paging" }
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }

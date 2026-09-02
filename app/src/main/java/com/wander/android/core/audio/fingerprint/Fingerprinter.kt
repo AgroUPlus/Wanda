@@ -37,41 +37,48 @@ class Fingerprinter @Inject constructor() {
     fun fingerprint(samples: FloatArray): List<Landmark> = pair(peaks(samples))
 
     /**
-     * The peaks, band by band.
+     * The peaks, as a constellation of local maxima.
      *
-     * Bands are logarithmic because pitch is: a fixed-width band would give the top octave as much
-     * of the spectrum as the bottom four combined, and a bass line and a cymbal would compete for
-     * the same slot. One peak per band per frame also spreads the fingerprint across the spectrum
-     * rather than letting whatever is loudest — usually the kick drum — supply every landmark.
+     * ## Why not a threshold that decays
      *
-     * Each band keeps a threshold that is set by the last peak it emitted and decays from there.
-     * That is what makes a fingerprint survive a microphone. The obvious alternatives both fail:
-     * a threshold taken from the whole recording's average moves when the recording gets quieter,
-     * so a room-level excerpt keeps a *different* set of peaks than the file did; and requiring a
-     * peak to beat its neighbours in time drops sustained notes entirely except where noise
-     * happens to tip one frame over another, which is not repeatable between two recordings of the
-     * same music. A decaying threshold is relative to what this band just did, so halving the
-     * level of everything leaves the peaks where they were — which is exactly the property
-     * matching needs.
+     * The previous version kept one threshold per frequency band, set by the last peak that band
+     * emitted and decaying from there. It reads well — it is relative to what the band just did,
+     * so halving the level of everything leaves the peaks where they were — and it does not work,
+     * because it is *stateful*. Two recordings of the same passage arrive with different histories
+     * (a different starting instant, a room's noise, a speaker's colouration), the thresholds walk
+     * apart, and the two fingerprints stop agreeing about which moments were peaks at all.
+     *
+     * Measured on a Pixel listening to a phone playing music beside it: of the hashes in the file's
+     * fingerprint for those six seconds, the microphone's fingerprint shared **14.7%**. The track
+     * being played came 11th against an index of two dozen tracks including itself.
+     *
+     * A local maximum has no history. A point is a peak if nothing within [NEIGHBOUR_FRAMES] in
+     * time and [NEIGHBOUR_BINS] in frequency is louder, which is a question about the music and
+     * not about what happened a moment ago — so both recordings answer it the same way. It is what
+     * Shazam's constellation map is, and the comment this replaces dismissed it for a reason that
+     * does not survive being tested: sustained notes are not dropped, because a sustained note is
+     * still a ridge with a maximum along it.
+     *
+     * ## Whitening
+     *
+     * The per-bin mean is subtracted first. A speaker and a microphone each impose a fixed tilt on
+     * the spectrum, and the tilt is exactly what a comparison of absolute magnitudes across bins
+     * mistakes for content. Removing each bin's own average over the clip removes the tilt and
+     * leaves what varies, which is the music.
+     *
+     * The strongest [PEAKS_PER_SECOND] survive. A density target rather than a magnitude threshold,
+     * because how loud a peak has to be to be interesting depends entirely on the recording.
      */
     fun peaks(samples: FloatArray): List<Peak> {
         val frameCount = (samples.size - AudioFormat.FRAME_SIZE) / AudioFormat.HOP_SIZE + 1
         if (frameCount <= 0) return emptyList()
 
-        // Per call, not per instance. One `Fingerprinter` is shared by the indexing worker and the
-        // listening sheet — `RecognitionRepository` is a singleton and holds exactly one — so
-        // instance-level scratch buffers were a data race that silently corrupted both
-        // fingerprints whenever an index run overlapped someone tapping the note. Three arrays per
-        // call is nothing against the transform they feed.
+        // Per call, not per instance: one `Fingerprinter` is shared by the indexing worker and the
+        // listening sheet, and instance-level scratch was a data race that silently corrupted both
+        // fingerprints whenever an index run overlapped somebody tapping the note.
         val real = FloatArray(AudioFormat.FRAME_SIZE)
         val imag = FloatArray(AudioFormat.FRAME_SIZE)
-
-        val bandCount = BAND_EDGES.size - 1
-        // Nothing has been heard yet, so the first frame of each band always sets its own level
-        // rather than being judged against a number chosen in advance.
-        val thresholds = FloatArray(bandCount) { Float.NEGATIVE_INFINITY }
-        val found = mutableListOf<Peak>()
-        val magnitudes = FloatArray(AudioFormat.BIN_COUNT)
+        val spectrogram = Array(frameCount) { FloatArray(AudioFormat.BIN_COUNT) }
 
         for (frame in 0 until frameCount) {
             val start = frame * AudioFormat.HOP_SIZE
@@ -80,36 +87,98 @@ class Fingerprinter @Inject constructor() {
                 imag[i] = 0f
             }
             Fft.transform(real, imag)
+            val row = spectrogram[frame]
             for (bin in 0 until AudioFormat.BIN_COUNT) {
                 // Log magnitude: loudness is perceived logarithmically, and on a linear scale a
-                // quiet passage produces no peaks worth the name while a loud one produces only
-                // the bass. The epsilon keeps silence finite rather than -inf.
+                // quiet passage produces no peaks worth the name. The epsilon keeps silence finite.
                 val power = real[bin] * real[bin] + imag[bin] * imag[bin]
-                magnitudes[bin] = ln(sqrt(power) + 1e-9f)
-            }
-
-            for (band in 0 until bandCount) {
-                var bestBin = -1
-                var bestMagnitude = Float.NEGATIVE_INFINITY
-                for (bin in BAND_EDGES[band] until BAND_EDGES[band + 1]) {
-                    if (magnitudes[bin] > bestMagnitude) {
-                        bestMagnitude = magnitudes[bin]
-                        bestBin = bin
-                    }
-                }
-                if (bestBin < 0) continue
-
-                if (bestMagnitude >= thresholds[band]) {
-                    found += Peak(frame, bestBin, bestMagnitude)
-                    thresholds[band] = bestMagnitude
-                }
-                // Decays whether or not a peak fired, so a band that has gone quiet becomes
-                // sensitive again instead of staying latched to a level that has passed.
-                thresholds[band] -= THRESHOLD_DECAY
+                row[bin] = ln(sqrt(power) + 1e-9f)
             }
         }
-        return found
+
+        // Whitening: each bin loses its own average over the clip.
+        for (bin in 0 until AudioFormat.BIN_COUNT) {
+            var sum = 0.0
+            for (frame in 0 until frameCount) sum += spectrogram[frame][bin]
+            val mean = (sum / frameCount).toFloat()
+            for (frame in 0 until frameCount) spectrogram[frame][bin] -= mean
+        }
+
+        // A separable maximum filter, not a scan of the whole neighbourhood per point. The direct
+        // form is `frames x bins x (2dt+1) x (2df+1)` comparisons — around 128 million for a single
+        // minute of audio, which took the indexer from a couple of seconds a track to over two
+        // minutes. Because a maximum over a rectangle is the maximum along one axis of the maxima
+        // along the other, the same answer comes out of two linear passes.
+        val neighbourhoodMax = maxFilter(spectrogram, frameCount)
+
+        val found = mutableListOf<Peak>()
+        for (frame in 0 until frameCount) {
+            val row = spectrogram[frame]
+            val limit = neighbourhoodMax[frame]
+            for (bin in 1 until AudioFormat.BIN_COUNT) {
+                // Equality rather than a strict comparison: this point *is* the maximum of its
+                // neighbourhood. A plateau marks more than one point, which costs nothing — the
+                // density cap below keeps the strongest and they are the same strength.
+                if (row[bin] >= limit[bin]) found += Peak(frame, bin, row[bin])
+            }
+        }
+
+        // A density target, not a level: the strongest survive, and how many that is follows the
+        // length of the clip so a six-second query and a whole track are described alike.
+        val keep = (PEAKS_PER_SECOND * frameCount / AudioFormat.FRAMES_PER_SECOND).toInt()
+        if (found.size <= keep) return found.sortedBy { it.frame }
+        return found.sortedByDescending { it.magnitude }
+            .take(keep)
+            .sortedBy { it.frame }
     }
+
+    /**
+     * The maximum of each point's neighbourhood, as two linear passes.
+     *
+     * Frequency first, then time. Each pass is a sliding-window maximum over a monotonic deque, so
+     * every value enters and leaves once however wide the window is — the cost does not depend on
+     * [NEIGHBOUR_BINS] or [NEIGHBOUR_FRAMES] at all.
+     */
+    private fun maxFilter(spectrogram: Array<FloatArray>, frameCount: Int): Array<FloatArray> {
+        val bins = AudioFormat.BIN_COUNT
+        val byFrequency = Array(frameCount) { FloatArray(bins) }
+        for (frame in 0 until frameCount) {
+            slidingMax(spectrogram[frame], byFrequency[frame], NEIGHBOUR_BINS)
+        }
+
+        val result = Array(frameCount) { FloatArray(bins) }
+        val column = FloatArray(frameCount)
+        val out = FloatArray(frameCount)
+        for (bin in 0 until bins) {
+            for (frame in 0 until frameCount) column[frame] = byFrequency[frame][bin]
+            slidingMax(column, out, NEIGHBOUR_FRAMES)
+            for (frame in 0 until frameCount) result[frame][bin] = out[frame]
+        }
+        return result
+    }
+
+    /** `destination[i]` is the largest of `source[i - radius .. i + radius]`. */
+    private fun slidingMax(source: FloatArray, destination: FloatArray, radius: Int) {
+        val n = source.size
+        if (n == 0) return
+        // Indices of candidates, values strictly decreasing: anything smaller than a later arrival
+        // can never be the maximum of a window that contains both.
+        val deque = IntArray(n)
+        var head = 0
+        var tail = 0
+        for (i in 0 until n + radius) {
+            if (i < n) {
+                while (tail > head && source[deque[tail - 1]] <= source[i]) tail--
+                deque[tail++] = i
+            }
+            val centre = i - radius
+            if (centre >= 0) {
+                while (deque[head] < centre - radius) head++
+                destination[centre] = source[deque[head]]
+            }
+        }
+    }
+
 
     /**
      * Pairs each peak with the few that follow it, inside a window ahead in time.
@@ -142,23 +211,28 @@ class Fingerprinter @Inject constructor() {
     }
 
     private companion object {
-        /**
-         * Band edges in FFT bins, roughly logarithmic over 0–4 kHz.
-         *
-         * Six bands: bass, low-mid, mid, high-mid, presence, air.
-         */
-        val BAND_EDGES = intArrayOf(1, 10, 20, 40, 80, 160, 512)
+        /** Half-height of the neighbourhood a peak must dominate, in frames (~96 ms either side). */
+        const val NEIGHBOUR_FRAMES = 3
+
+        /** And in bins (~70 Hz either side). Wide enough that one note yields one peak, not five. */
+        const val NEIGHBOUR_BINS = 9
 
         /**
-         * How fast a band's threshold falls, in log-magnitude units per frame.
+         * How many peaks a second of audio keeps.
          *
-         * The one knob controlling how many landmarks a recording produces. Too slow and a loud
-         * passage silences the band behind it for seconds; too fast and every frame fires, which
-         * bloats the index without adding information.
+         * Chosen by measurement rather than taste: swept against a real microphone capture of a
+         * known track, 45 gave the best separation for the smallest index. Higher finds a few more
+         * matches and costs proportionally more rows; lower starts losing quiet passages.
          */
-        const val THRESHOLD_DECAY = 0.08f
+        const val PEAKS_PER_SECOND = 45
 
-        /** Targets paired per anchor. */
-        const val FAN_OUT = 4
+        /**
+         * Targets paired per anchor.
+         *
+         * Six rather than four, and rather than the ten a larger fan would allow: measured, ten
+         * raised the true match's score but raised everything else's more — a clip of a *different*
+         * track named this one third instead of seventeenth.
+         */
+        const val FAN_OUT = 6
     }
 }

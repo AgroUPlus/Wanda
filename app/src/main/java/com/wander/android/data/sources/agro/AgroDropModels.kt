@@ -15,6 +15,24 @@ import androidx.compose.runtime.Immutable
  * something here.
  */
 @Immutable
+/**
+ * One sealed copy of a note, and the device it was sealed for.
+ *
+ * A note is sealed once per device key rather than once for the account, because a drop sealed to
+ * a single key is readable by a single device — which used to mean the recipient's newest phone
+ * and nobody else, the sender included.
+ */
+internal data class AgroSealedNote(
+    val deviceId: String,
+    val ciphertext: String
+)
+
+/** A device's published identity key, as `deviceKeys` answers it. */
+internal data class AgroDeviceKey(
+    val deviceId: String,
+    val publicKey: String
+)
+
 internal data class AgroDrop(
     val id: String,
     /** Who sent it. Empty on a drop this account sent, where [toUser] is the interesting end. */
@@ -27,7 +45,10 @@ internal data class AgroDrop(
     val contentHash: String?,
     val trackUri: String?,
     val note: String?,
+    /** The recipient's copy alone. Older servers send only this; prefer [noteCiphertexts]. */
     val noteCiphertext: String? = null,
+    /** Every sealed copy, including the sender's own. Empty against a server without the list. */
+    val noteCiphertexts: List<AgroSealedNote> = emptyList(),
     val isEncrypted: Boolean = false,
     val createdAt: String,
     /**

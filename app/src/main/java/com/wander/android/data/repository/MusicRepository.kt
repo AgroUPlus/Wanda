@@ -14,6 +14,10 @@ import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.map
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.model.isOneShotTrackId
 import com.wander.android.data.model.isPlayableOffline
@@ -30,6 +34,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 
 /**
@@ -87,8 +92,6 @@ class MusicRepository @Inject constructor(
 
     // ── Library reads (always from Room, so they work offline) ──────────────────────────────
 
-    fun getAllTracksFlow(): Flow<List<UnifiedTrack>> =
-        trackDao.getAllTracksFlow().mapToTracks()
 
     fun getLikedTracksFlow(): Flow<List<UnifiedTrack>> =
         trackDao.getLikedTracksFlow().mapToTracks()
@@ -118,12 +121,44 @@ class MusicRepository @Inject constructor(
         trackDao.getOfflineTracksOnce().map(TrackEntity::toUnifiedTrack)
     }
 
-    fun getTracksBySourceFlow(source: SourceType): Flow<List<UnifiedTrack>> =
-        trackDao.getTracksBySourceFlow(source).mapToTracks()
+
+    /**
+     * The library, a page at a time, optionally narrowed to one source.
+     *
+     * The mapping to [UnifiedTrack] happens per page rather than per emission, which is the whole
+     * saving: a write to `tracks` used to re-map every row in the library, and there are a thousand
+     * of them.
+     */
+    fun pagedLibraryTracks(source: SourceType?): Flow<PagingData<UnifiedTrack>> = Pager(
+        // A page comfortably larger than a screenful, so scrolling does not sit at the edge of a
+        // fetch; `enablePlaceholders = false` because the row heights are uniform and a placeholder
+        // buys nothing a skeleton does not already do better.
+        config = PagingConfig(pageSize = PAGE_SIZE, enablePlaceholders = false),
+        pagingSourceFactory = {
+            if (source == null) trackDao.pagedTracks() else trackDao.pagedTracksBySource(source)
+        }
+    ).flow.map { page -> page.map(TrackEntity::toUnifiedTrack) }
+
+    /**
+     * The ids the library list is showing, in its order, for building a queue from a tap.
+     *
+     * Suspending and fetched on demand rather than held: this is needed once per tap, and keeping
+     * it in memory to avoid a query would reintroduce the always-loaded list paging just removed.
+     */
+    /** The rows behind a set of ids, for turning a page's tap into a queue. */
+    suspend fun tracksByIds(ids: List<String>): List<UnifiedTrack> = withContext(Dispatchers.IO) {
+        trackDao.getTracksByIds(ids).map(TrackEntity::toUnifiedTrack)
+    }
+
+    suspend fun libraryTrackIds(source: SourceType?): List<String> = withContext(Dispatchers.IO) {
+        if (source == null) trackDao.libraryTrackIds() else trackDao.libraryTrackIdsBySource(source)
+    }
 
     /** The Library tab's albums: records you have, not records you have looked at. */
     fun getAlbumsFlow(): Flow<List<UnifiedAlbum>> =
-        albumDao.getLibraryAlbumsFlow().map { list -> list.map(AlbumEntity::toUnifiedAlbum) }
+        albumDao.getLibraryAlbumsFlow()
+            .map { list -> list.map(AlbumEntity::toUnifiedAlbum) }
+            .flowOn(Dispatchers.Default)
 
     /** Album ids in the order they were most recently added to. See [TrackDao.observeRecentlyAddedAlbumIds]. */
     fun getRecentlyAddedAlbumIdsFlow(limit: Int = 12): Flow<List<String>> =
@@ -132,12 +167,24 @@ class MusicRepository @Inject constructor(
     fun getAlbumTracksFlow(albumId: String): Flow<List<UnifiedTrack>> =
         trackDao.getTracksByAlbumFlow(albumId).mapToTracks()
 
+    /**
+     * Entities to models, off the main thread.
+     *
+     * The `flowOn` is the whole point of this helper now. Every one of these flows is consumed by a
+     * `stateIn(viewModelScope)`, which collects on `Dispatchers.Main.immediate` — so without it the
+     * conversion ran on the UI thread, and the Library screen holds four of them at once (liked,
+     * offline, history, albums). Any write to `tracks` re-emitted all four and re-mapped every row
+     * of each, on the thread that was trying to draw the scroll.
+     *
+     * Paging fixed this for the Tracks tab and only for the Tracks tab. The other lists were never
+     * paged — they are tens of rows and do not need to be — but they were still being converted in
+     * the wrong place.
+     */
     private fun Flow<List<TrackEntity>>.mapToTracks() =
-        map { list -> list.map(TrackEntity::toUnifiedTrack) }
+        map { list -> list.map(TrackEntity::toUnifiedTrack) }.flowOn(Dispatchers.Default)
 
     // ── Playback ────────────────────────────────────────────────────────────────────────────
 
-    /** Called by [com.wander.android.core.playback.StreamResolver] at load time. */
     /**
      * Streams that exist only for as long as the session that produced them.
      *
@@ -149,12 +196,12 @@ class MusicRepository @Inject constructor(
      */
     private val ephemeralStreams = java.util.concurrent.ConcurrentHashMap<String, StreamInfo>()
 
-    /** Registers a stream that only [getStreamInfo] within this session should know about. */
     /** One track as Room holds it, for a caller that has an id and needs its tags. */
     suspend fun trackById(trackId: String): UnifiedTrack? = withContext(Dispatchers.IO) {
         trackDao.getTrackById(trackId)?.toUnifiedTrack()
     }
 
+    /** Registers a stream that only [getStreamInfo] within this session should know about. */
     fun registerEphemeralStream(trackId: String, info: StreamInfo) {
         // A listening session produces one of these per track change; the cap is only here so a
         // very long session cannot grow the map without bound.
@@ -661,10 +708,6 @@ class MusicRepository @Inject constructor(
     fun configuredSources(): List<SourceType> = activeSources().map { it.sourceType }
 
     /**
-     * Endless radio. Falls back to the user's own most-played tracks when the source has no
-     * similarity API — that is a real playlist, not a placeholder.
-     */
-    /**
      * A queue that follows on from [seed].
      *
      * The candidates are what they have always been — the source's own radio where the backend has
@@ -722,6 +765,9 @@ class MusicRepository @Inject constructor(
     }
 
     private companion object {
+        /** Comfortably more than a screenful, so scrolling never sits at the edge of a fetch. */
+        const val PAGE_SIZE = 60
+
         /** Roughly a very long listening session's worth of track changes. */
         const val MAX_EPHEMERAL_STREAMS = 256
 

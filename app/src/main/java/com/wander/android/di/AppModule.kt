@@ -44,7 +44,7 @@ object AppModule {
                     super.onOpen(db)
                     runCatching {
                         db.execSQL("DELETE FROM tracks WHERE source = 'INTERNET_ARCHIVE'")
-                        db.execSQL("DELETE FROM album_entities WHERE source = 'INTERNET_ARCHIVE'")
+                        db.execSQL("DELETE FROM albums WHERE source = 'INTERNET_ARCHIVE'")
                     }
                 }
             })

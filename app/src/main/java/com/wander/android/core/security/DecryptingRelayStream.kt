@@ -32,7 +32,27 @@ internal class DecryptingRelayStream(
             filled += read
         }
         if (filled < magic.size || !RelayStreamFraming.isFramed(magic)) {
-            throw IOException("Relay stream is not an encrypted Wanda stream")
+            // The diagnostic goes in the message, not into `android.util.Log`. This class is one of
+            // the few in the audio path that can be constructed on the JVM, and reaching for the
+            // Android logger here would throw "not mocked" in its own unit test — trading a tested
+            // invariant for a log line. Whoever catches this logs it anyway.
+            //
+            // Three different failures used to render as one sentence and could not be told apart:
+            // nothing arrived, an HTTP error body arrived where audio was expected, or real bytes
+            // arrived without the framing that says they are encrypted. The first eight bytes
+            // separate all three.
+            val ascii = String(magic, 0, filled, Charsets.ISO_8859_1)
+                .map { if (it.code in 32..126) it else '.' }
+                .joinToString("")
+            val hex = magic.copyOf(filled).joinToString("") { "%02x".format(it) }
+            throw IOException(
+                if (filled == 0) {
+                    "The peer sent nothing for this track."
+                } else {
+                    "Relay stream is not an encrypted Wanda stream: " +
+                        "read $filled of ${magic.size} bytes, hex=$hex ascii=\"$ascii\""
+                }
+            )
         }
     }
 

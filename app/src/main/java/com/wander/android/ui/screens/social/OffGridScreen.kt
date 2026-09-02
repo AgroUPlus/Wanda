@@ -32,12 +32,15 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.core.p2p.NearbyPeers
+import com.wander.android.core.p2p.OffGridLink
 import com.wander.android.core.permissions.rememberNearbyGate
 import com.wander.android.ui.components.headerInset
+import com.wander.android.ui.components.rememberHaptics
 import com.wander.android.ui.components.listInset
 
 /**
@@ -58,9 +61,12 @@ internal fun OffGridScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val withNearby = rememberNearbyGate()
+    val haptics = rememberHaptics()
 
-    // Not `stop()` on every recomposition — only when the screen is actually leaving.
-    DisposableEffect(Unit) { onDispose { viewModel.stop() } }
+    // Only the scan is tied to the screen. Tearing the link down here is what made off-grid
+    // unusable: connecting and then walking to the player to play something killed the link on
+    // the way out. "Stop sharing" is the gesture that ends it, and it is the only one.
+    DisposableEffect(Unit) { onDispose { viewModel.onScreenLeft() } }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -74,7 +80,12 @@ internal fun OffGridScreen(
             }
             Text(
                 text = "Off-grid",
+                // Weighted explicitly, because `displaySmall` is W400 in Material 3. At this size
+                // a normal weight reads *lighter* than the W500 `titleLarge` headings elsewhere in
+                // the app despite being much bigger, which is why this title looked unemphasised
+                // next to its own siblings.
                 style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = 4.dp)
             )
         }
@@ -122,10 +133,35 @@ internal fun OffGridScreen(
                         Button(
                             // The permissions are asked at this tap, where the screen above says
                             // what they are for. Denied, the action still runs and reports honestly.
-                            onClick = { withNearby { viewModel.startSharing() } },
+                            onClick = {
+                                // `confirmed`, not `toggled`: this does not flip a switch, it asks
+                                // two radios to start and may take seconds to show anything. The
+                                // tick acknowledges the tap while the screen still looks unchanged.
+                                haptics.confirmed()
+                                withNearby { viewModel.startSharing() }
+                            },
                             shapes = ButtonDefaults.shapes()
                         ) { Text("Be findable") }
                     }
+                }
+            }
+
+            // Above the room list and outside the `isAdvertising` guard, because being connected
+            // to is not conditional on still advertising — and the phone that was tapped may never
+            // have opened this screen before the link existed.
+            if (state.links.isNotEmpty()) {
+                item(key = "links_header") { SectionHeader("Connected") }
+                items(state.links, key = { "link-${it.deviceId}" }) { link ->
+                    ConnectedRow(link = link, onDisconnect = viewModel::disconnect)
+                }
+                item(key = "listen_along") {
+                    ListenAlongRow(
+                        isFollowing = state.isFollowing,
+                        nowPlaying = state.followingNowPlaying,
+                        unresolvable = state.followingUnresolvable,
+                        onStart = viewModel::listenAlongOffGrid,
+                        onStop = viewModel::stopListenAlong
+                    )
                 }
             }
 
@@ -137,7 +173,7 @@ internal fun OffGridScreen(
                 items(state.peers, key = { it.beacon.deviceId }) { peer ->
                     PeerRow(
                         peer = peer,
-                        isLinked = state.linkedTo == peer.beacon.deviceId,
+                        isLinked = state.isLinkedTo(peer.beacon.deviceId),
                         isBusy = state.isConnecting,
                         onClick = { viewModel.connect(peer) }
                     )
@@ -233,6 +269,83 @@ private fun PeerRow(
         }
     }
 }
+
+/**
+ * Following what the linked peer plays, with no server in between.
+ *
+ * Its own row rather than a button on the link, because following is a separate decision from being
+ * connected: a link is also what a peer uses to fetch tracks from *you*, and the two should not be
+ * one switch.
+ */
+@Composable
+private fun ListenAlongRow(
+    isFollowing: Boolean,
+    nowPlaying: String?,
+    unresolvable: String?,
+    onStart: () -> Unit,
+    onStop: () -> Unit
+) {
+    ListItem(
+        headlineContent = { Text(if (isFollowing) "Listening along" else "Listen along") },
+        supportingContent = {
+            Text(
+                when {
+                    // Named rather than hidden: the listener should know the peer moved on to
+                    // something this phone has no copy of, which off-grid it cannot go and fetch.
+                    unresolvable != null -> "Can't find \"$unresolvable\" on this phone"
+                    nowPlaying != null -> nowPlaying
+                    isFollowing -> "Waiting for them to play something"
+                    else -> "Play whatever the linked device plays"
+                }
+            )
+        },
+        leadingContent = { Icon(Icons.Rounded.BluetoothSearching, contentDescription = null) },
+        modifier = Modifier.fillMaxWidth()
+    )
+    Row(modifier = Modifier.padding(start = 56.dp, end = 20.dp, bottom = 8.dp)) {
+        FilledTonalButton(
+            onClick = if (isFollowing) onStop else onStart,
+            shapes = ButtonDefaults.shapes()
+        ) { Text(if (isFollowing) "Stop following" else "Listen along") }
+    }
+}
+
+/**
+ * A live link, on whichever phone is reading it.
+ *
+ * Says which way it was made, because the two are not the same thing to the person holding the
+ * phone: one of them chose this, the other was chosen. The device that was tapped previously had
+ * no row at all — it served audio to a stranger with nothing on screen to say so, and no way to
+ * stop it short of leaving the screen.
+ */
+@Composable
+private fun ConnectedRow(
+    link: OffGridLink,
+    onDisconnect: (OffGridLink) -> Unit
+) {
+    ListItem(
+        headlineContent = { Text("Device " + shortId(link.deviceId)) },
+        supportingContent = {
+            Text(
+                when (link.role) {
+                    OffGridLink.Role.INITIATED -> "Connected, encrypted"
+                    OffGridLink.Role.ACCEPTED -> "Connected to you, encrypted"
+                }
+            )
+        },
+        leadingContent = { Icon(Icons.Rounded.Lock, contentDescription = null) },
+        modifier = Modifier.fillMaxWidth()
+    )
+    Row(modifier = Modifier.padding(start = 56.dp, end = 20.dp, bottom = 8.dp)) {
+        FilledTonalButton(
+            onClick = { onDisconnect(link) },
+            shapes = ButtonDefaults.shapes()
+        ) { Text("Disconnect") }
+    }
+}
+
+/** The beacon device id as the four hex bytes it is, matching what a peer row shows. */
+private fun shortId(deviceId: Int): String = "%08X".format(deviceId).chunked(4).joinToString(" ")
 
 /**
  * Signal as a word, not a number.

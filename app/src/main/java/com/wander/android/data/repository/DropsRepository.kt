@@ -2,6 +2,7 @@ package com.wander.android.data.repository
 
 import com.wander.android.core.database.dao.DropDao
 import com.wander.android.core.database.entity.DropEntity
+import com.wander.android.data.sources.agro.AgroDeviceKey
 import com.wander.android.data.sources.agro.AgroDrop
 import com.wander.android.data.sources.agro.AgroDropsApi
 import kotlinx.coroutines.flow.Flow
@@ -24,8 +25,7 @@ import javax.inject.Singleton
 @Singleton
 internal class DropsRepository @Inject constructor(
     private val dropsApi: AgroDropsApi,
-    private val dropDao: DropDao,
-    private val identityKeyManager: com.wander.android.core.security.IdentityKeyManager
+    private val dropDao: DropDao
 ) {
     val inbox: Flow<List<AgroDrop>> =
         dropDao.observeInbox().map { rows -> rows.map { it.toDrop() } }
@@ -111,16 +111,7 @@ internal class DropsRepository @Inject constructor(
      * here would be a second chance to miss it before the app is backgrounded again.
      */
     suspend fun onPushed(drop: AgroDrop) {
-        val decrypted = if (drop.isEncrypted && !drop.noteCiphertext.isNullOrBlank()) {
-            try {
-                drop.copy(note = identityKeyManager.openNote(drop.noteCiphertext))
-            } catch (e: Exception) {
-                drop
-            }
-        } else {
-            drop
-        }
-        dropDao.insert(decrypted.toEntity(incoming = true, syncedAt = Instant.now().toEpochMilli()))
+        dropDao.insert(drop.toEntity(incoming = true, syncedAt = Instant.now().toEpochMilli()))
     }
 
     /**
@@ -149,7 +140,7 @@ internal class DropsRepository @Inject constructor(
         contentHash: String? = null,
         trackUri: String? = null,
         note: String? = null,
-        recipientPublicKey: String? = null
+        recipientKeys: List<AgroDeviceKey> = emptyList()
     ): Result<AgroDrop> = dropsApi.drop(
         to = to,
         trackTitle = trackTitle,
@@ -159,7 +150,7 @@ internal class DropsRepository @Inject constructor(
         contentHash = contentHash,
         trackUri = trackUri,
         note = note,
-        recipientPublicKey = recipientPublicKey
+        recipientKeys = recipientKeys
     ).onSuccess { drop ->
         dropDao.insert(drop.toEntity(incoming = false, syncedAt = Instant.now().toEpochMilli()))
     }

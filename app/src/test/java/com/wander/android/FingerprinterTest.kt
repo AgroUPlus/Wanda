@@ -85,13 +85,28 @@ class FingerprinterTest {
         // is mostly transients, and a fingerprint keyed on where energy *arrives* has nothing to
         // grip on a signal that never changes. A held chord is also the degenerate case — every
         // recording of the same three tones would match it.
-        val pitches = doubleArrayOf(220.0, 277.2, 329.6, 440.0, 392.0, 293.7, 246.9, 523.3)
+        val scale = doubleArrayOf(220.0, 277.2, 329.6, 440.0, 392.0, 293.7, 246.9, 523.3)
         val noteSeconds = 0.4
+
+        // The sequence must not repeat inside the clip, and that is not a detail. With eight notes
+        // cycling every 3.2 seconds the signal is periodic at exactly 100 frames, so an excerpt cut
+        // at frame 120 aligns just as truthfully at frame 20 — and asserting on one of them tests
+        // which alignment the implementation happens to prefer rather than whether it found a real
+        // one. A deterministic walk through the scale gives thirty notes that never come round.
+        val noteCount = (seconds / noteSeconds).toInt() + 2
+        val sequence = IntArray(noteCount).also { seq ->
+            var state = 7
+            for (n in seq.indices) {
+                state = (state * 31 + 17) % 1021
+                seq[n] = state % scale.size
+            }
+        }
+
         val original = FloatArray(total) { i ->
             val t = i.toDouble() / AudioFormat.SAMPLE_RATE
             val noteIndex = (t / noteSeconds).toInt()
             val intoNote = t - noteIndex * noteSeconds
-            val pitch = pitches[noteIndex % pitches.size]
+            val pitch = scale[sequence[noteIndex.coerceAtMost(sequence.lastIndex)]]
             // Exponential decay from the attack, plus a quieter octave for spectral structure.
             val envelope = Math.exp(-6.0 * intoNote)
             ((sin(2 * PI * pitch * t) + 0.4 * sin(2 * PI * pitch * 2 * t)) * envelope).toFloat()

@@ -13,6 +13,9 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -49,7 +52,9 @@ internal class ListenAlongController @Inject constructor(
     private val resolver: ListenAlongResolver,
     private val playerConnection: PlayerConnection,
     private val suppression: ScrobbleSuppression,
-    private val musicRepository: MusicRepository
+    private val musicRepository: MusicRepository,
+    private val offGrid: com.wander.android.core.p2p.OffGridTransport,
+    private val offGridNowPlaying: com.wander.android.core.p2p.OffGridNowPlayingClient
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -58,6 +63,9 @@ internal class ListenAlongController @Inject constructor(
 
     /** The track currently mirrored, so an unchanged frame does not restart it. */
     private var playingKey: String? = null
+
+    /** Polls the peer while an off-grid session is running. Null at every other time. */
+    private var offGridPoll: kotlinx.coroutines.Job? = null
 
     /**
      * Frames are applied one at a time, and only the newest is applied.
@@ -102,6 +110,9 @@ internal class ListenAlongController @Inject constructor(
     suspend fun stop(): Result<Unit> {
         // Cleared first: whatever the server says, this device stops attributing a friend's
         // listening to its owner the moment they ask it to.
+        val wasOffGrid = offGridPoll != null
+        offGridPoll?.cancel()
+        offGridPoll = null
         suppression.set(false)
         playerConnection.setFollowing(false)
         _session.value = null
@@ -110,7 +121,105 @@ internal class ListenAlongController @Inject constructor(
         // The URLs resolved for this session name a private address and carry a bearer token. They
         // are worth exactly as long as the session was.
         musicRepository.clearEphemeralStreams()
+        // An off-grid session was never opened on a server, so there is nothing to close on one —
+        // and calling out here would fail on precisely the connection this tier exists to do
+        // without, turning a clean stop into an error.
+        if (wasOffGrid) return Result.success(Unit)
         return api.stopListenAlong().map { }
+    }
+
+    /**
+     * Follows the peer at the other end of a radio link, with no server involved.
+     *
+     * The off-grid tier could already carry the *audio* — [ListenAlongResolver] resolves a peer
+     * stream over the link — but nothing carried the question it answers. What to play, and where
+     * in it, arrived as a socket frame from Agro, so the one tier built for having no internet
+     * could not start a listen-along at all.
+     *
+     * This is the missing half: the host serves `/p2p/now-playing` behind the same grant that gates
+     * its audio, and this polls it. Everything after that is the ordinary path — the same mutex,
+     * the same [follow], the same drift correction — because the only thing that was ever different
+     * was the transport the answer arrived on.
+     */
+    suspend fun startOffGrid(): Result<Unit> {
+        val base = offGrid.connectedBaseUrl()
+            ?: return Result.failure(IllegalStateException("No device is linked over the radio."))
+        val token = offGrid.grantToken()
+            ?: return Result.failure(IllegalStateException("That link has no grant to read with."))
+
+        suppression.set(true)
+        playerConnection.setFollowing(true) { scope.launch { stop() } }
+        _session.value = ListenAlongSession(
+            // There is no account to name here — off-grid neither device has one, and the link is
+            // to a device rather than to a person. The screen says as much.
+            host = OFF_GRID_HOST,
+            listenerCount = 1,
+            nowPlaying = null,
+            resolvedFrom = null
+        )
+        playingKey = null
+
+        offGridPoll?.cancel()
+        offGridPoll = scope.launch {
+            var missed = 0
+            while (currentCoroutineContext().isActive) {
+                val reading = offGridNowPlaying.read(base, token)
+                if (reading == null) {
+                    // Counted, not acted on. A single missed poll over a radio link is ordinary;
+                    // a run of them means the peer has gone and the session should end rather than
+                    // sit there claiming to follow somebody who left.
+                    if (++missed >= MISSED_POLLS_BEFORE_STOP) {
+                        stop()
+                        return@launch
+                    }
+                } else {
+                    missed = 0
+                    if (reading.idle || reading.title.isBlank()) {
+                        // The peer stopped. The music already playing here is left alone, exactly
+                        // as a `stopped` frame does — cutting the audio dead is the worse surprise.
+                        stop()
+                        return@launch
+                    }
+                    submit(reading.toFrame())
+                }
+                delay(POLL_INTERVAL_MS)
+            }
+        }
+        return Result.success(Unit)
+    }
+
+    /** The off-grid reading, in the shape the follow path already speaks. */
+    private fun com.wander.android.core.p2p.OffGridNowPlaying.toFrame() = AgroFriendNowPlaying(
+        username = OFF_GRID_HOST,
+        // The host's own id for the track. It is meaningless as a *library* reference here —
+        // there is no server and no shared namespace — but the peer will serve exactly this id
+        // while it is the one it is playing, which is what lets a track with no content hash be
+        // fetched at all. No LAN address or token: the resolver reads the link straight off
+        // `OffGridTransport`, which is the whole reason tier 5 works without any of this.
+        trackUri = trackId.orEmpty(),
+        trackTitle = title,
+        artistName = artist,
+        albumName = album,
+        artworkUrl = null,
+        positionMs = positionMs,
+        isPlaying = isPlaying,
+        updatedAt = "",
+        deviceId = null,
+        contentHash = contentHash,
+        peerLanAddress = null,
+        peerLanToken = null
+    )
+
+    /** The newest reading wins, on the same lock every other source of frames uses. */
+    private fun submit(now: AgroFriendNowPlaying) {
+        pending = now
+        scope.launch {
+            followMutex.withLock {
+                val target = pending ?: return@withLock
+                pending = null
+                follow(target)
+            }
+        }
     }
 
     /**
@@ -175,7 +284,10 @@ internal class ListenAlongController @Inject constructor(
             hostDevice = now.deviceId,
             hostLanAddress = now.peerLanAddress,
             hostLanToken = now.peerLanToken,
-            contentHash = now.contentHash
+            contentHash = now.contentHash,
+            // Off-grid this carries the peer's own id for the track, which is the only address
+            // available when nothing has computed a content hash for it yet.
+            hostTrackId = now.trackUri.takeIf { it.isNotBlank() }
         )
         if (resolved == null) {
             // No fallback and no placeholder. Naming the track that could not be found is the only
@@ -237,6 +349,21 @@ internal class ListenAlongController @Inject constructor(
 
     private companion object {
         const val TAG = "ListenAlong"
+
+        /** What the session names as its host when there is no account on either side. */
+        const val OFF_GRID_HOST = "Nearby device"
+
+        /**
+         * How often the peer is asked what it is playing.
+         *
+         * Two seconds is well inside [DRIFT_TOLERANCE_MS], so a track change is picked up before
+         * the drift correction would have anything to say about it, and slow enough that the poll
+         * is nothing next to the audio already crossing the same link.
+         */
+        const val POLL_INTERVAL_MS = 2_000L
+
+        /** Three misses — about six seconds of silence — before the session is given up on. */
+        const val MISSED_POLLS_BEFORE_STOP = 3
 
         /**
          * How far out of step is tolerated. Two seconds is well past what anyone notices when they

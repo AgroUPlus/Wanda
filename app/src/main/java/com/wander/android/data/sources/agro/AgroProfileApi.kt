@@ -142,14 +142,48 @@ internal class AgroProfileApi @Inject constructor(
     }
 
     /**
-     * Publishes this account's X25519 identity public key for E2EE drops.
+     * Publishes this device's X25519 identity public key for E2EE drops.
+     *
+     * [deviceId] is what stops this replacing the account's *other* devices. The key column on the
+     * profile is one value per account and is still written for older clients, but the registry
+     * entry is per device, and a sender seals to every entry rather than to that column.
      */
-    suspend fun setPublicKey(publicKey: String): Result<Boolean> = graphQl.execute(
+    suspend fun setPublicKey(publicKey: String, deviceId: String): Result<Boolean> =
+        graphQl.execute(
+            """
+            mutation SetPublicKey(${'$'}publicKey: String, ${'$'}deviceId: String) {
+                setPublicKey(publicKey: ${'$'}publicKey, deviceId: ${'$'}deviceId) { publicKey }
+            }
+            """.trimIndent(),
+            buildJsonObject {
+                put("publicKey", publicKey.trim())
+                put("deviceId", deviceId.trim())
+            }
+        ).map { true }
+
+    /**
+     * Every identity key an account has published, one per device.
+     *
+     * Asked for fresh on every send. A cached key list seals a note to a device that has since been
+     * signed out and misses one that has since been added, and both failures are silent and
+     * permanent — the ciphertext is already sealed by the time anyone could notice.
+     *
+     * An empty list is a real answer, not an error: it means that account has published no keys,
+     * and the caller should send the note in clear rather than sealing it to nobody.
+     */
+    suspend fun deviceKeys(username: String): Result<List<AgroDeviceKey>> = graphQl.execute(
         """
-        mutation SetPublicKey(${'$'}publicKey: String) {
-            setPublicKey(publicKey: ${'$'}publicKey) { publicKey }
+        query DeviceKeys(${'$'}username: String!) {
+            deviceKeys(username: ${'$'}username) { deviceId publicKey }
         }
         """.trimIndent(),
-        buildJsonObject { put("publicKey", publicKey.trim()) }
-    ).map { true }
+        buildJsonObject { put("username", username.trim().lowercase()) }
+    ).map { data ->
+        (data["deviceKeys"] as? kotlinx.serialization.json.JsonArray).orEmpty().mapNotNull { entry ->
+            val obj = entry as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+            val deviceId = obj.str("deviceId") ?: return@mapNotNull null
+            val publicKey = obj.str("publicKey") ?: return@mapNotNull null
+            AgroDeviceKey(deviceId = deviceId, publicKey = publicKey)
+        }
+    }
 }

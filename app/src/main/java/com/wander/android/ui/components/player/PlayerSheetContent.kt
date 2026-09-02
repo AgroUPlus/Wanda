@@ -77,7 +77,15 @@ fun PlayerSheetContent(
      * out gives the row nothing to leave *with*, and it disappeared in a frame while the sheet
      * spent the next half-second shrinking over the hole it left. Passed in, it gets an exit.
      */
-    showDockRow: Boolean = true
+    showDockRow: Boolean = true,
+    /**
+     * Whether the playing track has been measured, drawn as a dot on the cover.
+     *
+     * Passed in rather than read here: this file knows nothing about repositories, and the status
+     * belongs to the track the *player* is on, which the caller already has.
+     */
+    fingerprintStatus: com.wander.android.data.repository.FingerprintStatus =
+        com.wander.android.data.repository.FingerprintStatus.MISSING
 ) {
     val anchors = remember { PlayerArtworkAnchors() }
     // Owned here, not in `NowPlayingScreen`. The sheet is what draws the cover the lyrics replace,
@@ -138,10 +146,23 @@ fun PlayerSheetContent(
     }
     val nextArtwork = playback.queue.getOrNull(playback.currentIndex + 1)?.artworkUrl
 
+    // The two surfaces disagree about what "previous" means, and they are both right.
+    //
+    // The docked strip shows no filmstrip, so it keeps the ordinary convention: far enough into a
+    // track, swiping back restarts it. The full player has just slid the *previous cover* into the
+    // slot, so restarting would contradict the thing the user watched happen — there it always
+    // steps back.
     val miniSwipe = Modifier.swipeToChangeTrack(
         state = swipe,
         onNext = playerConnection::next,
-        onPrevious = playerConnection::previous,
+        onPrevious = {
+            // Read at gesture time, never in composition: it changes with playback position.
+            val restarts = playerConnection.restartsOnPrevious
+            playerConnection.previous()
+            // A restart leaves the track — and so its cover — unchanged, so the peek cover the
+            // swipe adopted would otherwise sit there until the next real track change.
+            if (restarts) swipe.clearPending()
+        },
         nextArtworkUrl = nextArtwork,
         previousArtworkUrl = previousArtwork,
         exitDistance = DockedExitDistance
@@ -149,7 +170,7 @@ fun PlayerSheetContent(
     val fullSwipe = Modifier.swipeToChangeTrack(
         state = swipe,
         onNext = playerConnection::next,
-        onPrevious = playerConnection::previous,
+        onPrevious = playerConnection::previousTrack,
         nextArtworkUrl = nextArtwork,
         previousArtworkUrl = previousArtwork
     )
@@ -257,7 +278,8 @@ fun PlayerSheetContent(
             alpha = { artworkAlphaState.value },
             swipe = swipe,
             previousUrl = previousArtwork,
-            nextUrl = nextArtwork
+            nextUrl = nextArtwork,
+            fingerprintStatus = fingerprintStatus
         )
 
         // Composed as soon as the drag starts, so its artwork bounds are known and nothing

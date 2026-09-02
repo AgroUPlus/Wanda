@@ -350,7 +350,7 @@ class AgroUploader @Inject constructor(
     }
 
     private fun String.toRequestBody() =
-        okhttp3.RequestBody.create("application/json".toMediaType(), this)
+        toRequestBody("application/json".toMediaType())
 
     private companion object {
 

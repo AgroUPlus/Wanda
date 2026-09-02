@@ -24,8 +24,8 @@ android {
         applicationId = "com.wander.android"
         minSdk = 26
         targetSdk = 37
-        versionCode = 17
-        versionName = "1.2.3"
+        versionCode = 21
+        versionName = "1.5.0-beta.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
@@ -135,6 +135,9 @@ dependencies {
     implementation(libs.androidx.media3.datasource.okhttp)
 
     implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.paging)
+    implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.paging.compose)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 

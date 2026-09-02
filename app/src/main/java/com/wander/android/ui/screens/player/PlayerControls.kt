@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.ui.components.rememberHaptics
 import com.wander.android.ui.components.player.PlayPauseIcon
 import com.wander.android.core.playback.RepeatMode
 
@@ -39,6 +40,7 @@ fun PlayerControls(
     connection: PlayerConnection,
     modifier: Modifier = Modifier
 ) {
+    val haptics = rememberHaptics()
     val playButtonSize by animateDpAsState(
         targetValue = if (state.isPlaying) 76.dp else 72.dp,
         animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
@@ -71,7 +73,13 @@ fun PlayerControls(
         }
 
         FilledIconButton(
-            onClick = connection::togglePlayPause,
+            onClick = {
+                // Only play/pause among the transport controls. Skip and previous announce
+                // themselves — the song changes — so a tick there is repeating what the ears
+                // already got. Pausing into silence is the one that benefits.
+                haptics.toggled(!state.isPlaying)
+                connection.togglePlayPause()
+            },
             shape = MaterialTheme.shapes.large,
             modifier = Modifier.size(playButtonSize)
         ) {

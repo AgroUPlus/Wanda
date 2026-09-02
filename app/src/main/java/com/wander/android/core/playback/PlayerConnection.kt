@@ -3,6 +3,7 @@ package com.wander.android.core.playback
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
+import androidx.media3.common.C
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
@@ -535,6 +536,20 @@ class PlayerConnection @Inject constructor(
         if (restartsOnPrevious) ctrl.seekTo(0L) else ctrl.seekToPreviousMediaItem()
     }
 
+    /**
+     * Always steps back a track, never restarts this one.
+     *
+     * For the full player's swipe, where the gesture has already slid the *previous cover* into
+     * place before this is called. The restart convention is right for a button, whose press says
+     * nothing about what should follow, and wrong for a filmstrip that has just shown the user
+     * which track they are moving to — obeying it there animated a handover and then stayed on the
+     * same song.
+     */
+    fun previousTrack() {
+        if (isFollowing) return
+        _controller.value?.seekToPreviousMediaItem()
+    }
+
     fun toggleShuffle() {
         if (isFollowing || isInJam) return
         val ctrl = _controller.value ?: return
@@ -711,15 +726,35 @@ private fun Player.buildSnapshot(
     seekEpoch: Long
 ): PlaybackState {
     val activeItem = runCatching { currentMediaItem }.getOrNull()
+    val track = activeItem?.resolveTrack(cache)
     val playing = runCatching { isPlaying }.getOrDefault(false)
     val buffering = runCatching { playbackState == Player.STATE_BUFFERING }.getOrDefault(false)
-    val dur = runCatching { duration }.getOrDefault(0L).coerceAtLeast(0L)
+
+    // The player's own number first, the metadata's when the player has none.
+    //
+    // Both halves matter and each covers the other's blind spot. A YouTube Music row whose
+    // subtitle carried no `3:45` reaches Room with `durationMs = 0` while the player knows the
+    // length perfectly well — which is why the player is asked first. But a Navidrome stream is
+    // the mirror image: `stream.view` can be transcoded on the fly, and a chunked response with no
+    // `Content-Length` leaves Media3 reporting `TIME_UNSET` for the whole song, while `getSong`
+    // gave us the exact length in seconds before playback even started.
+    //
+    // `TIME_UNSET` used to be flattened to `0` here, which made "unknown" and "zero" the same
+    // number to everything downstream. Everything downstream gates on `durationMs > 0`, so the
+    // seek bar sat at zero, the slider was disabled and both clocks read `0:00` / `--:--` for the
+    // entire track.
+    val reported = runCatching { duration }.getOrDefault(C.TIME_UNSET)
+    val dur = if (reported == C.TIME_UNSET || reported <= 0L) {
+        track?.durationMs ?: 0L
+    } else {
+        reported
+    }
     val curIndex = runCatching { currentMediaItemIndex }.getOrDefault(0)
     val shuffle = runCatching { shuffleModeEnabled }.getOrDefault(false)
     val repMode = runCatching { repeatMode }.getOrDefault(Player.REPEAT_MODE_OFF)
 
     return PlaybackState(
-        currentTrack = activeItem?.resolveTrack(cache),
+        currentTrack = track,
         queue = cachedQueue,
         currentIndex = curIndex,
         isPlaying = playing,

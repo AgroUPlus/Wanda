@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.settings
 
+import com.wander.android.core.notification.WorkProgressNotification
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.cache.AudioCacheManager
@@ -55,7 +56,9 @@ internal class SettingsViewModel @Inject constructor(
     private val incognitoRepository: IncognitoRepository,
     private val releaseCheckScheduler: ReleaseCheckScheduler,
     private val accountApi: AgroAccountApi,
-    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
+    private val workControls: com.wander.android.core.work.WorkControls,
+    private val fingerprintProgress: com.wander.android.core.audio.fingerprint.FingerprintProgress
 ) : ViewModel() {
 
     val appVersion: String get() = com.wander.android.BuildConfig.VERSION_NAME
@@ -118,6 +121,35 @@ internal class SettingsViewModel @Inject constructor(
     val isOfflineMode: StateFlow<Boolean> = secureStorage.isOfflineMode
 
     val isPreloadNextEnabled: StateFlow<Boolean> = secureStorage.isPreloadNextEnabled
+
+    val isIndexOnMobileDataEnabled: StateFlow<Boolean> = secureStorage.isIndexOnMobileDataEnabled
+
+    val isMeasuringPaused: StateFlow<Boolean> =
+        workControls.isPaused(WorkProgressNotification.Kind.FINGERPRINT)
+
+    val isDownloadingPaused: StateFlow<Boolean> =
+        workControls.isPaused(WorkProgressNotification.Kind.DOWNLOAD)
+
+    /**
+     * Pause and resume, from the screen as well as from the notification.
+     *
+     * Both surfaces write through the same [WorkControls] and read the same flow, so a pause set on
+     * one is visible on the other. A notification that is dismissed or never seen — the user turned
+     * the channel off — would otherwise leave the pause unreachable.
+     */
+    fun setMeasuringPaused(paused: Boolean) = setPaused(WorkProgressNotification.Kind.FINGERPRINT, paused)
+
+    fun setDownloadingPaused(paused: Boolean) = setPaused(WorkProgressNotification.Kind.DOWNLOAD, paused)
+
+    private fun setPaused(kind: WorkProgressNotification.Kind, paused: Boolean) {
+        if (paused) {
+            workControls.pause(kind)
+        } else {
+            // Resuming is also the one gesture that means "try the ones that failed again".
+            if (kind == WorkProgressNotification.Kind.FINGERPRINT) fingerprintProgress.retryFailures()
+            workControls.resume(kind)
+        }
+    }
     val agroConnected: StateFlow<Boolean> = secureStorage.agroConfigured
 
     /** Blank until the user names one; see [SecureStorage.shareDomain]. */
@@ -397,6 +429,17 @@ internal class SettingsViewModel @Inject constructor(
     fun setPreloadNextEnabled(enabled: Boolean) = secureStorage.setPreloadNextEnabled(enabled)
 
     /**
+     * Turning this on re-enqueues, so the change takes effect now rather than at the next launch.
+     *
+     * WorkManager fixes a request's constraints when it is enqueued, so the run already sitting
+     * there is still waiting for Wi-Fi. `enqueueNow` replaces it with one that is not.
+     */
+    fun setIndexOnMobileDataEnabled(enabled: Boolean) {
+        secureStorage.setIndexOnMobileDataEnabled(enabled)
+        if (enabled) indexFingerprintsNow()
+    }
+
+    /**
      * Goes quiet, or stops.
      *
      * Routed through [IncognitoRepository] rather than written straight to storage, because with
@@ -429,8 +472,17 @@ internal class SettingsViewModel @Inject constructor(
      * fingerprints, and the library sync *publishes* the ones that already exist. Both are needed,
      * in that order.
      */
-    fun indexFingerprintsNow() =
-        com.wander.android.core.audio.fingerprint.FingerprintIndexWorker.enqueueNow(context)
+    /**
+     * Measures now, and forgets which tracks failed last time.
+     *
+     * Asking explicitly is the only way to say "try again" about a track the indexer could not
+     * reach — otherwise the skip list quietly outlasts whatever was actually wrong with it, which
+     * is usually a network that has since come back.
+     */
+    fun indexFingerprintsNow() {
+        fingerprintProgress.retryFailures()
+        com.wander.android.core.audio.fingerprint.FingerprintIndexing.enqueueNow(context)
+    }
 
     fun clearCache() {
         viewModelScope.launch {

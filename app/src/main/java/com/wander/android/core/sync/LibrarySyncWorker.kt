@@ -9,6 +9,8 @@ import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
+import com.wander.android.core.notification.WorkProgressNotification
+import com.wander.android.core.work.WorkControls
 import androidx.work.WorkerParameters
 import com.wander.android.R
 import com.wander.android.data.repository.CatalogSyncRepository
@@ -36,11 +38,16 @@ internal class LibrarySyncWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val syncRepository: LibrarySyncRepository,
     private val catalogSync: CatalogSyncRepository,
-    private val secureStorage: com.wander.android.core.security.SecureStorage
+    private val secureStorage: com.wander.android.core.security.SecureStorage,
+    private val notifications: WorkProgressNotification,
+    private val workControls: WorkControls
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         if (!syncRepository.isEnabled) return@withContext Result.success()
+        if (workControls.isPaused(WorkProgressNotification.Kind.LIBRARY_SYNC).value) {
+            return@withContext Result.success()
+        }
 
         runCatching { setForeground(foregroundInfo(0, 0)) }
             .onFailure {
@@ -180,44 +187,17 @@ internal class LibrarySyncWorker @AssistedInject constructor(
         )
     }
 
-    private fun foregroundInfo(done: Int, total: Int): ForegroundInfo {
-        ensureChannel()
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle("Syncing your library")
-            .setContentText(
-                if (total > 0) "$done of $total" else "Preparing…"
-            )
-            .setSmallIcon(R.drawable.ic_stat_sync)
-            .setOngoing(true)
-            .setSilent(true)
-            .apply { if (total > 0) setProgress(total, done, false) }
-            .build()
-
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            ForegroundInfo(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-        } else {
-            ForegroundInfo(NOTIFICATION_ID, notification)
-        }
-    }
-
-    private fun ensureChannel() {
-        val manager = context.getSystemService(NotificationManager::class.java) ?: return
-        if (manager.getNotificationChannel(CHANNEL_ID) != null) return
-        manager.createNotificationChannel(
-            NotificationChannel(
-                CHANNEL_ID,
-                "Library sync",
-                // Low: this is a background chore the user asked for, not something to interrupt
-                // them about.
-                NotificationManager.IMPORTANCE_LOW
-            )
+    private fun foregroundInfo(done: Int, total: Int): ForegroundInfo =
+        notifications.foregroundInfo(
+            kind = WorkProgressNotification.Kind.LIBRARY_SYNC,
+            title = "Syncing your library",
+            text = if (total > 0) "$done of $total" else "Preparing…",
+            done = done,
+            total = total
         )
-    }
 
     companion object {
         const val TAG = "LibrarySyncWorker"
-        private const val CHANNEL_ID = "wanda_library_sync"
-        private const val NOTIFICATION_ID = 4711
         private const val OFFER_CHANNEL_ID = "wanda_new_music"
         private const val OFFER_NOTIFICATION_ID = 4712
     }

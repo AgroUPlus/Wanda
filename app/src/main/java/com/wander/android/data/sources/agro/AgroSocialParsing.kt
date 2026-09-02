@@ -22,11 +22,11 @@ internal const val NOW_PLAYING_FIELDS =
         "deviceId contentHash peerLanAddress peerLanToken"
 
 internal fun JsonObject.toProfile(): AgroProfile = AgroProfile(
-    username = str("username").orEmpty(),
+    username = str("username") ?: error("profile has no username"),
     displayName = str("displayName"),
     bio = str("bio"),
     avatarUrl = str("avatarUrl"),
-    createdAt = str("createdAt").orEmpty(),
+    createdAt = str("createdAt") ?: error("profile has no createdAt"),
     friendState = FriendState.parse(str("friendState")),
     outgoing = bool("outgoing"),
     showNowPlaying = bool("showNowPlaying"),
@@ -37,15 +37,15 @@ internal fun JsonObject.toProfile(): AgroProfile = AgroProfile(
 )
 
 internal fun JsonObject.toNowPlaying(): AgroFriendNowPlaying = AgroFriendNowPlaying(
-    username = str("username").orEmpty(),
-    trackUri = str("trackUri").orEmpty(),
-    trackTitle = str("trackTitle").orEmpty(),
-    artistName = str("artistName").orEmpty(),
+    username = str("username") ?: error("nowPlaying has no username"),
+    trackUri = str("trackUri") ?: error("nowPlaying has no trackUri"),
+    trackTitle = str("trackTitle") ?: error("nowPlaying has no trackTitle"),
+    artistName = str("artistName") ?: error("nowPlaying has no artistName"),
     albumName = str("albumName"),
     artworkUrl = str("artworkUrl"),
     positionMs = long("positionMs"),
     isPlaying = bool("isPlaying"),
-    updatedAt = str("updatedAt").orEmpty(),
+    updatedAt = str("updatedAt") ?: error("nowPlaying has no updatedAt"),
     deviceId = str("deviceId"),
     contentHash = str("contentHash"),
     peerLanAddress = str("peerLanAddress"),

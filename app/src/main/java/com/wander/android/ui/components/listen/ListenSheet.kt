@@ -22,6 +22,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
+import com.wander.android.ui.components.Artwork
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -34,7 +35,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.data.repository.Recognition
 import com.wander.android.data.repository.RecognitionEngine
-import com.wander.android.ui.components.Artwork
 
 /**
  * "What is this?" — the microphone, matched against the user's own library.
@@ -112,8 +112,10 @@ private fun Listening(indexedTracks: Int) {
     Text("Listening…", style = MaterialTheme.typography.headlineSmall)
     Text(
         text = if (indexedTracks > 0) {
-            "Play it, or hum it. Matching against $indexedTracks " +
-                "${if (indexedTracks == 1) "track" else "tracks"} stored on this device."
+            // No longer "or hum it": that path is switched off, and asking for something the
+            // engine cannot use is worse than asking for nothing. See `MelodySearch`.
+            "Hold it near the music. Matching against $indexedTracks " +
+                "${if (indexedTracks == 1) "track" else "tracks"} measured on this device."
         } else {
             "Nothing is indexed yet. Recognition works on music saved to this device, and the " +
                 "index is built while charging."
@@ -173,8 +175,8 @@ private fun NoMatch(indexedTracks: Int, onRetry: () -> Unit) {
     Text("No match", style = MaterialTheme.typography.headlineSmall)
     Text(
         text = if (indexedTracks > 0) {
-            "That is not one of the $indexedTracks tracks on this device — or the room was too " +
-                "loud to hear it clearly. Humming works too, if you know how it goes."
+            "That is not one of the $indexedTracks tracks measured on this device — or the room " +
+                "was too loud to hear it clearly. Getting closer to the speaker helps most."
         } else {
             "Nothing is indexed yet, so there was nothing to match against. The index is built " +
                 "in the background while this phone is charging."

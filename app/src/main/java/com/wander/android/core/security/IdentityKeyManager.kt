@@ -124,6 +124,56 @@ class IdentityKeyManager @Inject constructor(
     }
 
     /**
+     * Seals [note] once for every device in [keysByDevice], answering the ciphertext per device id.
+     *
+     * ## Why a note is sealed more than once
+     *
+     * [sealNote] derives a shared secret from an ephemeral keypair and the recipient's public key,
+     * then discards the ephemeral private half. That is what makes it forward-secret, and it is
+     * also why a note sealed to one key is readable by exactly one key. Sealing to the recipient
+     * alone therefore produced a message its own sender could not open — there is no copy of the
+     * plaintext anywhere, so `[Encrypted Note]` was not a rendering failure but the truth.
+     *
+     * So the caller passes every device that should be able to read it: each of the recipient's,
+     * and its own. Each entry gets its own ephemeral keypair, which is the point — one shared
+     * ephemeral would let any recipient derive the secret of any other.
+     *
+     * A key that will not seal is skipped rather than failing the note. One device publishing
+     * something malformed must not stop the message reaching the others, and the sender's own
+     * entry is generated locally, so it is not the one at risk.
+     */
+    fun sealNoteToKeys(keysByDevice: Map<String, String>, note: String): Map<String, String> =
+        keysByDevice.mapNotNull { (deviceId, publicKey) ->
+            if (deviceId.isBlank() || publicKey.isBlank()) return@mapNotNull null
+            try {
+                deviceId to sealNote(publicKey, note)
+            } catch (_: Exception) {
+                null
+            }
+        }.toMap()
+
+    /**
+     * Opens whichever of [ciphertexts] this device holds the key for, or null if none of them.
+     *
+     * Tried in turn rather than looked up by device id. The id is a label the server hands back,
+     * and matching on it would make reading your own messages depend on it still agreeing with
+     * what this install calls itself — which a reinstall, a restore, or a re-pairing can break.
+     * The private key is the thing that actually decides, so it is the thing that is asked. An
+     * X25519 agreement is cheap and the list is bounded by somebody's device count.
+     */
+    fun openAnyNote(ciphertexts: Collection<String>): String? {
+        for (ciphertext in ciphertexts) {
+            if (ciphertext.isBlank()) continue
+            try {
+                return openNote(ciphertext)
+            } catch (_: Exception) {
+                // Sealed to a different device. Expected for every entry but ours.
+            }
+        }
+        return null
+    }
+
+    /**
      * Opens an encrypted sealed note using the local private key.
      */
     fun openNote(ciphertextB64: String): String {

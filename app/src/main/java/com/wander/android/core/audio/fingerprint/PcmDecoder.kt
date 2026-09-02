@@ -24,10 +24,17 @@ class PcmDecoder @Inject constructor() {
     /**
      * Decodes at most [maxSeconds] of [path], from the start.
      *
-     * Truncated rather than whole, and this is a judgement about what a fingerprint is for: a
-     * minute of a song is thousands of landmarks, enough to identify it many times over, and
-     * indexing the remaining three minutes triples the database to make an already-certain match
-     * more certain. Null when the source holds no audio track this device can decode.
+     * Truncated rather than whole, because decoding a whole library is paid per second of audio.
+     *
+     * **What truncation does not buy is coverage.** The first minute of a song is thousands of
+     * landmarks, which is ample density — but density is not the thing recognition needs. A clip
+     * is taken from wherever the listener happens to be standing, and a clip from the third minute
+     * of a song whose first minute is indexed shares no landmarks with it at all. No amount of
+     * detail in the indexed part helps; the answer is simply absent. That is why [startSeconds]
+     * exists, and why the indexer takes several windows spread across a track rather than one run
+     * at its head.
+     *
+     * Null when the source holds no audio track this device can decode.
      *
      * [path] is a local file, a `content://` URI, **or an `http(s)` URL**. The truncation is what
      * makes the last one affordable: `MediaExtractor` reads a remote source in ranges and stops
@@ -38,7 +45,8 @@ class PcmDecoder @Inject constructor() {
     fun decode(
         path: String,
         headers: Map<String, String> = emptyMap(),
-        maxSeconds: Int = DEFAULT_MAX_SECONDS
+        maxSeconds: Int = DEFAULT_MAX_SECONDS,
+        startSeconds: Int = 0
     ): FloatArray? {
         val extractor = MediaExtractor()
         return try {
@@ -55,10 +63,51 @@ class PcmDecoder @Inject constructor() {
 
             val format = extractor.getTrackFormat(trackIndex)
             extractor.selectTrack(trackIndex)
+            if (startSeconds > 0) {
+                // `SEEK_TO_CLOSEST_SYNC` rather than an exact seek: landing on a keyframe is what
+                // lets the decoder produce valid output immediately, and being a fraction of a
+                // second out is invisible to a fingerprint, whose alignment is established by the
+                // match rather than assumed from the seek.
+                extractor.seekTo(
+                    startSeconds.toLong() * 1_000_000L,
+                    MediaExtractor.SEEK_TO_CLOSEST_SYNC
+                )
+            }
             decodeTrack(extractor, format, maxSeconds)
         } catch (e: java.io.IOException) {
             // An unreadable file is a fact about the file, not an error worth propagating: the
             // indexer simply has nothing to add for it and moves on to the next one.
+            null
+        } catch (e: IllegalArgumentException) {
+            null
+        } finally {
+            extractor.release()
+        }
+    }
+
+    /**
+     * How long [path] is, in seconds, or null when that cannot be read.
+     *
+     * Asked of the container rather than of the library row, because the row is often wrong: a
+     * YouTube Music track arrives with no duration at all, and 175 of them in one real library had
+     * `durationMs = 0`. Anything deciding how much of a track to read from that field silently does
+     * nothing for every one of them.
+     *
+     * Cheap: the extractor reads headers, which for a remote source is one small range request.
+     */
+    fun durationSeconds(path: String, headers: Map<String, String> = emptyMap()): Int? {
+        val extractor = MediaExtractor()
+        return try {
+            if (headers.isEmpty()) extractor.setDataSource(path)
+            else extractor.setDataSource(path, headers)
+            (0 until extractor.trackCount)
+                .map { extractor.getTrackFormat(it) }
+                .firstOrNull { it.getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true }
+                ?.takeIf { it.containsKey(MediaFormat.KEY_DURATION) }
+                ?.getLong(MediaFormat.KEY_DURATION)
+                ?.let { (it / 1_000_000L).toInt() }
+                ?.takeIf { it > 0 }
+        } catch (e: java.io.IOException) {
             null
         } catch (e: IllegalArgumentException) {
             null
@@ -148,10 +197,10 @@ class PcmDecoder @Inject constructor() {
         return frames
     }
 
-    private companion object {
-        const val TIMEOUT_US = 10_000L
+    companion object {
+        private const val TIMEOUT_US = 10_000L
 
-        /** See [decode]: enough to identify a record several times over. */
+        /** See [decode]. A window's worth, not a whole track. */
         const val DEFAULT_MAX_SECONDS = 60
     }
 }
