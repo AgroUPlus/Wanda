@@ -29,6 +29,15 @@ internal data class OffGridNowPlaying(
      * honest form of "you cannot follow this one".
      */
     val contentHash: String? = null,
+    /**
+     * The host's own id for the track.
+     *
+     * Carried alongside the hash because a hash is not always there: it is computed from a file,
+     * and a track can be held and playable without one having been computed yet. The peer can ask
+     * for this instead, and the host will serve it *only* while it is the track being announced —
+     * see `P2PServer`'s handling of `?track=`.
+     */
+    val trackId: String? = null,
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
     val isPlaying: Boolean = false,

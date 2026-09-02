@@ -191,10 +191,12 @@ internal class ListenAlongController @Inject constructor(
     /** The off-grid reading, in the shape the follow path already speaks. */
     private fun com.wander.android.core.p2p.OffGridNowPlaying.toFrame() = AgroFriendNowPlaying(
         username = OFF_GRID_HOST,
-        // No server means no track ids that mean anything here, and no LAN address or token to
-        // carry: the resolver reads the link straight off `OffGridTransport`, which is the whole
-        // reason tier 5 works without any of this.
-        trackUri = "",
+        // The host's own id for the track. It is meaningless as a *library* reference here —
+        // there is no server and no shared namespace — but the peer will serve exactly this id
+        // while it is the one it is playing, which is what lets a track with no content hash be
+        // fetched at all. No LAN address or token: the resolver reads the link straight off
+        // `OffGridTransport`, which is the whole reason tier 5 works without any of this.
+        trackUri = trackId.orEmpty(),
         trackTitle = title,
         artistName = artist,
         albumName = album,
@@ -282,7 +284,10 @@ internal class ListenAlongController @Inject constructor(
             hostDevice = now.deviceId,
             hostLanAddress = now.peerLanAddress,
             hostLanToken = now.peerLanToken,
-            contentHash = now.contentHash
+            contentHash = now.contentHash,
+            // Off-grid this carries the peer's own id for the track, which is the only address
+            // available when nothing has computed a content hash for it yet.
+            hostTrackId = now.trackUri.takeIf { it.isNotBlank() }
         )
         if (resolved == null) {
             // No fallback and no placeholder. Naming the track that could not be found is the only

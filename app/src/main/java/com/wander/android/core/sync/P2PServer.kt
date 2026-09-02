@@ -230,8 +230,20 @@ class P2PServer @Inject constructor(
      * the grant the token names.
      */
     private fun sealingKeyFor(token: String, headerKey: String?): String? {
-        val grant = grants[token] ?: return null
-        return GrantBinding.sealingKey(grant.boundKeys, headerKey)
+        val grant = grants[token] ?: run {
+            Log.w(TAG, "Sealing refused: no grant for the token presented")
+            return null
+        }
+        val key = GrantBinding.sealingKey(grant.boundKeys, headerKey)
+        Log.i(
+            TAG,
+            "Sealing to " + when {
+                key == null -> "nothing — neither the grant nor the request named a key"
+                key == headerKey -> "the requester's own header key"
+                else -> "a key the grant names, ignoring the header's"
+            }
+        )
+        return key
     }
 
     /** The bearer token on a request, or empty. Shared by the authorisation and sealing paths. */
@@ -326,6 +338,7 @@ class P2PServer @Inject constructor(
 
         val hash = runCatching { trackDao.getTrackById(track.id)?.contentHash }.getOrNull()
         return com.wander.android.core.p2p.OffGridNowPlaying(
+            trackId = track.id,
             title = track.title,
             artist = track.artist,
             album = track.album,
@@ -586,7 +599,31 @@ class P2PServer @Inject constructor(
                 // nothing asks this server for one.
                 val queryUri = Uri.parse("http://localhost$path")
                 val queryHash = queryUri.getQueryParameter("hash") ?: fetchHash
-                val track = queryHash?.let { trackDao.findByContentHash(it) }
+
+                // `?track=` is the narrow exception to the rule above, and it stays narrow: the id
+                // is honoured **only** when it names the track this device is playing right now —
+                // the one it has already announced to this peer through `/p2p/now-playing`. So it
+                // opens no door the peer was not already being shown through, and in particular it
+                // cannot be used to walk the library, which is the thing the hash requirement
+                // exists to prevent.
+                //
+                // It is needed because a hash is computed from a file and is not always present:
+                // a downloaded track is perfectly playable and shareable before anything has got
+                // round to hashing it, and requiring one made most of a real library unreachable.
+                val requestedTrack = queryUri.getQueryParameter("track")
+                val track = when {
+                    queryHash != null -> trackDao.findByContentHash(queryHash)
+                    requestedTrack != null -> {
+                        val playing = nowPlaying().trackId
+                        if (playing != null && playing == requestedTrack) {
+                            trackDao.getTrackById(requestedTrack)
+                        } else {
+                            Log.w(TAG, "Refused ?track= for something that is not playing here")
+                            null
+                        }
+                    }
+                    else -> null
+                }
 
                 val (inputStream, totalLength) = when {
                     track?.localFilePath != null && java.io.File(track.localFilePath).exists() -> {
@@ -618,6 +655,12 @@ class P2PServer @Inject constructor(
                             val recipientKey =
                                 sealingKeyFor(tokenOf(request), identityKeyOf(request))
                             val session = queryUri.getQueryParameter("session").orEmpty()
+                            // A Range on this path is worth knowing about: neither encrypted
+                            // writer honours one, so a player that sent it is being answered from
+                            // the top of the file while believing it asked for the middle.
+                            val range = request.lineSequence()
+                                .firstOrNull { it.startsWith("Range:", ignoreCase = true) }
+                            if (range != null) Log.w(TAG, "Ignoring a range request: ${range.trim()}")
                             if (recipientKey != null && session.isNotBlank()) {
                                 writeEncrypted(output, fileIn, mime, recipientKey, session)
                             } else {
