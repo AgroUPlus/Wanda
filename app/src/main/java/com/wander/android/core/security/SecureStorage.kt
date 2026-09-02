@@ -22,6 +22,16 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     val isOfflineMode: StateFlow<Boolean> = _isOfflineMode.asStateFlow()
 
     /**
+     * Whether the start of the next track is fetched before it is reached.
+     *
+     * On by default: two seconds is a small enough download that the cost is hard to notice, and
+     * the benefit lands on every change of track. Off is for someone counting megabytes, which is
+     * why the switch exists at all — preloading spends data on audio that may never be played.
+     */
+    private val _isPreloadNextEnabled = MutableStateFlow(prefs.getBoolean(KEY_PRELOAD_NEXT, true))
+    val isPreloadNextEnabled: StateFlow<Boolean> = _isPreloadNextEnabled.asStateFlow()
+
+    /**
      * Endless-radio queue top-up. Persisted because it was an in-memory flag on `PlayerConnection`,
      * so a mode the user had deliberately turned on silently reset on every launch.
      */
@@ -177,6 +187,11 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         get() = prefs.getString(KEY_LOCAL_FOLDER_LABEL, null)
         set(value) = prefs.edit { putString(KEY_LOCAL_FOLDER_LABEL, value) }
 
+    fun setPreloadNextEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_PRELOAD_NEXT, enabled) }
+        _isPreloadNextEnabled.value = enabled
+    }
+
     fun setOfflineMode(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_OFFLINE_MODE, enabled) }
         _isOfflineMode.value = enabled
@@ -260,6 +275,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
             deviceId?.let { putString(KEY_AGRO_DEVICE_ID, it) }
         }
         _isOfflineMode.value = false
+        _isPreloadNextEnabled.value = true
         _isRadioMode.value = false
         _navidromeConfigured.value = false
         _ytMusicConfigured.value = false
@@ -477,6 +493,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_AGRO_LIBRARY_SYNC = "key_agro_library_sync"
         private const val KEY_AGRO_PROXY_ENABLED = "key_agro_proxy_enabled"
         private const val KEY_OFFLINE_MODE = "key_offline_mode"
+        private const val KEY_PRELOAD_NEXT = "key_preload_next"
         private const val KEY_RADIO_MODE = "key_radio_mode"
         private const val KEY_AMOLED_BLACK = "key_amoled_black"
         private const val KEY_MONET_DYNAMIC = "key_monet_dynamic"

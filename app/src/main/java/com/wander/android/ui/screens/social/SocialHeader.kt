@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PersonAdd
+import androidx.compose.material.icons.rounded.Sensors
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +45,7 @@ internal fun SocialHeader(
     contentPadding: PaddingValues,
     onOpenInbox: () -> Unit,
     onOpenMyProfile: () -> Unit,
+    onOpenOffGrid: () -> Unit,
     onFindPeople: () -> Unit
 ) {
     Row(
@@ -70,11 +72,17 @@ internal fun SocialHeader(
             )
             Text(text = "Friends", style = MaterialTheme.typography.headlineLarge)
         }
-        if (state.isPaired) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Outside the `isPaired` gate, unlike everything beside it. Off-grid sharing is the one
+            // thing on this tab that works with no server at all, so hiding it until an account
+            // exists would hide it from exactly the person it was built for.
+            FilledTonalIconButton(onClick = onOpenOffGrid) {
+                Icon(Icons.Rounded.Sensors, contentDescription = "Share off-grid")
+            }
+            if (state.isPaired) {
                 InboxAction(unread = unread, onClick = onOpenInbox)
                 FilledTonalIconButton(onClick = onFindPeople) {
                     Icon(Icons.Rounded.PersonAdd, contentDescription = "Find people")

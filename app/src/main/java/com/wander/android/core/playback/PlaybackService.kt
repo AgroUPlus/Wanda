@@ -2,7 +2,10 @@ package com.wander.android.core.playback
 
 import android.app.PendingIntent
 import android.content.Intent
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -30,6 +33,7 @@ class PlaybackService : MediaSessionService() {
     @Inject lateinit var playerFactory: PlayerFactory
     @Inject lateinit var musicRepository: MusicRepository
     @Inject lateinit var agroHandoffPublisher: AgroHandoffPublisher
+    @Inject lateinit var secureStorage: com.wander.android.core.security.SecureStorage
 
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private var mediaSession: MediaSession? = null
@@ -39,6 +43,7 @@ class PlaybackService : MediaSessionService() {
         val player = playerFactory.create()
         player.addListener(PlayCountRecorder(player))
         player.addListener(AgroHandoffReporter(player))
+        player.addListener(NextTrackPreloader(player))
 
         val sessionActivity = PendingIntent.getActivity(
             this,
@@ -50,6 +55,40 @@ class PlaybackService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(sessionActivity)
             .build()
+    }
+
+    /**
+     * Fetches the start of the next track, when the next track is one it is safe to fetch.
+     *
+     * Media3's preload configuration is a property of the whole player, not of an item, so it is
+     * re-decided every time the queue moves. Two seconds is the target: enough that a skip starts
+     * on the spot, small enough that it is not really a download.
+     *
+     * The refusals matter more than the feature. See [PreloadDecision] — a relay session serves its
+     * receiving half exactly once, so preloading one would consume the transfer and leave the
+     * actual playback with a `409`.
+     */
+    private inner class NextTrackPreloader(private val player: ExoPlayer) : Player.Listener {
+
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) = apply()
+
+        override fun onTimelineChanged(timeline: Timeline, reason: Int) = apply()
+
+        private fun apply() {
+            val next = runCatching {
+                player.nextMediaItemIndex
+                    .takeIf { it != C.INDEX_UNSET }
+                    ?.let(player::getMediaItemAt)
+            }.getOrNull()
+
+            val allowed = secureStorage.isPreloadNextEnabled.value &&
+                PreloadDecision.canPreload(next?.mediaId, isLive = next?.isLiveUri() == true)
+            player.preloadConfiguration = if (allowed) {
+                ExoPlayer.PreloadConfiguration(PRELOAD_TARGET_US)
+            } else {
+                ExoPlayer.PreloadConfiguration.DEFAULT
+            }
+        }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
@@ -156,4 +195,15 @@ class PlaybackService : MediaSessionService() {
             )
         }
     }
+
+    private companion object {
+        /**
+         * How much of the next track to have ready.
+         *
+         * Two seconds covers the gap a skip actually exposes: the round trip to resolve a URL and
+         * fill the first buffer. More would be data spent on audio that may never be played.
+         */
+        const val PRELOAD_TARGET_US = 2_000_000L
+    }
+
 }

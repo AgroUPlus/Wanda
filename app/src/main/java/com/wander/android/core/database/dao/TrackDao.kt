@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import com.wander.android.core.database.entity.TrackEntity
+import com.wander.android.data.model.isOneShotTrackId
 import com.wander.android.core.database.entity.TrackSourceFields
 import com.wander.android.data.model.SourceType
 import kotlinx.coroutines.flow.Flow
@@ -204,13 +205,28 @@ interface TrackDao {
      */
     @Transaction
     suspend fun upsertTracks(tracks: List<TrackEntity>) {
-        if (tracks.isEmpty()) return
-        val rowIds = insertNewTracks(tracks)
-        val existing = tracks.filterIndexed { index, _ -> rowIds[index] == CONFLICT_ROW_ID }
+        // A one-shot id names a transfer, not a track — see [isOneShotTrackId]. Storing one wrote
+        // a row with `source = LOCAL`, no file, and a dead relay URL in `streamUri`, which the
+        // offline-first tier then matched by title ahead of the real file. Every later attempt to
+        // play that song resolved to the same expired session and answered 401, permanently.
+        val storable = tracks.filterNot { isOneShotTrackId(it.id) }
+        if (storable.isEmpty()) return
+        val rowIds = insertNewTracks(storable)
+        val existing = storable.filterIndexed { index, _ -> rowIds[index] == CONFLICT_ROW_ID }
         if (existing.isNotEmpty()) {
             updateSourceFields(existing.map { it.toSourceFields() })
         }
     }
+
+    /**
+     * Deletes rows that should never have been written — see [upsertTracks].
+     *
+     * Kept as a query rather than a migration because it is also a repair: a build that wrote one
+     * of these may run again before any migration would, and the row has to go the moment it is
+     * noticed.
+     */
+    @Query("DELETE FROM tracks WHERE id LIKE 'relay:%' OR id LIKE 'p2p:%'")
+    suspend fun deleteOneShotTrackRows(): Int
 
     /** Returns -1 for every row that already existed, leaving it untouched. */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -241,13 +257,19 @@ interface TrackDao {
     suspend fun setDisplayMetadata(trackId: String, title: String, artist: String, album: String?)
 
     /**
-     * Everything with a file on this device — music stored locally, and anything downloaded.
+     * Everything that could be fingerprinted: the whole library.
      *
-     * The set the fingerprint index can be built from: recognition matches against audio it can
-     * actually read, and a track that only exists on a server has no bytes here to fingerprint.
+     * This used to be `localFilePath IS NOT NULL`, on the reasoning that a track living only on a
+     * server has no bytes here to read. That was true of the query and false of the device: the
+     * bytes are one ranged request away, and `PcmDecoder` only ever wanted the first minute of
+     * them. The old rule quietly meant that on a library made mostly of Navidrome and YouTube
+     * Music, the recogniser and the radio knew about a handful of songs.
+     *
+     * Livestreams are excluded here rather than downstream: there is no fixed audio to identify,
+     * and the worker would decode a different minute every run.
      */
-    @Query("SELECT * FROM tracks WHERE localFilePath IS NOT NULL AND localFilePath != ''")
-    suspend fun getTracksWithLocalFiles(): List<TrackEntity>
+    @Query("SELECT * FROM tracks WHERE isLive = 0")
+    suspend fun getFingerprintableTracks(): List<TrackEntity>
 
     /**
      * Every row on this device sharing a title, for the caller to judge.

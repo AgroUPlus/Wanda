@@ -57,7 +57,7 @@ class RecognitionRepository @Inject constructor(
 
     /** How many of this device's tracks the index could cover, for the "n of m" the sheet shows. */
     suspend fun indexableTrackCount(): Int =
-        withContext(Dispatchers.IO) { trackDao.getTracksWithLocalFiles().size }
+        withContext(Dispatchers.IO) { trackDao.getFingerprintableTracks().size }
 
     /**
      * Listens, then answers.
@@ -193,7 +193,7 @@ class RecognitionRepository @Inject constructor(
 
     internal suspend fun tracksNeedingIndex(): List<TrackEntity> = withContext(Dispatchers.IO) {
         val indexed = fingerprintDao.indexedTrackIds().toSet()
-        trackDao.getTracksWithLocalFiles().filterNot { it.id in indexed }
+        trackDao.getFingerprintableTracks().filterNot { it.id in indexed }
     }
 
     suspend fun clearIndex() = withContext(Dispatchers.IO) { fingerprintDao.clear() }

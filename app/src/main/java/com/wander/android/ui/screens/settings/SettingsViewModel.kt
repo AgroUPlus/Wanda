@@ -54,7 +54,8 @@ internal class SettingsViewModel @Inject constructor(
     private val updateChecker: UpdateChecker,
     private val incognitoRepository: IncognitoRepository,
     private val releaseCheckScheduler: ReleaseCheckScheduler,
-    private val accountApi: AgroAccountApi
+    private val accountApi: AgroAccountApi,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
 
     val appVersion: String get() = com.wander.android.BuildConfig.VERSION_NAME
@@ -115,6 +116,8 @@ internal class SettingsViewModel @Inject constructor(
     val isMonetDynamic: StateFlow<Boolean> = secureStorage.isMonetDynamic
     val isAmoledBlack: StateFlow<Boolean> = secureStorage.isAmoledBlack
     val isOfflineMode: StateFlow<Boolean> = secureStorage.isOfflineMode
+
+    val isPreloadNextEnabled: StateFlow<Boolean> = secureStorage.isPreloadNextEnabled
     val agroConnected: StateFlow<Boolean> = secureStorage.agroConfigured
 
     /** Blank until the user names one; see [SecureStorage.shareDomain]. */
@@ -391,6 +394,8 @@ internal class SettingsViewModel @Inject constructor(
     fun setAmoledBlack(enabled: Boolean) = secureStorage.setAmoledBlack(enabled)
     fun setOfflineMode(enabled: Boolean) = secureStorage.setOfflineMode(enabled)
 
+    fun setPreloadNextEnabled(enabled: Boolean) = secureStorage.setPreloadNextEnabled(enabled)
+
     /**
      * Goes quiet, or stops.
      *
@@ -415,6 +420,17 @@ internal class SettingsViewModel @Inject constructor(
     }
 
     fun downloadLikedNow() = downloadScheduler.downloadNow()
+
+    /**
+     * Measures the library now, rather than waiting for a charger.
+     *
+     * `enqueueNow` was written for exactly this and had no caller, so nothing in the app could ask
+     * for indexing at all. It is worth distinguishing from "Sync now" beside it: this *computes*
+     * fingerprints, and the library sync *publishes* the ones that already exist. Both are needed,
+     * in that order.
+     */
+    fun indexFingerprintsNow() =
+        com.wander.android.core.audio.fingerprint.FingerprintIndexWorker.enqueueNow(context)
 
     fun clearCache() {
         viewModelScope.launch {

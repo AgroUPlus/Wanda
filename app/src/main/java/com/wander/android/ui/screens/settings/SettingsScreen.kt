@@ -182,9 +182,12 @@ internal fun SettingsScreen(
 
                     SettingsTab.PLAYBACK -> playbackStorageTab(
                         offline = state.offline,
+                        preloadNext = state.preloadNext,
+                        onPreloadNextChange = viewModel::setPreloadNextEnabled,
                         onOfflineChange = viewModel::setOfflineMode,
                         cacheBytes = state.cacheBytes,
                         onDownloadLiked = viewModel::downloadLikedNow,
+                        onIndexFingerprints = viewModel::indexFingerprintsNow,
                         onClearCache = viewModel::clearCache
                     )
 

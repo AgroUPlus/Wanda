@@ -23,7 +23,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +59,7 @@ internal fun SocialScreen(
     onOpenJam: () -> Unit = {},
     onOpenInbox: () -> Unit = {},
     onOpenCircle: () -> Unit = {},
+    onOpenOffGrid: () -> Unit = {},
     onOpenMyProfile: () -> Unit = {},
     viewModel: SocialViewModel = hiltViewModel()
 ) {
@@ -90,6 +94,7 @@ internal fun SocialScreen(
             contentPadding = contentPadding,
             onOpenInbox = onOpenInbox,
             onOpenMyProfile = onOpenMyProfile,
+            onOpenOffGrid = onOpenOffGrid,
             onFindPeople = { searching = true }
         )
 
@@ -107,7 +112,25 @@ internal fun SocialScreen(
             return
         }
 
+        val listState = rememberLazyListState()
+
+        // Asking near the end rather than at it, so the next page is usually already there by the
+        // time the last card is reached. The ViewModel ignores a request while one is in flight or
+        // once the server has run out, so this does not need to debounce.
+        val wantsMore by remember(state.feed.size, state.feedExhausted) {
+            derivedStateOf {
+                if (state.feed.isEmpty() || state.feedExhausted) return@derivedStateOf false
+                val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()
+                    ?: return@derivedStateOf false
+                last.index >= listState.layoutInfo.totalItemsCount - FEED_PREFETCH_DISTANCE
+            }
+        }
+        LaunchedEffect(wantsMore) {
+            if (wantsMore) viewModel.loadMoreFeed()
+        }
+
         LazyColumn(
+            state = listState,
             contentPadding = contentPadding.listInset(),
             modifier = Modifier.fillMaxSize()
         ) {
@@ -184,6 +207,9 @@ internal fun SocialScreen(
                 item(key = "feed_header") { SectionHeader("Lately") }
                 items(
                     count = state.feed.size,
+                    // The server's feed carries no stable id, so position is all there is. It is a
+                    // sound key here only because the list grows at the end and is never reordered
+                    // — a prefix that was item 3 stays item 3 when a longer page arrives.
                     key = { index -> "feed_" + index }
                 ) { index ->
                     FeedItemCard(
@@ -191,6 +217,14 @@ internal fun SocialScreen(
                         onOpenProfile = onOpenProfile,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
                     )
+                }
+                if (state.feedLoadingMore) {
+                    items(
+                        count = FEED_SKELETON_ROWS,
+                        key = { index -> "feed_skeleton_" + index }
+                    ) {
+                        FeedItemSkeleton(modifier = Modifier.padding(horizontal = 20.dp))
+                    }
                 }
             }
 
@@ -250,7 +284,7 @@ internal fun SocialScreen(
 }
 
 @Composable
-private fun SectionHeader(title: String) {
+internal fun SectionHeader(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleMedium,
@@ -282,3 +316,11 @@ internal fun NotPairedNotice(onOpenSettings: () -> Unit) {
 
 /** Enough to fill the fold. A placeholder nobody scrolls to is work for nothing. */
 private const val SKELETON_ROWS = 6
+
+/**
+ * How close to the end the list gets before the next page is asked for.
+ *
+ * A few rows rather than the last one: fetching only once the final card is visible means the
+ * skeletons are always seen, and the point is that usually they are not.
+ */
+private const val FEED_PREFETCH_DISTANCE = 4

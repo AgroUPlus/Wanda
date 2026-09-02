@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -39,6 +40,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -60,6 +63,10 @@ internal fun InboxConversation(
     // means the sheet survives the list recomposing underneath it.
     var acting by remember { mutableStateOf<String?>(null) }
 
+    // Where the thread stopped being readable by the server, if it ever was. Computed once per
+    // conversation rather than per bubble: it is a property of the list, not of a message.
+    val boundaryId = remember(state.conversation) { encryptionBoundaryId(state.conversation) }
+
     LazyColumn(
         contentPadding = contentPadding.listInset(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -71,6 +78,7 @@ internal fun InboxConversation(
         ) { index ->
             val drop = state.conversation[index]
             val incoming = !state.isMine(drop)
+            if (drop.id == boundaryId) EncryptionBoundary()
             ConversationDropMessage(
                 drop = drop,
                 incoming = incoming,
@@ -153,6 +161,21 @@ private fun ConversationDropMessage(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            // Sealed notes only. The absence of a padlock on the older half of a conversation is
+            // itself the information, and `EncryptionBoundary` above already says what it means —
+            // an open or crossed-out padlock would say the same thing a second time, louder.
+            //
+            // No `contentDescription`: the spoken description belongs to the bubble as a whole,
+            // and a padlock announced between a name and a message turns one sentence into three.
+            if (drop.isEncrypted) {
+                Spacer(Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.Rounded.Lock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(12.dp)
+                )
+            }
             // A reaction travels back to the sender, unlike a read receipt — so their own
             // bubble is where they find out somebody answered. It sits on the recipient's own
             // bubble too, since the menu it is set from closes behind itself.
@@ -178,6 +201,11 @@ private fun ConversationDropMessage(
             modifier = Modifier
                 .widthIn(max = 340.dp)
                 .padding(top = 2.dp)
+                // What the silent padlock above means, for a reader who cannot see it. On the
+                // bubble rather than on the icon, so it is announced once, with the message.
+                .semantics {
+                    if (drop.isEncrypted) stateDescription = "End-to-end encrypted"
+                }
                 .clip(bubbleShape)
                 .combinedClickable(
                     onClick = onPlay,

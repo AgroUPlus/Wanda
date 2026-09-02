@@ -25,6 +25,7 @@ internal data class SettingsUiState(
     val monet: Boolean,
     val amoled: Boolean,
     val offline: Boolean,
+    val preloadNext: Boolean,
     val incognito: Boolean,
     val cacheBytes: Long,
     val agroPaired: Boolean,
@@ -63,6 +64,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val monet by viewModel.isMonetDynamic.collectAsStateWithLifecycle()
     val amoled by viewModel.isAmoledBlack.collectAsStateWithLifecycle()
     val offline by viewModel.isOfflineMode.collectAsStateWithLifecycle()
+    val preloadNext by viewModel.isPreloadNextEnabled.collectAsStateWithLifecycle()
     val incognito by viewModel.isIncognito.collectAsStateWithLifecycle()
     val cacheBytes by viewModel.cacheBytes.collectAsStateWithLifecycle()
     val agro by viewModel.agroConnected.collectAsStateWithLifecycle()
@@ -99,6 +101,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         monet = monet,
         amoled = amoled,
         offline = offline,
+        preloadNext = preloadNext,
         incognito = incognito,
         cacheBytes = cacheBytes,
         agroPaired = agro,
