@@ -13,8 +13,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import com.wander.android.data.repository.RecognitionProgress
-import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 
 /**
@@ -28,32 +26,9 @@ sealed interface ListenState {
     data object Idle : ListenState
     data object Listening : ListenState
 
-    /**
-     * The microphone is still open and the matcher has an opinion.
-     *
-     * Its own state rather than a field on [Listening], because the screen it draws is genuinely
-     * different: a shortlist that reorders as the audio arrives, not a spinner.
-     */
-    data class Narrowing(val progress: RecognitionProgress) : ListenState
     data class Matched(val recognition: Recognition) : ListenState
     data object NoMatch : ListenState
     data object Failed : ListenState
-
-    /**
-     * Which panel this state draws, ignoring what it carries.
-     *
-     * `Narrowing` changes value every second while showing the same panel, so the screen's
-     * cross-fade has to be told those are the same thing or it restarts the transition on each
-     * new ranking.
-     */
-    val kind: String
-        get() = when (this) {
-            Idle, Listening -> "listening"
-            is Narrowing -> "listening"
-            is Matched -> "matched"
-            NoMatch -> "nomatch"
-            Failed -> "failed"
-        }
 }
 
 @HiltViewModel
@@ -83,28 +58,12 @@ class ListenViewModel @Inject constructor(
         if (listening?.isActive == true) return
         listening = viewModelScope.launch {
             _state.value = ListenState.Listening
-            // Collected rather than awaited: every emission is the matcher's real state at that
-            // moment, and showing it is the whole difference between a shortlist narrowing and a
-            // spinner that produces an answer from nowhere.
-            val outcome = runCatching {
-                recognitionRepository.listenProgressively().collect { progress ->
-                    _state.value = if (progress.settled) {
-                        when (val recognition = progress.recognition) {
-                            null -> ListenState.NoMatch
-                            else -> ListenState.Matched(recognition)
-                        }
-                    } else {
-                        // Nothing to show yet keeps the plain listening screen: an empty shortlist
-                        // reads as "found nothing" rather than "not yet".
-                        if (progress.candidates.isEmpty()) ListenState.Listening
-                        else ListenState.Narrowing(progress)
-                    }
-                }
-            }
-            // A cancelled collection is the user dismissing the sheet, which `stop` has already
-            // put back to idle — it must not be reported as a microphone failure.
-            if (outcome.isFailure && outcome.exceptionOrNull() !is CancellationException) {
-                _state.value = ListenState.Failed
+            val result = runCatching { recognitionRepository.listen() }
+            val recognition = result.getOrNull()
+            _state.value = when {
+                result.isFailure -> ListenState.Failed
+                recognition == null -> ListenState.NoMatch
+                else -> ListenState.Matched(recognition)
             }
         }
     }

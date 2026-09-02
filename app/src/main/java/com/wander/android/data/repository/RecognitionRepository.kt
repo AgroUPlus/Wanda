@@ -9,13 +9,12 @@ import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import android.util.Log
 import com.wander.android.core.audio.fingerprint.MatchConfidence
 import com.wander.android.core.audio.fingerprint.PcmDecoder
 import com.wander.android.core.audio.fingerprint.OffsetAlignment
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -75,70 +74,6 @@ class RecognitionRepository @Inject constructor(
         val samples = micRecorder.record(seconds) ?: return null
         return withContext(Dispatchers.Default) { identifyOrHum(samples) }
     }
-
-    /**
-     * Listens, and reports what it is thinking as it goes.
-     *
-     * The same capture and the same passes as [listen] — but the clip is handed to the matcher
-     * every second as it grows, and the ranking that comes back is emitted rather than kept. What
-     * a screen draws from this is the engine's actual state: which tracks the audio aligns with so
-     * far, how many landmarks stand behind each, and how far the leader is above the crowd.
-     *
-     * That distinction is the whole point. Cycling plausible titles under a spinner would show a
-     * deliberation that never happened; this shows the one that does, and the leader changing
-     * hands twice before settling is a true thing about the clip rather than an effect.
-     *
-     * The last emission always carries [RecognitionProgress.settled], and its [Recognition] is
-     * exactly what [listen] would have answered for the same capture.
-     */
-    fun listenProgressively(seconds: Int = LISTEN_SECONDS): Flow<RecognitionProgress> = flow {
-        var lastClip: FloatArray? = null
-        micRecorder.recordProgressively(seconds).collect { clip ->
-            lastClip = clip
-            val scored = score(clip)
-            emit(
-                RecognitionProgress(
-                    candidates = scored?.let { describe(it) }.orEmpty(),
-                    noiseFloor = scored?.confidence?.noiseFloor ?: 0,
-                    settled = false,
-                    recognition = null
-                )
-            )
-        }
-
-        // The verdict comes off the whole clip, through the ordinary path — including the melody
-        // engine, which only ever had a whole capture to work with and is not worth running on a
-        // prefix.
-        val clip = lastClip
-        val recognition = if (clip == null) null else identifyOrHum(clip)
-        val finalScored = clip?.let { score(it) }
-        emit(
-            RecognitionProgress(
-                candidates = finalScored?.let { describe(it) }.orEmpty(),
-                noiseFloor = finalScored?.confidence?.noiseFloor ?: 0,
-                settled = true,
-                recognition = recognition
-            )
-        )
-    }
-
-    /** The top candidates, named, for a screen to draw. */
-    private suspend fun describe(scored: Scored): List<RecognitionCandidate> =
-        withContext(Dispatchers.IO) {
-            scored.ranked.take(MAX_SHOWN_CANDIDATES).mapNotNull { candidate ->
-                val entity = trackDao.getTrackById(candidate.trackId) ?: return@mapNotNull null
-                RecognitionCandidate(
-                    trackId = candidate.trackId,
-                    title = entity.title,
-                    artist = entity.artist,
-                    artworkUrl = entity.artworkUrl,
-                    votes = candidate.votes,
-                    // What the decision actually turns on, so a bar drawn from it is showing the
-                    // quantity being judged rather than a number that merely correlates with it.
-                    lead = (candidate.votes - scored.confidence.noiseFloor).coerceAtLeast(0)
-                )
-            }
-        }
 
     /**
      * Both engines, one capture.
@@ -385,9 +320,6 @@ class RecognitionRepository @Inject constructor(
 
         /** Puts a melody match's confidence on roughly the same scale as a landmark score. */
         const val MELODY_SCORE_SCALE = 20
-
-        /** How many candidates a screen is shown. More than a few is a list, not a shortlist. */
-        const val MAX_SHOWN_CANDIDATES = 5
 
         private const val TAG = "Recognition"
 
