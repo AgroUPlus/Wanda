@@ -2,6 +2,7 @@ package com.wander.android
 
 import android.app.Application
 import android.content.pm.ApplicationInfo
+import kotlinx.coroutines.launch
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import coil3.ImageLoader
@@ -59,13 +60,23 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
             .build()
     }
 
+    /** Outlives every screen, like the server it starts. */
+    private val applicationScope =
+        kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO
+        )
+
     override fun onCreate() {
         super.onCreate()
         downloadScheduler.scheduleAutoDownload()
         // Cheap and self-gating: the worker does nothing until an Agro server is paired.
         scrobbleSyncScheduler.schedule()
-        // Embedded P2P server for direct high-speed LAN audio transfers
-        p2pServer.start()
+        // Embedded P2P server for direct high-speed LAN audio transfers.
+        //
+        // Launched rather than awaited: `onCreate` must not block on a bind, and nothing on this
+        // path has a screen to report to. The off-grid screen starts it again and *does* wait,
+        // which is where a taken port becomes something the user is told about.
+        applicationScope.launch { p2pServer.start() }
         // Needed for YT Music's PO Token / signature-cipher deobfuscation (see InnerTubeClient).
         val isDebuggable = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         ZemerCipher.initialize(context = this, debugLogging = isDebuggable)
