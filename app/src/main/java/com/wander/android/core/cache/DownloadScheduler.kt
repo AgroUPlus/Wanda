@@ -1,10 +1,13 @@
 package com.wander.android.core.cache
 
+import com.wander.android.core.work.WorkControls
+import com.wander.android.core.notification.WorkProgressNotification
 import android.content.Context
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -26,6 +29,7 @@ class DownloadScheduler @Inject constructor(
             .build()
 
         val request = PeriodicWorkRequestBuilder<DownloadWorker>(6, TimeUnit.HOURS)
+            .addTag(WorkControls.tagFor(WorkProgressNotification.Kind.DOWNLOAD))
             .setConstraints(constraints)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES)
             .build()
@@ -40,14 +44,23 @@ class DownloadScheduler @Inject constructor(
     /** "Download now" from Settings — the user asked, so only connectivity is required. */
     fun downloadNow() {
         val request = OneTimeWorkRequestBuilder<DownloadWorker>()
+                    .addTag(WorkControls.tagFor(WorkProgressNotification.Kind.DOWNLOAD))
             .setConstraints(
                 Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
             )
             .build()
-        WorkManager.getInstance(context).enqueue(request)
+        // Named, where it used to be a bare `enqueue`. An unnamed request cannot be cancelled by
+        // anything, so "cancel downloads" would have silently missed exactly the run the user had
+        // just started by hand.
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            IMMEDIATE_WORK,
+            ExistingWorkPolicy.REPLACE,
+            request
+        )
     }
 
-    private companion object {
+    internal companion object {
         const val WORK_NAME = "wanda_auto_download"
+        const val IMMEDIATE_WORK = "wanda_auto_download_now"
     }
 }

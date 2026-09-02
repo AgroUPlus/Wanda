@@ -13,6 +13,10 @@ internal fun LazyListScope.playbackStorageTab(
     onOpenFingerprints: () -> Unit,
     indexOnMobileData: Boolean,
     onIndexOnMobileDataChange: (Boolean) -> Unit,
+    measuringPaused: Boolean,
+    onMeasuringPausedChange: (Boolean) -> Unit,
+    downloadingPaused: Boolean,
+    onDownloadingPausedChange: (Boolean) -> Unit,
     onClearCache: () -> Unit
 ) {
     item(key = "offline") {
@@ -58,6 +62,27 @@ internal fun LazyListScope.playbackStorageTab(
                 "free, which is why this is off by default.",
             checked = indexOnMobileData,
             onCheckedChange = onIndexOnMobileDataChange
+        )
+    }
+
+    item(key = "pause_measuring") {
+        SettingsToggle(
+            title = "Pause measuring",
+            // Says what pausing actually guarantees. A plain cancel would be undone by the next
+            // scheduled run and read as a button that did not work.
+            subtitle = "Stops the current pass and keeps it stopped until you turn this off. " +
+                "Sync and downloads are unaffected.",
+            checked = measuringPaused,
+            onCheckedChange = onMeasuringPausedChange
+        )
+    }
+
+    item(key = "pause_downloads") {
+        SettingsToggle(
+            title = "Pause downloads",
+            subtitle = "Stops downloading liked tracks until you turn this off.",
+            checked = downloadingPaused,
+            onCheckedChange = onDownloadingPausedChange
         )
     }
 

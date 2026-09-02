@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.settings
 
+import com.wander.android.core.notification.WorkProgressNotification
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.cache.AudioCacheManager
@@ -55,7 +56,8 @@ internal class SettingsViewModel @Inject constructor(
     private val incognitoRepository: IncognitoRepository,
     private val releaseCheckScheduler: ReleaseCheckScheduler,
     private val accountApi: AgroAccountApi,
-    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
+    private val workControls: com.wander.android.core.work.WorkControls
 ) : ViewModel() {
 
     val appVersion: String get() = com.wander.android.BuildConfig.VERSION_NAME
@@ -120,6 +122,27 @@ internal class SettingsViewModel @Inject constructor(
     val isPreloadNextEnabled: StateFlow<Boolean> = secureStorage.isPreloadNextEnabled
 
     val isIndexOnMobileDataEnabled: StateFlow<Boolean> = secureStorage.isIndexOnMobileDataEnabled
+
+    val isMeasuringPaused: StateFlow<Boolean> =
+        workControls.isPaused(WorkProgressNotification.Kind.FINGERPRINT)
+
+    val isDownloadingPaused: StateFlow<Boolean> =
+        workControls.isPaused(WorkProgressNotification.Kind.DOWNLOAD)
+
+    /**
+     * Pause and resume, from the screen as well as from the notification.
+     *
+     * Both surfaces write through the same [WorkControls] and read the same flow, so a pause set on
+     * one is visible on the other. A notification that is dismissed or never seen — the user turned
+     * the channel off — would otherwise leave the pause unreachable.
+     */
+    fun setMeasuringPaused(paused: Boolean) = setPaused(WorkProgressNotification.Kind.FINGERPRINT, paused)
+
+    fun setDownloadingPaused(paused: Boolean) = setPaused(WorkProgressNotification.Kind.DOWNLOAD, paused)
+
+    private fun setPaused(kind: WorkProgressNotification.Kind, paused: Boolean) {
+        if (paused) workControls.pause(kind) else workControls.resume(kind)
+    }
     val agroConnected: StateFlow<Boolean> = secureStorage.agroConfigured
 
     /** Blank until the user names one; see [SecureStorage.shareDomain]. */

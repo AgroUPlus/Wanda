@@ -1,5 +1,7 @@
 package com.wander.android.core.sync
 
+import com.wander.android.core.work.WorkControls
+import com.wander.android.core.notification.WorkProgressNotification
 import android.content.Context
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -41,6 +43,7 @@ class LibrarySyncScheduler @Inject constructor(
             .build()
 
         val request = PeriodicWorkRequestBuilder<LibrarySyncWorker>(6, TimeUnit.HOURS)
+            .addTag(WorkControls.tagFor(WorkProgressNotification.Kind.LIBRARY_SYNC))
             .setConstraints(constraints)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
             .build()
@@ -59,6 +62,7 @@ class LibrarySyncScheduler @Inject constructor(
     /** "Sync now". Only needs a connection — the user is asking for it deliberately. */
     fun syncNow() {
         val request = OneTimeWorkRequestBuilder<LibrarySyncWorker>()
+                    .addTag(WorkControls.tagFor(WorkProgressNotification.Kind.LIBRARY_SYNC))
             .setConstraints(
                 Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
             )
@@ -73,7 +77,7 @@ class LibrarySyncScheduler @Inject constructor(
         )
     }
 
-    private companion object {
+    internal companion object {
         const val PERIODIC_WORK = "wanda_library_sync"
         const val IMMEDIATE_WORK = "wanda_library_sync_now"
     }

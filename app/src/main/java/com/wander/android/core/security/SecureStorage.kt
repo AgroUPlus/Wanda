@@ -204,6 +204,30 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _isPreloadNextEnabled.value = enabled
     }
 
+    /**
+     * Whether a long-running job is suspended, keyed by `WorkProgressNotification.Kind.name`.
+     *
+     * A map of flows rather than a field per job, because the set of jobs is an enum that will grow
+     * and every addition would otherwise mean three more lines here. Created on demand and kept, so
+     * two callers asking about the same job observe the same flow — an important detail, since the
+     * notification action and the settings row both write to it and each must see the other's write.
+     */
+    private val workPausedFlows = mutableMapOf<String, MutableStateFlow<Boolean>>()
+
+    @Synchronized
+    fun workPaused(kindName: String): StateFlow<Boolean> =
+        workPausedFlows.getOrPut(kindName) {
+            MutableStateFlow(prefs.getBoolean(workPausedKey(kindName), false))
+        }.asStateFlow()
+
+    @Synchronized
+    fun setWorkPaused(kindName: String, paused: Boolean) {
+        prefs.edit { putBoolean(workPausedKey(kindName), paused) }
+        workPausedFlows.getOrPut(kindName) { MutableStateFlow(paused) }.value = paused
+    }
+
+    private fun workPausedKey(kindName: String) = "key_work_paused_$kindName"
+
     fun setIndexOnMobileDataEnabled(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_INDEX_ON_MOBILE_DATA, enabled) }
         _isIndexOnMobileDataEnabled.value = enabled

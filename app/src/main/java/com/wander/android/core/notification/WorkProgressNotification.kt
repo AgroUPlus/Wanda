@@ -78,6 +78,12 @@ class WorkProgressNotification @Inject constructor(
             .setSilent(true)
             .setProgress(if (total > 0) total else 0, done, total <= 0)
             .setContentIntent(openIntent(kind))
+            // Pause and Cancel are different promises and both are worth offering. Pause means
+            // "not now, and do not quietly start again" — the failure a bare cancel has, since the
+            // next periodic trigger would restart it minutes later and look like the button not
+            // working. Cancel means "stop this run", leaving the schedule intact.
+            .addAction(0, "Pause", actionIntent(kind, WorkActionReceiver.ACTION_PAUSE))
+            .addAction(0, "Cancel", actionIntent(kind, WorkActionReceiver.ACTION_CANCEL))
             .build()
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -117,6 +123,26 @@ class WorkProgressNotification @Inject constructor(
             context,
             kind.notificationId,
             launch,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+    }
+
+    /**
+     * A button on the notification, routed to [WorkActionReceiver].
+     *
+     * The request code mixes the kind with the action, because `PendingIntent` equality ignores
+     * extras: sharing one code between Pause and Cancel would have `FLAG_UPDATE_CURRENT` rewrite
+     * the first into the second, and both buttons would then do the same thing.
+     */
+    private fun actionIntent(kind: Kind, action: String): PendingIntent {
+        val intent = Intent(context, WorkActionReceiver::class.java)
+            .setAction(action)
+            .putExtra(WorkActionReceiver.EXTRA_KIND, kind.name)
+
+        return PendingIntent.getBroadcast(
+            context,
+            kind.notificationId * 10 + if (action == WorkActionReceiver.ACTION_PAUSE) 1 else 2,
+            intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
     }
