@@ -10,6 +10,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import com.wander.android.core.notification.WorkProgressNotification
+import com.wander.android.core.work.WorkControls
 import androidx.work.WorkerParameters
 import com.wander.android.R
 import com.wander.android.data.repository.CatalogSyncRepository
@@ -38,11 +39,15 @@ internal class LibrarySyncWorker @AssistedInject constructor(
     private val syncRepository: LibrarySyncRepository,
     private val catalogSync: CatalogSyncRepository,
     private val secureStorage: com.wander.android.core.security.SecureStorage,
-    private val notifications: WorkProgressNotification
+    private val notifications: WorkProgressNotification,
+    private val workControls: WorkControls
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         if (!syncRepository.isEnabled) return@withContext Result.success()
+        if (workControls.isPaused(WorkProgressNotification.Kind.LIBRARY_SYNC).value) {
+            return@withContext Result.success()
+        }
 
         runCatching { setForeground(foregroundInfo(0, 0)) }
             .onFailure {

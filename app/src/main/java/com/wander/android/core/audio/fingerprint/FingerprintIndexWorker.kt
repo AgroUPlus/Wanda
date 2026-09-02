@@ -1,5 +1,6 @@
 package com.wander.android.core.audio.fingerprint
 
+import com.wander.android.core.work.WorkControls
 import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
@@ -53,6 +54,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
     private val decoder: PcmDecoder,
     private val progress: FingerprintProgress,
     private val notifications: WorkProgressNotification,
+    private val workControls: WorkControls,
     private val musicRepository: MusicRepository
 ) : CoroutineWorker(context, params) {
 
@@ -70,6 +72,13 @@ class FingerprintIndexWorker @AssistedInject constructor(
         // melody contour or an acoustic vector. Any library indexed before hum-to-search existed
         // was frozen without one, permanently, and re-running the indexer could not fix it because
         // re-running produced the same empty list. It looked like the indexer doing nothing.
+        // A pause is checked here rather than only at enqueue time. WorkManager can start a run
+        // that was already queued when the user paused, and a paused job that visibly keeps working
+        // is worse than a button that does nothing — at least the latter is honest.
+        if (workControls.isPaused(WorkProgressNotification.Kind.FINGERPRINT).value) {
+            return@withContext Result.success()
+        }
+
         // One named track when the player asked for it, the whole library otherwise. The player's
         // request is a different urgency, not a small sweep: a track you have just started
         // listening to is the one whose missing measurement you might actually notice.
@@ -179,7 +188,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
     }
 
     companion object {
-        private const val NAME = "fingerprint-index"
+        internal const val NAME = "fingerprint-index"
 
         /** Names a single track to measure, instead of sweeping the library. */
         internal const val KEY_TRACK_ID = "track_id"
@@ -188,21 +197,30 @@ class FingerprintIndexWorker @AssistedInject constructor(
          * Tracks per run.
          *
          * Was 25, sized for the ten minutes a *plain* worker is given before the platform kills
-         * it. The run is a foreground service now, so that ceiling is gone and 25 was simply
-         * stopping a library of a thousand tracks after twenty-five of them and waiting for
-         * WorkManager's backoff to grant the next handful — which is what "it does ten and stops"
-         * looks like from the outside.
+         * it. The run is a foreground service now, so that ceiling is gone — 25 was simply stopping
+         * a library of a thousand tracks after twenty-five of them and waiting on WorkManager's
+         * backoff for the next handful, which is what "it does a few and stops" looks like from
+         * the outside.
          *
-         * Still bounded rather than unbounded: `Result.retry()` at the end means a run that is
-         * interrupted keeps every track it finished, and a bound is what makes that true.
+         * Bounded rather than unbounded for two reasons that survive the change. `Result.retry()`
+         * means an interrupted run keeps every track it finished, and a bound is what makes that
+         * true. And from Android 15 a `dataSync` foreground service gets roughly **six hours per
+         * day across the whole app** — spending that budget on one indexing marathon would stop
+         * the library sync too.
          */
-        private const val BATCH_SIZE = 250
+        private const val BATCH_SIZE = 100
 
         /**
-         * How far ahead to ask which tracks still need a vector. Comfortably more than one batch,
-         * so the set covers everything this run could reach without listing a whole library.
+         * How far ahead to ask which tracks still need an acoustic vector.
+         *
+         * Derived from [BATCH_SIZE] rather than standing on its own, because standing on its own is
+         * how it broke: it was a flat 200 chosen when a batch was 25, and raising the batch to 250
+         * silently made it *smaller* than a run. The effect was invisible — a track missing only
+         * its vector, past the two-hundredth, never entered the candidate list at all, and the
+         * radio degraded with nothing to show for it. Doubled so the set comfortably covers
+         * anything one run can reach.
          */
-        private const val FEATURE_BATCH_LIMIT = 200
+        private const val FEATURE_BATCH_LIMIT = BATCH_SIZE * 2
 
         /**
          * Asks for the index to be brought up to date.
@@ -215,6 +233,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
                 NAME,
                 ExistingWorkPolicy.KEEP,
                 OneTimeWorkRequestBuilder<FingerprintIndexWorker>()
+                    .addTag(WorkControls.tagFor(WorkProgressNotification.Kind.FINGERPRINT))
                     .setConstraints(
                         Constraints.Builder()
                             // Charging is **not** required, and that is a deliberate reversal.
@@ -263,6 +282,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
                 "$NAME:$trackId",
                 ExistingWorkPolicy.KEEP,
                 OneTimeWorkRequestBuilder<FingerprintIndexWorker>()
+                    .addTag(WorkControls.tagFor(WorkProgressNotification.Kind.FINGERPRINT))
                     .setInputData(workDataOf(KEY_TRACK_ID to trackId))
                     .build()
             )
@@ -279,7 +299,8 @@ class FingerprintIndexWorker @AssistedInject constructor(
             WorkManager.getInstance(context).enqueueUniqueWork(
                 NAME,
                 ExistingWorkPolicy.REPLACE,
-                OneTimeWorkRequestBuilder<FingerprintIndexWorker>().build()
+                OneTimeWorkRequestBuilder<FingerprintIndexWorker>()
+                    .addTag(WorkControls.tagFor(WorkProgressNotification.Kind.FINGERPRINT)).build()
             )
         }
     }

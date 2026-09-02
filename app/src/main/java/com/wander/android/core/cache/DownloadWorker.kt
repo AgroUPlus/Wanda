@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.notification.WorkEta
 import com.wander.android.core.notification.WorkProgressNotification
+import com.wander.android.core.work.WorkControls
 import com.wander.android.data.repository.MusicRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -28,7 +29,8 @@ class DownloadWorker @AssistedInject constructor(
     private val trackDao: TrackDao,
     private val musicRepository: MusicRepository,
     private val okHttpClient: OkHttpClient,
-    private val notifications: WorkProgressNotification
+    private val notifications: WorkProgressNotification,
+    private val workControls: WorkControls
 ) : CoroutineWorker(context, params) {
 
     private val downloadsDir = File(context.filesDir, "downloads")
@@ -47,6 +49,10 @@ class DownloadWorker @AssistedInject constructor(
         )
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        if (workControls.isPaused(WorkProgressNotification.Kind.DOWNLOAD).value) {
+            return@withContext Result.success()
+        }
+
         // A single explicit request from the context menu, or the periodic liked-tracks sweep.
         val requestedId = inputData.getString(KEY_TRACK_ID)
         val pending = if (requestedId != null) {

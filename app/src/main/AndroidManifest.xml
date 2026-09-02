@@ -106,6 +106,16 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Wanda"
         tools:targetApi="37">
+        <!--
+            The Pause and Cancel buttons on a progress notification.
+
+            `exported="false"`: the only sender is this app's own PendingIntent, and there is no
+            reason another installed app should be able to stop the user's library sync.
+        -->
+        <receiver
+            android:name=".core.notification.WorkActionReceiver"
+            android:exported="false" />
+
 
         <activity
             android:name=".MainActivity"
