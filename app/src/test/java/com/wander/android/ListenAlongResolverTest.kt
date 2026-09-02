@@ -32,6 +32,28 @@ class ListenAlongResolverTest {
         assertFalse(ListenAlongResolver.canTryDirect("192.168.1.9:8702", "  ", "abc123"))
     }
 
+    /**
+     * The off-grid tier is the only one whose credential does not come from the server, because it
+     * is the only one that has to work with no server in reach. `OffGridPairing` obtains it from
+     * the peer over the radio link itself.
+     */
+    @Test
+    fun `off-grid prefers the grant the peer issued face to face`() {
+        assertEquals("peer", ListenAlongResolver.offGridToken("peer", "agro"))
+    }
+
+    @Test
+    fun `off-grid still accepts an Agro token when there is no peer grant`() {
+        assertEquals("agro", ListenAlongResolver.offGridToken(null, "agro"))
+        assertEquals("agro", ListenAlongResolver.offGridToken("  ", "agro"))
+    }
+
+    @Test
+    fun `off-grid has no bearer when neither side issued one`() {
+        assertEquals(null, ListenAlongResolver.offGridToken(null, null))
+        assertEquals(null, ListenAlongResolver.offGridToken("", "  "))
+    }
+
     @Test
     fun `the relay needs a device and a hash but no lan address`() {
         assertTrue(ListenAlongResolver.canTryRelay("host-phone", "abc123", serverConfigured = true))

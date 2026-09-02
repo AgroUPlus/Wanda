@@ -10,6 +10,7 @@ import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.util.Log
 import android.os.ParcelUuid
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -36,11 +37,27 @@ internal class BleDiscovery @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
 
+    private companion object {
+        const val TAG = "BleDiscovery"
+    }
+
     private val manager: BluetoothManager?
         get() = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
 
     private val serviceUuid = ParcelUuid.fromString(OffGridBeacon.SERVICE_UUID)
     private var advertiseCallback: AdvertiseCallback? = null
+
+    /** The refusals worth telling apart, in the words of what the user could do about them. */
+    private fun describe(errorCode: Int): String = when (errorCode) {
+        AdvertiseCallback.ADVERTISE_FAILED_DATA_TOO_LARGE ->
+            "the beacon does not fit in an advertisement"
+        AdvertiseCallback.ADVERTISE_FAILED_FEATURE_UNSUPPORTED ->
+            "this chipset has no peripheral mode"
+        AdvertiseCallback.ADVERTISE_FAILED_ALREADY_STARTED -> "already advertising"
+        AdvertiseCallback.ADVERTISE_FAILED_TOO_MANY_ADVERTISERS -> "too many advertisers"
+        AdvertiseCallback.ADVERTISE_FAILED_INTERNAL_ERROR -> "internal error"
+        else -> "error $errorCode"
+    }
 
     /** Whether the radio is present and switched on. Everything below returns nothing without it. */
     val isAvailable: Boolean
@@ -70,11 +87,22 @@ internal class BleDiscovery @Inject constructor(
             // The name is left out on purpose. It is the device's Bluetooth name, which is usually
             // its owner's, and it would be broadcast to the whole room — see [OffGridBeacon].
             .setIncludeDeviceName(false)
-            .addServiceUuid(serviceUuid)
+            // Service *data* only, and no separate service-UUID field. A legacy advertisement is
+            // 31 bytes; naming the 128-bit UUID twice costs 18 of them for nothing, and the packet
+            // was refused outright for being 50 bytes long. The scan below filters on this same
+            // service data, so the second copy bought no discoverability either.
             .addServiceData(serviceUuid, beacon.toBytes())
             .build()
 
-        val callback = object : AdvertiseCallback() {}
+        val callback = object : AdvertiseCallback() {
+            override fun onStartFailure(errorCode: Int) {
+                // The empty callback that used to sit here is why this feature failed in perfect
+                // silence: `startAdvertising` is asynchronous, so the call below always "succeeded"
+                // and the refusal arrived here, where nothing was listening. A radio that will not
+                // advertise is the whole feature not working, and it has to say so.
+                Log.w(TAG, "the radio refused to advertise: " + describe(errorCode))
+            }
+        }
         advertiseCallback = callback
         return runCatching { advertiser.startAdvertising(settings, data, callback) }.isSuccess
     }
@@ -108,7 +136,16 @@ internal class BleDiscovery @Inject constructor(
             }
         }
 
-        val filter = ScanFilter.Builder().setServiceUuid(serviceUuid).build()
+        // Matched on service data rather than on a service-UUID field, because the advertisement
+        // no longer carries one — see [advertise]. The version byte is included in the match, so
+        // the scanner itself drops anything that is not one of ours instead of waking this process.
+        val filter = ScanFilter.Builder()
+            .setServiceData(
+                serviceUuid,
+                byteArrayOf(OffGridBeacon.VERSION),
+                byteArrayOf(0xFF.toByte())
+            )
+            .build()
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
             .build()

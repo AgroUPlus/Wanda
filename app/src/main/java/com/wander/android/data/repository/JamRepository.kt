@@ -6,9 +6,13 @@ import com.wander.android.data.sources.agro.AgroJamApi
 import com.wander.android.data.sources.agro.FriendJam
 import com.wander.android.data.sources.agro.Jam
 import com.wander.android.data.sources.agro.JamMode
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,8 +29,10 @@ internal class JamRepository @Inject constructor(
     private val api: AgroJamApi,
     private val playerConnection: PlayerConnection,
     private val playback: JamPlaybackController,
-    private val trackDao: com.wander.android.core.database.dao.TrackDao
+    private val sharedTrackHash: com.wander.android.core.sync.SharedTrackHash
 ) {
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
     private val _jam = MutableStateFlow<Jam?>(null)
     val jam: StateFlow<Jam?> = _jam.asStateFlow()
 
@@ -55,6 +61,7 @@ internal class JamRepository @Inject constructor(
                 onJamEnded()
             } else {
                 _jam.value = fresh
+                wireJamProposal()
                 if (fresh != null) playback.onNowPlaying(fresh.nowPlaying)
             }
         }
@@ -80,6 +87,7 @@ internal class JamRepository @Inject constructor(
     /** Leaves, and hands back whatever this device was playing before. */
     suspend fun leave(): Result<Unit> = api.leaveJam().map {
         _jam.value = null
+        wireJamProposal()
         playback.reset()
         returnQueue()
     }
@@ -87,6 +95,7 @@ internal class JamRepository @Inject constructor(
     /** The jam ended under us — the creator left, or it was wound up. Same restoration. */
     fun onJamEnded() {
         _jam.value = null
+        wireJamProposal()
         playback.reset()
         returnQueue()
     }
@@ -105,10 +114,14 @@ internal class JamRepository @Inject constructor(
      * Queues a track, naming the local file behind it when there is one.
      *
      * The hash is what lets the rest of the room play *this* copy rather than each hunting for the
-     * track by name in their own sources. Absent for anything streamed, which is most of a queue.
+     * track by name in their own sources. Absent for anything streamed, which is most of a queue —
+     * but computed on the spot for a local file the batch worker has not reached, because without
+     * it the room is told a file exists that nobody can ask for by name.
      */
-    suspend fun add(track: UnifiedTrack): Result<Unit> =
-        api.addTrack(track, contentHash = trackDao.getTrackById(track.id)?.contentHash).store()
+    suspend fun add(track: UnifiedTrack): Result<Unit> {
+        displaceAutoRadio()
+        return api.addTrack(track, contentHash = sharedTrackHash.of(track.id)).store()
+    }
 
     suspend fun approve(trackId: String): Result<Unit> = api.approve(trackId).store()
 
@@ -133,6 +146,52 @@ internal class JamRepository @Inject constructor(
     /** Every mutation answers with the whole jam, so applying one is a straight replacement. */
     private fun Result<Jam>.store(): Result<Unit> = onSuccess { fresh ->
         _jam.value = fresh
+        wireJamProposal()
         playback.onNowPlaying(fresh.nowPlaying)
     }.map { }
+
+    /**
+     * While a jam exists, choosing a track anywhere in the app proposes it to the room.
+     *
+     * This used to be installed by `JamViewModel`, which meant it only existed once that ViewModel
+     * had been constructed — so a jam joined before the app was restarted, or simply a user who
+     * went straight to Library without passing through the Friends tab, had no proposal callback
+     * at all and tapping a song played it locally instead. Long-pressing worked the whole time,
+     * because that path calls the repository directly, which is exactly the inconsistency reported.
+     *
+     * Owned here because the jam is owned here: the callback's lifetime is now the jam's, not a
+     * screen's.
+     */
+    private fun wireJamProposal() {
+        if (_jam.value == null) {
+            playerConnection.setJamProposal(null)
+            return
+        }
+        playerConnection.setJamProposal { tracks, index ->
+            tracks.getOrNull(index)?.let { track -> scope.launch { add(track) } }
+        }
+    }
+
+    /**
+     * Remembers the track auto-radio put in an empty queue, so a real choice can displace it.
+     *
+     * Held here rather than in a ViewModel for the same reason the callback above is: the
+     * proposal it guards can now arrive from anywhere in the app.
+     */
+    fun noteAutoRadioTrack(trackId: String?) {
+        autoRadioTrackId = trackId
+    }
+
+    private var autoRadioTrackId: String? = null
+
+    /** Drops the auto-radio placeholder, if one is still sitting where the user's pick should go. */
+    private suspend fun displaceAutoRadio() {
+        val radioTrackId = autoRadioTrackId ?: return
+        autoRadioTrackId = null
+        val jam = _jam.value ?: return
+        val queued = (jam.queue + jam.proposals).firstOrNull {
+            it.trackUri == radioTrackId || it.id == radioTrackId
+        } ?: return
+        api.removeTrack(queued.id).store()
+    }
 }

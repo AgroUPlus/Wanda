@@ -5,10 +5,15 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.wander.android.core.database.entity.TrackEntity
+import com.wander.android.core.playback.LIVE_SUFFIX
+import com.wander.android.data.model.isOneShotTrackId
 import com.wander.android.data.repository.AcousticFeatureRepository
+import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.MelodySearchRepository
 import com.wander.android.data.repository.RecognitionRepository
 import com.wander.android.data.repository.RecordingIdentityRepository
@@ -42,7 +47,8 @@ class FingerprintIndexWorker @AssistedInject constructor(
     private val recordingLinks: RecordingLinkRepository,
     private val acousticFeatures: AcousticFeatureRepository,
     private val melodySearch: MelodySearchRepository,
-    private val decoder: PcmDecoder
+    private val decoder: PcmDecoder,
+    private val musicRepository: MusicRepository
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.Default) {
@@ -63,8 +69,8 @@ class FingerprintIndexWorker @AssistedInject constructor(
 
         for (track in pending.take(BATCH_SIZE)) {
             if (isStopped) return@withContext Result.retry()
-            val path = track.localFilePath ?: continue
-            val samples = decoder.decode(path) ?: continue
+            val source = audioSourceFor(track) ?: continue
+            val samples = decoder.decode(source.first, source.second) ?: continue
             recognitionRepository.index(track, samples)
             if (track.id in needsCanonical) {
                 recordingIdentity.index(track.id, samples, track.durationMs)
@@ -79,6 +85,30 @@ class FingerprintIndexWorker @AssistedInject constructor(
         }
 
         if (pending.size > BATCH_SIZE) Result.retry() else Result.success()
+    }
+
+    /**
+     * Where to read a minute of this track's audio, and what to send with the request.
+     *
+     * A local file when there is one, and otherwise the stream the track actually plays from.
+     * Restricting this to files meant that on a library made mostly of Navidrome and YouTube Music
+     * the radio and the recogniser reasoned about a handful of songs and behaved as though that
+     * were the whole collection.
+     *
+     * Two exclusions, both of which would waste a decode rather than fail loudly. A **livestream**
+     * has no beginning to measure and no fixed content to identify. A **one-shot** id names a
+     * borrowed transfer that is consumed by reading it, so indexing one would spend somebody
+     * else's relay session on a fingerprint.
+     */
+    private suspend fun audioSourceFor(track: TrackEntity): Pair<String, Map<String, String>>? {
+        track.localFilePath
+            ?.takeIf { it.isNotBlank() && java.io.File(it).exists() }
+            ?.let { return it to emptyMap() }
+
+        if (track.isLive || isOneShotTrackId(track.id)) return null
+        val stream = musicRepository.getStreamInfo(track.id).getOrNull() ?: return null
+        if (stream.uri.endsWith(LIVE_SUFFIX)) return null
+        return stream.uri to stream.headers
     }
 
     companion object {
@@ -111,6 +141,10 @@ class FingerprintIndexWorker @AssistedInject constructor(
                         Constraints.Builder()
                             .setRequiresCharging(true)
                             .setRequiresBatteryNotLow(true)
+                            // Unmetered, because this now reads audio. It used to declare no
+                            // network constraint on the grounds that it touched none, which stopped
+                            // being true the moment streamed tracks became indexable.
+                            .setRequiredNetworkType(NetworkType.UNMETERED)
                             .build()
                     )
                     .build()

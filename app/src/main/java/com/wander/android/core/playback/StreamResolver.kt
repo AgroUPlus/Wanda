@@ -6,6 +6,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.ResolvingDataSource
+import com.wander.android.data.model.isOneShotTrackId
 import com.wander.android.data.repository.MusicRepository
 import kotlinx.coroutines.runBlocking
 import java.io.IOException
@@ -66,6 +67,23 @@ class StreamResolver @Inject constructor(
             .buildUpon()
             .setUri(streamInfo.uri.toUri())
             .setHttpRequestHeaders(dataSpec.httpRequestHeaders + streamInfo.headers)
+            // A borrowed track is never cached, and this is where that gets decided.
+            //
+            // `RelayDecryptingDataSource` documents the spec as being marked uncacheable, and it
+            // was not — no cache flag appeared anywhere in the project. Two consequences, both
+            // real. `CacheDataSource` re-opens its upstream to fill each span, and a relay session
+            // serves its receiving half exactly once, so the second open came back `409`. And a
+            // `Tee` wrote somebody else's track to this device's disk, which is precisely what the
+            // placement of the decrypting source exists to prevent.
+            //
+            // The flag reads oddly and is exactly right: both peer tiers and the relay omit
+            // `Content-Length` on purpose, because encryption framing makes the byte count differ
+            // from the file's and neither stream is seekable. Length is therefore always unknown
+            // for these, and this is the flag Media3 offers for "then do not cache it".
+            .setFlags(
+                dataSpec.flags or
+                    if (isOneShotTrackId(trackId)) DataSpec.FLAG_DONT_CACHE_IF_LENGTH_UNKNOWN else 0
+            )
             .build()
     }
 

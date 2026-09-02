@@ -4,8 +4,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
 
@@ -37,6 +37,42 @@ fun rememberLocalNetworkGate(action: () -> Unit): () -> Unit {
                 launcher.launch(permission)
             } else {
                 current()
+            }
+        }
+    }
+}
+
+/**
+ * The same gate for a screen with several actions behind it, each carrying its own argument.
+ *
+ * Returns a wrapper: `withLocalNetwork { viewModel.join(code) }`. One launcher for the screen, and
+ * the action that asked for it is held until the answer comes back — which is why this cannot just
+ * be [rememberLocalNetworkGate] called once per button, as each call would need its own launcher
+ * registered at composition time and the arguments are not known until the tap.
+ */
+@Composable
+fun rememberLocalNetworkGate(): (() -> Unit) -> Unit {
+    val context = LocalContext.current
+    val pending = remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) {
+        // Run either way, and clear first so a refused grant cannot leave an action armed for the
+        // next unrelated answer. See the note above: the relay covers a refusal.
+        val action = pending.value
+        pending.value = null
+        action?.invoke()
+    }
+
+    return remember(launcher) {
+        { action ->
+            val permission = LOCAL_NETWORK_PERMISSION
+            if (permission != null && !context.hasLocalNetworkPermission()) {
+                pending.value = action
+                launcher.launch(permission)
+            } else {
+                action()
             }
         }
     }

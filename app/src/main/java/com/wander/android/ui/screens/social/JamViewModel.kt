@@ -3,7 +3,6 @@ package com.wander.android.ui.screens.social
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.JamPlaybackController
@@ -43,7 +42,6 @@ internal data class JamUiState(
 internal class JamViewModel @Inject constructor(
     private val repository: JamRepository,
     private val playback: JamPlaybackController,
-    private val playerConnection: PlayerConnection,
     private val feedApi: AgroFeedApi,
     private val musicRepository: MusicRepository,
     private val resolver: ListenAlongResolver,
@@ -96,20 +94,6 @@ internal class JamViewModel @Inject constructor(
             .onEach { adrift -> _state.value = _state.value.copy(outOfSync = adrift) }
             .launchIn(viewModelScope)
 
-        // While in a jam, choosing something to play suggests it to the room instead. One person
-        // deciding what plays by pressing play is what a shared queue exists to replace.
-        repository.jam
-            .onEach { jam ->
-                playerConnection.setJamProposal(
-                    if (jam == null) {
-                        null
-                    } else {
-                        { tracks, index -> tracks.getOrNull(index)?.let(::suggest) }
-                    }
-                )
-            }
-            .launchIn(viewModelScope)
-
         refresh()
         refreshFriendJams()
     }
@@ -122,7 +106,6 @@ internal class JamViewModel @Inject constructor(
 
     fun leave() = run {
         playback.reset()
-        playerConnection.setJamProposal(null)
         repository.leave()
     }
 
@@ -154,11 +137,9 @@ internal class JamViewModel @Inject constructor(
         repository.setJamRadioEnabled(enabled)
     }
 
-    private var activeRadioTrackId: String? = null
-
     private fun checkAutoTopUpRadio(jam: Jam?) {
         if (jam == null || !repository.isJamRadioEnabled.value) {
-            activeRadioTrackId = null
+            repository.noteAutoRadioTrack(null)
             return
         }
         // Only host or single user auto-proposes blend so we don't multiply proposals
@@ -200,7 +181,7 @@ internal class JamViewModel @Inject constructor(
                     val resolved = resolver.resolve(title, artist)
                     if (resolved != null && resolved.track.id != now.trackId) {
                         repository.add(resolved.track)
-                        activeRadioTrackId = resolved.track.id
+                        repository.noteAutoRadioTrack(resolved.track.id)
                         added = true
                         break
                     }
@@ -214,7 +195,7 @@ internal class JamViewModel @Inject constructor(
                         if (radio.isNotEmpty()) {
                             val track = radio.first()
                             repository.add(track)
-                            activeRadioTrackId = track.id
+                            repository.noteAutoRadioTrack(track.id)
                         }
                     }
                 }
@@ -225,31 +206,14 @@ internal class JamViewModel @Inject constructor(
         }
     }
 
-    /** Suggests a track, from wherever it was chosen in the app. */
-    fun suggest(track: UnifiedTrack) {
-        val radioTrackId = activeRadioTrackId
-        activeRadioTrackId = null
-        run {
-            // If the queue was empty and an auto-radio fallback track was placed there,
-            // remove the auto-radio fallback first so the user's manual addition plays next!
-            if (radioTrackId != null) {
-                val currentQueue = _state.value.jam?.queue.orEmpty()
-                val currentProposals = _state.value.jam?.proposals.orEmpty()
-                val radioInQueue = currentQueue.firstOrNull {
-                    it.trackUri == radioTrackId || it.id == radioTrackId
-                }
-                val radioInProposals = currentProposals.firstOrNull {
-                    it.trackUri == radioTrackId || it.id == radioTrackId
-                }
-                if (radioInQueue != null) {
-                    repository.remove(radioInQueue.id)
-                } else if (radioInProposals != null) {
-                    repository.remove(radioInProposals.id)
-                }
-            }
-            repository.add(track)
-        }
-    }
+    /**
+     * Suggests a track chosen from this screen.
+     *
+     * Choosing one from anywhere *else* in the app goes straight to the repository, which owns the
+     * proposal callback for as long as the jam lasts — see `JamRepository.wireJamProposal`.
+     * Displacing an auto-radio placeholder happens there too, so both routes behave the same.
+     */
+    fun suggest(track: UnifiedTrack) = run { repository.add(track) }
 
     /** Puts this device back where the room is now. */
     fun resync() = playback.resync()

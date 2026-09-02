@@ -5,8 +5,11 @@ import androidx.compose.foundation.lazy.LazyListScope
 internal fun LazyListScope.playbackStorageTab(
     offline: Boolean,
     onOfflineChange: (Boolean) -> Unit,
+    preloadNext: Boolean,
+    onPreloadNextChange: (Boolean) -> Unit,
     cacheBytes: Long,
     onDownloadLiked: () -> Unit,
+    onIndexFingerprints: () -> Unit,
     onClearCache: () -> Unit
 ) {
     item(key = "offline") {
@@ -18,6 +21,28 @@ internal fun LazyListScope.playbackStorageTab(
                 "Wanda offers to turn this on and off as your connection changes.",
             checked = offline,
             onCheckedChange = onOfflineChange
+        )
+    }
+
+    item(key = "preload_next") {
+        SettingsToggle(
+            title = "Ready the next track",
+            // Said plainly, because it is a real cost and the honest reason to turn it off.
+            subtitle = "Fetch the first couple of seconds ahead of time so skipping starts " +
+                "instantly. Uses a little data on a track you might not play.",
+            checked = preloadNext,
+            onCheckedChange = onPreloadNextChange
+        )
+    }
+
+    item(key = "index_fingerprints") {
+        SettingsRow(
+            title = "Measure the library now",
+            // Named for what it produces rather than for the machinery. "Fingerprint" means
+            // nothing to most people; recognising a song and building a radio are the results.
+            subtitle = "Lets Wanda recognise your songs and build radios from how they sound. " +
+                "Otherwise this happens on Wi-Fi while charging.",
+            onClick = onIndexFingerprints
         )
     }
 
