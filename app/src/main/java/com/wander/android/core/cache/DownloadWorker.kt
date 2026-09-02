@@ -5,6 +5,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.wander.android.core.database.dao.TrackDao
+import com.wander.android.core.notification.WorkEta
 import com.wander.android.core.notification.WorkProgressNotification
 import com.wander.android.data.repository.MusicRepository
 import dagger.assisted.Assisted
@@ -32,13 +33,18 @@ class DownloadWorker @AssistedInject constructor(
 
     private val downloadsDir = File(context.filesDir, "downloads")
 
-    private fun notifying(done: Int, total: Int) = notifications.foregroundInfo(
-        kind = WorkProgressNotification.Kind.DOWNLOAD,
-        title = "Downloading your music",
-        text = "$done of $total",
-        done = done,
-        total = total
-    )
+    private fun notifying(eta: WorkEta, done: Int, total: Int, title: String? = null) =
+        notifications.foregroundInfo(
+            kind = WorkProgressNotification.Kind.DOWNLOAD,
+            title = "Downloading your music",
+            text = listOfNotNull(
+                "$done of $total",
+                eta.describe(done, total, System.currentTimeMillis()),
+                title
+            ).joinToString(" · "),
+            done = done,
+            total = total
+        )
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         // A single explicit request from the context menu, or the periodic liked-tracks sweep.
@@ -57,11 +63,12 @@ class DownloadWorker @AssistedInject constructor(
         // Downloading a batch of liked tracks is minutes of network, and it was doing it with no
         // way to tell it apart from nothing happening — and subject to the same ten-minute ceiling
         // as every other plain worker.
-        runCatching { setForeground(notifying(0, pending.size)) }
+        val eta = WorkEta(System.currentTimeMillis())
+        runCatching { setForeground(notifying(eta, 0, pending.size)) }
 
         for ((index, entity) in pending.withIndex()) {
             if (isStopped) break
-            runCatching { setForeground(notifying(index, pending.size)) }
+            runCatching { setForeground(notifying(eta, index, pending.size, entity.title)) }
             val streamInfo = musicRepository.getStreamInfo(entity.id).getOrElse {
                 failures++
                 continue

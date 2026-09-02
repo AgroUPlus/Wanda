@@ -14,6 +14,7 @@ import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.playback.LIVE_SUFFIX
 import com.wander.android.data.model.isOneShotTrackId
 import com.wander.android.data.repository.AcousticFeatureRepository
+import com.wander.android.core.notification.WorkEta
 import com.wander.android.core.notification.WorkProgressNotification
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.MelodySearchRepository
@@ -99,13 +100,14 @@ class FingerprintIndexWorker @AssistedInject constructor(
         // an indexer that never finished. As a foreground service it gets to work through the
         // batch, and the person holding the phone can see that it is doing so.
         val batch = pending.take(BATCH_SIZE)
-        runCatching { setForeground(notifying(0, batch.size)) }
+        val eta = WorkEta(System.currentTimeMillis())
+        runCatching { setForeground(notifying(eta, 0, batch.size)) }
 
         for ((index, track) in batch.withIndex()) {
             if (isStopped) return@withContext Result.retry()
             // Updated before each decode rather than after, so the count names the track being
             // worked on rather than the last one finished.
-            runCatching { setForeground(notifying(index, batch.size, track.title)) }
+            runCatching { setForeground(notifying(eta, index, batch.size, track.title)) }
             // Marked around the decode and every write that comes off it, in a `finally` so a
             // cancelled worker or a track that fails to decode does not leave the badge spinning.
             progress.started(track.id)
@@ -134,16 +136,20 @@ class FingerprintIndexWorker @AssistedInject constructor(
         if (pending.size > BATCH_SIZE) Result.retry() else Result.success()
     }
 
-    private fun notifying(done: Int, total: Int, title: String? = null) =
+    private fun notifying(eta: WorkEta, done: Int, total: Int, title: String? = null) =
         notifications.foregroundInfo(
             kind = WorkProgressNotification.Kind.FINGERPRINT,
             // Named for the result rather than the machinery, as the Settings row is:
             // "fingerprinting" means nothing to most people, being able to recognise a song does.
             title = "Measuring your library",
-            // The track being worked on, when there is one. A bare "12 of 250" says the phone is
-            // busy; the title says what it is busy *with*, which is the difference between a
-            // progress bar you trust and one you wonder about.
-            text = if (title == null) "$done of $total" else "$done of $total · $title",
+            // The track being worked on and how long is left. A bare "12 of 250" says the phone is
+            // busy; the title says what it is busy *with*, and the estimate says whether this is
+            // worth waiting for or worth leaving on Wi-Fi overnight.
+            text = listOfNotNull(
+                "$done of $total",
+                eta.describe(done, total, System.currentTimeMillis()),
+                title
+            ).joinToString(" · "),
             done = done,
             total = total
         )
