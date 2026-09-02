@@ -40,7 +40,10 @@ class PitchDetector @Inject constructor() {
         for (index in 0 until count) {
             pitches[index] = pitchOf(samples, index * hop, frame, difference, normalised)
         }
-        return pitches
+        // Octave slips are folded out before anything downstream sees the track. They are not a
+        // rare blemish: a quarter of the intervals in a real library's stored contours were jumps
+        // of eleven semitones or more, which is the detector changing its mind rather than a tune.
+        return OctaveCorrection.apply(pitches)
     }
 
     /** The buffers are passed in and reused: this runs a few hundred times per clip. */
