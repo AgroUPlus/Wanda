@@ -1,6 +1,7 @@
 package com.wander.android.di
 
 import com.wander.android.core.network.HttpClientFactory
+import com.wander.android.core.network.ProxyRouting
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,17 +23,11 @@ object NetworkModule {
         return HttpClientFactory.okHttpClient.newBuilder()
             .addInterceptor { chain ->
                 val request = chain.request()
-                val host = request.url.host
-                val path = request.url.encodedPath
-                
-                val proxyTargets = listOf("lrclib.net", "nyaa.si")
-                val isArchiveMetadata = host.contains("archive.org") && 
-                    (path.contains("/advancedsearch.php") || path.contains("/metadata/"))
 
-                if ((isArchiveMetadata || proxyTargets.any { host.contains(it) }) 
-                    && secureStorage.agroProxyEnabled.value 
-                    && secureStorage.agroApiKey.isNotEmpty()) 
-                {
+                if (ProxyRouting.shouldRelay(request.url.host, request.url.encodedPath) &&
+                    secureStorage.agroProxyEnabled.value &&
+                    secureStorage.agroApiKey.isNotEmpty()
+                ) {
                     val agroUrl = secureStorage.agroServerUrl.trimEnd('/')
                     if (agroUrl.isNotEmpty()) {
                         val proxyUrl = "${agroUrl}/api/v1/proxy"
