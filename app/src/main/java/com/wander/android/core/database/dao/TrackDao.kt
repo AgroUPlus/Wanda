@@ -3,6 +3,7 @@ package com.wander.android.core.database.dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
+import androidx.paging.PagingSource
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
@@ -24,6 +25,34 @@ interface TrackDao {
      */
     @Query("SELECT * FROM tracks WHERE isLibrary = 1 ORDER BY title ASC")
     fun getAllTracksFlow(): Flow<List<TrackEntity>>
+
+    /**
+     * The same rows, a page at a time.
+     *
+     * Room reads only the window the list is showing and re-reads only the pages that changed, so a
+     * play count ticking over no longer costs a full re-read and a full re-map of the library. The
+     * flow above did exactly that on every single write to `tracks` — likes, play counts, a sync —
+     * and at a thousand rows it is what made scrolling stutter.
+     */
+    @Query("SELECT * FROM tracks WHERE isLibrary = 1 ORDER BY title ASC")
+    fun pagedTracks(): PagingSource<Int, TrackEntity>
+
+    @Query("SELECT * FROM tracks WHERE isLibrary = 1 AND source = :source ORDER BY title ASC")
+    fun pagedTracksBySource(source: SourceType): PagingSource<Int, TrackEntity>
+
+    /**
+     * Every library track's id, in the order the list shows them.
+     *
+     * What a tap needs and a page cannot give: playing a track means queueing the library around
+     * it, and with paging the screen no longer holds the whole list to hand over. Ids only, because
+     * the queue is built from ids and loading a thousand full rows to find a position would put
+     * back the cost paging just removed.
+     */
+    @Query("SELECT id FROM tracks WHERE isLibrary = 1 ORDER BY title ASC")
+    suspend fun libraryTrackIds(): List<String>
+
+    @Query("SELECT id FROM tracks WHERE isLibrary = 1 AND source = :source ORDER BY title ASC")
+    suspend fun libraryTrackIdsBySource(source: SourceType): List<String>
 
     /**
      * Every row, library or not, once.

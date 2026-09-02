@@ -9,7 +9,13 @@ import com.wander.android.data.repository.FingerprintStatus
 import com.wander.android.data.repository.FingerprintStatusRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import com.wander.android.core.database.entity.TrackEntity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
@@ -66,15 +72,33 @@ internal class FingerprintsViewModel @Inject constructor(
     statuses: FingerprintStatusRepository
 ) : ViewModel() {
 
+    /**
+     * The whole library, re-sorted whenever a measurement lands.
+     *
+     * This screen genuinely needs every row — it groups and counts them — so it is the one place
+     * that legitimately loads the lot. What it must not do is *re-map* the lot on every tick, and
+     * that is what it was doing: `statuses()` carries a one-second ticker so that a failed
+     * measurement eventually turns red, and combining it directly meant a thousand
+     * entity-to-model conversions and a thousand-row sort every second, for a screen showing
+     * thirty rows.
+     *
+     * The tracks are therefore mapped only when *the tracks* change, and the statuses are folded in
+     * afterwards — the sort is over rows that already exist, and the ticker no longer touches the
+     * conversion at all.
+     */
+    private val libraryRows: Flow<List<UnifiedTrack>> = trackDao.getAllTracksFlow()
+        .map { entities -> entities.map(TrackEntity::toUnifiedTrack) }
+        .flowOn(Dispatchers.Default)
+
     val state: StateFlow<FingerprintsUiState> = combine(
-        trackDao.getAllTracksFlow(),
-        statuses.statuses()
+        libraryRows,
+        // Conflated: during an indexing pass the statuses change faster than a person can read
+        // them, and every intermediate state costs a full sort. The screen wants the latest answer,
+        // not each of them.
+        statuses.statuses().conflate()
     ) { tracks, byId ->
         val rows = tracks
-            .map { entity ->
-                val track = entity.toUnifiedTrack()
-                FingerprintRow(track, byId[track.id] ?: FingerprintStatus.MISSING)
-            }
+            .map { track -> FingerprintRow(track, byId[track.id] ?: FingerprintStatus.MISSING) }
             // Processing first, then missing, then done — most actionable at the top.
             .sortedWith(
                 compareBy<FingerprintRow> {
@@ -128,5 +152,9 @@ internal class FingerprintsViewModel @Inject constructor(
             total = rows.size,
             isLoading = false
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FingerprintsUiState())
+    }
+        // The grouping and the thousand-row sort are real work and have no business on the main
+        // thread; `combine` runs its transform on the collector's dispatcher by default.
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FingerprintsUiState())
 }
