@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import kotlinx.coroutines.flow.Flow
@@ -138,6 +139,10 @@ class LibraryViewModel @Inject constructor(
         val byId = albums.associateBy { it.id }
         recentIds.mapNotNull(byId::get)
     }
+        // `combine` transforms on the collector's dispatcher, and the collector is
+        // `stateIn(viewModelScope)` — the main thread. Indexing every album to pick twelve of them
+        // is not much, but it was being done on the UI thread every time either flow moved.
+        .flowOn(kotlinx.coroutines.Dispatchers.Default)
         // The two flows emit independently, so a scan that touches both produces an intermediate
         // pairing — new ids against stale albums, or the reverse — that resolves to a list
         // identical to the one already on screen. Without this the row rebuilds and its scroll

@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 
 /**
@@ -155,7 +156,9 @@ class MusicRepository @Inject constructor(
 
     /** The Library tab's albums: records you have, not records you have looked at. */
     fun getAlbumsFlow(): Flow<List<UnifiedAlbum>> =
-        albumDao.getLibraryAlbumsFlow().map { list -> list.map(AlbumEntity::toUnifiedAlbum) }
+        albumDao.getLibraryAlbumsFlow()
+            .map { list -> list.map(AlbumEntity::toUnifiedAlbum) }
+            .flowOn(Dispatchers.Default)
 
     /** Album ids in the order they were most recently added to. See [TrackDao.observeRecentlyAddedAlbumIds]. */
     fun getRecentlyAddedAlbumIdsFlow(limit: Int = 12): Flow<List<String>> =
@@ -164,8 +167,21 @@ class MusicRepository @Inject constructor(
     fun getAlbumTracksFlow(albumId: String): Flow<List<UnifiedTrack>> =
         trackDao.getTracksByAlbumFlow(albumId).mapToTracks()
 
+    /**
+     * Entities to models, off the main thread.
+     *
+     * The `flowOn` is the whole point of this helper now. Every one of these flows is consumed by a
+     * `stateIn(viewModelScope)`, which collects on `Dispatchers.Main.immediate` — so without it the
+     * conversion ran on the UI thread, and the Library screen holds four of them at once (liked,
+     * offline, history, albums). Any write to `tracks` re-emitted all four and re-mapped every row
+     * of each, on the thread that was trying to draw the scroll.
+     *
+     * Paging fixed this for the Tracks tab and only for the Tracks tab. The other lists were never
+     * paged — they are tens of rows and do not need to be — but they were still being converted in
+     * the wrong place.
+     */
     private fun Flow<List<TrackEntity>>.mapToTracks() =
-        map { list -> list.map(TrackEntity::toUnifiedTrack) }
+        map { list -> list.map(TrackEntity::toUnifiedTrack) }.flowOn(Dispatchers.Default)
 
     // ── Playback ────────────────────────────────────────────────────────────────────────────
 

@@ -57,7 +57,8 @@ internal class SettingsViewModel @Inject constructor(
     private val releaseCheckScheduler: ReleaseCheckScheduler,
     private val accountApi: AgroAccountApi,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
-    private val workControls: com.wander.android.core.work.WorkControls
+    private val workControls: com.wander.android.core.work.WorkControls,
+    private val fingerprintProgress: com.wander.android.core.audio.fingerprint.FingerprintProgress
 ) : ViewModel() {
 
     val appVersion: String get() = com.wander.android.BuildConfig.VERSION_NAME
@@ -141,7 +142,13 @@ internal class SettingsViewModel @Inject constructor(
     fun setDownloadingPaused(paused: Boolean) = setPaused(WorkProgressNotification.Kind.DOWNLOAD, paused)
 
     private fun setPaused(kind: WorkProgressNotification.Kind, paused: Boolean) {
-        if (paused) workControls.pause(kind) else workControls.resume(kind)
+        if (paused) {
+            workControls.pause(kind)
+        } else {
+            // Resuming is also the one gesture that means "try the ones that failed again".
+            if (kind == WorkProgressNotification.Kind.FINGERPRINT) fingerprintProgress.retryFailures()
+            workControls.resume(kind)
+        }
     }
     val agroConnected: StateFlow<Boolean> = secureStorage.agroConfigured
 
@@ -465,8 +472,17 @@ internal class SettingsViewModel @Inject constructor(
      * fingerprints, and the library sync *publishes* the ones that already exist. Both are needed,
      * in that order.
      */
-    fun indexFingerprintsNow() =
-        com.wander.android.core.audio.fingerprint.FingerprintIndexWorker.enqueueNow(context)
+    /**
+     * Measures now, and forgets which tracks failed last time.
+     *
+     * Asking explicitly is the only way to say "try again" about a track the indexer could not
+     * reach — otherwise the skip list quietly outlasts whatever was actually wrong with it, which
+     * is usually a network that has since come back.
+     */
+    fun indexFingerprintsNow() {
+        fingerprintProgress.retryFailures()
+        com.wander.android.core.audio.fingerprint.FingerprintIndexing.enqueueNow(context)
+    }
 
     fun clearCache() {
         viewModelScope.launch {
