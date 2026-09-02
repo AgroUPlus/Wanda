@@ -22,18 +22,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import com.wander.android.data.repository.RecognitionCandidate
-import com.wander.android.data.repository.RecognitionProgress
+import com.wander.android.ui.components.Artwork
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -46,7 +35,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.data.repository.Recognition
 import com.wander.android.data.repository.RecognitionEngine
-import com.wander.android.ui.components.Artwork
 
 /**
  * "What is this?" — the microphone, matched against the user's own library.
@@ -88,11 +76,6 @@ fun ListenSheet(
         ) {
             AnimatedContent(
                 targetState = state,
-                // Keyed on the kind of state, not the value. `Narrowing` carries a new ranking
-                // every second, and without this the whole panel would cross-fade on each one —
-                // the list would flicker instead of reordering, which is the opposite of the
-                // thing being shown.
-                contentKey = { it.kind },
                 transitionSpec = {
                     (fadeIn() + scaleIn(initialScale = 0.92f)) togetherWith
                         (fadeOut() + scaleOut(targetScale = 0.92f))
@@ -107,7 +90,6 @@ fun ListenSheet(
                 ) {
                     when (current) {
                         ListenState.Idle, ListenState.Listening -> Listening(indexed)
-                        is ListenState.Narrowing -> Narrowing(current.progress)
                         is ListenState.Matched -> Matched(
                             recognition = current.recognition,
                             onPlay = {
@@ -140,99 +122,6 @@ private fun Listening(indexedTracks: Int) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center
     )
-}
-
-/**
- * The shortlist, while the microphone is still open.
- *
- * Every row here is a track the clip genuinely aligns with, and the order is the matcher's real
- * ranking at this instant — recomputed each second against a second more audio. A leader changing
- * hands is a true thing about the clip, not an effect: it means the newly arrived audio aligned
- * better somewhere else.
- *
- * The bar is drawn from the *lead* over the noise floor rather than from the raw vote count.
- * Votes carry a floor of coincidences that grows with the size of the index, so bars drawn from
- * them would all sit nearly full — including the wrong ones. The lead is the quantity the verdict
- * is actually taken on, so it is the one worth showing.
- */
-@Composable
-private fun Narrowing(progress: RecognitionProgress) {
-    PulsingMic()
-    Text("Narrowing it down…", style = MaterialTheme.typography.headlineSmall)
-
-    val strongest = progress.candidates.maxOfOrNull { it.lead }?.coerceAtLeast(1) ?: 1
-    LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 240.dp)
-    ) {
-        items(progress.candidates, key = { it.trackId }) { candidate ->
-            CandidateRow(
-                candidate = candidate,
-                // Relative to the current leader: the absolute numbers climb throughout the
-                // capture, and a bar scaled to them would creep upward for everyone at once and
-                // say nothing about who is ahead.
-                strength = candidate.lead.toFloat() / strongest,
-                modifier = Modifier.animateItem()
-            )
-        }
-    }
-}
-
-@Composable
-private fun CandidateRow(
-    candidate: RecognitionCandidate,
-    strength: Float,
-    modifier: Modifier = Modifier
-) {
-    // Animated so a row that gains ground grows into it rather than jumping, which is what makes
-    // the ranking legible while it is still moving.
-    val width by animateFloatAsState(
-        targetValue = strength.coerceIn(0f, 1f),
-        animationSpec = tween(durationMillis = 450),
-        label = "candidateStrength"
-    )
-    Column(modifier = modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Artwork(
-                url = candidate.artworkUrl,
-                contentDescription = null,
-                sizeDp = 36.dp,
-                shape = MaterialTheme.shapes.small,
-                modifier = Modifier.size(36.dp)
-            )
-            Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
-                Text(
-                    text = candidate.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = candidate.artist,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-        Box(
-            modifier = Modifier
-                .padding(top = 4.dp)
-                .fillMaxWidth()
-                .height(3.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(width)
-                    .height(3.dp)
-                    .background(MaterialTheme.colorScheme.primary, CircleShape)
-            )
-        }
-    }
 }
 
 @Composable
