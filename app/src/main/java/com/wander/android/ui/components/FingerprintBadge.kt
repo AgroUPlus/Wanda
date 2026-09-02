@@ -89,24 +89,23 @@ private val MissingDark = Color(0xFFE57373)
  * what it is about, and an unexplained coloured dot beside a song title reads like a status nobody
  * can decode.
  *
- * ## Why "measuring now" wins over this track's own state
+ * ## It is about the track on screen, and nothing else
  *
- * The indexer works through whatever still needs measuring, which is almost never the song you
- * happen to be playing — so an indicator scoped strictly to the current track would sit red or
- * green while the phone was busy, and answer "is it doing it now?" with silence. The blue state
- * therefore means *the indexer is running*, whatever it is running on, and it pulses so it reads
- * as activity rather than as a third colour. Green and red still describe the track on screen.
+ * Green means *this* song is measured, blue means *this* song is being measured right now, red
+ * means it is not and is about to be — playing an unmeasured track is what schedules it. Reading
+ * anything else here would be a lie about the song whose title it sits beside; whether the
+ * library-wide sweep happens to be running is a different question and belongs on the fingerprints
+ * screen, which answers it per group.
  *
  * The content description says which, because none of that is recoverable from a colour.
  */
 @Composable
 fun NowPlayingFingerprint(
     status: FingerprintStatus,
-    isIndexerRunning: Boolean,
     modifier: Modifier = Modifier
 ) {
     val dark = isSystemInDarkTheme()
-    val busy = isIndexerRunning || status == FingerprintStatus.PROCESSING
+    val busy = status == FingerprintStatus.PROCESSING
 
     val target = when {
         busy -> if (dark) ProcessingDark else ProcessingLight
@@ -128,7 +127,7 @@ fun NowPlayingFingerprint(
     Icon(
         imageVector = Icons.Rounded.Fingerprint,
         contentDescription = when {
-            busy -> "Measuring your library now"
+            busy -> "Measuring this track now"
             status == FingerprintStatus.INDEXED -> "This track is fingerprinted"
             else -> "This track is not fingerprinted yet"
         },

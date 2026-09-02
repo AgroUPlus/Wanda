@@ -7,12 +7,14 @@ import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.workDataOf
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.playback.LIVE_SUFFIX
 import com.wander.android.data.model.isOneShotTrackId
 import com.wander.android.data.repository.AcousticFeatureRepository
+import com.wander.android.core.notification.WorkProgressNotification
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.MelodySearchRepository
 import com.wander.android.data.repository.RecognitionRepository
@@ -49,6 +51,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
     private val melodySearch: MelodySearchRepository,
     private val decoder: PcmDecoder,
     private val progress: FingerprintProgress,
+    private val notifications: WorkProgressNotification,
     private val musicRepository: MusicRepository
 ) : CoroutineWorker(context, params) {
 
@@ -66,7 +69,12 @@ class FingerprintIndexWorker @AssistedInject constructor(
         // melody contour or an acoustic vector. Any library indexed before hum-to-search existed
         // was frozen without one, permanently, and re-running the indexer could not fix it because
         // re-running produced the same empty list. It looked like the indexer doing nothing.
+        // One named track when the player asked for it, the whole library otherwise. The player's
+        // request is a different urgency, not a small sweep: a track you have just started
+        // listening to is the one whose missing measurement you might actually notice.
+        val requestedId = inputData.getString(KEY_TRACK_ID)
         val candidates = recognitionRepository.fingerprintableTracks()
+            .let { all -> if (requestedId == null) all else all.filter { it.id == requestedId } }
         val candidateIds = candidates.map { it.id }
 
         val needsLandmark = recognitionRepository.tracksNeedingIndex().mapTo(mutableSetOf()) { it.id }
@@ -84,8 +92,20 @@ class FingerprintIndexWorker @AssistedInject constructor(
         }
         if (pending.isEmpty()) return@withContext Result.success()
 
-        for (track in pending.take(BATCH_SIZE)) {
+        // Foreground for the duration, and this is what makes the batching honest.
+        //
+        // A plain worker is killed at around ten minutes, which on a streamed library is a handful
+        // of tracks — so the run ended early, deferred the rest, and from the outside looked like
+        // an indexer that never finished. As a foreground service it gets to work through the
+        // batch, and the person holding the phone can see that it is doing so.
+        val batch = pending.take(BATCH_SIZE)
+        runCatching { setForeground(notifying(0, batch.size)) }
+
+        for ((index, track) in batch.withIndex()) {
             if (isStopped) return@withContext Result.retry()
+            // Updated before each decode rather than after, so the count names the track being
+            // worked on rather than the last one finished.
+            runCatching { setForeground(notifying(index, batch.size, track.title)) }
             // Marked around the decode and every write that comes off it, in a `finally` so a
             // cancelled worker or a track that fails to decode does not leave the badge spinning.
             progress.started(track.id)
@@ -114,6 +134,20 @@ class FingerprintIndexWorker @AssistedInject constructor(
         if (pending.size > BATCH_SIZE) Result.retry() else Result.success()
     }
 
+    private fun notifying(done: Int, total: Int, title: String? = null) =
+        notifications.foregroundInfo(
+            kind = WorkProgressNotification.Kind.FINGERPRINT,
+            // Named for the result rather than the machinery, as the Settings row is:
+            // "fingerprinting" means nothing to most people, being able to recognise a song does.
+            title = "Measuring your library",
+            // The track being worked on, when there is one. A bare "12 of 250" says the phone is
+            // busy; the title says what it is busy *with*, which is the difference between a
+            // progress bar you trust and one you wonder about.
+            text = if (title == null) "$done of $total" else "$done of $total · $title",
+            done = done,
+            total = total
+        )
+
     /**
      * Where to read a minute of this track's audio, and what to send with the request.
      *
@@ -141,11 +175,22 @@ class FingerprintIndexWorker @AssistedInject constructor(
     companion object {
         private const val NAME = "fingerprint-index"
 
+        /** Names a single track to measure, instead of sweeping the library. */
+        internal const val KEY_TRACK_ID = "track_id"
+
         /**
-         * Tracks per run. Small enough to finish inside the ten minutes a plain worker is given,
-         * with room for the slowest files in a collection.
+         * Tracks per run.
+         *
+         * Was 25, sized for the ten minutes a *plain* worker is given before the platform kills
+         * it. The run is a foreground service now, so that ceiling is gone and 25 was simply
+         * stopping a library of a thousand tracks after twenty-five of them and waiting for
+         * WorkManager's backoff to grant the next handful — which is what "it does ten and stops"
+         * looks like from the outside.
+         *
+         * Still bounded rather than unbounded: `Result.retry()` at the end means a run that is
+         * interrupted keeps every track it finished, and a bound is what makes that true.
          */
-        private const val BATCH_SIZE = 25
+        private const val BATCH_SIZE = 250
 
         /**
          * How far ahead to ask which tracks still need a vector. Comfortably more than one batch,
@@ -192,6 +237,27 @@ class FingerprintIndexWorker @AssistedInject constructor(
                             )
                             .build()
                     )
+                    .build()
+            )
+        }
+
+        /**
+         * Measures one track now, because it is the one playing.
+         *
+         * Unconstrained, and deliberately so: this is a single track, roughly a minute of audio,
+         * for a song the user is listening to at this moment. The Wi-Fi and battery constraints on
+         * the sweep exist because it walks a thousand tracks — they are a rule about bulk, not a
+         * rule about fingerprinting.
+         *
+         * Keyed per track so it neither cancels the sweep nor is cancelled by it, and `KEEP` so a
+         * track being re-observed does not restart its own measurement.
+         */
+        fun enqueueFor(context: Context, trackId: String) {
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                "$NAME:$trackId",
+                ExistingWorkPolicy.KEEP,
+                OneTimeWorkRequestBuilder<FingerprintIndexWorker>()
+                    .setInputData(workDataOf(KEY_TRACK_ID to trackId))
                     .build()
             )
         }

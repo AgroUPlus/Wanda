@@ -5,6 +5,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.wander.android.core.database.dao.TrackDao
+import com.wander.android.core.notification.WorkProgressNotification
 import com.wander.android.data.repository.MusicRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -25,10 +26,19 @@ class DownloadWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val trackDao: TrackDao,
     private val musicRepository: MusicRepository,
-    private val okHttpClient: OkHttpClient
+    private val okHttpClient: OkHttpClient,
+    private val notifications: WorkProgressNotification
 ) : CoroutineWorker(context, params) {
 
     private val downloadsDir = File(context.filesDir, "downloads")
+
+    private fun notifying(done: Int, total: Int) = notifications.foregroundInfo(
+        kind = WorkProgressNotification.Kind.DOWNLOAD,
+        title = "Downloading your music",
+        text = "$done of $total",
+        done = done,
+        total = total
+    )
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         // A single explicit request from the context menu, or the periodic liked-tracks sweep.
@@ -44,8 +54,14 @@ class DownloadWorker @AssistedInject constructor(
         downloadsDir.mkdirs()
         var failures = 0
 
-        for (entity in pending) {
+        // Downloading a batch of liked tracks is minutes of network, and it was doing it with no
+        // way to tell it apart from nothing happening — and subject to the same ten-minute ceiling
+        // as every other plain worker.
+        runCatching { setForeground(notifying(0, pending.size)) }
+
+        for ((index, entity) in pending.withIndex()) {
             if (isStopped) break
+            runCatching { setForeground(notifying(index, pending.size)) }
             val streamInfo = musicRepository.getStreamInfo(entity.id).getOrElse {
                 failures++
                 continue
