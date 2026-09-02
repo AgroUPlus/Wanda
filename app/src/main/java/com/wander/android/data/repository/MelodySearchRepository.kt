@@ -57,11 +57,11 @@ class MelodySearchRepository @Inject constructor(
      */
     suspend fun search(samples: FloatArray, limit: Int = MAX_RESULTS): List<MelodyMatch> {
         val query = contourOf(samples)
-        if (query.size < MelodyContour.MIN_NOTES) {
+        if (query.size < MIN_QUERY_NOTES) {
             // Logged, like every other way this returns nothing. All four were silent and
             // indistinguishable, so "it didn't find my song" could not be told from "it has never
             // measured your songs" by anybody, including from a bug report.
-            Log.i(TAG, "No search: the hum gave ${query.size} notes, ${MelodyContour.MIN_NOTES} needed")
+            Log.i(TAG, "No search: the hum gave ${query.size} notes, $MIN_QUERY_NOTES needed")
             return emptyList()
         }
 
@@ -160,6 +160,20 @@ class MelodySearchRepository @Inject constructor(
         const val CONTOUR_VERSION = 1
 
         const val MAX_RESULTS = 5
+
+        /**
+         * How many notes a *query* must have. Far more than a stored contour needs to be valid.
+         *
+         * The matcher aligns a subsequence: the hum may start anywhere in the stored melody and end
+         * anywhere after it, which is the only way somebody humming a chorus can match a whole
+         * track. The cost of that freedom is that a short query matches everything — with four
+         * notes there is a close-enough run of four somewhere in almost any song, and a real
+         * library duly reported all 71 measured tracks as fitting within the distance limit.
+         *
+         * Twelve notes is a few seconds of an actual tune, and long enough that finding it by
+         * coincidence in an unrelated melody is not something that just happens.
+         */
+        const val MIN_QUERY_NOTES = 12
 
         private const val TAG = "MelodySearch"
     }
