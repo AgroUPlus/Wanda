@@ -12,7 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,6 +20,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -106,8 +108,15 @@ private fun Summary(state: FingerprintsUiState) {
             modifier = Modifier.padding(top = 4.dp)
         )
         if (state.total > 0) {
-            LinearProgressIndicator(
+            // Wavy while there is a track being measured, flat when there is not.
+            //
+            // The wave is not decoration here — it is the difference between "this is moving" and
+            // "this is where it stopped". A determinate bar at 40% looks identical whether the
+            // indexer is working or was killed an hour ago, and that ambiguity is the whole
+            // question someone opens this screen with.
+            LinearWavyProgressIndicator(
                 progress = { state.indexed.toFloat() / state.total },
+                amplitude = { if (state.processing != null) 1f else 0f },
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
             )
         }
@@ -116,6 +125,8 @@ private fun Summary(state: FingerprintsUiState) {
                 text = "Measuring \"${it.track.title}\" now",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 8.dp)
             )
         }
@@ -129,7 +140,8 @@ private fun SectionHeader(section: FingerprintSection, modifier: Modifier = Modi
             // The count belongs in the heading, not in a badge: "3 of 812" is the answer someone
             // opened this screen to get, per group.
             text = "${section.title} — ${section.indexed} of ${section.rows.size}",
-            style = MaterialTheme.typography.titleSmall,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
         )
         Text(

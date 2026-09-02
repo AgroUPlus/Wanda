@@ -97,7 +97,6 @@ internal fun NowPlayingScreen(
     val lyrics by viewModel.lyrics.collectAsStateWithLifecycle()
     val likedTrackIds by viewModel.likedTrackIds.collectAsStateWithLifecycle()
     val fingerprintStatus by viewModel.fingerprintStatus.collectAsStateWithLifecycle()
-    val isIndexing by viewModel.isIndexing.collectAsStateWithLifecycle()
     var showSourcePicker by remember { mutableStateOf(false) }
     val renditions by viewModel.renditions.collectAsStateWithLifecycle()
     val isFindingRenditions by viewModel.isFindingRenditions.collectAsStateWithLifecycle()
@@ -366,7 +365,6 @@ internal fun NowPlayingScreen(
                 // Before the like button, so the row reads title → state → action.
                 NowPlayingFingerprint(
                     status = fingerprintStatus[track.id] ?: FingerprintStatus.MISSING,
-                    isIndexerRunning = isIndexing,
                     modifier = Modifier.padding(end = 12.dp)
                 )
 

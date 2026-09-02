@@ -86,18 +86,33 @@ internal class FingerprintsViewModel @Inject constructor(
                 }.thenBy { it.track.title.lowercase() }
             )
 
-        val (local, streamed) = rows.partition { it.track.source == SourceType.LOCAL }
+        // Ordered by how likely the group is to be the one you came here about, not by size.
+        //
+        // External first — YouTube Music and anything else that is neither a local file nor your
+        // own server. Those are the tracks the indexer reaches last and fails on most, because
+        // measuring one means fetching audio from a third party, so they are the group that
+        // actually explains a low count. Your own library, local or Navidrome, comes after.
+        val byGroup = rows.groupBy { it.track.source }
 
         val sections = listOfNotNull(
-            streamed.takeIf { it.isNotEmpty() }?.let {
+            byGroup[SourceType.YTMUSIC]?.takeIf { it.isNotEmpty() }?.let {
                 FingerprintSection(
-                    title = "Streaming",
-                    subtitle = "Navidrome and YouTube Music. Measuring one downloads about a " +
-                        "minute of it, so these fill in over Wi-Fi.",
+                    title = "External",
+                    subtitle = "YouTube Music. Measuring one fetches about a minute of audio from " +
+                        "a third party, so these are the slowest to fill in and the likeliest to " +
+                        "fail outright.",
                     rows = it
                 )
             },
-            local.takeIf { it.isNotEmpty() }?.let {
+            byGroup[SourceType.NAVIDROME]?.takeIf { it.isNotEmpty() }?.let {
+                FingerprintSection(
+                    title = "Navidrome",
+                    subtitle = "Your own server. Measuring one downloads about a minute of it, so " +
+                        "these fill in over Wi-Fi.",
+                    rows = it
+                )
+            },
+            byGroup[SourceType.LOCAL]?.takeIf { it.isNotEmpty() }?.let {
                 FingerprintSection(
                     title = "On this device",
                     subtitle = "Local files. These cost nothing but time; one that stays red has " +
