@@ -112,8 +112,10 @@ private fun Listening(indexedTracks: Int) {
     Text("Listening…", style = MaterialTheme.typography.headlineSmall)
     Text(
         text = if (indexedTracks > 0) {
-            "Play it, or hum it. Matching against $indexedTracks " +
-                "${if (indexedTracks == 1) "track" else "tracks"} stored on this device."
+            // No longer "or hum it": that path is switched off, and asking for something the
+            // engine cannot use is worse than asking for nothing. See `MelodySearch`.
+            "Hold it near the music. Matching against $indexedTracks " +
+                "${if (indexedTracks == 1) "track" else "tracks"} measured on this device."
         } else {
             "Nothing is indexed yet. Recognition works on music saved to this device, and the " +
                 "index is built while charging."
@@ -173,8 +175,8 @@ private fun NoMatch(indexedTracks: Int, onRetry: () -> Unit) {
     Text("No match", style = MaterialTheme.typography.headlineSmall)
     Text(
         text = if (indexedTracks > 0) {
-            "That is not one of the $indexedTracks tracks on this device — or the room was too " +
-                "loud to hear it clearly. Humming works too, if you know how it goes."
+            "That is not one of the $indexedTracks tracks measured on this device — or the room " +
+                "was too loud to hear it clearly. Getting closer to the speaker helps most."
         } else {
             "Nothing is indexed yet, so there was nothing to match against. The index is built " +
                 "in the background while this phone is charging."

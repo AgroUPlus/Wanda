@@ -110,7 +110,15 @@ class FingerprintStatusRepository @Inject constructor(
             val now = System.currentTimeMillis()
             input.indexing?.let { settling[it] = now }
 
-            val done = input.landmarks.filterTo(mutableSetOf()) { it in input.contours }
+            // Green means "this track can be recognised", which is the landmark fingerprint and
+            // nothing else. It used to require a melody contour as well — so with humming switched
+            // off every track in the library would read as unmeasured, and while humming was *on*
+            // the badge was promising something the contours could not deliver anyway.
+            val done = if (com.wander.android.core.audio.melody.MelodySearch.ENABLED) {
+                input.landmarks.filterTo(mutableSetOf()) { it in input.contours }
+            } else {
+                input.landmarks.toMutableSet()
+            }
             // Held only until the answer arrives, or until the window runs out.
             settling.keys.removeAll(done)
             settling.entries.removeAll { now - it.value > SETTLE_WINDOW_MS }
