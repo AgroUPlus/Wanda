@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.social
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.p2p.NearbyPeers
+import com.wander.android.core.p2p.OffGridLink
 import com.wander.android.core.p2p.OffGridPairing
 import com.wander.android.core.p2p.OffGridTransport
 import com.wander.android.core.sync.P2PServer
@@ -38,6 +39,12 @@ internal class OffGridViewModel @Inject constructor(
 
     init {
         _state.value = _state.value.copy(isSupported = transport.isSupported)
+        // Collected for the life of the view model rather than started by `startSharing`, because
+        // the device that gets *connected to* never calls that path — someone else does, and this
+        // is the only way its screen learns about it.
+        transport.links
+            .onEach { links -> _state.value = _state.value.copy(links = links) }
+            .launchIn(viewModelScope)
     }
 
     /**
@@ -76,8 +83,7 @@ internal class OffGridViewModel @Inject constructor(
         viewModelScope.launch { transport.disconnect() }
         _state.value = _state.value.copy(
             isAdvertising = false,
-            peers = emptyList(),
-            linkedTo = null
+            peers = emptyList()
         )
     }
 
@@ -98,12 +104,25 @@ internal class OffGridViewModel @Inject constructor(
         _state.value = _state.value.copy(isConnecting = true, error = null)
         viewModelScope.launch {
             val result = transport.connect(peer)
+            // `links` is not set here: the transport publishes it, and both ends read it from
+            // there. Writing it locally on success is what made the connection a fact only the
+            // initiator possessed.
             _state.value = _state.value.copy(
                 isConnecting = false,
-                linkedTo = result.getOrNull()?.let { peer.beacon.deviceId },
                 error = result.exceptionOrNull()?.let(::describe)
             )
         }
+    }
+
+    /**
+     * Ends one link without giving up on being findable.
+     *
+     * Distinct from [stop], which puts the whole feature away. Someone who wants to stop serving
+     * one phone usually does not want to disappear from the room, and having only the second was
+     * why "stop sharing" was the only way to end a connection.
+     */
+    fun disconnect(link: OffGridLink) {
+        viewModelScope.launch { transport.disconnect(link) }
     }
 
     fun dismissError() {
