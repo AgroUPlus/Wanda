@@ -45,6 +45,30 @@ class ContentHasher @Inject constructor(
 
     suspend fun hash(uriString: String): String? = hash(uriString.toUri())
 
+    /**
+     * Hashes a file this app downloaded, by path.
+     *
+     * Separate from [hash] because `localFilePath` is a bare filesystem path with no scheme, and
+     * `openInputStream` needs a URI — passing one to the other silently produced null, which is
+     * how a downloaded track stayed unhashed for ever while looking as though it had been tried.
+     */
+    suspend fun hashFile(path: String): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            val file = java.io.File(path)
+            if (!file.exists()) return@runCatching null
+            file.inputStream().use { input ->
+                val digest = MessageDigest.getInstance("SHA-256")
+                val buffer = ByteArray(BUFFER_BYTES)
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read <= 0) break
+                    digest.update(buffer, 0, read)
+                }
+                digest.digest().joinToString("") { "%02x".format(it) }
+            }
+        }.getOrNull()
+    }
+
     private companion object {
         /**
          * Large enough that a 40 MB FLAC is a few hundred reads, small enough that it is nothing

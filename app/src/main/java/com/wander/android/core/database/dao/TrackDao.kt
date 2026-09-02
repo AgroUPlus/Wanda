@@ -358,6 +358,27 @@ interface TrackDao {
     suspend fun getUnhashedLocalTracks(limit: Int): List<TrackEntity>
 
     /**
+     * Downloaded files that have never been hashed.
+     *
+     * The hashing pass only ever looked at `source = 'LOCAL'`, so a track downloaded from
+     * Navidrome or YouTube Music kept a null `contentHash` no matter how long it sat on the disk.
+     * That is the whole reason off-grid listen-along could not address them: the peer tier asks
+     * for audio by content hash, and 13 of the 24 files actually held on one real device had none.
+     */
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE source != 'LOCAL'
+          AND (contentHash IS NULL OR contentHash = '')
+          AND isDownloaded = 1
+          AND localFilePath IS NOT NULL
+        ORDER BY addedTimestamp DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun getUnhashedDownloads(limit: Int): List<TrackEntity>
+
+    /**
      * Records a duration read from the audio itself.
      *
      * Only ever fills a gap — `durationMs > 0` is left alone — because the source's own answer is

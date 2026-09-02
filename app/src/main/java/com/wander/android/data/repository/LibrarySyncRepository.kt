@@ -110,6 +110,19 @@ class LibrarySyncRepository @Inject constructor(
             // A file that cannot be read is left unhashed rather than marked. It may simply have
             // been deleted since the scan, and the next scan will drop the row.
         }
+
+        // Downloads, which were never hashed at all.
+        //
+        // A track fetched from Navidrome or YouTube Music is a file on this disk exactly like a
+        // local one, and the peer tier addresses audio by content hash — so leaving these unhashed
+        // is what made off-grid listen-along unable to name most of what the phone was holding.
+        // Read by path rather than by URI: `localFilePath` has no scheme.
+        for (track in trackDao.getUnhashedDownloads(limit)) {
+            val path = track.localFilePath ?: continue
+            val hash = hasher.hashFile(path) ?: continue
+            trackDao.setContentHash(track.id, hash)
+            hashed++
+        }
         hashed
     }
 

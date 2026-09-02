@@ -80,7 +80,15 @@ internal class ListenAlongResolver @Inject constructor(
         hostDevice: String? = null,
         hostLanAddress: String? = null,
         hostLanToken: String? = null,
-        contentHash: String? = null
+        contentHash: String? = null,
+        /**
+         * The host's own id for the track, when it gave one.
+         *
+         * Only ever used against a peer that is playing it: see `P2PServer`'s `?track=`. It exists
+         * because a content hash is computed from a file and is often simply not there yet, which
+         * off-grid left most of a library unfetchable.
+         */
+        hostTrackId: String? = null
     ): ResolvedTrack? {
         if (title.isBlank()) return null
         val query = listOf(artist, title).filter { it.isNotBlank() }.joinToString(" ")
@@ -157,15 +165,23 @@ internal class ListenAlongResolver @Inject constructor(
         // here — as this did — meant the one tier designed to work without a server could not.
         // Agro's token is still accepted, for a link raised while the account happened to be
         // online.
-        if (hash.isNotBlank()) {
-            val offGridBase = offGrid.connectedBaseUrl()
-            val offGridToken = offGridToken(offGrid.grantToken(), lanToken)
-            if (offGridBase != null && offGridToken != null) {
-                Log.i(TAG, "Resolved track over a direct radio link with no network involved")
-                return encryptedPeerStream(
-                    offGridBase, hash, title, artist, offGridToken, ResolvedFrom.P2P_OFFGRID
-                )
-            }
+        val offGridBase = offGrid.connectedBaseUrl()
+        val offGridToken = offGridToken(offGrid.grantToken(), lanToken)
+        if (offGridBase != null && offGridToken != null &&
+            (hash.isNotBlank() || !hostTrackId.isNullOrBlank())
+        ) {
+            Log.i(TAG, "Resolved track over a direct radio link with no network involved")
+            return encryptedPeerStream(
+                base = offGridBase,
+                hash = hash,
+                // Falls back to the id when there is no hash. The peer refuses it unless it is
+                // playing that very track, so this is not a wider request than the hash was.
+                trackId = hostTrackId,
+                title = title,
+                artist = artist,
+                grantToken = offGridToken,
+                from = ResolvedFrom.P2P_OFFGRID
+            )
         }
 
         // 6. Through Agro's relay, when a direct connection is not on offer.
@@ -239,12 +255,22 @@ internal class ListenAlongResolver @Inject constructor(
         title: String,
         artist: String,
         grantToken: String,
-        from: ResolvedFrom
+        from: ResolvedFrom,
+        trackId: String? = null
     ): ResolvedTrack {
         val session = java.util.UUID.randomUUID().toString()
-        val streamUrl = "$base/p2p/stream?hash=$hash&session=$session"
+        // The hash when there is one, the peer's own id when there is not. The id is refused by
+        // the peer unless it is the track it is currently playing, so the two are equally narrow.
+        val address = if (hash.isNotBlank()) {
+            "hash=" + java.net.URLEncoder.encode(hash, "UTF-8")
+        } else {
+            "track=" + java.net.URLEncoder.encode(trackId.orEmpty(), "UTF-8")
+        }
+        val streamUrl = "$base/p2p/stream?$address&session=$session"
         val track = UnifiedTrack(
-            id = "p2p:$hash",
+            // Still a one-shot id: what matters is the `p2p:` prefix, which is what keeps the URL
+            // out of the cache and out of the library. See `EphemeralTrackId`.
+            id = "p2p:" + hash.ifBlank { trackId.orEmpty() },
             source = SourceType.LOCAL,
             title = title,
             artist = artist,

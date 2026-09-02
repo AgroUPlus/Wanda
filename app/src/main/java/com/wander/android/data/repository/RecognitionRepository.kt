@@ -15,6 +15,7 @@ import android.util.Log
 import com.wander.android.core.audio.fingerprint.MatchConfidence
 import com.wander.android.core.audio.fingerprint.PcmDecoder
 import com.wander.android.core.audio.fingerprint.OffsetAlignment
+import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -76,6 +77,70 @@ class RecognitionRepository @Inject constructor(
     }
 
     /**
+     * Listens, and reports what it is thinking as it goes.
+     *
+     * The same capture and the same passes as [listen] — but the clip is handed to the matcher
+     * every second as it grows, and the ranking that comes back is emitted rather than kept. What
+     * a screen draws from this is the engine's actual state: which tracks the audio aligns with so
+     * far, how many landmarks stand behind each, and how far the leader is above the crowd.
+     *
+     * That distinction is the whole point. Cycling plausible titles under a spinner would show a
+     * deliberation that never happened; this shows the one that does, and the leader changing
+     * hands twice before settling is a true thing about the clip rather than an effect.
+     *
+     * The last emission always carries [RecognitionProgress.settled], and its [Recognition] is
+     * exactly what [listen] would have answered for the same capture.
+     */
+    fun listenProgressively(seconds: Int = LISTEN_SECONDS): Flow<RecognitionProgress> = flow {
+        var lastClip: FloatArray? = null
+        micRecorder.recordProgressively(seconds).collect { clip ->
+            lastClip = clip
+            val scored = score(clip)
+            emit(
+                RecognitionProgress(
+                    candidates = scored?.let { describe(it) }.orEmpty(),
+                    noiseFloor = scored?.confidence?.noiseFloor ?: 0,
+                    settled = false,
+                    recognition = null
+                )
+            )
+        }
+
+        // The verdict comes off the whole clip, through the ordinary path — including the melody
+        // engine, which only ever had a whole capture to work with and is not worth running on a
+        // prefix.
+        val clip = lastClip
+        val recognition = if (clip == null) null else identifyOrHum(clip)
+        val finalScored = clip?.let { score(it) }
+        emit(
+            RecognitionProgress(
+                candidates = finalScored?.let { describe(it) }.orEmpty(),
+                noiseFloor = finalScored?.confidence?.noiseFloor ?: 0,
+                settled = true,
+                recognition = recognition
+            )
+        )
+    }
+
+    /** The top candidates, named, for a screen to draw. */
+    private suspend fun describe(scored: Scored): List<RecognitionCandidate> =
+        withContext(Dispatchers.IO) {
+            scored.ranked.take(MAX_SHOWN_CANDIDATES).mapNotNull { candidate ->
+                val entity = trackDao.getTrackById(candidate.trackId) ?: return@mapNotNull null
+                RecognitionCandidate(
+                    trackId = candidate.trackId,
+                    title = entity.title,
+                    artist = entity.artist,
+                    artworkUrl = entity.artworkUrl,
+                    votes = candidate.votes,
+                    // What the decision actually turns on, so a bar drawn from it is showing the
+                    // quantity being judged rather than a number that merely correlates with it.
+                    lead = (candidate.votes - scored.confidence.noiseFloor).coerceAtLeast(0)
+                )
+            }
+        }
+
+    /**
      * Both engines, one capture.
      *
      * The microphone is opened once and the samples are handed to each engine in turn. Recording
@@ -117,6 +182,36 @@ class RecognitionRepository @Inject constructor(
      * winner is the fullest bin, not the busiest track.
      */
     private suspend fun identify(samples: FloatArray): Recognition? {
+        val scored = score(samples) ?: return null
+        if (!scored.confidence.accepted) {
+            Log.i(
+                TAG,
+                "Refused: a lead of ${scored.confidence.bestExcess} over the noise does not clear " +
+                    "${MatchConfidence.MIN_EXCESS} and ${MatchConfidence.MIN_MARGIN}x " +
+                    "the runner-up's ${scored.confidence.runnerUpExcess}"
+            )
+            return null
+        }
+
+        val winner = scored.ranked.first()
+        val entity = withContext(Dispatchers.IO) { trackDao.getTrackById(winner.trackId) }
+            ?: return null
+        return Recognition(
+            track = entity.toUnifiedTrack(),
+            positionSeconds = (winner.offsetFrames / AudioFormat.FRAMES_PER_SECOND).toInt()
+                .coerceAtLeast(0),
+            score = winner.votes
+        )
+    }
+
+    /**
+     * Every candidate the clip aligns with, best first, and how confident that ordering is.
+     *
+     * Split out of [identify] so the same pass can answer two questions: "who is it" at the end,
+     * and "who is it looking like so far" while the microphone is still open. Nothing here decides
+     * anything — [MatchConfidence] does that, and the caller chooses whether to act on it.
+     */
+    private suspend fun score(samples: FloatArray): Scored? {
         val landmarks = fingerprinter.fingerprint(samples)
         if (landmarks.isEmpty()) {
             Log.i(TAG, "No landmarks in the clip — silence, or a room too quiet to hear")
@@ -150,44 +245,31 @@ class RecognitionRepository @Inject constructor(
             }
         }
 
-        // Every candidate's best alignment, so the winner can be judged against the crowd rather
-        // than against whichever coincidence happened to come second.
-        val aligned = votes.mapNotNull { (trackId, bins) ->
-            // Neighbouring bins count: nothing makes the microphone start on a frame boundary, so
-            // one true alignment arrives split across two adjacent offsets — see [OffsetAlignment].
-            OffsetAlignment.best(bins)?.let { trackId to it }
-        }
-        val winner = aligned.maxByOrNull { it.second.votes } ?: return null
-        val confidence = MatchConfidence.assess(aligned.map { it.second.votes })
+        // Neighbouring bins count: nothing makes the microphone start on a frame boundary, so one
+        // true alignment arrives split across two adjacent offsets — see [OffsetAlignment].
+        val ranked = votes.mapNotNull { (trackId, bins) ->
+            OffsetAlignment.best(bins)?.let { Candidate(trackId, it.votes, it.offsetFrames) }
+        }.sortedByDescending { it.votes }
+        if (ranked.isEmpty()) return null
 
+        val confidence = MatchConfidence.assess(ranked.map { it.votes })
         Log.i(
             TAG,
-            "Landmark pass: ${landmarks.size} landmarks, ${aligned.size} candidates, " +
-                "best ${winner.first} at ${winner.second.votes} votes, " +
+            "Landmark pass: ${landmarks.size} landmarks, ${ranked.size} candidates, " +
+                "best ${ranked.first().trackId} at ${ranked.first().votes} votes, " +
                 "noise floor ${confidence.noiseFloor}, lead ${confidence.bestExcess} " +
                 "against ${confidence.runnerUpExcess}"
         )
-
-        if (!confidence.accepted) {
-            Log.i(
-                TAG,
-                "Refused: a lead of ${confidence.bestExcess} over the noise does not clear " +
-                    "${MatchConfidence.MIN_EXCESS} and ${MatchConfidence.MIN_MARGIN}x " +
-                    "the runner-up's ${confidence.runnerUpExcess}"
-            )
-            return null
-        }
-
-        val trackId = winner.first
-        val bestOffset = winner.second.offsetFrames
-        val bestScore = winner.second.votes
-        val entity = withContext(Dispatchers.IO) { trackDao.getTrackById(trackId) } ?: return null
-        return Recognition(
-            track = entity.toUnifiedTrack(),
-            positionSeconds = (bestOffset / AudioFormat.FRAMES_PER_SECOND).toInt().coerceAtLeast(0),
-            score = bestScore
-        )
+        return Scored(ranked, confidence)
     }
+
+    /** One track the clip aligned with, and where. */
+    private data class Candidate(val trackId: String, val votes: Int, val offsetFrames: Int)
+
+    private data class Scored(
+        val ranked: List<Candidate>,
+        val confidence: MatchConfidence.Assessment
+    )
 
     /**
      * Replaces one track's landmarks with those of the head of the file.
@@ -303,6 +385,9 @@ class RecognitionRepository @Inject constructor(
 
         /** Puts a melody match's confidence on roughly the same scale as a landmark score. */
         const val MELODY_SCORE_SCALE = 20
+
+        /** How many candidates a screen is shown. More than a few is a list, not a shortlist. */
+        const val MAX_SHOWN_CANDIDATES = 5
 
         private const val TAG = "Recognition"
 
