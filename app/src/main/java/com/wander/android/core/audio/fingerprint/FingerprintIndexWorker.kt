@@ -132,7 +132,10 @@ class FingerprintIndexWorker @AssistedInject constructor(
                 }
                 // Guarded now that the list is a union: a track pulled in because it wants a
                 // contour must not have its landmarks written a second time.
-                if (track.id in needsLandmark) recognitionRepository.index(track, samples)
+                if (track.id in needsLandmark) {
+                    recognitionRepository.index(track, samples)
+                    indexDeeperWindows(track, source)
+                }
                 if (track.id in needsCanonical) {
                     recordingIdentity.index(track.id, samples, track.durationMs)
                     // Asked here and not lazily at read time: the comparison needs every candidate
@@ -150,6 +153,47 @@ class FingerprintIndexWorker @AssistedInject constructor(
         }
 
         if (pending.size > BATCH_SIZE) Result.retry() else Result.success()
+    }
+
+    /**
+     * Reads a few more windows from further into the track, so it can be recognised past its head.
+     *
+     * The first pass indexes a minute from the start, which is ample *density* — thousands of
+     * landmarks — and no coverage at all beyond it. A clip is taken from wherever the listener is
+     * standing, and a clip from the third minute of a song shares literally no landmarks with an
+     * index built from its first: the answer is not weak, it is absent. That is the shape of "it
+     * cannot find a song I own and have already indexed".
+     *
+     * Windows rather than the whole track, because decoding is paid per second of audio and a
+     * streamed library pays for it twice, in data as well as time. Spread across what is left so
+     * that a chorus, a bridge and an outro each have something in the index.
+     *
+     * Failures are silent and per window: a seek that lands badly or a stream that stops early
+     * costs that window's coverage and nothing else, and the track keeps the landmarks it already
+     * has.
+     */
+    private suspend fun indexDeeperWindows(track: TrackEntity, source: Pair<String, Map<String, String>>) {
+        val durationSeconds = (track.durationMs / 1000L).toInt()
+        // Nothing beyond the head to read. The `+ WINDOW_SECONDS` keeps a track that is barely
+        // longer than the first pass from being decoded again for a sliver.
+        if (durationSeconds <= PcmDecoder.DEFAULT_MAX_SECONDS + WINDOW_SECONDS) return
+
+        val remaining = durationSeconds - PcmDecoder.DEFAULT_MAX_SECONDS
+        val windows = minOf(DEEP_WINDOWS, remaining / WINDOW_SECONDS)
+        if (windows <= 0) return
+
+        // Evenly through what the head did not reach, and never so close to the end that the window
+        // would run off it.
+        val step = remaining / (windows + 1)
+        for (i in 1..windows) {
+            if (isStopped) return
+            val start = PcmDecoder.DEFAULT_MAX_SECONDS + step * i
+            if (start + WINDOW_SECONDS > durationSeconds) continue
+            val samples = runCatching {
+                decoder.decode(source.first, source.second, WINDOW_SECONDS, startSeconds = start)
+            }.getOrNull() ?: continue
+            recognitionRepository.indexWindow(track.id, samples, start)
+        }
     }
 
     private fun notifying(
@@ -219,6 +263,17 @@ class FingerprintIndexWorker @AssistedInject constructor(
          * day across the whole app** — spending that budget on one indexing marathon would stop
          * the library sync too.
          */
+        /** How many extra windows are read past the first minute. */
+        private const val DEEP_WINDOWS = 3
+
+        /**
+         * How long each is.
+         *
+         * Fifteen seconds is several hundred landmarks — far more than a match needs — and three of
+         * them cost less than doubling the first pass. Coverage was what was missing, not density.
+         */
+        private const val WINDOW_SECONDS = 15
+
         private const val BATCH_SIZE = 100
 
         /**

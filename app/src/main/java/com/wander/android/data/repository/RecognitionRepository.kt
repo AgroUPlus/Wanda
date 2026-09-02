@@ -11,6 +11,10 @@ import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import android.util.Log
+import com.wander.android.core.audio.fingerprint.MatchConfidence
+import com.wander.android.core.audio.fingerprint.PcmDecoder
+import com.wander.android.core.audio.fingerprint.OffsetAlignment
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -114,7 +118,10 @@ class RecognitionRepository @Inject constructor(
      */
     private suspend fun identify(samples: FloatArray): Recognition? {
         val landmarks = fingerprinter.fingerprint(samples)
-        if (landmarks.isEmpty()) return null
+        if (landmarks.isEmpty()) {
+            Log.i(TAG, "No landmarks in the clip — silence, or a room too quiet to hear")
+            return null
+        }
 
         // Anchor frames for each hash the clip produced. One hash can occur at several moments,
         // and each occurrence is its own vote.
@@ -126,7 +133,10 @@ class RecognitionRepository @Inject constructor(
         val matches = withContext(Dispatchers.IO) {
             queryOffsets.keys.chunked(SQL_VARIABLE_LIMIT).flatMap { fingerprintDao.matching(it) }
         }
-        if (matches.isEmpty()) return null
+        if (matches.isEmpty()) {
+            Log.i(TAG, "No indexed track shares a single hash with this clip")
+            return null
+        }
 
         // (trackId, offset) -> votes. The offset can be negative when the clip started before the
         // matched landmark, which is ordinary and must not be discarded.
@@ -140,31 +150,37 @@ class RecognitionRepository @Inject constructor(
             }
         }
 
-        var bestTrackId: String? = null
-        var bestOffset = 0
-        var bestScore = 0
-        var runnerUpScore = 0
-        for ((trackId, bins) in votes) {
-            val (offset, score) = bins.maxByOrNull { it.value } ?: continue
-            if (score > bestScore) {
-                runnerUpScore = bestScore
-                bestTrackId = trackId
-                bestOffset = offset
-                bestScore = score
-            } else if (score > runnerUpScore) {
-                runnerUpScore = score
-            }
+        // Every candidate's best alignment, so the winner can be judged against the crowd rather
+        // than against whichever coincidence happened to come second.
+        val aligned = votes.mapNotNull { (trackId, bins) ->
+            // Neighbouring bins count: nothing makes the microphone start on a frame boundary, so
+            // one true alignment arrives split across two adjacent offsets — see [OffsetAlignment].
+            OffsetAlignment.best(bins)?.let { trackId to it }
+        }
+        val winner = aligned.maxByOrNull { it.second.votes } ?: return null
+        val confidence = MatchConfidence.assess(aligned.map { it.second.votes })
+
+        Log.i(
+            TAG,
+            "Landmark pass: ${landmarks.size} landmarks, ${aligned.size} candidates, " +
+                "best ${winner.first} at ${winner.second.votes} votes, " +
+                "noise floor ${confidence.noiseFloor}, lead ${confidence.bestExcess} " +
+                "against ${confidence.runnerUpExcess}"
+        )
+
+        if (!confidence.accepted) {
+            Log.i(
+                TAG,
+                "Refused: a lead of ${confidence.bestExcess} over the noise does not clear " +
+                    "${MatchConfidence.MIN_EXCESS} and ${MatchConfidence.MIN_MARGIN}x " +
+                    "the runner-up's ${confidence.runnerUpExcess}"
+            )
+            return null
         }
 
-        // Two gates, and both are needed. An absolute floor rejects a clip of silence or of a
-        // room, which still produces a handful of coincidental alignments. A margin over the
-        // runner-up rejects the case where two tracks are equally plausible — most often the same
-        // recording indexed twice — where naming one of them would be a coin toss presented as an
-        // answer.
-        val trackId = bestTrackId ?: return null
-        if (bestScore < MIN_SCORE) return null
-        if (runnerUpScore > 0 && bestScore < runnerUpScore * MIN_MARGIN) return null
-
+        val trackId = winner.first
+        val bestOffset = winner.second.offsetFrames
+        val bestScore = winner.second.votes
         val entity = withContext(Dispatchers.IO) { trackDao.getTrackById(trackId) } ?: return null
         return Recognition(
             track = entity.toUnifiedTrack(),
@@ -173,27 +189,81 @@ class RecognitionRepository @Inject constructor(
         )
     }
 
-    /** Replaces one track's landmarks. Called by the indexer, one track at a time. */
+    /**
+     * Replaces one track's landmarks with those of the head of the file.
+     *
+     * Kept as the first pass so a track is searchable as soon as its first window is read; deeper
+     * windows are added by [indexWindow] and must not delete what this wrote.
+     */
     internal suspend fun index(track: TrackEntity, samples: FloatArray) {
         val landmarks = fingerprinter.fingerprint(samples)
         if (landmarks.isEmpty()) return
         withContext(Dispatchers.IO) {
             fingerprintDao.deleteTrack(track.id)
-            fingerprintDao.insertAll(
-                landmarks.map { landmark ->
-                    com.wander.android.core.database.entity.FingerprintEntity(
-                        hash = landmark.hash.value,
-                        trackId = track.id,
-                        anchorFrame = landmark.anchorFrame
-                    )
-                }
-            )
+            writeLandmarks(track.id, landmarks, frameOffset = 0)
         }
     }
 
+    /**
+     * Adds the landmarks of a window taken [startSeconds] into the track.
+     *
+     * The offset is the whole point. A landmark's anchor frame is what the matcher aligns on, so a
+     * window decoded from the third minute has to be numbered from the third minute — fingerprinted
+     * from zero it would claim the song opens with its own bridge, and every clip matching it would
+     * be reported at a position that does not exist.
+     *
+     * Appends rather than replaces, so windows can be read in any order and a partially indexed
+     * track stays usable for the part that has been read.
+     */
+    internal suspend fun indexWindow(trackId: String, samples: FloatArray, startSeconds: Int) {
+        val landmarks = fingerprinter.fingerprint(samples)
+        if (landmarks.isEmpty()) return
+        val frameOffset = (startSeconds * AudioFormat.FRAMES_PER_SECOND).toInt()
+        withContext(Dispatchers.IO) { writeLandmarks(trackId, landmarks, frameOffset) }
+    }
+
+    private suspend fun writeLandmarks(
+        trackId: String,
+        landmarks: List<com.wander.android.core.audio.fingerprint.Landmark>,
+        frameOffset: Int
+    ) {
+        fingerprintDao.insertAll(
+            landmarks.map { landmark ->
+                com.wander.android.core.database.entity.FingerprintEntity(
+                    hash = landmark.hash.value,
+                    trackId = trackId,
+                    anchorFrame = landmark.anchorFrame + frameOffset
+                )
+            }
+        )
+    }
+
     internal suspend fun tracksNeedingIndex(): List<TrackEntity> = withContext(Dispatchers.IO) {
-        val indexed = fingerprintDao.indexedTrackIds().toSet()
-        trackDao.getFingerprintableTracks().filterNot { it.id in indexed }
+        val depth = fingerprintDao.indexedDepth().associate { it.trackId to it.lastFrame }
+        trackDao.getFingerprintableTracks().filter { track ->
+            val lastFrame = depth[track.id] ?: return@filter true
+            // Having landmarks is not the same as being findable. A track measured before the
+            // indexer read past the first minute looks done and cannot be recognised from anywhere
+            // after it, so shallow coverage counts as needing work — otherwise the very fact of
+            // having been indexed once excludes it from ever being indexed properly.
+            reachesPastTheHead(track, lastFrame).not()
+        }
+    }
+
+    /**
+     * Whether [track]'s landmarks reach past the opening window.
+     *
+     * True for anything short enough that the opening window *is* the whole track — there is
+     * nothing deeper to read, and asking for it every sweep would re-decode a library for ever.
+     */
+    private fun reachesPastTheHead(track: TrackEntity, lastFrame: Int): Boolean {
+        val durationSeconds = (track.durationMs / 1000L).toInt()
+        if (durationSeconds <= PcmDecoder.DEFAULT_MAX_SECONDS + SHALLOW_TOLERANCE_SECONDS) {
+            return true
+        }
+        val headEnd =
+            (PcmDecoder.DEFAULT_MAX_SECONDS + SHALLOW_TOLERANCE_SECONDS) * AudioFormat.FRAMES_PER_SECOND
+        return lastFrame > headEnd
     }
 
     /**
@@ -221,13 +291,22 @@ class RecognitionRepository @Inject constructor(
         /** SQLite's default limit on host parameters in one statement. */
         const val SQL_VARIABLE_LIMIT = 900
 
-        /** Matching landmarks at one offset before an answer is offered at all. */
-        const val MIN_SCORE = 12
-
-        /** How far the winner must clear the runner-up. */
-        const val MIN_MARGIN = 1.6
+        // The score floor and the margin now live in [MatchConfidence], because both are
+        // meaningless as raw vote counts: what they were trying to express is a lead over the
+        // noise, and the noise depends on the size of the index and the length of the clip.
 
         /** Puts a melody match's confidence on roughly the same scale as a landmark score. */
         const val MELODY_SCORE_SCALE = 20
+
+        private const val TAG = "Recognition"
+
+        /**
+         * How far past the opening window a track's landmarks must reach to count as covered.
+         *
+         * A few seconds of slack, because the head pass stops on a decoder boundary rather than
+         * exactly on the second, and a track re-queued every sweep for missing its last frame would
+         * never leave the queue.
+         */
+        private const val SHALLOW_TOLERANCE_SECONDS = 5
     }
 }
