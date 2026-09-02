@@ -26,12 +26,18 @@ interface TrackFeatureDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(features: TrackFeatureEntity)
 
-    /** Tracks with a file on this device and no current measurement. */
+    /**
+     * Tracks with no current measurement, from anywhere in the library.
+     *
+     * The local-file condition that used to be here was the second of two independent gates on the
+     * same idea, and it is what kept the radio reasoning about a fraction of a streamed library.
+     * See `TrackDao.getFingerprintableTracks`; livestreams are excluded for the same reason.
+     */
     @Query(
         """
         SELECT t.id FROM tracks t
         LEFT JOIN track_features f ON f.trackId = t.id AND f.version = :version
-        WHERE t.localFilePath IS NOT NULL AND t.localFilePath != '' AND f.trackId IS NULL
+        WHERE t.isLive = 0 AND f.trackId IS NULL
         LIMIT :limit
         """
     )

@@ -54,7 +54,12 @@ fun PlayerControls(
             icon = Icons.Rounded.Shuffle,
             description = "Shuffle",
             active = state.isShuffle,
-            onClick = connection::toggleShuffle
+            onClick = connection::toggleShuffle,
+            // In a jam or a listen-along the running order is somebody else's. The button stays
+            // in place rather than disappearing — a control that vanishes reads as a bug, one
+            // that dims reads as "not right now".
+            enabled = !state.orderLocked,
+            disabledDescription = "Shuffle, unavailable while the room chooses the order"
         )
 
         IconButton(onClick = connection::previous, modifier = Modifier.size(56.dp)) {
@@ -92,7 +97,9 @@ fun PlayerControls(
             },
             description = "Repeat",
             active = state.repeatMode != RepeatMode.OFF,
-            onClick = connection::toggleRepeat
+            onClick = connection::toggleRepeat,
+            enabled = !state.orderLocked,
+            disabledDescription = "Repeat, unavailable while the room chooses the order"
         )
     }
 }
@@ -102,14 +109,23 @@ private fun ToggleButton(
     icon: ImageVector,
     description: String,
     active: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    disabledDescription: String? = null
 ) {
-    IconButton(onClick = onClick) {
+    IconButton(onClick = onClick, enabled = enabled) {
         Icon(
             imageVector = icon,
-            contentDescription = description,
-            tint = if (active) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onSurfaceVariant
+            // Says *why* it is inert, for a screen reader that cannot see the dimming.
+            contentDescription = if (enabled) description else disabledDescription ?: description,
+            tint = when {
+                !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DisabledAlpha)
+                active -> MaterialTheme.colorScheme.primary
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
+            }
         )
     }
 }
+
+/** Material's disabled-content opacity, for an icon that is present but not yours to press. */
+private const val DisabledAlpha = 0.38f

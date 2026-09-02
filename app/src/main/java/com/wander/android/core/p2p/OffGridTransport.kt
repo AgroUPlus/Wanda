@@ -6,6 +6,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.io.IOException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -33,12 +34,22 @@ internal class OffGridTransport @Inject constructor(
     private val ble: BleDiscovery,
     private val wifiDirect: WifiDirectLink,
     private val identityKeys: IdentityKeyManager,
-    private val p2pServer: P2PServer
+    private val p2pServer: P2PServer,
+    private val pairing: OffGridPairing
 ) {
 
     private val peers = NearbyPeers()
     private val linkMutex = Mutex()
     private var link: DirectLink? = null
+
+    /**
+     * The bearer the peer issued face to face, good for as long as the link is.
+     *
+     * Held here rather than fetched per track: pairing is one round trip and the grant outlives a
+     * single song, so asking again on every track change would spend the radio to re-learn what is
+     * already known.
+     */
+    private var grant: String? = null
 
     /** Whether this device can do any of it. False on a phone without BLE peripheral support. */
     val isSupported: Boolean
@@ -51,6 +62,9 @@ internal class OffGridTransport @Inject constructor(
      * whether the server is actually running rather than from an intention to run it.
      */
     fun startAdvertising(servesAudio: Boolean): Boolean {
+        // Discovery only. Being findable must stay cheap: both devices have to be findable before
+        // either can see the other, so anything expensive here is paid twice for one link.
+        wifiDirect.makeDiscoverable()
         val publicKey = identityKeys.getOrCreateIdentityKeys().second.encoded
         return ble.advertise(
             OffGridBeacon(
@@ -82,12 +96,33 @@ internal class OffGridTransport @Inject constructor(
      * Null when no link could be formed, which is ordinary: see [WifiDirectLink] on how many ways
      * group formation fails without anything being wrong.
      */
-    suspend fun connect(): String? = linkMutex.withLock {
-        link?.let { return@withLock baseUrlOf(it) }
-        val formed = wifiDirect.connect() ?: return@withLock null
+    suspend fun connect(peer: NearbyPeers.Peer): Result<String> = linkMutex.withLock {
+        link?.let { existing ->
+            if (grant != null) return@withLock Result.success(baseUrlOf(existing))
+        }
+        val formed = wifiDirect.connect()
+            ?: return@withLock Result.failure(IOException("no direct link could be formed"))
+        val base = baseUrlOf(formed)
+
+        // Paired before the link is kept. A group formed with the wrong device is worse than no
+        // group: it looks connected, and every fetch afterwards would go to a stranger.
+        val token = pairing.pair(base, peer.beacon).getOrElse { error ->
+            wifiDirect.disconnect()
+            return@withLock Result.failure(error)
+        }
         link = formed
-        baseUrlOf(formed)
+        grant = token
+        Result.success(base)
     }
+
+    /**
+     * The grant this device holds for the peer it is linked to, or null.
+     *
+     * What lets [com.wander.android.data.repository.ListenAlongResolver] use tier 5 without Agro:
+     * every other tier's token is minted by the server, and off-grid there is no server to mint
+     * one.
+     */
+    fun grantToken(): String? = grant
 
     /**
      * The base URL of a link that is *already* up, or null.
@@ -106,6 +141,7 @@ internal class OffGridTransport @Inject constructor(
      */
     suspend fun disconnect() = linkMutex.withLock {
         link = null
+        grant = null
         wifiDirect.disconnect()
         p2pServer.clearGrants()
         peers.clear()
