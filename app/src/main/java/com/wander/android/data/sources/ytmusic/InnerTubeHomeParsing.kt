@@ -1,5 +1,6 @@
 package com.wander.android.data.sources.ytmusic
 
+import com.wander.android.data.model.UNKNOWN_ARTIST
 import com.wander.android.data.model.RecommendedShelf
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack

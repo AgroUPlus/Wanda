@@ -32,6 +32,18 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     val isPreloadNextEnabled: StateFlow<Boolean> = _isPreloadNextEnabled.asStateFlow()
 
     /**
+     * Whether the fingerprint indexer may work over mobile data.
+     *
+     * Off by default, and the default is the whole point. Measuring a streamed library reads about
+     * a minute of audio per track, so a few thousand tracks is a real amount of data — not
+     * something to spend on somebody's plan without asking. On Wi-Fi it costs nothing and runs
+     * whenever the phone is not on its last few percent.
+     */
+    private val _isIndexOnMobileDataEnabled =
+        MutableStateFlow(prefs.getBoolean(KEY_INDEX_ON_MOBILE_DATA, false))
+    val isIndexOnMobileDataEnabled: StateFlow<Boolean> = _isIndexOnMobileDataEnabled.asStateFlow()
+
+    /**
      * Endless-radio queue top-up. Persisted because it was an in-memory flag on `PlayerConnection`,
      * so a mode the user had deliberately turned on silently reset on every launch.
      */
@@ -192,6 +204,11 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _isPreloadNextEnabled.value = enabled
     }
 
+    fun setIndexOnMobileDataEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_INDEX_ON_MOBILE_DATA, enabled) }
+        _isIndexOnMobileDataEnabled.value = enabled
+    }
+
     fun setOfflineMode(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_OFFLINE_MODE, enabled) }
         _isOfflineMode.value = enabled
@@ -276,6 +293,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         }
         _isOfflineMode.value = false
         _isPreloadNextEnabled.value = true
+        _isIndexOnMobileDataEnabled.value = false
         _isRadioMode.value = false
         _navidromeConfigured.value = false
         _ytMusicConfigured.value = false
@@ -494,6 +512,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_AGRO_PROXY_ENABLED = "key_agro_proxy_enabled"
         private const val KEY_OFFLINE_MODE = "key_offline_mode"
         private const val KEY_PRELOAD_NEXT = "key_preload_next"
+        private const val KEY_INDEX_ON_MOBILE_DATA = "key_index_on_mobile_data"
         private const val KEY_RADIO_MODE = "key_radio_mode"
         private const val KEY_AMOLED_BLACK = "key_amoled_black"
         private const val KEY_MONET_DYNAMIC = "key_monet_dynamic"

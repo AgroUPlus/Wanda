@@ -105,7 +105,16 @@ private fun PlayerSeekBarInternal(
         )
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = formatTime((fraction * durationMs).toLong()),
+                // The position, not the fraction multiplied back out by the duration.
+                //
+                // Those agree whenever the duration is known and disagree completely when it is
+                // not: an unknown duration pins `fraction` at zero, so this read `0:00` for a
+                // whole track whose position the player was reporting correctly the entire time.
+                // While a finger is on the thumb the fraction is what the user is choosing, and
+                // that is the one case where it leads.
+                text = formatTime(
+                    if (scrubbing >= 0f) (scrubbing * durationMs).toLong() else positionMs
+                ),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f)

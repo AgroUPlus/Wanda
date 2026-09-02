@@ -48,6 +48,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
     private val acousticFeatures: AcousticFeatureRepository,
     private val melodySearch: MelodySearchRepository,
     private val decoder: PcmDecoder,
+    private val progress: FingerprintProgress,
     private val musicRepository: MusicRepository
 ) : CoroutineWorker(context, params) {
 
@@ -69,19 +70,27 @@ class FingerprintIndexWorker @AssistedInject constructor(
 
         for (track in pending.take(BATCH_SIZE)) {
             if (isStopped) return@withContext Result.retry()
-            val source = audioSourceFor(track) ?: continue
-            val samples = decoder.decode(source.first, source.second) ?: continue
-            recognitionRepository.index(track, samples)
-            if (track.id in needsCanonical) {
-                recordingIdentity.index(track.id, samples, track.durationMs)
-                // Asked here and not lazily at read time: the comparison needs every candidate
-                // fingerprint in memory, which is affordable once per track in a background worker
-                // and not affordable on every library query. This is where the answer gets written
-                // down, and it is the only thing that turns a stored fingerprint into a merge.
-                recordingLinks.record(track.id, recordingIdentity.matchesFor(track.id))
+            // Marked around the decode and every write that comes off it, in a `finally` so a
+            // cancelled worker or a track that fails to decode does not leave the badge spinning.
+            progress.started(track.id)
+            try {
+                val source = audioSourceFor(track) ?: continue
+                val samples = decoder.decode(source.first, source.second) ?: continue
+                recognitionRepository.index(track, samples)
+                if (track.id in needsCanonical) {
+                    recordingIdentity.index(track.id, samples, track.durationMs)
+                    // Asked here and not lazily at read time: the comparison needs every candidate
+                    // fingerprint in memory, which is affordable once per track in a background
+                    // worker and not affordable on every library query. This is where the answer
+                    // gets written down, and it is the only thing that turns a stored fingerprint
+                    // into a merge.
+                    recordingLinks.record(track.id, recordingIdentity.matchesFor(track.id))
+                }
+                if (track.id in needsFeatures) acousticFeatures.measure(track.id, samples)
+                if (track.id in needsContour) melodySearch.index(track.id, samples)
+            } finally {
+                progress.finished(track.id)
             }
-            if (track.id in needsFeatures) acousticFeatures.measure(track.id, samples)
-            if (track.id in needsContour) melodySearch.index(track.id, samples)
         }
 
         if (pending.size > BATCH_SIZE) Result.retry() else Result.success()
@@ -132,26 +141,50 @@ class FingerprintIndexWorker @AssistedInject constructor(
          * `KEEP`, so repeated calls — every launch, say — join the run already queued instead of
          * cancelling and restarting it, which on a large library would mean never finishing.
          */
-        fun enqueue(context: Context) {
+        fun enqueue(context: Context, allowMobileData: Boolean = false) {
             WorkManager.getInstance(context).enqueueUniqueWork(
                 NAME,
                 ExistingWorkPolicy.KEEP,
                 OneTimeWorkRequestBuilder<FingerprintIndexWorker>()
                     .setConstraints(
                         Constraints.Builder()
-                            .setRequiresCharging(true)
+                            // Charging is **not** required, and that is a deliberate reversal.
+                            //
+                            // It reads like the cautious choice and it quietly gutted the feature.
+                            // A library that lives on Navidrome and YouTube Music is only reachable
+                            // while the app is in use, and "in use" and "plugged in" are close to
+                            // disjoint — so the index never filled, and a recogniser with an empty
+                            // index is not a conservative recogniser, it is a broken one.
+                            //
+                            // The cost was overstated. The decode is `MediaCodec`, which is the
+                            // same hardware path that plays the song, on one track at a time,
+                            // capped at [BATCH_SIZE] per run with the rest deferred to the next.
+                            // What is actually expensive here is the network, and that is what the
+                            // remaining two constraints are for.
                             .setRequiresBatteryNotLow(true)
-                            // Unmetered, because this now reads audio. It used to declare no
-                            // network constraint on the grounds that it touched none, which stopped
+                            // A network constraint at all, because this now reads audio. It used
+                            // to declare none on the grounds that it touched none, which stopped
                             // being true the moment streamed tracks became indexable.
-                            .setRequiredNetworkType(NetworkType.UNMETERED)
+                            //
+                            // Unmetered unless the user has said otherwise: measuring a streamed
+                            // library reads about a minute per track, which is free on Wi-Fi and
+                            // is somebody's data plan anywhere else.
+                            .setRequiredNetworkType(
+                                if (allowMobileData) NetworkType.CONNECTED else NetworkType.UNMETERED
+                            )
                             .build()
                     )
                     .build()
             )
         }
 
-        /** Runs it now, constraints and all, for a user who asked from Settings. */
+        /**
+         * Runs it now, ignoring every constraint, for a user who asked from Settings.
+         *
+         * The KDoc used to say "constraints and all" beside a builder that sets none. Asking
+         * explicitly is the one case where overriding them is right — the user is looking at the
+         * screen and has said to go — so the behaviour stays and the description is corrected.
+         */
         fun enqueueNow(context: Context) {
             WorkManager.getInstance(context).enqueueUniqueWork(
                 NAME,

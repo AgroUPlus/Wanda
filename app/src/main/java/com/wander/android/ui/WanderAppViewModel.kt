@@ -358,9 +358,13 @@ class WanderAppViewModel @Inject constructor(
             localSource.refresh()
             // The scan is what discovers the files, so the fingerprint index can only usefully be
             // asked for afterwards. `KEEP` inside means the repeated calls this makes across
-            // launches join one run rather than restarting it. Constrained to charging, so asking
-            // costs the user nothing right now.
-            FingerprintIndexWorker.enqueue(context)
+            // launches join one run rather than restarting it. It no longer waits for a charger —
+            // a streamed library is only reachable while the app is in use — so asking here can
+            // actually lead to work being done.
+            FingerprintIndexWorker.enqueue(
+                context,
+                allowMobileData = secureStorage.isIndexOnMobileDataEnabled.value
+            )
         }
     }
 }

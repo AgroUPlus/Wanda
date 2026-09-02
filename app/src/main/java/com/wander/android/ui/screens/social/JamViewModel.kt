@@ -51,7 +51,7 @@ internal class JamViewModel @Inject constructor(
     private val _state = MutableStateFlow(JamUiState())
     val state: StateFlow<JamUiState> = _state.asStateFlow()
 
-    fun shareUrl(code: String): String {
+    fun shareUrl(code: String): String? {
         val configuredDomain = secureStorage.agroShareDomain.value.ifBlank { secureStorage.shareDomain.value }
         if (configuredDomain.isNotBlank()) {
             val host = configuredDomain.removePrefix("https://").removePrefix("http://").trimEnd('/')
@@ -66,7 +66,7 @@ internal class JamViewModel @Inject constructor(
                 "https://$cleanServer/jam?code=$code"
             }
         }
-        return "https://frwd.top/jam?code=$code"
+        return null
     }
 
     private var toppingUp = false

@@ -7,6 +7,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.UUID
 
 /**
  * The wire format shouted into a room, and what a scanner makes of what it hears.
@@ -72,12 +73,45 @@ class OffGridBeaconTest {
         assertNull(OffGridBeacon.fromBytes(ByteArray(OffGridBeacon.SIZE) { 99 }))
     }
 
+    /**
+     * The regression that took the whole app down on launch.
+     *
+     * `0000w4nd-0000-1000-8000-00805f9b34fb` spelled a word where hex was required. `BleDiscovery`
+     * parses this in a field initialiser and is a `@Singleton`, so the throw came out of the Hilt
+     * graph before any off-grid code ran — a dead app, from a constant nothing else looked at.
+     */
+    @Test
+    fun `the service uuid is a uuid`() {
+        assertEquals(OffGridBeacon.SERVICE_UUID, UUID.fromString(OffGridBeacon.SERVICE_UUID).toString())
+    }
+
+    /**
+     * A legacy advertisement is thirty-one bytes, and one that does not fit is refused outright.
+     *
+     * Counted rather than measured, because `AdvertiseData` cannot be built off a device: the
+     * service-data field costs two bytes of AD header plus the sixteen of a 128-bit UUID, and the
+     * framework prepends a three-byte flags field of its own. This is what caught the packet that
+     * named the UUID twice and came to fifty bytes.
+     */
+    @Test
+    fun `the advertisement fits in a legacy packet`() {
+        val serviceDataField = AD_HEADER + UUID_128_BYTES + OffGridBeacon.SIZE
+        assertTrue(FLAGS_FIELD + serviceDataField <= LEGACY_ADVERTISEMENT_BYTES)
+    }
+
     /** Derived from the key so it survives a restart without being stored anywhere. */
     @Test
     fun `the device id is stable for one identity and differs between two`() {
         val other = ByteArray(32) { (it + 9).toByte() }
         assertEquals(OffGridBeacon.deviceIdFrom(key), OffGridBeacon.deviceIdFrom(key))
         assertTrue(OffGridBeacon.deviceIdFrom(key) != OffGridBeacon.deviceIdFrom(other))
+    }
+
+    private companion object {
+        const val LEGACY_ADVERTISEMENT_BYTES = 31
+        const val AD_HEADER = 2
+        const val UUID_128_BYTES = 16
+        const val FLAGS_FIELD = 3
     }
 }
 

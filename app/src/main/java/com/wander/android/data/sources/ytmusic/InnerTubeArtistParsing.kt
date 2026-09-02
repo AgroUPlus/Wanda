@@ -1,5 +1,6 @@
 package com.wander.android.data.sources.ytmusic
 
+import com.wander.android.data.model.UNKNOWN_ARTIST
 import com.wander.android.data.model.ArtistAlbumSection
 import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.ArtistSection

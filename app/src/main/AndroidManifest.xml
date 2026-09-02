@@ -22,6 +22,14 @@
         infer position from nearby beacons, and this app only ever looks for its own service UUID.
         The flag is how that is promised to the system, and it is what keeps the feature from
         needing a location permission at all on Android 12 and later.
+
+        Older releases are a different story, and `minSdk` is 26. The `BLUETOOTH_*` runtime
+        permissions below only exist from API 31; before that, advertising and scanning need the
+        legacy `BLUETOOTH`/`BLUETOOTH_ADMIN` pair, and both a BLE scan (API =< 30) and Wi-Fi
+        Direct's `discoverPeers` (API =< 32) are gated on `ACCESS_FINE_LOCATION`. None of that is
+        optional and none of it reports an error when missing — the radio simply never finds
+        anybody, which reads as a feature that does not work. Each is capped at the last release
+        that needs it so no modern install is asked for location.
     -->
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     <uses-permission
@@ -29,10 +37,21 @@
         android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <uses-permission
         android:name="android.permission.NEARBY_WIFI_DEVICES"
         android:usesPermissionFlags="neverForLocation" />
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- Required for Wi-Fi P2P group formation, and easy to miss: it is not a runtime grant. -->
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
 
     <!-- Wi-Fi Direct is absent on a real minority of devices; the app is fine without it. -->
     <uses-feature

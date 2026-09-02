@@ -24,8 +24,7 @@ import javax.inject.Singleton
 @Singleton
 internal class DropsRepository @Inject constructor(
     private val dropsApi: AgroDropsApi,
-    private val dropDao: DropDao,
-    private val identityKeyManager: com.wander.android.core.security.IdentityKeyManager
+    private val dropDao: DropDao
 ) {
     val inbox: Flow<List<AgroDrop>> =
         dropDao.observeInbox().map { rows -> rows.map { it.toDrop() } }
@@ -111,16 +110,7 @@ internal class DropsRepository @Inject constructor(
      * here would be a second chance to miss it before the app is backgrounded again.
      */
     suspend fun onPushed(drop: AgroDrop) {
-        val decrypted = if (drop.isEncrypted && !drop.noteCiphertext.isNullOrBlank()) {
-            try {
-                drop.copy(note = identityKeyManager.openNote(drop.noteCiphertext))
-            } catch (e: Exception) {
-                drop
-            }
-        } else {
-            drop
-        }
-        dropDao.insert(decrypted.toEntity(incoming = true, syncedAt = Instant.now().toEpochMilli()))
+        dropDao.insert(drop.toEntity(incoming = true, syncedAt = Instant.now().toEpochMilli()))
     }
 
     /**

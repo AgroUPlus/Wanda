@@ -118,6 +118,8 @@ internal class SettingsViewModel @Inject constructor(
     val isOfflineMode: StateFlow<Boolean> = secureStorage.isOfflineMode
 
     val isPreloadNextEnabled: StateFlow<Boolean> = secureStorage.isPreloadNextEnabled
+
+    val isIndexOnMobileDataEnabled: StateFlow<Boolean> = secureStorage.isIndexOnMobileDataEnabled
     val agroConnected: StateFlow<Boolean> = secureStorage.agroConfigured
 
     /** Blank until the user names one; see [SecureStorage.shareDomain]. */
@@ -395,6 +397,17 @@ internal class SettingsViewModel @Inject constructor(
     fun setOfflineMode(enabled: Boolean) = secureStorage.setOfflineMode(enabled)
 
     fun setPreloadNextEnabled(enabled: Boolean) = secureStorage.setPreloadNextEnabled(enabled)
+
+    /**
+     * Turning this on re-enqueues, so the change takes effect now rather than at the next launch.
+     *
+     * WorkManager fixes a request's constraints when it is enqueued, so the run already sitting
+     * there is still waiting for Wi-Fi. `enqueueNow` replaces it with one that is not.
+     */
+    fun setIndexOnMobileDataEnabled(enabled: Boolean) {
+        secureStorage.setIndexOnMobileDataEnabled(enabled)
+        if (enabled) indexFingerprintsNow()
+    }
 
     /**
      * Goes quiet, or stops.

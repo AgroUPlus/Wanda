@@ -5,8 +5,11 @@ import com.wander.android.core.sync.P2PServer
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
-import java.io.IOException
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -61,9 +64,13 @@ internal class OffGridTransport @Inject constructor(
      * [servesAudio] is a promise about what a peer will find if it connects, so it is set from
      * whether the server is actually running rather than from an intention to run it.
      */
-    fun startAdvertising(servesAudio: Boolean): Boolean {
+    suspend fun startAdvertising(servesAudio: Boolean): Result<Unit> {
         // Discovery only. Being findable must stay cheap: both devices have to be findable before
         // either can see the other, so anything expensive here is paid twice for one link.
+        //
+        // Its failure is logged by the framework wrapper but not returned: BLE is what makes this
+        // device appear on the other phone's screen, and a Wi-Fi Direct scan that would not start
+        // is a problem for the tap that comes later, not a reason to refuse to be seen now.
         wifiDirect.makeDiscoverable()
         val publicKey = identityKeys.getOrCreateIdentityKeys().second.encoded
         return ble.advertise(
@@ -83,25 +90,64 @@ internal class OffGridTransport @Inject constructor(
      * The list is rebuilt on every sighting rather than emitted per beacon, because a UI wants "who
      * is here now" and a beacon stream is not that — see [NearbyPeers] for the three decisions in
      * between.
+     *
+     * Sightings alone are not enough to drive it, though, and that was the bug: a device that walks
+     * out of the room stops advertising, so nothing arrives, so nothing re-emits, so
+     * [NearbyPeers.current]'s expiry sweep never runs and the departed phone stays on screen for
+     * good. Absence is silence, and silence has to be checked for on a clock. The ticker runs only
+     * while this flow is collected, and `distinctUntilChanged` keeps the busy case — dozens of
+     * sightings a second from one phone in the room — from recomposing the list each time.
      */
-    fun nearbyServers(): Flow<List<NearbyPeers.Peer>> = ble.scan().map { (beacon, rssi) ->
-        val now = System.currentTimeMillis()
-        peers.sighted(beacon, rssi, now)
-        peers.servers(now)
+    fun nearbyServers(): Flow<List<NearbyPeers.Peer>> {
+        val sightings = ble.scan().map { (beacon, rssi) ->
+            peers.sighted(beacon, rssi, System.currentTimeMillis())
+        }
+        val sweeps = flow {
+            while (true) {
+                delay(SWEEP_INTERVAL_MS)
+                emit(false)
+            }
+        }
+        return merge(sightings, sweeps)
+            .map { peers.servers(System.currentTimeMillis()) }
+            .distinctUntilChanged { old, new -> old.looksTheSameAs(new) }
+    }
+
+    /**
+     * Whether two lists would draw identically.
+     *
+     * Not `==`, which would compare [NearbyPeers.Peer.lastSeenAtMs] and so be different on every
+     * single sighting — dozens a second from one phone sitting in the room, each one a recomposition
+     * of the list. What the screen actually shows is who is there, in what order, and how strong the
+     * signal is in words, so the signal is bucketed well below the jitter that a stationary phone
+     * produces and well above the change that would alter the word.
+     */
+    private fun List<NearbyPeers.Peer>.looksTheSameAs(other: List<NearbyPeers.Peer>): Boolean {
+        if (size != other.size) return false
+        return indices.all { i ->
+            this[i].beacon == other[i].beacon &&
+                this[i].rssi / RSSI_BUCKET_DBM == other[i].rssi / RSSI_BUCKET_DBM
+        }
     }
 
     /**
      * Raises a direct link and returns the base URL the peer's library is reachable at.
      *
-     * Null when no link could be formed, which is ordinary: see [WifiDirectLink] on how many ways
-     * group formation fails without anything being wrong.
+     * A failure here is ordinary rather than exceptional — see [WifiDirectLink] on how many ways
+     * group formation fails without anything being wrong — but it now carries the reason, because
+     * "the scan was refused" and "nobody is here" want different things from the user.
      */
     suspend fun connect(peer: NearbyPeers.Peer): Result<String> = linkMutex.withLock {
         link?.let { existing ->
             if (grant != null) return@withLock Result.success(baseUrlOf(existing))
+            // A link with no grant is a half-finished attempt, not something to build a second
+            // link on top of. Wi-Fi Direct will not form a group while this device is in one, so
+            // stacking the next attempt on it would fail for a reason that had nothing to do with
+            // the peer.
+            link = null
+            wifiDirect.disconnect()
         }
-        val formed = wifiDirect.connect()
-            ?: return@withLock Result.failure(IOException("no direct link could be formed"))
+        val formed = wifiDirect.connect().getOrElse { return@withLock Result.failure(it) }
         val base = baseUrlOf(formed)
 
         // Paired before the link is kept. A group formed with the wrong device is worse than no
@@ -145,6 +191,19 @@ internal class OffGridTransport @Inject constructor(
         wifiDirect.disconnect()
         p2pServer.clearGrants()
         peers.clear()
+    }
+
+    private companion object {
+        /**
+         * How often the list is re-swept when nothing is being heard.
+         *
+         * Well under `NearbyPeers.STALE_AFTER_MS`, so a departure shows within a tick or two of
+         * becoming true, and far too slow to be a poll worth worrying about.
+         */
+        const val SWEEP_INTERVAL_MS = 2_000L
+
+        /** Coarser than a stationary phone's jitter, finer than any word the screen puts on it. */
+        const val RSSI_BUCKET_DBM = 10
     }
 
     private fun baseUrlOf(link: DirectLink) =

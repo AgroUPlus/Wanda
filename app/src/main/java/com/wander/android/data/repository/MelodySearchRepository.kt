@@ -116,11 +116,15 @@ class MelodySearchRepository @Inject constructor(
         framesPerSecond = AudioFormat.FRAMES_PER_SECOND
     )
 
-    private companion object {
+    internal companion object {
         /**
          * The contour contract. Bumped when note segmentation changes — a stored contour and a
          * freshly measured one must have been cut into notes the same way, or the comparison is
          * between two different alphabets.
+         *
+         * Visible past this class because the fingerprint badge asks the same question the search
+         * does — "is there a contour at the current version" — and a badge reading a stale version
+         * would call a track indexed that the search cannot use.
          */
         const val CONTOUR_VERSION = 1
 

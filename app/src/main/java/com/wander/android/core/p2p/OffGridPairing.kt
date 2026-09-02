@@ -19,8 +19,8 @@ import javax.inject.Singleton
  *
  * ## Why the answer is checked and not just used
  *
- * A Wi-Fi Direct group is formed with whatever the framework negotiates. The beacon is fourteen
- * bytes and cannot carry a MAC address, so there is no way to *ask* for a particular peer — the
+ * A Wi-Fi Direct group is formed with whatever the framework negotiates. The beacon is ten bytes
+ * and cannot carry a MAC address, so there is no way to *ask* for a particular peer — the
  * link comes up and only then can this device find out whose it is. Rather than pretend to choose,
  * this verifies afterwards: the peer returns its identity key, the beacon's fingerprint is
  * recomputed from it, and a mismatch means the link reached somebody else and must be dropped.

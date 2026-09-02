@@ -22,6 +22,7 @@ import com.wander.android.ui.screens.queue.QueueScreen
 import com.wander.android.ui.screens.settings.SettingsScreen
 import com.wander.android.ui.screens.social.CircleScreen
 import com.wander.android.ui.screens.social.InboxScreen
+import com.wander.android.ui.screens.settings.FingerprintsScreen
 import com.wander.android.ui.screens.social.OffGridScreen
 import com.wander.android.ui.screens.social.JamScreen
 import com.wander.android.ui.screens.social.MyProfileScreen
@@ -119,7 +120,8 @@ fun NavGraphBuilder.wanderNavGraph(
             onNavidromeLogin = { navController.navigateSettled(Routes.NAVIDROME_LOGIN) },
             onYouTubeLogin = { navController.navigateSettled(Routes.YTMUSIC_LOGIN) },
             onOpenImport = { navController.navigateSettled(Routes.IMPORT_PLAYLIST) },
-            onOpenMergePreview = { navController.navigateSettled(Routes.MERGE_PREVIEW) }
+            onOpenMergePreview = { navController.navigateSettled(Routes.MERGE_PREVIEW) },
+            onOpenFingerprints = { navController.navigateSettled(Routes.FINGERPRINTS) }
         )
     }
 
@@ -167,6 +169,13 @@ fun NavGraphBuilder.wanderNavGraph(
 
     detailDestination(motion, route = Routes.OFFGRID) {
         OffGridScreen(
+            contentPadding = contentPadding,
+            onBack = navController::popBackStack
+        )
+    }
+
+    detailDestination(motion, route = Routes.FINGERPRINTS) {
+        FingerprintsScreen(
             contentPadding = contentPadding,
             onBack = navController::popBackStack
         )

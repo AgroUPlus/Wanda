@@ -12,6 +12,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -48,14 +49,23 @@ internal class OffGridViewModel @Inject constructor(
     fun startSharing() {
         if (!transport.isSupported) return
         p2pServer.start()
-        val advertising = transport.startAdvertising(servesAudio = true)
-        _state.value = _state.value.copy(
-            isAdvertising = advertising,
-            // A radio that refused is worth saying plainly. It is usually Bluetooth switched off or
-            // a permission declined, and neither is something the user can guess from an empty list.
-            error = if (advertising) null else "This phone could not start broadcasting. Check that Bluetooth is on."
-        )
-        startScanning()
+        viewModelScope.launch {
+            // Suspends now, and that is the fix rather than a detail. `startAdvertising` used to
+            // return a boolean that was always true — the radio reports its refusal asynchronously,
+            // so the message below could never appear no matter how thoroughly the advertisement
+            // had been rejected.
+            val advertising = transport.startAdvertising(servesAudio = true)
+            _state.value = _state.value.copy(
+                isAdvertising = advertising.isSuccess,
+                // A radio that refused is worth saying plainly, in its own words: "this chipset has
+                // no peripheral mode" and "Bluetooth is off" are not the same problem, and neither
+                // is something the user can guess from an empty list.
+                error = advertising.exceptionOrNull()?.let {
+                    "This phone could not start broadcasting: ${it.message}"
+                }
+            )
+            startScanning()
+        }
     }
 
     /** Stops advertising and scanning, and drops any link. What leaving the screen must do. */
@@ -101,8 +111,11 @@ internal class OffGridViewModel @Inject constructor(
     }
 
     private fun describe(error: Throwable): String = when {
+        // The link never came up. `WifiDirectLink` now says which way — a refused scan names the
+        // permission, an empty room says so — where this used to advise moving closer whatever the
+        // cause, including a nearby-devices grant the user had declined.
         error !is OffGridPairing.PairingException ->
-            "No direct link could be formed. Some phones refuse this silently. Try again, or move closer."
+            error.message ?: "No direct link could be formed. Try again, or move closer."
         error.failure is OffGridPairing.Failure.WrongPeer ->
             "The link reached a different device than the one you picked, so it was dropped."
         error.failure is OffGridPairing.Failure.Unreadable ->
@@ -121,6 +134,14 @@ internal class OffGridViewModel @Inject constructor(
         scanJob?.cancel()
         scanJob = transport.nearbyServers()
             .onEach { found -> _state.value = _state.value.copy(peers = found) }
+            // A refused scan now ends the flow with its reason instead of staying open and empty.
+            // Those two states look identical on screen — nobody here — and only one of them is
+            // something the user can act on.
+            .catch { error ->
+                _state.value = _state.value.copy(
+                    error = "This phone could not look for others: ${error.message}"
+                )
+            }
             .launchIn(viewModelScope)
     }
 }
