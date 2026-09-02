@@ -30,6 +30,12 @@ internal data class OffGridUiState(
     val links: List<OffGridLink> = emptyList(),
     /** True while a link is being raised — which takes seconds and a system dialog. */
     val isConnecting: Boolean = false,
+    /** Whether this device is mirroring what the linked peer plays. */
+    val isFollowing: Boolean = false,
+    /** What the peer is playing, as one line, or null while nothing has been read yet. */
+    val followingNowPlaying: String? = null,
+    /** Set when the peer is playing something no source here can supply. */
+    val followingUnresolvable: String? = null,
     val error: String? = null
 ) {
     /** True when scanning has found nobody yet, which is the ordinary state for the first seconds. */

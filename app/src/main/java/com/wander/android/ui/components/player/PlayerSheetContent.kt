@@ -77,7 +77,15 @@ fun PlayerSheetContent(
      * out gives the row nothing to leave *with*, and it disappeared in a frame while the sheet
      * spent the next half-second shrinking over the hole it left. Passed in, it gets an exit.
      */
-    showDockRow: Boolean = true
+    showDockRow: Boolean = true,
+    /**
+     * Whether the playing track has been measured, drawn as a dot on the cover.
+     *
+     * Passed in rather than read here: this file knows nothing about repositories, and the status
+     * belongs to the track the *player* is on, which the caller already has.
+     */
+    fingerprintStatus: com.wander.android.data.repository.FingerprintStatus =
+        com.wander.android.data.repository.FingerprintStatus.MISSING
 ) {
     val anchors = remember { PlayerArtworkAnchors() }
     // Owned here, not in `NowPlayingScreen`. The sheet is what draws the cover the lyrics replace,
@@ -270,7 +278,8 @@ fun PlayerSheetContent(
             alpha = { artworkAlphaState.value },
             swipe = swipe,
             previousUrl = previousArtwork,
-            nextUrl = nextArtwork
+            nextUrl = nextArtwork,
+            fingerprintStatus = fingerprintStatus
         )
 
         // Composed as soon as the drag starts, so its artwork bounds are known and nothing

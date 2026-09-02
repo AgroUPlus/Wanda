@@ -58,8 +58,29 @@ class WanderAppViewModel @Inject constructor(
     private val instantRadio: InstantRadioRepository,
     private val playerConnection: PlayerConnection,
     private val searchQueryHolder: SearchQueryHolder,
+    fingerprintStatuses: com.wander.android.data.repository.FingerprintStatusRepository,
     @ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
+
+    /**
+     * Whether the track on the player's cover has been measured.
+     *
+     * Read here rather than in `NowPlayingScreen` because the cover the user actually looks at is
+     * not that screen's: the travelling cover is drawn by `MorphingArtwork`, outside it, and the
+     * badge sitting in `NowPlayingScreen` was in a branch the real player never takes.
+     */
+    val playingFingerprintStatus: StateFlow<com.wander.android.data.repository.FingerprintStatus> =
+        combine(
+            playerConnection.state,
+            fingerprintStatuses.statuses()
+        ) { playback, statuses ->
+            playback.currentTrack?.id?.let { statuses[it] }
+                ?: com.wander.android.data.repository.FingerprintStatus.MISSING
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            com.wander.android.data.repository.FingerprintStatus.MISSING
+        )
 
     /**
      * The dock's search text.

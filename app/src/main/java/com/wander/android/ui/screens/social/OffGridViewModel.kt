@@ -28,7 +28,8 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 internal class OffGridViewModel @Inject constructor(
     private val transport: OffGridTransport,
-    private val p2pServer: P2PServer
+    private val p2pServer: P2PServer,
+    private val listenAlong: com.wander.android.data.repository.ListenAlongController
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(OffGridUiState())
@@ -44,6 +45,28 @@ internal class OffGridViewModel @Inject constructor(
         // is the only way its screen learns about it.
         transport.links
             .onEach { links -> _state.value = _state.value.copy(links = links) }
+            .launchIn(viewModelScope)
+        // Read rather than remembered. The radio outlives this view model, so a screen returned to
+        // must show what is actually running — otherwise it offers "Be findable" for a phone that
+        // has been findable the whole time.
+        // The session is owned by the controller, so this screen reads it rather than tracking
+        // it — coming back here must show a follow that is still running.
+        listenAlong.session
+            .onEach { session ->
+                _state.value = _state.value.copy(
+                    isFollowing = session != null,
+                    followingNowPlaying = session?.nowPlaying?.let {
+                        listOfNotNull(it.artistName.ifBlank { null }, it.trackTitle).joinToString(" — ")
+                    },
+                    followingUnresolvable = session?.unresolvable
+                )
+            }
+            .launchIn(viewModelScope)
+        transport.isAdvertising
+            .onEach { advertising ->
+                _state.value = _state.value.copy(isAdvertising = advertising)
+                if (advertising && scanJob == null) startScanning()
+            }
             .launchIn(viewModelScope)
     }
 
@@ -88,16 +111,33 @@ internal class OffGridViewModel @Inject constructor(
         }
     }
 
-    /** Stops advertising and scanning, and drops any link. What leaving the screen must do. */
+    /**
+     * Stops advertising, stops scanning, and drops every link.
+     *
+     * What the **"Stop sharing" button** means, and nothing else calls it. Leaving the screen must
+     * not do this — see [onScreenLeft]. It used to, and that made the feature impossible to use:
+     * you connected to a phone, navigated to the player to actually listen to something, and the
+     * link you had just made was torn down on the way out.
+     */
     fun stop() {
         transport.stopAdvertising()
         scanJob?.cancel()
         scanJob = null
         viewModelScope.launch { transport.disconnect() }
-        _state.value = _state.value.copy(
-            isAdvertising = false,
-            peers = emptyList()
-        )
+        _state.value = _state.value.copy(peers = emptyList())
+    }
+
+    /**
+     * What leaving the screen means: stop looking, keep everything the user turned on.
+     *
+     * The scan is the only part of this that is a function of *looking at the list*, and it is the
+     * expensive part — a BLE scan left running behind a closed screen would quietly cost battery
+     * all afternoon. Advertising and any live link are decisions the user made deliberately, and
+     * they end when the user ends them, not when a screen goes away.
+     */
+    fun onScreenLeft() {
+        scanJob?.cancel()
+        scanJob = null
     }
 
     /**
@@ -136,6 +176,31 @@ internal class OffGridViewModel @Inject constructor(
      */
     fun disconnect(link: OffGridLink) {
         viewModelScope.launch { transport.disconnect(link) }
+    }
+
+    /**
+     * Starts following what the linked peer is playing, with no server involved.
+     *
+     * The link already carries audio; what it did not carry was which audio. Offered here rather
+     * than on the friends list because there is no friend to offer it against: off-grid neither
+     * device has an account, and the only thing either can name is the device at the other end.
+     */
+    fun listenAlongOffGrid() {
+        viewModelScope.launch {
+            val started = listenAlong.startOffGrid()
+            _state.value = _state.value.copy(
+                isFollowing = started.isSuccess,
+                error = started.exceptionOrNull()?.message
+            )
+        }
+    }
+
+    /** Stops following, leaving the link and the music where they are. */
+    fun stopListenAlong() {
+        viewModelScope.launch {
+            listenAlong.stop()
+            _state.value = _state.value.copy(isFollowing = false)
+        }
     }
 
     fun dismissError() {
