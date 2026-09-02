@@ -13,7 +13,7 @@ import com.wander.android.data.repository.LibrarySyncRepository
 import com.wander.android.data.repository.SyncOfferArtwork
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.PlaylistWriteRepository
-import com.wander.android.core.audio.fingerprint.FingerprintIndexWorker
+import com.wander.android.core.audio.fingerprint.FingerprintIndexing
 import com.wander.android.data.repository.SearchQueryHolder
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.wander.android.data.repository.ShareRepository
@@ -361,7 +361,7 @@ class WanderAppViewModel @Inject constructor(
             // launches join one run rather than restarting it. It no longer waits for a charger —
             // a streamed library is only reachable while the app is in use — so asking here can
             // actually lead to work being done.
-            FingerprintIndexWorker.enqueue(
+            FingerprintIndexing.enqueue(
                 context,
                 allowMobileData = secureStorage.isIndexOnMobileDataEnabled.value
             )

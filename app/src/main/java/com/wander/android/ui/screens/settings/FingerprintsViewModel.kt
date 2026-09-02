@@ -2,7 +2,10 @@ package com.wander.android.ui.screens.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.audio.fingerprint.FingerprintProgress
 import com.wander.android.core.database.dao.TrackDao
+import com.wander.android.core.notification.WorkProgressNotification
+import com.wander.android.core.work.WorkControls
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.FingerprintStatus
@@ -50,7 +53,8 @@ internal data class FingerprintsUiState(
     val sections: List<FingerprintSection> = emptyList(),
     val indexed: Int = 0,
     val total: Int = 0,
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val isPaused: Boolean = false
 ) {
     /** The one being decoded right now, if any — the line the screen leads with. */
     val processing: FingerprintRow?
@@ -69,8 +73,23 @@ internal data class FingerprintsUiState(
 @HiltViewModel
 internal class FingerprintsViewModel @Inject constructor(
     trackDao: TrackDao,
-    statuses: FingerprintStatusRepository
+    statuses: FingerprintStatusRepository,
+    private val workControls: WorkControls,
+    private val progress: FingerprintProgress
 ) : ViewModel() {
+
+    /** Pauses measuring, or lifts the pause and starts it again. */
+    fun setPaused(paused: Boolean) {
+        if (paused) {
+            workControls.pause(WorkProgressNotification.Kind.FINGERPRINT)
+        } else {
+            // An explicit resume is also the user saying "try the ones that failed again" — it is
+            // the only gesture that means that, and without it a track the indexer could not reach
+            // stays skipped for the life of the process.
+            progress.retryFailures()
+            workControls.resume(WorkProgressNotification.Kind.FINGERPRINT)
+        }
+    }
 
     /**
      * The whole library, re-sorted whenever a measurement lands.
@@ -95,8 +114,9 @@ internal class FingerprintsViewModel @Inject constructor(
         // Conflated: during an indexing pass the statuses change faster than a person can read
         // them, and every intermediate state costs a full sort. The screen wants the latest answer,
         // not each of them.
-        statuses.statuses().conflate()
-    ) { tracks, byId ->
+        statuses.statuses().conflate(),
+        workControls.isPaused(WorkProgressNotification.Kind.FINGERPRINT)
+    ) { tracks, byId, paused ->
         val rows = tracks
             .map { track -> FingerprintRow(track, byId[track.id] ?: FingerprintStatus.MISSING) }
             // Processing first, then missing, then done — most actionable at the top.
@@ -150,7 +170,8 @@ internal class FingerprintsViewModel @Inject constructor(
             sections = sections,
             indexed = rows.count { it.status == FingerprintStatus.INDEXED },
             total = rows.size,
-            isLoading = false
+            isLoading = false,
+            isPaused = paused
         )
     }
         // The grouping and the thousand-row sort are real work and have no business on the main

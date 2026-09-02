@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearWavyProgressIndicator
@@ -70,7 +72,7 @@ internal fun FingerprintsScreen(
             contentPadding = contentPadding.listInset(),
             modifier = Modifier.fillMaxSize()
         ) {
-            item(key = "summary") { Summary(state) }
+            item(key = "summary") { Summary(state, viewModel::setPaused) }
 
             state.sections.forEach { section ->
                 item(key = "header_${section.title}") {
@@ -92,7 +94,7 @@ internal fun FingerprintsScreen(
 }
 
 @Composable
-private fun Summary(state: FingerprintsUiState) {
+private fun Summary(state: FingerprintsUiState, onPausedChange: (Boolean) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)) {
         Text(
             text = "${state.indexed} of ${state.total} measured",
@@ -116,11 +118,33 @@ private fun Summary(state: FingerprintsUiState) {
             // question someone opens this screen with.
             LinearWavyProgressIndicator(
                 progress = { state.indexed.toFloat() / state.total },
-                amplitude = { if (state.processing != null) 1f else 0f },
+                // Flat the moment measuring is paused, without waiting for the run to unwind. A
+                // wave still rolling under a button that says "Resume" is the screen contradicting
+                // itself about the one thing it is here to report.
+                amplitude = { if (state.processing != null && !state.isPaused) 1f else 0f },
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
             )
         }
-        state.processing?.let {
+        // A button rather than a switch, because this is an action taken on something happening
+        // right now — "stop that" — not a preference that describes how the app should behave.
+        FilledTonalButton(
+            onClick = { onPausedChange(!state.isPaused) },
+            shapes = ButtonDefaults.shapes(),
+            modifier = Modifier.padding(top = 12.dp)
+        ) {
+            Text(if (state.isPaused) "Resume measuring" else "Pause measuring")
+        }
+
+        if (state.isPaused) {
+            Text(
+                text = "Paused. Nothing is being measured until you resume.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+
+        state.processing?.takeIf { !state.isPaused }?.let {
             Text(
                 text = "Measuring \"${it.track.title}\" now",
                 style = MaterialTheme.typography.bodySmall,

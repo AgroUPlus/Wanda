@@ -65,24 +65,34 @@ internal fun LazyListScope.playbackStorageTab(
         )
     }
 
+    // Rows that act, not switches that describe.
+    //
+    // A switch says "this is how the app should behave from now on"; these say "stop what you are
+    // doing" and "start again now", which is a thing done to work already in flight. Resuming also
+    // re-enqueues rather than waiting for the next Wi-Fi-and-battery trigger, so the row does
+    // visibly what its label promises — see `WorkControls.resume`.
     item(key = "pause_measuring") {
-        SettingsToggle(
-            title = "Pause measuring",
-            // Says what pausing actually guarantees. A plain cancel would be undone by the next
-            // scheduled run and read as a button that did not work.
-            subtitle = "Stops the current pass and keeps it stopped until you turn this off. " +
-                "Sync and downloads are unaffected.",
-            checked = measuringPaused,
-            onCheckedChange = onMeasuringPausedChange
+        SettingsRow(
+            title = if (measuringPaused) "Resume measuring" else "Pause measuring",
+            subtitle = if (measuringPaused) {
+                "Measuring is paused. Resuming starts a pass now and retries anything that failed."
+            } else {
+                "Stops the current pass and keeps it stopped until you resume. " +
+                    "Sync and downloads are unaffected."
+            },
+            onClick = { onMeasuringPausedChange(!measuringPaused) }
         )
     }
 
     item(key = "pause_downloads") {
-        SettingsToggle(
-            title = "Pause downloads",
-            subtitle = "Stops downloading liked tracks until you turn this off.",
-            checked = downloadingPaused,
-            onCheckedChange = onDownloadingPausedChange
+        SettingsRow(
+            title = if (downloadingPaused) "Resume downloads" else "Pause downloads",
+            subtitle = if (downloadingPaused) {
+                "Downloading liked tracks is paused."
+            } else {
+                "Stops downloading liked tracks until you resume."
+            },
+            onClick = { onDownloadingPausedChange(!downloadingPaused) }
         )
     }
 

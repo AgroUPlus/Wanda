@@ -8,7 +8,7 @@ import com.wander.android.data.repository.RenditionFinder
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.playback.PlaybackCoordinator
 import com.wander.android.data.model.UnifiedTrack
-import com.wander.android.core.audio.fingerprint.FingerprintIndexWorker
+import com.wander.android.core.audio.fingerprint.FingerprintIndexing
 import com.wander.android.data.repository.FingerprintStatus
 import com.wander.android.data.repository.FingerprintStatusRepository
 import com.wander.android.data.repository.MusicRepository
@@ -66,7 +66,7 @@ internal class NowPlayingViewModel @Inject constructor(
                 .collect { (trackId, status) ->
                     if (trackId == null || status != null) return@collect
                     if (!requested.add(trackId)) return@collect
-                    FingerprintIndexWorker.enqueueFor(context, trackId)
+                    FingerprintIndexing.enqueueFor(context, trackId)
                 }
         }
     }

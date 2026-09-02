@@ -2,6 +2,8 @@ package com.wander.android.core.work
 
 import android.content.Context
 import androidx.work.WorkManager
+import com.wander.android.core.audio.fingerprint.FingerprintIndexing
+import com.wander.android.core.audio.fingerprint.FingerprintProgress
 import com.wander.android.core.notification.WorkProgressNotification.Kind
 import com.wander.android.core.security.SecureStorage
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -34,7 +36,8 @@ import kotlinx.coroutines.flow.StateFlow
 @Singleton
 class WorkControls @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val secureStorage: SecureStorage
+    private val secureStorage: SecureStorage,
+    private val fingerprintProgress: FingerprintProgress
 ) {
 
     /** Whether [kind] is suspended. Read by the UI, and by every enqueue point before scheduling. */
@@ -51,8 +54,22 @@ class WorkControls @Inject constructor(
         cancel(kind)
     }
 
-    /** Lifts the pause. Does **not** start anything: the next ordinary trigger will. */
-    fun resume(kind: Kind) = secureStorage.setWorkPaused(kind.name, false)
+    /**
+     * Lifts the pause and starts the work again.
+     *
+     * It used to only lift the flag, on the reasoning that the next ordinary trigger would pick it
+     * up. For measuring that trigger is Wi-Fi plus a decent battery, which can be hours away — so
+     * "Resume" was a button that visibly did nothing, which is the same complaint the pause flag
+     * exists to avoid at the other end.
+     */
+    fun resume(kind: Kind) {
+        secureStorage.setWorkPaused(kind.name, false)
+        if (kind == Kind.FINGERPRINT) {
+            // The same network rule the sweep is normally scheduled under; resuming must not
+            // quietly become permission to measure a streamed library over mobile data.
+            FingerprintIndexing.enqueue(context, secureStorage.isIndexOnMobileDataEnabled.value)
+        }
+    }
 
     /**
      * Stops the current run without suspending future ones.
@@ -62,6 +79,9 @@ class WorkControls @Inject constructor(
      */
     fun cancel(kind: Kind) {
         WorkManager.getInstance(context).cancelAllWorkByTag(tagFor(kind))
+        // Cancellation unwinds asynchronously; the marker is what the badges and the wave read, and
+        // it must not outlive the decision.
+        if (kind == Kind.FINGERPRINT) fingerprintProgress.clear()
     }
 
     companion object {
