@@ -53,19 +53,35 @@ class FingerprintIndexWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.Default) {
-        // Both fingerprints come off one decode. They answer different questions and share
-        // nothing but the samples, and decoding is by far the expensive part — doing it twice for
-        // one file would double the cost of indexing a library to no purpose.
-        val needsLandmark = recognitionRepository.tracksNeedingIndex()
-        val needsCanonical = recordingIdentity
-            .needingIndex(needsLandmark.map { it.id })
-            .toSet()
-        // Four measurements, one decode. The acoustic vector answers a third question again —
-        // not "what is this" but "what does it sound like", and the melody contour asks a fourth,
-        // "how does it go". Each on its own would be another full pass over the library.
-        val needsFeatures = acousticFeatures.needingMeasurement(FEATURE_BATCH_LIMIT)
-        val needsContour = melodySearch.needingIndex(needsLandmark.map { it.id })
-        val pending = needsLandmark
+        // Four measurements, one decode. They answer different questions and share nothing but the
+        // samples, and decoding is by far the expensive part — a separate pass for each would
+        // multiply the cost of indexing a library to no purpose.
+        //
+        // Each is asked about **every** track, not about the tracks that need a landmark.
+        //
+        // That was the bug, and it was self-concealing. The run used to be driven entirely by
+        // `tracksNeedingIndex()` — tracks with no landmark fingerprint — and the other three
+        // questions were then asked only about *that* list. So the moment a track acquired a
+        // landmark it left the candidate set for good, and could never afterwards be given a
+        // melody contour or an acoustic vector. Any library indexed before hum-to-search existed
+        // was frozen without one, permanently, and re-running the indexer could not fix it because
+        // re-running produced the same empty list. It looked like the indexer doing nothing.
+        val candidates = recognitionRepository.fingerprintableTracks()
+        val candidateIds = candidates.map { it.id }
+
+        val needsLandmark = recognitionRepository.tracksNeedingIndex().mapTo(mutableSetOf()) { it.id }
+        val needsCanonical = recordingIdentity.needingIndex(candidateIds).toSet()
+        val needsFeatures = acousticFeatures.needingMeasurement(FEATURE_BATCH_LIMIT).toSet()
+        val needsContour = melodySearch.needingIndex(candidateIds).toSet()
+
+        // Anything still missing any one of the four is worth a decode; a track that has all four
+        // is worth nothing and must not be decoded again.
+        val pending = candidates.filter {
+            it.id in needsLandmark ||
+                it.id in needsCanonical ||
+                it.id in needsFeatures ||
+                it.id in needsContour
+        }
         if (pending.isEmpty()) return@withContext Result.success()
 
         for (track in pending.take(BATCH_SIZE)) {
@@ -76,7 +92,9 @@ class FingerprintIndexWorker @AssistedInject constructor(
             try {
                 val source = audioSourceFor(track) ?: continue
                 val samples = decoder.decode(source.first, source.second) ?: continue
-                recognitionRepository.index(track, samples)
+                // Guarded now that the list is a union: a track pulled in because it wants a
+                // contour must not have its landmarks written a second time.
+                if (track.id in needsLandmark) recognitionRepository.index(track, samples)
                 if (track.id in needsCanonical) {
                     recordingIdentity.index(track.id, samples, track.durationMs)
                     // Asked here and not lazily at read time: the comparison needs every candidate

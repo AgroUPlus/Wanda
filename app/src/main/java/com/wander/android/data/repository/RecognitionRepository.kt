@@ -196,6 +196,17 @@ class RecognitionRepository @Inject constructor(
         trackDao.getFingerprintableTracks().filterNot { it.id in indexed }
     }
 
+    /**
+     * Every track that could be measured, whether or not it has a landmark fingerprint already.
+     *
+     * Separate from [tracksNeedingIndex] because the indexer takes four different measurements off
+     * one decode and they were introduced at different times. Driving the whole run from "needs a
+     * landmark" meant a track indexed before the melody contour existed could never acquire one —
+     * it was excluded from the candidate list by the very fact that it had already been indexed.
+     */
+    internal suspend fun fingerprintableTracks(): List<TrackEntity> =
+        withContext(Dispatchers.IO) { trackDao.getFingerprintableTracks() }
+
     suspend fun clearIndex() = withContext(Dispatchers.IO) { fingerprintDao.clear() }
 
     private companion object {
