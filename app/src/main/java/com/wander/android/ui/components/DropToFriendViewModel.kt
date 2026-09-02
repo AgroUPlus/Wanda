@@ -1,5 +1,6 @@
 package com.wander.android.ui.components
 
+import com.wander.android.data.sources.agro.AgroDeviceKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.data.model.UnifiedTrack
@@ -51,17 +52,22 @@ internal class DropToFriendViewModel @Inject constructor(
         if (_sending.value) return
         _sending.value = true
         viewModelScope.launch {
-            // The cached friend list cannot supply this. `FriendEntity` has no `publicKey` column,
-            // so `toProfile()` leaves it null for everyone — which meant `recipientPublicKey` was
-            // always null, nothing could ever be sealed, and every note in the app went out in
-            // plaintext while the inbox was being taught to draw padlocks.
+            // Every device the recipient has published a key for, asked for fresh.
             //
-            // Fetched fresh rather than cached, and that is the right shape for a key regardless:
-            // a stale one seals a note the recipient can no longer open, which fails silently and
-            // permanently. One round trip, on an action that is already a network call.
-            val recipientPublicKey =
-                friends.value.find { it.username.equals(to, ignoreCase = true) }?.publicKey
+            // The cached friend list cannot supply this — `FriendEntity` has no key column — and a
+            // cache would be wrong here anyway: a stale key list seals a note to a phone that has
+            // been signed out and misses one that has just been added, and both fail silently and
+            // permanently, because the ciphertext is sealed by the time anyone could notice.
+            //
+            // An empty answer falls back to the account-wide key, which is all an older server
+            // publishes, and then to sending in clear.
+            val recipientKeys = social.deviceKeys(to).getOrNull().orEmpty().ifEmpty {
+                val legacyKey = friends.value
+                    .find { it.username.equals(to, ignoreCase = true) }?.publicKey
                     ?: social.profile(to).getOrNull()?.publicKey
+                legacyKey?.let { listOf(AgroDeviceKey(deviceId = "legacy", publicKey = it)) }
+                    .orEmpty()
+            }
             val result = drops.drop(
                 to = to,
                 trackTitle = track.title,
@@ -72,7 +78,7 @@ internal class DropToFriendViewModel @Inject constructor(
                 // a streamed track, and inventing one would be a reference that resolves nowhere.
                 trackUri = track.id,
                 note = note.takeIf { it.isNotBlank() },
-                recipientPublicKey = recipientPublicKey
+                recipientKeys = recipientKeys
             )
             _sending.value = false
             onDone(result.exceptionOrNull())

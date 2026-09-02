@@ -16,7 +16,8 @@ import kotlinx.serialization.json.jsonPrimitive
 /** The fields every drop query selects. Written once so the queries cannot drift apart. */
 internal const val DROP_FIELDS =
     "id fromUser toUser trackTitle artistName albumName artworkUrl " +
-        "contentHash trackUri note noteCiphertext isEncrypted createdAt readAt archived reaction"
+        "contentHash trackUri note noteCiphertext noteCiphertexts { deviceId ciphertext } " +
+        "isEncrypted createdAt readAt archived reaction"
 
 internal const val FEED_FIELDS = "username at kind summary artist title count"
 
@@ -32,6 +33,7 @@ internal fun JsonObject.toDrop(): AgroDrop = AgroDrop(
     trackUri = str("trackUri"),
     note = str("note"),
     noteCiphertext = str("noteCiphertext"),
+    noteCiphertexts = sealedNotes(),
     isEncrypted = bool("isEncrypted"),
     createdAt = str("createdAt") ?: error("drop has no createdAt"),
     readAt = str("readAt"),
@@ -59,6 +61,7 @@ internal fun JsonObject.toPushedDrop(recipient: String): AgroDrop = AgroDrop(
     trackUri = str("trackUri"),
     note = str("note"),
     noteCiphertext = str("noteCiphertext"),
+    noteCiphertexts = sealedNotes(),
     isEncrypted = bool("isEncrypted"),
     createdAt = str("createdAt") ?: error("pushed drop has no createdAt"),
     readAt = null,
@@ -104,6 +107,20 @@ private fun JsonObject.toMatrixEntry(): AgroTasteMatrixEntry = AgroTasteMatrixEn
     score = long("score").toInt()
 )
 
+/**
+ * The per-device sealed copies, or empty against a server that does not send them.
+ *
+ * Absent rather than empty is the case that matters: it means the server predates the list, and
+ * the reader has to fall back to the single `noteCiphertext`.
+ */
+private fun JsonObject.sealedNotes(): List<AgroSealedNote> =
+    this["noteCiphertexts"]?.jsonArray.orEmpty().mapNotNull { entry ->
+        val obj = entry as? JsonObject ?: return@mapNotNull null
+        val deviceId = obj.str("deviceId") ?: return@mapNotNull null
+        val ciphertext = obj.str("ciphertext") ?: return@mapNotNull null
+        AgroSealedNote(deviceId = deviceId, ciphertext = ciphertext)
+    }
+
 /** A list of plain strings, tolerating anything that is not one. */
 private fun JsonObject.strings(key: String): List<String> =
     this[key]?.jsonArray.orEmpty().mapNotNull { it.jsonPrimitive.contentOrNull }
@@ -121,10 +138,14 @@ private fun JsonObject.strings(key: String): List<String> =
 internal fun AgroDrop.decryptIfNeeded(
     identityKeyManager: com.wander.android.core.security.IdentityKeyManager
 ): AgroDrop {
-    if (!isEncrypted || noteCiphertext.isNullOrBlank()) return this
-    return try {
-        copy(note = identityKeyManager.openNote(noteCiphertext!!))
-    } catch (_: Exception) {
-        this
-    }
+    if (!isEncrypted) return this
+
+    // Every copy, this device's own included. A note you *sent* has a copy sealed to you in here
+    // and nowhere else — the single `noteCiphertext` is the recipient's, which is why your own
+    // half of a conversation used to be unopenable rather than merely unopened.
+    val candidates = noteCiphertexts.map { it.ciphertext } + listOfNotNull(noteCiphertext)
+    if (candidates.isEmpty()) return this
+
+    val opened = identityKeyManager.openAnyNote(candidates) ?: return this
+    return copy(note = opened)
 }

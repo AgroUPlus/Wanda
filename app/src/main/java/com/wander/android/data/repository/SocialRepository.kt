@@ -1,5 +1,6 @@
 package com.wander.android.data.repository
 
+import com.wander.android.data.sources.agro.AgroDeviceKey
 import com.wander.android.core.database.dao.FriendDao
 import com.wander.android.core.database.entity.FriendEntity
 import com.wander.android.core.security.SecureStorage
@@ -160,6 +161,15 @@ internal class SocialRepository @Inject constructor(
     suspend fun search(query: String): Result<List<AgroProfile>> = friendsApi.searchUsers(query)
 
     suspend fun profile(username: String): Result<AgroProfile?> = profileApi.profile(username)
+
+    /**
+     * Every identity key an account has published, one per device.
+     *
+     * Not cached, deliberately — see `AgroProfileApi.deviceKeys`. A key list is the one thing here
+     * where being slightly out of date produces a message nobody can ever read.
+     */
+    suspend fun deviceKeys(username: String): Result<List<AgroDeviceKey>> =
+        profileApi.deviceKeys(username)
 
     /**
      * Applies one friend's new track, in place, with no network call.
