@@ -89,7 +89,13 @@ class FingerprintIndexWorker @AssistedInject constructor(
         val needsLandmark = recognitionRepository.tracksNeedingIndex().mapTo(mutableSetOf()) { it.id }
         val needsCanonical = recordingIdentity.needingIndex(candidateIds).toSet()
         val needsFeatures = acousticFeatures.needingMeasurement(FEATURE_BATCH_LIMIT).toSet()
-        val needsContour = melodySearch.needingIndex(candidateIds).toSet()
+        // Empty while humming is off: measuring a contour is a quarter of the work of every decode,
+        // and nothing reads the result. See [MelodySearch].
+        val needsContour = if (com.wander.android.core.audio.melody.MelodySearch.ENABLED) {
+            melodySearch.needingIndex(candidateIds).toSet()
+        } else {
+            emptySet()
+        }
 
         // Anything still missing any one of the four is worth a decode; a track that has all four
         // is worth nothing and must not be decoded again.

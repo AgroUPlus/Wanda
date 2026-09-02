@@ -93,6 +93,13 @@ class RecognitionRepository @Inject constructor(
     private suspend fun identifyOrHum(samples: FloatArray): Recognition? {
         identify(samples)?.let { return it }
 
+        // Humming is switched off, and deliberately: see [MelodySearch]. The melody engine can only
+        // compare a hum against a shape extracted from a finished mix, and on anything dense that
+        // shape is the bass line rather than the tune — so the answers it gave were guesses wearing
+        // a result's clothes. The landmark pass above is the whole feature until that is fixed
+        // properly.
+        if (!com.wander.android.core.audio.melody.MelodySearch.ENABLED) return null
+
         val match = melodySearch.search(samples).firstOrNull() ?: return null
         val entity = withContext(Dispatchers.IO) { trackDao.getTrackById(match.trackId) } ?: return null
         return Recognition(
