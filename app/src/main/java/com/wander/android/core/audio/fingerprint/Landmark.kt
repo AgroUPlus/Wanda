@@ -32,13 +32,14 @@ object HashPacking {
     /**
      * Frequency resolution kept in the hash, in bits.
      *
-     * Eight, not the nine the spectrum could supply: a peak measured through a phone microphone in
-     * a room lands a bin or so away from where it lands in the file, and a hash that insists on
-     * the exact bin would refuse the match it exists to find. Halving the resolution costs
-     * distinctiveness that the pairing above buys back.
+     * Eight, spent on a *logarithmic* axis rather than a linear one. That is the change that
+     * matters: pitch is logarithmic, so a fixed number of hertz per code is more than a semitone
+     * down in the bass and a twentieth of one up top. The linear version spent almost all of its
+     * codes above 2 kHz, where a phone speaker's own colouration moves the peak around, and gave
+     * the bass — where the notes are — five distinguishable values.
      */
     private const val FREQ_BITS = 8
-    private const val FREQ_MASK = (1 shl FREQ_BITS) - 1
+    private const val FREQ_LEVELS = (1 shl FREQ_BITS) - 1
 
     /** Six bits of gap, in frames: up to ~2 seconds between the two peaks of a pair. */
     private const val DELTA_BITS = 6
@@ -47,7 +48,19 @@ object HashPacking {
     /** Below this the pair is two views of one event and says nothing about the gap. */
     const val MIN_DELTA_FRAMES = 1
 
-    fun quantiseFrequency(bin: Int): Int = (bin shr 1) and FREQ_MASK
+    private val LOG_TOP = kotlin.math.ln(AudioFormat.BIN_COUNT.toDouble())
+
+    /**
+     * A bin as a logarithmic code.
+     *
+     * Bin 0 has no logarithm and is folded into the first code; nothing musical lives in the first
+     * 8 Hz anyway.
+     */
+    fun quantiseFrequency(bin: Int): Int {
+        val safe = if (bin < 1) 1 else bin
+        val scaled = kotlin.math.ln(safe.toDouble()) / LOG_TOP * FREQ_LEVELS
+        return scaled.toInt().coerceIn(0, FREQ_LEVELS)
+    }
 
     fun pack(anchorBin: Int, targetBin: Int, deltaFrames: Int): Hash = Hash(
         (quantiseFrequency(anchorBin) shl (FREQ_BITS + DELTA_BITS)) or

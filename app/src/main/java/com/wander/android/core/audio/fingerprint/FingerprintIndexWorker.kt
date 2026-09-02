@@ -82,6 +82,10 @@ class FingerprintIndexWorker @AssistedInject constructor(
             .let { all -> if (requestedId == null) all else all.filter { it.id == requestedId } }
         val candidateIds = candidates.map { it.id }
 
+        // Before anything is asked of the index, in case it was written by an older algorithm
+        // and every row in it is now unreadable.
+        recognitionRepository.clearIndexIfStale()
+
         val needsLandmark = recognitionRepository.tracksNeedingIndex().mapTo(mutableSetOf()) { it.id }
         val needsCanonical = recordingIdentity.needingIndex(candidateIds).toSet()
         val needsFeatures = acousticFeatures.needingMeasurement(FEATURE_BATCH_LIMIT).toSet()
@@ -108,7 +112,18 @@ class FingerprintIndexWorker @AssistedInject constructor(
         // of tracks — so the run ended early, deferred the rest, and from the outside looked like
         // an indexer that never finished. As a foreground service it gets to work through the
         // batch, and the person holding the phone can see that it is doing so.
-        val batch = pending.take(BATCH_SIZE)
+        // Files on this device first, then everything else.
+        //
+        // Not a preference but an economy: a downloaded track is decoded straight off the disk in a
+        // second or two, while a streamed one spends the better part of a minute *per window*
+        // pulling audio over the network. Measured on a real library, the sweep was managing about
+        // one track every four minutes and would have taken most of a night; the tracks it could
+        // have done in seconds were queued behind them for no reason. Ordering this way makes the
+        // index useful within minutes of a rebuild instead of by morning.
+        val ordered = pending.sortedBy { track ->
+            if (track.localFilePath != null || track.isDownloaded) 0 else 1
+        }
+        val batch = ordered.take(BATCH_SIZE)
         val eta = WorkEta(System.currentTimeMillis())
         runCatching { setForeground(notifying(eta, 0, batch.size, remaining = pending.size)) }
 
@@ -153,7 +168,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
             }
         }
 
-        if (pending.size > BATCH_SIZE) Result.retry() else Result.success()
+        if (ordered.size > BATCH_SIZE) Result.retry() else Result.success()
     }
 
     /**
