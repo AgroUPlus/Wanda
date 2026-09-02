@@ -32,11 +32,19 @@ class AgroClient @Inject constructor(
         runCatching {
             val pubKeyB64 = identityKeyManager.getPublicKeyBase64()
             val keyMutation = """
-                mutation SetPublicKey(${'$'}publicKey: String) {
-                    setPublicKey(publicKey: ${'$'}publicKey) { publicKey }
+                mutation SetPublicKey(${'$'}publicKey: String, ${'$'}deviceId: String) {
+                    setPublicKey(publicKey: ${'$'}publicKey, deviceId: ${'$'}deviceId) { publicKey }
                 }
             """.trimIndent()
-            graphQl.execute(keyMutation, buildJsonObject { put("publicKey", pubKeyB64) })
+            // Under this device's own id. Without it every sign-in published over the last one,
+            // and the phone that was already paired stopped being able to read its own messages.
+            graphQl.execute(
+                keyMutation,
+                buildJsonObject {
+                    put("publicKey", pubKeyB64)
+                    put("deviceId", secureStorage.agroDeviceId)
+                }
+            )
         }
 
         val mutation = """
