@@ -2,6 +2,7 @@ package com.wander.android.core.sync
 
 import android.content.Context
 import android.net.Uri
+import kotlinx.coroutines.flow.asStateFlow
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.security.AudioStreamCipher
 import com.wander.android.core.security.AudioStreamKeys
@@ -70,7 +71,67 @@ class P2PServer @Inject constructor(
      */
     private val grants = java.util.concurrent.ConcurrentHashMap<String, Grant>()
 
-    private data class Grant(val forUser: String, val expiresAtMs: Long)
+    private val _pairedPeers =
+        kotlinx.coroutines.flow.MutableStateFlow<List<PairedPeer>>(emptyList())
+
+    /**
+     * The peers that have paired *with this device*, face to face.
+     *
+     * Being connected used to be knowable only by the phone that did the connecting. The device
+     * that was tapped raised a group, minted a grant and started serving audio without anything on
+     * its screen saying so — and it could not tell the difference between a peer that had gone and
+     * one that had never come, because nothing recorded either.
+     *
+     * Only the pairing grants are reflected here. An Agro-issued grant is not a face-to-face link
+     * and has no business appearing on the off-grid screen.
+     */
+    internal val pairedPeers: kotlinx.coroutines.flow.StateFlow<List<PairedPeer>> =
+        _pairedPeers.asStateFlow()
+
+    /**
+     * A peer that paired with this device.
+     *
+     * Named by its identity key, because off-grid that is the only name either device has — there
+     * are no accounts and no server that could supply one. [fingerprint] is the same eight bytes
+     * the beacon advertises, so a screen can match this against the row the user tapped.
+     */
+    internal data class PairedPeer(
+        val publicKeyB64: String,
+        val fingerprint: ByteArray,
+        val pairedAtMs: Long
+    ) {
+        // A data class with a ByteArray needs these written out; the generated ones compare by
+        // identity, which would make two readings of the same peer look like different peers.
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            val that = other as? PairedPeer ?: return false
+            return publicKeyB64 == that.publicKeyB64 && pairedAtMs == that.pairedAtMs
+        }
+
+        override fun hashCode(): Int = 31 * publicKeyB64.hashCode() + pairedAtMs.hashCode()
+    }
+
+    private data class Grant(
+        val forUser: String,
+        val expiresAtMs: Long,
+        /**
+         * Which arrangement issued it, and therefore which teardown may revoke it.
+         *
+         * Off-grid disconnect used to clear the whole map, so unpairing from a phone in a car
+         * also revoked the grants Agro had issued for an unrelated listen-along over the house
+         * Wi-Fi — the listener kept a token this device had silently stopped honouring, and every
+         * request afterwards was answered `403`.
+         */
+        val origin: Origin
+    )
+
+    private enum class Origin {
+        /** Minted by Agro and pushed over the sync socket. Lives and dies with that session. */
+        AGRO,
+
+        /** Minted here, face to face, for a peer with no path to Agro. Dies with the link. */
+        PAIRING
+    }
 
     /**
      * Mints a grant for a peer that asked for one face to face, and seals it to their key.
@@ -102,19 +163,85 @@ class P2PServer @Inject constructor(
         }.getOrNull() ?: return null
         // Recorded against the requester's key rather than an account name: off-grid, there are no
         // accounts, and the key is the only identity either device has.
-        acceptGrant(token, forUser = requesterPublicKeyB64, ttlSeconds = PAIR_GRANT_TTL_SECONDS)
+        record(token, requesterPublicKeyB64, PAIR_GRANT_TTL_SECONDS, Origin.PAIRING)
+        rememberPairedPeer(requesterPublicKeyB64)
         return sealed
     }
 
-    /** Records a grant pushed by Agro as `P2P_GRANT`. */
-    fun acceptGrant(token: String, forUser: String, ttlSeconds: Long) {
+    /**
+     * Records a grant pushed by Agro as `P2P_GRANT`.
+     *
+     * Re-announcing an existing token is expected rather than exceptional: this map is memory-only,
+     * so the process dying takes every grant with it while the server keeps handing the listener
+     * the same one. An upsert is what makes that recoverable without a new token.
+     */
+    fun acceptGrant(token: String, forUser: String, ttlSeconds: Long) =
+        record(token, forUser, ttlSeconds, Origin.AGRO)
+
+    private fun record(token: String, forUser: String, ttlSeconds: Long, origin: Origin) {
         if (token.isBlank()) return
         grants.entries.removeAll { it.value.expiresAtMs <= System.currentTimeMillis() }
-        grants[token] = Grant(forUser, System.currentTimeMillis() + ttlSeconds * 1000L)
+        grants[token] = Grant(forUser, System.currentTimeMillis() + ttlSeconds * 1000L, origin)
     }
 
-    /** Drops every grant. Called when the session that justified them ends. */
-    fun clearGrants() = grants.clear()
+    /**
+     * Drops the grants minted face to face, leaving Agro's alone.
+     *
+     * Called when a peer link is torn down. Only the pairing grants depended on that link; an
+     * Agro-issued grant belongs to a session over an entirely different interface and revoking it
+     * here was the bug — stopping an off-grid share silently broke LAN streaming until the app was
+     * restarted.
+     */
+    fun clearPairingGrants() {
+        grants.entries.removeAll { it.value.origin == Origin.PAIRING }
+        _pairedPeers.value = emptyList()
+    }
+
+    /**
+     * Forgets one peer and the grant it was given.
+     *
+     * What `/p2p/unpair` calls, so that a peer which has stopped sharing stops appearing here —
+     * and stops being able to fetch audio — the moment it says so, rather than when its grant
+     * happens to run out ten minutes later.
+     */
+    private fun unpair(publicKeyB64: String) {
+        if (publicKeyB64.isBlank()) return
+        grants.entries.removeAll {
+            it.value.origin == Origin.PAIRING && it.value.forUser == publicKeyB64
+        }
+        _pairedPeers.value = _pairedPeers.value.filterNot { it.publicKeyB64 == publicKeyB64 }
+    }
+
+    /**
+     * Stops honouring the pairing granted to the peer with this beacon device id.
+     *
+     * Keyed by the beacon id rather than the key because that is what the screen has: the row the
+     * user is looking at names a device, not a base64 blob. The id is derived from the key, so the
+     * lookup is a recomputation rather than a second source of truth.
+     */
+    internal fun revokePairing(deviceId: Int) {
+        val peer = _pairedPeers.value.firstOrNull {
+            com.wander.android.core.p2p.OffGridBeacon.deviceIdFrom(
+                runCatching {
+                    android.util.Base64.decode(it.publicKeyB64, android.util.Base64.NO_WRAP)
+                }.getOrDefault(ByteArray(0))
+            ) == deviceId
+        } ?: return
+        unpair(peer.publicKeyB64)
+    }
+
+    private fun rememberPairedPeer(publicKeyB64: String) {
+        val fingerprint = runCatching {
+            com.wander.android.core.p2p.OffGridBeacon.fingerprintFrom(
+                android.util.Base64.decode(publicKeyB64, android.util.Base64.NO_WRAP)
+            )
+        }.getOrNull() ?: return
+        val peer = PairedPeer(publicKeyB64, fingerprint, System.currentTimeMillis())
+        // Re-pairing replaces rather than appends: the same device asking again is the same link,
+        // and a list that grew on every retry would report a crowd where there is one phone.
+        _pairedPeers.value =
+            _pairedPeers.value.filterNot { it.publicKeyB64 == publicKeyB64 } + peer
+    }
 
     private fun isAuthorised(request: String): Boolean {
         val token = request.lineSequence()
@@ -250,6 +377,25 @@ class P2PServer @Inject constructor(
                         "Content-Length: ${body.toByteArray().size}\r\nConnection: close\r\n\r\n" + body
                 }
                 output.write(response.toByteArray())
+                output.flush()
+                return
+            }
+
+            // Hanging up. Open like the pair it undoes, and it proves itself the same way: the
+            // key names which pairing to drop, and knowing a key only ever lets you end your own
+            // link. Announced rather than left to expire so that stopping a share is visible on
+            // both screens at once, which is the whole complaint it answers.
+            if (method == "GET" && path.startsWith("/p2p/unpair")) {
+                val requesterKey = Uri.parse("http://localhost$path")
+                    .getQueryParameter("key")
+                    .orEmpty()
+                unpair(requesterKey)
+                val body = "ok"
+                output.write(
+                    ("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n" +
+                        "Content-Length: ${body.length}\r\nConnection: close\r\n\r\n$body")
+                        .toByteArray()
+                )
                 output.flush()
                 return
             }

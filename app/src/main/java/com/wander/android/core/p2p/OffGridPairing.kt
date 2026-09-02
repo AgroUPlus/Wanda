@@ -93,6 +93,38 @@ internal class OffGridPairing @Inject constructor(
     }
 
     /**
+     * Whether the peer at [baseUrl] is still answering.
+     *
+     * `/p2p/ping` is the one endpoint that needs no grant, which is what makes it usable as a
+     * liveness check: a 403 would be indistinguishable from a dead link, and the question here is
+     * only whether anything is still there.
+     */
+    suspend fun ping(baseUrl: String): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            client.newCall(Request.Builder().url("$baseUrl/p2p/ping").build()).execute()
+                .use { it.isSuccessful }
+        }.getOrDefault(false)
+    }
+
+    /**
+     * Tells [baseUrl] this device is done, so the peer stops listing it and stops honouring its
+     * grant.
+     *
+     * Best effort by design, and the caller does not wait on the answer to tear its own side down.
+     * The link is often being dropped *because* the peer has gone, and a teardown that could be
+     * blocked by an unreachable peer would be a teardown that hangs exactly when it is needed. The
+     * grant expires on its own either way; this only makes the common case immediate.
+     */
+    suspend fun unpair(baseUrl: String): Unit = withContext(Dispatchers.IO) {
+        val myKey = identityKeyManager.getPublicKeyBase64()
+        val url = "$baseUrl/p2p/unpair?key=" + java.net.URLEncoder.encode(myKey, "UTF-8")
+        runCatching {
+            client.newCall(Request.Builder().url(url).build()).execute().close()
+        }
+        Unit
+    }
+
+    /**
      * Whether [peerKeyB64] is the key the chosen beacon was advertising.
      *
      * The fingerprint is the first eight bytes of the key (`OffGridBeacon.fingerprintFrom`), so

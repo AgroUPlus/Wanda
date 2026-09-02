@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.core.p2p.NearbyPeers
+import com.wander.android.core.p2p.OffGridLink
 import com.wander.android.core.permissions.rememberNearbyGate
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.rememberHaptics
@@ -143,6 +144,16 @@ internal fun OffGridScreen(
                 }
             }
 
+            // Above the room list and outside the `isAdvertising` guard, because being connected
+            // to is not conditional on still advertising — and the phone that was tapped may never
+            // have opened this screen before the link existed.
+            if (state.links.isNotEmpty()) {
+                item(key = "links_header") { SectionHeader("Connected") }
+                items(state.links, key = { "link-${it.deviceId}" }) { link ->
+                    ConnectedRow(link = link, onDisconnect = viewModel::disconnect)
+                }
+            }
+
             if (state.isAdvertising) {
                 item(key = "peers_header") { SectionHeader("In the room") }
                 if (state.isSearching) {
@@ -151,7 +162,7 @@ internal fun OffGridScreen(
                 items(state.peers, key = { it.beacon.deviceId }) { peer ->
                     PeerRow(
                         peer = peer,
-                        isLinked = state.linkedTo == peer.beacon.deviceId,
+                        isLinked = state.isLinkedTo(peer.beacon.deviceId),
                         isBusy = state.isConnecting,
                         onClick = { viewModel.connect(peer) }
                     )
@@ -247,6 +258,43 @@ private fun PeerRow(
         }
     }
 }
+
+/**
+ * A live link, on whichever phone is reading it.
+ *
+ * Says which way it was made, because the two are not the same thing to the person holding the
+ * phone: one of them chose this, the other was chosen. The device that was tapped previously had
+ * no row at all — it served audio to a stranger with nothing on screen to say so, and no way to
+ * stop it short of leaving the screen.
+ */
+@Composable
+private fun ConnectedRow(
+    link: OffGridLink,
+    onDisconnect: (OffGridLink) -> Unit
+) {
+    ListItem(
+        headlineContent = { Text("Device " + shortId(link.deviceId)) },
+        supportingContent = {
+            Text(
+                when (link.role) {
+                    OffGridLink.Role.INITIATED -> "Connected, encrypted"
+                    OffGridLink.Role.ACCEPTED -> "Connected to you, encrypted"
+                }
+            )
+        },
+        leadingContent = { Icon(Icons.Rounded.Lock, contentDescription = null) },
+        modifier = Modifier.fillMaxWidth()
+    )
+    Row(modifier = Modifier.padding(start = 56.dp, end = 20.dp, bottom = 8.dp)) {
+        FilledTonalButton(
+            onClick = { onDisconnect(link) },
+            shapes = ButtonDefaults.shapes()
+        ) { Text("Disconnect") }
+    }
+}
+
+/** The beacon device id as the four hex bytes it is, matching what a peer row shows. */
+private fun shortId(deviceId: Int): String = "%08X".format(deviceId).chunked(4).joinToString(" ")
 
 /**
  * Signal as a word, not a number.

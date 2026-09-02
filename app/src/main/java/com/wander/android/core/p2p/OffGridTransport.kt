@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -44,6 +46,52 @@ internal class OffGridTransport @Inject constructor(
     private val peers = NearbyPeers()
     private val linkMutex = Mutex()
     private var link: DirectLink? = null
+
+    private val _outgoingLink = kotlinx.coroutines.flow.MutableStateFlow<OffGridLink?>(null)
+
+    private val scope = kotlinx.coroutines.CoroutineScope(
+        kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO
+    )
+
+    /** Watches the link this device made, so a peer that walks off stops being shown as present. */
+    private var watchdog: kotlinx.coroutines.Job? = null
+
+    /**
+     * Whether this device is linked to another, from either end.
+     *
+     * Both ends, and that is the point. A link had exactly one observer — the phone that tapped —
+     * so the phone that was tapped raised a group and served audio with nothing on its screen
+     * saying it was connected to anyone, and neither side could tell a peer that had left from one
+     * that had never arrived.
+     *
+     * The two halves come from different places because they are different facts. This device
+     * connecting outwards is something it did and can simply remember; another device connecting
+     * inwards is only visible as a pairing grant the server issued, which is why
+     * [P2PServer.pairedPeers] exists.
+     */
+    val links: Flow<List<OffGridLink>> =
+        kotlinx.coroutines.flow.combine(
+            _outgoingLink,
+            p2pServer.pairedPeers
+        ) { outgoing, paired ->
+            val incoming = paired.map { peer ->
+                OffGridLink(
+                    deviceId = OffGridBeacon.deviceIdFrom(
+                        runCatching {
+                            android.util.Base64.decode(
+                                peer.publicKeyB64,
+                                android.util.Base64.NO_WRAP
+                            )
+                        }.getOrDefault(ByteArray(0))
+                    ),
+                    role = OffGridLink.Role.ACCEPTED,
+                    sinceMs = peer.pairedAtMs
+                )
+            }
+            // The outgoing link first: it is the one this user chose, and on the rare phone that is
+            // both ends of two links at once it is the one they are waiting on.
+            (listOfNotNull(outgoing) + incoming).distinctBy { it.deviceId }
+        }.distinctUntilChanged()
 
     /**
      * The bearer the peer issued face to face, good for as long as the link is.
@@ -158,6 +206,12 @@ internal class OffGridTransport @Inject constructor(
         }
         link = formed
         grant = token
+        _outgoingLink.value = OffGridLink(
+            deviceId = peer.beacon.deviceId,
+            role = OffGridLink.Role.INITIATED,
+            sinceMs = System.currentTimeMillis()
+        )
+        startWatchdog(base)
         Result.success(base)
     }
 
@@ -182,15 +236,66 @@ internal class OffGridTransport @Inject constructor(
     /**
      * Drops the link and everything that depended on it.
      *
-     * The grants go with it, and that ordering matters: a grant that outlived the link it was
-     * issued for would still authorise a request arriving over any *other* interface.
+     * The pairing grants go with it, and that ordering matters: a face-to-face grant that outlived
+     * the link it was issued for would still authorise a request arriving over any *other*
+     * interface. Agro's grants are left alone — they were never issued for this link, and taking
+     * them down here broke LAN streaming every time somebody stopped sharing.
      */
+    private fun startWatchdog(base: String) {
+        watchdog?.cancel()
+        watchdog = scope.launch {
+            var missed = 0
+            while (kotlinx.coroutines.currentCoroutineContext().isActive) {
+                delay(HEARTBEAT_INTERVAL_MS)
+                if (link == null) return@launch
+                // Counted rather than acted on at the first failure. Wi-Fi Direct drops a packet
+                // when a phone's screen turns off or the radio changes channel, and tearing a link
+                // down over one missed ping would make the feature look broken while working.
+                missed = if (pairing.ping(base)) 0 else missed + 1
+                if (missed >= MISSED_BEATS_BEFORE_DROP) {
+                    // Torn down locally. The peer is not answering, so there is nobody to tell.
+                    linkMutex.withLock {
+                        link = null
+                        grant = null
+                        _outgoingLink.value = null
+                    }
+                    wifiDirect.disconnect()
+                    return@launch
+                }
+            }
+        }
+    }
+
     suspend fun disconnect() = linkMutex.withLock {
+        watchdog?.cancel()
+        watchdog = null
+        // Told before it is dropped, so the other phone's screen changes at the same moment this
+        // one's does. Best effort: the usual reason to disconnect is that the peer has already
+        // gone, and a teardown that waited on an unreachable peer would hang precisely then.
+        link?.let { runCatching { pairing.unpair(baseUrlOf(it)) } }
         link = null
         grant = null
+        _outgoingLink.value = null
         wifiDirect.disconnect()
-        p2pServer.clearGrants()
+        p2pServer.clearPairingGrants()
         peers.clear()
+    }
+
+    /**
+     * Ends one link, leaving advertising and any other link alone.
+     *
+     * The two roles end differently, and that asymmetry is real rather than an inconsistency. A
+     * link this device *made* is a Wi-Fi Direct group it negotiated, so ending it means tearing the
+     * group down. A link another device made to this one is a grant this device issued; the group
+     * belongs to them, and all this end can do — and should do — is stop honouring the grant. Their
+     * screen updates when their next request is refused, or immediately if they are still there to
+     * be told.
+     */
+    suspend fun disconnect(link: OffGridLink) {
+        when (link.role) {
+            OffGridLink.Role.INITIATED -> disconnect()
+            OffGridLink.Role.ACCEPTED -> p2pServer.revokePairing(link.deviceId)
+        }
     }
 
     private companion object {
@@ -204,6 +309,17 @@ internal class OffGridTransport @Inject constructor(
 
         /** Coarser than a stationary phone's jitter, finer than any word the screen puts on it. */
         const val RSSI_BUCKET_DBM = 10
+
+        /**
+         * How often a link this device made is checked.
+         *
+         * Five seconds is a cheap request over a radio that is already up, and it bounds how long
+         * a screen can claim a connection that has gone — which was previously forever.
+         */
+        const val HEARTBEAT_INTERVAL_MS = 5_000L
+
+        /** Three misses, so a dropped packet or a sleeping screen is not read as a departure. */
+        const val MISSED_BEATS_BEFORE_DROP = 3
     }
 
     private fun baseUrlOf(link: DirectLink) =
