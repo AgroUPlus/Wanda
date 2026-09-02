@@ -23,6 +23,8 @@ class RouteChromeTest {
         assertTrue(Routes.showsChrome(Routes.PLAYLIST))
         assertTrue(Routes.showsChrome(Routes.PROFILE))
         assertTrue(Routes.showsChrome(Routes.JAM_ROUTE))
+        // Off-grid is reached from the Friends header and keeps the player like its neighbours.
+        assertTrue(Routes.showsChrome(Routes.OFFGRID))
     }
 
     @Test

@@ -12,6 +12,7 @@ import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.model.isOneShotTrackId
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -32,6 +33,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /**
  * The UI's handle on playback: a [MediaController] bound to [PlaybackService], exposed as flows.
@@ -46,6 +48,9 @@ class PlayerConnection @Inject constructor(
     private val secureStorage: SecureStorage
 ) {
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
+
+    /** Whether shuffle and repeat currently belong to somebody else. See [PlaybackState.orderLocked]. */
+    private val _orderLocked = MutableStateFlow(false)
 
     private val _controller = MutableStateFlow<MediaController?>(null)
     val controller: StateFlow<MediaController?> = _controller.asStateFlow()
@@ -126,6 +131,10 @@ class PlayerConnection @Inject constructor(
             }
         }
         .combine(secureStorage.isRadioMode) { state, radio -> state.copy(isRadioMode = radio) }
+        // Combined rather than read inside the snapshot: joining a jam changes no player property
+        // on its own, so a snapshot built from the controller alone would keep saying the order is
+        // the user's until the next unrelated playback event happened to rebuild it.
+        .combine(_orderLocked) { state, locked -> state.copy(orderLocked = locked) }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, PlaybackState())
 
@@ -152,6 +161,12 @@ class PlayerConnection @Inject constructor(
         if (error.errorCode !in CONTAINER_PARSE_ERRORS) return false
         val item = runCatching { ctrl.currentMediaItem }.getOrNull() ?: return false
         val id = item.mediaId.takeIf { it.isNotBlank() } ?: return false
+
+        // Never for a stream that can only be fetched once. Re-preparing re-opens the URL, and a
+        // relay session refuses the second request with a 409 — so the retry replaced "this did
+        // not parse as a container" with a response code that describes the retry rather than the
+        // fault, and pointed the search at the wrong end of the transfer entirely.
+        if (isOneShotTrackId(id)) return false
 
         val uri = item.localConfiguration?.uri
         if (uri != null && uri.scheme != WANDA_SCHEME) return false
@@ -380,7 +395,9 @@ class PlayerConnection @Inject constructor(
     fun setFollowing(following: Boolean, onLeave: (() -> Unit)? = null) {
         isFollowing = following
         onLeaveFollowing = if (following) onLeave else null
+        _orderLocked.value = isFollowing || isInJam
     }
+
 
     private var onLeaveFollowing: (() -> Unit)? = null
 
@@ -398,7 +415,25 @@ class PlayerConnection @Inject constructor(
      */
     fun setJamProposal(propose: ((List<UnifiedTrack>, Int) -> Unit)?) {
         onPlayInJam = propose
+        _orderLocked.value = isFollowing || isInJam
+        // Joining clears both, because a repeat switched on before the jam started fights the room
+        // exactly as one switched on during it. Leaving does not put them back: the room owned them
+        // for the duration, and silently reinstating a mode set an hour ago would be a surprise.
+        if (propose == null) return
+        // Hopped to the main thread rather than set here. This is called from `JamRepository` on
+        // `Dispatchers.IO` — every mutation answers with the whole jam and re-wires from there —
+        // and a `MediaController` may only be touched on the application thread.
+        scope.launch {
+            _controller.value?.let { ctrl ->
+                ctrl.repeatMode = Player.REPEAT_MODE_OFF
+                ctrl.shuffleModeEnabled = false
+            }
+        }
     }
+
+    /** True while this device is in a jam, where the room decides what plays next. */
+    private val isInJam: Boolean
+        get() = onPlayInJam != null
 
     /**
      * The jam's own playback, which must not be re-proposed back into the jam it came from.
@@ -433,7 +468,14 @@ class PlayerConnection @Inject constructor(
 
     internal fun followerSetPlaying(shouldPlay: Boolean) {
         val ctrl = _controller.value ?: return
-        if (ctrl.isPlaying != shouldPlay) {
+        // `playWhenReady`, not `isPlaying`. The two differ for the whole of a buffer, because
+        // `isPlaying` also requires the player to be READY — so while a freshly resolved track
+        // loads, a device that has already been told to play still reads as not playing. Compared
+        // against `isPlaying`, every frame from the host arriving during that window looked like a
+        // device that had failed to start, and re-issued the resume: on a livestream that also
+        // re-seeks to the edge, which restarts the buffer, which keeps `isPlaying` false. That is
+        // the stutter at the start of a listen-along, and it could not settle on its own.
+        if (ctrl.playWhenReady != shouldPlay) {
             // Rejoins the edge on resume for the same reason [togglePlayPause] does, and it
             // matters more here: the room carried on broadcasting while this device was paused,
             // so resuming where it stopped is both a dead position and one nobody else is at.
@@ -494,11 +536,26 @@ class PlayerConnection @Inject constructor(
     }
 
     fun toggleShuffle() {
+        if (isFollowing || isInJam) return
         val ctrl = _controller.value ?: return
         ctrl.shuffleModeEnabled = !ctrl.shuffleModeEnabled
     }
 
+    /**
+     * Repeat and shuffle belong to whoever is choosing the running order, and in a jam that is the
+     * room.
+     *
+     * Ungated, `REPEAT_MODE_ONE` in a jam meant the local player restarted the track at its end
+     * while the room moved on to the next one. The reconciler then measured the whole length of the
+     * song as drift and seeked, every pass, forever — audible as a stutter on each correction, with
+     * the device stuck on a track nobody else was still hearing. It could never converge, because
+     * the loop put the position back faster than the seek could take it forward.
+     *
+     * Gated here beside [isFollowing] rather than by hiding the buttons, for the reason given
+     * there: there are several call sites and one that forgot would break a room silently.
+     */
     fun toggleRepeat() {
+        if (isFollowing || isInJam) return
         val ctrl = _controller.value ?: return
         ctrl.repeatMode = when (ctrl.repeatMode) {
             Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL

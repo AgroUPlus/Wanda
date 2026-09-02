@@ -209,6 +209,11 @@ internal class ListenAlongController @Inject constructor(
      * times a minute to fix a discrepancy nobody can hear.
      */
     private suspend fun correctDrift(now: AgroFriendNowPlaying) = withContext(Dispatchers.Main) {
+        // Buffering is not drift. The position stands still while a buffer fills, so measuring here
+        // measures the buffer — and "correcting" it seeks, which starts another buffer, which reads
+        // as more drift. `JamPlaybackController` learned this and guards for it; this path never
+        // did, which is why the same stutter appeared only when following a friend.
+        if (playerConnection.state.value.isBuffering) return@withContext
         // Read off the controller rather than `state`, which deliberately carries no position —
         // the UI gets that from a ticker that only runs while it is on screen.
         val here = playerConnection.controller.value?.currentPosition ?: return@withContext

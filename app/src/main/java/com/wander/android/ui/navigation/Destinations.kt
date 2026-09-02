@@ -66,6 +66,14 @@ object Routes {
     const val CIRCLE = "circle"
 
     /**
+     * Sharing music phone to phone with no network at all.
+     *
+     * Reached from the Friends header rather than from the tab's body, because the body is behind
+     * `isPaired` and this is the one social feature that deliberately needs no server.
+     */
+    const val OFFGRID = "offgrid"
+
+    /**
      * Ids and names both contain `/` and `:` — a `navidrome:al-42` id, an artist called
      * "AC/DC" — so they are encoded into the path rather than interpolated raw, which produced a
      * route with extra segments that matched nothing.
@@ -127,7 +135,7 @@ object Routes {
      */
     private val withChrome: Set<String> =
         (topLevel + ALBUM + PLAYLIST + ARTIST + PROFILE + MY_PROFILE + SETTINGS + STATS +
-            HISTORY + MERGE_PREVIEW + JAM + JAM_ROUTE + INBOX + CIRCLE)
+            HISTORY + MERGE_PREVIEW + JAM + JAM_ROUTE + INBOX + CIRCLE + OFFGRID)
             .map { it.withoutArgs() }
             .toSet()
 

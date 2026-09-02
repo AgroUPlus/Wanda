@@ -4,7 +4,7 @@ Suivi du triage des 18 issues ouvertes (Wanda #23–#33, Agro #13–#19) et de l
 livraison. Deux dépôts, une seule feuille de route : presque chaque issue client
 a une moitié serveur, et les deux doivent partir ensemble.
 
-Dernière mise à jour : 2026-09-01.
+Dernière mise à jour : 2026-09-01 (soirée).
 
 ---
 
@@ -107,6 +107,77 @@ et `sync()` n'avaient aucun appelant. Désormais :
 
 ---
 
+### Vague 4ter — la session P2P : ce qui a été réparé
+
+Une soirée entière sur deux téléphones. La plupart des pannes n'étaient pas là où on les
+cherchait, et plusieurs étaient masquées les unes par les autres.
+
+**L'UUID de service n'était pas hexadécimal.** `0000w4nd-…` épelait un mot, `ParcelUuid.fromString`
+levait dans le constructeur de `BleDiscovery`, et comme la classe est un `@Singleton` ça emportait
+tout le graphe Hilt : l'app crashait au lancement. Remplacé par un UUID 128 bits aléatoire.
+
+**Aucune piste n'avait de `contentHash`.** Il n'était calculé que par `LibrarySyncWorker`
+(*unmetered + charging*), donc sur un appareil qui n'avait jamais fini une synchro, aucun fichier
+n'en avait. Or les trois paliers pairs demandent des octets **par hash**. Une seule cause pour trois
+symptômes : « couldn't find song » en listen-along, « you don't have [titre] » en jam, et pause/skip
+qui ne se propageaient pas — la résolution échouant, `playingKey` restait nul et chaque trame
+repartait dans la résolution au lieu d'ajuster le transport. `SharedTrackHash` calcule désormais le
+hash du fichier au moment où son propriétaire le partage.
+
+**Une ligne fantôme empoisonnait Room.** Les pistes relay/p2p sont déclarées `source = LOCAL`, et
+l'une d'elles avait été persistée : `id = relay:…`, pas de fichier, et une URL de session relay
+morte dans `streamUri`. Le tier 1 la trouvait par titre avant le vrai fichier et rendait un `401`,
+définitivement et pour ce titre seulement. `TrackDao.upsertTracks` refuse ces ids, et
+`getStreamInfo` supprime la ligne quand il en croise une.
+
+**Le relay était ouvert deux fois.** `RelayDecryptingDataSource` ouvrait la source pour lire les
+en-têtes puis passait le même `DataSource` à `DataSourceInputStream`, qui l'ouvre lui-même à la
+première lecture. Une session relay ne sert sa moitié réceptrice qu'une fois : la seconde requête
+répondait `409`. Corrigé par `OpenDataSourceStream`. Et `StreamResolver` marque enfin ces flux
+non cachables — `RelayDecryptingDataSource` documentait cette propriété alors qu'aucun drapeau de
+cache n'existait dans le projet, si bien que `CacheDataSource` rouvrait la source pour remplir
+chaque span *et* écrivait le morceau emprunté sur le disque.
+
+**`ACCESS_LOCAL_NETWORK` n'était jamais demandée.** Déclarée au manifeste, jamais requise, donc
+refusée en silence sur Android 16+. Le téléphone ne pouvait ni ouvrir ni accepter une connexion
+LAN, dans les deux sens, pendant que la library sync marchait très bien parce qu'elle sort vers
+l'IP publique. `LocalNetworkGate` existait mais n'était branché que sur l'offre de sync ; il l'est
+maintenant sur le listen-along et sur la création/jonction de jam.
+
+**Le partage faisait planter celui qui partage.** `P2PServer` lançait `handleClient` dans un scope
+sans `CoroutineExceptionHandler`, et seul le chemin audio était protégé. Le *broken pipe* que
+produit ExoPlayer à chaque seek côté auditeur tuait le processus de l'hôte.
+
+**Notes en clair.** `FriendEntity` n'a pas de colonne `publicKey`, donc `toProfile()` la laissait
+nulle et *aucune* note n'a jamais pu être scellée. La clé est désormais récupérée fraîche à
+l'envoi, ce qui est de toute façon la bonne forme : une clé périmée scelle une note que le
+destinataire ne peut plus ouvrir.
+
+**Le pause/dépause en boucle du listen-along.** `followerSetPlaying` comparait `isPlaying`, qui est
+faux pendant tout un buffer, au lieu de `playWhenReady` : chaque trame de l'hôte ressemblait à un
+appareil qui n'avait pas démarré et réémettait la reprise. Et `correctDrift` n'avait pas la garde
+de buffering que `JamPlaybackController` possède et documente — le même piège trouvé d'un côté
+seulement.
+
+**Repeat et shuffle en jam.** Non gardés, contrairement à pause/seek/next. `REPEAT_MODE_ONE`
+relançait la piste pendant que la salle avançait, le réconciliateur mesurait la longueur du morceau
+comme dérive et corrigeait sans fin. Ils sont maintenant inertes et grisés
+(`PlaybackState.orderLocked`).
+
+### Vague 4quater — ce qui a été construit
+
+- **Écran off-grid** (`OffGridScreen`), atteint depuis l'en-tête Friends, **hors** du gate
+  `isPaired` puisque c'est la fonction qui doit marcher sans serveur.
+- **Poignée de main locale** : `GET /p2p/pair?key=…` mint un grant de 256 bits et le rend **scellé**
+  à la clé du demandeur, qui vérifie ensuite l'empreinte du beacon. Le tier 5 ne dépend donc plus
+  d'Agro pour son jeton — c'était le trou qui rendait l'off-grid impossible sans serveur.
+- **Pré-buffer** des deux premières secondes de la piste suivante, réglable, avec `PreloadDecision`
+  qui refuse les ids à usage unique (précharger une session relay la consomme) et les directs.
+- **Empreintes des sources streamées** : `PcmDecoder` accepte une URL avec en-têtes, et les **deux**
+  requêtes SQL qui filtraient indépendamment sur `localFilePath` couvrent toute la bibliothèque.
+  Réglages → « Measure the library now » appelle enfin `enqueueNow`, qui n'avait aucun appelant.
+- **Cadenas par message** dans les conversations, en plus de la barre de séparation E2EE.
+
 ## Reste à faire
 
 ### À tester à la main
@@ -170,6 +241,42 @@ vert : 206 tests côté Wanda, 378 côté Agro.
    souvent la basse au lieu de la mélodie. Fredonner un air de chaque type et
    voir lequel répond. Un échec attendu ici, pas un bug.
 
+0. **L'off-grid ne se connecte toujours pas. C'est le point ouvert numéro un.**
+
+   La découverte marche : les deux téléphones se voient en BLE, la liste se remplit, l'empreinte
+   s'affiche. C'est la formation du groupe Wi-Fi Direct qui échoue, et `dumpsys wifip2p` est le
+   seul outil qui dise où — la ligne `CONNECT` et son `dest=` :
+
+   | trace | signification |
+   |---|---|
+   | `dest=<null>` en `InactiveState` | refus immédiat : le pair n'est plus dans le cache |
+   | `dest=<null>` en `GroupCreatedState` | ce téléphone possède déjà un groupe |
+   | `dest=ProvisionDiscoveryState` | ça avance, on attend le dialogue système |
+   | reste en `GroupNegotiationState` | la négociation ne conclut pas |
+
+   Quatre versions ont été essayées en une soirée, et **deux ont cassé la précédente** :
+
+   - `createGroup()` d'origine : chaque appareil formait un groupe d'un seul membre et
+     `groupOwnerAddress` était sa **propre** adresse. Il s'appariait avec lui-même — attrapé par la
+     vérification d'empreinte, qui a donc fait son travail.
+   - `stopPeerDiscovery` avant `connect` : vide le cache de pairs du framework, donc `connect`
+     nomme un appareil qu'il ne connaît plus. Refus instantané.
+   - `hostGroup()` sur le chemin « be findable » : comme les deux appareils doivent être trouvables
+     pour se voir, les deux devenaient propriétaires, et un propriétaire ne peut pas rejoindre le
+     groupe d'un autre. Défaut de conception, pas de plomberie.
+   - **État actuel**, non validé : découverte seule côté trouvable, négociation normale au tap avec
+     `groupOwnerIntent = 0` (le tapeur devient client, car le framework ne rend que l'adresse du
+     *propriétaire*), délais séparés (12 s de scan, 75 s de négociation), garde contre les scans
+     parasites pendant la négociation, et abandon d'un éventuel groupe résiduel avant de connecter.
+
+   Cette combinaison n'a jamais tourné ensemble. La fois où la négociation a été atteinte, elle a
+   été tuée à 30 s ; il est possible qu'elle aboutissait. À reprendre **depuis la trace**, pas
+   depuis une hypothèse sur ce que l'API devrait faire : c'est ce qui a coûté les trois régressions
+   ci-dessus.
+
+   Non résolu par ailleurs : `« Relay stream is not an encrypted Wanda stream »`, vu une fois sur
+   une vidéo. L'en-tête `x-agro-sealed-key` était présent mais le corps ne portait pas le cadrage.
+
 9. **PR #43 — le lien hors-réseau.** Rien de tout cela ne tourne sur la JVM :
    BLE et Wi-Fi Direct sont du framework. Deux téléphones, Wi-Fi et données
    coupées sur les deux : l'un partage, l'autre doit le voir apparaître en
@@ -184,7 +291,14 @@ vert : 206 tests côté Wanda, 378 côté Agro.
     réseau ne montre plus l'audio en clair. C'était le trou : le relais
     lointain était chiffré, le lien local ne l'était pas.
 
-11. **Migration 21 → 22, puis 22 → 23.** Installer par-dessus une base existante et vérifier
+11. **Le catalogue serveur est vide.** 13 fichiers sur 13 sont empreints sur l'appareil
+   (229 672 landmarks, 13 vecteurs), mais `catalog_recordings` est à **0** sur Agro : la
+   publication n'a jamais tourné. Ce sont deux workers distincts et il faut les deux, dans cet
+   ordre — Réglages → « Measure the library now » **calcule**, puis « Sync now »
+   (`LibrarySyncWorker`) **publie**. À revérifier maintenant que les sources streamées sont
+   indexables.
+
+12. **Migration 21 → 22, puis 22 → 23.** Installer par-dessus une base existante et vérifier
    que rien n'est perdu. La table `track_features` démarre vide par
    conception ; les vecteurs arrivent à la prochaine indexation.
 
@@ -201,8 +315,8 @@ fusionnées). Reste :
 
 ### Vague 6 — les gros morceaux
 10. **Wanda #32** — transport hors-réseau Wi-Fi Direct / BLE / LocalOnlyHotspot.
-   Entièrement absent aujourd'hui : zéro occurrence de `WifiP2pManager`,
-   `NsdManager`, BLE ou mDNS. À construire derrière l'abstraction `ResolvedFrom`
+   Le transport, l'écran et la poignée de main X25519 existent désormais ; il reste la formation du
+   groupe Wi-Fi Direct, voir le point 0 de la liste à tester. À construire derrière l'abstraction `ResolvedFrom`
    existante pour que `ListenAlongResolver` gagne un palier au lieu d'être réécrit.
    À découper en épopée : découverte BLE + poignée de main X25519, montée en
    Wi-Fi Direct, pair PC.

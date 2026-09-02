@@ -34,7 +34,19 @@ class OffGridBeaconTest {
     /** It has to fit in a BLE advertisement's service data, which is around twenty bytes. */
     @Test
     fun `a beacon fits in one advertisement`() {
-        assertTrue("beacon is ${beacon().toBytes().size} bytes", beacon().toBytes().size <= 20)
+        // The budget, spelled out, because the old bound of 20 was guesswork and passed while the
+        // real packet was 50 bytes and refused by the radio in silence.
+        //
+        //   31  a legacy BLE advertisement, in total
+        //  - 3  the flags structure Android prepends
+        //  -18  the service-data header: length, type, and a 128-bit UUID
+        //  ----
+        //   10  left for the payload
+        val budget = 31 - 3 - (2 + 16)
+        assertTrue(
+            "beacon is ${beacon().toBytes().size} bytes, budget is $budget",
+            beacon().toBytes().size <= budget
+        )
     }
 
     /** Nothing in the payload should be able to name a person or a phone. */
@@ -42,8 +54,8 @@ class OffGridBeaconTest {
     fun `a beacon carries no name`() {
         val bytes = beacon().toBytes()
         assertEquals(OffGridBeacon.SIZE, bytes.size)
-        // Everything after the flag byte would be room for one; there is none.
-        assertEquals(14, bytes.size)
+        // A version, a fingerprint and one flag. There is no room for a name and no field for one.
+        assertEquals(10, bytes.size)
     }
 
     @Test

@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.data.sources.agro.FriendJam
+import com.wander.android.core.permissions.rememberLocalNetworkGate
 import com.wander.android.data.sources.agro.Jam
 import com.wander.android.data.sources.agro.JamMode
 import com.wander.android.data.sources.agro.JamTrack
@@ -80,6 +81,11 @@ internal fun JamScreen(
     viewModel: JamViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // Creating or joining a room is the moment the peer tier starts mattering, and the moment the
+    // user can see why they are being asked. Denied, Android refuses LAN connections in both
+    // directions and every track falls to the relay.
+    val withLocalNetwork = rememberLocalNetworkGate()
 
     LaunchedEffect(initialCode) {
         val clean = initialCode?.trim()?.uppercase()?.filter { it.isLetterOrDigit() }
@@ -114,10 +120,10 @@ internal fun JamScreen(
         val jam = state.jam
         if (jam == null) {
             StartOrJoin(
-                onCreate = viewModel::create,
-                onJoin = viewModel::join,
+                onCreate = { mode -> withLocalNetwork { viewModel.create(mode) } },
+                onJoin = { code -> withLocalNetwork { viewModel.join(code) } },
                 friendJams = state.friendJams,
-                onJoinFriendJam = viewModel::joinFriendJam,
+                onJoinFriendJam = { id -> withLocalNetwork { viewModel.joinFriendJam(id) } },
                 error = state.error,
                 initialCode = initialCode,
                 modifier = Modifier.padding(24.dp)

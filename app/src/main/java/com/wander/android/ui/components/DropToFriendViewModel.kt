@@ -26,7 +26,7 @@ import javax.inject.Inject
 @HiltViewModel
 internal class DropToFriendViewModel @Inject constructor(
     private val drops: DropsRepository,
-    social: SocialRepository
+    private val social: SocialRepository
 ) : ViewModel() {
 
     val friends: StateFlow<List<AgroProfile>> = social.friends
@@ -51,7 +51,17 @@ internal class DropToFriendViewModel @Inject constructor(
         if (_sending.value) return
         _sending.value = true
         viewModelScope.launch {
-            val recipientPublicKey = friends.value.find { it.username.equals(to, ignoreCase = true) }?.publicKey
+            // The cached friend list cannot supply this. `FriendEntity` has no `publicKey` column,
+            // so `toProfile()` leaves it null for everyone — which meant `recipientPublicKey` was
+            // always null, nothing could ever be sealed, and every note in the app went out in
+            // plaintext while the inbox was being taught to draw padlocks.
+            //
+            // Fetched fresh rather than cached, and that is the right shape for a key regardless:
+            // a stale one seals a note the recipient can no longer open, which fails silently and
+            // permanently. One round trip, on an action that is already a network call.
+            val recipientPublicKey =
+                friends.value.find { it.username.equals(to, ignoreCase = true) }?.publicKey
+                    ?: social.profile(to).getOrNull()?.publicKey
             val result = drops.drop(
                 to = to,
                 trackTitle = track.title,
