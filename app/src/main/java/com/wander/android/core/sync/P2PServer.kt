@@ -113,6 +113,15 @@ class P2PServer @Inject constructor(
 
     private data class Grant(
         val forUser: String,
+        /**
+         * The identity keys this grant may be sealed to, or empty when it names none.
+         *
+         * Empty is the pre-binding behaviour and is kept deliberately: an off-grid pairing grant
+         * carries the peer's key in [forUser] instead, and an older Agro sends no key list at all.
+         * Refusing to serve in either case would break working setups to close a gap neither of
+         * them has.
+         */
+        val boundKeys: List<String>,
         val expiresAtMs: Long,
         /**
          * Which arrangement issued it, and therefore which teardown may revoke it.
@@ -163,7 +172,15 @@ class P2PServer @Inject constructor(
         }.getOrNull() ?: return null
         // Recorded against the requester's key rather than an account name: off-grid, there are no
         // accounts, and the key is the only identity either device has.
-        record(token, requesterPublicKeyB64, PAIR_GRANT_TTL_SECONDS, Origin.PAIRING)
+        record(
+            token,
+            requesterPublicKeyB64,
+            // Face to face there is no Agro to name the keys, but the requester's key *is* the
+            // identity this grant was minted for, so it binds itself.
+            listOf(requesterPublicKeyB64),
+            PAIR_GRANT_TTL_SECONDS,
+            Origin.PAIRING
+        )
         rememberPairedPeer(requesterPublicKeyB64)
         return sealed
     }
@@ -175,14 +192,45 @@ class P2PServer @Inject constructor(
      * so the process dying takes every grant with it while the server keeps handing the listener
      * the same one. An upsert is what makes that recoverable without a new token.
      */
-    fun acceptGrant(token: String, forUser: String, ttlSeconds: Long) =
-        record(token, forUser, ttlSeconds, Origin.AGRO)
+    fun acceptGrant(token: String, forUser: String, forKeys: List<String>, ttlSeconds: Long) =
+        record(token, forUser, forKeys, ttlSeconds, Origin.AGRO)
 
-    private fun record(token: String, forUser: String, ttlSeconds: Long, origin: Origin) {
+    private fun record(
+        token: String,
+        forUser: String,
+        forKeys: List<String>,
+        ttlSeconds: Long,
+        origin: Origin
+    ) {
         if (token.isBlank()) return
         grants.entries.removeAll { it.value.expiresAtMs <= System.currentTimeMillis() }
-        grants[token] = Grant(forUser, System.currentTimeMillis() + ttlSeconds * 1000L, origin)
+        grants[token] = Grant(
+            forUser = forUser,
+            boundKeys = forKeys.filter { it.isNotBlank() },
+            expiresAtMs = System.currentTimeMillis() + ttlSeconds * 1000L,
+            origin = origin
+        )
     }
+
+    /**
+     * The key a stream for this request may be sealed to, or null to refuse.
+     *
+     * The decision itself is [GrantBinding.sealingKey], which is pure and tested; this only finds
+     * the grant the token names.
+     */
+    private fun sealingKeyFor(token: String, headerKey: String?): String? {
+        val grant = grants[token] ?: return null
+        return GrantBinding.sealingKey(grant.boundKeys, headerKey)
+    }
+
+    /** The bearer token on a request, or empty. Shared by the authorisation and sealing paths. */
+    private fun tokenOf(request: String): String = request.lineSequence()
+        .firstOrNull { it.startsWith("Authorization:", ignoreCase = true) }
+        ?.substringAfter(':')
+        ?.trim()
+        ?.removePrefix("Bearer ")
+        ?.trim()
+        .orEmpty()
 
     /**
      * Drops the grants minted face to face, leaving Agro's alone.
@@ -244,13 +292,7 @@ class P2PServer @Inject constructor(
     }
 
     private fun isAuthorised(request: String): Boolean {
-        val token = request.lineSequence()
-            .firstOrNull { it.startsWith("Authorization:", ignoreCase = true) }
-            ?.substringAfter(':')
-            ?.trim()
-            ?.removePrefix("Bearer ")
-            ?.trim()
-            .orEmpty()
+        val token = tokenOf(request)
         if (token.isEmpty()) return false
         val grant = grants[token] ?: return false
         if (grant.expiresAtMs <= System.currentTimeMillis()) {
@@ -450,7 +492,10 @@ class P2PServer @Inject constructor(
                                 "m4a", "mp4" -> "audio/mp4"
                                 else -> "audio/mpeg"
                             }
-                            val recipientKey = identityKeyOf(request)
+                            // Checked against the grant, never taken on trust. A rewritten
+                            // header names a key the grant does not, and is not sealed to.
+                            val recipientKey =
+                                sealingKeyFor(tokenOf(request), identityKeyOf(request))
                             val session = queryUri.getQueryParameter("session").orEmpty()
                             if (recipientKey != null && session.isNotBlank()) {
                                 writeEncrypted(output, fileIn, mime, recipientKey, session)
@@ -484,15 +529,22 @@ class P2PServer @Inject constructor(
      * and until now they were the audio itself, in the clear. The relay path was encrypted while the
      * *closer* path was not, which is precisely backwards from what anyone would assume.
      *
-     * The key is sealed to the public key the requester sent, so it is readable by that peer and by
+     * The key is sealed to a public key the *grant* names, so it is readable by that peer and by
      * nothing else on the wire. The framing and the cipher are the relay's, unchanged, which is what
      * lets the player decrypt this with no idea which transport it came over.
      *
-     * **What this defends against and what it does not.** A passive listener on the network learns
-     * nothing, which is the threat a shared Wi-Fi actually presents. An attacker able to intercept
-     * and rewrite the request as it goes could substitute their own public key — the grant proves
-     * the requester is authorised, but nothing yet binds it to that key. Closing that means carrying
-     * the peer's identity key through Agro's grant, which is the next step and is not this one.
+     * **What this defends against.** A passive listener on the network learns nothing, which is the
+     * threat a shared Wi-Fi actually presents. An attacker who can rewrite the request in flight is
+     * also covered now: they can put their own key in `X-Wanda-Identity`, but an Agro-issued grant
+     * carries the keys the listener has published, and a key that is not among them is not sealed
+     * to. The bearer token proves the requester is authorised; the bound set proves they are who
+     * the grant was minted for.
+     *
+     * **Where the header still stands alone.** Off-grid, where the grant was minted face to face
+     * and carries the peer's own key as its identity — that binding is [mintPairingGrant]'s, not
+     * Agro's. And against an older Agro that sends no key list, where trusting the header is what
+     * the previous build did and refusing to serve would break a working setup to close a gap that
+     * server has no way to help with.
      */
     private fun writeEncrypted(
         output: OutputStream,

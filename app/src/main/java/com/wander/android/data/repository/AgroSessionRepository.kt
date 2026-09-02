@@ -26,6 +26,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.intOrNull
@@ -428,6 +429,10 @@ class AgroSessionRepository @Inject constructor(
                     AgroLiveMessage.P2PGrant(
                         token = token,
                         forUser = forUser,
+                        forKeys = (payload["forKeys"] as? JsonArray)
+                            .orEmpty()
+                            .mapNotNull { it.jsonPrimitive.contentOrNull }
+                            .filter { it.isNotBlank() },
                         ttlSeconds = payload["ttlSeconds"]?.jsonPrimitive?.longOrNull ?: 600L
                     )
                 } else null

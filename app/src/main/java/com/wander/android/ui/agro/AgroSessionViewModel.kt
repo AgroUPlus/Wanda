@@ -179,7 +179,12 @@ internal class AgroSessionViewModel @Inject constructor(
                 is AgroLiveMessage.P2PGrant -> {
                     // Recorded before the listener can present it: Agro pushes the grant here
                     // first for exactly that reason.
-                    p2pServer.acceptGrant(message.token, message.forUser, message.ttlSeconds)
+                    p2pServer.acceptGrant(
+                        message.token,
+                        message.forUser,
+                        message.forKeys,
+                        message.ttlSeconds
+                    )
                 }
             }
         }
