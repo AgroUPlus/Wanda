@@ -3,6 +3,7 @@ package com.wander.android.data.repository
 import android.net.Uri
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.SourceType
+import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.agro.AgroGraphQl
 import com.wander.android.data.sources.navidrome.NavidromeSource
@@ -54,6 +55,33 @@ class LinkRepository @Inject constructor(
         val isSharePath = uri.pathSegments.contains("share") || uri.fragment?.contains("share") == true
         return matchesHost || isSharePath
     }
+
+    /**
+     * Resolves a universal album link against whatever this device has configured.
+     *
+     * Every configured source is asked, and [AlbumResolution] decides — strictly, because a link
+     * to one record opening a different one is worse than an honest miss. Sources are searched in
+     * their preference order, so someone who owns the album gets their own copy rather than a
+     * stream of it.
+     */
+    suspend fun resolveAlbum(uri: Uri): Result<UnifiedAlbum> = withContext(Dispatchers.IO) {
+        val link = UniversalAlbumLink.parse(uri.toString())
+            ?: return@withContext Result.failure(
+                IllegalArgumentException("That link doesn't name an album.")
+            )
+
+        val candidates = musicRepository.searchAlbums("${link.artist} ${link.title}")
+        val match = AlbumResolution.bestMatch(link, candidates)
+            ?: return@withContext Result.failure(
+                IllegalArgumentException(
+                    "“${link.title}” by ${link.artist} isn't in any of your sources."
+                )
+            )
+        Result.success(match)
+    }
+
+    /** Whether this is an album link. Separate from [canOpen] because it resolves to an album. */
+    fun isAlbumLink(uri: Uri): Boolean = UniversalAlbumLink.matches(uri.toString())
 
     /**
      * The link itself, or what it stands for. A link shared through the user's own domain wraps
