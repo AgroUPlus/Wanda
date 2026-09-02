@@ -351,6 +351,45 @@ class MusicRepository @Inject constructor(
         TrackDeduplicator.deduplicate((cached + remote).distinctBy { it.id })
     }
 
+    /**
+     * Albums matching a query, from Room and from what the sources return.
+     *
+     * No source exposes an album search — `IMusicSource.search` answers with tracks — so the remote
+     * half is derived by grouping those tracks by the record they came from. That is less precise
+     * than a real album endpoint and it is enough for what it is used for: resolving a shared album
+     * link, where [AlbumResolution] then insists on an exact artist and title anyway.
+     *
+     * Room comes first in the list, so a record the user already has outranks a search hit. The
+     * caller's ordering is the tiebreak in [AlbumResolution], and this is where it is set.
+     */
+    suspend fun searchAlbums(query: String): List<UnifiedAlbum> = withContext(Dispatchers.IO) {
+        if (query.isBlank()) return@withContext emptyList()
+
+        val known = albumDao.getAllAlbumsOnce()
+            .map(AlbumEntity::toUnifiedAlbum)
+            .filter { it.title.contains(query, ignoreCase = true) || query.contains(it.title, ignoreCase = true) }
+
+        val fromTracks = searchAllSources(query)
+            .filter { !it.album.isNullOrBlank() }
+            .groupBy { (it.album.orEmpty()) to it.artist }
+            .map { (key, tracks) ->
+                val (album, artist) = key
+                UnifiedAlbum(
+                    // Not a real album id on any backend: nothing fetches by it. The screen that
+                    // opens a resolved album browses by title and artist, which is all the sources
+                    // agree on anyway.
+                    id = "derived:${album.lowercase()}:${artist.lowercase()}",
+                    source = tracks.first().source,
+                    title = album,
+                    artist = artist,
+                    songCount = tracks.size,
+                    year = tracks.firstNotNullOfOrNull { it.year }
+                )
+            }
+
+        (known + fromTracks).distinctBy { it.title.lowercase() to it.artist.lowercase() }
+    }
+
     // ── Writes ──────────────────────────────────────────────────────────────────────────────
 
     /**

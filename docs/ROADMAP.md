@@ -291,6 +291,13 @@ vert : 206 tests côté Wanda, 378 côté Agro.
     réseau ne montre plus l'audio en clair. C'était le trou : le relais
     lointain était chiffré, le lien local ne l'était pas.
 
+11. **PR #44 — le lien d'album universel.** Le seul qui demande deux personnes
+    aux sources différentes : partager un album depuis une bibliothèque locale
+    et l'ouvrir sur un appareil qui n'a que YouTube Music, ou l'inverse. Un
+    album introuvable doit dire lequel et chez qui, pas échouer en silence.
+    Vérifier aussi qu'un appui long sur une pochette ouvre bien la feuille —
+    `combinedClickable` sur une carte dans une grille est le genre de geste qui
+    entre en conflit avec le défilement.
 11. **Le catalogue serveur est vide.** 13 fichiers sur 13 sont empreints sur l'appareil
    (229 672 landmarks, 13 vecteurs), mais `catalog_recordings` est à **0** sur Agro : la
    publication n'a jamais tourné. Ce sont deux workers distincts et il faut les deux, dans cet

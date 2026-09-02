@@ -1,6 +1,7 @@
 package com.wander.android.ui.screens.library
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,17 +17,23 @@ import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.scrollingTitle
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AlbumCard(
     album: UnifiedAlbum,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Long press opens the actions sheet. Null on the screens that have nowhere to show one, so
+     * the gesture does nothing rather than half-working.
+     */
+    onLongClick: (() -> Unit)? = null,
     /** Nominal cell width. The grid is `Adaptive(156.dp)`, so cells never fall below this. */
     artworkSize: Dp = 160.dp
 ) {
     Column(
         modifier = modifier
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(8.dp)
     ) {
         Artwork(
