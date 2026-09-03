@@ -98,14 +98,14 @@ internal class InnerTubeSubtitle private constructor(private val tokens: List<Js
     private fun couldTitle(text: String): Boolean =
         text.any(Char::isLetterOrDigit) &&
             !DURATION.matches(text) &&
-            !COUNT.matches(text)
+            !isCount(text)
 
     /** Whether a token could be somebody's name, judged only on what it is shaped like. */
     private fun couldName(text: String): Boolean =
         text.any(Char::isLetterOrDigit) &&
             !YEAR.matches(text) &&
             !DURATION.matches(text) &&
-            !COUNT.matches(text)
+            !isCount(text)
 
     /**
      * Used when no run links to an artist page, which happens on uploads YouTube has not matched
@@ -132,7 +132,15 @@ internal class InnerTubeSubtitle private constructor(private val tokens: List<Js
          * rejecting a real artist as a statistic is a worse failure than letting an unsuffixed
          * "3 views" through. YouTube prints the suffixed form for anything with an audience.
          */
-        private val COUNT = Regex("""[\d,]*[.\d][\d,]*[KMB]\s+\S+|[\d,]+\.[\d]+\s+\S+""")
+        /** "1.2M plays", "138K views" — a magnitude suffix carries it. */
+        private val SUFFIXED_COUNT = Regex("""[\d,]*[.\d][\d,]*[KMB]\s+\S+""")
+
+        /** "1.5 million plays" — no suffix, but the decimal point says it is a quantity. */
+        private val DECIMAL_COUNT = Regex("""[\d,]+\.[\d]+\s+\S+""")
+
+        private val COUNTS = listOf(SUFFIXED_COUNT, DECIMAL_COUNT)
+
+        private fun isCount(text: String) = COUNTS.any { it.matches(text) }
 
         /** Separator runs carry no meaning and would otherwise count as tokens. */
         private val SEPARATOR = Regex("""[\s•·|]*""")

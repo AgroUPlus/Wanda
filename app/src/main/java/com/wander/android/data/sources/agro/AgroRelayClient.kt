@@ -125,11 +125,16 @@ class AgroRelayClient @Inject constructor(
 
             // One key per track, sealed to the listener alone. Absent a listener key there is
             // nobody to seal to, and encrypting would send bytes only this device could read.
-            val roomKey = listenerPublicKey?.takeIf { it.isNotBlank() }?.let { AudioStreamKeys.newRoomKey() }
-            val sealedKey = roomKey?.let { key ->
+            //
+            // The raw key and its sealed envelope live or die together: either both exist and the
+            // body goes out encrypted, or neither does and it goes out in the clear. Holding them
+            // in one value is what keeps the two from being null-checked apart further down, where
+            // only one of the two checks could ever fire.
+            val sealing = listenerPublicKey?.takeIf { it.isNotBlank() }?.let { listenerKey ->
+                val roomKey = AudioStreamKeys.newRoomKey()
                 runCatching {
-                    identityKeyManager.sealNote(listenerPublicKey!!, AudioStreamKeys.encodeRoomKey(key))
-                }.getOrNull()
+                    identityKeyManager.sealNote(listenerKey, AudioStreamKeys.encodeRoomKey(roomKey))
+                }.getOrNull()?.let { envelope -> SealedRoomKey(roomKey, envelope) }
             }
 
             val requestBody = object : RequestBody() {
@@ -137,17 +142,17 @@ class AgroRelayClient @Inject constructor(
 
                 // Framing and tags change the length, and the count is unknown until the last
                 // chunk is sealed. Chunked is honest; a wrong length would truncate the audio.
-                override fun contentLength() = if (sealedKey == null && size > 0) size else -1L
+                override fun contentLength() = if (sealing == null && size > 0) size else -1L
 
                 override fun writeTo(sink: BufferedSink) {
                     inputProvider().use { input ->
-                        if (sealedKey == null || roomKey == null) {
+                        if (sealing == null) {
                             sink.writeAll(input.source())
                         } else {
                             RelayStreamFraming.encrypt(
                                 input,
                                 sink.outputStream(),
-                                AudioStreamCipher(AudioStreamKeys.derive(roomKey, sessionId))
+                                AudioStreamCipher(AudioStreamKeys.derive(sealing.roomKey, sessionId))
                             )
                         }
                     }
@@ -158,9 +163,9 @@ class AgroRelayClient @Inject constructor(
                 .url("$server/api/v1/relay/$sessionId/send")
                 .header("Authorization", "Bearer $apiKey")
                 .apply {
-                    if (sealedKey != null) {
+                    if (sealing != null) {
                         header("x-agro-encrypted", "true")
-                        header("x-agro-sealed-key", sealedKey)
+                        header("x-agro-sealed-key", sealing.envelope)
                     }
                 }
                 .post(requestBody)
@@ -175,6 +180,12 @@ class AgroRelayClient @Inject constructor(
             }
         }
     }
+
+    /**
+     * A room key together with the envelope that carries it to the listener. Constructed only when
+     * both halves exist, so a caller holding one holds the other.
+     */
+    private class SealedRoomKey(val roomKey: ByteArray, val envelope: String)
 
     private companion object {
         const val TAG = "AgroRelayClient"

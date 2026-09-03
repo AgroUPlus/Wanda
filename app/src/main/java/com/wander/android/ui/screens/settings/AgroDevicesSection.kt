@@ -40,14 +40,12 @@ import com.wander.android.ui.components.ListeningGreen
  * feature that failed to load, which is exactly how it was read.
  */
 internal fun LazyListScope.agroDevicesSection(
-    devices: List<AgroNode>,
-    handoff: AgroHandoffState?,
-    isResuming: Boolean,
+    state: AgroDevicesState,
     onResume: (AgroHandoffState) -> Unit
 ) {
     item(key = "agro_devices_header") { SettingsSection("Devices") }
 
-    if (devices.isEmpty()) {
+    if (state.devices.isEmpty()) {
         item(key = "agro_devices_empty") {
             Text(
                 text = "Nothing else is signed in. Other devices using this Agro account " +
@@ -60,11 +58,11 @@ internal fun LazyListScope.agroDevicesSection(
         return
     }
 
-    items(items = devices, key = { "agro_device_${it.deviceId}" }) { node ->
-        val resumable = handoff?.takeIf { it.deviceId == node.deviceId }
+    items(items = state.devices, key = { "agro_device_${it.deviceId}" }) { node ->
+        val resumable = state.handoff?.takeIf { it.deviceId == node.deviceId }
         DeviceRow(
             node = node,
-            isResuming = isResuming,
+            isResuming = state.isResuming,
             onResume = resumable?.let { { onResume(it) } }
         )
     }

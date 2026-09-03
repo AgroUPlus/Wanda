@@ -127,7 +127,6 @@ fun NavGraphBuilder.wanderNavGraph(
 
     detailDestination(motion, Routes.IMPORT_PLAYLIST) {
         com.wander.android.ui.screens.importer.PlaylistImportScreen(
-            contentPadding = contentPadding,
             onBack = navController::popBackStack,
             onOpenPlaylist = { navController.navigateSettled(Routes.playlist(it)) }
         )

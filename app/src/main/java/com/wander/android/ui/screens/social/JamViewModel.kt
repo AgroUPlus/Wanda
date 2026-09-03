@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.social
 
+import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -199,7 +200,11 @@ internal class JamViewModel @Inject constructor(
                         }
                     }
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                // Topping the queue up is best-effort: the jam plays on with what it already has,
+                // and the next track change tries again. Surfacing this would put an error in
+                // front of someone whose music never stopped.
+                Log.d(TAG, "Auto top-up skipped", e)
             } finally {
                 toppingUp = false
             }
@@ -237,5 +242,9 @@ internal class JamViewModel @Inject constructor(
                 error = result.exceptionOrNull()?.message
             )
         }
+    }
+
+    private companion object {
+        const val TAG = "JamViewModel"
     }
 }

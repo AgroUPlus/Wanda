@@ -37,7 +37,6 @@ fun PlatformIcon(
 }
 
 private fun DrawScope.drawSpotifyLogo(tint: Color) {
-    val center = Offset(size.width / 2f, size.height / 2f)
     val radius = size.minDimension / 2f
     drawCircle(color = tint, radius = radius, style = Stroke(width = size.width * 0.08f))
 
