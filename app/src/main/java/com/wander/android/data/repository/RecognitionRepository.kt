@@ -178,6 +178,11 @@ class RecognitionRepository @Inject constructor(
 
         // (trackId, offset) -> votes. The offset can be negative when the clip started before the
         // matched landmark, which is ordinary and must not be discarded.
+        //
+        // A mutable accumulator on purpose: this is the inner loop of landmark matching, run over
+        // every hash of every candidate track, and rebuilding an immutable map per vote would
+        // allocate once per iteration for no gain in clarity.
+        @Suppress("kotlin:S6524")
         val votes = HashMap<String, HashMap<Int, Int>>()
         for (match in matches) {
             val offsets = queryOffsets[match.hash] ?: continue

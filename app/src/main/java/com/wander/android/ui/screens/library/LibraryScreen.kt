@@ -109,7 +109,6 @@ fun LibraryScreen(
     val tracks = viewModel.tracks.collectAsLazyPagingItems()
     val likedTracks by viewModel.likedTracks.collectAsStateWithLifecycle()
     val downloadedTracks by viewModel.downloadedTracks.collectAsStateWithLifecycle()
-    val historyTracks by viewModel.historyTracks.collectAsStateWithLifecycle()
     val albums by viewModel.albums.collectAsStateWithLifecycle()
     val recentAlbums by viewModel.recentAlbums.collectAsStateWithLifecycle()
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
