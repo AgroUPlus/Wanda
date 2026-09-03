@@ -32,11 +32,8 @@ import com.wander.android.data.importer.PlatformType
 import com.wander.android.ui.screens.importer.PlatformIcon
 
 internal fun LazyListScope.externalTab(
-    onOpenImport: () -> Unit,
-    shareDomain: String,
-    agroShareDomain: String,
-    onEditDomain: () -> Unit,
-    incognito: Boolean
+    state: SettingsUiState,
+    actions: SettingsActions
 ) {
     // ── Playlist Importer Hero Card ──────────────────────────────────────────────────────────
     item(key = "import_playlist_card") {
@@ -50,7 +47,7 @@ internal fun LazyListScope.externalTab(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
                 .clip(MaterialTheme.shapes.large)
-                .clickable(onClick = onOpenImport)
+                .clickable(onClick = actions.onOpenImport)
         ) {
             Column(
                 modifier = Modifier
@@ -135,7 +132,7 @@ internal fun LazyListScope.externalTab(
     }
 
     // ── External Sharing Section ────────────────────────────────────────────────────────────
-    if (incognito) {
+    if (state.incognito) {
         item(key = "sharing_incognito") {
             SettingsRow(
                 title = "Sharing paused by incognito",
@@ -148,12 +145,12 @@ internal fun LazyListScope.externalTab(
         SettingsRow(
             title = "Custom share domain",
             subtitle = when {
-                agroShareDomain.isNotBlank() -> "$agroShareDomain/listen — configured on Agro server"
-                shareDomain.isNotBlank() -> "Links go out as $shareDomain/listen — tap to customize"
+                state.agroShareDomain.isNotBlank() -> "${state.agroShareDomain}/listen — configured on Agro server"
+                state.shareDomain.isNotBlank() -> "Links go out as ${state.shareDomain}/listen — tap to customize"
                 else -> "Default — shares each backend's native link"
             },
-            onClick = onEditDomain,
-            enabled = !incognito
+            onClick = actions.onEditShareDomain,
+            enabled = !state.incognito
         )
     }
 }

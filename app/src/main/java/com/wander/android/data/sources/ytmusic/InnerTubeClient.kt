@@ -382,6 +382,13 @@ class InnerTubeClient @Inject constructor(
     private companion object {
         val SAPISID_REGEX = Regex("(?:__Secure-3PAPISID|SAPISID)=([^;]+)")
 
+        /**
+         * SHA-1 is Google's spec, not ours: the `SAPISIDHASH` scheme YouTube's web client uses is
+         * defined as `sha1("<unix seconds> <SAPISID> <origin>")`, and the server accepts no other
+         * digest. Nothing secret is derived from the hash — it proves possession of a cookie the
+         * request already carries — so collision resistance is not what is being relied on.
+         */
+        @Suppress("kotlin:S4790") // Protocol-mandated digest; substituting a stronger one fails auth.
         fun sapisidHash(sapisid: String): String {
             val time = System.currentTimeMillis() / 1000
             val digest = MessageDigest.getInstance("SHA-1")

@@ -23,23 +23,61 @@ object TrackDeduplicator {
     /**
      * Editorial noise describing the *release* rather than the performance. "Song" and
      * "Song (Remastered 2011)" are the same recording, so this is removed before matching.
+     *
+     * Held as terms rather than one long literal. The pattern it builds is unchanged — this is a
+     * list to read and edit, not a simpler match — and `TrackDeduplicatorPatternTest` pins every
+     * term in it so an edit that drops one fails the build rather than the catalogue.
      */
-    private val NOISE = Regex(
-        """\b(remaster(ed)?(\s+\d{4})?|\d{4}\s+remaster|official\s+(music\s+)?(video|audio)""" +
-            """|lyrics?(\s+video)?|album\s+version|single\s+version|original\s+mix""" +
-            """|explicit|clean|hd|hq|visualizer|mv)\b"""
+    private val NOISE_TERMS = listOf(
+        """remaster(ed)?(\s+\d{4})?""",
+        """\d{4}\s+remaster""",
+        """official\s+(music\s+)?(video|audio)""",
+        """lyrics?(\s+video)?""",
+        """album\s+version""",
+        """single\s+version""",
+        """original\s+mix""",
+        "explicit",
+        "clean",
+        "hd",
+        "hq",
+        "visualizer",
+        "mv"
     )
+
+    private val NOISE = Regex("""\b(${NOISE_TERMS.joinToString("|")})\b""")
 
     /**
      * Markers of a genuinely different performance. Compared as a set, so two tracks only merge
      * when they carry the *same* markers — folding a live take into the studio cut would silently
      * hide a version the user deliberately owns, which is the one failure this must never make.
      */
-    private val VARIANT = Regex(
-        """\b(live|acoustic|unplugged|remix|rmx|demo|instrumental|karaoke|reprise|edit""" +
-            """|mix|version|cover|session|extended|club|dub|slowed|sped\s*up|orchestral""" +
-            """|piano|deluxe|bonus)\b"""
+    private val VARIANT_TERMS = listOf(
+        "live",
+        "acoustic",
+        "unplugged",
+        "remix",
+        "rmx",
+        "demo",
+        "instrumental",
+        "karaoke",
+        "reprise",
+        "edit",
+        "mix",
+        "version",
+        "cover",
+        "session",
+        "extended",
+        "club",
+        "dub",
+        "slowed",
+        """sped\s*up""",
+        "orchestral",
+        "piano",
+        "deluxe",
+        "bonus"
     )
+
+    private val VARIANT = Regex("""\b(${VARIANT_TERMS.joinToString("|")})\b""")
 
     private val FEATURED = Regex("""\b(feat|ft|featuring|with)\b.*""")
     private val NON_ALPHANUMERIC = Regex("""[^\p{L}\p{N}\s]""")

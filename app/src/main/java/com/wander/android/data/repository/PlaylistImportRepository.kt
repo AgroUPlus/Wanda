@@ -25,7 +25,24 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
 
-private val NOISE_SUFFIXES = Regex("""(?i)\s*[\(\[](?:official\s*(?:music)?\s*video|official\s*audio|lyrics?|audio|remaster(?:ed)?\s*\d*|video|explicit|clean|visualizer)[\)\]]""")
+/**
+ * Bracketed editorial noise on an imported title. One term per line because the list is the part
+ * that gets edited; the pattern around it never changes.
+ */
+private val NOISE_SUFFIX_TERMS = listOf(
+    """official\s*(?:music)?\s*video""",
+    """official\s*audio""",
+    """lyrics?""",
+    "audio",
+    """remaster(?:ed)?\s*\d*""",
+    "video",
+    "explicit",
+    "clean",
+    "visualizer"
+)
+
+private val NOISE_SUFFIXES =
+    Regex("""(?i)\s*[\(\[](?:${NOISE_SUFFIX_TERMS.joinToString("|")})[\)\]]""")
 private val FEAT_REGEX = Regex("""(?i)\s*(?:feat\.?|ft\.?|featuring)\s+.*""")
 private const val MIN_MATCH_SCORE = 100
 
@@ -176,9 +193,11 @@ class PlaylistImportRepository @Inject constructor(
 
             if (durationMs > 0 && candidate.durationMs > 0) {
                 val deltaSec = abs(candidate.durationMs - durationMs) / 1000
-                if (deltaSec <= 3) score += 40
-                else if (deltaSec <= 10) score += 20
-                else if (deltaSec > 60) score -= 30
+                when {
+                    deltaSec <= 3 -> score += 40
+                    deltaSec <= 10 -> score += 20
+                    deltaSec > 60 -> score -= 30
+                }
             }
 
             if (score >= MIN_MATCH_SCORE) candidate to score else null
