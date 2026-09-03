@@ -13,31 +13,22 @@ private const val ORG_URL = "https://github.com/AgroUPlus"
 private const val REPO_URL = "https://github.com/AgroUPlus/Wanda"
 
 internal fun LazyListScope.aboutTab(
-    appVersion: String,
-    updateCheck: UpdateCheckResult?,
-    isChecking: Boolean,
-    autoUpdateCheck: Boolean,
-    releaseNotifications: Boolean,
-    onReleaseNotificationsChange: (Boolean) -> Unit,
-    onAutoUpdateCheckChange: (Boolean) -> Unit,
-    onCheckForUpdate: () -> Unit,
-    onOpenRelease: (String) -> Unit,
-    onOpenUrl: (String) -> Unit,
-    onOpenMergePreview: () -> Unit
+    state: SettingsUiState,
+    actions: SettingsActions
 ) {
     item(key = "merge_preview") {
         SettingsRow(
             title = "Merge preview",
             subtitle = "See which of your tracks are the same recording, before anything changes",
-            onClick = onOpenMergePreview
+            onClick = actions.onOpenMergePreview
         )
     }
 
     item(key = "version") {
         SettingsRow(
             title = "Version",
-            subtitle = appVersion,
-            onClick = { onOpenUrl(REPO_URL) }
+            subtitle = state.appVersion,
+            onClick = { actions.onOpenUrl(REPO_URL) }
         )
     }
 
@@ -45,19 +36,19 @@ internal fun LazyListScope.aboutTab(
         SettingsRow(
             title = "Check for update",
             subtitle = when {
-                isChecking -> "Checking…"
-                updateCheck is UpdateCheckResult.UpdateAvailable ->
-                    "Version ${updateCheck.version} is available — tap to view"
-                updateCheck is UpdateCheckResult.UpToDate -> "You're on the latest version"
-                updateCheck is UpdateCheckResult.Failed -> "Couldn't check — tap to retry"
+                state.isCheckingForUpdate -> "Checking…"
+                state.updateCheck is UpdateCheckResult.UpdateAvailable ->
+                    "Version ${state.updateCheck.version} is available — tap to view"
+                state.updateCheck is UpdateCheckResult.UpToDate -> "You're on the latest version"
+                state.updateCheck is UpdateCheckResult.Failed -> "Couldn't check — tap to retry"
                 else -> "Tap to check for a newer version"
             },
             onClick = {
-                val available = updateCheck
+                val available = state.updateCheck
                 if (available is UpdateCheckResult.UpdateAvailable) {
-                    onOpenRelease(available.releaseUrl)
+                    actions.onOpenUrl(available.releaseUrl)
                 } else {
-                    onCheckForUpdate()
+                    actions.onCheckForUpdate()
                 }
             }
         )
@@ -69,7 +60,7 @@ internal fun LazyListScope.aboutTab(
         SettingsRow(
             title = "AgroUPlus",
             subtitle = "Wanda and Agro are built here. Source, issues and releases on GitHub.",
-            onClick = { onOpenUrl(ORG_URL) }
+            onClick = { actions.onOpenUrl(ORG_URL) }
         )
     }
 
@@ -78,8 +69,8 @@ internal fun LazyListScope.aboutTab(
             title = "Check for updates on launch",
             subtitle = "Finds the latest release automatically and tells you when there is one. " +
                 "Off by default: this is a network call at startup.",
-            checked = autoUpdateCheck,
-            onCheckedChange = onAutoUpdateCheckChange
+            checked = state.autoUpdateCheckEnabled,
+            onCheckedChange = actions.onAutoUpdateCheckChange
         )
     }
 
@@ -89,8 +80,8 @@ internal fun LazyListScope.aboutTab(
             subtitle = "Checks once a day on Wi-Fi and posts a notification when a new version " +
                 "is published. Off by default: it is a network call you did not ask for, and a " +
                 "notification you did not ask for.",
-            checked = releaseNotifications,
-            onCheckedChange = onReleaseNotificationsChange
+            checked = state.releaseNotificationsEnabled,
+            onCheckedChange = actions.onReleaseNotificationsChange
         )
     }
 }

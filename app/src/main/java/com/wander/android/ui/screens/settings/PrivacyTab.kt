@@ -1,7 +1,6 @@
 package com.wander.android.ui.screens.settings
 
 import androidx.compose.foundation.lazy.LazyListScope
-import com.wander.android.data.sources.agro.AgroVisibility
 
 /**
  * What this device records, and what other people are allowed to see.
@@ -13,33 +12,27 @@ import com.wander.android.data.sources.agro.AgroVisibility
  * already leaked by the time the user finds it.
  */
 internal fun LazyListScope.privacyTab(
-    incognito: Boolean,
-    onIncognitoChange: (Boolean) -> Unit,
-    agroPaired: Boolean,
-    visibility: AgroVisibility?,
-    onVisibilityChange: (AgroVisibility) -> Unit,
-    proxyEnabled: Boolean,
-    onProxyChange: (Boolean) -> Unit,
-    onForgetEverything: () -> Unit
+    state: SettingsUiState,
+    actions: SettingsActions
 ) {
     item(key = "incognito") {
         SettingsToggle(
             title = "Incognito",
             subtitle = "Stop recording plays, and stop telling anyone what you are listening " +
                 "to. Everything below is off while this is on.",
-            checked = incognito,
-            onCheckedChange = onIncognitoChange
+            checked = state.incognito,
+            onCheckedChange = actions.onIncognitoChange
         )
     }
 
-    if (agroPaired && visibility != null) {
+    if (state.agroPaired && state.agroVisibility != null) {
         item(key = "visibility_header") { SettingsSection("What friends can see") }
 
-        // Greyed out rather than hidden while incognito is on. The stored preferences are left
-        // exactly as they were and come back untouched when it goes off — incognito overrides
+        // Greyed out rather than hidden while state.incognito is on. The stored preferences are left
+        // exactly as they were and come back untouched when it goes off — state.incognito overrides
         // them for as long as it is on, it does not rewrite them. Hiding the rows instead would
         // leave no way to tell what will be shared again afterwards.
-        if (incognito) {
+        if (state.incognito) {
             item(key = "visibility_incognito_note") {
                 SettingsRow(
                     subtitle = "Incognito is on, so none of this is being shared. " +
@@ -53,11 +46,11 @@ internal fun LazyListScope.privacyTab(
             SettingsToggle(
                 title = "Show what I'm playing",
                 subtitle = "Friends see your current track, and can listen along with you",
-                checked = visibility.showNowPlaying && !incognito,
+                checked = state.agroVisibility.showNowPlaying && !state.incognito,
                 onCheckedChange = {
-                    onVisibilityChange(visibility.copy(showNowPlaying = it))
+                    actions.onVisibilityChange(state.agroVisibility.copy(showNowPlaying = it))
                 },
-                enabled = !incognito
+                enabled = !state.incognito
             )
         }
 
@@ -65,9 +58,9 @@ internal fun LazyListScope.privacyTab(
             SettingsToggle(
                 title = "Share my listening stats",
                 subtitle = "Friends see your top artists and how much your taste overlaps theirs",
-                checked = visibility.showStats && !incognito,
-                onCheckedChange = { onVisibilityChange(visibility.copy(showStats = it)) },
-                enabled = !incognito
+                checked = state.agroVisibility.showStats && !state.incognito,
+                onCheckedChange = { actions.onVisibilityChange(state.agroVisibility.copy(showStats = it)) },
+                enabled = !state.incognito
             )
         }
 
@@ -76,20 +69,20 @@ internal fun LazyListScope.privacyTab(
                 title = "Let people find me",
                 subtitle = "Your username appears when someone searches for it. Off means only " +
                     "people you have already added can see you at all.",
-                checked = visibility.discoverable && !incognito,
-                onCheckedChange = { onVisibilityChange(visibility.copy(discoverable = it)) },
-                enabled = !incognito
+                checked = state.agroVisibility.discoverable && !state.incognito,
+                onCheckedChange = { actions.onVisibilityChange(state.agroVisibility.copy(discoverable = it)) },
+                enabled = !state.incognito
             )
         }
     }
 
-    if (agroPaired) {
+    if (state.agroPaired) {
         item(key = "proxy_relay") {
             SettingsToggle(
                 title = "Agro Privacy Relay",
                 subtitle = "Route metadata and lyric requests through your Agro server to mask your IP from external services like LRCLIB and Archive.org.",
-                checked = proxyEnabled,
-                onCheckedChange = onProxyChange
+                checked = state.agroProxyEnabled,
+                onCheckedChange = actions.onProxyChange
             )
         }
     }
@@ -98,7 +91,7 @@ internal fun LazyListScope.privacyTab(
         SettingsRow(
             title = "Forget all credentials",
             subtitle = "Signs out of every source and erases stored secrets",
-            onClick = onForgetEverything,
+            onClick = actions.onForgetEverything,
             destructive = true
         )
     }
