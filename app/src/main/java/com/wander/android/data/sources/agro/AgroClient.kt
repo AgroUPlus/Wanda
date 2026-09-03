@@ -115,7 +115,7 @@ class AgroClient @Inject constructor(
             })
         }
 
-        return graphQl.execute(mutation, variables).map { }
+        return graphQl.execute(mutation, variables).discardPayload()
     }
 
     /**
@@ -161,7 +161,7 @@ class AgroClient @Inject constructor(
             put("userId", secureStorage.agroUsername)
             put("deviceId", secureStorage.agroDeviceId)
         }
-        return graphQl.execute(mutation, variables).map { }
+        return graphQl.execute(mutation, variables).discardPayload()
     }
 
     companion object {
@@ -354,3 +354,11 @@ class AgroClient @Inject constructor(
 internal data class AgroIdentity(val username: String, val role: String) {
     val isAdmin: Boolean get() = role.equals("admin", ignoreCase = true)
 }
+
+/**
+ * Drops a mutation's response body, keeping only whether it succeeded.
+ *
+ * These mutations return an acknowledgement the caller has no use for — what matters is that the
+ * server accepted the write. Named rather than an empty `map { }` so that is legible as a choice.
+ */
+private fun <T> Result<T>.discardPayload(): Result<Unit> = map { Unit }
