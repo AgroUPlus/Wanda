@@ -213,6 +213,14 @@ class SubsonicApiClient @Inject constructor(
         const val CLIENT_NAME = "Wanda"
         const val SALT_BYTES = 8
 
+        /**
+         * MD5 is not a choice here. Subsonic 1.16.1 defines authentication as
+         * `t=md5(password + salt)` with the salt sent alongside in the clear, and a Navidrome or
+         * Subsonic server will reject anything else — there is no stronger digest to negotiate.
+         * The salt is 8 bytes of [SecureRandom] and is fresh per request, so the token is not
+         * replayable across calls, and the exchange only ever happens over HTTPS.
+         */
+        @Suppress("kotlin:S4790") // Protocol-mandated digest, not a password hash of our choosing.
         fun md5(input: String): String =
             MessageDigest.getInstance("MD5").digest(input.toByteArray(Charsets.UTF_8)).toHex()
 

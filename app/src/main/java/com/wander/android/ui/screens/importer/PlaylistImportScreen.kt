@@ -11,7 +11,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -50,7 +49,6 @@ private enum class ImporterStage {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaylistImportScreen(
-    contentPadding: PaddingValues,
     onBack: () -> Unit,
     onOpenPlaylist: (String) -> Unit = {},
     viewModel: PlaylistImportViewModel = hiltViewModel()

@@ -373,7 +373,7 @@ class MusicRepository @Inject constructor(
             // Restricting *which sources are asked* rather than filtering their results is the
             // point: a slow backend the user turned off must not hold the whole search up.
             .filter { onlySources == null || it.sourceType in onlySources }
-        val allowedTypes = allowed.mapTo(mutableSetOf(), IMusicSource::sourceType)
+        val allowedTypes = allowed.map(IMusicSource::sourceType).toSet()
 
         // Room holds every result the app has ever shown, search hits included, so signing out of
         // a backend used to leave its tracks turning up in Search for good — offered by a source
