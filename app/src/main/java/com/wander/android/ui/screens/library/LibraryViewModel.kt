@@ -119,10 +119,6 @@ class LibraryViewModel @Inject constructor(
     val likedTracks: StateFlow<List<UnifiedTrack>> = musicRepository.getLikedTracksFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** What has been played on this device, newest first. Room-backed, so it works offline. */
-    val historyTracks: StateFlow<List<UnifiedTrack>> = musicRepository.getRecentlyPlayedFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
     val downloadedTracks: StateFlow<List<UnifiedTrack>> = musicRepository.getDownloadedTracksFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 

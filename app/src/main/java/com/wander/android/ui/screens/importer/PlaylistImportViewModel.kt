@@ -104,7 +104,7 @@ class PlaylistImportViewModel @Inject constructor(
         val platform = _state.value.platform
         if (platform == PlatformType.SPOTIFY) {
             CookieManager.getInstance().apply {
-                setCookie("https://open.spotify.com", "sp_dc=; Max-Age=0")
+                setCookie(SPOTIFY_ORIGIN, "sp_dc=; Max-Age=0")
                 setCookie("https://accounts.spotify.com", "sp_dc=; Max-Age=0")
                 flush()
             }
@@ -121,7 +121,7 @@ class PlaylistImportViewModel @Inject constructor(
     private fun checkCurrentPlatform(platform: PlatformType) {
         when (platform) {
             PlatformType.SPOTIFY -> {
-                val cookie = CookieManager.getInstance().getCookie("https://open.spotify.com")
+                val cookie = CookieManager.getInstance().getCookie(SPOTIFY_ORIGIN)
                     ?: CookieManager.getInstance().getCookie("https://accounts.spotify.com")
                 if (!cookie.isNullOrBlank() && cookie.contains("sp_")) {
                     checkSpotifyPlaylists(cookie)
@@ -223,7 +223,7 @@ class PlaylistImportViewModel @Inject constructor(
             _state.value = _state.value.copy(isLoadingPlaylist = true, error = null)
             val platform = PlatformType.detect(url)
             val cookie = if (platform == PlatformType.SPOTIFY) {
-                CookieManager.getInstance().getCookie("https://open.spotify.com")
+                CookieManager.getInstance().getCookie(SPOTIFY_ORIGIN)
             } else null
 
             val result: Result<RawImportPlaylist> = withContext(Dispatchers.IO) {
@@ -290,6 +290,8 @@ class PlaylistImportViewModel @Inject constructor(
     }
 
     private companion object {
+        /** Cookie-jar origin for the Spotify web session; not a request URL. */
+        const val SPOTIFY_ORIGIN = "https://open.spotify.com"
         const val SIGN_IN_PROMPT = "Please sign in"
     }
 

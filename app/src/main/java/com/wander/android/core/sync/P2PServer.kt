@@ -456,7 +456,10 @@ class P2PServer @Inject constructor(
     private fun releaseWifiLock() {
         try {
             wifiLock?.release()
-        } catch (ignored: Exception) {
+        } catch (e: Exception) {
+            // A lock the framework has already reclaimed throws on release. Nothing is leaked and
+            // the field is cleared below either way, so this is noted at debug and no higher.
+            Log.d(TAG, "Wi-Fi lock was already released", e)
         }
         wifiLock = null
     }
@@ -466,7 +469,11 @@ class P2PServer @Inject constructor(
         releaseWifiLock()
         try {
             serverSocket?.close()
-        } catch (ignored: Exception) {}
+        } catch (e: Exception) {
+            // Closing a socket that is mid-accept, or already closed, throws. We are stopping; the
+            // only thing the caller could do with this is what we do here, which is carry on.
+            Log.d(TAG, "Server socket was already closed", e)
+        }
         serverSocket = null
     }
 
@@ -576,7 +583,7 @@ class P2PServer @Inject constructor(
                 return
             }
 
-            if (method == "GET" && (path.startsWith("/p2p/fetch/") || path.startsWith("/p2p/stream"))) {
+            if (method == "GET" && (path.startsWith(FETCH_PREFIX) || path.startsWith("/p2p/stream"))) {
                 // The ping above is deliberately open — it answers "something is listening" and
                 // nothing else. Everything that returns audio needs a grant.
                 if (!isAuthorised(request)) {
@@ -590,8 +597,8 @@ class P2PServer @Inject constructor(
                     return
                 }
 
-                val fetchHash = if (path.startsWith("/p2p/fetch/")) {
-                    path.removePrefix("/p2p/fetch/").substringBefore("?")
+                val fetchHash = if (path.startsWith(FETCH_PREFIX)) {
+                    path.removePrefix(FETCH_PREFIX).substringBefore("?")
                 } else null
 
                 // Addressed by content hash only. Looking a track up by *id* was a far wider
@@ -758,6 +765,12 @@ class P2PServer @Inject constructor(
 
     private companion object {
         const val TAG = "P2PServer"
+
+        /**
+         * The audio route. `AgroUploader` builds the same path from its own literal when it fetches
+         * from a peer — the two are one wire contract and have to move together.
+         */
+        const val FETCH_PREFIX = "/p2p/fetch/"
 
         /** The requester's X25519 identity public key, base64. Its presence turns encryption on. */
         const val IDENTITY_HEADER = "X-Wanda-Identity"

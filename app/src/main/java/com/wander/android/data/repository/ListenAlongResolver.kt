@@ -351,7 +351,7 @@ internal class ListenAlongResolver @Inject constructor(
             serverConfigured: Boolean
         ): Boolean =
             !hostDevice.isNullOrBlank() && !contentHash.isNullOrBlank() && serverConfigured
-        val BRACKETED = Regex("""[\(\[].*?[\)\]]""")
+        val BRACKETED = Regex("""[\(\[][^\)\]]*+[\)\]]""")
         val WHITESPACE = Regex("""\s+""")
         val AUDIO_EXTENSIONS = Regex("""\.(mp3|flac|wav|ogg|m4a|aac|opus|wma|alac)$""", RegexOption.IGNORE_CASE)
         val GENERIC_ARTISTS = setOf("unknown", "unknown artist", "<unknown>", "various", "various artists", "various artist")

@@ -176,7 +176,7 @@ class LibrarySyncRepository @Inject constructor(
             return@withContext Result.success(0)
         }
 
-        val known = trackDao.getSyncedLocalTracks().mapNotNullTo(mutableSetOf()) { it.contentHash }
+        val known = trackDao.getSyncedLocalTracks().mapNotNull { it.contentHash }.toSet()
         libraryApi.deviceHoldings().mapCatching { onServer ->
             val stale = onServer.filterNot { it in known }
             if (stale.isEmpty()) 0 else libraryApi.forgetHoldings(stale).getOrThrow()
@@ -358,7 +358,7 @@ class LibrarySyncRepository @Inject constructor(
         // as "nothing to free", which is a worse lie than the old behaviour.
         val synced = trackDao.getSyncedLocalTracks()
         val confirmed = reclaimableHere(limit = MAX_RECLAIM).getOrNull() ?: return@withContext synced
-        val safe = confirmed.mapTo(mutableSetOf()) { it.contentHash }
+        val safe = confirmed.map { it.contentHash }.toSet()
         synced.filter { it.contentHash in safe }
     }
 

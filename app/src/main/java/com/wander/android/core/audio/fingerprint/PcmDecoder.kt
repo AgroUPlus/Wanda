@@ -190,7 +190,7 @@ class PcmDecoder @Inject constructor() {
         for (frame in 0 until frames) {
             var sum = 0f
             for (channel in 0 until channels) {
-                sum += shorts.get(frame * channels + channel) / Short.MAX_VALUE.toFloat()
+                sum += shorts[frame * channels + channel] / Short.MAX_VALUE.toFloat()
             }
             into.add(sum / channels)
         }

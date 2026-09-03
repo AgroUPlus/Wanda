@@ -57,7 +57,7 @@ internal fun LazyListScope.artistPageSections(
 ) {
     if (page.topSongs.isNotEmpty()) {
         val shown = if (showAllSongs) page.topSongs else page.topSongs.take(TopSongsPreview)
-        item(key = "songs-title", contentType = "section-title") {
+        item(key = "songs-title", contentType = SECTION_TITLE) {
             ArtistSectionTitle(
                 text = "Top songs",
                 action = if (page.topSongs.size > TopSongsPreview) {
@@ -91,7 +91,7 @@ internal fun LazyListScope.artistPageSections(
     albumShelf(page.singles, "singles", expandedShelves, loadingShelf, onExpandShelf, onOpenAlbum)
 
     if (page.videos.isNotEmpty()) {
-        item(key = "videos-title", contentType = "section-title") { ArtistSectionTitle("Videos") }
+        item(key = "videos-title", contentType = SECTION_TITLE) { ArtistSectionTitle("Videos") }
         items(page.videos, key = { "video-${it.id}" }, contentType = { "track" }) { track ->
             TrackRow(
                 track = track,
@@ -104,7 +104,7 @@ internal fun LazyListScope.artistPageSections(
     }
 
     page.otherShelves.forEach { section ->
-        item(key = "other-title-${section.title}", contentType = "section-title") {
+        item(key = "other-title-${section.title}", contentType = SECTION_TITLE) {
             ArtistSectionTitle(section.title)
         }
         when (section) {
@@ -132,7 +132,7 @@ internal fun LazyListScope.artistPageSections(
     }
 
     if (page.related.isNotEmpty()) {
-        item(key = "related-title", contentType = "section-title") {
+        item(key = "related-title", contentType = SECTION_TITLE) {
             ArtistSectionTitle("Fans might also like")
         }
         item(key = "related", contentType = "artist-row") {
@@ -166,7 +166,7 @@ private fun LazyListScope.albumShelf(
     val albums = expandedShelves[section.title] ?: section.albums
     val canExpand = section.moreBrowseId != null && section.title !in expandedShelves
 
-    item(key = "$keyPrefix-title", contentType = "section-title") {
+    item(key = "$keyPrefix-title", contentType = SECTION_TITLE) {
         ArtistSectionTitle(
             text = section.title,
             action = "See all".takeIf { canExpand },
@@ -221,3 +221,6 @@ internal fun ArtistSectionTitle(
         }
     }
 }
+
+/** Recycling hint shared by every section heading in the artist list. */
+private const val SECTION_TITLE = "section-title"

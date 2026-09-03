@@ -34,9 +34,7 @@ class TextPlaylistParser @Inject constructor() {
             }
         }
 
-        if (tracks.isEmpty()) {
-            throw IllegalArgumentException("No tracks found in the provided text.")
-        }
+        require(tracks.isNotEmpty()) { "No tracks found in the provided text." }
 
         RawImportPlaylist(
             platform = PlatformType.PLAIN_TEXT,

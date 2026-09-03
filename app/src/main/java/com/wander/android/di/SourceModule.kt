@@ -16,11 +16,11 @@ import dagger.multibindings.IntoSet
  */
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class SourceModule {
+interface SourceModule {
 
-    @Binds @IntoSet abstract fun bindNavidrome(source: NavidromeSource): IMusicSource
+    @Binds @IntoSet fun bindNavidrome(source: NavidromeSource): IMusicSource
 
-    @Binds @IntoSet abstract fun bindLocal(source: LocalMusicSource): IMusicSource
+    @Binds @IntoSet fun bindLocal(source: LocalMusicSource): IMusicSource
 
-    @Binds @IntoSet abstract fun bindYtMusic(source: YTMusicSource): IMusicSource
+    @Binds @IntoSet fun bindYtMusic(source: YTMusicSource): IMusicSource
 }

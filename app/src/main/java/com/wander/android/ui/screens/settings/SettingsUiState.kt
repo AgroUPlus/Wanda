@@ -51,11 +51,24 @@ internal data class SettingsUiState(
     val shareDomain: String,
     val agroShareDomain: String,
     val appVersion: String,
+    val navidromeServer: String,
+    val agroDevicePetname: String,
+    val agroServer: String,
+    /** Whether this device can delete its own audio files at all; see `LocalFileDeleter`. */
+    val canDeleteLocalFiles: Boolean,
     val updateCheck: UpdateCheckResult?,
     val isCheckingForUpdate: Boolean,
     val autoUpdateCheckEnabled: Boolean,
     val releaseNotificationsEnabled: Boolean
-)
+) {
+    /**
+     * Whether the "free up space" row has anything to offer.
+     *
+     * Both halves matter: a device that cannot delete its own files must not be told it can, and
+     * with nothing confirmed on the server there is nothing safe to remove.
+     */
+    val canDelete: Boolean get() = canDeleteLocalFiles && syncedTracks > 0
+}
 
 @Composable
 internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiState {
@@ -133,6 +146,10 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         shareDomain = shareDomain,
         agroShareDomain = agroShareDomain,
         appVersion = viewModel.appVersion,
+        navidromeServer = viewModel.navidromeServer,
+        agroDevicePetname = viewModel.agroDevicePetname,
+        agroServer = viewModel.agroServer,
+        canDeleteLocalFiles = viewModel.canDeleteLocalFiles,
         updateCheck = updateCheck,
         isCheckingForUpdate = isCheckingForUpdate,
         autoUpdateCheckEnabled = autoUpdateCheckEnabled,

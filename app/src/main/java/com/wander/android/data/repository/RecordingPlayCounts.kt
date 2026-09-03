@@ -55,7 +55,7 @@ class RecordingPlayCounts @Inject constructor(
     suspend fun forgottenFavourites(thresholdTimestamp: Long, minPlays: Int, limit: Int):
         List<UnifiedTrack> = grouped()
         .filter { it.playCount > minPlays }
-        .filter { it.lastPlayedTimestamp == null || it.lastPlayedTimestamp!! < thresholdTimestamp }
+        .filter { track -> track.lastPlayedTimestamp.let { it == null || it < thresholdTimestamp } }
         .sortedByDescending { it.playCount }
         .take(limit)
 
