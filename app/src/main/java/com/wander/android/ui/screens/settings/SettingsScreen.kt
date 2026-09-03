@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
@@ -77,6 +78,64 @@ internal fun SettingsScreen(
     val dialogs = rememberSettingsDialogs()
     SettingsDialogs(state = state, dialogs = dialogs, viewModel = viewModel)
 
+    val devices = AgroDevicesState(
+        devices = agroDevices,
+        handoff = agroSession,
+        isResuming = agroResuming
+    )
+
+    // Remembered rather than rebuilt per recomposition: every one of these is bound to the
+    // ViewModel, the dialog flags or the launchers, none of which change while the screen is up.
+    // Rebuilding them would hand each tab a fresh set of callbacks on every state emission and
+    // undo the point of the @Immutable holder.
+    val actions = remember(viewModel, dialogs, pickLocalFolder, uriHandler) {
+        SettingsActions(
+            onNavidromeLogin = onNavidromeLogin,
+            onNavidromeSignOut = { dialogs.confirmNavidromeSignOut = true },
+            onYouTubeLogin = onYouTubeLogin,
+            onYouTubeSignOut = { dialogs.confirmYouTubeSignOut = true },
+            onRescanLocal = viewModel::rescanLocalLibrary,
+            onPickLocalFolder = pickLocalFolder.takeIf { supportsFolderScan },
+            onAgroPair = { dialogs.showAgroDialog = true },
+            onAgroUnpair = { dialogs.confirmAgroUnpair = true },
+            onSyncSettingsChange = viewModel::setAgroSyncSettings,
+            onPopularityChange = viewModel::setPopularityContribution,
+            onResumeHandoff = agroViewModel::resume,
+            onP2pSyncChange = viewModel::setP2pSync,
+            onServerArchiveChange = viewModel::setServerArchive,
+            onSyncNow = viewModel::syncLibraryNow,
+            onReviewDeletions = {
+                viewModel.buildDeleteRequest { sender ->
+                    sender?.let {
+                        deleteLauncher.launch(IntentSenderRequest.Builder(it).build())
+                    }
+                }
+            },
+            onMonetChange = viewModel::setMonetDynamic,
+            onAmoledChange = viewModel::setAmoledBlack,
+            onOfflineChange = viewModel::setOfflineMode,
+            onPreloadNextChange = viewModel::setPreloadNextEnabled,
+            onIndexOnMobileDataChange = viewModel::setIndexOnMobileDataEnabled,
+            onMeasuringPausedChange = viewModel::setMeasuringPaused,
+            onDownloadingPausedChange = viewModel::setDownloadingPaused,
+            onDownloadLiked = viewModel::downloadLikedNow,
+            onIndexFingerprints = viewModel::indexFingerprintsNow,
+            onOpenFingerprints = onOpenFingerprints,
+            onClearCache = viewModel::clearCache,
+            onOpenImport = onOpenImport,
+            onEditShareDomain = { dialogs.showShareDomainDialog = true },
+            onIncognitoChange = viewModel::setIncognito,
+            onVisibilityChange = viewModel::setAgroVisibility,
+            onProxyChange = viewModel::setAgroProxyEnabled,
+            onForgetEverything = { dialogs.confirmForgetEverything = true },
+            onReleaseNotificationsChange = viewModel::setReleaseNotificationEnabled,
+            onAutoUpdateCheckChange = viewModel::setAutoUpdateCheckEnabled,
+            onCheckForUpdate = viewModel::checkForUpdate,
+            onOpenUrl = uriHandler::openUri,
+            onOpenMergePreview = onOpenMergePreview
+        )
+    }
+
     val tabs = SettingsTab.entries
     val pagerState = rememberPagerState(pageCount = tabs::size)
     val scope = rememberCoroutineScope()
@@ -120,117 +179,13 @@ internal fun SettingsScreen(
                 modifier = Modifier.fillMaxSize()
             ) {
                 when (tabs[page]) {
-                    SettingsTab.CONNECTIONS -> connectionsTab(
-                        navidromeConnected = state.navidrome,
-                        navidromeServer = viewModel.navidromeServer,
-                        syncedNavidrome = state.syncedNavidrome,
-                        youTubeConnected = state.youTube,
-                        youTubeAccount = state.youTubeAccount,
-                        localReady = state.localReady,
-                        onNavidromeLogin = onNavidromeLogin,
-                        onNavidromeSignOut = { dialogs.confirmNavidromeSignOut = true },
-                        onYouTubeLogin = onYouTubeLogin,
-                        onYouTubeSignOut = { dialogs.confirmYouTubeSignOut = true },
-                        onRescanLocal = viewModel::rescanLocalLibrary,
-                        onPickLocalFolder = pickLocalFolder.takeIf { supportsFolderScan },
-                        localFolder = state.localScanFolder
-                    )
-
-                    SettingsTab.SYNC -> syncTab(
-                        paired = state.agroPaired,
-                        connection = state.agroConnection,
-                        devicePetname = viewModel.agroDevicePetname,
-                        server = viewModel.agroServer,
-                        syncSettings = state.agroSyncSettings,
-                        onSyncSettingsChange = viewModel::setAgroSyncSettings,
-                        onPair = { dialogs.showAgroDialog = true },
-                        onUnpair = { dialogs.confirmAgroUnpair = true },
-                        devices = agroDevices,
-                        handoff = agroSession,
-                        isResuming = agroResuming,
-                        onResume = agroViewModel::resume,
-                        p2pSyncEnabled = state.p2pSync,
-                        onP2pSyncChange = viewModel::setP2pSync,
-                        serverArchiveEnabled = state.serverArchive,
-                        popularityEnabled = state.popularityContribution,
-                        onPopularityChange = viewModel::setPopularityContribution,
-                        canArchive = state.canArchive,
-                        onServerArchiveChange = viewModel::setServerArchive,
-                        pendingUploads = state.pendingUploads,
-                        syncedTracks = state.syncedTracks,
-                        localTracks = state.localTracks,
-                        incognito = state.incognito,
-                        serverTotalTracks = state.serverTotalTracks,
-                        syncProgress = state.syncProgress,
-                        filesLandInNavidrome = state.navidrome,
-                        onSyncNow = viewModel::syncLibraryNow,
-                        onReviewDeletions = {
-                            viewModel.buildDeleteRequest { sender ->
-                                sender?.let {
-                                    deleteLauncher.launch(IntentSenderRequest.Builder(it).build())
-                                }
-                            }
-                        },
-                        canDelete = viewModel.canDeleteLocalFiles && state.syncedTracks > 0
-                    )
-
-                    SettingsTab.APPEARANCE -> appearanceTab(
-                        monet = state.monet,
-                        onMonetChange = viewModel::setMonetDynamic,
-                        amoled = state.amoled,
-                        onAmoledChange = viewModel::setAmoledBlack
-                    )
-
-                    SettingsTab.PLAYBACK -> playbackStorageTab(
-                        offline = state.offline,
-                        preloadNext = state.preloadNext,
-                        onPreloadNextChange = viewModel::setPreloadNextEnabled,
-                        onOfflineChange = viewModel::setOfflineMode,
-                        cacheBytes = state.cacheBytes,
-                        onDownloadLiked = viewModel::downloadLikedNow,
-                        onIndexFingerprints = viewModel::indexFingerprintsNow,
-                        onOpenFingerprints = onOpenFingerprints,
-                        indexOnMobileData = state.indexOnMobileData,
-                        onIndexOnMobileDataChange = viewModel::setIndexOnMobileDataEnabled,
-                        measuringPaused = state.measuringPaused,
-                        onMeasuringPausedChange = viewModel::setMeasuringPaused,
-                        downloadingPaused = state.downloadingPaused,
-                        onDownloadingPausedChange = viewModel::setDownloadingPaused,
-                        onClearCache = viewModel::clearCache
-                    )
-
-                    SettingsTab.EXTERNAL -> externalTab(
-                        onOpenImport = onOpenImport,
-                        shareDomain = state.shareDomain,
-                        agroShareDomain = state.agroShareDomain,
-                        onEditDomain = { dialogs.showShareDomainDialog = true },
-                        incognito = state.incognito
-                    )
-
-                    SettingsTab.PRIVACY -> privacyTab(
-                        incognito = state.incognito,
-                        onIncognitoChange = viewModel::setIncognito,
-                        agroPaired = state.agroPaired,
-                        visibility = state.agroVisibility,
-                        onVisibilityChange = viewModel::setAgroVisibility,
-                        proxyEnabled = state.agroProxyEnabled,
-                        onProxyChange = viewModel::setAgroProxyEnabled,
-                        onForgetEverything = { dialogs.confirmForgetEverything = true }
-                    )
-
-                    SettingsTab.ABOUT -> aboutTab(
-                        appVersion = state.appVersion,
-                        updateCheck = state.updateCheck,
-                        isChecking = state.isCheckingForUpdate,
-                        autoUpdateCheck = state.autoUpdateCheckEnabled,
-                        releaseNotifications = state.releaseNotificationsEnabled,
-                        onReleaseNotificationsChange = viewModel::setReleaseNotificationEnabled,
-                        onAutoUpdateCheckChange = viewModel::setAutoUpdateCheckEnabled,
-                        onCheckForUpdate = viewModel::checkForUpdate,
-                        onOpenRelease = { uriHandler.openUri(it) },
-                        onOpenUrl = { uriHandler.openUri(it) },
-                        onOpenMergePreview = onOpenMergePreview
-                    )
+                    SettingsTab.CONNECTIONS -> connectionsTab(state, actions)
+                    SettingsTab.SYNC -> syncTab(state, actions, devices)
+                    SettingsTab.APPEARANCE -> appearanceTab(state, actions)
+                    SettingsTab.PLAYBACK -> playbackStorageTab(state, actions)
+                    SettingsTab.EXTERNAL -> externalTab(state, actions)
+                    SettingsTab.PRIVACY -> privacyTab(state, actions)
+                    SettingsTab.ABOUT -> aboutTab(state, actions)
                 }
             }
         }

@@ -1,29 +1,14 @@
 package com.wander.android.ui.screens.settings
 
 import androidx.compose.foundation.lazy.LazyListScope
-import com.wander.android.data.sources.agro.AgroSyncedSettings
 
 /**
  * Where the music comes from: one row per backend, each saying whether it is connected and what
  * tapping it will do.
  */
 internal fun LazyListScope.connectionsTab(
-    navidromeConnected: Boolean,
-    navidromeServer: String,
-    syncedNavidrome: AgroSyncedSettings?,
-    youTubeConnected: Boolean,
-    /** Display name of the signed-in account, or empty until it is known. */
-    youTubeAccount: String,
-    localReady: Boolean,
-    onNavidromeLogin: () -> Unit,
-    onNavidromeSignOut: () -> Unit,
-    onYouTubeLogin: () -> Unit,
-    onYouTubeSignOut: () -> Unit,
-    onRescanLocal: () -> Unit,
-    /** Null when this device is too old to narrow the scan — see `supportsFolderScan`. */
-    onPickLocalFolder: (() -> Unit)?,
-    /** The chosen folder, or null for the whole device. */
-    localFolder: String?
+    state: SettingsUiState,
+    actions: SettingsActions
 ) {
     item(key = "navidrome") {
         SettingsRow(
@@ -32,27 +17,27 @@ internal fun LazyListScope.connectionsTab(
             // saying so is the difference between "sync did nothing" and "sync told this device
             // where to sign in".
             subtitle = when {
-                navidromeConnected -> "Connected to $navidromeServer"
-                syncedNavidrome?.serverUrl != null ->
-                    "Agro has ${syncedNavidrome.serverUrl} — tap to sign in"
+                state.navidrome -> "Connected to ${state.navidromeServer}"
+                state.syncedNavidrome?.serverUrl != null ->
+                    "Agro has ${state.syncedNavidrome.serverUrl} — tap to sign in"
                 else -> "Not connected"
             },
-            onClick = if (navidromeConnected) onNavidromeSignOut else onNavidromeLogin
+            onClick = if (state.navidrome) actions.onNavidromeSignOut else actions.onNavidromeLogin
         )
     }
 
     item(key = "ytmusic") {
         SettingsRow(
             title = "YouTube Music",
-            subtitle = if (youTubeConnected) {
+            subtitle = if (state.youTube) {
                 // A Google account can hold several YouTube channels and only the session knows
                 // which one is active, so naming it is the only way to be sure the right one is
                 // signed in. Falls back to the bare state while the name is still unknown.
-                youTubeAccount.takeIf { it.isNotBlank() }?.let { "Signed in as $it" } ?: "Signed in"
+                state.youTubeAccount.takeIf { it.isNotBlank() }?.let { "Signed in as $it" } ?: "Signed in"
             } else {
                 "Signed out. Search still works; your library needs sign-in."
             },
-            onClick = if (youTubeConnected) onYouTubeSignOut else onYouTubeLogin
+            onClick = if (state.youTube) actions.onYouTubeSignOut else actions.onYouTubeLogin
         )
     }
 
@@ -62,17 +47,17 @@ internal fun LazyListScope.connectionsTab(
         SettingsRow(
             title = "Music on this device",
             subtitle = when {
-                !localReady -> "Waiting for permission to read audio files"
-                localFolder != null -> "$localFolder — tap to rescan, hold to change folder"
-                onPickLocalFolder != null ->
+                !state.localReady -> "Waiting for permission to read audio files"
+                state.localScanFolder != null -> "${state.localScanFolder} — tap to rescan, hold to change folder"
+                actions.onPickLocalFolder != null ->
                     "Whole device — tap to rescan, hold to pick a folder"
                 else -> "Tap to rescan"
             },
-            onClick = onRescanLocal,
+            onClick = actions.onRescanLocal,
             // A phone's audio is not all music: ringtones, podcast downloads and voice memos all
             // satisfy MediaStore's IS_MUSIC. Narrowing the scan is set once and forgotten, so it
             // sits behind a long press rather than taking a row from the action used every time.
-            onLongClick = onPickLocalFolder
+            onLongClick = actions.onPickLocalFolder
         )
     }
 }
