@@ -57,7 +57,7 @@ import com.wander.android.core.database.converter.SourceTypeConverter
         RecordingFingerprintEntity::class,
         RecordingSubHashEntity::class
     ],
-    version = 23,
+    version = 24,
     exportSchema = true
 )
 @TypeConverters(SourceTypeConverter::class)
