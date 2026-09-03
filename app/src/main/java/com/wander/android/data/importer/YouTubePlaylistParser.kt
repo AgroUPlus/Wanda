@@ -32,9 +32,7 @@ class YouTubePlaylistParser @Inject constructor(
         val parsedTracks = root.responsiveListItems()
             .mapNotNull(::parseResponsiveListItem)
 
-        if (parsedTracks.isEmpty()) {
-            throw IllegalStateException("No tracks found in this YouTube playlist.")
-        }
+        check(parsedTracks.isNotEmpty()) { "No tracks found in this YouTube playlist." }
 
         val rawTracks = parsedTracks.map { track ->
             RawImportTrack(

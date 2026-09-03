@@ -1,5 +1,6 @@
 package com.wander.android.data.importer
 
+import android.util.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -52,7 +53,12 @@ class AppleMusicPlaylistParser @Inject constructor(
 
                     tracks.add(RawImportTrack(title = name, artist = artistName))
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                // One malformed JSON-LD block is not a failed import. Apple ships several of these
+                // scripts per page and only some carry a tracklist; the regex fallback below picks
+                // the page up if none of them parsed.
+                Log.d(TAG, "Skipping unparseable JSON-LD block", e)
+            }
         }
 
         // 2. Fallback: Parse music:song or serialized structure if JSON-LD was absent
@@ -67,8 +73,8 @@ class AppleMusicPlaylistParser @Inject constructor(
             }
         }
 
-        if (tracks.isEmpty()) {
-            throw IllegalStateException("Could not extract tracks from Apple Music page. Please ensure the playlist is public.")
+        check(tracks.isNotEmpty()) {
+            "Could not extract tracks from Apple Music page. Please ensure the playlist is public."
         }
 
         RawImportPlaylist(
@@ -77,5 +83,9 @@ class AppleMusicPlaylistParser @Inject constructor(
             coverUrl = ogImage,
             tracks = tracks
         )
+    }
+
+    private companion object {
+        const val TAG = "AppleMusicParser"
     }
 }

@@ -30,14 +30,12 @@ class SpotifyPlaylistParser @Inject constructor(
 
     suspend fun fetchUserPlaylists(cookie: String? = null): Result<List<RawUserPlaylistSummary>> = runCatching {
         val session = fetchWebSession(cookie)
-        if (session.isAnonymous) {
-            throw IllegalStateException("Please sign in to Spotify in the browser above.")
-        }
+        check(!session.isAnonymous) { "Please sign in to Spotify in the browser above." }
         val accessToken = session.accessToken
 
         val playlistsResponse: String = httpClient.get("https://api.spotify.com/v1/me/playlists?limit=50") {
             header("Authorization", "Bearer $accessToken")
-            header("User-Agent", IMPORT_WEB_USER_AGENT)
+            header(HEADER_USER_AGENT, IMPORT_WEB_USER_AGENT)
             if (!cookie.isNullOrBlank()) {
                 header("Cookie", cookie)
             }
@@ -76,7 +74,7 @@ class SpotifyPlaylistParser @Inject constructor(
         // Step 2: Fetch playlist details
         val playlistResponse: String = httpClient.get("https://api.spotify.com/v1/playlists/$playlistId") {
             header("Authorization", "Bearer $accessToken")
-            header("User-Agent", IMPORT_WEB_USER_AGENT)
+            header(HEADER_USER_AGENT, IMPORT_WEB_USER_AGENT)
             if (!cookie.isNullOrBlank()) {
                 header("Cookie", cookie)
             }
@@ -111,9 +109,7 @@ class SpotifyPlaylistParser @Inject constructor(
             )
         }
 
-        if (tracks.isEmpty()) {
-            throw IllegalStateException("No tracks could be found in this Spotify playlist.")
-        }
+        check(tracks.isNotEmpty()) { "No tracks could be found in this Spotify playlist." }
 
         RawImportPlaylist(
             platform = PlatformType.SPOTIFY,
@@ -132,7 +128,7 @@ class SpotifyPlaylistParser @Inject constructor(
      */
     private suspend fun fetchWebSession(cookie: String?): WebSession {
         val response = httpClient.get(TOKEN_URL) {
-            header("User-Agent", IMPORT_WEB_USER_AGENT)
+            header(HEADER_USER_AGENT, IMPORT_WEB_USER_AGENT)
             header("Accept", "application/json")
             header("Referer", "https://open.spotify.com/")
             if (!cookie.isNullOrBlank()) {
@@ -140,8 +136,8 @@ class SpotifyPlaylistParser @Inject constructor(
             }
         }
         val body = response.bodyAsText()
-        if (!response.status.isSuccess()) {
-            throw IllegalStateException("Spotify refused the token request (HTTP ${response.status.value}).")
+        check(response.status.isSuccess()) {
+            "Spotify refused the token request (HTTP ${response.status.value})."
         }
 
         val tokenJson = runCatching { json.parseToJsonElement(body).jsonObject }.getOrNull()
@@ -155,6 +151,7 @@ class SpotifyPlaylistParser @Inject constructor(
     }
 
     private companion object {
+        const val HEADER_USER_AGENT = "User-Agent"
         const val TOKEN_URL = "https://open.spotify.com/api/token?reason=init&productType=web_player"
     }
 }

@@ -61,9 +61,7 @@ class DeezerPlaylistParser @Inject constructor(
             )
         }
 
-        if (tracks.isEmpty()) {
-            throw IllegalStateException("No tracks found in this Deezer playlist.")
-        }
+        check(tracks.isNotEmpty()) { "No tracks found in this Deezer playlist." }
 
         RawImportPlaylist(
             platform = PlatformType.DEEZER,
