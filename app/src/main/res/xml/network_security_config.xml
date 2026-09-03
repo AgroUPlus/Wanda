@@ -1,19 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  HTTPS everywhere by default. Cleartext is opted into per host, never globally: a blanket
-  cleartextTrafficPermitted="true" would let any request in the app fall back to plain HTTP,
-  including the ones that carry credentials.
+  Cleartext is permitted globally, and that is a deliberate, uncomfortable choice. It is written
+  down here rather than left to be discovered, because the previous version of this comment claimed
+  the opposite of what the file does.
 
-  Android resolves this policy from static XML with no runtime API, so every plain-HTTP host has
-  to be named at build time. Only development loopbacks are listed here, and neither leaves the
-  device: `localhost`/`127.0.0.1` is the `adb reverse tcp:8700 tcp:8700` flow, and `10.0.2.2` is
-  the emulator's route to its host machine.
+  Why it cannot be narrowed: peer-to-peer sync fetches audio straight off another phone on the same
+  LAN, over plain HTTP to whatever address DHCP handed that phone (see `OffGridTransport`,
+  `AgroUploader`, `ListenAlongResolver`). Android resolves this policy from static XML at build
+  time and supports neither CIDR ranges nor wildcards, so there is no way to name "the local
+  network" — only literal hosts, which are not knowable until a peer appears. A `base-config` of
+  false turns P2P off entirely.
 
-  A self-hosted Navidrome or Agro on the LAN needs HTTPS. Put it behind a reverse proxy with a
-  real certificate — that is the supported setup and needs no exception here at all. If you must
-  reach one over plain HTTP, add its literal address to the block below in your own build; do not
-  commit it, because a cleartext exception baked into a released APK applies to whatever happens
-  to sit at that address on *someone else's* network.
+  What carries the security instead of TLS: the P2P audio payload is already end-to-end encrypted
+  before it reaches the socket — ChaCha20-Poly1305 under a key sealed to the receiving peer's
+  X25519 identity, so the bytes on the wire are readable by that peer and by nothing else on the
+  network (see `P2PServer`'s sealed-stream path and `AudioStreamCipher`). Transport TLS on top of
+  that would encrypt already-encrypted bytes; what it would add is protection for the small
+  metadata routes (ping, pair, now-playing, unpair), and it would require a self-signed X.509
+  identity per device plus certificate pinning at every call site, since peers are bare IPs with no
+  hostname to verify.
+
+  What this does NOT license: anything carrying a credential must still be HTTPS. A self-hosted
+  Navidrome or Agro belongs behind a reverse proxy with a real certificate — the permissive base
+  config here is not an invitation to point one at `http://`. Tokens, passwords and session cookies
+  never travel over plain HTTP in this app, and that is a property of the call sites, not of this
+  file.
+
+  The domain-config below is now redundant with a permissive base and is kept only as
+  documentation of the development loopbacks: `localhost`/`127.0.0.1` is the
+  `adb reverse tcp:8700 tcp:8700` flow, and `10.0.2.2` is the emulator's route to its host.
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="true">
