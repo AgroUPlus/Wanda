@@ -24,3 +24,12 @@ local.properties
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# WSL debug keystore, copied so Windows builds match the APK already on the test device
+/debug.keystore
+
+# Local reports and backups
+metrics.json
+report.json
+sonarcloud_report.md
+*.wsl.bak

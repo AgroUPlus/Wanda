@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A diagonal band across the bottom-left corner of the launcher icon's foreground, so a debug
+  build is recognisable at a glance without reading the label. Drawn on the 108x108 adaptive-icon
+  canvas; the band is well inside the 66x66 safe zone so masks of any shape keep it.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:name="ribbon"
+        android:rotation="-45"
+        android:pivotX="32"
+        android:pivotY="76">
+        <path
+            android:fillColor="#FF6D00"
+            android:pathData="M-24,68 L92,68 L92,84 L-24,84 Z" />
+        <path
+            android:fillColor="#1A000000"
+            android:pathData="M-24,82 L92,82 L92,84 L-24,84 Z" />
+    </group>
+</vector>
