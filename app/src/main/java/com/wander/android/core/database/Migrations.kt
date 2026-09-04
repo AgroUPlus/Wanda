@@ -558,8 +558,67 @@ val MIGRATION_23_24 = object : Migration(23, 24) {
     }
 }
 
+/**
+ * Adds `track_embeddings`: one neural audio-fingerprint BLOB per track.
+ *
+ * The desktop indexer (`core/db_sync.py`, `EMBEDDINGS_DDL`) creates the identical table with
+ * `CREATE TABLE IF NOT EXISTS` when it runs against a database whose app predates this, so a
+ * pulled database can already carry the table and its rows before this migration runs — the
+ * `IF NOT EXISTS` here makes that harmless. Keep the two DDLs compatible.
+ */
+val MIGRATION_24_25 = object : Migration(24, 25) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `track_embeddings` (
+                `trackId` TEXT NOT NULL,
+                `vector` BLOB NOT NULL,
+                `dim` INTEGER NOT NULL,
+                `model` TEXT NOT NULL,
+                `version` INTEGER NOT NULL,
+                `computedAt` INTEGER NOT NULL,
+                PRIMARY KEY(`trackId`)
+            )
+            """.trimIndent()
+        )
+
+        // Repair a `fingerprints` table left WITHOUT ROWID by MIGRATION_23_24 (or the desktop
+        // indexer's --shrink). On a WITHOUT ROWID table SQLite silently widens
+        // `index_fingerprints_trackId` to (trackId, hash, anchorFrame) — the primary-key columns
+        // are appended — and Room's schema check then rejects it against the plain (trackId)
+        // index it expects, crashing every launch. Rebuild it as an ordinary table. Cheap unless
+        // it is actually WITHOUT ROWID, and by v25 the embeddings are taking over the recognition
+        // path anyway.
+        val withoutRowid = db.query(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='fingerprints'"
+        ).use { it.moveToFirst() && it.getString(0).uppercase().contains("WITHOUT ROWID") }
+        if (withoutRowid) {
+            db.execSQL(
+                """
+                CREATE TABLE `fingerprints_v25` (
+                    `hash` INTEGER NOT NULL,
+                    `trackId` TEXT NOT NULL,
+                    `anchorFrame` INTEGER NOT NULL,
+                    PRIMARY KEY(`hash`, `trackId`, `anchorFrame`)
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                "INSERT OR IGNORE INTO `fingerprints_v25` (hash, trackId, anchorFrame) " +
+                    "SELECT hash, trackId, anchorFrame FROM `fingerprints`"
+            )
+            db.execSQL("DROP TABLE `fingerprints`")
+            db.execSQL("ALTER TABLE `fingerprints_v25` RENAME TO `fingerprints`")
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_fingerprints_trackId` " +
+                    "ON `fingerprints` (`trackId`)"
+            )
+        }
+    }
+}
+
 /** Every migration, in order. Room applies whichever ones a given database still needs. */
 val WANDER_MIGRATIONS: Array<Migration> = arrayOf(
     MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
-    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24
+    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25
 )
