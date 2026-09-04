@@ -445,7 +445,7 @@ class MusicRepository @Inject constructor(
      * Without this a like wrote to Room correctly but the icon never changed.
      */
     fun getLikedTrackIdsFlow(): Flow<Set<String>> =
-        trackDao.getLikedTrackIdsFlow().map { it.toSet() }
+        trackDao.getLikedTrackIdsFlow().map { it.toSet() }.flowOn(Dispatchers.Default)
 
     /**
      * [track] may be a search or radio result that Room has never seen, and the UPDATE behind
