@@ -91,6 +91,10 @@ interface TrackDao {
     @Query("SELECT * FROM tracks WHERE id = :id LIMIT 1")
     suspend fun getTrackById(id: String): TrackEntity?
 
+    /** Candidate track ids within duration tolerance for duplicate matching, excluding target track. */
+    @Query("SELECT id FROM tracks WHERE id != :excludingId AND durationMs BETWEEN :minDurationMs AND :maxDurationMs")
+    suspend fun getCandidateIdsByDuration(excludingId: String, minDurationMs: Long, maxDurationMs: Long): List<String>
+
     @Query("SELECT * FROM tracks WHERE albumId = :albumId ORDER BY discNumber ASC, trackNumber ASC")
     suspend fun getTracksInAlbum(albumId: String): List<TrackEntity>
 
