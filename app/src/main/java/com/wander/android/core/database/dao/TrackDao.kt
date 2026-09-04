@@ -301,6 +301,18 @@ interface TrackDao {
     suspend fun getFingerprintableTracks(): List<TrackEntity>
 
     /**
+     * The same set as a flow, for the Fingerprints screen.
+     *
+     * That screen used `getAllTracksFlow`, which is `isLibrary = 1` — the Library screen's rule.
+     * So it reported on a fraction of what the indexer actually measures: a library of 1,368
+     * fingerprintable tracks showed as 200, with every YouTube Music track missing entirely, and
+     * the question the screen exists to answer ("why can't Wanda hear this song?") could not be
+     * asked about the songs most likely to be missing.
+     */
+    @Query("SELECT * FROM tracks WHERE isLive = 0")
+    fun getFingerprintableTracksFlow(): Flow<List<TrackEntity>>
+
+    /**
      * Every row on this device sharing a title, for the caller to judge.
      *
      * Deliberately *candidates*, not an answer. This used to be a single `LIMIT 1` row, which made
