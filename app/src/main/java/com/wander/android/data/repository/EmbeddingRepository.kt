@@ -6,6 +6,7 @@ import com.wander.android.core.audio.fingerprint.AudioFormat
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.dao.TrackEmbeddingDao
 import com.wander.android.core.database.entity.TrackEmbeddingEntity
+import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
