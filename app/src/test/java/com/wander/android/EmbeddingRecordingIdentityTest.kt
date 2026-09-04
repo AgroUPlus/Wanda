@@ -75,39 +75,74 @@ class EmbeddingRecordingIdentityTest {
         override suspend fun clear() {}
     }
 
+    /**
+     * A stub, not a fake: every method answers empty. The test drives
+     * [RecordingIdentityRepository] through the embedding path, which reads none of these — the
+     * DAO is here only because the constructor requires one.
+     *
+     * Regenerated from the interface. Kotlin forbids default values on an override, so the
+     * defaults `TrackDao` declares are dropped here.
+     */
     private class FakeTrackDao : com.wander.android.core.database.dao.TrackDao {
-        override fun getAllTracksFlow() = kotlinx.coroutines.flow.emptyFlow<List<com.wander.android.core.database.entity.TrackEntity>>()
+        override fun getAllTracksFlow(): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
         override fun pagedTracks(): androidx.paging.PagingSource<Int, com.wander.android.core.database.entity.TrackEntity> = throw NotImplementedError()
         override fun pagedTracksBySource(source: com.wander.android.data.model.SourceType): androidx.paging.PagingSource<Int, com.wander.android.core.database.entity.TrackEntity> = throw NotImplementedError()
-        override suspend fun libraryTrackIds() = emptyList<String>()
-        override suspend fun libraryTrackIdsBySource(source: com.wander.android.data.model.SourceType) = emptyList<String>()
-        override suspend fun getAllTracksOnce() = emptyList<com.wander.android.core.database.entity.TrackEntity>()
-        override fun getTracksBySourceFlow(source: com.wander.android.data.model.SourceType) = kotlinx.coroutines.flow.emptyFlow<List<com.wander.android.core.database.entity.TrackEntity>>()
-        override fun getLikedTracksFlow() = kotlinx.coroutines.flow.emptyFlow<List<com.wander.android.core.database.entity.TrackEntity>>()
-        override fun getLikedTrackIdsFlow() = kotlinx.coroutines.flow.emptyFlow<List<String>>()
-        override fun getDownloadedTracksFlow() = kotlinx.coroutines.flow.emptyFlow<List<com.wander.android.core.database.entity.TrackEntity>>()
-        override suspend fun getOfflineTracksOnce() = emptyList<com.wander.android.core.database.entity.TrackEntity>()
-        override fun getTracksByAlbumFlow(albumId: String) = kotlinx.coroutines.flow.emptyFlow<List<com.wander.android.core.database.entity.TrackEntity>>()
+        override suspend fun libraryTrackIds(): List<String> = emptyList()
+        override suspend fun libraryTrackIdsBySource(source: com.wander.android.data.model.SourceType): List<String> = emptyList()
+        override suspend fun getAllTracksOnce(): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override fun getTracksBySourceFlow(source: com.wander.android.data.model.SourceType): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
+        override fun getLikedTracksFlow(): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
+        override fun getLikedTrackIdsFlow(): kotlinx.coroutines.flow.Flow<List<String>> = kotlinx.coroutines.flow.emptyFlow()
+        override fun getDownloadedTracksFlow(): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
+        override suspend fun getOfflineTracksOnce(): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override fun getTracksByAlbumFlow(albumId: String): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
         override suspend fun getTrackById(id: String): com.wander.android.core.database.entity.TrackEntity? = null
-        override suspend fun getCandidateIdsByDuration(excludingId: String, minDurationMs: Long, maxDurationMs: Long) = emptyList<String>()
-        override suspend fun getTracksInAlbum(albumId: String) = emptyList<com.wander.android.core.database.entity.TrackEntity>()
-        override suspend fun getTracksInSource(source: com.wander.android.data.model.SourceType) = emptyList<com.wander.android.core.database.entity.TrackEntity>()
-        override fun getTracksByArtistFlow(artist: String) = kotlinx.coroutines.flow.emptyFlow<List<com.wander.android.core.database.entity.TrackEntity>>()
-        override suspend fun searchTracksOnce(query: String) = emptyList<com.wander.android.core.database.entity.TrackEntity>()
-        override fun getTracksBySourceAndTitleFlow(source: com.wander.android.data.model.SourceType, query: String) = kotlinx.coroutines.flow.emptyFlow<List<com.wander.android.core.database.entity.TrackEntity>>()
-        override suspend fun insert(track: com.wander.android.core.database.entity.TrackEntity) = 0L
-        override suspend fun insertAll(tracks: List<com.wander.android.core.database.entity.TrackEntity>) = emptyList<Long>()
-        override suspend fun upsert(track: com.wander.android.core.database.entity.TrackEntity) = 0L
-        override suspend fun update(track: com.wander.android.core.database.entity.TrackEntity) {}
-        override suspend fun updateSourceMetadata(tracks: List<com.wander.android.core.database.entity.TrackSourceFields>) {}
-        override suspend fun updateLikeStatus(trackId: String, isLiked: Boolean) {}
-        override suspend fun markDownloaded(trackId: String, localFilePath: String) {}
-        override suspend fun removeDownloaded(trackId: String) {}
-        override suspend fun recordPlay(trackId: String, timestamp: Long) {}
-        override suspend fun deleteById(trackId: String) {}
-        override suspend fun deleteTracks(trackIds: List<String>) {}
-        override suspend fun clearNonLibraryTracks() {}
-        override suspend fun clear() {}
-        override suspend fun pruneOneShotTracks() {}
+        override suspend fun getCandidateIdsByDuration(excludingId: String, minDurationMs: Long, maxDurationMs: Long): List<String> = emptyList()
+        override suspend fun getTracksInAlbum(albumId: String): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun getTracksInSource(source: com.wander.android.data.model.SourceType): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override fun getTracksByArtistFlow(artist: String): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
+        override suspend fun getTracksByArtistOnce(artist: String): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun getLikedTracksOnce(): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun searchTracks(query: String, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun searchTracksInSource(source: com.wander.android.data.model.SourceType, query: String, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun getRandomTracksInSource(source: com.wander.android.data.model.SourceType, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun getRecentlyAddedInSource(source: com.wander.android.data.model.SourceType, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun getRecentlyAddedTracks(limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun markLive(trackId: String) {}
+        override fun observeRecentlyAddedAlbumIds(limit: Int): kotlinx.coroutines.flow.Flow<List<String>> = kotlinx.coroutines.flow.emptyFlow()
+        override suspend fun getRecentlyPlayedTracks(limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun getLikedTracksList(limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun getTopPlayedTracks(limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun getPlayedTracksOnce(): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun getForgottenFavorites(thresholdTimestamp: Long, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun getNeverPlayedTracks(limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun getLikedNotDownloaded(limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun deleteOneShotTrackRows(): Int = 0
+        override suspend fun insertNewTracks(tracks: List<com.wander.android.core.database.entity.TrackEntity>): List<Long> = emptyList()
+        override suspend fun updateSourceFields(fields: List<com.wander.android.core.database.entity.TrackSourceFields>) {}
+        override suspend fun markAsLibrary(trackIds: List<String>) {}
+        override suspend fun setLiked(trackId: String, isLiked: Boolean) {}
+        override suspend fun setDisplayMetadata(trackId: String, title: String, artist: String, album: String?) {}
+        override suspend fun getFingerprintableTracks(): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override fun getFingerprintableTracksFlow(): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
+        override suspend fun findLocalOrDownloadedCandidates(title: String, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun findNavidromeCandidates(title: String, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun setDownloaded(trackId: String, isDownloaded: Boolean, localPath: String?) {}
+        override suspend fun incrementPlayCount(trackId: String, timestamp: Long) {}
+        override suspend fun getUnhashedLocalTracks(limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun getUnhashedDownloads(limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun fillMissingDuration(trackId: String, durationMs: Long) {}
+        override suspend fun setContentHash(trackId: String, hash: String) {}
+        override suspend fun getUnsyncedLocalTracks(limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun markSynced(trackId: String, timestamp: Long) {}
+        override suspend fun getSyncedLocalTracks(): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override fun countPendingUploadFlow(): kotlinx.coroutines.flow.Flow<Int> = kotlinx.coroutines.flow.emptyFlow()
+        override fun countSyncedFlow(): kotlinx.coroutines.flow.Flow<Int> = kotlinx.coroutines.flow.emptyFlow()
+        override fun countLocalFlow(): kotlinx.coroutines.flow.Flow<Int> = kotlinx.coroutines.flow.emptyFlow()
+        override suspend fun localContentHashesNotIn(keepIds: List<String>): List<String> = emptyList()
+        override suspend fun deleteLocalTracksNotIn(keepIds: List<String>): Int = 0
+        override suspend fun clearBySource(source: com.wander.android.data.model.SourceType) {}
+        override suspend fun getTracksByIds(ids: List<String>): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun findByContentHash(hash: String): com.wander.android.core.database.entity.TrackEntity? = null
     }
 }
