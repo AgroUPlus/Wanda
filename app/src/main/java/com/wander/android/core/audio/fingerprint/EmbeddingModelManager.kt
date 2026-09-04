@@ -83,54 +83,65 @@ class EmbeddingModelManager @Inject constructor(
         if (isVerifiedPresent()) { _state.value = State.Ready; return@withContext }
 
         _state.value = State.Downloading(0f)
-        marker.delete()
+        marker.safeDelete()
         val tmp = File(modelFile.parentFile, "$FILE_NAME.part")
         try {
             httpClient.newCall(Request.Builder().url(MODEL_URL).build()).execute().use { r ->
                 val body = r.body ?: error("empty response")
                 if (!r.isSuccessful) error("HTTP ${r.code}")
-                val total = body.contentLength().takeIf { it > 0 } ?: SIZE_BYTES
-                val digest = MessageDigest.getInstance("SHA-256")
-                var read = 0L
-                body.byteStream().use { input ->
-                    FileOutputStream(tmp).use { out ->
-                        val buf = ByteArray(1 shl 16)
-                        while (true) {
-                            val n = input.read(buf)
-                            if (n == -1) break
-                            out.write(buf, 0, n)
-                            digest.update(buf, 0, n)
-                            read += n
-                            _state.value =
-                                State.Downloading((read.toFloat() / total).coerceIn(0f, 1f))
-                        }
-                    }
+                streamToFileWithDigest(body, tmp) { fraction ->
+                    _state.value = State.Downloading(fraction)
                 }
-                val hex = digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
-                if (hex != SHA256) error("checksum mismatch (got $hex)")
             }
 
-            if (!tmp.renameTo(modelFile)) {
-                tmp.copyTo(modelFile, overwrite = true); tmp.delete()
-            }
-
-            // The "works now, without a song" check: TFLite loads the file and produces a
-            // 128-value embedding for one second of silence.
-            val problem = selfCheck()
-            if (problem != null) {
-                modelFile.delete()
-                _state.value = State.Failed(problem)
-                return@withContext
-            }
-
-            marker.writeText(SHA256)
-            _state.value = State.Ready
-            Log.i(TAG, "model ready (${modelFile.length()} bytes, self-check passed)")
+            _state.value = installAndVerify(tmp)
         } catch (e: Exception) {
-            tmp.delete()
+            tmp.safeDelete()
             Log.w(TAG, "model download failed", e)
             _state.value = State.Failed(e.message ?: "download failed")
         }
+    }
+
+    private fun streamToFileWithDigest(
+        body: okhttp3.ResponseBody,
+        destination: File,
+        onProgress: (Float) -> Unit
+    ) {
+        val total = body.contentLength().takeIf { it > 0 } ?: SIZE_BYTES
+        val digest = MessageDigest.getInstance("SHA-256")
+        var read = 0L
+        body.byteStream().use { input ->
+            FileOutputStream(destination).use { out ->
+                val buf = ByteArray(1 shl 16)
+                while (true) {
+                    val n = input.read(buf)
+                    if (n == -1) break
+                    out.write(buf, 0, n)
+                    digest.update(buf, 0, n)
+                    read += n
+                    onProgress((read.toFloat() / total).coerceIn(0f, 1f))
+                }
+            }
+        }
+        val hex = digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
+        if (hex != SHA256) error("checksum mismatch (got $hex)")
+    }
+
+    private fun installAndVerify(tmp: File): State {
+        if (!tmp.renameTo(modelFile)) {
+            tmp.copyTo(modelFile, overwrite = true)
+            tmp.safeDelete()
+        }
+
+        val problem = selfCheck()
+        if (problem != null) {
+            modelFile.safeDelete()
+            return State.Failed(problem)
+        }
+
+        marker.writeText(SHA256)
+        Log.i(TAG, "model ready (${modelFile.length()} bytes, self-check passed)")
+        return State.Ready
     }
 
     /** Re-runs the load + inference check against the file already on disk. For a Settings button. */
@@ -165,9 +176,16 @@ class EmbeddingModelManager @Inject constructor(
 
     /** Removes the model. For a Settings "free up space" action. */
     fun delete() {
-        modelFile.delete()
-        marker.delete()
+        modelFile.safeDelete()
+        marker.safeDelete()
         _state.value = State.Absent
+    }
+
+    private fun File.safeDelete(): Boolean {
+        if (!exists()) return true
+        val deleted = delete()
+        if (!deleted) Log.w(TAG, "failed to delete ${this.absolutePath}")
+        return deleted
     }
 
     companion object {

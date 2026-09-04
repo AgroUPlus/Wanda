@@ -141,37 +141,7 @@ class RecognitionRepository @Inject constructor(
         )
     }
 
-    /**
-     * Aligns a clip's landmarks against the index.
-     *
-     * The count of shared hashes is not the answer on its own — a busy track shares scattered
-     * hashes with everything. What identifies a recording is that its matches share *one* time
-     * offset: if the clip really is 40 seconds into a song, then every matching landmark sits the
-     * same distance from where it sits in the file. So the votes are binned by that offset and the
-     * winner is the fullest bin, not the busiest track.
-     */
-    private suspend fun identify(samples: FloatArray): Recognition? {
-        val scored = score(samples) ?: return null
-        if (!scored.confidence.accepted) {
-            Log.i(
-                TAG,
-                "Refused: a lead of ${scored.confidence.bestExcess} over the noise does not clear " +
-                    "${MatchConfidence.MIN_EXCESS} and ${MatchConfidence.MIN_MARGIN}x " +
-                    "the runner-up's ${scored.confidence.runnerUpExcess}"
-            )
-            return null
-        }
 
-        val winner = scored.ranked.first()
-        val entity = withContext(Dispatchers.IO) { trackDao.getTrackById(winner.trackId) }
-            ?: return null
-        return Recognition(
-            track = entity.toUnifiedTrack(),
-            positionSeconds = (winner.offsetFrames / AudioFormat.FRAMES_PER_SECOND).toInt()
-                .coerceAtLeast(0),
-            score = winner.votes
-        )
-    }
 
     /**
      * Every candidate the clip aligns with, best first, and how confident that ordering is.
