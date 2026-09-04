@@ -91,4 +91,27 @@ class PresenceUnsealingTest {
         assertEquals("In Rainbows", ordinary.trackTitle)
         assertFalse(ordinary.isLocked)
     }
+
+    @Test
+    fun theContentHashTravelsInsideTheEnvelope() {
+        // Suppressed from the plaintext columns, so this is the only place a listener can get it.
+        // Without it, following along can name the track but never find the file.
+        val opened = placeholder().withSealedMetadata(
+            """{"trackUri":"local:1","trackTitle":"Kid A","artistName":"Radiohead",""" +
+                """"contentHash":"abc123"}"""
+        )
+
+        assertEquals("abc123", opened.contentHash)
+        assertFalse(opened.isLocked)
+    }
+
+    @Test
+    fun anEnvelopeWithoutAHashDoesNotEraseOne() {
+        val withHash = placeholder().copy(contentHash = "already-known")
+        val opened = withHash.withSealedMetadata(
+            """{"trackTitle":"Kid A","artistName":"Radiohead"}"""
+        )
+
+        assertEquals("already-known", opened.contentHash)
+    }
 }

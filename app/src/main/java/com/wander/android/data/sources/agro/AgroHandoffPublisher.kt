@@ -163,7 +163,8 @@ internal class AgroHandoffPublisher @Inject constructor(
             title = track.title,
             artist = track.artist,
             album = track.album,
-            artworkUrl = track.artworkUrl
+            artworkUrl = track.artworkUrl,
+            contentHash = sharedTrackHash.of(track.id)
         ).toString(Charsets.UTF_8)
         return runCatching { presenceSealer.sealFor(friends, metadata) }.getOrElse { emptyList() }
     }
