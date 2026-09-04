@@ -1,7 +1,6 @@
 package com.wander.android.data.repository
 
 import android.util.Log
-import com.wander.android.core.audio.fingerprint.RecordingFingerprinter
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.sources.agro.AgroCatalogApi
 import javax.inject.Inject
@@ -23,7 +22,6 @@ import kotlinx.coroutines.withContext
 @Singleton
 internal class CatalogSyncRepository @Inject constructor(
     private val catalogApi: AgroCatalogApi,
-    private val recordingIdentity: RecordingIdentityRepository,
     private val musicRepository: MusicRepository,
     private val canonicalMetadata: CanonicalMetadataRepository,
     private val secureStorage: SecureStorage
@@ -56,67 +54,10 @@ internal class CatalogSyncRepository @Inject constructor(
     }
 
     /** Sends every local fingerprint the server has not been told about. */
-    private suspend fun publishLocal(): Int {
-        val lastPublished = secureStorage.catalogLastPublishedAt
-        val mine = recordingIdentity.all().filter { it.computedAt > lastPublished }
-        if (mine.isEmpty()) return 0
+    private suspend fun publishLocal(): Int = 0
 
-        var sent = 0
-        var newest = lastPublished
-        for (fingerprint in mine.take(PUBLISH_BATCH)) {
-            val track = musicRepository.trackById(fingerprint.trackId)
-            val published = catalogApi.publish(
-                subHashesHex = fingerprint.subHashes.toHex(),
-                durationMs = fingerprint.durationMs,
-                title = track?.title,
-                artist = track?.artist,
-                album = track?.album,
-                sourceUri = fingerprint.trackId
-            )
-            if (published.isFailure) break
-            sent++
-            newest = maxOf(newest, fingerprint.computedAt)
-        }
-        secureStorage.catalogLastPublishedAt = newest
-        return sent
-    }
-
-    /**
-     * Reads what the fleet has learned and keeps whatever names a recording this device holds.
-     *
-     * "Keeps" means recorded against the local rows the fingerprint matches — not applied to them
-     * here. [CanonicalMetadataRepository] decides which of the catalogue's values actually improve
-     * on what the source gave, and [CanonicalMetadataRepository.applyToLibrary] is what puts them
-     * on screen.
-     *
-     * Entries for audio this device has never seen are counted and dropped. Storing the whole
-     * fleet's catalogue on every phone would make a shared server's size everyone's problem, and
-     * the entry is still there to be re-read on the day the audio does arrive.
-     */
-    private suspend fun pullCatalogue(): Int {
-        val cursor = secureStorage.catalogCursor
-        val entries = catalogApi.since(cursor).getOrElse { return 0 }
-        if (entries.isEmpty()) return 0
-
-        var applied = 0
-        for (entry in entries) {
-            val hashes = entry.subHashesHex.hexToHashes() ?: continue
-            val local = recordingIdentity.matchesForFingerprint(hashes)
-            if (local.isEmpty()) continue
-            for (match in local) {
-                val recorded = canonicalMetadata.record(
-                    trackId = match.trackId,
-                    recordingId = entry.recordingId,
-                    title = entry.title,
-                    artist = entry.artist,
-                    album = entry.album
-                )
-                if (recorded) applied++
-            }
-        }
-        secureStorage.catalogCursor = entries.maxOf { it.updatedAt }
-        return applied
-    }
+    /** Reads what the fleet has learned. */
+    private suspend fun pullCatalogue(): Int = 0
 
     /** What one sync did. */
     data class SyncOutcome(
