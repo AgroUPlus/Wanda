@@ -140,6 +140,23 @@ object AgroVault {
         return out
     }
 
+    /**
+     * Overwrites a derived subkey once it has been used.
+     *
+     * Only worth doing for keys this code owns the lifetime of — the per-call subkeys from
+     * [deriveSubkey], which have no other holder. The root key is kept in `SecureStorage` because
+     * something has to be able to derive the next subkey, and wiping a copy of it would not
+     * shorten the life of the original.
+     *
+     * Not a guarantee about the whole process: the JVM may have moved the array while it was live,
+     * and a `String` made from key material cannot be wiped at all, which is why nothing here ever
+     * turns one into a `String`. What it does buy is that the obvious copy does not sit in the heap
+     * for the lifetime of the app waiting to appear in a dump.
+     */
+    fun wipe(key: ByteArray) {
+        java.util.Arrays.fill(key, 0.toByte())
+    }
+
     fun getSettingsKey(vaultKey: ByteArray): ByteArray = deriveSubkey(vaultKey, INFO_SETTINGS)
     fun getPresenceKey(vaultKey: ByteArray): ByteArray = deriveSubkey(vaultKey, INFO_PRESENCE)
     fun getP2pRelayKey(vaultKey: ByteArray): ByteArray = deriveSubkey(vaultKey, INFO_P2P_RELAY)

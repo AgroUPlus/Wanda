@@ -3,6 +3,7 @@ package com.wander.android.data.repository
 import android.util.Log
 import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.network.HttpClientFactory
+import com.wander.android.data.sources.agro.openIfSealed
 import com.wander.android.data.sources.agro.AgroGraphQl
 import com.wander.android.data.sources.agro.toPushedDrop
 import com.wander.android.data.sources.agro.AgroHandoffState
@@ -54,7 +55,8 @@ import javax.inject.Singleton
 class AgroSessionRepository @Inject constructor(
     private val sessionApi: AgroSessionApi,
     private val graphQl: AgroGraphQl,
-    private val connectivity: ConnectivityObserver
+    private val connectivity: ConnectivityObserver,
+    private val identityKeyManager: com.wander.android.core.security.IdentityKeyManager
 ) {
     private val _devices = MutableStateFlow<List<AgroNode>>(emptyList())
     val devices: StateFlow<List<AgroNode>> = _devices.asStateFlow()
@@ -343,6 +345,11 @@ class AgroSessionRepository @Inject constructor(
             "FRIEND_PRESENCE" -> {
                 val payload = envelope["payload"] as? JsonObject
                 val who = payload?.get("username")?.jsonPrimitive?.contentOrNull
+                // Every copy the friend sealed to this account, across its devices. The frame is
+                // addressed to the account, not to one device, so which of them opens is decided
+                // by the key rather than by the server.
+                val sealedCopies = (payload?.get("encryptedPresence") as? JsonArray).orEmpty()
+                    .mapNotNull { it.jsonObject["ciphertext"]?.jsonPrimitive?.contentOrNull }
                 AgroLiveMessage.Friends(
                     presence = who?.let {
                         AgroFriendNowPlaying(
@@ -355,7 +362,7 @@ class AgroSessionRepository @Inject constructor(
                             positionMs = 0L,
                             isPlaying = payload["isPlaying"]?.jsonPrimitive?.booleanOrNull ?: false,
                             updatedAt = payload["updatedAt"]?.jsonPrimitive?.contentOrNull.orEmpty()
-                        )
+                        ).openIfSealed(identityKeyManager, sealedCopies)
                     }
                 )
             }
