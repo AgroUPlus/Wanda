@@ -1,144 +1,159 @@
 package com.wander.android.data.repository
 
-import com.wander.android.core.audio.fingerprint.RecordingFingerprinter
-import com.wander.android.core.database.dao.RecordingFingerprintDao
-import com.wander.android.core.database.entity.RecordingFingerprintEntity
-import com.wander.android.core.database.entity.RecordingSubHashEntity
-import java.nio.ByteBuffer
+import com.wander.android.core.audio.fingerprint.AudioEmbedder
+import com.wander.android.core.database.dao.TrackDao
+import com.wander.android.core.database.dao.TrackEmbeddingDao
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.math.sqrt
 
 /**
- * Which tracks are the same recording, decided on the audio rather than on the tags.
+ * Which tracks are the same recording, decided using neural audio embeddings.
  *
- * The existing matcher decides on normalised artist, title and duration, which is right whenever
- * the tags are right and wrong in the one case this exists for: a file whose artist field holds
- * the uploader's name, or a title carrying "(Official Video) [HQ]". Two such rows never match by
- * metadata however obviously they are the same performance, and two unrelated songs sharing a
- * common title match every time.
+ * Replaces legacy Haitsma-Kalker sub-hashes with 128-d neural embeddings (wanda_embedder.tflite).
  *
- * Matching is two steps on purpose. The sub-hash index proposes candidates cheaply and is allowed
- * to be wrong; the sequence comparison decides and is not. Doing only the first would merge
- * unrelated recordings on a handful of coincidental hits, and doing only the second would mean
- * comparing against every fingerprint in the library.
+ * Matching uses a two-stage filter:
+ * 1. Candidates within +/- 3000ms duration tolerance are proposed.
+ * 2. Mean-vector dot product filters out dissimilar songs (>= 0.75).
+ * 3. Full symmetric segment similarity decides (>= 0.88).
  */
 @Singleton
 class RecordingIdentityRepository @Inject constructor(
-    private val fingerprintDao: RecordingFingerprintDao
+    private val embeddingDao: TrackEmbeddingDao,
+    private val trackDao: TrackDao
 ) {
-
     /**
      * How alike two sequences must be to be called one recording.
      *
-     * Unrelated recordings sit at chance — half the bits agree, because that is what unrelated
-     * bits do. A copy that has been through a lossy encoder sits far above that but nowhere near
-     * a perfect match, so this sits between the two and nearer the noisy end, since the cost of
-     * missing a merge is a duplicate row and the cost of a wrong one is hiding a track someone
-     * owns.
+     * Two transfers/encodings of the same recording score >= 0.88 (typically >= 0.95).
+     * Unrelated tracks, covers, or different arrangements sit well below 0.70.
      */
-    private val matchThreshold = 0.72
-
-    /** Records [trackId]'s fingerprint and indexes it. */
-    suspend fun index(trackId: String, samples: FloatArray, durationMs: Long) {
-        val hashes = RecordingFingerprinter.fingerprint(samples)
-        if (hashes.isEmpty()) return
-
-        withContext(Dispatchers.IO) {
-            fingerprintDao.replace(
-                RecordingFingerprintEntity(
-                    trackId = trackId,
-                    subHashes = hashes.toBytes(),
-                    durationMs = durationMs,
-                    computedAt = System.currentTimeMillis()
-                ),
-                halvesOf(hashes).map { RecordingSubHashEntity(it, trackId) }
-            )
-        }
-    }
+    private val matchThreshold = 0.88
 
     /**
-     * Track ids holding the same recording as [trackId], best first.
-     *
-     * Empty when [trackId] has no fingerprint yet — an unindexed track is not evidence of
-     * anything, and treating it as unmatched would be indistinguishable from having checked.
+     * Tolerance in duration to propose duplicate candidates.
+     * Aligned with [TrackDeduplicator.DURATION_TOLERANCE_MS].
      */
-    suspend fun matchesFor(trackId: String): List<Match> = withContext(Dispatchers.IO) {
-        val mine = fingerprintDao.forTrack(trackId) ?: return@withContext emptyList()
-        matchesForFingerprint(mine.subHashes.toHashes(), excluding = trackId)
-    }
+    private val durationToleranceMs = 3_000L
 
     /**
-     * Local tracks holding the recording [hashes] describes, best first.
-     *
-     * Takes the fingerprint rather than a track id so a fingerprint that arrived from elsewhere —
-     * the shared catalogue, say — can be matched against this device without first being stored.
+     * Minimum dot product between normalized mean vectors to proceed to sequence comparison.
      */
-    suspend fun matchesForFingerprint(
-        hashes: IntArray,
-        excluding: String = ""
-    ): List<Match> = withContext(Dispatchers.IO) {
-        if (hashes.isEmpty()) return@withContext emptyList()
-
-        val candidateIds = fingerprintDao.candidates(halvesOf(hashes).toList(), excluding)
-        if (candidateIds.isEmpty()) return@withContext emptyList()
-
-        fingerprintDao.forTracks(candidateIds)
-            .map { Match(it.trackId, RecordingFingerprinter.similarity(hashes, it.subHashes.toHashes())) }
-            .filter { it.similarity >= matchThreshold }
-            .sortedByDescending { it.similarity }
-    }
-
-    /** Of [trackIds], those with no fingerprint yet. */
-    suspend fun needingIndex(trackIds: List<String>): List<String> = withContext(Dispatchers.IO) {
-        val indexed = fingerprintDao.indexedTrackIds().toSet()
-        trackIds.filterNot { it in indexed }
-    }
-
-    /** Every fingerprint held here, for publishing to a catalogue. */
-    suspend fun all(): List<RecordingFingerprintEntity> = withContext(Dispatchers.IO) {
-        fingerprintDao.forTracks(fingerprintDao.indexedTrackIds())
-    }
-
-    suspend fun isIndexed(trackId: String): Boolean =
-        withContext(Dispatchers.IO) { fingerprintDao.forTrack(trackId) != null }
-
-    suspend fun forget(trackId: String) = withContext(Dispatchers.IO) {
-        fingerprintDao.clearHalves(trackId)
-        fingerprintDao.delete(trackId)
-    }
-
-    /**
-     * Both halves of every sub-hash, each tagged with the end it came from.
-     *
-     * A set: a repeated hash indexes once, and a passage that repeats should not weigh more than
-     * one that does not simply for having repeated.
-     */
-    private fun halvesOf(hashes: IntArray): Set<Int> {
-        val halves = HashSet<Int>(hashes.size * 2)
-        for (hash in hashes) {
-            halves += hash and 0xFFFF
-            halves += ((hash ushr 16) and 0xFFFF) or HIGH_HALF_TAG
-        }
-        return halves
-    }
+    private val meanSimThreshold = 0.75f
 
     data class Match(val trackId: String, val similarity: Double)
 
-    private companion object {
-        /** Keeps a low half from colliding with a high half of the same value. */
-        const val HIGH_HALF_TAG = 1 shl 16
+    /**
+     * Finds track ids holding the same recording as [trackId], best first.
+     */
+    suspend fun matchesFor(trackId: String): List<Match> = withContext(Dispatchers.Default) {
+        val targetTrack = withContext(Dispatchers.IO) { trackDao.getTrackById(trackId) } ?: return@withContext emptyList()
+        if (targetTrack.durationMs <= 0L) return@withContext emptyList()
 
-        fun IntArray.toBytes(): ByteArray {
-            val buffer = ByteBuffer.allocate(size * Int.SIZE_BYTES)
-            forEach(buffer::putInt)
-            return buffer.array()
+        val targetEntity = withContext(Dispatchers.IO) {
+            embeddingDao.getForTrack(trackId, AudioEmbedder.MODEL_NAME, AudioEmbedder.EMBEDDER_VERSION)
+        } ?: return@withContext emptyList()
+
+        val targetVectors = AudioEmbedder.unpack(targetEntity.vector)
+        if (targetVectors.isEmpty()) return@withContext emptyList()
+
+        val minDuration = targetTrack.durationMs - durationToleranceMs
+        val maxDuration = targetTrack.durationMs + durationToleranceMs
+
+        val candidateIds = withContext(Dispatchers.IO) {
+            trackDao.getCandidateIdsByDuration(trackId, minDuration, maxDuration)
+        }
+        if (candidateIds.isEmpty()) return@withContext emptyList()
+
+        val candidateEntities = withContext(Dispatchers.IO) {
+            embeddingDao.getForTracks(candidateIds, AudioEmbedder.MODEL_NAME, AudioEmbedder.EMBEDDER_VERSION)
+        }
+        if (candidateEntities.isEmpty()) return@withContext emptyList()
+
+        val targetMean = meanVector(targetVectors)
+
+        val matches = mutableListOf<Match>()
+        for (candidate in candidateEntities) {
+            val candidateVectors = AudioEmbedder.unpack(candidate.vector)
+            if (candidateVectors.isEmpty()) continue
+
+            val candidateMean = meanVector(candidateVectors)
+            val meanSim = dot(targetMean, candidateMean)
+            if (meanSim < meanSimThreshold) continue
+
+            val sim = sequenceSimilarity(targetVectors, candidateVectors)
+            if (sim >= matchThreshold) {
+                matches += Match(candidate.trackId, sim.toDouble())
+            }
         }
 
-        fun ByteArray.toHashes(): IntArray {
-            val buffer = ByteBuffer.wrap(this)
-            return IntArray(size / Int.SIZE_BYTES) { buffer.int }
+        matches.sortedByDescending { it.similarity }
+    }
+
+    /** True if [trackId] already has a computed embedding. */
+    suspend fun isIndexed(trackId: String): Boolean = withContext(Dispatchers.IO) {
+        embeddingDao.getForTrack(trackId, AudioEmbedder.MODEL_NAME, AudioEmbedder.EMBEDDER_VERSION) != null
+    }
+
+    /**
+     * Computes symmetric sequence similarity between two embedding sequences.
+     * Score is the average of best cosine matches in both directions.
+     */
+    internal fun sequenceSimilarity(a: Array<FloatArray>, b: Array<FloatArray>): Float {
+        if (a.isEmpty() || b.isEmpty()) return 0f
+
+        var sumA = 0f
+        for (va in a) {
+            var best = -1f
+            for (vb in b) {
+                val d = dot(va, vb)
+                if (d > best) best = d
+            }
+            sumA += best
         }
+        val meanA = sumA / a.size
+
+        var sumB = 0f
+        for (vb in b) {
+            var best = -1f
+            for (va in a) {
+                val d = dot(va, vb)
+                if (d > best) best = d
+            }
+            sumB += best
+        }
+        val meanB = sumB / b.size
+
+        return (meanA + meanB) / 2f
+    }
+
+    internal fun meanVector(vectors: Array<FloatArray>): FloatArray {
+        val dim = vectors[0].size
+        val mean = FloatArray(dim)
+        for (v in vectors) {
+            for (i in 0 until dim) {
+                mean[i] += v[i]
+            }
+        }
+        var normSq = 0f
+        for (i in 0 until dim) {
+            mean[i] /= vectors.size
+            normSq += mean[i] * mean[i]
+        }
+        val norm = sqrt(normSq)
+        if (norm > 0f) {
+            for (i in 0 until dim) {
+                mean[i] /= norm
+            }
+        }
+        return mean
+    }
+
+    private fun dot(a: FloatArray, b: FloatArray): Float {
+        var s = 0f
+        for (i in a.indices) s += a[i] * b[i]
+        return s
     }
 }
