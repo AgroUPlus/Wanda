@@ -32,7 +32,7 @@ class PlaybackService : MediaSessionService() {
 
     @Inject lateinit var playerFactory: PlayerFactory
     @Inject lateinit var musicRepository: MusicRepository
-    @Inject lateinit var agroHandoffPublisher: AgroHandoffPublisher
+    @Inject internal lateinit var agroHandoffPublisher: AgroHandoffPublisher
     @Inject lateinit var secureStorage: com.wander.android.core.security.SecureStorage
 
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())

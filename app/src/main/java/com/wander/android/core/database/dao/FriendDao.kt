@@ -17,6 +17,15 @@ interface FriendDao {
     @Query("SELECT * FROM friends WHERE state = 'pending' ORDER BY outgoing, LOWER(username)")
     fun observeRequests(): Flow<List<FriendEntity>>
 
+    /**
+     * Just the names, for sealing a session to the people entitled to see it.
+     *
+     * A one-shot read rather than the Flow above: it is asked on a track change, from a publisher
+     * that has no lifecycle to collect a Flow against, and it wants the list as it is now.
+     */
+    @Query("SELECT username FROM friends WHERE state = 'accepted'")
+    suspend fun friendUsernames(): List<String>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(friends: List<FriendEntity>)
 

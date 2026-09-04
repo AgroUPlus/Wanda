@@ -21,13 +21,22 @@ import javax.inject.Singleton
  */
 @Singleton
 internal class AgroFriendsApi @Inject constructor(
-    private val graphQl: AgroGraphQl
+    private val graphQl: AgroGraphQl,
+    private val identityKeyManager: com.wander.android.core.security.IdentityKeyManager,
+    private val secureStorage: com.wander.android.core.security.SecureStorage
 ) {
     suspend fun friends(): Result<List<AgroFriend>> = graphQl.execute(
         "{ friends { profile { $PROFILE_FIELDS } nowPlaying { $NOW_PLAYING_FIELDS } } }",
         buildJsonObject { }
     ).map { data ->
-        (data["friends"] as? JsonArray).orEmpty().map { it.jsonObject.toFriend() }
+        // `friends` answers without knowing which device is asking, so it never carries a sealed
+        // copy — presence for the feed comes from [friendsNowPlaying], which does. Unsealed here
+        // anyway so that the two paths cannot drift into disagreeing about what a session looks
+        // like, which is the whole point of `openIfSealed` living in one place.
+        (data["friends"] as? JsonArray).orEmpty().map { entry ->
+            val friend = entry.jsonObject.toFriend()
+            friend.copy(nowPlaying = friend.nowPlaying?.openIfSealed(identityKeyManager))
+        }
     }
 
     /** Both directions at once; `outgoing` says which is which. */
@@ -45,10 +54,18 @@ internal class AgroFriendsApi @Inject constructor(
      * when somebody accepts a request, presence changes with every track.
      */
     suspend fun friendsNowPlaying(): Result<List<AgroFriendNowPlaying>> = graphQl.execute(
-        "{ friendsNowPlaying { $NOW_PLAYING_FIELDS } }",
-        buildJsonObject { }
+        // The device id names which key the server should pick a sealed copy for. A copy is sealed
+        // to one device, so without it there is nothing the server could safely hand back.
+        """
+        query FriendsNowPlaying(${'$'}deviceId: String) {
+            friendsNowPlaying(deviceId: ${'$'}deviceId) { $NOW_PLAYING_FIELDS }
+        }
+        """.trimIndent(),
+        buildJsonObject { put("deviceId", secureStorage.agroDeviceId) }
     ).map { data ->
-        (data["friendsNowPlaying"] as? JsonArray).orEmpty().map { it.jsonObject.toNowPlaying() }
+        (data["friendsNowPlaying"] as? JsonArray).orEmpty().map {
+            it.jsonObject.toNowPlaying().openIfSealed(identityKeyManager)
+        }
     }
 
     /**
