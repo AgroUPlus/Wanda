@@ -50,7 +50,11 @@ class ListenViewModel @Inject constructor(
     val indexedTracks: StateFlow<Int> = recognitionRepository.indexedTrackCount
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
+    /** Real-time microphone audio volume level `[0f, 1f]` during active capture. */
+    val audioLevel: StateFlow<Float> = recognitionRepository.audioLevel
+
     private var listening: Job? = null
+
 
     fun start() {
         // One at a time: a second tap while the microphone is open would try to open it twice and
