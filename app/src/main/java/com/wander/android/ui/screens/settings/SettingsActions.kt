@@ -27,6 +27,7 @@ internal data class SettingsActions(
     val onAgroUnpair: () -> Unit,
     val onSyncSettingsChange: (Boolean) -> Unit,
     val onPopularityChange: (Boolean) -> Unit,
+    val onCatalogTradeChange: (Boolean) -> Unit,
     val onResumeHandoff: (AgroHandoffState) -> Unit,
     val onP2pSyncChange: (Boolean) -> Unit,
     val onServerArchiveChange: (Boolean) -> Unit,

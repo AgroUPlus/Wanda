@@ -289,6 +289,9 @@ internal class SettingsViewModel @Inject constructor(
     /** Off until asked for, like everything else that sends something outward. */
     val popularityEnabled: StateFlow<Boolean> = secureStorage.agroPopularityContributionFlow
 
+    /** Same reason, and the same default. */
+    val catalogTradeEnabled: StateFlow<Boolean> = secureStorage.agroCatalogTradeFlow
+
     /**
      * Whether the server lets this account archive.
      *
@@ -359,6 +362,10 @@ internal class SettingsViewModel @Inject constructor(
 
     fun setPopularityContribution(enabled: Boolean) {
         secureStorage.setAgroPopularityContribution(enabled)
+    }
+
+    fun setCatalogTrade(enabled: Boolean) {
+        secureStorage.setAgroCatalogTrade(enabled)
     }
 
     fun setServerArchive(enabled: Boolean) {

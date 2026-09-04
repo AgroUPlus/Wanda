@@ -41,6 +41,7 @@ internal data class SettingsUiState(
     val p2pSync: Boolean,
     val serverArchive: Boolean,
     val popularityContribution: Boolean,
+    val catalogTrade: Boolean,
     val canArchive: Boolean,
     val syncProgress: SyncProgress,
     val pendingUploads: Int,
@@ -96,6 +97,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val p2pSync by viewModel.p2pSyncEnabled.collectAsStateWithLifecycle()
     val serverArchive by viewModel.serverArchiveEnabled.collectAsStateWithLifecycle()
     val popularityContribution by viewModel.popularityEnabled.collectAsStateWithLifecycle()
+    val catalogTrade by viewModel.catalogTradeEnabled.collectAsStateWithLifecycle()
     val canArchive by viewModel.canArchive.collectAsStateWithLifecycle()
     val syncProgress by viewModel.librarySyncProgress.collectAsStateWithLifecycle()
     val pendingUploads by viewModel.pendingUploads.collectAsStateWithLifecycle()
@@ -136,6 +138,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         p2pSync = p2pSync,
         serverArchive = serverArchive,
         popularityContribution = popularityContribution,
+        catalogTrade = catalogTrade,
         canArchive = canArchive,
         syncProgress = syncProgress,
         pendingUploads = pendingUploads,
