@@ -1,7 +1,10 @@
 package com.wander.android.core.security
 
+import org.bouncycastle.crypto.digests.SHA256Digest
 import org.bouncycastle.crypto.generators.Argon2BytesGenerator
+import org.bouncycastle.crypto.generators.HKDFBytesGenerator
 import org.bouncycastle.crypto.params.Argon2Parameters
+import org.bouncycastle.crypto.params.HKDFParameters
 import java.security.GeneralSecurityException
 import java.security.SecureRandom
 import java.util.Base64
@@ -58,6 +61,11 @@ object AgroVault {
     private const val NONCE_BYTES = 12
     private const val TAG_BITS = 128
 
+    // Domain separation contexts for HKDF-SHA256 (RFC 5869)
+    const val INFO_SETTINGS = "agro/v1/settings"
+    const val INFO_PRESENCE = "agro/v1/presence"
+    const val INFO_P2P_RELAY = "agro/v1/p2p-relay"
+
     /** Thrown when sealed data cannot be opened. Never swallowed: see [openSettings]. */
     class VaultException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
@@ -101,7 +109,7 @@ object AgroVault {
     /** Seals settings for the server to store without reading. */
     fun sealSettings(plaintext: String, vaultKey: ByteArray): String = seal(
         plaintext.toByteArray(Charsets.UTF_8),
-        vaultKey
+        getSettingsKey(vaultKey)
     )
 
     /**
@@ -114,7 +122,34 @@ object AgroVault {
      * @throws VaultException if the blob is not ours or the key is wrong.
      */
     fun openSettings(blob: String, vaultKey: ByteArray): String =
-        String(open(blob, vaultKey, "settings"), Charsets.UTF_8)
+        String(open(blob, getSettingsKey(vaultKey), "settings"), Charsets.UTF_8)
+
+    // ── Key Separation & Derivation (HKDF-SHA256, RFC 5869) ───────────────────────────────────
+
+    /**
+     * Derives a purpose-specific subkey from the root [vaultKey] using HKDF-SHA256.
+     * Prevents cross-context domain confusion and key-reuse attacks.
+     */
+    fun deriveSubkey(rootKey: ByteArray, info: String, outputBytes: Int = KEY_BYTES): ByteArray {
+        require(rootKey.size == KEY_BYTES) { "root key must be $KEY_BYTES bytes" }
+        val hkdf = HKDFBytesGenerator(SHA256Digest())
+        // HKDF Extract & Expand with empty salt (RFC 5869 allows null/empty salt when IKM is already high entropy)
+        hkdf.init(HKDFParameters(rootKey, null, info.toByteArray(Charsets.UTF_8)))
+        val out = ByteArray(outputBytes)
+        hkdf.generateBytes(out, 0, outputBytes)
+        return out
+    }
+
+    fun getSettingsKey(vaultKey: ByteArray): ByteArray = deriveSubkey(vaultKey, INFO_SETTINGS)
+    fun getPresenceKey(vaultKey: ByteArray): ByteArray = deriveSubkey(vaultKey, INFO_PRESENCE)
+    fun getP2pRelayKey(vaultKey: ByteArray): ByteArray = deriveSubkey(vaultKey, INFO_P2P_RELAY)
+
+    /** Seals arbitrary byte payloads (presence envelopes, metadata) under a subkey. */
+    fun sealPayload(plaintext: ByteArray, key: ByteArray): String = seal(plaintext, key)
+
+    /** Opens an arbitrary sealed payload under a subkey. */
+    fun openPayload(sealed: String, key: ByteArray, context: String = "payload"): ByteArray =
+        open(sealed, key, context)
 
     // ── AES-256-GCM, as `base64(nonce || ciphertext||tag)` ───────────────────────────────────
 
