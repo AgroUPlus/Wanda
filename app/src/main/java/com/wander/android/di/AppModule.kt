@@ -65,7 +65,6 @@ object AppModule {
     @Provides fun provideCanonicalMetadataDao(db: WanderDatabase): com.wander.android.core.database.dao.CanonicalMetadataDao = db.canonicalMetadataDao()
     @Provides fun provideTrackFeatureDao(db: WanderDatabase): com.wander.android.core.database.dao.TrackFeatureDao = db.trackFeatureDao()
     @Provides fun provideMelodyContourDao(db: WanderDatabase): com.wander.android.core.database.dao.MelodyContourDao = db.melodyContourDao()
-
-    @Provides fun provideRecordingFingerprintDao(db: WanderDatabase): com.wander.android.core.database.dao.RecordingFingerprintDao = db.recordingFingerprintDao()
     @Provides fun provideTrackEmbeddingDao(db: WanderDatabase): com.wander.android.core.database.dao.TrackEmbeddingDao = db.trackEmbeddingDao()
+    @Provides fun provideTrackAttemptDao(db: WanderDatabase): com.wander.android.core.database.dao.TrackAttemptDao = db.trackAttemptDao()
 }

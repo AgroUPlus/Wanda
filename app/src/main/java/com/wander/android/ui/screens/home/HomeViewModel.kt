@@ -12,6 +12,8 @@ import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.repository.RecommendationRepository
 import com.wander.android.data.repository.SmartMixRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,11 +29,11 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val musicRepository: MusicRepository,
-    private val homeShelfRepository: HomeShelfRepository,
     private val recommendationRepository: RecommendationRepository,
+    private val homeShelfRepository: HomeShelfRepository,
+    private val shareRepository: ShareRepository,
     private val smartMixRepository: SmartMixRepository,
-    private val playerConnection: PlayerConnection,
-    private val shareRepository: ShareRepository
+    private val playerConnection: PlayerConnection
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -53,7 +55,8 @@ class HomeViewModel @Inject constructor(
     private fun observeLikes() {
         viewModelScope.launch {
             likedTrackIds.collect { liked ->
-                _uiState.update { state -> state.copy(allSections = state.allSections.withLikes(liked)) }
+                val updated = withContext(Dispatchers.Default) { _uiState.value.allSections.withLikes(liked) }
+                _uiState.update { it.copy(allSections = updated) }
             }
         }
     }
