@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-build overlay. The debug APK installs as com.wander.android.debug, so it can sit on the
+  same device as a release install; this makes the two obviously different on the home screen.
+-->
+<resources>
+    <string name="app_name">Wanda debug</string>
+</resources>
