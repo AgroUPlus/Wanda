@@ -49,6 +49,10 @@ internal fun AgroFriendNowPlaying.withSealedMetadata(opened: String?): AgroFrien
         artistName = fields.str("artistName") ?: artistName,
         albumName = fields.str("albumName") ?: albumName,
         artworkUrl = fields.str("artworkUrl") ?: artworkUrl,
+        // The hash is absent from the plaintext columns under a sealed session, so this is the only
+        // place a listener can get it — and without it, following along can name the track but not
+        // find the file.
+        contentHash = fields.str("contentHash") ?: contentHash,
         isLocked = false
     )
 }

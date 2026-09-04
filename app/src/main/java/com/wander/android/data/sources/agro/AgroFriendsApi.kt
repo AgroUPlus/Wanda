@@ -26,13 +26,19 @@ internal class AgroFriendsApi @Inject constructor(
     private val secureStorage: com.wander.android.core.security.SecureStorage
 ) {
     suspend fun friends(): Result<List<AgroFriend>> = graphQl.execute(
-        "{ friends { profile { $PROFILE_FIELDS } nowPlaying { $NOW_PLAYING_FIELDS } } }",
-        buildJsonObject { }
+        // This answer seeds the presence feed on a graph refresh, so it needs the device id for
+        // the same reason [friendsNowPlaying] does: without it every sealed friend arrives as a
+        // placeholder and stays one until a socket frame happens to replace it.
+        """
+        query Friends(${'$'}deviceId: String) {
+            friends(deviceId: ${'$'}deviceId) {
+                profile { $PROFILE_FIELDS }
+                nowPlaying { $NOW_PLAYING_FIELDS }
+            }
+        }
+        """.trimIndent(),
+        buildJsonObject { put("deviceId", secureStorage.agroDeviceId) }
     ).map { data ->
-        // `friends` answers without knowing which device is asking, so it never carries a sealed
-        // copy — presence for the feed comes from [friendsNowPlaying], which does. Unsealed here
-        // anyway so that the two paths cannot drift into disagreeing about what a session looks
-        // like, which is the whole point of `openIfSealed` living in one place.
         (data["friends"] as? JsonArray).orEmpty().map { entry ->
             val friend = entry.jsonObject.toFriend()
             friend.copy(nowPlaying = friend.nowPlaying?.openIfSealed(identityKeyManager))

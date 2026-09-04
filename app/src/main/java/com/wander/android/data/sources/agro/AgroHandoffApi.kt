@@ -56,7 +56,10 @@ internal class AgroHandoffApi @Inject constructor(
             // only part of it this code controls. The root key lives in `SecureStorage` and stays.
             try {
                 runCatching {
-                    AgroVault.sealPayload(sealedMetadata(trackUri, title, artist, album, artworkUrl), key)
+                    AgroVault.sealPayload(
+                        sealedMetadata(trackUri, title, artist, album, artworkUrl, contentHash),
+                        key
+                    )
                 }.getOrNull()
             } finally {
                 AgroVault.wipe(key)
@@ -156,13 +159,20 @@ internal class AgroHandoffApi @Inject constructor(
         title: String,
         artist: String,
         album: String?,
-        artworkUrl: String?
+        artworkUrl: String?,
+        contentHash: String?
     ): ByteArray = buildJsonObject {
         put("trackUri", trackUri)
         put("trackTitle", title)
         put("artistName", artist)
         album?.let { put("albumName", it) }
         artworkUrl?.let { put("artworkUrl", it) }
+        // Suppressed from the plaintext column — the hash identifies the track as surely as its
+        // name — but it belongs *inside* the envelope. Someone following along resolves the file by
+        // hash, and a listener who can open the copy is by definition already allowed to know what
+        // is playing. Without it, a sealed session is followable in name only: the label above the
+        // transfer is right and the transfer no longer finds anything.
+        contentHash?.takeIf { it.isNotBlank() }?.let { put("contentHash", it) }
     }.toString().toByteArray(Charsets.UTF_8)
 
     private companion object {

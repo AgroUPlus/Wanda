@@ -17,7 +17,9 @@ import javax.inject.Singleton
  */
 @Singleton
 internal class AgroListenAlongApi @Inject constructor(
-    private val graphQl: AgroGraphQl
+    private val graphQl: AgroGraphQl,
+    private val identityKeyManager: com.wander.android.core.security.IdentityKeyManager,
+    private val secureStorage: com.wander.android.core.security.SecureStorage
 ) {
     private val sessionFields = "host listeners nowPlaying { $NOW_PLAYING_FIELDS }"
 
@@ -30,12 +32,17 @@ internal class AgroListenAlongApi @Inject constructor(
      */
     suspend fun startListenAlong(host: String): Result<AgroListenAlong> = graphQl.execute(
         """
-        mutation StartListenAlong(${'$'}host: String!) {
-            startListenAlong(host: ${'$'}host) { $sessionFields }
+        mutation StartListenAlong(${'$'}host: String!, ${'$'}deviceId: String) {
+            startListenAlong(host: ${'$'}host, deviceId: ${'$'}deviceId) { $sessionFields }
         }
         """.trimIndent(),
-        buildJsonObject { put("host", host.trim().lowercase()) }
-    ).mapCatching { data -> data["startListenAlong"]!!.jsonObject.toListenAlong() }
+        buildJsonObject {
+            put("host", host.trim().lowercase())
+            put("deviceId", secureStorage.agroDeviceId)
+        }
+    ).mapCatching { data ->
+        data["startListenAlong"]!!.jsonObject.toListenAlong().opened()
+    }
 
     suspend fun stopListenAlong(): Result<Boolean> = graphQl.execute(
         "mutation { stopListenAlong }",
@@ -44,7 +51,20 @@ internal class AgroListenAlongApi @Inject constructor(
 
     /** The session this device is in, if any. Used to recover one across a restart. */
     suspend fun listenAlong(): Result<AgroListenAlong?> = graphQl.execute(
-        "{ listenAlong { $sessionFields } }",
-        buildJsonObject { }
-    ).map { data -> data.obj("listenAlong")?.toListenAlong() }
+        """
+        query ListenAlong(${'$'}deviceId: String) {
+            listenAlong(deviceId: ${'$'}deviceId) { $sessionFields }
+        }
+        """.trimIndent(),
+        buildJsonObject { put("deviceId", secureStorage.agroDeviceId) }
+    ).map { data -> data.obj("listenAlong")?.toListenAlong()?.opened() }
+
+    /**
+     * Opens the session's sealed metadata, if it arrived sealed.
+     *
+     * Following a session needs more of it than watching one does: the title to show, and the
+     * content hash to find the file. Both live only inside the envelope once a host seals.
+     */
+    private fun AgroListenAlong.opened(): AgroListenAlong =
+        copy(nowPlaying = nowPlaying?.openIfSealed(identityKeyManager))
 }

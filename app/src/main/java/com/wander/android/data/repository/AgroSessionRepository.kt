@@ -403,8 +403,15 @@ class AgroSessionRepository @Inject constructor(
             }
             "LISTEN_ALONG" -> {
                 val payload = envelope["payload"] as? JsonObject
-                AgroLiveMessage.ListenAlong(
-                    host = payload?.get("host")?.jsonPrimitive?.contentOrNull.orEmpty(),
+                val host = payload?.get("host")?.jsonPrimitive?.contentOrNull.orEmpty()
+                // Opened through the same helper the presence frame uses, by way of the model it
+                // works on. A listener needs more out of the envelope than a watcher does: the
+                // title to show, and the content hash to find the file with — under a sealed
+                // session the plaintext fields carry neither.
+                val sealedCopies = (payload?.get("encryptedPresence") as? JsonArray).orEmpty()
+                    .mapNotNull { it.jsonObject["ciphertext"]?.jsonPrimitive?.contentOrNull }
+                val opened = AgroFriendNowPlaying(
+                    username = host,
                     trackUri = payload?.get("trackUri")?.jsonPrimitive?.contentOrNull.orEmpty(),
                     trackTitle = payload?.get("trackTitle")?.jsonPrimitive?.contentOrNull.orEmpty(),
                     artistName = payload?.get("artistName")?.jsonPrimitive?.contentOrNull.orEmpty(),
@@ -412,12 +419,26 @@ class AgroSessionRepository @Inject constructor(
                     artworkUrl = payload?.get("artworkUrl")?.jsonPrimitive?.contentOrNull,
                     positionMs = payload?.get("positionMs")?.jsonPrimitive?.longOrNull ?: 0L,
                     isPlaying = payload?.get("isPlaying")?.jsonPrimitive?.booleanOrNull ?: false,
+                    updatedAt = "",
+                    deviceId = payload?.get("deviceId")?.jsonPrimitive?.contentOrNull,
+                    contentHash = payload?.get("contentHash")?.jsonPrimitive?.contentOrNull
+                ).openIfSealed(identityKeyManager, sealedCopies)
+                AgroLiveMessage.ListenAlong(
+                    host = host,
+                    trackUri = opened.trackUri,
+                    trackTitle = opened.trackTitle,
+                    artistName = opened.artistName,
+                    albumName = opened.albumName,
+                    artworkUrl = opened.artworkUrl,
+                    positionMs = opened.positionMs,
+                    isPlaying = opened.isPlaying,
                     // The host's own frames carry a track; the stop frame carries only this.
                     stopped = payload?.get("stopped")?.jsonPrimitive?.booleanOrNull ?: false,
-                    deviceId = payload?.get("deviceId")?.jsonPrimitive?.contentOrNull,
-                    contentHash = payload?.get("contentHash")?.jsonPrimitive?.contentOrNull,
+                    deviceId = opened.deviceId,
+                    contentHash = opened.contentHash,
                     peerLanAddress = payload?.get("peerLanAddress")?.jsonPrimitive?.contentOrNull,
-                    peerLanToken = payload?.get("peerLanToken")?.jsonPrimitive?.contentOrNull
+                    peerLanToken = payload?.get("peerLanToken")?.jsonPrimitive?.contentOrNull,
+                    isLocked = opened.isLocked
                 )
             }
             "TRACK_DROP" -> (envelope["payload"] as? JsonObject)?.let { payload ->
