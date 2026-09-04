@@ -6,10 +6,14 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import com.wander.android.BuildConfig
 import javax.inject.Inject
 import kotlin.coroutines.coroutineContext
+import kotlin.math.sqrt
 
 /**
  * Records a few seconds from the microphone as mono float PCM at the fingerprint rate.
@@ -25,6 +29,11 @@ import kotlin.coroutines.coroutineContext
 class MicRecorder @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) {
+
+    private val _audioLevel = MutableStateFlow(0f)
+
+    /** Instantaneous audio volume level in `[0f, 1f]` updated in real time during capture. */
+    val audioLevel: StateFlow<Float> = _audioLevel.asStateFlow()
 
     /**
      * Records [seconds] of audio. Caller must hold `RECORD_AUDIO`.
@@ -47,7 +56,10 @@ class MicRecorder @Inject constructor(
 
         val total = RECORD_RATE * seconds
         val samples = FloatArray(total)
-        val chunk = ShortArray(bufferSize)
+        // Read in responsive ~45ms slices (approx 2048 shorts) for fluid UI level metering
+        // while the recorder's internal buffer remains large to prevent dropped frames.
+        val stepSize = maxOf(minBuffer, 2048)
+        val chunk = ShortArray(stepSize)
         var written = 0
 
         try {
@@ -58,14 +70,20 @@ class MicRecorder @Inject constructor(
                 coroutineContext.ensureActive()
                 val read = recorder.read(chunk, 0, minOf(chunk.size, total - written))
                 if (read <= 0) break
+                var sumSquares = 0f
                 for (i in 0 until read) {
-                    samples[written + i] = chunk[i] / Short.MAX_VALUE.toFloat()
+                    val s = chunk[i] / Short.MAX_VALUE.toFloat()
+                    samples[written + i] = s
+                    sumSquares += s * s
                 }
                 written += read
+                val rms = sqrt(sumSquares / read)
+                _audioLevel.value = (rms * 4.5f).coerceIn(0f, 1f)
             }
         } catch (e: IllegalStateException) {
             return@withContext null
         } finally {
+            _audioLevel.value = 0f
             runCatching { recorder.stop() }
             recorder.release()
         }
@@ -74,6 +92,7 @@ class MicRecorder @Inject constructor(
         Resampler.toFingerprintRate(samples.copyOf(written), RECORD_RATE)
             .also { if (BuildConfig.DEBUG) dumpForDiagnosis(it) }
     }
+
 
     /**
      * Writes the captured clip to the app's files directory, in debug builds only.
