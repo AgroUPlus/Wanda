@@ -70,6 +70,8 @@ class EmbeddingRecordingIdentityTest {
         override fun indexedTrackCountFlow(model: String, version: Int) = kotlinx.coroutines.flow.emptyFlow<Int>()
         override fun indexedTrackIdsFlow(model: String, version: Int) = kotlinx.coroutines.flow.emptyFlow<List<String>>()
         override suspend fun upsert(embedding: com.wander.android.core.database.entity.TrackEmbeddingEntity) {}
+        override suspend fun computedSince(after: Long, model: String, version: Int, limit: Int) =
+            emptyList<com.wander.android.core.database.entity.TrackEmbeddingEntity>()
         override suspend fun needingIndex(model: String, version: Int, limit: Int) = emptyList<String>()
         override suspend fun prune(model: String, version: Int) {}
         override suspend fun clear() {}

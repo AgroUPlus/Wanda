@@ -27,14 +27,33 @@ interface TrackEmbeddingDao {
     @Query("SELECT * FROM track_embeddings WHERE trackId IN (:trackIds) AND model = :model AND version = :version")
     suspend fun getForTracks(trackIds: List<String>, model: String, version: Int): List<TrackEmbeddingEntity>
 
+    /**
+     * Embeddings computed since [after], oldest first, for publishing to the catalogue.
+     *
+     * Ordered and limited rather than filtered in Kotlin: one row is ~1 KB per second of audio, so
+     * reading the whole table to find the handful that are new would be the expensive way to
+     * answer a cheap question. Oldest first so the caller can advance its cursor to the last row it
+     * actually managed to send.
+     */
+    @Query(
+        "SELECT * FROM track_embeddings WHERE model = :model AND version = :version " +
+            "AND computedAt > :after ORDER BY computedAt LIMIT :limit"
+    )
+    suspend fun computedSince(
+        after: Long,
+        model: String,
+        version: Int,
+        limit: Int
+    ): List<TrackEmbeddingEntity>
+
     @Query("SELECT COUNT(*) FROM track_embeddings WHERE model = :model AND version = :version")
     fun indexedTrackCountFlow(model: String, version: Int): Flow<Int>
 
     /**
      * Which tracks have a current neural fingerprint, for the badge and the Fingerprints screen.
      *
-     * Ids rather than rows: the caller wants set membership, and the vectors are ~30 KB each —
-     * reading the whole table to answer "is this one done" would be megabytes per redraw.
+     * Ids rather than rows: the caller wants set membership, and a vector is ~1 KB per second of
+     * audio — reading the whole table to answer "is this one done" would be megabytes per redraw.
      */
     @Query("SELECT trackId FROM track_embeddings WHERE model = :model AND version = :version")
     fun indexedTrackIdsFlow(model: String, version: Int): Flow<List<String>>

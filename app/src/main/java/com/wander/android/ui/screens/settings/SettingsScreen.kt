@@ -100,6 +100,7 @@ internal fun SettingsScreen(
             onAgroUnpair = { dialogs.confirmAgroUnpair = true },
             onSyncSettingsChange = viewModel::setAgroSyncSettings,
             onPopularityChange = viewModel::setPopularityContribution,
+            onCatalogTradeChange = viewModel::setCatalogTrade,
             onResumeHandoff = agroViewModel::resume,
             onP2pSyncChange = viewModel::setP2pSync,
             onServerArchiveChange = viewModel::setServerArchive,
