@@ -55,6 +55,7 @@ fun ListenSheet(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val indexed by viewModel.indexedTracks.collectAsStateWithLifecycle()
+    val audioLevel by viewModel.audioLevel.collectAsStateWithLifecycle()
     val sheetState = rememberModalBottomSheetState()
 
     // Starts on open and stops on close — including a swipe-away, which is why this is a
@@ -89,7 +90,7 @@ fun ListenSheet(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     when (current) {
-                        ListenState.Idle, ListenState.Listening -> Listening(indexed)
+                        ListenState.Idle, ListenState.Listening -> Listening(indexed, audioLevel)
                         is ListenState.Matched -> Matched(
                             recognition = current.recognition,
                             onPlay = {
@@ -107,8 +108,9 @@ fun ListenSheet(
 }
 
 @Composable
-private fun Listening(indexedTracks: Int) {
-    PulsingMic()
+private fun Listening(indexedTracks: Int, audioLevel: Float = 0f) {
+    PulsingMic(audioLevel = audioLevel)
+
     Text("Listening…", style = MaterialTheme.typography.headlineSmall)
     Text(
         text = if (indexedTracks > 0) {

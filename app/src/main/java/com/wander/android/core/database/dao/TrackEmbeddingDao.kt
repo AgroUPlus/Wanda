@@ -21,6 +21,12 @@ interface TrackEmbeddingDao {
     @Query("SELECT * FROM track_embeddings WHERE model = :model AND version = :version")
     suspend fun getAll(model: String, version: Int): List<TrackEmbeddingEntity>
 
+    @Query("SELECT * FROM track_embeddings WHERE trackId = :trackId AND model = :model AND version = :version LIMIT 1")
+    suspend fun getForTrack(trackId: String, model: String, version: Int): TrackEmbeddingEntity?
+
+    @Query("SELECT * FROM track_embeddings WHERE trackId IN (:trackIds) AND model = :model AND version = :version")
+    suspend fun getForTracks(trackIds: List<String>, model: String, version: Int): List<TrackEmbeddingEntity>
+
     @Query("SELECT COUNT(*) FROM track_embeddings WHERE model = :model AND version = :version")
     fun indexedTrackCountFlow(model: String, version: Int): Flow<Int>
 
