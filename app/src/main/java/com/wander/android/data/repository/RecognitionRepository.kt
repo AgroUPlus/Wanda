@@ -15,13 +15,19 @@ import com.wander.android.core.audio.fingerprint.MatchConfidence
 import com.wander.android.core.audio.fingerprint.PcmDecoder
 import com.wander.android.core.audio.fingerprint.OffsetAlignment
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
+
 
 /** Which engine produced an answer, so the UI can say how it knows. */
 enum class RecognitionEngine {
     /** The record itself was playing, and its landmarks lined up. Exact. */
     LANDMARK,
+
+    /** The record was playing, and its neural fingerprint matched — robust to the codec and
+     *  timing degradation that defeats the landmark pass. Exact. */
+    EMBEDDING,
 
     /** Somebody hummed the tune and its shape fitted. A good guess, not a certainty. */
     MELODY
@@ -55,12 +61,17 @@ class RecognitionRepository @Inject constructor(
     private val micRecorder: MicRecorder,
     private val fingerprinter: Fingerprinter,
     private val melodySearch: MelodySearchRepository,
+    private val embeddingSearch: EmbeddingRepository,
     private val secureStorage: com.wander.android.core.security.SecureStorage
 ) {
 
     val indexedTrackCount: Flow<Int> = fingerprintDao.indexedTrackCountFlow()
 
+    /** Real-time microphone audio volume level `[0f, 1f]` during active capture. */
+    val audioLevel: StateFlow<Float> get() = micRecorder.audioLevel
+
     /** How many of this device's tracks the index could cover, for the "n of m" the sheet shows. */
+
     suspend fun indexableTrackCount(): Int =
         withContext(Dispatchers.IO) { trackDao.getFingerprintableTracks().size }
 
@@ -91,7 +102,22 @@ class RecognitionRepository @Inject constructor(
      * scores are not on a common scale to be blended anyway.
      */
     private suspend fun identifyOrHum(samples: FloatArray): Recognition? {
-        identify(samples)?.let { return it }
+        // The neural fingerprint is the recognition path. It replaced the landmark index, which is
+        // no longer written or read: an embedding survives a lossy re-encode and a listener who
+        // did not catch the track from its opening, both of which defeated the landmarks.
+        embeddingSearch.match(samples)?.let { match ->
+            val entity = withContext(Dispatchers.IO) { trackDao.getTrackById(match.trackId) }
+            if (entity != null) {
+                return Recognition(
+                    track = entity.toUnifiedTrack(),
+                    positionSeconds = match.positionSeconds.coerceAtLeast(0),
+                    // A cosine in roughly [0.55, 1.0] scaled to sit near a landmark vote count so
+                    // one confidence bar can render both.
+                    score = (match.similarity * EMBEDDING_SCORE_SCALE).toInt(),
+                    engine = RecognitionEngine.EMBEDDING
+                )
+            }
+        }
 
         // Humming is switched off, and deliberately: see [MelodySearch]. The melody engine can only
         // compare a hum against a shape extracted from a finished mix, and on anything dense that
@@ -354,6 +380,9 @@ class RecognitionRepository @Inject constructor(
 
         /** Puts a melody match's confidence on roughly the same scale as a landmark score. */
         const val MELODY_SCORE_SCALE = 20
+
+        /** Same idea for an embedding cosine: ~0.8 similarity reads as a ~80-vote landmark hit. */
+        const val EMBEDDING_SCORE_SCALE = 100
 
         private const val TAG = "Recognition"
 
