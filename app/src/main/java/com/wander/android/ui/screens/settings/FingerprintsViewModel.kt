@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.audio.fingerprint.EmbeddingModelManager
 import com.wander.android.core.audio.fingerprint.FingerprintProgress
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.notification.WorkProgressNotification
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /** One track and what has been measured about it. */
 @androidx.compose.runtime.Immutable
@@ -54,7 +56,10 @@ internal data class FingerprintsUiState(
     val indexed: Int = 0,
     val total: Int = 0,
     val isLoading: Boolean = true,
-    val isPaused: Boolean = false
+    val isPaused: Boolean = false,
+    val recognitionModel: EmbeddingModelManager.State = EmbeddingModelManager.State.Absent,
+    /** Tracks with a neural fingerprint. Separate from [indexed], which counts landmarks. */
+    val embedded: Int = 0
 ) {
     /** The one being decoded right now, if any — the line the screen leads with. */
     val processing: FingerprintRow?
@@ -75,8 +80,19 @@ internal class FingerprintsViewModel @Inject constructor(
     trackDao: TrackDao,
     statuses: FingerprintStatusRepository,
     private val workControls: WorkControls,
-    private val progress: FingerprintProgress
+    private val progress: FingerprintProgress,
+    private val embeddingModel: EmbeddingModelManager
 ) : ViewModel() {
+
+    /** Fetches the ~34 MB recognition model, or retries a failed download. */
+    fun downloadRecognitionModel() {
+        viewModelScope.launch { embeddingModel.download() }
+    }
+
+    /** Re-runs the load + one-inference check on the model already on disk. */
+    fun verifyRecognitionModel() {
+        viewModelScope.launch { embeddingModel.verifyNow() }
+    }
 
     /** Pauses measuring, or lifts the pause and starts it again. */
     fun setPaused(paused: Boolean) {
@@ -105,7 +121,7 @@ internal class FingerprintsViewModel @Inject constructor(
      * afterwards — the sort is over rows that already exist, and the ticker no longer touches the
      * conversion at all.
      */
-    private val libraryRows: Flow<List<UnifiedTrack>> = trackDao.getAllTracksFlow()
+    private val libraryRows: Flow<List<UnifiedTrack>> = trackDao.getFingerprintableTracksFlow()
         .map { entities -> entities.map(TrackEntity::toUnifiedTrack) }
         .flowOn(Dispatchers.Default)
 
@@ -115,8 +131,9 @@ internal class FingerprintsViewModel @Inject constructor(
         // them, and every intermediate state costs a full sort. The screen wants the latest answer,
         // not each of them.
         statuses.statuses().conflate(),
-        workControls.isPaused(WorkProgressNotification.Kind.FINGERPRINT)
-    ) { tracks, byId, paused ->
+        workControls.isPaused(WorkProgressNotification.Kind.FINGERPRINT),
+        embeddingModel.state
+    ) { tracks, byId, paused, model ->
         val rows = tracks
             .map { track -> FingerprintRow(track, byId[track.id] ?: FingerprintStatus.MISSING) }
             // Processing first, then missing, then done — most actionable at the top.
@@ -171,7 +188,12 @@ internal class FingerprintsViewModel @Inject constructor(
             indexed = rows.count { it.status == FingerprintStatus.INDEXED },
             total = rows.size,
             isLoading = false,
-            isPaused = paused
+            isPaused = paused,
+            recognitionModel = model,
+            // Counted from the rows on screen, not from the whole table: the two used to have
+            // different denominators (a global embedding count over a library-only row count),
+            // which is how "200 of 200" appeared next to a list where nothing was green.
+            embedded = rows.count { it.status == FingerprintStatus.INDEXED }
         )
     }
         // The grouping and the thousand-row sort are real work and have no business on the main

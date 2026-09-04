@@ -16,32 +16,28 @@ internal fun LazyListScope.aboutTab(
     state: SettingsUiState,
     actions: SettingsActions
 ) {
-    item(key = "merge_preview") {
+    item(key = "duplicate_recordings") {
         SettingsRow(
-            title = "Merge preview",
-            subtitle = "See which of your tracks are the same recording, before anything changes",
+            title = "Duplicate recordings",
+            subtitle = "Review which of your tracks are the same recording, before anything merges",
             onClick = actions.onOpenMergePreview
         )
     }
 
+    // Version and the update check are one row: the version is the question "am I current?" and
+    // the check is the answer, so splitting them made the user tap two rows to learn one thing.
     item(key = "version") {
         SettingsRow(
             title = "Version",
-            subtitle = state.appVersion,
-            onClick = { actions.onOpenUrl(REPO_URL) }
-        )
-    }
-
-    item(key = "check_for_update") {
-        SettingsRow(
-            title = "Check for update",
             subtitle = when {
-                state.isCheckingForUpdate -> "Checking…"
+                state.isCheckingForUpdate -> "${state.appVersion} · checking…"
                 state.updateCheck is UpdateCheckResult.UpdateAvailable ->
-                    "Version ${state.updateCheck.version} is available — tap to view"
-                state.updateCheck is UpdateCheckResult.UpToDate -> "You're on the latest version"
-                state.updateCheck is UpdateCheckResult.Failed -> "Couldn't check — tap to retry"
-                else -> "Tap to check for a newer version"
+                    "${state.appVersion} · version ${state.updateCheck.version} is out — tap to view"
+                state.updateCheck is UpdateCheckResult.UpToDate ->
+                    "${state.appVersion} · up to date"
+                state.updateCheck is UpdateCheckResult.Failed ->
+                    "${state.appVersion} · couldn't check — tap to retry"
+                else -> "${state.appVersion} · tap to check for an update"
             },
             onClick = {
                 val available = state.updateCheck

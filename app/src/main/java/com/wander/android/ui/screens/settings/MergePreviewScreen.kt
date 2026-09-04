@@ -65,7 +65,7 @@ internal fun MergePreviewScreen(
             IconButton(onClick = onBack, modifier = Modifier.padding(start = 4.dp)) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
             }
-            Text("Merge preview", style = MaterialTheme.typography.titleLarge)
+            Text("Duplicate recordings", style = MaterialTheme.typography.headlineLarge)
         }
 
         val current = report
