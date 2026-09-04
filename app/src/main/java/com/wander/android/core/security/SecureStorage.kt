@@ -444,6 +444,27 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     }
 
     /**
+     * Whether this device trades recording fingerprints with the server's catalogue.
+     *
+     * One switch for both directions, and off by default. Publishing tells other accounts on the
+     * server which recordings this device holds — the catalogue has no account column, so what is
+     * published is shared with everyone on it. That is a disclosure to other people rather than to
+     * the server, which is the same reason the popularity switch exists and is also off.
+     *
+     * Both directions, because a device that pulls without ever publishing is taking the benefit of
+     * everyone else's disclosure while making none of its own. The catalogue only has anything in
+     * it because people contribute to it.
+     */
+    private val _agroCatalogTrade = MutableStateFlow(prefs.getBoolean(KEY_AGRO_CATALOG_TRADE, false))
+    val agroCatalogTradeFlow: StateFlow<Boolean> = _agroCatalogTrade.asStateFlow()
+    val agroCatalogTrade: Boolean get() = _agroCatalogTrade.value
+
+    fun setAgroCatalogTrade(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_AGRO_CATALOG_TRADE, enabled) }
+        _agroCatalogTrade.value = enabled
+    }
+
+    /**
      * Upload local audio files to the Agro / Navidrome server storage.
      * Admin-only. Default: false.
      */
@@ -539,6 +560,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_AGRO_IDENTITY_PUB = "key_agro_identity_pub"
         private const val KEY_AGRO_SYNC_SETTINGS = "key_agro_sync_settings"
         private const val KEY_AGRO_DEVICE_ID = "key_agro_device_id"
+        private const val KEY_AGRO_CATALOG_TRADE = "key_agro_catalog_trade"
         const val KEY_CATALOG_CURSOR = "catalog_cursor"
         const val KEY_CATALOG_PUBLISHED_AT = "catalog_published_at"
         private const val KEY_AGRO_P2P_SYNC = "key_agro_p2p_sync"
