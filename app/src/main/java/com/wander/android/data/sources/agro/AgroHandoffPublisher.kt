@@ -30,10 +30,13 @@ import javax.inject.Singleton
  * cancelled the moment playback stops, so an idle or paused app sends nothing at all.
  */
 @Singleton
-class AgroHandoffPublisher @Inject constructor(
+internal class AgroHandoffPublisher @Inject constructor(
     private val agroClient: AgroClient,
+    private val handoffApi: AgroHandoffApi,
     private val secureStorage: SecureStorage,
-    private val sharedTrackHash: com.wander.android.core.sync.SharedTrackHash
+    private val sharedTrackHash: com.wander.android.core.sync.SharedTrackHash,
+    private val presenceSealer: PresenceSealer,
+    private val friendDao: com.wander.android.core.database.dao.FriendDao
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var lastSent: Handoff? = null
@@ -74,7 +77,10 @@ class AgroHandoffPublisher @Inject constructor(
         val stateChanged = handoff != lastSent
         lastSent = handoff
 
-        if (stateChanged) scope.launch { send(track, positionMs, durationMs, isPlaying) }
+        // Only a state change re-seals. The heartbeat repeats a position against metadata that
+        // has not moved, and sealing that again would be one ciphertext per friend device every
+        // thirty seconds to say what the last set already says.
+        if (stateChanged) scope.launch { send(track, positionMs, durationMs, isPlaying, seal = true) }
         if (!isPlaying) return
 
         heartbeat = scope.launch {
@@ -84,29 +90,40 @@ class AgroHandoffPublisher @Inject constructor(
                     stop()
                     break
                 }
-                send(track, positionMs, durationMs, isPlaying = true)
+                send(track, positionMs, durationMs, isPlaying = true, seal = false)
             }
         }
     }
 
-    /** Playback ended or the service is going away: stop claiming to be a live session. */
+    /**
+     * Playback ended or the service is going away: stop claiming to be a live session.
+     *
+     * The sealed copies go with it. They describe a track that is no longer playing, and the feed
+     * that reads them has already stopped showing this session — so what is left on the server is
+     * a set of envelopes addressed to friends about something that is over.
+     */
     fun stop() {
         heartbeat?.cancel()
         heartbeat = null
+        val ended = lastSent
         lastSent = null
+        if (ended != null && agroClient.isConfigured) {
+            scope.launch { handoffApi.clearPresenceCopies().onFailure { log("clear presence", it) } }
+        }
     }
 
     private suspend fun send(
         track: UnifiedTrack,
         positionMs: () -> Long,
         durationMs: () -> Long,
-        isPlaying: Boolean
+        isPlaying: Boolean,
+        seal: Boolean
     ) {
         if (secureStorage.isIncognitoMode) return
         // Both reads in one hop to the main thread, so the position cannot belong to a different
         // track than the length it is measured against.
         val (position, duration) = withContext(Dispatchers.Main) { positionMs() to durationMs() }
-        agroClient.sendHandoffState(
+        handoffApi.sendHandoffState(
             trackUri = track.id,
             title = track.title,
             artist = track.artist,
@@ -121,8 +138,35 @@ class AgroHandoffPublisher @Inject constructor(
             // local file with no hash tells every listener there is nothing to transfer, and all
             // three peer tiers then decline a transfer they have no way to name — which is what
             // made two phones on one Wi-Fi unable to hand each other a song.
-            contentHash = sharedTrackHash.of(track.id)
+            contentHash = sharedTrackHash.of(track.id),
+            presenceCopies = if (seal) sealForFriends(track) else null
         ).onFailure { log("handoff", it) }
+    }
+
+    /**
+     * The session sealed once per friend device, or null when there is nothing to seal to.
+     *
+     * Null and empty are different instructions to the server — leave the copies alone, versus drop
+     * them — so this returns an empty list rather than null when there are simply no friends or no
+     * published keys. A session that can no longer be sealed to anyone must clear what the last one
+     * left, not inherit it.
+     *
+     * Only sealed when a vault key is enrolled. Without one the handoff is in clear anyway and
+     * friends read the ordinary columns, so a sealed copy would be a second answer to a question
+     * already answered.
+     */
+    private suspend fun sealForFriends(track: UnifiedTrack): List<AgroPresenceCopy>? {
+        if (secureStorage.agroVaultKey == null) return null
+        val friends = runCatching { friendDao.friendUsernames() }.getOrNull().orEmpty()
+        val metadata = handoffApi.sealedMetadata(
+            trackUri = track.id,
+            title = track.title,
+            artist = track.artist,
+            album = track.album,
+            artworkUrl = track.artworkUrl,
+            contentHash = sharedTrackHash.of(track.id)
+        ).toString(Charsets.UTF_8)
+        return runCatching { presenceSealer.sealFor(friends, metadata) }.getOrElse { emptyList() }
     }
 
     /** Only the failure text — never the server URL or key, both of which are credentials. */

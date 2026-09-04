@@ -21,13 +21,28 @@ import javax.inject.Singleton
  */
 @Singleton
 internal class AgroFriendsApi @Inject constructor(
-    private val graphQl: AgroGraphQl
+    private val graphQl: AgroGraphQl,
+    private val identityKeyManager: com.wander.android.core.security.IdentityKeyManager,
+    private val secureStorage: com.wander.android.core.security.SecureStorage
 ) {
     suspend fun friends(): Result<List<AgroFriend>> = graphQl.execute(
-        "{ friends { profile { $PROFILE_FIELDS } nowPlaying { $NOW_PLAYING_FIELDS } } }",
-        buildJsonObject { }
+        // This answer seeds the presence feed on a graph refresh, so it needs the device id for
+        // the same reason [friendsNowPlaying] does: without it every sealed friend arrives as a
+        // placeholder and stays one until a socket frame happens to replace it.
+        """
+        query Friends(${'$'}deviceId: String) {
+            friends(deviceId: ${'$'}deviceId) {
+                profile { $PROFILE_FIELDS }
+                nowPlaying { $NOW_PLAYING_FIELDS }
+            }
+        }
+        """.trimIndent(),
+        buildJsonObject { put("deviceId", secureStorage.agroDeviceId) }
     ).map { data ->
-        (data["friends"] as? JsonArray).orEmpty().map { it.jsonObject.toFriend() }
+        (data["friends"] as? JsonArray).orEmpty().map { entry ->
+            val friend = entry.jsonObject.toFriend()
+            friend.copy(nowPlaying = friend.nowPlaying?.openIfSealed(identityKeyManager))
+        }
     }
 
     /** Both directions at once; `outgoing` says which is which. */
@@ -45,10 +60,18 @@ internal class AgroFriendsApi @Inject constructor(
      * when somebody accepts a request, presence changes with every track.
      */
     suspend fun friendsNowPlaying(): Result<List<AgroFriendNowPlaying>> = graphQl.execute(
-        "{ friendsNowPlaying { $NOW_PLAYING_FIELDS } }",
-        buildJsonObject { }
+        // The device id names which key the server should pick a sealed copy for. A copy is sealed
+        // to one device, so without it there is nothing the server could safely hand back.
+        """
+        query FriendsNowPlaying(${'$'}deviceId: String) {
+            friendsNowPlaying(deviceId: ${'$'}deviceId) { $NOW_PLAYING_FIELDS }
+        }
+        """.trimIndent(),
+        buildJsonObject { put("deviceId", secureStorage.agroDeviceId) }
     ).map { data ->
-        (data["friendsNowPlaying"] as? JsonArray).orEmpty().map { it.jsonObject.toNowPlaying() }
+        (data["friendsNowPlaying"] as? JsonArray).orEmpty().map {
+            it.jsonObject.toNowPlaying().openIfSealed(identityKeyManager)
+        }
     }
 
     /**

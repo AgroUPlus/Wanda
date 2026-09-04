@@ -157,4 +157,41 @@ class AgroVaultTest {
             AgroVault.openPayload(sealed, relayKey, "presence")
         }
     }
+
+    @Test
+    fun wipeZeroesTheKeyAndAWipedKeyCannotOpen() {
+        val rootKey = AgroVault.newVaultKey()
+        val presenceKey = AgroVault.getPresenceKey(rootKey)
+        val sealed = AgroVault.sealPayload("what is playing".toByteArray(), presenceKey)
+
+        // Opening with a live copy of the same subkey works, so the failure below is the wipe and
+        // not the envelope.
+        assertEquals(
+            "what is playing",
+            String(AgroVault.openPayload(sealed, AgroVault.getPresenceKey(rootKey)))
+        )
+
+        AgroVault.wipe(presenceKey)
+        assertTrue("the subkey still holds key material", presenceKey.all { it == 0.toByte() })
+
+        // The root key is untouched: wiping a derived subkey must not cost the ability to derive
+        // the next one.
+        assertEquals(
+            "what is playing",
+            String(AgroVault.openPayload(sealed, AgroVault.getPresenceKey(rootKey)))
+        )
+    }
+
+    @Test
+    fun aWipedKeyNoLongerOpensWhatItSealed() {
+        val rootKey = AgroVault.newVaultKey()
+        val key = AgroVault.getPresenceKey(rootKey)
+        val sealed = AgroVault.sealPayload("what is playing".toByteArray(), key)
+
+        AgroVault.wipe(key)
+
+        assertThrows(AgroVault.VaultException::class.java) {
+            AgroVault.openPayload(sealed, key)
+        }
+    }
 }
