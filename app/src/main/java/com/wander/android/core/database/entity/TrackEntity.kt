@@ -88,7 +88,13 @@ data class TrackEntity(
 
     val playCount: Int = 0,
     val lastPlayedTimestamp: Long? = null,
-    val addedTimestamp: Long = System.currentTimeMillis()
+    val addedTimestamp: Long = System.currentTimeMillis(),
+
+    // ── Indexer retry backoff ───────────────────────────────────────────────────────────────
+    /** When this device last attempted to decode or index this track. */
+    val lastAttemptAt: Long? = null,
+    /** How many consecutive times decoding or indexing this track has failed. */
+    val attempts: Int = 0
 ) {
     fun toUnifiedTrack() = UnifiedTrack(
         id = id,
