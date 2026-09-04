@@ -13,6 +13,7 @@ import com.wander.android.core.notification.WorkEta
 import com.wander.android.core.notification.WorkProgressNotification
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.MelodySearchRepository
+import com.wander.android.data.repository.EmbeddingRepository
 import com.wander.android.data.repository.RecognitionRepository
 import com.wander.android.data.repository.RecordingIdentityRepository
 import com.wander.android.data.repository.RecordingLinkRepository
@@ -45,6 +46,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
     private val recordingLinks: RecordingLinkRepository,
     private val acousticFeatures: AcousticFeatureRepository,
     private val melodySearch: MelodySearchRepository,
+    private val embeddingSearch: EmbeddingRepository,
     private val decoder: PcmDecoder,
     private val progress: FingerprintProgress,
     private val notifications: WorkProgressNotification,
@@ -82,11 +84,6 @@ class FingerprintIndexWorker @AssistedInject constructor(
             .let { all -> if (requestedId == null) all else all.filter { it.id == requestedId } }
         val candidateIds = candidates.map { it.id }
 
-        // Before anything is asked of the index, in case it was written by an older algorithm
-        // and every row in it is now unreadable.
-        recognitionRepository.clearIndexIfStale()
-
-        val needsLandmark = recognitionRepository.tracksNeedingIndex().mapTo(mutableSetOf()) { it.id }
         val needsCanonical = recordingIdentity.needingIndex(candidateIds).toSet()
         val needsFeatures = acousticFeatures.needingMeasurement(FEATURE_BATCH_LIMIT).toSet()
         // Empty while humming is off: measuring a contour is a quarter of the work of every decode,
@@ -96,18 +93,21 @@ class FingerprintIndexWorker @AssistedInject constructor(
         } else {
             emptySet()
         }
+        // The neural fingerprint, on the same decode. Empty set when the model asset is absent.
+        val needsEmbedding = embeddingSearch.needingIndex(EMBEDDING_BATCH_LIMIT)
+            .let { needed -> needed.filterTo(mutableSetOf()) { it in candidateIds } }
 
-        // Anything still missing any one of the four is worth a decode; a track that has all four
+        // Anything still missing any one of these is worth a decode; a track that has them all
         // is worth nothing and must not be decoded again.
         val pending = candidates.filter {
             // A track this run already failed to reach is not a candidate again. Without this the
             // failures sit at the head of the list for ever and the sweep re-spends every batch on
             // them — see `FingerprintProgress.couldNotReach`.
             !progress.isUnreachable(it.id) && (
-                it.id in needsLandmark ||
                 it.id in needsCanonical ||
                 it.id in needsFeatures ||
-                it.id in needsContour
+                it.id in needsContour ||
+                it.id in needsEmbedding
             )
         }
         if (pending.isEmpty()) return@withContext Result.success()
@@ -152,12 +152,6 @@ class FingerprintIndexWorker @AssistedInject constructor(
                     progress.couldNotReach(track.id)
                     continue
                 }
-                // Guarded now that the list is a union: a track pulled in because it wants a
-                // contour must not have its landmarks written a second time.
-                if (track.id in needsLandmark) {
-                    recognitionRepository.index(track, samples)
-                    indexDeeperWindows(track, source)
-                }
                 if (track.id in needsCanonical) {
                     recordingIdentity.index(track.id, samples, track.durationMs)
                     // Asked here and not lazily at read time: the comparison needs every candidate
@@ -169,63 +163,13 @@ class FingerprintIndexWorker @AssistedInject constructor(
                 }
                 if (track.id in needsFeatures) acousticFeatures.measure(track.id, samples)
                 if (track.id in needsContour) melodySearch.index(track.id, samples)
+                if (track.id in needsEmbedding) embeddingSearch.index(track.id, samples)
             } finally {
                 progress.finished(track.id)
             }
         }
 
         if (ordered.size > BATCH_SIZE) Result.retry() else Result.success()
-    }
-
-    /**
-     * Reads a few more windows from further into the track, so it can be recognised past its head.
-     *
-     * The first pass indexes a minute from the start, which is ample *density* — thousands of
-     * landmarks — and no coverage at all beyond it. A clip is taken from wherever the listener is
-     * standing, and a clip from the third minute of a song shares literally no landmarks with an
-     * index built from its first: the answer is not weak, it is absent. That is the shape of "it
-     * cannot find a song I own and have already indexed".
-     *
-     * Windows rather than the whole track, because decoding is paid per second of audio and a
-     * streamed library pays for it twice, in data as well as time. Spread across what is left so
-     * that a chorus, a bridge and an outro each have something in the index.
-     *
-     * Failures are silent and per window: a seek that lands badly or a stream that stops early
-     * costs that window's coverage and nothing else, and the track keeps the landmarks it already
-     * has.
-     */
-    private suspend fun indexDeeperWindows(track: TrackEntity, source: Pair<String, Map<String, String>>) {
-        // The row's own duration first, then the container's. A YouTube Music track routinely
-        // arrives with none — 175 of them in one real library — and reading the field alone meant
-        // this returned immediately for every one of them, which is to say it never ran at all.
-        val durationSeconds = (track.durationMs / 1000L).toInt().takeIf { it > 0 }
-            ?: decoder.durationSeconds(source.first, source.second)?.also { measured ->
-                // Written back, so the next sweep can reason about this track without opening it
-                // again — and so everything else that gates on a duration stops seeing zero.
-                trackDao.fillMissingDuration(track.id, measured * 1000L)
-            }
-            ?: return
-
-        // Nothing beyond the head to read. The `+ WINDOW_SECONDS` keeps a track that is barely
-        // longer than the first pass from being decoded again for a sliver.
-        if (durationSeconds <= PcmDecoder.DEFAULT_MAX_SECONDS + WINDOW_SECONDS) return
-
-        val remaining = durationSeconds - PcmDecoder.DEFAULT_MAX_SECONDS
-        val windows = minOf(DEEP_WINDOWS, remaining / WINDOW_SECONDS)
-        if (windows <= 0) return
-
-        // Evenly through what the head did not reach, and never so close to the end that the window
-        // would run off it.
-        val step = remaining / (windows + 1)
-        for (i in 1..windows) {
-            if (isStopped) return
-            val start = PcmDecoder.DEFAULT_MAX_SECONDS + step * i
-            if (start + WINDOW_SECONDS > durationSeconds) continue
-            val samples = runCatching {
-                decoder.decode(source.first, source.second, WINDOW_SECONDS, startSeconds = start)
-            }.getOrNull() ?: continue
-            recognitionRepository.indexWindow(track.id, samples, start)
-        }
     }
 
     private fun notifying(
@@ -319,5 +263,8 @@ class FingerprintIndexWorker @AssistedInject constructor(
          * anything one run can reach.
          */
         private const val FEATURE_BATCH_LIMIT = BATCH_SIZE * 2
+
+        /** Same reasoning as [FEATURE_BATCH_LIMIT]: comfortably larger than one run's reach. */
+        private const val EMBEDDING_BATCH_LIMIT = BATCH_SIZE * 2
     }
 }

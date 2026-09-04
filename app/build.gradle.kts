@@ -40,6 +40,19 @@ android {
                 keyPassword = keystoreProps.getProperty("releaseKeyPassword")
             }
         }
+        // Pin the debug key when a project-local `debug.keystore` is present (gitignored).
+        // Without this, AGP signs with `~/.android/debug.keystore`, which differs between the
+        // machine that first installed the debug build and this one — so `adb install -r` fails
+        // with a signature mismatch and the app has to be uninstalled (losing its data).
+        getByName("debug") {
+            val local = rootProject.file("debug.keystore")
+            if (local.exists()) {
+                storeFile = local
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
     }
 
     buildTypes {
@@ -153,6 +166,11 @@ dependencies {
 
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
+
+    // Neural audio-fingerprint model runtime (AudioEmbedder). Apache-2.0. The model file itself
+    // is downloaded at runtime by EmbeddingModelManager, not bundled.
+    implementation(libs.litert)
+    implementation(libs.litert.gpu)
 
     // YouTube cipher deobfuscation + PoToken (BotGuard) generation. GPL-3.0 (Wanda is AGPL-3.0;
     // GPLv3 §13 permits the combination) — see LICENSE.
