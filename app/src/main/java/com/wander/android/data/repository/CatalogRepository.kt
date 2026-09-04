@@ -13,6 +13,7 @@ import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,7 +40,9 @@ class CatalogRepository @Inject constructor(
     // ── Album ───────────────────────────────────────────────────────────────────────────────
 
     fun albumTracksFlow(albumId: String): Flow<List<UnifiedTrack>> =
-        trackDao.getTracksByAlbumFlow(albumId).map { it.map(TrackEntity::toUnifiedTrack) }
+        trackDao.getTracksByAlbumFlow(albumId)
+            .map { it.map(TrackEntity::toUnifiedTrack) }
+            .flowOn(Dispatchers.Default)
 
     suspend fun album(albumId: String): UnifiedAlbum? = withContext(Dispatchers.IO) {
         albumDao.getAlbumById(albumId)?.toUnifiedAlbum() ?: albumFromTracks(albumId)
@@ -128,7 +131,7 @@ class CatalogRepository @Inject constructor(
         albumDao.getAlbumsByArtistFlow(artist).map { entities ->
             ArtistIdentity.sameArtist(entities, artistId) { it.artistId }
                 .map(AlbumEntity::toUnifiedAlbum)
-        }
+        }.flowOn(Dispatchers.Default)
 
     /**
      * Deduplicated: the artist page is fed by a cross-source search, so the same song arrives once
@@ -141,7 +144,7 @@ class CatalogRepository @Inject constructor(
                 ArtistIdentity.sameArtist(entities, artistId) { it.artistId }
                     .map(TrackEntity::toUnifiedTrack)
             )
-        }
+        }.flowOn(Dispatchers.Default)
 
     /**
      * Fills in an artist Room only partly knows, by searching every configured backend for their

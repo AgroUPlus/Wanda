@@ -14,7 +14,6 @@ import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.dao.MelodyContourDao
 import com.wander.android.core.database.dao.TrackFeatureDao
 import com.wander.android.core.database.dao.PlaylistDao
-import com.wander.android.core.database.dao.RecordingFingerprintDao
 import com.wander.android.core.database.dao.RecordingLinkDao
 import com.wander.android.core.database.dao.RecordingSplitDao
 import com.wander.android.core.database.dao.TrackEmbeddingDao
@@ -28,10 +27,8 @@ import com.wander.android.core.database.entity.FingerprintEntity
 import com.wander.android.core.database.entity.FriendEntity
 import com.wander.android.core.database.entity.HistoryEntity
 import com.wander.android.core.database.entity.PlaylistEntity
-import com.wander.android.core.database.entity.RecordingFingerprintEntity
 import com.wander.android.core.database.entity.RecordingLinkEntity
 import com.wander.android.core.database.entity.RecordingSplitEntity
-import com.wander.android.core.database.entity.RecordingSubHashEntity
 import com.wander.android.core.database.entity.ShelfEntity
 import com.wander.android.core.database.entity.TrackEmbeddingEntity
 import com.wander.android.core.database.entity.TrackEntity
@@ -56,11 +53,9 @@ import com.wander.android.core.database.converter.SourceTypeConverter
         CanonicalMetadataEntity::class,
         TrackFeatureEntity::class,
         MelodyContourEntity::class,
-        RecordingFingerprintEntity::class,
-        RecordingSubHashEntity::class,
         TrackEmbeddingEntity::class
     ],
-    version = 25,
+    version = 26,
     exportSchema = true
 )
 @TypeConverters(SourceTypeConverter::class)
@@ -80,6 +75,5 @@ abstract class WanderDatabase : RoomDatabase() {
     abstract fun trackFeatureDao(): TrackFeatureDao
     abstract fun melodyContourDao(): MelodyContourDao
     abstract fun trackEmbeddingDao(): TrackEmbeddingDao
-
-    abstract fun recordingFingerprintDao(): RecordingFingerprintDao
+    abstract fun trackAttemptDao(): com.wander.android.core.database.dao.TrackAttemptDao
 }
