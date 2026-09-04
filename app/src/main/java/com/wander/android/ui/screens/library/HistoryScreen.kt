@@ -81,7 +81,7 @@ internal fun HistoryScreen(
             IconButton(onClick = onBack, modifier = Modifier.padding(start = 4.dp)) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
             }
-            Text("History", style = MaterialTheme.typography.headlineSmall)
+            Text("History", style = MaterialTheme.typography.headlineLarge)
         }
 
         if (tracks.isEmpty()) {

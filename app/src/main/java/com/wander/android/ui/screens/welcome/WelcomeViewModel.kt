@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.welcome
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.audio.fingerprint.EmbeddingModelManager
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.sources.local.LocalMusicSource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,26 +17,34 @@ import javax.inject.Inject
 data class SetupStatus(
     val localGranted: Boolean = false,
     val navidromeConfigured: Boolean = false,
-    val ytMusicConfigured: Boolean = false
+    val ytMusicConfigured: Boolean = false,
+    val recognitionModel: EmbeddingModelManager.State = EmbeddingModelManager.State.Absent
 )
 
 @HiltViewModel
 class WelcomeViewModel @Inject constructor(
     private val secureStorage: SecureStorage,
-    private val localSource: LocalMusicSource
+    private val localSource: LocalMusicSource,
+    private val embeddingModel: EmbeddingModelManager
 ) : ViewModel() {
 
     val status: StateFlow<SetupStatus> = combine(
         localSource.isConfigured,
         secureStorage.navidromeConfigured,
-        secureStorage.ytMusicConfigured
-    ) { local, navidrome, ytMusic ->
-        SetupStatus(local, navidrome, ytMusic)
+        secureStorage.ytMusicConfigured,
+        embeddingModel.state
+    ) { local, navidrome, ytMusic, model ->
+        SetupStatus(local, navidrome, ytMusic, model)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SetupStatus())
 
     /** Rescans after the audio permission is granted from the welcome flow. */
     fun refreshLocal() {
         viewModelScope.launch { localSource.refresh() }
+    }
+
+    /** Fetches the ~34 MB recognition model. Also offered later from Settings > Fingerprints. */
+    fun downloadRecognitionModel() {
+        viewModelScope.launch { embeddingModel.download() }
     }
 
     fun finish() = secureStorage.markSetupComplete()

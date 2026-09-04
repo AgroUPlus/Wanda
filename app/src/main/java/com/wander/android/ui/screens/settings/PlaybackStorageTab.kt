@@ -6,6 +6,8 @@ internal fun LazyListScope.playbackStorageTab(
     state: SettingsUiState,
     actions: SettingsActions
 ) {
+    item(key = "sec_playback") { SettingsSection("Playback") }
+
     item(key = "offline") {
         SettingsToggle(
             title = "Offline mode",
@@ -28,6 +30,8 @@ internal fun LazyListScope.playbackStorageTab(
             onCheckedChange = actions.onPreloadNextChange
         )
     }
+
+    item(key = "sec_measuring") { SettingsSection("Measuring") }
 
     item(key = "index_fingerprints") {
         SettingsRow(
@@ -52,45 +56,19 @@ internal fun LazyListScope.playbackStorageTab(
         )
     }
 
-    // Rows that act, not switches that describe.
-    //
-    // A switch says "this is how the app should behave from now on"; these say "stop what you are
-    // doing" and "start again now", which is a thing done to work already in flight. Resuming also
-    // re-enqueues rather than waiting for the next Wi-Fi-and-battery trigger, so the row does
-    // visibly what its label promises — see `WorkControls.resume`.
-    item(key = "pause_measuring") {
-        SettingsRow(
-            title = if (state.measuringPaused) "Resume measuring" else "Pause measuring",
-            subtitle = if (state.measuringPaused) {
-                "Measuring is paused. Resuming starts a pass now and retries anything that failed."
-            } else {
-                "Stops the current pass and keeps it stopped until you resume. " +
-                    "Sync and downloads are unaffected."
-            },
-            onClick = { actions.onMeasuringPausedChange(!state.measuringPaused) }
-        )
-    }
-
-    item(key = "pause_downloads") {
-        SettingsRow(
-            title = if (state.downloadingPaused) "Resume downloads" else "Pause downloads",
-            subtitle = if (state.downloadingPaused) {
-                "Downloading liked tracks is paused."
-            } else {
-                "Stops downloading liked tracks until you resume."
-            },
-            onClick = { actions.onDownloadingPausedChange(!state.downloadingPaused) }
-        )
-    }
-
     item(key = "view_fingerprints") {
         SettingsRow(
             title = "What has been measured",
+            // Pause/resume of a running pass lives on the progress notification, not here: it is
+            // an action on work in flight, and the notification is where that work is already
+            // visible. This screen is the report; that one is the remote control.
             subtitle = "See which songs Wanda can recognise and hum-search, and which are still " +
                 "waiting.",
             onClick = actions.onOpenFingerprints
         )
     }
+
+    item(key = "sec_storage") { SettingsSection("Storage") }
 
     item(key = "download") {
         SettingsRow(
