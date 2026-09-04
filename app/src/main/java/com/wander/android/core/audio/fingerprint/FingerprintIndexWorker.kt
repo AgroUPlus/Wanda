@@ -52,7 +52,8 @@ class FingerprintIndexWorker @AssistedInject constructor(
     private val notifications: WorkProgressNotification,
     private val workControls: WorkControls,
     private val musicRepository: MusicRepository,
-    private val trackDao: com.wander.android.core.database.dao.TrackDao
+    private val trackDao: com.wander.android.core.database.dao.TrackDao,
+    private val trackAttemptDao: com.wander.android.core.database.dao.TrackAttemptDao
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.Default) {
@@ -84,7 +85,6 @@ class FingerprintIndexWorker @AssistedInject constructor(
             .let { all -> if (requestedId == null) all else all.filter { it.id == requestedId } }
         val candidateIds = candidates.map { it.id }
 
-        val needsCanonical = recordingIdentity.needingIndex(candidateIds).toSet()
         val needsFeatures = acousticFeatures.needingMeasurement(FEATURE_BATCH_LIMIT).toSet()
         // Empty while humming is off: measuring a contour is a quarter of the work of every decode,
         // and nothing reads the result. See [MelodySearch].
@@ -99,12 +99,12 @@ class FingerprintIndexWorker @AssistedInject constructor(
 
         // Anything still missing any one of these is worth a decode; a track that has them all
         // is worth nothing and must not be decoded again.
+        val now = System.currentTimeMillis()
         val pending = candidates.filter {
-            // A track this run already failed to reach is not a candidate again. Without this the
-            // failures sit at the head of the list for ever and the sweep re-spends every batch on
-            // them — see `FingerprintProgress.couldNotReach`.
-            !progress.isUnreachable(it.id) && (
-                it.id in needsCanonical ||
+            // A track this run already failed to reach is not a candidate again.
+            // Also back off tracks whose repeated failures are persisted across process deaths.
+            !progress.isUnreachable(it.id) &&
+            !isBackedOff(it, now) && (
                 it.id in needsFeatures ||
                 it.id in needsContour ||
                 it.id in needsEmbedding
@@ -145,25 +145,29 @@ class FingerprintIndexWorker @AssistedInject constructor(
                 val source = audioSourceFor(track)
                 if (source == null) {
                     progress.couldNotReach(track.id)
+                    trackAttemptDao.recordAttempt(track.id, System.currentTimeMillis())
                     continue
                 }
                 val samples = decoder.decode(source.first, source.second)
                 if (samples == null) {
                     progress.couldNotReach(track.id)
+                    trackAttemptDao.recordAttempt(track.id, System.currentTimeMillis())
                     continue
                 }
-                if (track.id in needsCanonical) {
-                    recordingIdentity.index(track.id, samples, track.durationMs)
-                    // Asked here and not lazily at read time: the comparison needs every candidate
-                    // fingerprint in memory, which is affordable once per track in a background
-                    // worker and not affordable on every library query. This is where the answer
-                    // gets written down, and it is the only thing that turns a stored fingerprint
-                    // into a merge.
-                    recordingLinks.record(track.id, recordingIdentity.matchesFor(track.id))
+                if (track.attempts > 0) {
+                    trackAttemptDao.clearAttempts(track.id)
                 }
                 if (track.id in needsFeatures) acousticFeatures.measure(track.id, samples)
                 if (track.id in needsContour) melodySearch.index(track.id, samples)
-                if (track.id in needsEmbedding) embeddingSearch.index(track.id, samples)
+                if (track.id in needsEmbedding) {
+                    embeddingSearch.index(track.id, samples)
+                    // With neural embeddings now stored, find duplicates among other indexed tracks
+                    // and record links in recording_links.
+                    val matches = recordingIdentity.matchesFor(track.id)
+                    if (matches.isNotEmpty()) {
+                        recordingLinks.record(track.id, matches)
+                    }
+                }
             } finally {
                 progress.finished(track.id)
             }
@@ -266,5 +270,21 @@ class FingerprintIndexWorker @AssistedInject constructor(
 
         /** Same reasoning as [FEATURE_BATCH_LIMIT]: comfortably larger than one run's reach. */
         private const val EMBEDDING_BATCH_LIMIT = BATCH_SIZE * 2
+
+        const val BASE_BACKOFF_MS = 5 * 60 * 1000L // 5 minutes
+        const val MAX_BACKOFF_MS = 24 * 60 * 60 * 1000L // 24 hours
+
+        fun calculateBackoff(attempts: Int): Long {
+            if (attempts <= 0) return 0L
+            val shift = minOf(attempts - 1, 10)
+            return minOf(MAX_BACKOFF_MS, BASE_BACKOFF_MS * (1L shl shift))
+        }
+    }
+
+    internal fun isBackedOff(track: TrackEntity, now: Long): Boolean {
+        if (track.attempts <= 0) return false
+        val backoffMs = calculateBackoff(track.attempts)
+        val last = track.lastAttemptAt ?: return false
+        return (now - last) < backoffMs
     }
 }

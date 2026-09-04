@@ -1,5 +1,10 @@
 package com.wander.android.core.audio.fingerprint
 
+import com.wander.android.core.database.dao.TrackAttemptDao
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +24,9 @@ import kotlinx.coroutines.flow.asStateFlow
  * WorkManager and the screen watching it outlives any one run.
  */
 @Singleton
-class FingerprintProgress @Inject constructor() {
+class FingerprintProgress @Inject constructor(
+    private val trackAttemptDao: TrackAttemptDao
+) {
 
     private val _indexing = MutableStateFlow<String?>(null)
 
@@ -81,5 +88,8 @@ class FingerprintProgress @Inject constructor() {
     /** Forgets the failures, so an explicit "measure now" really does try everything again. */
     fun retryFailures() {
         unreachable.clear()
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            trackAttemptDao.clearAllAttempts()
+        }
     }
 }
