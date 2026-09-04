@@ -227,7 +227,12 @@ class FingerprintIndexWorker @AssistedInject constructor(
         return stream.uri to stream.headers
     }
 
-    private companion object {
+    /**
+     * `internal` rather than private: [calculateBackoff] is the schedule this worker runs on, and
+     * `FingerprintBackoffTest` asserts its shape — the doubling, and the 24-hour cap — which is not
+     * observable any other way without waiting a day.
+     */
+    internal companion object {
         /**
          * Tracks per run.
          *
