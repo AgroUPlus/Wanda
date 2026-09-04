@@ -113,4 +113,48 @@ class AgroVaultTest {
             AgroVault.openSettings(corrupted, key)
         }
     }
+
+    @Test
+    fun deriveSubkeyIsDeterministicAndDistinctForDifferentContexts() {
+        val rootKey = AgroVault.newVaultKey()
+
+        val settingsKey = AgroVault.getSettingsKey(rootKey)
+        val presenceKey = AgroVault.getPresenceKey(rootKey)
+        val relayKey = AgroVault.getP2pRelayKey(rootKey)
+
+        assertEquals(32, settingsKey.size)
+        assertEquals(32, presenceKey.size)
+        assertEquals(32, relayKey.size)
+
+        // All derived subkeys must be distinct from root key and each other
+        assertFalse(settingsKey.contentEquals(rootKey))
+        assertFalse(settingsKey.contentEquals(presenceKey))
+        assertFalse(settingsKey.contentEquals(relayKey))
+        assertFalse(presenceKey.contentEquals(relayKey))
+
+        // Deterministic on same root key and context
+        val settingsKey2 = AgroVault.getSettingsKey(rootKey)
+        assertArrayEquals(settingsKey, settingsKey2)
+    }
+
+    @Test
+    fun sealAndOpenPayloadRoundTrip() {
+        val rootKey = AgroVault.newVaultKey()
+        val presenceKey = AgroVault.getPresenceKey(rootKey)
+        val payload = """{"trackUri":"content://media/1","title":"Windowlicker","artist":"Aphex Twin"}"""
+
+        val sealed = AgroVault.sealPayload(payload.toByteArray(Charsets.UTF_8), presenceKey)
+        assertNotNull(sealed)
+        assertFalse(sealed.contains("Aphex Twin"))
+
+        val openedBytes = AgroVault.openPayload(sealed, presenceKey, "presence")
+        val opened = String(openedBytes, Charsets.UTF_8)
+        assertEquals(payload, opened)
+
+        // Wrong subkey fails
+        val relayKey = AgroVault.getP2pRelayKey(rootKey)
+        assertThrows(AgroVault.VaultException::class.java) {
+            AgroVault.openPayload(sealed, relayKey, "presence")
+        }
+    }
 }
