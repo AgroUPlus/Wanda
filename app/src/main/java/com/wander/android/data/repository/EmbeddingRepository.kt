@@ -91,21 +91,10 @@ class EmbeddingRepository @Inject constructor(
 
         val ranked = stored.map { entity ->
             val track = AudioEmbedder.unpack(entity.vector)
-            var total = 0f
-            var firstBest = 0
-            for ((qi, q) in query.withIndex()) {
-                var best = -1f
-                var bestJ = 0
-                for (j in track.indices) {
-                    val s = dot(q, track[j])
-                    if (s > best) { best = s; bestJ = j }
-                }
-                total += best
-                if (qi == 0) firstBest = bestJ
-            }
+            val (similarity, firstBest) = scoreSequence(query, track)
             Match(
                 trackId = entity.trackId,
-                similarity = total / query.size,
+                similarity = similarity,
                 positionSeconds = (firstBest * AudioEmbedder.HOP_SAMPLES / AudioFormat.SAMPLE_RATE)
             )
         }.sortedByDescending { it.similarity }
@@ -131,6 +120,28 @@ class EmbeddingRepository @Inject constructor(
         Log.i(TAG, "Embedding pass: ${ranked.size} candidates, best ${best.trackId} " +
             "at ${"%.3f".format(best.similarity)}, runner-up ${competitor?.trackId ?: "none"} at ${"%.3f".format(runnerUp)}")
         if (best.similarity - runnerUp < MIN_MARGIN) null else best
+    }
+
+    internal fun scoreSequence(
+        query: Array<FloatArray>,
+        track: Array<FloatArray>
+    ): Pair<Float, Int> {
+        var total = 0f
+        var firstBest = 0
+        for ((qi, q) in query.withIndex()) {
+            var best = -1f
+            var bestJ = 0
+            for (j in track.indices) {
+                val s = dot(q, track[j])
+                if (s > best) {
+                    best = s
+                    bestJ = j
+                }
+            }
+            total += best
+            if (qi == 0) firstBest = bestJ
+        }
+        return Pair(total / query.size, firstBest)
     }
 
     private fun dot(a: FloatArray, b: FloatArray): Float {
