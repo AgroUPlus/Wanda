@@ -2,6 +2,8 @@ package com.wander.android.data.sources.agro
 
 import com.wander.android.core.security.AgroVault
 import com.wander.android.core.security.SecureStorage
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -69,78 +71,6 @@ class AgroClient @Inject constructor(
             if (!petname.isNullOrBlank()) secureStorage.setAgroDevicePetname(petname)
             petname
         }
-    }
-
-    /**
-     * Event-driven handoff: called only on Media3 playback transitions, never on timers.
-     * See [AgroHandoffPublisher], which is what decides an event is worth sending.
-     */
-    suspend fun sendHandoffState(
-        trackUri: String,
-        title: String,
-        artist: String,
-        album: String?,
-        artworkUrl: String?,
-        positionMs: Long,
-        durationMs: Long,
-        isPlaying: Boolean,
-        contentHash: String? = null
-    ): Result<Unit> {
-        val mutation = """
-            mutation UpdateHandoff(${'$'}input: HandoffInput!) {
-                updateHandoff(input: ${'$'}input)
-            }
-        """.trimIndent()
-
-        // When a vault key is enrolled, the real metadata travels only inside an authenticated
-        // envelope the server cannot open, and the plaintext fields below are reduced to a
-        // placeholder. Another of this account's devices unseals it with the same subkey; the
-        // server and its database see nothing but ciphertext, a position and a play/pause flag.
-        val handoffKey = secureStorage.agroVaultKey?.let { AgroVault.getPresenceKey(it) }
-        val encryptedPayload = handoffKey?.let { key ->
-            val metadataJson = buildJsonObject {
-                put("trackUri", trackUri)
-                put("trackTitle", title)
-                put("artistName", artist)
-                album?.let { put("albumName", it) }
-                artworkUrl?.let { put("artworkUrl", it) }
-            }.toString()
-            runCatching {
-                AgroVault.sealPayload(metadataJson.toByteArray(Charsets.UTF_8), key)
-            }.getOrNull()
-        }
-        val private = encryptedPayload != null
-
-        val variables = buildJsonObject {
-            put("input", buildJsonObject {
-                put("userId", secureStorage.agroUsername)
-                // Suppressed under a sealed session: sending the real values here would defeat the
-                // envelope. `HandoffInput` requires these three, so they carry a placeholder.
-                put("trackUri", if (private) "encrypted" else trackUri)
-                put("trackTitle", if (private) PRIVATE_SESSION_TITLE else title)
-                put("artistName", if (private) "" else artist)
-                if (!private) {
-                    album?.let { put("albumName", it) }
-                    // Optional in `HandoffInput`, but it is what lets the receiving client show the
-                    // right cover without looking the track up again.
-                    artworkUrl?.let { put("artworkUrl", it) }
-                }
-                put("positionMs", positionMs)
-                // What the position is measured against. Without it anything rendering this
-                // session can only show an elapsed count — a progress bar needs both ends.
-                put("durationMs", durationMs)
-                put("isPlaying", isPlaying)
-                put("deviceId", secureStorage.agroDeviceId)
-                // Only sent when this device actually has the file and has hashed it, and never
-                // under a sealed session: the hash identifies the track as surely as its name.
-                if (!private) {
-                    contentHash?.takeIf { it.isNotBlank() }?.let { put("contentHash", it) }
-                }
-                encryptedPayload?.let { put("encryptedPayload", it) }
-            })
-        }
-
-        return graphQl.execute(mutation, variables).discardPayload()
     }
 
     /**
@@ -389,4 +319,5 @@ internal data class AgroIdentity(val username: String, val role: String) {
  * These mutations return an acknowledgement the caller has no use for — what matters is that the
  * server accepted the write. Named rather than an empty `map { }` so that is legible as a choice.
  */
-private fun <T> Result<T>.discardPayload(): Result<Unit> = map { Unit }
+/** Shared with [AgroHandoffApi]: a mutation whose only interesting answer is whether it failed. */
+internal fun <T> Result<T>.discardPayload(): Result<Unit> = map { Unit }
