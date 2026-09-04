@@ -44,7 +44,7 @@ class AgroSessionApi @Inject constructor(
         query PlaybackHandoff(${'$'}userId: String!) {
             playbackHandoff(userId: ${'$'}userId) {
                 trackUri trackTitle artistName albumName artworkUrl
-                positionMs isPlaying deviceId updatedAt queueIndex
+                positionMs isPlaying deviceId updatedAt queueIndex encryptedPayload
                 queue { trackUri trackTitle artistName albumName artworkUrl }
             }
         }
@@ -166,19 +166,34 @@ class AgroSessionApi @Inject constructor(
         isOnline = this["isOnline"]?.jsonPrimitive?.booleanOrNull == true
     )
 
-    private fun JsonObject.toHandoff() = AgroHandoffState(
-        trackUri = string("trackUri").orEmpty(),
-        trackTitle = string("trackTitle").orEmpty(),
-        artistName = string("artistName").orEmpty(),
-        albumName = string("albumName"),
-        artworkUrl = string("artworkUrl"),
-        positionMs = this["positionMs"]?.jsonPrimitive?.longOrNull ?: 0L,
-        isPlaying = this["isPlaying"]?.jsonPrimitive?.booleanOrNull == true,
-        deviceId = string("deviceId").orEmpty(),
-        updatedAt = string("updatedAt").orEmpty(),
-        queue = this["queue"]?.jsonArray.orEmpty().map { it.jsonObject.toQueueTrack() },
-        queueIndex = this["queueIndex"]?.jsonPrimitive?.intOrNull ?: -1
-    )
+    private fun JsonObject.toHandoff(): AgroHandoffState {
+        // A sealed session carries placeholders in the plaintext fields; the real metadata is in
+        // an envelope only a device with the account's vault key can open. Opened here so the rest
+        // of the app — the resume card, "same track as playing" — sees a normal handoff.
+        val sealed = string("encryptedPayload")?.let { openSealedHandoff(it) }
+        return AgroHandoffState(
+            trackUri = sealed?.string("trackUri") ?: string("trackUri").orEmpty(),
+            trackTitle = sealed?.string("trackTitle") ?: string("trackTitle").orEmpty(),
+            artistName = sealed?.string("artistName") ?: string("artistName").orEmpty(),
+            albumName = sealed?.string("albumName") ?: string("albumName"),
+            artworkUrl = sealed?.string("artworkUrl") ?: string("artworkUrl"),
+            positionMs = this["positionMs"]?.jsonPrimitive?.longOrNull ?: 0L,
+            isPlaying = this["isPlaying"]?.jsonPrimitive?.booleanOrNull == true,
+            deviceId = string("deviceId").orEmpty(),
+            updatedAt = string("updatedAt").orEmpty(),
+            queue = this["queue"]?.jsonArray.orEmpty().map { it.jsonObject.toQueueTrack() },
+            queueIndex = this["queueIndex"]?.jsonPrimitive?.intOrNull ?: -1
+        )
+    }
+
+    /** Opens a sealed handoff envelope with the account's handoff subkey, or null if it cannot. */
+    private fun openSealedHandoff(sealed: String): JsonObject? {
+        val key = secureStorage.agroVaultKey?.let { AgroVault.getPresenceKey(it) } ?: return null
+        return runCatching {
+            val plaintext = AgroVault.openPayload(sealed, key, "handoff").toString(Charsets.UTF_8)
+            Json.parseToJsonElement(plaintext).jsonObject
+        }.getOrNull()
+    }
 
     private fun JsonObject.toQueueTrack() = AgroHandoffTrack(
         trackUri = string("trackUri").orEmpty(),

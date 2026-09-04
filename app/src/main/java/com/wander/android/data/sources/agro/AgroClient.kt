@@ -92,26 +92,51 @@ class AgroClient @Inject constructor(
             }
         """.trimIndent()
 
-        val variables = buildJsonObject {
-            put("input", buildJsonObject {
-                put("userId", secureStorage.agroUsername)
+        // When a vault key is enrolled, the real metadata travels only inside an authenticated
+        // envelope the server cannot open, and the plaintext fields below are reduced to a
+        // placeholder. Another of this account's devices unseals it with the same subkey; the
+        // server and its database see nothing but ciphertext, a position and a play/pause flag.
+        val handoffKey = secureStorage.agroVaultKey?.let { AgroVault.getPresenceKey(it) }
+        val encryptedPayload = handoffKey?.let { key ->
+            val metadataJson = buildJsonObject {
                 put("trackUri", trackUri)
                 put("trackTitle", title)
                 put("artistName", artist)
                 album?.let { put("albumName", it) }
-                // Optional in `HandoffInput`, but it is what lets the receiving client show the
-                // right cover without looking the track up again.
                 artworkUrl?.let { put("artworkUrl", it) }
+            }.toString()
+            runCatching {
+                AgroVault.sealPayload(metadataJson.toByteArray(Charsets.UTF_8), key)
+            }.getOrNull()
+        }
+        val private = encryptedPayload != null
+
+        val variables = buildJsonObject {
+            put("input", buildJsonObject {
+                put("userId", secureStorage.agroUsername)
+                // Suppressed under a sealed session: sending the real values here would defeat the
+                // envelope. `HandoffInput` requires these three, so they carry a placeholder.
+                put("trackUri", if (private) "encrypted" else trackUri)
+                put("trackTitle", if (private) PRIVATE_SESSION_TITLE else title)
+                put("artistName", if (private) "" else artist)
+                if (!private) {
+                    album?.let { put("albumName", it) }
+                    // Optional in `HandoffInput`, but it is what lets the receiving client show the
+                    // right cover without looking the track up again.
+                    artworkUrl?.let { put("artworkUrl", it) }
+                }
                 put("positionMs", positionMs)
                 // What the position is measured against. Without it anything rendering this
                 // session can only show an elapsed count — a progress bar needs both ends.
                 put("durationMs", durationMs)
                 put("isPlaying", isPlaying)
                 put("deviceId", secureStorage.agroDeviceId)
-                // Only sent when this device actually has the file and has hashed it. Omitted
-                // rather than nulled: the server keeps the hash a track change established instead
-                // of erasing it on the next heartbeat.
-                contentHash?.takeIf { it.isNotBlank() }?.let { put("contentHash", it) }
+                // Only sent when this device actually has the file and has hashed it, and never
+                // under a sealed session: the hash identifies the track as surely as its name.
+                if (!private) {
+                    contentHash?.takeIf { it.isNotBlank() }?.let { put("contentHash", it) }
+                }
+                encryptedPayload?.let { put("encryptedPayload", it) }
             })
         }
 
@@ -166,6 +191,9 @@ class AgroClient @Inject constructor(
 
     companion object {
         const val DEFAULT_SERVER_URL = "https://agro.kolbxyz.xyz"
+
+        /** Placeholder title on a sealed handoff — the real one is inside [HandoffInput]'s envelope. */
+        const val PRIVATE_SESSION_TITLE = "Private Session"
     }
 
     /**
