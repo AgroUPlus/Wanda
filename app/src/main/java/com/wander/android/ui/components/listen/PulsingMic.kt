@@ -102,21 +102,23 @@ internal fun PulsingMic(
             drawOrganicBlob(
                 center = center,
                 radius = auraRadius,
-                phase = phase1,
-                distortion = 0.14f + 0.12f * smoothedLevel,
-                lobes = 4,
-                harmonicLobes = 7,
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        tertiaryColor.copy(alpha = 0.22f + 0.18f * smoothedLevel),
-                        primaryColor.copy(alpha = 0.08f + 0.12f * smoothedLevel),
-                        Color.Transparent
+                waveform = BlobWaveform(
+                    phase = phase1,
+                    distortion = 0.14f + 0.12f * smoothedLevel,
+                    lobes = 4,
+                    harmonicLobes = 7,
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            tertiaryColor.copy(alpha = 0.22f + 0.18f * smoothedLevel),
+                            primaryColor.copy(alpha = 0.08f + 0.12f * smoothedLevel),
+                            Color.Transparent
+                        ),
+                        center = center,
+                        radius = auraRadius * 1.1f
                     ),
-                    center = center,
-                    radius = auraRadius * 1.1f
-                ),
-                strokeColor = tertiaryColor.copy(alpha = 0.25f + 0.35f * smoothedLevel),
-                strokeWidth = (2f + 2f * smoothedLevel).dp.toPx()
+                    strokeColor = tertiaryColor.copy(alpha = 0.25f + 0.35f * smoothedLevel),
+                    strokeWidth = (2f + 2f * smoothedLevel).dp.toPx()
+                )
             )
 
             // 2. Layer 2: Middle liquid wave (counter-rotating, energetic, vibrant)
@@ -124,21 +126,23 @@ internal fun PulsingMic(
             drawOrganicBlob(
                 center = center,
                 radius = waveRadius,
-                phase = phase2,
-                distortion = 0.18f + 0.16f * smoothedLevel,
-                lobes = 5,
-                harmonicLobes = 3,
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        primaryColor.copy(alpha = 0.38f + 0.25f * smoothedLevel),
-                        secondaryColor.copy(alpha = 0.18f + 0.15f * smoothedLevel),
-                        primaryColor.copy(alpha = 0.02f)
+                waveform = BlobWaveform(
+                    phase = phase2,
+                    distortion = 0.18f + 0.16f * smoothedLevel,
+                    lobes = 5,
+                    harmonicLobes = 3,
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            primaryColor.copy(alpha = 0.38f + 0.25f * smoothedLevel),
+                            secondaryColor.copy(alpha = 0.18f + 0.15f * smoothedLevel),
+                            primaryColor.copy(alpha = 0.02f)
+                        ),
+                        center = center,
+                        radius = waveRadius * 1.05f
                     ),
-                    center = center,
-                    radius = waveRadius * 1.05f
-                ),
-                strokeColor = primaryColor.copy(alpha = 0.45f + 0.40f * smoothedLevel),
-                strokeWidth = (2.5f + 2f * smoothedLevel).dp.toPx()
+                    strokeColor = primaryColor.copy(alpha = 0.45f + 0.40f * smoothedLevel),
+                    strokeWidth = (2.5f + 2f * smoothedLevel).dp.toPx()
+                )
             )
 
             // 3. Layer 3: Inner soft core glow
@@ -177,19 +181,23 @@ internal fun PulsingMic(
     }
 }
 
+private data class BlobWaveform(
+    val phase: Float,
+    val distortion: Float,
+    val lobes: Int,
+    val harmonicLobes: Int,
+    val brush: Brush,
+    val strokeColor: Color,
+    val strokeWidth: Float
+)
+
 /**
  * Draws a continuous organic fluid blob using a closed cubic/quadratic Bézier spline around [center].
  */
 private fun DrawScope.drawOrganicBlob(
     center: Offset,
     radius: Float,
-    phase: Float,
-    distortion: Float,
-    lobes: Int,
-    harmonicLobes: Int,
-    brush: Brush,
-    strokeColor: Color,
-    strokeWidth: Float
+    waveform: BlobWaveform
 ) {
     if (radius <= 0f) return
 
@@ -199,9 +207,9 @@ private fun DrawScope.drawOrganicBlob(
     for (i in 0 until pointCount) {
         val theta = (i.toFloat() / pointCount) * 2f * PI.toFloat()
         // Combine primary lobes and secondary harmonic lobes with phase offsets
-        val wave1 = sin(lobes * theta + phase)
-        val wave2 = cos(harmonicLobes * theta - phase * 1.3f)
-        val r = radius * (1f + distortion * (0.65f * wave1 + 0.35f * wave2))
+        val wave1 = sin(waveform.lobes * theta + waveform.phase)
+        val wave2 = cos(waveform.harmonicLobes * theta - waveform.phase * 1.3f)
+        val r = radius * (1f + waveform.distortion * (0.65f * wave1 + 0.35f * wave2))
 
         val x = center.x + r * cos(theta)
         val y = center.y + r * sin(theta)
@@ -225,9 +233,9 @@ private fun DrawScope.drawOrganicBlob(
     }
 
     // Draw soft gradient fill
-    drawPath(path = path, brush = brush, style = Fill)
+    drawPath(path = path, brush = waveform.brush, style = Fill)
     // Draw glowing undulating contour stroke
-    drawPath(path = path, color = strokeColor, style = Stroke(width = strokeWidth))
+    drawPath(path = path, color = waveform.strokeColor, style = Stroke(width = waveform.strokeWidth))
 }
 
 private val CanvasSize = 170.dp
