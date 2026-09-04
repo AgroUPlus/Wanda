@@ -181,12 +181,25 @@ internal object RecordingFingerprinter {
     fun aligned(a: IntArray, b: IntArray): Alignment {
         if (a.isEmpty() || b.isEmpty()) return Alignment(0.0, 0, 0)
 
-        val voted = voteOffset(a, b) ?: return Alignment(0.0, 0, 0)
+        // No shared sub-hash is not the same as no similarity, and treating it as one is what this
+        // `?: 0` replaces. A vote needs two sub-hashes to be equal in all 32 bits; degradation
+        // flips bits, so a re-encoded or noisy copy of the same recording shares far fewer exact
+        // values than intuition suggests, and often none at all. The old code returned 0.0 there —
+        // scoring a degraded copy of a track *below* an unrelated one, which is the one comparison
+        // the fingerprint exists to get right.
+        //
+        // So the vote decides *where* to look, not *whether* to look. With no votes the offset is
+        // unknown and 0 is the best available guess: the overwhelmingly common case is two
+        // encodings of the same recording starting at the same place. The refine window then
+        // covers a frame or two of drift, at the same seven comparisons the voted path costs.
+        val voted = voteOffset(a, b)
+        val centre = voted?.offsetFrames ?: 0
+        val votes = voted?.votes ?: 0
 
-        var best = Alignment(0.0, voted.offsetFrames, voted.votes)
-        for (offset in voted.offsetFrames - REFINE_FRAMES..voted.offsetFrames + REFINE_FRAMES) {
+        var best = Alignment(0.0, centre, votes)
+        for (offset in centre - REFINE_FRAMES..centre + REFINE_FRAMES) {
             val score = similarityAt(a, b, offset)
-            if (score > best.similarity) best = Alignment(score, offset, voted.votes)
+            if (score > best.similarity) best = Alignment(score, offset, votes)
         }
         return best
     }
