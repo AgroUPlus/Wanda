@@ -1,8 +1,9 @@
 package com.wander.android.data.repository
 
+import com.wander.android.core.audio.fingerprint.AudioEmbedder
 import com.wander.android.core.audio.fingerprint.FingerprintProgress
-import com.wander.android.core.database.dao.FingerprintDao
 import com.wander.android.core.database.dao.MelodyContourDao
+import com.wander.android.core.database.dao.TrackEmbeddingDao
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -53,13 +54,14 @@ enum class FingerprintStatus {
 // player's cover is read there, because the cover the user looks at is drawn outside
 // `NowPlayingScreen`. Everything it exposes was already public.
 class FingerprintStatusRepository @Inject constructor(
-    private val fingerprintDao: FingerprintDao,
+    private val embeddingDao: TrackEmbeddingDao,
     private val contourDao: MelodyContourDao,
     private val progress: FingerprintProgress
 ) {
 
     private data class Input(
-        val landmarks: Set<String>,
+        /** Tracks with a current neural fingerprint — what recognition actually reads now. */
+        val embedded: Set<String>,
         val contours: Set<String>,
         val indexing: String?
     )
@@ -87,10 +89,13 @@ class FingerprintStatusRepository @Inject constructor(
         var last: Input? = null
 
         val inputs: Flow<Input?> = combine(
-            fingerprintDao.indexedTrackIdsFlow(),
+            embeddingDao.indexedTrackIdsFlow(
+                AudioEmbedder.MODEL_NAME,
+                AudioEmbedder.EMBEDDER_VERSION
+            ),
             contourDao.indexedTrackIdsFlow(MelodySearchRepository.CONTOUR_VERSION),
             progress.indexing
-        ) { landmarks, contours, indexing -> Input(landmarks.toSet(), contours.toSet(), indexing) }
+        ) { embedded, contours, indexing -> Input(embedded.toSet(), contours.toSet(), indexing) }
 
         val ticks: Flow<Input?> = flow {
             while (true) {
@@ -110,14 +115,14 @@ class FingerprintStatusRepository @Inject constructor(
             val now = System.currentTimeMillis()
             input.indexing?.let { settling[it] = now }
 
-            // Green means "this track can be recognised", which is the landmark fingerprint and
-            // nothing else. It used to require a melody contour as well — so with humming switched
-            // off every track in the library would read as unmeasured, and while humming was *on*
-            // the badge was promising something the contours could not deliver anyway.
+            // Green means "this track can be recognised", which is now the neural fingerprint and
+            // nothing else. It was the landmark index until the embedder replaced it; reading the
+            // old table here would have shown a whole library as unmeasured the moment the
+            // landmarks were dropped, while recognition was in fact working.
             val done = if (com.wander.android.core.audio.melody.MelodySearch.ENABLED) {
-                input.landmarks.filterTo(mutableSetOf()) { it in input.contours }
+                input.embedded.filterTo(mutableSetOf()) { it in input.contours }
             } else {
-                input.landmarks.toMutableSet()
+                input.embedded.toMutableSet()
             }
             // Held only until the answer arrives, or until the window runs out.
             settling.keys.removeAll(done)
