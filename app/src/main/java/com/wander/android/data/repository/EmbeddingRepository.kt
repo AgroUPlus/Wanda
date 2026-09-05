@@ -242,26 +242,37 @@ class EmbeddingRepository @Inject constructor(
      * arithmetic faster was solving the smallest of the three problems; the answer is to stop
      * reading the other 1300 tracks.
      *
-     * Stage one ranks every track by the best cosine between the clip's mean vector and any of
-     * the track's stored [TrackEmbeddingEntity.centroid] chunk means — a couple of megabytes read
-     * and a few thousand multiply-adds. Stage two opens only the top [SHORTLIST] and does the full
-     * segment-level comparison there.
+     * **One** ranks every track by the best cosine between the clip's mean vector and any of the
+     * track's stored [TrackEmbeddingEntity.centroid] chunk means — a megabyte read and a few
+     * thousand multiply-adds. The top [SHORTLIST] go on.
      *
-     * ## Why the shortlist is safe
+     * **Two** reads those rows and scores them with [COARSE_SEGMENTS] evenly spaced clip segments
+     * instead of all of them, keeping the top [COARSE_KEEP]. The rows are read once and serve both
+     * this pass and the next, so this buys arithmetic and costs no I/O.
      *
-     * A chunk mean is a lossy summary and could in principle rank the right track below the cut.
-     * Measured against this user's own 1374-track index over 300 random six-second excerpts, the
-     * true track's **worst** rank was 2 and top-8 recall was 100%. [SHORTLIST] sits an order of
-     * magnitude above that.
+     * **Three** scores the survivors with the whole clip, which is what the thresholds judge.
      *
-     * That margin is the reason chunking exists. The same measurement against a single whole-track
+     * ## Why each cut is safe
+     *
+     * Both were measured against this user's own index rather than reasoned about, and the second
+     * measurement corrected the first. A chunk mean is a lossy summary and can rank the right
+     * track below the cut: over 400 six-second excerpts of the **full-length** index (median 3.0
+     * minutes a track), top-32 recall was 99.75% and the worst true-track rank was 33 — so the
+     * shortlist of 32 that a 60-second index had justified was dropping roughly one clip in four
+     * hundred, invisibly. [SHORTLIST] is now three times that worst case.
+     *
+     * That margin is why chunking exists at all. The same measurement against a single whole-track
      * mean gave a worst rank of **524** — a shortlist deep enough to be safe would have had to
      * open a third of the library, which is the cost the shortlist is here to avoid.
      *
-     * The failure mode if it ever is not deep enough is a miss, not a wrong answer: stage two
-     * still applies the full threshold and margin to what it is given, so a shortlist that drops
-     * the right track produces "no match", which is what the user would have been told by a
-     * genuine failure anyway.
+     * The coarse pass is the cheaper of the two cuts to justify: over 300 excerpts, three clip
+     * segments put the true track no lower than **rank 1** of a 128-track shortlist. [COARSE_KEEP]
+     * is twenty-four.
+     *
+     * The failure mode of either being too tight is a miss, not a wrong answer: the last pass
+     * still applies the full threshold and margin to what it is given, so a cut that drops the
+     * right track produces "no match" — which is exactly what a song that is genuinely not in the
+     * library produces, and exactly why a cut that is too tight is invisible from the outside.
      *
      * Rows with no centroid yet are shortlisted unconditionally — see [TrackEmbeddingDao.centroids].
      */
@@ -297,7 +308,11 @@ class EmbeddingRepository @Inject constructor(
         val shortlist = LinkedHashSet<String>(unmeasured)
         for (i in 0 until minOf(SHORTLIST, ranked.size)) shortlist += ranked[i].first
 
-        val scored = ArrayList<Match>(shortlist.size)
+        // Read once. Both remaining passes walk these same bytes — the BLOB *is* the working
+        // array, stored and compared in the same form — so re-reading for the second would be
+        // paying the expensive part twice to save the cheap one.
+        val candidates = ArrayList<SegmentVectors>(shortlist.size)
+        val candidateIds = ArrayList<String>(shortlist.size)
         for (ids in shortlist.chunked(FETCH_CHUNK)) {
             val rows = withContext(Dispatchers.IO) {
                 embeddingDao.getForTracks(
@@ -307,15 +322,31 @@ class EmbeddingRepository @Inject constructor(
             for (entity in rows) {
                 val segments = entity.vector.size / AudioEmbedder.EMBED_DIM
                 if (segments == 0) continue
-                // The BLOB *is* the working array now: stored and compared in the same form, so a
-                // match reads bytes straight out of SQLite and walks them.
-                scored += score(query, SegmentVectors(entity.vector, segments), entity.trackId)
+                candidates += SegmentVectors(entity.vector, segments)
+                candidateIds += entity.trackId
             }
+        }
+
+        // Scored into an array first, then sorted by index. `sortedByDescending { score(...) }`
+        // reads like one score per candidate and is not: the selector is invoked on every
+        // *comparison*, so ninety-six candidates cost some seven hundred scorings and the cheap
+        // pass becomes several times more expensive than the expensive one it feeds.
+        val coarse = coarseQuery(query)
+        val coarseScores = FloatArray(candidates.size) {
+            score(coarse, candidates[it], candidateIds[it]).similarity
+        }
+        val survivors = candidates.indices
+            .sortedByDescending { coarseScores[it] }
+            .take(COARSE_KEEP)
+
+        val scored = survivors.mapTo(ArrayList(survivors.size)) {
+            score(query, candidates[it], candidateIds[it])
         }
         scored.sortByDescending { it.similarity }
         Log.i(
             TAG,
-            "Shortlisted ${shortlist.size} of ${centroids.size} tracks" +
+            "Shortlisted ${shortlist.size} of ${centroids.size} tracks, " +
+                "scored ${scored.size} in full" +
                 if (unmeasured.isEmpty()) "" else " (${unmeasured.size} without a centroid yet)"
         )
         return scored
@@ -395,6 +426,23 @@ class EmbeddingRepository @Inject constructor(
          * the thresholds were tuned on real room captures rather than on clean excerpts, so it
          * wants its own tuning pass against the same.
          */
+        /**
+         * [COARSE_SEGMENTS] of [query], evenly spaced — the cheap pass's query.
+         *
+         * A copy rather than a stride, because [score]'s inner loop indexes segments contiguously
+         * and teaching it to stride would slow the expensive pass to speed up the cheap one.
+         */
+        internal fun coarseQuery(query: SegmentVectors): SegmentVectors {
+            val n = minOf(COARSE_SEGMENTS, query.segments)
+            if (n == query.segments) return query
+            val out = ByteArray(n * AudioEmbedder.EMBED_DIM)
+            for (i in 0 until n) {
+                val from = (i * (query.segments - 1) / (n - 1)) * AudioEmbedder.EMBED_DIM
+                query.values.copyInto(out, i * AudioEmbedder.EMBED_DIM, from, from + AudioEmbedder.EMBED_DIM)
+            }
+            return SegmentVectors(out, n)
+        }
+
         internal fun score(query: SegmentVectors, track: SegmentVectors, trackId: String): Match {
             var total = 0f
             // Only offsets that fit the clip entirely inside the track. A partial overlap scores
@@ -454,19 +502,42 @@ class EmbeddingRepository @Inject constructor(
         /**
          * How many tracks the summary stage passes on to the full comparison.
          *
-         * Every one of these costs a row read and an unpack, which together were most of what a
-         * match spent its time on once the whole-table scan was gone — so this is the number that
-         * decides how fast recognition is. The worst true-track rank measured over 300 excerpts of
-         * this library was 2; 32 leaves an order of magnitude of headroom while reading a fortieth
-         * of the library.
+         * Every one of these costs a row read, which is most of what a match spends its time on
+         * once the whole-table scan is gone — so this is the number that decides how fast
+         * recognition is, and it wants to be as small as it can safely be.
+         *
+         * It was 32, measured against an index in which every track was 60 seconds and summarised
+         * to a single chunk. Re-measured against the same library indexed **whole** — a median of
+         * 3.0 minutes and five chunks a track — over 400 excerpts: top-32 recall 99.75%, top-64
+         * 100%, worst true-track rank **33**. One in four hundred fell outside the old depth, and
+         * a track outside it is simply never found; that is what "it works on some songs and not
+         * others" looks like from the outside.
+         *
+         * 96 is three times the worst rank measured, and those excerpts are clean — a clip from a
+         * room is noisier than any of them, so the tail is wider in practice than it is here. The
+         * cost of being generous is a few hundred milliseconds; the cost of being tight is a
+         * silent miss that looks exactly like a song not being in the library.
          */
-        const val SHORTLIST = 32
+        const val SHORTLIST = 96
 
         /** Divides both operands' fixed-point scales back out of an int8 dot product. */
         private const val QUANT_SQUARED = AudioEmbedder.QUANT_SCALE * AudioEmbedder.QUANT_SCALE
 
         /** Track ids per `IN (...)`, kept clear of SQLite's 999-parameter limit. */
         private const val FETCH_CHUNK = 100
+
+        /**
+         * Clip segments the coarse pass uses, evenly spaced across the clip.
+         *
+         * Spread rather than taken from the front: three consecutive half-seconds describe one
+         * moment and a track that happens to contain a similar moment survives on it, while three
+         * spread across six seconds have to agree about a span, which is most of what the full
+         * pass is checking anyway.
+         */
+        private const val COARSE_SEGMENTS = 3
+
+        /** How many survive the coarse pass. Measured worst rank there was 1; this is 24. */
+        private const val COARSE_KEEP = 24
 
         /** Rows given a summary per indexer run. See [backfillCentroids]. */
         private const val CENTROID_BACKFILL_LIMIT = 2_000

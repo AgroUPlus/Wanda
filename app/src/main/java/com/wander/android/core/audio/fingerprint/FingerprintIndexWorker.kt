@@ -153,10 +153,19 @@ class FingerprintIndexWorker @AssistedInject constructor(
                     trackAttemptDao.recordAttempt(track.id, System.currentTimeMillis())
                     continue
                 }
+                // Only the embedding wants the whole track. Features and contours are measured
+                // over the first minute, so reading twenty for a track that needs one of those
+                // and not an embedding is nineteen minutes of decode, and of memory, for samples
+                // that are then thrown away.
+                val wantsWholeTrack = track.id in needsEmbedding
                 val samples = decoder.decode(
                     source.first,
                     source.second,
-                    maxSeconds = EMBEDDING_MAX_SECONDS
+                    maxSeconds = if (wantsWholeTrack) {
+                        EMBEDDING_MAX_SECONDS
+                    } else {
+                        PcmDecoder.DEFAULT_MAX_SECONDS
+                    }
                 )
                 if (samples == null) {
                     progress.couldNotReach(track.id)
@@ -270,13 +279,14 @@ class FingerprintIndexWorker @AssistedInject constructor(
          * more than 59 seconds — on a library averaging three minutes a track, most of the music
          * had no vectors at all. The whole track is indexed now.
          *
-         * Bounded all the same. Decoded audio is held in memory as float PCM at 8 kHz — 32 KB a
-         * second, so twenty minutes is ~38 MB — and a mis-tagged podcast or a twelve-hour sleep
-         * mix would otherwise decide how much heap the indexer needs. Twenty minutes covers every
-         * song and the long tail of live and classical recordings; anything past it is indexed up
-         * to here, which is worth far more than nothing.
+         * Bounded all the same, and the bound matters more than it looks. Audio is buffered at
+         * the *source* rate before it is resampled, so a minute of 44.1 kHz stereo is ~10 MB and
+         * the cost is linear in this number — a mis-tagged podcast or a twelve-hour sleep mix
+         * would otherwise decide how much heap the indexer needs. Twelve minutes covers every song
+         * and most live and classical recordings; anything longer is indexed up to here, which is
+         * worth far more than nothing.
          */
-        private const val EMBEDDING_MAX_SECONDS = 20 * 60
+        private const val EMBEDDING_MAX_SECONDS = 12 * 60
 
         private const val BATCH_SIZE = 100
 

@@ -129,7 +129,13 @@ class PcmDecoder @Inject constructor() {
         // A primitive buffer, not `ArrayList<Float>`. The list boxed every sample — around 2.6
         // million objects for a single minute of 44.1 kHz audio — and indexing a library is
         // thousands of tracks of that, which is GC pressure measured in whole seconds of CPU.
-        val mono = FloatBuffer(sourceRate * maxSeconds)
+        //
+        // Sized from the *track*, bounded by [maxSeconds], rather than from [maxSeconds] alone.
+        // Sizing it from the cap is fine while the cap is a minute and catastrophic once it is
+        // long enough to hold a whole track: at a 20-minute bound and a 44.1 kHz source it
+        // reserves 212 MB for every decode, whatever the song's actual length — enough to hold
+        // the main thread in garbage collection until the platform declares the app unresponsive.
+        val mono = FloatBuffer(sourceRate * expectedSeconds(format, maxSeconds))
         val wanted = sourceRate.toLong() * maxSeconds
 
         try {
@@ -184,6 +190,27 @@ class PcmDecoder @Inject constructor() {
         return Resampler.toFingerprintRate(mono.toFloatArray(), sourceRate)
     }
 
+    /**
+     * How many seconds this decode will actually produce, for sizing the buffer.
+     *
+     * The container's declared duration where it has one, clamped to what was asked for. A stream
+     * that declares nothing gets a minute, which grows if it turns out to be longer — one doubling
+     * is far cheaper than reserving for the worst case every time.
+     */
+    private fun expectedSeconds(format: MediaFormat, maxSeconds: Int): Int {
+        val declared = runCatching {
+            if (format.containsKey(MediaFormat.KEY_DURATION)) {
+                (format.getLong(MediaFormat.KEY_DURATION) / 1_000_000L).toInt()
+            } else {
+                0
+            }
+        }.getOrDefault(0)
+        if (declared <= 0) return minOf(UNDECLARED_SECONDS, maxSeconds).coerceAtLeast(1)
+        // A second of slack: a container's duration and what decodes out of it routinely disagree
+        // by a frame or two, and one doubling to hold the difference costs the whole buffer again.
+        return minOf(declared + 1, maxSeconds).coerceAtLeast(1)
+    }
+
     /** Averages channels down to one, appending to [into]. Returns the frames written. */
     private fun downmix(shorts: java.nio.ShortBuffer, channels: Int, into: FloatBuffer): Int {
         val frames = shorts.remaining() / channels
@@ -199,6 +226,9 @@ class PcmDecoder @Inject constructor() {
 
     companion object {
         private const val TIMEOUT_US = 10_000L
+
+        /** Buffer to reserve for a source that declares no duration. See [expectedSeconds]. */
+        private const val UNDECLARED_SECONDS = 60
 
         /** See [decode]. A window's worth, not a whole track. */
         const val DEFAULT_MAX_SECONDS = 60
@@ -224,8 +254,14 @@ private class FloatBuffer(initialCapacity: Int) {
         data[size++] = value
     }
 
-    /** A right-sized copy: the caller keeps this for the life of the fingerprint. */
-    fun toFloatArray(): FloatArray = data.copyOf(size)
+    /**
+     * A right-sized array the caller keeps for the life of the fingerprint.
+     *
+     * Hands back the buffer itself when it happens to be exactly full — which is the common case
+     * now that it is sized from the track's declared duration. Copying there would double the
+     * peak footprint of a decode for no purpose, and the buffer has no other owner.
+     */
+    fun toFloatArray(): FloatArray = if (size == data.size) data else data.copyOf(size)
 }
 
 /** Linear resampling to [AudioFormat.SAMPLE_RATE]. */
