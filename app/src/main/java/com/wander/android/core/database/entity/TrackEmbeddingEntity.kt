@@ -21,14 +21,25 @@ data class TrackEmbeddingEntity(
     /** `nSegments * dim` float32 values, big-endian, row-major (segment-major). */
     val vector: ByteArray,
     /**
-     * The mean of [vector]'s segments, L2-normalised — one `dim`-value summary of the whole track,
-     * packed the same way.
+     * One L2-normalised mean per 30-second chunk of the track, packed like [vector].
      *
-     * A search index, and the reason a match does not have to read [vector] at all for most of the
-     * library. Comparing a clip's mean against 1400 of these is 180,000 multiply-adds and reads
-     * 700 KB; comparing it against the segments themselves is 232 million and reads 84 MB, which
-     * is where every second of a recognition used to go. The full comparison then runs on the
-     * handful of tracks this shortlists — see `EmbeddingRepository.match`.
+     * The search index, and the reason a match does not have to read [vector] at all for most of
+     * the library. Comparing a clip's mean against these is thousands of multiply-adds over a
+     * couple of megabytes; comparing it against the segments themselves is hundreds of millions
+     * over 84 MB, which is where every second of a recognition used to go. The full comparison
+     * then runs only on what this shortlists — see `EmbeddingRepository.match`.
+     *
+     * ## Why per chunk and not one per track
+     *
+     * A six-second clip resembles one moment of a song, not its average, so a single whole-track
+     * mean blurs away the thing being searched for. Measured over 300 excerpts of this library:
+     * with one mean per track the true track's worst rank was **524** of 1374 — a shortlist deep
+     * enough to be safe would have had to read a third of the library. At one mean per 30 s the
+     * worst rank was **2**, and top-8 recall was 100%. The extra cost is 512 bytes per half-minute
+     * of audio, against ~60 KB per minute for [vector] itself.
+     *
+     * A track of 60 s or less has exactly one, which is what every row written before chunking
+     * already holds — those rows stay correct rather than needing rewriting.
      *
      * Null on a row written before this column existed. Such a row is shortlisted unconditionally
      * rather than skipped, so the index is never silently incomplete while the backfill runs.

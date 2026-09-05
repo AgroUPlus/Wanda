@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MicOff
@@ -26,6 +27,7 @@ import com.wander.android.ui.components.Artwork
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -134,13 +136,19 @@ private fun Listening(readiness: IndexReadiness, audioLevel: Float = 0f) {
 /**
  * The microphone has closed; the search is running.
  *
- * The same wave, driven by nothing — there is no signal any more, and pretending otherwise by
- * feeding it a synthetic level would be a progress bar that reports its own existence. It keeps
- * its idle breathing, and the words carry the change.
+ * No wave. It is an audio-reactive animation and there is no audio any more — left running it
+ * shows the one thing that is certainly not happening, which is what made the old sheet look
+ * frozen. A plain indeterminate spinner says the honest thing instead: something is going on,
+ * and its pace is not a measurement of anything.
  */
 @Composable
 private fun Identifying(readiness: IndexReadiness) {
-    PulsingMic(audioLevel = 0f)
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.size(140.dp)
+    ) {
+        CircularProgressIndicator(modifier = Modifier.size(56.dp))
+    }
 
     Text("Identifying…", style = MaterialTheme.typography.headlineSmall)
     Text(
