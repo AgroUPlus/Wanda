@@ -46,7 +46,8 @@ import kotlinx.coroutines.launch
 @Singleton
 class PlayerConnection @Inject constructor(
     @param:ApplicationContext private val context: Context,
-    private val secureStorage: SecureStorage
+    private val secureStorage: SecureStorage,
+    private val streamResolver: StreamResolver
 ) {
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
 
@@ -136,6 +137,15 @@ class PlayerConnection @Inject constructor(
         // on its own, so a snapshot built from the controller alone would keep saying the order is
         // the user's until the next unrelated playback event happened to rebuild it.
         .combine(_orderLocked) { state, locked -> state.copy(orderLocked = locked) }
+        // Combined for the same reason [_orderLocked] is: resolving a stream changes no player
+        // property, so a snapshot built from the controller alone goes on reporting whatever
+        // liveness the item was *queued* with. For a broadcast opened from a shared link that is
+        // whatever YouTube's badges said — usually nothing — and the sheet drew a scrub bar over
+        // a stream with no beginning until an unrelated error tripped `retryContainerMismatch`.
+        //
+        // Patched here rather than written into `trackCache`, because the cache is only read while
+        // a snapshot is being built and there is no event to build one on.
+        .combine(streamResolver.resolvedLive) { state, live -> state.withLiveIds(live) }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, PlaybackState())
 

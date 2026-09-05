@@ -8,6 +8,10 @@ import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.ResolvingDataSource
 import com.wander.android.data.model.isOneShotTrackId
 import com.wander.android.data.repository.MusicRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
 import java.io.IOException
 import javax.inject.Inject
@@ -48,6 +52,24 @@ class StreamResolver @Inject constructor(
     @Volatile
     private var liveHeaders: Map<String, String> = emptyMap()
 
+    private val _resolvedLive = MutableStateFlow<Set<String>>(emptySet())
+
+    /**
+     * Ids that turned out, on resolve, to be a livestream.
+     *
+     * The only moment anything knows for certain — `InnerTubeParsing.isLiveEntry` reads badges
+     * YouTube changes the shape of, and `MusicRepository` records the same discovery to Room. Room
+     * is not enough on its own: a track opened from a shared link has no row to update, and the
+     * player builds what it shows from the queued `UnifiedTrack` rather than from the database. So
+     * a broadcast opened from a link played correctly and drew a scrub bar counting `0:15 - 0:30`
+     * over a stream with nothing to scrub, until an unrelated playback error happened to trip
+     * `retryContainerMismatch` into rewriting the URI.
+     *
+     * Cumulative rather than "the current one", because the queue holds more than one item and an
+     * id that was live does not stop having been.
+     */
+    val resolvedLive: StateFlow<Set<String>> = _resolvedLive.asStateFlow()
+
     override fun resolveDataSpec(dataSpec: DataSpec): DataSpec {
         val trackId = dataSpec.uri.wandaTrackId() ?: return carryLiveIdentity(dataSpec)
 
@@ -61,6 +83,10 @@ class StreamResolver @Inject constructor(
             streamInfo.headers
         } else {
             emptyMap()
+        }
+
+        if (streamInfo.format == MimeTypes.APPLICATION_M3U8) {
+            _resolvedLive.update { if (trackId in it) it else it + trackId }
         }
 
         return dataSpec

@@ -178,6 +178,10 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             linkRepository.resolve(uri).fold(
                 onSuccess = { track ->
+                    // Stored before it plays, so everything keyed on a `tracks` row works for a
+                    // link the way it does for a search result — `markLive` above all, which is
+                    // how a stream that resolves to a manifest is remembered as a broadcast.
+                    musicRepository.rememberSharedTrack(track)
                     playerConnection.play(listOf(track))
                     // Applied after `play`, not before: `setSpeedAndPitch` needs a controller and
                     // writes straight to it, so a rate set against the outgoing track would be
