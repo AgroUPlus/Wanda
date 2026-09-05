@@ -38,7 +38,34 @@ data class PlaybackState(
      * reader twice a second — which is the thing keeping it out was for.
      */
     val seekEpoch: Long = 0L
-)
+) {
+    /**
+     * The same snapshot with [liveIds] known to be livestreams marked as such.
+     *
+     * A track's own `isLive` is whatever the source claimed when it was queued — for YouTube, a
+     * badge hunt over a response whose shape changes; for a link-opened track, usually nothing at
+     * all. [liveIds] is what a stream *resolve* proved, which is the only moment anything knows
+     * for certain. See `StreamResolver.resolvedLive`.
+     *
+     * One-way: it can only mark a track live, never un-mark one. A resolve that came back
+     * progressive says this play is progressive, not that the recording is never a broadcast, and
+     * the item that is already flying as HLS must not have the ground taken out from under it.
+     */
+    internal fun withLiveIds(liveIds: Set<String>): PlaybackState {
+        if (liveIds.isEmpty()) return this
+        val track = currentTrack?.let { if (it.id in liveIds && !it.isLive) it.copy(isLive = true) else it }
+        val patchedQueue = if (queue.any { it.id in liveIds && !it.isLive }) {
+            queue.map { if (it.id in liveIds && !it.isLive) it.copy(isLive = true) else it }
+        } else {
+            queue
+        }
+        return if (track === currentTrack && patchedQueue === queue) {
+            this
+        } else {
+            copy(currentTrack = track, queue = patchedQueue)
+        }
+    }
+}
 
 /**
  * Playback rate and pitch.

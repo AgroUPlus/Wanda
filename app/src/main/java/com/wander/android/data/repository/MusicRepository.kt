@@ -297,10 +297,16 @@ class MusicRepository @Inject constructor(
      *
      * Neither happens in incognito mode, nor while listening along with a friend — in the second
      * case because the track is their choice rather than this account's, and counting it would put
-     * their listening into your history. See [ScrobbleSuppression].
+     * their listening into your history. See [ScrobbleSuppression]. Nor for a livestream, which
+     * has no play to count.
      */
     suspend fun recordPlay(track: UnifiedTrack) = withContext(Dispatchers.IO) {
         if (secureStorage.isIncognitoMode || scrobbleSuppression.isSuppressed) return@withContext
+        // A broadcast has no play to count. The threshold that decides when a play is worth
+        // recording is derived from the track's duration, and a livestream's is zero, so it fell
+        // to the fixed 30-second fallback — scrobbling a radio station as though it were a song,
+        // once for every half minute somebody left it on.
+        if (track.isLive) return@withContext
         trackDao.incrementPlayCount(track.id, System.currentTimeMillis())
         val entryId = historyDao.recordHistory(HistoryEntity(trackId = track.id))
         val scrobbled = sourceFor(track.source)
@@ -327,6 +333,21 @@ class MusicRepository @Inject constructor(
      * Sources whose catalogue is not personal ([SourceType.isPersonalLibrary]) never count as
      * library, whichever path fetched them.
      */
+    /**
+     * Stores a track that arrived from a link rather than from a source listing.
+     *
+     * Not `asLibrary`: a link somebody sent you is not a record you own, which is the distinction
+     * `getAlbumTracks` makes when it claims the opposite for your own server.
+     *
+     * Worth storing all the same, because the row is what everything else is keyed on. Without it
+     * `markLive` updated nothing — so a broadcast opened from a link never learned it was one,
+     * even after its stream resolved to a manifest — `incrementPlayCount` counted nothing, and
+     * `recordHistory` wrote rows naming a `trackId` that appears in no `tracks` row.
+     */
+    suspend fun rememberSharedTrack(track: UnifiedTrack) = withContext(Dispatchers.IO) {
+        persist(listOf(track), asLibrary = false)
+    }
+
     private suspend fun persist(tracks: List<UnifiedTrack>, asLibrary: Boolean) {
         if (tracks.isEmpty()) return
         val libraryIds = if (asLibrary) {
