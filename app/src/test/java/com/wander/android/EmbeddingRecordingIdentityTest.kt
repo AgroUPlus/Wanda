@@ -65,6 +65,7 @@ class EmbeddingRecordingIdentityTest {
 
     private class FakeTrackEmbeddingDao : com.wander.android.core.database.dao.TrackEmbeddingDao {
         override suspend fun centroids(model: String, version: Int) = emptyList<com.wander.android.core.database.dao.Centroid>()
+        override suspend fun idsAfter(model: String, version: Int, after: String, limit: Int) = emptyList<String>()
         override suspend fun setCentroid(trackId: String, centroid: ByteArray) {}
         override suspend fun getForTrack(trackId: String, model: String, version: Int) = null
         override suspend fun getForTracks(trackIds: List<String>, model: String, version: Int) = emptyList<com.wander.android.core.database.entity.TrackEmbeddingEntity>()

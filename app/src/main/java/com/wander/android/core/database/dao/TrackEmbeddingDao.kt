@@ -25,6 +25,19 @@ interface TrackEmbeddingDao {
     @Query("SELECT trackId, centroid FROM track_embeddings WHERE model = :model AND version = :version")
     suspend fun centroids(model: String, version: Int): List<Centroid>
 
+    /**
+     * Embedded track ids after [after], in id order — the duplicate scan's cursor.
+     *
+     * Ordered and resumable because the scan is a sweep of the whole library and a run is bounded:
+     * "which tracks have I examined for duplicates" is not answerable from `recording_links`,
+     * where a track with no duplicate and a track never looked at are the same absence.
+     */
+    @Query(
+        "SELECT trackId FROM track_embeddings WHERE model = :model AND version = :version " +
+            "AND trackId > :after ORDER BY trackId LIMIT :limit"
+    )
+    suspend fun idsAfter(model: String, version: Int, after: String, limit: Int): List<String>
+
     /** Fills in a centroid for a row written before the column existed. */
     @Query("UPDATE track_embeddings SET centroid = :centroid WHERE trackId = :trackId")
     suspend fun setCentroid(trackId: String, centroid: ByteArray)
