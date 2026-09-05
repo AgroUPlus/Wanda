@@ -3,6 +3,7 @@ package com.wander.android.ui.components.listen
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.data.repository.IndexReadiness
 import com.wander.android.data.repository.Recognition
 import com.wander.android.data.repository.RecognitionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -41,14 +42,18 @@ class ListenViewModel @Inject constructor(
     val state: StateFlow<ListenState> = _state.asStateFlow()
 
     /**
-     * How much of the library recognition can actually see.
+     * How much of the library recognition can actually see, and why it might be nothing.
      *
      * Shown on the sheet rather than buried in Settings, because it is the single fact that
      * explains a failed match: an index covering nine tracks cannot identify the tenth, and
      * without it the feature would simply look broken.
+     *
+     * Starts at [IndexReadiness.Empty] rather than at a guess about the model: "the index is
+     * filling" is the only one of the three that is harmless to show for the frame before the
+     * real answer arrives.
      */
-    val indexedTracks: StateFlow<Int> = recognitionRepository.indexedTrackCount
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+    val readiness: StateFlow<IndexReadiness> = recognitionRepository.indexReadiness
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), IndexReadiness.Empty)
 
     /** Real-time microphone audio volume level `[0f, 1f]` during active capture. */
     val audioLevel: StateFlow<Float> = recognitionRepository.audioLevel

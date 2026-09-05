@@ -58,7 +58,8 @@ internal data class FingerprintsUiState(
     val isLoading: Boolean = true,
     val isPaused: Boolean = false,
     val recognitionModel: EmbeddingModelManager.State = EmbeddingModelManager.State.Absent,
-    /** Tracks with a neural fingerprint. Separate from [indexed], which counts landmarks. */
+    /** Tracks with a neural fingerprint. The same number as [indexed] since the embedder
+     *  became the only engine; kept as its own field because the screen names it separately. */
     val embedded: Int = 0
 ) {
     /** The one being decoded right now, if any — the line the screen leads with. */

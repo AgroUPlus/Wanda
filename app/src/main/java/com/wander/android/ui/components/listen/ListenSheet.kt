@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.data.repository.Recognition
+import com.wander.android.data.repository.IndexReadiness
 import com.wander.android.data.repository.RecognitionEngine
 
 /**
@@ -54,7 +55,7 @@ fun ListenSheet(
     viewModel: ListenViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val indexed by viewModel.indexedTracks.collectAsStateWithLifecycle()
+    val readiness by viewModel.readiness.collectAsStateWithLifecycle()
     val audioLevel by viewModel.audioLevel.collectAsStateWithLifecycle()
     val sheetState = rememberModalBottomSheetState()
 
@@ -90,7 +91,7 @@ fun ListenSheet(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     when (current) {
-                        ListenState.Idle, ListenState.Listening -> Listening(indexed, audioLevel)
+                        ListenState.Idle, ListenState.Listening -> Listening(readiness, audioLevel)
                         is ListenState.Matched -> Matched(
                             recognition = current.recognition,
                             onPlay = {
@@ -98,7 +99,7 @@ fun ListenSheet(
                                 onOpenTrack()
                             }
                         )
-                        ListenState.NoMatch -> NoMatch(indexed, onRetry = viewModel::start)
+                        ListenState.NoMatch -> NoMatch(readiness, onRetry = viewModel::start)
                         ListenState.Failed -> Failed(onRetry = viewModel::start)
                     }
                 }
@@ -108,19 +109,19 @@ fun ListenSheet(
 }
 
 @Composable
-private fun Listening(indexedTracks: Int, audioLevel: Float = 0f) {
+private fun Listening(readiness: IndexReadiness, audioLevel: Float = 0f) {
     PulsingMic(audioLevel = audioLevel)
 
     Text("Listening…", style = MaterialTheme.typography.headlineSmall)
     Text(
-        text = if (indexedTracks > 0) {
+        text = when (readiness) {
             // No longer "or hum it": that path is switched off, and asking for something the
             // engine cannot use is worse than asking for nothing. See `MelodySearch`.
-            "Hold it near the music. Matching against $indexedTracks " +
-                "${if (indexedTracks == 1) "track" else "tracks"} measured on this device."
-        } else {
-            "Nothing is indexed yet. Recognition works on music saved to this device, and the " +
-                "index is built while charging."
+            is IndexReadiness.Ready ->
+                "Hold it near the music. Matching against ${readiness.trackCount} " +
+                    "${if (readiness.trackCount == 1) "track" else "tracks"} measured on this device."
+            IndexReadiness.Empty -> INDEX_FILLING
+            IndexReadiness.ModelMissing -> MODEL_MISSING
         },
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -173,15 +174,17 @@ private fun Matched(recognition: Recognition, onPlay: () -> Unit) {
 }
 
 @Composable
-private fun NoMatch(indexedTracks: Int, onRetry: () -> Unit) {
+private fun NoMatch(readiness: IndexReadiness, onRetry: () -> Unit) {
     Text("No match", style = MaterialTheme.typography.headlineSmall)
     Text(
-        text = if (indexedTracks > 0) {
-            "That is not one of the $indexedTracks tracks measured on this device — or the room " +
-                "was too loud to hear it clearly. Getting closer to the speaker helps most."
-        } else {
-            "Nothing is indexed yet, so there was nothing to match against. The index is built " +
-                "in the background while this phone is charging."
+        text = when (readiness) {
+            is IndexReadiness.Ready ->
+                "That is not one of the ${readiness.trackCount} tracks measured on this device — " +
+                    "or the room was too loud to hear it clearly. Getting closer to the speaker " +
+                    "helps most."
+            IndexReadiness.Empty -> "Nothing is measured yet, so there was nothing to match " +
+                "against. $INDEX_FILLING"
+            IndexReadiness.ModelMissing -> MODEL_MISSING
         },
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -189,6 +192,22 @@ private fun NoMatch(indexedTracks: Int, onRetry: () -> Unit) {
     )
     TextButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) { Text("Listen again") }
 }
+
+/**
+ * Says "in the background", not "while charging".
+ *
+ * `FingerprintIndexing` asks for battery-not-low on an unmetered network and deliberately does not
+ * require charging, so the old wording sent people off to plug the phone in and wait for something
+ * that was already happening.
+ */
+private const val INDEX_FILLING =
+    "Recognition works on music saved to this device, and the index is being built in the " +
+        "background — Settings › Fingerprints shows how far it has got."
+
+/** The one state waiting will not fix, so it asks for the download instead of counselling patience. */
+private const val MODEL_MISSING =
+    "The recognition model has not been downloaded yet, so there is nothing to match against. " +
+        "Settings › Fingerprints will fetch it — about 35 MB, once."
 
 @Composable
 private fun Failed(onRetry: () -> Unit) {
