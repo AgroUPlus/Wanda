@@ -3,12 +3,14 @@ package com.wander.android.data.repository
 import android.util.Log
 import com.wander.android.core.audio.fingerprint.AudioEmbedder
 import com.wander.android.core.audio.fingerprint.AudioFormat
+import com.wander.android.core.audio.fingerprint.EmbeddingModelManager
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.dao.TrackEmbeddingDao
 import com.wander.android.core.database.entity.TrackEmbeddingEntity
 import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,6 +35,16 @@ class EmbeddingRepository @Inject constructor(
 
     val indexedTrackCount: Flow<Int> =
         embeddingDao.indexedTrackCountFlow(AudioEmbedder.MODEL_NAME, AudioEmbedder.EMBEDDER_VERSION)
+
+    /**
+     * Whether the model this index is built with is on the device at all.
+     *
+     * Separate from [indexedTrackCount] being zero, and the difference matters to the person
+     * holding the phone: an empty index fills itself in the background, a missing model never
+     * will until they ask for the download.
+     */
+    val modelReady: Flow<Boolean> =
+        embedder.modelState.map { it is EmbeddingModelManager.State.Ready }
 
     /** Computes [samples]'s embedding sequence and stores it. A track that embeds to nothing is skipped. */
     suspend fun index(trackId: String, samples: FloatArray) = withContext(Dispatchers.Default) {

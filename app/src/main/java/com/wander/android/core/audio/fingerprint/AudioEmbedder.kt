@@ -2,6 +2,7 @@ package com.wander.android.core.audio.fingerprint
 
 import android.os.SystemClock
 import android.util.Log
+import kotlinx.coroutines.flow.StateFlow
 import org.tensorflow.lite.Interpreter
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
@@ -102,6 +103,15 @@ class AudioEmbedder @Inject constructor(
 
     /** Whether the model has been downloaded. Recognition-by-embedding is off until it has. */
     fun isAvailable(): Boolean = modelManager.isReady()
+
+    /**
+     * The same fact as [isAvailable], as a flow.
+     *
+     * Re-exported here rather than injecting [EmbeddingModelManager] into everything that cares:
+     * "can this device embed audio" is a question about the embedder, and a download that finishes
+     * while the recogniser is open should change what it says without the user reopening it.
+     */
+    val modelState: StateFlow<EmbeddingModelManager.State> get() = modelManager.state
 
     private fun segment(samples: FloatArray): Array<FloatArray> {
         var pcm = samples

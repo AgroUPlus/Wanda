@@ -25,7 +25,7 @@ import javax.inject.Singleton
  * The model is ~35 MB, which is most of an APK on its own and useless to anyone who never opens
  * the recogniser — so it is not shipped in `assets/`. It is downloaded once, during setup or from
  * Settings, into app storage, and everything that needs it ([AudioEmbedder]) reads it from there.
- * Absent, recognition-by-embedding simply does nothing; the landmark path is unaffected.
+ * Absent, recognition does nothing at all: there is no other engine behind it.
  *
  * A successful download is verified two ways and only then does a `.ready` marker get written:
  * the bytes must match a pinned SHA-256, and TFLite must be able to load the file and run one

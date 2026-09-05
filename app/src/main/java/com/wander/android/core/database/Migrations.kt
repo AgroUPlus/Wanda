@@ -626,8 +626,28 @@ val MIGRATION_25_26 = object : Migration(25, 26) {
     }
 }
 
+/**
+ * Drops `fingerprints`.
+ *
+ * The landmark index has had no writer since the neural embedder took over recognition, and its
+ * last reader was a count that drove the Listen sheet's "nothing is indexed yet" — a table with no
+ * writer answering a question about a table that had one. Both are gone, so the rows go too.
+ *
+ * Worth being rid of on its own terms: this table has been the source of two launch-crash repairs
+ * already (MIGRATION_23_24's `WITHOUT ROWID` shrink and MIGRATION_24_25's undo of it), because
+ * Room's schema check compares an index SQLite silently rewrites. There is nothing left to keep in
+ * step. Landmarks cannot be recovered from anything else, but neither can they be used by
+ * anything: recomputing them would cost exactly what recomputing embeddings costs, and only
+ * embeddings are read.
+ */
+val MIGRATION_26_27 = object : Migration(26, 27) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DROP TABLE IF EXISTS `fingerprints`")
+    }
+}
+
 /** Every migration, in order. Room applies whichever ones a given database still needs. */
 val WANDER_MIGRATIONS: Array<Migration> = arrayOf(
     MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
-    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26
+    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27
 )

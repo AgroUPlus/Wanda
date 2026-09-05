@@ -61,10 +61,10 @@ class FingerprintIndexWorker @AssistedInject constructor(
         // samples, and decoding is by far the expensive part — a separate pass for each would
         // multiply the cost of indexing a library to no purpose.
         //
-        // Each is asked about **every** track, not about the tracks that need a landmark.
+        // Each is asked about **every** track, not about the tracks one of them happens to want.
         //
         // That was the bug, and it was self-concealing. The run used to be driven entirely by
-        // `tracksNeedingIndex()` — tracks with no landmark fingerprint — and the other three
+        // the tracks with no landmark fingerprint — the engine of the day — and the other three
         // questions were then asked only about *that* list. So the moment a track acquired a
         // landmark it left the candidate set for good, and could never afterwards be given a
         // melody contour or an acoustic vector. Any library indexed before hum-to-search existed
