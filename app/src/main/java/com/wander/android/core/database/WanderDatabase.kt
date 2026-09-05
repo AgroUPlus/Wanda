@@ -52,7 +52,7 @@ import com.wander.android.core.database.converter.SourceTypeConverter
         MelodyContourEntity::class,
         TrackEmbeddingEntity::class
     ],
-    version = 27,
+    version = 28,
     exportSchema = true
 )
 @TypeConverters(SourceTypeConverter::class)

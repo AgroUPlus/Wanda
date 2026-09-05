@@ -8,7 +8,9 @@ import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
+import com.wander.android.core.audio.fingerprint.AudioFormat
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -104,21 +106,46 @@ class RecognitionRepository @Inject constructor(
     /** Real-time microphone audio volume level `[0f, 1f]` during active capture. */
     val audioLevel: StateFlow<Float> get() = micRecorder.audioLevel
 
+    /** Whether the microphone is open, so the UI can stop claiming it is once it is not. */
+    val isRecording: StateFlow<Boolean> get() = micRecorder.isRecording
+
     /** How many of this device's tracks the index could cover, for the "n of m" the sheet shows. */
 
     suspend fun indexableTrackCount(): Int =
         withContext(Dispatchers.IO) { trackDao.getFingerprintableTracks().size }
 
     /**
-     * Listens, then answers.
+     * Listens, and answers as soon as it is sure.
      *
      * Null covers three different situations the caller has to tell apart by other means: the
      * microphone would not start, nothing was playing, and the music is not in the library. They
      * are the same outcome here — no track to name.
+     *
+     * ## Why it does not simply record for six seconds
+     *
+     * It used to, and then matched — so naming a song took the full clip whatever was playing,
+     * even when the first two seconds were unmistakable. The microphone now hands over what it has
+     * every [CHECKPOINT_SECONDS] while it keeps recording, and the first checkpoint that produces
+     * a match confident enough for its length ends the capture there.
+     *
+     * A checkpoint is judged against [EmbeddingRepository.EARLY_MIN_SIMILARITY], deliberately
+     * stricter than the bar the finished clip has to clear: two seconds of audio is a third of the
+     * evidence and must not be accepted on a threshold tuned for all of it. So this is faster on
+     * the easy cases — a clean recording, close to the speaker — and no less careful on the hard
+     * ones, which take exactly as long as they did before.
      */
     suspend fun listen(seconds: Int = LISTEN_SECONDS): Recognition? {
-        val samples = micRecorder.record(seconds) ?: return null
-        return withContext(Dispatchers.Default) { identifyOrHum(samples) }
+        var answer: Recognition? = null
+        micRecorder.stream(seconds, CHECKPOINT_SECONDS)
+            .takeWhile { answer == null }
+            .collect { clip ->
+                // The last emission is the whole clip, and only it is judged on the ordinary
+                // thresholds. `>=` rather than `==` because resampling 44.1 kHz to 8 kHz does not
+                // land on an exact sample count.
+                val complete = clip.size >= seconds * AudioFormat.SAMPLE_RATE
+                answer = withContext(Dispatchers.Default) { identifyOrHum(clip, early = !complete) }
+            }
+        return answer
     }
 
     /**
@@ -135,23 +162,36 @@ class RecognitionRepository @Inject constructor(
      * scores — would let a plausible melody match override a certain acoustic one, and their
      * scores are not on a common scale to be blended anyway.
      */
-    private suspend fun identifyOrHum(samples: FloatArray): Recognition? {
+    private suspend fun identifyOrHum(samples: FloatArray, early: Boolean = false): Recognition? {
         // The neural fingerprint is the recognition path. It replaced the landmark index, which is
         // no longer written or read: an embedding survives a lossy re-encode and a listener who
         // did not catch the track from its opening, both of which defeated the landmarks.
-        embeddingSearch.match(samples)?.let { match ->
-            val entity = withContext(Dispatchers.IO) { trackDao.getTrackById(match.trackId) }
+        val match = if (early) {
+            embeddingSearch.match(
+                samples,
+                minSimilarity = EmbeddingRepository.EARLY_MIN_SIMILARITY,
+                minMargin = EmbeddingRepository.EARLY_MIN_MARGIN
+            )
+        } else {
+            embeddingSearch.match(samples)
+        }
+        match?.let { recognised ->
+            val entity = withContext(Dispatchers.IO) { trackDao.getTrackById(recognised.trackId) }
             if (entity != null) {
                 return Recognition(
                     track = entity.toUnifiedTrack(),
-                    positionSeconds = match.positionSeconds.coerceAtLeast(0),
-                    // A cosine in roughly [0.55, 1.0] scaled to sit near a landmark vote count so
-                    // one confidence bar can render both.
-                    score = (match.similarity * EMBEDDING_SCORE_SCALE).toInt(),
+                    positionSeconds = recognised.positionSeconds.coerceAtLeast(0),
+                    // A cosine in roughly [0.55, 1.0] on the 0-100 scale the melody engine's
+                    // score is also mapped onto, so one confidence bar can render both.
+                    score = (recognised.similarity * EMBEDDING_SCORE_SCALE).toInt(),
                     engine = RecognitionEngine.EMBEDDING
                 )
             }
         }
+
+        // Only the finished clip is offered to the melody engine: it is the weaker of the two and
+        // has no business answering on a fraction of a capture.
+        if (early) return null
 
         // Humming is switched off, and deliberately: see [MelodySearch]. The melody engine can only
         // compare a hum against a shape extracted from a finished mix, and on anything dense that
@@ -160,23 +200,23 @@ class RecognitionRepository @Inject constructor(
         // properly.
         if (!com.wander.android.core.audio.melody.MelodySearch.ENABLED) return null
 
-        val match = melodySearch.search(samples).firstOrNull() ?: return null
-        val entity = withContext(Dispatchers.IO) { trackDao.getTrackById(match.trackId) } ?: return null
+        val hummed = melodySearch.search(samples).firstOrNull() ?: return null
+        val entity = withContext(Dispatchers.IO) { trackDao.getTrackById(hummed.trackId) } ?: return null
         return Recognition(
             track = entity.toUnifiedTrack(),
             // A hum says nothing about where in the track it came from: somebody humming the
             // chorus is not listening to it, and reporting a position would be inventing one.
             positionSeconds = 0,
             // Distance is an error measure — lower is better — and `score` is a confidence, so it
-            // has to be turned around rather than passed through. Scaled to sit in the same
-            // rough range as a landmark score so a UI can render one bar for both.
-            score = ((ContourMatcher.MAX_DISTANCE - match.distance) * MELODY_SCORE_SCALE).toInt(),
+            // has to be turned around rather than passed through. Scaled onto the same 0-100
+            // range as an embedding score so a UI can render one bar for both.
+            score = ((ContourMatcher.MAX_DISTANCE - hummed.distance) * MELODY_SCORE_SCALE).toInt(),
             engine = RecognitionEngine.MELODY
         )
     }
 
     /**
-     * Every track that could be measured, whether or not it has a landmark fingerprint already.
+     * Every track that could be measured, whether or not it has been measured already.
      *
      * Every measurable track, not just the unmeasured ones: the indexer takes several different
      * measurements off one decode and they were introduced at different times. Driving the whole
@@ -194,6 +234,15 @@ class RecognitionRepository @Inject constructor(
          * is not left holding a phone at a speaker wondering whether it has frozen.
          */
         const val LISTEN_SECONDS = 6
+
+        /**
+         * How often the capture so far is offered to the matcher.
+         *
+         * Under two seconds there is not enough audio for even a strict threshold to mean much —
+         * the model works on one-second segments — and much over it gives the recording time to
+         * finish on its own, which is the thing this exists to avoid.
+         */
+        const val CHECKPOINT_SECONDS = 2
 
         /** Puts a melody match's confidence on roughly the same scale as an embedding score. */
         const val MELODY_SCORE_SCALE = 20

@@ -646,8 +646,27 @@ val MIGRATION_26_27 = object : Migration(26, 27) {
     }
 }
 
+/**
+ * Adds `track_embeddings.centroid`: one mean vector per track, as a search index.
+ *
+ * Recognition compared a clip against every segment of every track, which meant reading and
+ * deserialising the entire embedding table on each attempt — measured on a 1384-track library,
+ * 18.6 s to read 84 MB out of SQLite and 23.8 s to turn the bytes into floats, against 8.0 s of
+ * actual arithmetic. The shortlist this column feeds cuts the rows a match has to open from every
+ * one of them to a hundred or so.
+ *
+ * Nullable, and left null here: the mean cannot be computed in SQL from a packed big-endian BLOB,
+ * so existing rows acquire theirs when the indexer next measures them — which it will, since every
+ * row written before full-length indexing is short and already due to be redone.
+ */
+val MIGRATION_27_28 = object : Migration(27, 28) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `track_embeddings` ADD COLUMN `centroid` BLOB DEFAULT NULL")
+    }
+}
+
 /** Every migration, in order. Room applies whichever ones a given database still needs. */
 val WANDER_MIGRATIONS: Array<Migration> = arrayOf(
     MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
-    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27
+    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28
 )

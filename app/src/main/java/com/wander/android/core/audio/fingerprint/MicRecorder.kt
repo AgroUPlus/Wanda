@@ -6,13 +6,20 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.lastOrNull
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import com.wander.android.BuildConfig
 import javax.inject.Inject
 import kotlin.coroutines.coroutineContext
+import kotlin.math.log10
 import kotlin.math.sqrt
 
 /**
@@ -35,6 +42,17 @@ class MicRecorder @Inject constructor(
     /** Instantaneous audio volume level in `[0f, 1f]` updated in real time during capture. */
     val audioLevel: StateFlow<Float> = _audioLevel.asStateFlow()
 
+    private val _isRecording = MutableStateFlow(false)
+
+    /**
+     * Whether the microphone is open right now.
+     *
+     * The sheet's "Listening…" is a claim about the microphone, and it went on being made for the
+     * whole time the matcher was working — long after the microphone had closed and the wave had
+     * gone flat, which is exactly when it looked broken. This is what lets the UI stop saying it.
+     */
+    val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
+
     /**
      * Records [seconds] of audio. Caller must hold `RECORD_AUDIO`.
      *
@@ -42,17 +60,45 @@ class MicRecorder @Inject constructor(
      * device that rejects the configuration. Null rather than an exception because "could not
      * listen" is an outcome the UI has to show either way.
      */
+    suspend fun record(seconds: Int): FloatArray? =
+        stream(seconds, checkpointSeconds = 0).lastOrNull()
+
+    /**
+     * The same capture, handed out as it accumulates.
+     *
+     * Emits the clip so far every [checkpointSeconds], and the whole clip at the end — each
+     * emission a complete, resampled array starting from the beginning, not a delta, so a consumer
+     * can simply try to recognise each one. Zero [checkpointSeconds] emits only the final clip.
+     *
+     * ## Why this is a flow and not a callback
+     *
+     * The point is to answer as soon as the answer is certain instead of always waiting out the
+     * full six seconds. That means matching *while* recording, and a matcher invoked inline would
+     * stall the read loop for as long as it took — `AudioRecord`'s buffer is a fraction of a
+     * second, so the audio arriving during the match would simply be dropped, and the clip that
+     * finally got matched would have a hole in it.
+     *
+     * `CONFLATED` buffering is what keeps them apart: the recorder never waits for the consumer,
+     * and a consumer that was busy through two checkpoints resumes on the newest clip rather than
+     * working through a backlog of stale prefixes it no longer cares about. Cancelling collection
+     * — which is what a caller does the moment it is sure — closes the microphone.
+     */
+    fun stream(seconds: Int, checkpointSeconds: Int): Flow<FloatArray> =
+        capture(seconds, checkpointSeconds)
+            .flowOn(Dispatchers.IO)
+            .buffer(Channel.CONFLATED)
+
     @SuppressLint("MissingPermission")
-    suspend fun record(seconds: Int): FloatArray? = withContext(Dispatchers.IO) {
+    private fun capture(seconds: Int, checkpointSeconds: Int): Flow<FloatArray> = flow {
         val minBuffer = AudioRecord.getMinBufferSize(
             RECORD_RATE,
             AndroidAudioFormat.CHANNEL_IN_MONO,
             AndroidAudioFormat.ENCODING_PCM_16BIT
         )
-        if (minBuffer <= 0) return@withContext null
+        if (minBuffer <= 0) return@flow
 
         val bufferSize = maxOf(minBuffer, RECORD_RATE / 2)
-        val recorder = openRecorder(bufferSize) ?: return@withContext null
+        val recorder = openRecorder(bufferSize) ?: return@flow
 
         val total = RECORD_RATE * seconds
         val samples = FloatArray(total)
@@ -61,9 +107,13 @@ class MicRecorder @Inject constructor(
         val stepSize = maxOf(minBuffer, 2048)
         val chunk = ShortArray(stepSize)
         var written = 0
+        val checkpointEvery = if (checkpointSeconds > 0) RECORD_RATE * checkpointSeconds else 0
+        var nextCheckpoint = checkpointEvery
+        var level = 0f
 
         try {
             recorder.startRecording()
+            _isRecording.value = true
             while (written < total) {
                 // Cancellation is checked every chunk, so dismissing the sheet stops the
                 // microphone within a fraction of a second rather than at the end of the clip.
@@ -77,21 +127,59 @@ class MicRecorder @Inject constructor(
                     sumSquares += s * s
                 }
                 written += read
-                val rms = sqrt(sumSquares / read)
-                _audioLevel.value = (rms * 4.5f).coerceIn(0f, 1f)
+                level = follow(level, loudness(sqrt(sumSquares / read)))
+                _audioLevel.value = level
+
+                if (checkpointEvery > 0 && written >= nextCheckpoint && written < total) {
+                    nextCheckpoint += checkpointEvery
+                    emit(Resampler.toFingerprintRate(samples.copyOf(written), RECORD_RATE))
+                }
             }
         } catch (e: IllegalStateException) {
-            return@withContext null
+            return@flow
         } finally {
+            _isRecording.value = false
             _audioLevel.value = 0f
             runCatching { recorder.stop() }
             recorder.release()
         }
 
-        if (written < RECORD_RATE) return@withContext null
-        Resampler.toFingerprintRate(samples.copyOf(written), RECORD_RATE)
-            .also { if (BuildConfig.DEBUG) dumpForDiagnosis(it) }
+        if (written < RECORD_RATE) return@flow
+        emit(
+            Resampler.toFingerprintRate(samples.copyOf(written), RECORD_RATE)
+                .also { if (BuildConfig.DEBUG) dumpForDiagnosis(it) }
+        )
     }
+
+    /**
+     * RMS as something an eye can see.
+     *
+     * The level drove a wave that barely moved, because it was the raw RMS times a constant and
+     * hearing is not linear. A room with music playing in it measured 0.0028 RMS on this device —
+     * `rms * 4.5` is 0.013, which is visually indistinguishable from silence, while the same clip
+     * peaked at 0.117. Loud passages then clipped at the top of a range nothing else ever reached.
+     *
+     * Decibels instead, over a [FLOOR_DB] window, which is how the signal is actually distributed:
+     * quiet music lands near the middle of the bar rather than against the bottom of it, and the
+     * whole range gets used.
+     */
+    private fun loudness(rms: Float): Float {
+        if (rms <= 0f) return 0f
+        val db = 20f * log10(rms)
+        return ((db - FLOOR_DB) / -FLOOR_DB).coerceIn(0f, 1f)
+    }
+
+    /**
+     * Rises fast, falls slow.
+     *
+     * A beat is an attack and a tail, and following both at the same speed reads as either
+     * sluggish (slow enough to be smooth) or jittery (fast enough to be prompt). Snapping to a
+     * rise and easing off a fall is what makes a level meter look like it is listening — the same
+     * asymmetry every VU meter has.
+     */
+    private fun follow(current: Float, target: Float): Float =
+        if (target > current) current + (target - current) * ATTACK
+        else current + (target - current) * RELEASE
 
 
     /**
@@ -171,6 +259,13 @@ class MicRecorder @Inject constructor(
     private companion object {
         /** The one capture rate every Android device must support. See the class comment. */
         const val RECORD_RATE = 44_100
+
+        /** Quietest level the meter shows apart from silence. -60 dBFS is a very quiet room. */
+        const val FLOOR_DB = -60f
+
+        /** Per ~46 ms chunk. See [follow]. */
+        const val ATTACK = 0.6f
+        const val RELEASE = 0.18f
 
         private const val TAG = "MicRecorder"
 
