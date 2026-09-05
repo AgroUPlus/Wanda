@@ -210,4 +210,50 @@ class EmbeddingMatchScoringTest {
             assertEquals(1f, sqrt(chunk.fold(0f) { acc, x -> acc + x * x }), 1e-4f)
         }
     }
+
+    /**
+     * The coarse pass must sample the clip's whole span, not its opening.
+     *
+     * Three consecutive half-seconds describe one moment, and a track containing a similar moment
+     * survives on it; three spread across the clip have to agree about a span. Ends included, so
+     * the pass sees how far the clip reaches.
+     */
+    @Test
+    fun `the coarse query spans the clip end to end`() {
+        val song = track(segments = 240)
+        val clip = excerpt(song, at = 0, segments = 11)
+        val coarse = EmbeddingRepository.coarseQuery(clip)
+
+        assertEquals(3, coarse.segments)
+        val dim = AudioEmbedder.EMBED_DIM
+        // First, middle and last segment of the clip.
+        for ((i, source) in listOf(0, 5, 10).withIndex()) {
+            assertArrayEquals(
+                clip.values.copyOfRange(source * dim, (source + 1) * dim),
+                coarse.values.copyOfRange(i * dim, (i + 1) * dim)
+            )
+        }
+    }
+
+    /** A clip already at or below the coarse width is passed through, not padded or truncated. */
+    @Test
+    fun `a clip shorter than the coarse width is used whole`() {
+        val song = track(segments = 240)
+        val clip = excerpt(song, at = 0, segments = 2)
+        assertEquals(2, EmbeddingRepository.coarseQuery(clip).segments)
+    }
+
+    /** The cheap pass has to rank the true track first, or the expensive one never sees it. */
+    @Test
+    fun `the coarse pass still puts the right track on top`() {
+        val right = track(segments = 240)
+        val wrong = track(segments = 240)
+        val clip = excerpt(right, at = 90, segments = 11)
+        val coarse = EmbeddingRepository.coarseQuery(clip)
+
+        assertTrue(
+            EmbeddingRepository.score(coarse, right, "right").similarity >
+                EmbeddingRepository.score(coarse, wrong, "wrong").similarity
+        )
+    }
 }

@@ -238,11 +238,17 @@ class RecognitionRepository @Inject constructor(
         /**
          * How often the capture so far is offered to the matcher.
          *
+         * Three, not two, so that exactly one checkpoint falls inside a six-second capture. At two
+         * there were two of them, and a checkpoint match is not free: it runs on the same cores as
+         * the capture and the final match queues behind whichever one is still in flight, so the
+         * answer for the *whole* clip arrived later than it needed to. Measured on a Pixel 10, the
+         * second checkpoint delayed the final answer by about the length of a match.
+         *
          * Under two seconds there is not enough audio for even a strict threshold to mean much —
-         * the model works on one-second segments — and much over it gives the recording time to
+         * the model works on one-second segments — and much over three gives the recording time to
          * finish on its own, which is the thing this exists to avoid.
          */
-        const val CHECKPOINT_SECONDS = 2
+        const val CHECKPOINT_SECONDS = 3
 
         /** Puts a melody match's confidence on roughly the same scale as an embedding score. */
         const val MELODY_SCORE_SCALE = 20
