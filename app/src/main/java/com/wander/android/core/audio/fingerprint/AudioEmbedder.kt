@@ -145,6 +145,35 @@ class AudioEmbedder @Inject constructor(
             return Array(n) { FloatArray(EMBED_DIM) { buf.float } }
         }
 
+        /**
+         * The same bytes, into one flat array the caller owns and reuses.
+         *
+         * [unpack]'s `Array<FloatArray>` is one object per segment, and the matcher walks every
+         * segment of every track in the library on every attempt — a shape that allocated ~84 MB
+         * of short-lived arrays per match. This writes into a buffer that outlives the row.
+         * [dest] must hold at least `segments * EMBED_DIM` floats; the segment count is returned.
+         */
+        fun unpackInto(blob: ByteArray, dest: FloatArray): Int {
+            val buf = ByteBuffer.wrap(blob).order(ByteOrder.BIG_ENDIAN)
+            val values = blob.size / 4
+            for (i in 0 until values) dest[i] = buf.float
+            return values / EMBED_DIM
+        }
+
+        /** Segment vectors end to end, for a caller that wants one array rather than a list of them. */
+        fun flatten(vectors: Array<FloatArray>): SegmentVectors {
+            val flat = FloatArray(vectors.size * EMBED_DIM)
+            for ((i, row) in vectors.withIndex()) row.copyInto(flat, i * EMBED_DIM)
+            return SegmentVectors(flat, vectors.size)
+        }
+
+        /** One vector as a big-endian float32 BLOB, in the same layout as [pack]'s rows. */
+        fun packVector(vector: FloatArray): ByteArray {
+            val buf = ByteBuffer.allocate(vector.size * 4).order(ByteOrder.BIG_ENDIAN)
+            for (v in vector) buf.putFloat(v)
+            return buf.array()
+        }
+
         /** Serialises segment vectors as a big-endian float32 BLOB. Matches `core/embedder.py`. */
         fun pack(vectors: Array<FloatArray>): ByteArray {
             val buf = ByteBuffer.allocate(vectors.size * EMBED_DIM * 4).order(ByteOrder.BIG_ENDIAN)
@@ -153,3 +182,12 @@ class AudioEmbedder @Inject constructor(
         }
     }
 }
+
+/**
+ * Segment vectors laid end to end, and how many there are.
+ *
+ * The matcher's working shape. [values] holds `segments * AudioEmbedder.EMBED_DIM` floats and may
+ * be longer than that — it is a buffer reused across tracks of different lengths, so its size says
+ * nothing about the content and [segments] is the only count to trust.
+ */
+class SegmentVectors(val values: FloatArray, val segments: Int)

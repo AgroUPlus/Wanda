@@ -91,7 +91,9 @@ fun ListenSheet(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     when (current) {
-                        ListenState.Idle, ListenState.Listening -> Listening(readiness, audioLevel)
+                        ListenState.Idle, ListenState.Listening ->
+                            Listening(readiness, audioLevel)
+                        ListenState.Identifying -> Identifying(readiness)
                         is ListenState.Matched -> Matched(
                             recognition = current.recognition,
                             onPlay = {
@@ -129,6 +131,32 @@ private fun Listening(readiness: IndexReadiness, audioLevel: Float = 0f) {
     )
 }
 
+/**
+ * The microphone has closed; the search is running.
+ *
+ * The same wave, driven by nothing — there is no signal any more, and pretending otherwise by
+ * feeding it a synthetic level would be a progress bar that reports its own existence. It keeps
+ * its idle breathing, and the words carry the change.
+ */
+@Composable
+private fun Identifying(readiness: IndexReadiness) {
+    PulsingMic(audioLevel = 0f)
+
+    Text("Identifying…", style = MaterialTheme.typography.headlineSmall)
+    Text(
+        text = when (readiness) {
+            is IndexReadiness.Ready ->
+                "Searching ${readiness.trackCount} " +
+                    "${if (readiness.trackCount == 1) "track" else "tracks"} measured on this device."
+            IndexReadiness.Empty -> INDEX_FILLING
+            IndexReadiness.ModelMissing -> MODEL_MISSING
+        },
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center
+    )
+}
+
 @Composable
 private fun Matched(recognition: Recognition, onPlay: () -> Unit) {
     Artwork(
@@ -154,8 +182,8 @@ private fun Matched(recognition: Recognition, onPlay: () -> Unit) {
         overflow = TextOverflow.Ellipsis
     )
     if (recognition.engine == RecognitionEngine.MELODY) {
-        // Said out loud, because the two engines are not equally sure. A landmark match heard the
-        // record; this one matched the shape of a tune somebody hummed, and a listener shown a
+        // Said out loud, because the two engines are not equally sure. An embedding match heard
+        // the record; this one matched the shape of a tune somebody hummed, and a listener shown a
         // confident wrong answer has no way to know which kind they were given.
         Text(
             text = "Matched by melody — this is a guess from the tune, not the recording.",
