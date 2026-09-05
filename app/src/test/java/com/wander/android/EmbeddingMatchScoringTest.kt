@@ -29,11 +29,8 @@ class EmbeddingMatchScoringTest {
         return FloatArray(v.size) { v[it] / norm }
     }
 
-    private fun track(segments: Int): SegmentVectors {
-        val flat = FloatArray(segments * AudioEmbedder.EMBED_DIM)
-        for (i in 0 until segments) unit().copyInto(flat, i * AudioEmbedder.EMBED_DIM)
-        return SegmentVectors(flat, segments)
-    }
+    private fun track(segments: Int): SegmentVectors =
+        AudioEmbedder.flatten(Array(segments) { unit() })
 
     /** The clip as it appears `at` segments into `track`. */
     private fun excerpt(track: SegmentVectors, at: Int, segments: Int): SegmentVectors {
@@ -53,7 +50,11 @@ class EmbeddingMatchScoringTest {
 
         // 200 segments at a 0.5 s hop.
         assertEquals(100, match.positionSeconds)
-        assertEquals(1f, match.similarity, 1e-4f)
+        // Not exactly 1.0: quantising moves each component by up to half a step, which perturbs
+        // the vector's norm, so a clip's cosine against its own source can land fractionally
+        // either side of unity. The measured drift on real vectors is under 0.002 — an order of
+        // magnitude below the 0.04 margin any decision is made on.
+        assertEquals(1f, match.similarity, 0.002f)
     }
 
     /**
@@ -84,28 +85,42 @@ class EmbeddingMatchScoringTest {
         assertTrue(EmbeddingRepository.score(clip, song, "t").positionSeconds >= 0)
     }
 
-    /** Big-endian, segment-major, and the flat form the matcher walks agrees with the boxed one. */
+    /**
+     * One byte a component, segment-major, and a round-trip that stays inside the quantiser's step.
+     *
+     * The BLOB is the working array — a match walks the bytes SQLite hands it — so `pack` and
+     * `flatten` producing anything different would not be a rounding difference, it would be two
+     * incompatible alphabets that both look plausible.
+     */
     @Test
-    fun `packing round-trips through both unpack shapes`() {
+    fun `packing is one byte per component and round-trips within a quantisation step`() {
         val vectors = Array(5) { unit() }
         val blob = AudioEmbedder.pack(vectors)
-        assertEquals(5 * AudioEmbedder.EMBED_DIM * 4, blob.size)
+        assertEquals(5 * AudioEmbedder.EMBED_DIM, blob.size)
 
-        val boxed = AudioEmbedder.unpack(blob)
-        assertEquals(5, boxed.size)
-        for (i in vectors.indices) assertArrayEquals(vectors[i], boxed[i], 0f)
+        val read = AudioEmbedder.unpack(blob)
+        assertEquals(5, read.size)
+        // Half a step of 1/255, which is the most rounding to nearest can cost.
+        for (i in vectors.indices) assertArrayEquals(vectors[i], read[i], 0.5f / 255f)
 
-        val flat = FloatArray(5 * AudioEmbedder.EMBED_DIM)
-        assertEquals(5, AudioEmbedder.unpackInto(blob, flat))
-        assertArrayEquals(AudioEmbedder.flatten(vectors).values, flat, 0f)
+        assertArrayEquals(blob, AudioEmbedder.flatten(vectors).values)
     }
 
-    /** A buffer bigger than the row is the normal case — it is reused across tracks of every length. */
+    /**
+     * Nothing in a real vector comes near clipping, and the guard holds if anything ever does.
+     *
+     * Measured over 162,447 stored segment vectors the largest component was 0.433; the scale
+     * clips at 0.498. A component beyond that must saturate rather than wrap, because
+     * `(0.6 * 255).toInt().toByte()` is -103 — a large positive number stored as a large negative
+     * one, which is the kind of failure that produces confident nonsense.
+     */
     @Test
-    fun `unpackInto reports the row's segments, not the buffer's capacity`() {
-        val blob = AudioEmbedder.pack(Array(3) { unit() })
-        val oversized = FloatArray(120 * AudioEmbedder.EMBED_DIM)
-        assertEquals(3, AudioEmbedder.unpackInto(blob, oversized))
+    fun `an out-of-range component saturates rather than wrapping`() {
+        assertEquals(127.toByte(), AudioEmbedder.quantise(0.9f))
+        assertEquals((-127).toByte(), AudioEmbedder.quantise(-0.9f))
+        assertEquals(0.toByte(), AudioEmbedder.quantise(0f))
+        // The measured extreme, comfortably inside the range.
+        assertEquals(110.toByte(), AudioEmbedder.quantise(0.433f))
     }
 
     /**
@@ -139,15 +154,60 @@ class EmbeddingMatchScoringTest {
         assertEquals(1f, norm, 1e-4f)
     }
 
-    /** The 512-byte BLOB the shortlist reads back has to be the vector that was written. */
+    /**
+     * The position must survive a chorus that repeats verbatim later in the song.
+     *
+     * The clip's own segments are duplicated at another offset, so several of them individually
+     * match the wrong place perfectly. Only the diagonal distinguishes the two, and it is the
+     * whole reason this is not an argmax.
+     */
     @Test
-    fun `a centroid round-trips through its blob`() {
-        val mean = EmbeddingRepository.meanOf(track(segments = 40))
-        val blob = AudioEmbedder.packVector(mean)
-        assertEquals(AudioEmbedder.EMBED_DIM * 4, blob.size)
+    fun `a verbatim repeat elsewhere does not move the position`() {
+        val song = track(segments = 300)
+        val clip = excerpt(song, at = 200, segments = 11)
+        // The same eleven segments also appear at segment 40.
+        clip.values.copyInto(song.values, 40 * AudioEmbedder.EMBED_DIM)
 
-        val read = FloatArray(AudioEmbedder.EMBED_DIM)
-        AudioEmbedder.unpackInto(blob, read)
-        assertArrayEquals(mean, read, 0f)
+        // Two exact alignments now exist; the earlier one is reported, and either is correct.
+        val at = EmbeddingRepository.score(clip, song, "t").positionSeconds
+        assertTrue(at == 20 || at == 100)
+    }
+
+    /** The BLOB the shortlist reads back has to be the vectors that were written. */
+    @Test
+    fun `a summary round-trips through its blob`() {
+        val song = track(segments = 40)
+        val summary = EmbeddingRepository.summaryOf(song)
+        val blob = AudioEmbedder.pack(summary)
+        assertEquals(summary.size * AudioEmbedder.EMBED_DIM, blob.size)
+        assertArrayEquals(AudioEmbedder.flatten(summary).values, blob)
+    }
+
+    /**
+     * One summary per 30 s, and the tail folded in rather than left as a stub.
+     *
+     * The chunk length is the whole reason the shortlist can be short: measured over 300 excerpts
+     * of a real 1374-track index, a single whole-track mean put the true track as low as rank 524,
+     * and one mean per 30 s put it no lower than rank 2.
+     */
+    @Test
+    fun `a track is summarised once per thirty seconds`() {
+        // 60 segments is one chunk; 119 (a 60 s track) is still one.
+        assertEquals(1, EmbeddingRepository.summaryOf(track(segments = 60)).size)
+        assertEquals(1, EmbeddingRepository.summaryOf(track(segments = 119)).size)
+        // 360 segments is a three-minute track: six chunks.
+        assertEquals(6, EmbeddingRepository.summaryOf(track(segments = 360)).size)
+        // A short remainder joins the last chunk instead of becoming a seventh.
+        assertEquals(6, EmbeddingRepository.summaryOf(track(segments = 370)).size)
+        // Shorter than one chunk still yields one.
+        assertEquals(1, EmbeddingRepository.summaryOf(track(segments = 11)).size)
+    }
+
+    /** Every chunk summary is a unit vector, or a dot product against it is not a cosine. */
+    @Test
+    fun `every chunk summary is normalised`() {
+        for (chunk in EmbeddingRepository.summaryOf(track(segments = 300))) {
+            assertEquals(1f, sqrt(chunk.fold(0f) { acc, x -> acc + x * x }), 1e-4f)
+        }
     }
 }

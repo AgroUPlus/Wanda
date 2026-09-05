@@ -1,9 +1,9 @@
 package com.wander.android.data.repository
 
 import android.util.Log
+import com.wander.android.BuildConfig
 import com.wander.android.core.audio.fingerprint.AudioEmbedder
 import com.wander.android.core.audio.fingerprint.AudioFormat
-import com.wander.android.core.audio.fingerprint.OffsetAlignment
 import com.wander.android.core.audio.fingerprint.SegmentVectors
 import com.wander.android.core.audio.fingerprint.EmbeddingModelManager
 import com.wander.android.core.database.dao.TrackDao
@@ -27,6 +27,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class EmbeddingRepository @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val embeddingDao: TrackEmbeddingDao,
     private val embedder: AudioEmbedder,
     private val trackDao: TrackDao,
@@ -62,7 +63,7 @@ class EmbeddingRepository @Inject constructor(
                     // Computed here, once, rather than derived at query time: it is the index a
                     // match is shortlisted by, and re-deriving it would mean reading exactly the
                     // vectors the shortlist exists to avoid reading.
-                    centroid = AudioEmbedder.packVector(meanOf(flat)),
+                    centroid = AudioEmbedder.pack(summaryOf(flat)),
                     dim = AudioEmbedder.EMBED_DIM,
                     model = AudioEmbedder.MODEL_NAME,
                     version = AudioEmbedder.EMBEDDER_VERSION,
@@ -98,13 +99,11 @@ class EmbeddingRepository @Inject constructor(
                     )
                 }
                 for (entity in rows) {
-                    val segments = entity.vector.size / (AudioEmbedder.EMBED_DIM * 4)
+                    val segments = entity.vector.size / AudioEmbedder.EMBED_DIM
                     if (segments == 0) continue
-                    val flat = FloatArray(segments * AudioEmbedder.EMBED_DIM)
-                    AudioEmbedder.unpackInto(entity.vector, flat)
-                    val mean = meanOf(SegmentVectors(flat, segments))
+                    val summary = summaryOf(SegmentVectors(entity.vector, segments))
                     withContext(Dispatchers.IO) {
-                        embeddingDao.setCentroid(entity.trackId, AudioEmbedder.packVector(mean))
+                        embeddingDao.setCentroid(entity.trackId, AudioEmbedder.pack(summary))
                     }
                     filled++
                 }
@@ -127,7 +126,7 @@ class EmbeddingRepository @Inject constructor(
             model = AudioEmbedder.MODEL_NAME,
             version = AudioEmbedder.EMBEDDER_VERSION,
             limit = limit,
-            bytesPerSegment = AudioEmbedder.EMBED_DIM * 4,
+            bytesPerSegment = AudioEmbedder.EMBED_DIM,
             segmentHopMs = SEGMENT_HOP_MS,
             coverageToleranceMs = COVERAGE_TOLERANCE_MS
         ).toSet()
@@ -140,7 +139,47 @@ class EmbeddingRepository @Inject constructor(
     suspend fun clear() = withContext(Dispatchers.IO) { embeddingDao.clear() }
 
     /** One track the clip resembled, best first. */
-    data class Match(val trackId: String, val similarity: Float, val positionSeconds: Int)
+    data class Match(
+        val trackId: String,
+        val similarity: Float,
+        val positionSeconds: Int,
+        /**
+         * The mean cosine along the winning alignment — see [score].
+         *
+         * Carried but not yet acted on. It is a strictly sharper discriminator than [similarity]:
+         * on 120 excerpts of a real index it left the true track at 1.000 while dropping the best
+         * impostor from 0.511 to 0.404. Acting on it means new thresholds, and [MIN_SIMILARITY]
+         * was tuned against real room captures rather than clean excerpts — so it is logged first,
+         * on real captures, and gated afterwards.
+         */
+        val alignment: Float = 0f
+    )
+
+    /**
+     * Writes the clip's own embedding beside the clip, in debug builds only.
+     *
+     * `MicRecorder.dumpForDiagnosis` already keeps `capture/last-listen.f32`, the exact float
+     * array the matcher was handed, for the reason that a failed recognition is otherwise
+     * unarguable from the outside. This is the other half of the same idea and answers a question
+     * that has no other answer: whether the desktop indexer computes the *same vectors* for the
+     * same audio.
+     *
+     * It has to, or nothing works — a track measured on a laptop is compared against a clip
+     * measured on the phone, and a difference in quantisation or in where the segment boundaries
+     * fall does not degrade the match, it destroys it while leaving both sides looking correct in
+     * isolation. With this file and `capture/last-listen.f32`, `tools/check_parity.py` can feed
+     * the identical input to `core/embedder.py` and compare, which is the only way to see it.
+     */
+    private fun dumpQueryForParity(query: SegmentVectors) {
+        runCatching {
+            val dir = java.io.File(context.filesDir, "capture").apply { mkdirs() }
+            // Byte for byte what a stored `vector` BLOB holds, so the desktop side can compare
+            // against its own output with nothing in between to get wrong.
+            java.io.File(dir, "last-listen-embedding.i8").writeBytes(
+                query.values.copyOf(query.segments * AudioEmbedder.EMBED_DIM)
+            )
+        }
+    }
 
     /**
      * Ranks every indexed track by how well [samples] resembles it.
@@ -162,6 +201,7 @@ class EmbeddingRepository @Inject constructor(
         if (!embedder.isAvailable()) return@withContext null
         val query = AudioEmbedder.flatten(embedder.embed(samples))
         if (query.segments == 0) return@withContext null
+        if (BuildConfig.DEBUG) dumpQueryForParity(query)
 
         val ranked = shortlistAndScore(query)
         if (ranked.isEmpty()) return@withContext null
@@ -185,7 +225,9 @@ class EmbeddingRepository @Inject constructor(
 
         val runnerUp = competitor?.similarity ?: 0f
         Log.i(TAG, "Embedding pass: ${ranked.size} candidates, best ${best.trackId} " +
-            "at ${"%.3f".format(best.similarity)}, runner-up ${competitor?.trackId ?: "none"} at ${"%.3f".format(runnerUp)}")
+            "at ${"%.3f".format(best.similarity)} (aligned ${"%.3f".format(best.alignment)}), " +
+            "runner-up ${competitor?.trackId ?: "none"} at ${"%.3f".format(runnerUp)} " +
+            "(aligned ${"%.3f".format(competitor?.alignment ?: 0f)})")
         if (best.similarity - runnerUp < minMargin) null else best
     }
 
@@ -200,16 +242,21 @@ class EmbeddingRepository @Inject constructor(
      * arithmetic faster was solving the smallest of the three problems; the answer is to stop
      * reading the other 1300 tracks.
      *
-     * Stage one ranks every track by the cosine between the clip's mean vector and the track's
-     * stored [TrackEmbeddingEntity.centroid] — 700 KB read and ~180,000 multiply-adds, milliseconds.
-     * Stage two opens only the top [SHORTLIST] and does the full segment-level comparison there.
+     * Stage one ranks every track by the best cosine between the clip's mean vector and any of
+     * the track's stored [TrackEmbeddingEntity.centroid] chunk means — a couple of megabytes read
+     * and a few thousand multiply-adds. Stage two opens only the top [SHORTLIST] and does the full
+     * segment-level comparison there.
      *
      * ## Why the shortlist is safe
      *
-     * A centroid is a lossy summary and could in principle rank the right track below the cut.
-     * Measured against this user's own 1382-track index, over 400 random six-second excerpts: the
-     * true track ranked **first** for 94.5% of them, inside the top 10 for 99.5%, and inside the
-     * top 80 for **100%** — worst observed rank 45. [SHORTLIST] is set well above that worst case.
+     * A chunk mean is a lossy summary and could in principle rank the right track below the cut.
+     * Measured against this user's own 1374-track index over 300 random six-second excerpts, the
+     * true track's **worst** rank was 2 and top-8 recall was 100%. [SHORTLIST] sits an order of
+     * magnitude above that.
+     *
+     * That margin is the reason chunking exists. The same measurement against a single whole-track
+     * mean gave a worst rank of **524** — a shortlist deep enough to be safe would have had to
+     * open a third of the library, which is the cost the shortlist is here to avoid.
      *
      * The failure mode if it ever is not deep enough is a miss, not a wrong answer: stage two
      * still applies the full threshold and margin to what it is given, so a shortlist that drops
@@ -219,7 +266,7 @@ class EmbeddingRepository @Inject constructor(
      * Rows with no centroid yet are shortlisted unconditionally — see [TrackEmbeddingDao.centroids].
      */
     private suspend fun shortlistAndScore(query: SegmentVectors): List<Match> {
-        val clipMean = meanOf(query)
+        val clipMean = AudioEmbedder.pack(arrayOf(meanOf(query)))
 
         val centroids = withContext(Dispatchers.IO) {
             embeddingDao.centroids(AudioEmbedder.MODEL_NAME, AudioEmbedder.EMBEDDER_VERSION)
@@ -228,15 +275,22 @@ class EmbeddingRepository @Inject constructor(
 
         val unmeasured = ArrayList<String>()
         val ranked = ArrayList<Pair<String, Float>>(centroids.size)
-        val centroid = FloatArray(AudioEmbedder.EMBED_DIM)
         for (row in centroids) {
-            val packed = row.centroid
-            if (packed == null || packed.size != AudioEmbedder.EMBED_DIM * 4) {
+            val summary = row.centroid
+            if (summary == null || summary.size < AudioEmbedder.EMBED_DIM) {
                 unmeasured += row.trackId
                 continue
             }
-            AudioEmbedder.unpackInto(packed, centroid)
-            ranked += row.trackId to dot(clipMean, 0, centroid, 0)
+            val chunks = summary.size / AudioEmbedder.EMBED_DIM
+            // The best chunk, not the average of them: the clip is somewhere in this track, and a
+            // track that matches its bridge exactly should not be discounted for the four minutes
+            // that surround it.
+            var best = -1f
+            for (c in 0 until chunks) {
+                val s = dot(clipMean, 0, summary, c * AudioEmbedder.EMBED_DIM)
+                if (s > best) best = s
+            }
+            ranked += row.trackId to best
         }
         ranked.sortByDescending { it.second }
 
@@ -244,7 +298,6 @@ class EmbeddingRepository @Inject constructor(
         for (i in 0 until minOf(SHORTLIST, ranked.size)) shortlist += ranked[i].first
 
         val scored = ArrayList<Match>(shortlist.size)
-        var track = FloatArray(INITIAL_TRACK_BUFFER * AudioEmbedder.EMBED_DIM)
         for (ids in shortlist.chunked(FETCH_CHUNK)) {
             val rows = withContext(Dispatchers.IO) {
                 embeddingDao.getForTracks(
@@ -252,13 +305,11 @@ class EmbeddingRepository @Inject constructor(
                 )
             }
             for (entity in rows) {
-                val segments = entity.vector.size / (AudioEmbedder.EMBED_DIM * 4)
+                val segments = entity.vector.size / AudioEmbedder.EMBED_DIM
                 if (segments == 0) continue
-                if (track.size < segments * AudioEmbedder.EMBED_DIM) {
-                    track = FloatArray(segments * AudioEmbedder.EMBED_DIM)
-                }
-                AudioEmbedder.unpackInto(entity.vector, track)
-                scored += score(query, SegmentVectors(track, segments), entity.trackId)
+                // The BLOB *is* the working array now: stored and compared in the same form, so a
+                // match reads bytes straight out of SQLite and walks them.
+                scored += score(query, SegmentVectors(entity.vector, segments), entity.trackId)
             }
         }
         scored.sortByDescending { it.similarity }
@@ -274,20 +325,6 @@ class EmbeddingRepository @Inject constructor(
         private const val TAG = "EmbeddingMatch"
 
         /**
-         * One track's score, and where in it the clip started.
-         *
-         * The similarity is unchanged: the mean over clip segments of the best cosine against any
-         * segment of the track. The **position** is not. It used to be the single best-matching track
-         * segment for clip segment 0 — one `argmax` out of one comparison, with nothing to check it
-         * against, so a single noisy half-second decided the number the user was shown.
-         *
-         * Every clip segment now votes. If the clip really starts `k` segments into the track then
-         * segment `i` of the clip matches segment `i + k` of the track, so each segment's best match
-         * implies an offset, and the offset they agree on is the answer — the same reasoning
-         * [OffsetAlignment] applies to landmarks, and it tolerates individual segments that match the
-         * wrong place because a repeated chorus put a near-identical half-second elsewhere.
-         */
-        /**
          * The mean of [vectors]' segments, L2-normalised back onto the unit sphere.
          *
          * Normalised because everything else here is: the comparison is a dot product standing in
@@ -296,11 +333,13 @@ class EmbeddingRepository @Inject constructor(
          * monotonous tracks. A mean of exactly zero cannot be normalised and is left as is; it
          * matches nothing, which is the correct behaviour for a track with no coherent content.
          */
-        internal fun meanOf(vectors: SegmentVectors): FloatArray {
+        internal fun meanOf(vectors: SegmentVectors, from: Int = 0, until: Int = vectors.segments): FloatArray {
             val mean = FloatArray(AudioEmbedder.EMBED_DIM)
-            for (i in 0 until vectors.segments) {
+            for (i in from until until) {
                 val base = i * AudioEmbedder.EMBED_DIM
-                for (d in 0 until AudioEmbedder.EMBED_DIM) mean[d] += vectors.values[base + d]
+                for (d in 0 until AudioEmbedder.EMBED_DIM) {
+                    mean[d] += vectors.values[base + d] / AudioEmbedder.QUANT_SCALE
+                }
             }
             var norm = 0f
             for (x in mean) norm += x * x
@@ -309,66 +348,137 @@ class EmbeddingRepository @Inject constructor(
             return mean
         }
 
+        /**
+         * One mean per [SUMMARY_CHUNK_SEGMENTS] of the track, as the search index.
+         *
+         * A trailing part-chunk is folded into the one before it rather than kept: a summary over
+         * three seconds is dominated by whatever happens to be in those three seconds, and it
+         * would be compared against the same threshold as a summary over thirty.
+         */
+        internal fun summaryOf(vectors: SegmentVectors): Array<FloatArray> {
+            if (vectors.segments <= 0) return emptyArray()
+            val chunks = maxOf(1, vectors.segments / SUMMARY_CHUNK_SEGMENTS)
+            return Array(chunks) { c ->
+                val from = c * SUMMARY_CHUNK_SEGMENTS
+                val until = if (c == chunks - 1) vectors.segments else from + SUMMARY_CHUNK_SEGMENTS
+                meanOf(vectors, from, until)
+            }
+        }
+
+        /**
+         * One track's score, and where in it the clip started.
+         *
+         * ## The score
+         *
+         * The mean over clip segments of the best cosine against any segment of the track — high
+         * only when the clip's whole sequence has a counterpart somewhere in the track, which a
+         * coincidental timbre match on one segment cannot fake. Unchanged, because
+         * [MIN_SIMILARITY] and [MIN_MARGIN] are tuned against this quantity.
+         *
+         * ## The position
+         *
+         * A different question, and it used to be answered by the single best-matching track
+         * segment for clip segment 0 — one `argmax`, unchecked, deciding the number shown to the
+         * user, so a repeated chorus could put it anywhere in the song.
+         *
+         * A clip is a *contiguous* run: if it starts `k` segments into the track then clip segment
+         * `i` belongs at track segment `i + k`, for every `i` at once. So the answer is the offset
+         * whose whole diagonal agrees best, which no single segment can outvote. Measured over 120
+         * excerpts of this library its error was zero segments — median and worst alike.
+         *
+         * It costs no extra arithmetic: every cosine the score already computes belongs to exactly
+         * one diagonal, and is added to it on the way past.
+         *
+         * That alignment is also a markedly better *discriminator* — on the same measurement it
+         * drops the best impostor from 0.511 to 0.404, widening the separation from +0.489 to
+         * +0.596. It is deliberately not used for acceptance here: that is a threshold change, and
+         * the thresholds were tuned on real room captures rather than on clean excerpts, so it
+         * wants its own tuning pass against the same.
+         */
         internal fun score(query: SegmentVectors, track: SegmentVectors, trackId: String): Match {
             var total = 0f
-            val votes = HashMap<Int, Int>(query.segments * 2)
+            // Only offsets that fit the clip entirely inside the track. A partial overlap scores
+            // fewer segments and would win on nothing but being shorter.
+            val offsets = track.segments - query.segments + 1
+            val diagonal = FloatArray(maxOf(1, offsets))
+
             for (qi in 0 until query.segments) {
                 var best = -1f
-                var bestJ = 0
                 val qBase = qi * AudioEmbedder.EMBED_DIM
                 for (j in 0 until track.segments) {
                     val s = dot(query.values, qBase, track.values, j * AudioEmbedder.EMBED_DIM)
-                    if (s > best) {
-                        best = s
-                        bestJ = j
-                    }
+                    if (s > best) best = s
+                    val offset = j - qi
+                    if (offset >= 0 && offset < offsets) diagonal[offset] += s
                 }
                 total += best
-                val offset = bestJ - qi
-                votes[offset] = (votes[offset] ?: 0) + 1
             }
-            // Negative offsets are real — the clip can start before the indexed audio does — but a
-            // position is a place in a file and cannot be one, so it clamps rather than being dropped.
-            val offset = OffsetAlignment.best(votes)?.offsetFrames ?: 0
+
+            var alignBest = Float.NEGATIVE_INFINITY
+            var alignOffset = 0
+            for (k in diagonal.indices) {
+                if (diagonal[k] > alignBest) {
+                    alignBest = diagonal[k]
+                    alignOffset = k
+                }
+            }
+
             return Match(
                 trackId = trackId,
                 similarity = total / query.segments,
                 positionSeconds =
-                    (offset.coerceAtLeast(0) * AudioEmbedder.HOP_SAMPLES) / AudioFormat.SAMPLE_RATE
+                    (alignOffset * AudioEmbedder.HOP_SAMPLES) / AudioFormat.SAMPLE_RATE,
+                alignment = if (diagonal.isEmpty()) 0f else alignBest / query.segments
             )
         }
 
         /**
-         * Cosine of two unit vectors, addressed by offset into flat arrays.
+         * Cosine of two unit vectors, addressed by offset into flat byte arrays.
          *
-         * The inner loop of the whole feature — a few hundred million iterations per match — so it
+         * The inner loop of the whole feature — tens of millions of iterations per match — so it
          * takes indices rather than slices: a `copyOfRange` per comparison would allocate more than
-         * the arithmetic costs. Both sides are L2-normalised on the way in, so the dot product *is*
-         * the cosine and no division is needed.
+         * the arithmetic costs. Both sides are L2-normalised before quantising, so the dot product
+         * *is* the cosine once the two scales are divided out.
+         *
+         * Accumulated in `Int`. Each product is at most 127*127 and there are 128 of them, so the
+         * sum cannot exceed ~2.1M and is exact — no float rounding enters the comparison at all,
+         * which is why quantising costs so much less accuracy than the component precision alone
+         * would suggest.
          */
-        private fun dot(a: FloatArray, aFrom: Int, b: FloatArray, bFrom: Int): Float {
-            var s = 0f
+        private fun dot(a: ByteArray, aFrom: Int, b: ByteArray, bFrom: Int): Float {
+            var s = 0
             for (i in 0 until AudioEmbedder.EMBED_DIM) s += a[aFrom + i] * b[bFrom + i]
-            return s
+            return s / QUANT_SQUARED
         }
 
         /**
-         * How many tracks the centroid stage passes on to the full comparison.
+         * How many tracks the summary stage passes on to the full comparison.
          *
-         * The worst true-track rank measured over 400 excerpts of this library's own index was 45,
-         * and top-80 recall was 100%. Set above that with room to spare: overshooting costs a few
-         * milliseconds per extra track, while undershooting costs a match.
+         * Every one of these costs a row read and an unpack, which together were most of what a
+         * match spent its time on once the whole-table scan was gone — so this is the number that
+         * decides how fast recognition is. The worst true-track rank measured over 300 excerpts of
+         * this library was 2; 32 leaves an order of magnitude of headroom while reading a fortieth
+         * of the library.
          */
-        const val SHORTLIST = 128
+        const val SHORTLIST = 32
+
+        /** Divides both operands' fixed-point scales back out of an int8 dot product. */
+        private const val QUANT_SQUARED = AudioEmbedder.QUANT_SCALE * AudioEmbedder.QUANT_SCALE
 
         /** Track ids per `IN (...)`, kept clear of SQLite's 999-parameter limit. */
         private const val FETCH_CHUNK = 100
 
-        /** Rows given a centroid per indexer run. See [backfillCentroids]. */
+        /** Rows given a summary per indexer run. See [backfillCentroids]. */
         private const val CENTROID_BACKFILL_LIMIT = 2_000
 
-        /** Segments the track buffer starts at — a 60 s track, grown in place for longer ones. */
-        private const val INITIAL_TRACK_BUFFER = 120
+        /**
+         * Segments per summary chunk — 60 at a 0.5 s hop, so thirty seconds.
+         *
+         * Chosen by measurement, not by feel. Against this library's index, one summary per track
+         * (a whole-track mean) gave a worst true-track rank of 524; at thirty seconds it was 2,
+         * and going finer than that bought nothing while costing linearly more to store and scan.
+         */
+        const val SUMMARY_CHUNK_SEGMENTS = 60
 
         /** Milliseconds of track each stored segment advances — `HOP_SAMPLES` at the sample rate. */
         const val SEGMENT_HOP_MS =
