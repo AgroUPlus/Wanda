@@ -44,6 +44,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
     private val recognitionRepository: RecognitionRepository,
     private val recordingIdentity: RecordingIdentityRepository,
     private val recordingLinks: RecordingLinkRepository,
+    private val secureStorage: com.wander.android.core.security.SecureStorage,
     private val acousticFeatures: AcousticFeatureRepository,
     private val melodySearch: MelodySearchRepository,
     private val embeddingSearch: EmbeddingRepository,
@@ -97,6 +98,13 @@ class FingerprintIndexWorker @AssistedInject constructor(
         // existed is shortlisted unconditionally by every recognition until it has one, so this
         // is what stops a whole library of them making the first match after an upgrade slow.
         embeddingSearch.backfillCentroids()
+
+        // And link the duplicates among tracks this device did not measure itself. Links are
+        // recorded per track as it is indexed below, which covers everything the phone measures
+        // and nothing a desktop indexer wrote — and an *unlinked* duplicate is worse than none:
+        // the matcher refuses a winner that a near-identical runner-up sits inside MIN_MARGIN of,
+        // so a pair nobody linked make each other permanently unrecognisable.
+        recordingIdentity.linkDuplicates(recordingLinks, secureStorage)
 
         // The neural fingerprint, on the same decode. Empty set when the model asset is absent.
         val needsEmbedding = embeddingSearch.needingIndex(EMBEDDING_BATCH_LIMIT)

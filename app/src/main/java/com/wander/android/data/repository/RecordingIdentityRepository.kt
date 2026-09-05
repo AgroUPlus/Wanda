@@ -46,11 +46,20 @@ class RecordingIdentityRepository @Inject constructor(
     data class Match(val trackId: String, val similarity: Double)
 
     /**
+     * A track's length: what its metadata claims, or what its embedding measured.
+     *
+     * The fallback is not a guess. Tracks are embedded whole at a fixed half-second hop, so the
+     * segment count *is* a measurement of the decoded audio — and one that does not depend on a
+     * backend having filled the field in.
+     */
+    private fun durationOf(declaredMs: Long, segments: Int): Long =
+        if (declaredMs > 0L) declaredMs else segments.toLong() * SEGMENT_HOP_MS
+
+    /**
      * Finds track ids holding the same recording as [trackId], best first.
      */
     suspend fun matchesFor(trackId: String): List<Match> = withContext(Dispatchers.Default) {
         val targetTrack = withContext(Dispatchers.IO) { trackDao.getTrackById(trackId) } ?: return@withContext emptyList()
-        if (targetTrack.durationMs <= 0L) return@withContext emptyList()
 
         val targetEntity = withContext(Dispatchers.IO) {
             embeddingDao.getForTrack(trackId, AudioEmbedder.MODEL_NAME, AudioEmbedder.EMBEDDER_VERSION)
@@ -59,8 +68,20 @@ class RecordingIdentityRepository @Inject constructor(
         val targetVectors = AudioEmbedder.unpack(targetEntity.vector)
         if (targetVectors.isEmpty()) return@withContext emptyList()
 
-        val minDuration = targetTrack.durationMs - durationToleranceMs
-        val maxDuration = targetTrack.durationMs + durationToleranceMs
+        // A track whose metadata carries no duration used to stop here, and that is not a rare
+        // shape — YouTube Music rows routinely arrive without one. It made those tracks
+        // undetectable as duplicates in either direction, and a duplicate nobody knows about is
+        // what stops the *original* from being recognised: it scores within MIN_MARGIN of it and
+        // the match is rejected as ambiguous. Measured on a real library, a flawless six-second
+        // excerpt of one track led its own unlinked copy by 0.018 against a 0.04 margin.
+        //
+        // The embedding is a better duration than the metadata anyway: it was measured from the
+        // audio that actually decoded, at a known half-second per segment.
+        val targetDuration = durationOf(targetTrack.durationMs, targetVectors.size)
+        if (targetDuration <= 0L) return@withContext emptyList()
+
+        val minDuration = targetDuration - durationToleranceMs
+        val maxDuration = targetDuration + durationToleranceMs
 
         val candidateIds = withContext(Dispatchers.IO) {
             trackDao.getCandidateIdsByDuration(trackId, minDuration, maxDuration)
@@ -199,5 +220,64 @@ class RecordingIdentityRepository @Inject constructor(
         var s = 0f
         for (i in a.indices) s += a[i] * b[i]
         return s
+    }
+
+    /**
+     * Links every duplicate in the library, for tracks nothing has asked about yet.
+     *
+     * `FingerprintIndexWorker` records links for each track *it* measures, which is enough while
+     * the phone is the only thing that measures anything. It is not enough once a desktop indexer
+     * writes the embeddings: those tracks arrive fingerprinted and unlinked, and an unlinked
+     * duplicate is worse than no duplicate at all — `EmbeddingRepository.findCompetitor` skips a
+     * runner-up it knows to be the same recording, and cannot skip one nobody told it about, so
+     * the pair defeat each other on [EmbeddingRepository.MIN_MARGIN] and *neither* is ever
+     * recognised. Measured on a real library: a flawless excerpt of one track led its own copy by
+     * 0.018 against a 0.04 margin, so no recording however good could have identified it.
+     *
+     * Bounded per run, and cheap per track: the duration gate means each one compares against a
+     * handful of candidates rather than the library. Tracks are taken oldest-measured first so a
+     * partial run makes steady progress instead of revisiting the same head each time.
+     *
+     * Returns how many tracks were examined.
+     */
+    suspend fun linkDuplicates(
+        linkRepository: RecordingLinkRepository,
+        secureStorage: com.wander.android.core.security.SecureStorage,
+        limit: Int = LINK_BACKFILL_LIMIT
+    ): Int = withContext(Dispatchers.Default) {
+        val after = secureStorage.duplicateScanCursor
+        val pending = withContext(Dispatchers.IO) {
+            embeddingDao.idsAfter(
+                AudioEmbedder.MODEL_NAME, AudioEmbedder.EMBEDDER_VERSION, after, limit
+            )
+        }
+        if (pending.isEmpty()) {
+            // The sweep reached the end. Reset rather than latch: the library gains tracks, and
+            // whether two of them are the same recording is a question that comes back.
+            if (after.isNotEmpty()) secureStorage.duplicateScanCursor = ""
+            return@withContext 0
+        }
+
+        var linked = 0
+        for (trackId in pending) {
+            val matches = matchesFor(trackId)
+            if (matches.isNotEmpty()) {
+                linkRepository.record(trackId, matches)
+                linked++
+            }
+        }
+        secureStorage.duplicateScanCursor = pending.last()
+        android.util.Log.i(TAG, "Duplicate link pass: examined ${pending.size}, linked $linked")
+        pending.size
+    }
+
+    companion object {
+        private const val TAG = "RecordingIdentity"
+
+        /** Milliseconds of audio each stored segment advances. See `AudioEmbedder.HOP_SAMPLES`. */
+        private const val SEGMENT_HOP_MS = 500L
+
+        /** Tracks examined for duplicates per run. See [linkDuplicates]. */
+        private const val LINK_BACKFILL_LIMIT = 300
     }
 }
