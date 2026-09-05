@@ -170,6 +170,28 @@ class LibraryViewModel @Inject constructor(
             musicRepository.getRecentTracks(LIBRARY_TRACK_REFRESH)
             _playlists.value = musicRepository.getPlaylists()
             _isRefreshing.value = false
+            // And this fills in the rest, after the spinner has stopped. "Recent" is a handful of
+            // records; the albums the server lists are the whole library, and until their tracks
+            // are stored the songs on them cannot be searched, queued or recognised.
+            backfillAlbumTracks()
+        }
+    }
+
+    /**
+     * Pulls in the tracks of every library album that has none, a slice at a time.
+     *
+     * Behind the spinner rather than under it: this is one request per album and a large server is
+     * hundreds of them, so holding the refresh indicator until it finished would make the Library
+     * tab appear to hang for a minute the first time somebody connects one.
+     *
+     * Bounded twice — each slice is bounded, and [BACKFILL_SLICES] caps how many slices one
+     * refresh will run — so a source that keeps reporting albums it will not return tracks for
+     * cannot turn this into an endless stream of requests at somebody's own server. It stops as
+     * soon as a slice fills nothing in, and the next refresh picks up whatever is left.
+     */
+    private suspend fun backfillAlbumTracks() {
+        repeat(BACKFILL_SLICES) {
+            if (musicRepository.importMissingAlbumTracks() == 0) return
         }
     }
 
@@ -306,5 +328,8 @@ class LibraryViewModel @Inject constructor(
     private companion object {
         /** How many recently added tracks a refresh pulls into Room from every active source. */
         const val LIBRARY_TRACK_REFRESH = 200
+        
+        /** How many slices of album-track backfill one refresh will run. See [backfillAlbumTracks]. */
+        private const val BACKFILL_SLICES = 12
     }
 }
