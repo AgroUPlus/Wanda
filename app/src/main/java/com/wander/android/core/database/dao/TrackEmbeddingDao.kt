@@ -110,7 +110,7 @@ interface TrackEmbeddingDao {
         SELECT t.id FROM tracks t
         LEFT JOIN track_embeddings e
                ON e.trackId = t.id AND e.model = :model AND e.version = :version
-        WHERE t.isLive = 0
+        WHERE t.isLive = 0 AND (t.isLibrary = 1 OR t.playCount > 0)
           AND (
                 e.trackId IS NULL
                 OR (

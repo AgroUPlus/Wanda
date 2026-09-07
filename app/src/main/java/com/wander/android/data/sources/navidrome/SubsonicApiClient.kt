@@ -199,7 +199,10 @@ class SubsonicApiClient @Inject constructor(
      * and never persisted or logged.
      */
     fun buildStreamUrl(trackId: String): String =
-        buildUrl("stream.view", mapOf("id" to trackId))
+        buildUrl("stream.view", mapOf(
+            "id" to trackId,
+            "estimateContentLength" to "true"
+        ))
 
     /**
      * 500 px was fine for a list row and soft as a full-screen player cover on a 1080 px-wide

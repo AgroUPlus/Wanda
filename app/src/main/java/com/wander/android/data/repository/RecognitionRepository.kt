@@ -112,7 +112,7 @@ class RecognitionRepository @Inject constructor(
     /** How many of this device's tracks the index could cover, for the "n of m" the sheet shows. */
 
     suspend fun indexableTrackCount(): Int =
-        withContext(Dispatchers.IO) { trackDao.getFingerprintableTracks().size }
+        withContext(Dispatchers.IO) { trackDao.getFingerprintableTrackCount() }
 
     /**
      * Listens, and answers as soon as it is sure.
@@ -225,6 +225,9 @@ class RecognitionRepository @Inject constructor(
      */
     internal suspend fun fingerprintableTracks(): List<TrackEntity> =
         withContext(Dispatchers.IO) { trackDao.getFingerprintableTracks() }
+
+    internal suspend fun fingerprintableTrackIds(): List<String> =
+        withContext(Dispatchers.IO) { trackDao.getFingerprintableTrackIds() }
 
     private companion object {
         /**

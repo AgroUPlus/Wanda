@@ -160,6 +160,9 @@ internal class ArtistViewModel @Inject constructor(
                 hasCache.value = true
                 // The cached id is what lets the page fetch below run at once, instead of waiting
                 // for Room to emit something to infer it from.
+                if (knownArtistId == null) {
+                    knownArtistId = cached.artistId?.takeIf(String::isNotBlank)
+                }
                 // Seeded as a page with no shelves: enough for the header to be right and for the
                 // identity filter to start working, while the shelves themselves arrive from the
                 // fetch below. The merger fills the rest from Room.
