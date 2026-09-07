@@ -92,6 +92,50 @@ class RecordingIdentityRepository @Inject constructor(
         matches.sortedByDescending { it.similarity }
     }
 
+    /**
+     * Finds local tracks holding the same recording as an embedding from somewhere else.
+     *
+     * The inverse of [matchesFor]: that one starts from a track this device already has, this one
+     * starts from a catalogue entry it has just been handed. Same three steps at the same
+     * thresholds — duration, mean, sequence — because "the same recording" has to mean one thing.
+     *
+     * [durationMs] is the publisher's, so the duration gate is symmetric with theirs.
+     */
+    suspend fun matchesForEmbedding(
+        vectors: Array<FloatArray>,
+        durationMs: Long
+    ): List<Match> = withContext(Dispatchers.Default) {
+        if (vectors.isEmpty() || durationMs <= 0L) return@withContext emptyList()
+
+        val candidateIds = withContext(Dispatchers.IO) {
+            trackDao.getCandidateIdsByDuration(
+                "",
+                durationMs - durationToleranceMs,
+                durationMs + durationToleranceMs
+            )
+        }
+        if (candidateIds.isEmpty()) return@withContext emptyList()
+
+        val candidateEntities = withContext(Dispatchers.IO) {
+            embeddingDao.getForTracks(candidateIds, AudioEmbedder.MODEL_NAME, AudioEmbedder.EMBEDDER_VERSION)
+        }
+        if (candidateEntities.isEmpty()) return@withContext emptyList()
+
+        val incomingMean = meanVector(vectors)
+
+        val matches = mutableListOf<Match>()
+        for (candidate in candidateEntities) {
+            val candidateVectors = AudioEmbedder.unpack(candidate.vector)
+            if (candidateVectors.isEmpty()) continue
+            if (dot(incomingMean, meanVector(candidateVectors)) < meanSimThreshold) continue
+
+            val sim = sequenceSimilarity(vectors, candidateVectors)
+            if (sim >= matchThreshold) matches += Match(candidate.trackId, sim.toDouble())
+        }
+
+        matches.sortedByDescending { it.similarity }
+    }
+
     /** True if [trackId] already has a computed embedding. */
     suspend fun isIndexed(trackId: String): Boolean = withContext(Dispatchers.IO) {
         embeddingDao.getForTrack(trackId, AudioEmbedder.MODEL_NAME, AudioEmbedder.EMBEDDER_VERSION) != null

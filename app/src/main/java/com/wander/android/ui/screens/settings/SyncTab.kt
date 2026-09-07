@@ -60,6 +60,19 @@ internal fun LazyListScope.syncTab(
         )
     }
 
+    item(key = "agro_catalog_trade") {
+        SettingsToggle(
+            title = "Trade fingerprints with the server",
+            // Names both directions and who ends up able to see it. The catalogue has no account
+            // column, so publishing is a disclosure to everyone on the server, not just to it.
+            subtitle = "Sends the acoustic fingerprints of your tracks and takes everyone else's, " +
+                "so badly tagged music inherits good tags. Other people on this server can see " +
+                "which recordings you hold, not your listening. Recognition works either way.",
+            checked = state.catalogTrade,
+            onCheckedChange = actions.onCatalogTradeChange
+        )
+    }
+
     agroDevicesSection(state = devices, onResume = actions.onResumeHandoff)
 
     librarySyncSection(
