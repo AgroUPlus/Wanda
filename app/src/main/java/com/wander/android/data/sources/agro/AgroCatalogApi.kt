@@ -6,6 +6,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
@@ -26,13 +27,16 @@ internal class AgroCatalogApi @Inject constructor(
 ) {
 
     /**
-     * Publishes one fingerprint, and answers with the recording the server filed it under.
+     * Publishes one embedding, and answers with the recording the server filed it under.
      *
      * That id may be one another device created — which is the point, and how two encodings of
      * one performance stop being two recordings.
      */
     suspend fun publish(
-        subHashesHex: String,
+        embeddingHex: String,
+        dim: Int,
+        model: String,
+        version: Int,
         durationMs: Long,
         title: String?,
         artist: String?,
@@ -41,17 +45,22 @@ internal class AgroCatalogApi @Inject constructor(
     ): Result<String> = graphQl.execute(
         """
         mutation PublishRecording(
-            ${'$'}subHashes: String!, ${'$'}durationMs: Int!,
+            ${'$'}embedding: String!, ${'$'}dim: Int!, ${'$'}model: String!, ${'$'}version: Int!,
+            ${'$'}durationMs: Int!,
             ${'$'}title: String, ${'$'}artist: String, ${'$'}album: String, ${'$'}sourceUri: String
         ) {
             publishRecording(
-                subHashes: ${'$'}subHashes, durationMs: ${'$'}durationMs,
+                embedding: ${'$'}embedding, dim: ${'$'}dim, model: ${'$'}model, version: ${'$'}version,
+                durationMs: ${'$'}durationMs,
                 title: ${'$'}title, artist: ${'$'}artist, album: ${'$'}album, sourceUri: ${'$'}sourceUri
             )
         }
         """.trimIndent(),
         buildJsonObject {
-            put("subHashes", subHashesHex)
+            put("embedding", embeddingHex)
+            put("dim", dim)
+            put("model", model)
+            put("version", version)
             put("durationMs", durationMs)
             put("title", title)
             put("artist", artist)
@@ -71,7 +80,7 @@ internal class AgroCatalogApi @Inject constructor(
         """
         query CatalogSince(${'$'}since: Int!, ${'$'}limit: Int!) {
             catalogSince(since: ${'$'}since, limit: ${'$'}limit) {
-                recordingId subHashes durationMs title artist album sources updatedAt
+                recordingId embedding dim model version durationMs title artist album sources updatedAt
             }
         }
         """.trimIndent(),
@@ -87,10 +96,13 @@ internal class AgroCatalogApi @Inject constructor(
 
     private fun JsonObject.toCatalogEntry(): AgroCatalogEntry? {
         val id = this["recordingId"]?.jsonPrimitive?.contentOrNull ?: return null
-        val hashes = this["subHashes"]?.jsonPrimitive?.contentOrNull ?: return null
+        val embedding = this["embedding"]?.jsonPrimitive?.contentOrNull ?: return null
         return AgroCatalogEntry(
             recordingId = id,
-            subHashesHex = hashes,
+            embeddingHex = embedding,
+            dim = this["dim"]?.jsonPrimitive?.intOrNull ?: 0,
+            model = this["model"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            version = this["version"]?.jsonPrimitive?.intOrNull ?: 0,
             durationMs = this["durationMs"]?.jsonPrimitive?.longOrNull ?: 0L,
             title = this["title"]?.jsonPrimitive?.contentOrNull,
             artist = this["artist"]?.jsonPrimitive?.contentOrNull,
@@ -106,12 +118,17 @@ internal class AgroCatalogApi @Inject constructor(
 /** One recording as the catalogue knows it. */
 internal data class AgroCatalogEntry(
     val recordingId: String,
-    val subHashesHex: String,
+    /** The embedding as hex int8. Unpacked and compared locally rather than trusting the match. */
+    val embeddingHex: String,
+    val dim: Int,
+    /** Which embedder produced it. An entry from a model this device does not run is skipped. */
+    val model: String,
+    val version: Int,
     val durationMs: Long,
     val title: String?,
     val artist: String?,
     val album: String?,
-    /** Namespaced ids known to hold this audio — `ytm:…`, `navidrome:…`, `local:…`. */
+    /** Namespaced ids known to hold this audio — `ytm:…`, `navidrome:…`. Never a `local:` id. */
     val sources: List<String>,
     val updatedAt: Long
 )
