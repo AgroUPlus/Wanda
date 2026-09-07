@@ -128,8 +128,12 @@ class CatalogRepository @Inject constructor(
      * [ArtistIdentity].
      */
     fun artistAlbumsFlow(artist: String, artistId: String? = null): Flow<List<UnifiedAlbum>> =
-        albumDao.getAlbumsByArtistFlow(artist).map { entities ->
-            ArtistIdentity.sameArtist(entities, artistId) { it.artistId }
+        kotlinx.coroutines.flow.combine(
+            albumDao.getAlbumsByArtistFlow(artist),
+            trackDao.getTracksByArtistFlow(artist)
+        ) { albumEntities, trackEntities ->
+            val aliases = ArtistIdentity.aliasesOf(trackEntities.map(TrackEntity::toUnifiedTrack), artistId)
+            ArtistIdentity.sameArtist(albumEntities, aliases) { it.artistId }
                 .map(AlbumEntity::toUnifiedAlbum)
         }.flowOn(Dispatchers.Default)
 
@@ -140,10 +144,9 @@ class CatalogRepository @Inject constructor(
      */
     fun artistTracksFlow(artist: String, artistId: String? = null): Flow<List<UnifiedTrack>> =
         trackDao.getTracksByArtistFlow(artist).map { entities ->
-            TrackDeduplicator.deduplicate(
-                ArtistIdentity.sameArtist(entities, artistId) { it.artistId }
-                    .map(TrackEntity::toUnifiedTrack)
-            )
+            val tracks = entities.map(TrackEntity::toUnifiedTrack)
+            val aliases = ArtistIdentity.aliasesOf(tracks, artistId)
+            TrackDeduplicator.deduplicate(ArtistIdentity.sameArtist(tracks, aliases) { it.artistId })
         }.flowOn(Dispatchers.Default)
 
     /**

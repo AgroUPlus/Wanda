@@ -82,9 +82,8 @@ class FingerprintIndexWorker @AssistedInject constructor(
         // request is a different urgency, not a small sweep: a track you have just started
         // listening to is the one whose missing measurement you might actually notice.
         val requestedId = inputData.getString(FingerprintIndexing.KEY_TRACK_ID)
-        val candidates = recognitionRepository.fingerprintableTracks()
-            .let { all -> if (requestedId == null) all else all.filter { it.id == requestedId } }
-        val candidateIds = candidates.map { it.id }
+        val candidateIds = recognitionRepository.fingerprintableTrackIds()
+            .let { all -> if (requestedId == null) all else all.filter { it == requestedId } }
 
         val needsFeatures = acousticFeatures.needingMeasurement(FEATURE_BATCH_LIMIT).toSet()
         // Empty while humming is off: measuring a contour is a quarter of the work of every decode,
@@ -113,15 +112,13 @@ class FingerprintIndexWorker @AssistedInject constructor(
         // Anything still missing any one of these is worth a decode; a track that has them all
         // is worth nothing and must not be decoded again.
         val now = System.currentTimeMillis()
+        val pendingIds = (needsFeatures + needsContour + needsEmbedding).intersect(candidateIds.toSet())
+        val candidates = if (pendingIds.isEmpty()) emptyList() else trackDao.getTracksByIds(pendingIds.toList())
         val pending = candidates.filter {
             // A track this run already failed to reach is not a candidate again.
             // Also back off tracks whose repeated failures are persisted across process deaths.
             !progress.isUnreachable(it.id) &&
-            !isBackedOff(it, now) && (
-                it.id in needsFeatures ||
-                it.id in needsContour ||
-                it.id in needsEmbedding
-            )
+            !isBackedOff(it, now)
         }
         if (pending.isEmpty()) return@withContext Result.success()
 
