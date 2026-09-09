@@ -25,7 +25,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material3.Icon
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -98,6 +100,7 @@ internal fun NowPlayingScreen(
     val likedTrackIds by viewModel.likedTrackIds.collectAsStateWithLifecycle()
     val fingerprintStatus by viewModel.fingerprintStatus.collectAsStateWithLifecycle()
     var showSourcePicker by remember { mutableStateOf(false) }
+    var showAudioTrackPicker by remember { mutableStateOf(false) }
     val renditions by viewModel.renditions.collectAsStateWithLifecycle()
     val isFindingRenditions by viewModel.isFindingRenditions.collectAsStateWithLifecycle()
     val jam by viewModel.jam.collectAsStateWithLifecycle()
@@ -121,6 +124,17 @@ internal fun NowPlayingScreen(
                 showSourcePicker = false
                 viewModel.clearRenditions()
             }
+        )
+    }
+
+    if (showAudioTrackPicker) {
+        AudioTrackPickerDialog(
+            audioTracks = state.audioTracks,
+            onSelect = { track ->
+                viewModel.setPreferredAudioLanguage(track.language)
+                showAudioTrackPicker = false
+            },
+            onDismiss = { showAudioTrackPicker = false }
         )
     }
 
@@ -315,6 +329,27 @@ internal fun NowPlayingScreen(
                     onShare = { viewModel.share(track) }.takeIf { viewModel.canShare(track) },
                     contentAlpha = overlayAlpha
                 )
+
+                // Language button — top-left of the cover, only when multiple audio tracks exist.
+                //
+                // Gated on `size > 1`: a single-track stream has nothing to switch to, and
+                // showing the button for it would open an empty or single-row menu. The button
+                // sits at TopStart to mirror the overlay buttons (Share/Lyrics) at TopEnd/BottomEnd
+                // and to stay off the album art's visual centre, where artwork tends to be busiest.
+                if (state.audioTracks.size > 1) {
+                    FilledTonalIconButton(
+                        onClick = { showAudioTrackPicker = true },
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(12.dp)
+                            .graphicsLayer { alpha = overlayAlpha() }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Translate,
+                            contentDescription = "Change audio language"
+                        )
+                    }
+                }
             }
         }
 

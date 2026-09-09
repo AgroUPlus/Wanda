@@ -252,7 +252,19 @@ class PlayerConnection @Inject constructor(
         val future = MediaController.Builder(context, token).buildAsync()
         future.addListener(
             {
-                _controller.value = runCatching { future.get() }.getOrNull()
+                val ctrl = runCatching { future.get() }.getOrNull()
+                // Restore the stored language preference immediately so the very first track
+                // the controller plays already obeys it without any further UI action.
+                ctrl?.let { c ->
+                    val lang = secureStorage.preferredAudioLanguage
+                    if (lang != null) {
+                        c.trackSelectionParameters = c.trackSelectionParameters
+                            .buildUpon()
+                            .setPreferredAudioLanguage(lang)
+                            .build()
+                    }
+                }
+                _controller.value = ctrl
                 pendingPlay?.let { queued ->
                     pendingPlay = null
                     play(queued.tracks, queued.startIndex, queued.startPositionMs)
@@ -594,6 +606,25 @@ class PlayerConnection @Inject constructor(
     }
 
     /**
+     * Stores the user's chosen audio language and applies it to the current player immediately.
+     *
+     * ExoPlayer's `setPreferredAudioLanguage` is a hint: it picks the closest matching track it has
+     * rather than failing if the language is absent, so setting it is always safe. Null clears the
+     * preference and lets the player decide on its own.
+     *
+     * Persisted through [SecureStorage] so the choice survives across sessions and across all
+     * sources — choosing French on a French-dubbed podcast should mean French on the next one too.
+     */
+    fun setPreferredAudioLanguage(language: String?) {
+        secureStorage.preferredAudioLanguage = language
+        val ctrl = _controller.value ?: return
+        ctrl.trackSelectionParameters = ctrl.trackSelectionParameters
+            .buildUpon()
+            .setPreferredAudioLanguage(language)
+            .build()
+    }
+
+    /**
      * Said by the instant-radio button when there is nothing to build a station out of.
      *
      * Lives here rather than in the calling ViewModel because [notices] is the shell's one
@@ -763,6 +794,33 @@ private fun Player.buildSnapshot(
     val shuffle = runCatching { shuffleModeEnabled }.getOrDefault(false)
     val repMode = runCatching { repeatMode }.getOrDefault(Player.REPEAT_MODE_OFF)
 
+    // Extract the distinct audio-language tracks the player can see for this item.
+    //
+    // We read `currentTracks` rather than querying the format list directly: it carries
+    // the isTrackSelected flag per track inside each group, which is what the picker needs to
+    // mark the active row without any additional bookkeeping.
+    //
+    // Deduplication is by language tag. Multiple formats can share the same language
+    // (stereo vs 5.1, 128 kbps vs 320 kbps) and a picker with three identically-labelled
+    // "English" rows would be confusing; the listener cares about the language, not the
+    // bitrate, and ExoPlayer's language preference picks the best rendition automatically.
+    val audioTracks = runCatching {
+        val seen = mutableSetOf<String?>()
+        currentTracks.groups
+            .filter { it.type == C.TRACK_TYPE_AUDIO }
+            .flatMap { group ->
+                (0 until group.length).mapNotNull { i ->
+                    val fmt = group.getTrackFormat(i)
+                    if (!seen.add(fmt.language)) null
+                    else AudioTrackInfo(
+                        language = fmt.language,
+                        label = fmt.label,
+                        isSelected = group.isTrackSelected(i)
+                    )
+                }
+            }
+    }.getOrDefault(emptyList())
+
     return PlaybackState(
         currentTrack = track,
         queue = cachedQueue,
@@ -777,7 +835,8 @@ private fun Player.buildSnapshot(
             else -> RepeatMode.OFF
         },
         isRadioMode = radio,
-        seekEpoch = seekEpoch
+        seekEpoch = seekEpoch,
+        audioTracks = audioTracks
     )
 }
 

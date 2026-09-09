@@ -151,4 +151,12 @@ internal class NowPlayingViewModel @Inject constructor(
             shareRepository.share(track, playerConnection.speedAndPitch.value)
         }
     }
+
+    /**
+     * Delegates to [PlayerConnection.setPreferredAudioLanguage], which persists the choice and
+     * updates the player immediately.
+     */
+    fun setPreferredAudioLanguage(language: String?) {
+        playerConnection.setPreferredAudioLanguage(language)
+    }
 }

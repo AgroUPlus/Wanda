@@ -176,6 +176,17 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         set(value) = prefs.edit { putLong(KEY_LOCAL_WATERMARK, value) }
 
     /**
+     * The BCP-47 language tag the user has chosen for multi-track audio, or null to let the
+     * player pick by itself.
+     *
+     * Persisted here so that switching language in one podcast/video carries through to every
+     * subsequent source without repeating the choice each time.
+     */
+    var preferredAudioLanguage: String?
+        get() = prefs.getString(KEY_PREFERRED_AUDIO_LANGUAGE, null)
+        set(value) = prefs.edit { putString(KEY_PREFERRED_AUDIO_LANGUAGE, value) }
+
+    /**
      * Content hashes of files that have left this device and that the server has not been told
      * about yet.
      *
@@ -587,6 +598,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_SHARE_DOMAIN = "key_share_domain"
         private const val KEY_AGRO_SHARE_DOMAIN = "key_agro_share_domain"
         private const val KEY_AGRO_SHARE_HOSTS = "key_agro_share_hosts"
+        private const val KEY_PREFERRED_AUDIO_LANGUAGE = "key_preferred_audio_language"
 
         /** A bare hostname: labels, dots, and a TLD. Anything else is not a domain to build on. */
         private val HOST = Regex("""[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+""")

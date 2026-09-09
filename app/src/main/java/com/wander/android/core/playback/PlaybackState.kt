@@ -5,6 +5,23 @@ import com.wander.android.data.model.UnifiedTrack
 
 enum class RepeatMode { OFF, ALL, ONE }
 
+/**
+ * One language track available in the current media item.
+ *
+ * [language] is the BCP-47 tag (e.g. `"en"`, `"fr"`, `"ja"`) or null when the stream has no
+ * language metadata. [label] is the human-readable name the stream carries, if any. The UI falls
+ * back to the language tag — or "Unknown" — when the label is absent.
+ *
+ * [isSelected] mirrors what ExoPlayer has actually chosen, so the picker can mark the active row
+ * without any additional state.
+ */
+@Immutable
+data class AudioTrackInfo(
+    val language: String?,
+    val label: String?,
+    val isSelected: Boolean
+)
+
 /** Everything the UI needs about playback, in one snapshot. Position is deliberately separate. */
 @Immutable
 data class PlaybackState(
@@ -37,7 +54,16 @@ data class PlaybackState(
      * A counter rather than the position itself, because a position in here would recompose every
      * reader twice a second — which is the thing keeping it out was for.
      */
-    val seekEpoch: Long = 0L
+    val seekEpoch: Long = 0L,
+    /**
+     * Audio tracks available in the current media item, deduplicated by language.
+     *
+     * Empty for ordinary music (single track). Populated for podcasts and videos that carry
+     * more than one language — those are the only cases where the picker makes sense, and the
+     * UI gates the button on `audioTracks.size > 1` rather than `isNotEmpty()` to avoid showing
+     * a single-option menu.
+     */
+    val audioTracks: List<AudioTrackInfo> = emptyList()
 ) {
     /**
      * The same snapshot with [liveIds] known to be livestreams marked as such.
