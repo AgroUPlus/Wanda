@@ -1,20 +1,16 @@
 package com.wander.android.data.repository
 
-import com.wander.android.core.audio.fingerprint.AudioFormat
-import com.wander.android.core.audio.fingerprint.Fingerprinter
 import com.wander.android.core.audio.fingerprint.MicRecorder
 import com.wander.android.core.audio.melody.ContourMatcher
-import com.wander.android.core.database.dao.FingerprintDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import android.util.Log
-import com.wander.android.core.audio.fingerprint.MatchConfidence
-import com.wander.android.core.audio.fingerprint.PcmDecoder
-import com.wander.android.core.audio.fingerprint.OffsetAlignment
 import kotlinx.coroutines.flow.Flow
+import com.wander.android.core.audio.fingerprint.AudioFormat
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,11 +18,8 @@ import javax.inject.Singleton
 
 /** Which engine produced an answer, so the UI can say how it knows. */
 enum class RecognitionEngine {
-    /** The record itself was playing, and its landmarks lined up. Exact. */
-    LANDMARK,
-
     /** The record was playing, and its neural fingerprint matched — robust to the codec and
-     *  timing degradation that defeats the landmark pass. Exact. */
+     *  timing degradation that defeated the landmark pass it replaced. Exact. */
     EMBEDDING,
 
     /** Somebody hummed the tune and its shape fitted. A good guess, not a certainty. */
@@ -38,10 +31,44 @@ data class Recognition(
     val track: UnifiedTrack,
     /** Where in the track the listener came in, in seconds. Zero for a melody match. */
     val positionSeconds: Int,
-    /** Matching landmarks behind this answer. Higher is more certain. */
+    /** How certain this answer is, on a 0-100 scale. Higher is more certain. */
     val score: Int,
-    val engine: RecognitionEngine = RecognitionEngine.LANDMARK
+    val engine: RecognitionEngine = RecognitionEngine.EMBEDDING
 )
+
+/**
+ * Why the recogniser can or cannot name anything yet.
+ *
+ * Three states rather than a count, because "0 tracks" has two causes that need opposite advice.
+ * The index filling itself in the background is a matter of waiting; a model that was never
+ * downloaded will stay missing for ever unless the user is told to fetch it. Telling the second
+ * person to wait is the bug this type exists to make unrepresentable.
+ */
+sealed interface IndexReadiness {
+    /** The ~35 MB embedder has not been downloaded. Nothing can be measured or matched. */
+    data object ModelMissing : IndexReadiness
+
+    /** The model is here and the index is still being built. */
+    data object Empty : IndexReadiness
+
+    /** [trackCount] tracks can be matched against, right now. */
+    data class Ready(val trackCount: Int) : IndexReadiness
+
+    companion object {
+        /**
+         * The whole decision, as a function of the two facts behind it.
+         *
+         * A function rather than a `when` inlined into the flow so the three branches can be
+         * asserted without standing up a repository, a DAO and a 35 MB model — which is how the
+         * bug this replaces survived: nothing ever checked which table the count came from.
+         */
+        fun of(modelReady: Boolean, indexedTrackCount: Int): IndexReadiness = when {
+            !modelReady -> ModelMissing
+            indexedTrackCount <= 0 -> Empty
+            else -> Ready(indexedTrackCount)
+        }
+    }
+}
 
 /**
  * Identifies music playing in the room, against the user's own library.
@@ -51,40 +78,74 @@ data class Recognition(
  * "name any song" but "which of *my* records is this", which needs no service, no account, and
  * sends nothing anywhere. A song the user does not own returns null rather than a guess.
  *
- * See `Fingerprinter` for how a recording becomes landmarks. This class is only the two things
- * built on top: filling the index, and aligning a clip against it.
+ * See [EmbeddingRepository] for how a recording becomes a neural fingerprint and how a clip is
+ * matched against them. This class is only the microphone and the choice of engine on top.
  */
 @Singleton
 class RecognitionRepository @Inject constructor(
-    private val fingerprintDao: FingerprintDao,
     private val trackDao: TrackDao,
     private val micRecorder: MicRecorder,
-    private val fingerprinter: Fingerprinter,
     private val melodySearch: MelodySearchRepository,
-    private val embeddingSearch: EmbeddingRepository,
-    private val secureStorage: com.wander.android.core.security.SecureStorage
+    private val embeddingSearch: EmbeddingRepository
 ) {
 
-    val indexedTrackCount: Flow<Int> = fingerprintDao.indexedTrackCountFlow()
+    /**
+     * How many tracks the sheet can actually match against.
+     *
+     * Delegated to [EmbeddingRepository] rather than counted here, because this number and the one
+     * Settings shows have to be the same number. They were not: this read `fingerprints`, which no
+     * longer has a writer, so the sheet said "nothing is indexed yet" while Settings counted a full
+     * library of embeddings and recognition matched against them. One flow, one table, no drift.
+     */
+    val indexedTrackCount: Flow<Int> = embeddingSearch.indexedTrackCount
+
+    /** [indexedTrackCount] and the reason it might be zero, as one thing the sheet can render. */
+    val indexReadiness: Flow<IndexReadiness> =
+        combine(embeddingSearch.modelReady, embeddingSearch.indexedTrackCount, IndexReadiness::of)
 
     /** Real-time microphone audio volume level `[0f, 1f]` during active capture. */
     val audioLevel: StateFlow<Float> get() = micRecorder.audioLevel
 
+    /** Whether the microphone is open, so the UI can stop claiming it is once it is not. */
+    val isRecording: StateFlow<Boolean> get() = micRecorder.isRecording
+
     /** How many of this device's tracks the index could cover, for the "n of m" the sheet shows. */
 
     suspend fun indexableTrackCount(): Int =
-        withContext(Dispatchers.IO) { trackDao.getFingerprintableTracks().size }
+        withContext(Dispatchers.IO) { trackDao.getFingerprintableTrackCount() }
 
     /**
-     * Listens, then answers.
+     * Listens, and answers as soon as it is sure.
      *
      * Null covers three different situations the caller has to tell apart by other means: the
      * microphone would not start, nothing was playing, and the music is not in the library. They
      * are the same outcome here — no track to name.
+     *
+     * ## Why it does not simply record for six seconds
+     *
+     * It used to, and then matched — so naming a song took the full clip whatever was playing,
+     * even when the first two seconds were unmistakable. The microphone now hands over what it has
+     * every [CHECKPOINT_SECONDS] while it keeps recording, and the first checkpoint that produces
+     * a match confident enough for its length ends the capture there.
+     *
+     * A checkpoint is judged against [EmbeddingRepository.EARLY_MIN_SIMILARITY], deliberately
+     * stricter than the bar the finished clip has to clear: two seconds of audio is a third of the
+     * evidence and must not be accepted on a threshold tuned for all of it. So this is faster on
+     * the easy cases — a clean recording, close to the speaker — and no less careful on the hard
+     * ones, which take exactly as long as they did before.
      */
     suspend fun listen(seconds: Int = LISTEN_SECONDS): Recognition? {
-        val samples = micRecorder.record(seconds) ?: return null
-        return withContext(Dispatchers.Default) { identifyOrHum(samples) }
+        var answer: Recognition? = null
+        micRecorder.stream(seconds, CHECKPOINT_SECONDS)
+            .takeWhile { answer == null }
+            .collect { clip ->
+                // The last emission is the whole clip, and only it is judged on the ordinary
+                // thresholds. `>=` rather than `==` because resampling 44.1 kHz to 8 kHz does not
+                // land on an exact sample count.
+                val complete = clip.size >= seconds * AudioFormat.SAMPLE_RATE
+                answer = withContext(Dispatchers.Default) { identifyOrHum(clip, early = !complete) }
+            }
+        return answer
     }
 
     /**
@@ -95,284 +156,107 @@ class RecognitionRepository @Inject constructor(
      * audio — a clip of a room, or a clip of somebody humming, is the same array of floats either
      * way. Which of them can do anything with it is what differs.
      *
-     * The landmark engine goes first and wins outright when it answers. It is comparing the audio
+     * The embedding engine goes first and wins outright when it answers. It is comparing the audio
      * against itself, so its answer is a fact; the melody engine is comparing a shape against a
      * shape and its answer is an inference. Running them in the other order — or blending their
      * scores — would let a plausible melody match override a certain acoustic one, and their
      * scores are not on a common scale to be blended anyway.
      */
-    private suspend fun identifyOrHum(samples: FloatArray): Recognition? {
+    private suspend fun identifyOrHum(samples: FloatArray, early: Boolean = false): Recognition? {
         // The neural fingerprint is the recognition path. It replaced the landmark index, which is
         // no longer written or read: an embedding survives a lossy re-encode and a listener who
         // did not catch the track from its opening, both of which defeated the landmarks.
-        embeddingSearch.match(samples)?.let { match ->
-            val entity = withContext(Dispatchers.IO) { trackDao.getTrackById(match.trackId) }
+        val match = if (early) {
+            embeddingSearch.match(
+                samples,
+                minSimilarity = EmbeddingRepository.EARLY_MIN_SIMILARITY,
+                minMargin = EmbeddingRepository.EARLY_MIN_MARGIN
+            )
+        } else {
+            embeddingSearch.match(samples)
+        }
+        match?.let { recognised ->
+            val entity = withContext(Dispatchers.IO) { trackDao.getTrackById(recognised.trackId) }
             if (entity != null) {
                 return Recognition(
                     track = entity.toUnifiedTrack(),
-                    positionSeconds = match.positionSeconds.coerceAtLeast(0),
-                    // A cosine in roughly [0.55, 1.0] scaled to sit near a landmark vote count so
-                    // one confidence bar can render both.
-                    score = (match.similarity * EMBEDDING_SCORE_SCALE).toInt(),
+                    positionSeconds = recognised.positionSeconds.coerceAtLeast(0),
+                    // A cosine in roughly [0.55, 1.0] on the 0-100 scale the melody engine's
+                    // score is also mapped onto, so one confidence bar can render both.
+                    score = (recognised.similarity * EMBEDDING_SCORE_SCALE).toInt(),
                     engine = RecognitionEngine.EMBEDDING
                 )
             }
         }
 
+        // Only the finished clip is offered to the melody engine: it is the weaker of the two and
+        // has no business answering on a fraction of a capture.
+        if (early) return null
+
         // Humming is switched off, and deliberately: see [MelodySearch]. The melody engine can only
         // compare a hum against a shape extracted from a finished mix, and on anything dense that
         // shape is the bass line rather than the tune — so the answers it gave were guesses wearing
-        // a result's clothes. The landmark pass above is the whole feature until that is fixed
+        // a result's clothes. The embedding pass above is the whole feature until that is fixed
         // properly.
         if (!com.wander.android.core.audio.melody.MelodySearch.ENABLED) return null
 
-        val match = melodySearch.search(samples).firstOrNull() ?: return null
-        val entity = withContext(Dispatchers.IO) { trackDao.getTrackById(match.trackId) } ?: return null
+        val hummed = melodySearch.search(samples).firstOrNull() ?: return null
+        val entity = withContext(Dispatchers.IO) { trackDao.getTrackById(hummed.trackId) } ?: return null
         return Recognition(
             track = entity.toUnifiedTrack(),
             // A hum says nothing about where in the track it came from: somebody humming the
             // chorus is not listening to it, and reporting a position would be inventing one.
             positionSeconds = 0,
             // Distance is an error measure — lower is better — and `score` is a confidence, so it
-            // has to be turned around rather than passed through. Scaled to sit in the same
-            // rough range as a landmark score so a UI can render one bar for both.
-            score = ((ContourMatcher.MAX_DISTANCE - match.distance) * MELODY_SCORE_SCALE).toInt(),
+            // has to be turned around rather than passed through. Scaled onto the same 0-100
+            // range as an embedding score so a UI can render one bar for both.
+            score = ((ContourMatcher.MAX_DISTANCE - hummed.distance) * MELODY_SCORE_SCALE).toInt(),
             engine = RecognitionEngine.MELODY
         )
     }
 
-
-
     /**
-     * Every candidate the clip aligns with, best first, and how confident that ordering is.
+     * Every track that could be measured, whether or not it has been measured already.
      *
-     * Split out of [identify] so the same pass can answer two questions: "who is it" at the end,
-     * and "who is it looking like so far" while the microphone is still open. Nothing here decides
-     * anything — [MatchConfidence] does that, and the caller chooses whether to act on it.
-     */
-    private suspend fun score(samples: FloatArray): Scored? {
-        val landmarks = fingerprinter.fingerprint(samples)
-        if (landmarks.isEmpty()) {
-            Log.i(TAG, "No landmarks in the clip — silence, or a room too quiet to hear")
-            return null
-        }
-
-        // Anchor frames for each hash the clip produced. One hash can occur at several moments,
-        // and each occurrence is its own vote.
-        val queryOffsets = HashMap<Int, MutableList<Int>>()
-        for (landmark in landmarks) {
-            queryOffsets.getOrPut(landmark.hash.value) { mutableListOf() } += landmark.anchorFrame
-        }
-
-        val matches = withContext(Dispatchers.IO) {
-            queryOffsets.keys.chunked(SQL_VARIABLE_LIMIT).flatMap { fingerprintDao.matching(it) }
-        }
-        if (matches.isEmpty()) {
-            Log.i(TAG, "No indexed track shares a single hash with this clip")
-            return null
-        }
-
-        // (trackId, offset) -> votes. The offset can be negative when the clip started before the
-        // matched landmark, which is ordinary and must not be discarded.
-        //
-        // A mutable accumulator on purpose: this is the inner loop of landmark matching, run over
-        // every hash of every candidate track, and rebuilding an immutable map per vote would
-        // allocate once per iteration for no gain in clarity.
-        @Suppress("kotlin:S6524")
-        val votes = HashMap<String, HashMap<Int, Int>>()
-        for (match in matches) {
-            val offsets = queryOffsets[match.hash] ?: continue
-            val perTrack = votes.getOrPut(match.trackId) { HashMap() }
-            for (queryFrame in offsets) {
-                val delta = match.anchorFrame - queryFrame
-                perTrack[delta] = (perTrack[delta] ?: 0) + 1
-            }
-        }
-
-        // Neighbouring bins count: nothing makes the microphone start on a frame boundary, so one
-        // true alignment arrives split across two adjacent offsets — see [OffsetAlignment].
-        val ranked = votes.mapNotNull { (trackId, bins) ->
-            OffsetAlignment.best(bins)?.let { Candidate(trackId, it.votes, it.offsetFrames) }
-        }.sortedByDescending { it.votes }
-        if (ranked.isEmpty()) return null
-
-        val confidence = MatchConfidence.assess(ranked.map { it.votes })
-        Log.i(
-            TAG,
-            "Landmark pass: ${landmarks.size} landmarks, ${ranked.size} candidates, " +
-                "best ${ranked.first().trackId} at ${ranked.first().votes} votes, " +
-                "noise floor ${confidence.noiseFloor}, lead ${confidence.bestExcess} " +
-                "against ${confidence.runnerUpExcess}"
-        )
-        return Scored(ranked, confidence)
-    }
-
-    /** One track the clip aligned with, and where. */
-    private data class Candidate(val trackId: String, val votes: Int, val offsetFrames: Int)
-
-    private data class Scored(
-        val ranked: List<Candidate>,
-        val confidence: MatchConfidence.Assessment
-    )
-
-    /**
-     * Replaces one track's landmarks with those of the head of the file.
-     *
-     * Kept as the first pass so a track is searchable as soon as its first window is read; deeper
-     * windows are added by [indexWindow] and must not delete what this wrote.
-     */
-    internal suspend fun index(track: TrackEntity, samples: FloatArray) {
-        val landmarks = fingerprinter.fingerprint(samples)
-        if (landmarks.isEmpty()) return
-        withContext(Dispatchers.IO) {
-            fingerprintDao.deleteTrack(track.id)
-            writeLandmarks(track.id, landmarks, frameOffset = 0)
-        }
-    }
-
-    /**
-     * Adds the landmarks of a window taken [startSeconds] into the track.
-     *
-     * The offset is the whole point. A landmark's anchor frame is what the matcher aligns on, so a
-     * window decoded from the third minute has to be numbered from the third minute — fingerprinted
-     * from zero it would claim the song opens with its own bridge, and every clip matching it would
-     * be reported at a position that does not exist.
-     *
-     * Appends rather than replaces, so windows can be read in any order and a partially indexed
-     * track stays usable for the part that has been read.
-     */
-    internal suspend fun indexWindow(trackId: String, samples: FloatArray, startSeconds: Int) {
-        val landmarks = fingerprinter.fingerprint(samples)
-        if (landmarks.isEmpty()) return
-        val frameOffset = (startSeconds * AudioFormat.FRAMES_PER_SECOND).toInt()
-        withContext(Dispatchers.IO) { writeLandmarks(trackId, landmarks, frameOffset) }
-    }
-
-    private suspend fun writeLandmarks(
-        trackId: String,
-        landmarks: List<com.wander.android.core.audio.fingerprint.Landmark>,
-        frameOffset: Int
-    ) {
-        fingerprintDao.insertAll(
-            landmarks.map { landmark ->
-                com.wander.android.core.database.entity.FingerprintEntity(
-                    hash = landmark.hash.value,
-                    trackId = trackId,
-                    anchorFrame = landmark.anchorFrame + frameOffset
-                )
-            }
-        )
-    }
-
-    /**
-     * Throws away an index built by a different version of the algorithm.
-     *
-     * A landmark hash means nothing outside the scheme that produced it: change how peaks are
-     * picked or packed and the stored rows do not match *less well*, they match nothing at all.
-     * Keeping them would leave every track looking indexed while being unfindable — which is worse
-     * than an empty index, because nothing would ever go back and fix it.
-     *
-     * Called before the candidate list is built, so the very next sweep re-reads everything.
-     */
-    internal suspend fun clearIndexIfStale() = withContext(Dispatchers.IO) {
-        if (secureStorage.fingerprintIndexVersion == FINGERPRINT_VERSION) return@withContext
-        Log.i(
-            TAG,
-            "Index was built by version ${secureStorage.fingerprintIndexVersion}, " +
-                "this is $FINGERPRINT_VERSION — starting again"
-        )
-        fingerprintDao.clear()
-        secureStorage.fingerprintIndexVersion = FINGERPRINT_VERSION
-    }
-
-    internal suspend fun tracksNeedingIndex(): List<TrackEntity> = withContext(Dispatchers.IO) {
-        val depth = fingerprintDao.indexedDepth().associate { it.trackId to it.lastFrame }
-        trackDao.getFingerprintableTracks().filter { track ->
-            val lastFrame = depth[track.id] ?: return@filter true
-            // Having landmarks is not the same as being findable. A track measured before the
-            // indexer read past the first minute looks done and cannot be recognised from anywhere
-            // after it, so shallow coverage counts as needing work — otherwise the very fact of
-            // having been indexed once excludes it from ever being indexed properly.
-            reachesPastTheHead(track, lastFrame).not()
-        }
-    }
-
-    /**
-     * Whether [track]'s landmarks reach past the opening window.
-     *
-     * True for anything short enough that the opening window *is* the whole track — there is
-     * nothing deeper to read, and asking for it every sweep would re-decode a library for ever.
-     */
-    private fun reachesPastTheHead(track: TrackEntity, lastFrame: Int): Boolean {
-        val durationSeconds = (track.durationMs / 1000L).toInt()
-        // An unknown length is not evidence of a short track. Treating zero as "nothing deeper to
-        // read" excused exactly the tracks most likely to need re-reading — every YouTube Music row
-        // arrives without one — so it is the depth alone that decides until a length is known. The
-        // indexer measures and records one on its next pass, after which this takes the real answer.
-        if (durationSeconds > 0 &&
-            durationSeconds <= PcmDecoder.DEFAULT_MAX_SECONDS + SHALLOW_TOLERANCE_SECONDS
-        ) {
-            return true
-        }
-        val headEnd =
-            (PcmDecoder.DEFAULT_MAX_SECONDS + SHALLOW_TOLERANCE_SECONDS) * AudioFormat.FRAMES_PER_SECOND
-        return lastFrame > headEnd
-    }
-
-    /**
-     * Every track that could be measured, whether or not it has a landmark fingerprint already.
-     *
-     * Separate from [tracksNeedingIndex] because the indexer takes four different measurements off
-     * one decode and they were introduced at different times. Driving the whole run from "needs a
-     * landmark" meant a track indexed before the melody contour existed could never acquire one —
-     * it was excluded from the candidate list by the very fact that it had already been indexed.
+     * Every measurable track, not just the unmeasured ones: the indexer takes several different
+     * measurements off one decode and they were introduced at different times. Driving the whole
+     * run from "needs an embedding" would mean a track measured before a later measurement existed
+     * could never acquire one — excluded from the candidate list by the fact of having been done.
      */
     internal suspend fun fingerprintableTracks(): List<TrackEntity> =
         withContext(Dispatchers.IO) { trackDao.getFingerprintableTracks() }
 
-    suspend fun clearIndex() = withContext(Dispatchers.IO) { fingerprintDao.clear() }
+    internal suspend fun fingerprintableTrackIds(): List<String> =
+        withContext(Dispatchers.IO) { trackDao.getFingerprintableTrackIds() }
 
     private companion object {
         /**
          * How long to listen.
          *
-         * Long enough that a chorus's worth of landmarks accumulates, short enough that the user
+         * Long enough that a chorus's worth of segments accumulates, short enough that the user
          * is not left holding a phone at a speaker wondering whether it has frozen.
          */
         const val LISTEN_SECONDS = 6
 
-        /** SQLite's default limit on host parameters in one statement. */
-        const val SQL_VARIABLE_LIMIT = 900
+        /**
+         * How often the capture so far is offered to the matcher.
+         *
+         * Three, not two, so that exactly one checkpoint falls inside a six-second capture. At two
+         * there were two of them, and a checkpoint match is not free: it runs on the same cores as
+         * the capture and the final match queues behind whichever one is still in flight, so the
+         * answer for the *whole* clip arrived later than it needed to. Measured on a Pixel 10, the
+         * second checkpoint delayed the final answer by about the length of a match.
+         *
+         * Under two seconds there is not enough audio for even a strict threshold to mean much —
+         * the model works on one-second segments — and much over three gives the recording time to
+         * finish on its own, which is the thing this exists to avoid.
+         */
+        const val CHECKPOINT_SECONDS = 3
 
-        // The score floor and the margin now live in [MatchConfidence], because both are
-        // meaningless as raw vote counts: what they were trying to express is a lead over the
-        // noise, and the noise depends on the size of the index and the length of the clip.
-
-        /** Puts a melody match's confidence on roughly the same scale as a landmark score. */
+        /** Puts a melody match's confidence on roughly the same scale as an embedding score. */
         const val MELODY_SCORE_SCALE = 20
 
-        /** Same idea for an embedding cosine: ~0.8 similarity reads as a ~80-vote landmark hit. */
+        /** An embedding cosine as a bar: ~0.8 similarity reads as ~80. */
         const val EMBEDDING_SCORE_SCALE = 100
-
-        private const val TAG = "Recognition"
-
-        /**
-         * The fingerprint contract.
-         *
-         * Bumped whenever peak picking or hash packing changes. Version 2 replaced a stateful
-         * per-band threshold with a constellation of local maxima, and linear frequency codes with
-         * logarithmic ones — measured against a real microphone capture, that moved the played
-         * track from 11th place to 1st.
-         */
-        const val FINGERPRINT_VERSION = 2
-
-        /**
-         * How far past the opening window a track's landmarks must reach to count as covered.
-         *
-         * A few seconds of slack, because the head pass stops on a decoder boundary rather than
-         * exactly on the second, and a track re-queued every sweep for missing its last frame would
-         * never leave the queue.
-         */
-        private const val SHALLOW_TOLERANCE_SECONDS = 5
     }
 }

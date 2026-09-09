@@ -138,7 +138,7 @@ class NavidromeSource @Inject constructor(
     }
 
     override suspend fun getAlbums(limit: Int, offset: Int) =
-        apiClient.getAlbumList2(type = "alphabeticalByName", size = limit)
+        apiClient.getAlbumList2(type = "alphabeticalByName", size = limit, offset = offset)
             .map { albums -> albums.map { it.toUnified() } }
 
     override suspend fun getAlbumTracks(albumId: String) =

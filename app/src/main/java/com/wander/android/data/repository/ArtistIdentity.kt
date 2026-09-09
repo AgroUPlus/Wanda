@@ -1,5 +1,7 @@
 package com.wander.android.data.repository
 
+import com.wander.android.data.model.UnifiedTrack
+
 /**
  * Tells two artists who share a name apart.
  *
@@ -21,17 +23,51 @@ package com.wander.android.data.repository
 internal object ArtistIdentity {
 
     /**
+     * Discovers all backend ids that refer to this artist, by seeing which of their tracks
+     * deduplicate against one another across sources.
+     */
+    fun aliasesOf(
+        tracks: List<UnifiedTrack>,
+        pageArtistId: String?
+    ): Set<String> {
+        val groups = TrackDeduplicator.groupRecordings(tracks)
+        val aliases = mutableSetOf<String>()
+        if (pageArtistId != null) {
+            aliases.add(pageArtistId)
+        } else {
+            val firstId = tracks.firstNotNullOfOrNull { it.artistId?.takeIf { id -> id.isNotBlank() } }
+            if (firstId != null) aliases.add(firstId)
+        }
+        if (aliases.isEmpty()) return emptySet()
+
+        var added = true
+        while (added) {
+            added = false
+            for (group in groups) {
+                val groupIds = group.mapNotNull { it.artistId?.takeIf { id -> id.isNotBlank() } }
+                if (groupIds.any { it in aliases }) {
+                    val newIds = groupIds.filterNot { it in aliases }
+                    if (newIds.isNotEmpty()) {
+                        aliases.addAll(newIds)
+                        added = true
+                    }
+                }
+            }
+        }
+        return aliases
+    }
+
+    /**
      * Keeps items that could belong to this artist.
      *
-     * [pageArtistId] null means nothing is known about identity and everything is kept — the
-     * behaviour before this existed. [idOf] returning null likewise means "cannot tell", never
-     * "different".
+     * [aliases] empty means nothing is known about identity and everything is kept.
+     * [idOf] returning null likewise means "cannot tell", never "different".
      */
-    fun <T> sameArtist(items: List<T>, pageArtistId: String?, idOf: (T) -> String?): List<T> {
-        if (pageArtistId.isNullOrBlank()) return items
+    fun <T> sameArtist(items: List<T>, aliases: Set<String>, idOf: (T) -> String?): List<T> {
+        if (aliases.isEmpty()) return items
         return items.filter { item ->
             val id = idOf(item)
-            id.isNullOrBlank() || id == pageArtistId
+            id.isNullOrBlank() || id in aliases
         }
     }
 }

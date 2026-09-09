@@ -215,6 +215,25 @@
                 tools:node="remove" />
         </provider>
 
+        <service
+            android:name=".core.audio.recognition.RecognitionTileService"
+            android:exported="true"
+            android:label="Listen"
+            android:icon="@drawable/ic_listen"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <activity
+            android:name=".core.audio.recognition.RecognitionActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:launchMode="singleInstance" />
+
     </application>
 
 </manifest>

@@ -37,7 +37,7 @@ interface TrackFeatureDao {
         """
         SELECT t.id FROM tracks t
         LEFT JOIN track_features f ON f.trackId = t.id AND f.version = :version
-        WHERE t.isLive = 0 AND f.trackId IS NULL
+        WHERE t.isLive = 0 AND (t.isLibrary = 1 OR t.playCount > 0) AND f.trackId IS NULL
         LIMIT :limit
         """
     )

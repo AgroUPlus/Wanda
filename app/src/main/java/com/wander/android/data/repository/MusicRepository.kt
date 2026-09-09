@@ -297,10 +297,16 @@ class MusicRepository @Inject constructor(
      *
      * Neither happens in incognito mode, nor while listening along with a friend — in the second
      * case because the track is their choice rather than this account's, and counting it would put
-     * their listening into your history. See [ScrobbleSuppression].
+     * their listening into your history. See [ScrobbleSuppression]. Nor for a livestream, which
+     * has no play to count.
      */
     suspend fun recordPlay(track: UnifiedTrack) = withContext(Dispatchers.IO) {
         if (secureStorage.isIncognitoMode || scrobbleSuppression.isSuppressed) return@withContext
+        // A broadcast has no play to count. The threshold that decides when a play is worth
+        // recording is derived from the track's duration, and a livestream's is zero, so it fell
+        // to the fixed 30-second fallback — scrobbling a radio station as though it were a song,
+        // once for every half minute somebody left it on.
+        if (track.isLive) return@withContext
         trackDao.incrementPlayCount(track.id, System.currentTimeMillis())
         val entryId = historyDao.recordHistory(HistoryEntity(trackId = track.id))
         val scrobbled = sourceFor(track.source)
@@ -327,6 +333,21 @@ class MusicRepository @Inject constructor(
      * Sources whose catalogue is not personal ([SourceType.isPersonalLibrary]) never count as
      * library, whichever path fetched them.
      */
+    /**
+     * Stores a track that arrived from a link rather than from a source listing.
+     *
+     * Not `asLibrary`: a link somebody sent you is not a record you own, which is the distinction
+     * `getAlbumTracks` makes when it claims the opposite for your own server.
+     *
+     * Worth storing all the same, because the row is what everything else is keyed on. Without it
+     * `markLive` updated nothing — so a broadcast opened from a link never learned it was one,
+     * even after its stream resolved to a manifest — `incrementPlayCount` counted nothing, and
+     * `recordHistory` wrote rows naming a `trackId` that appears in no `tracks` row.
+     */
+    suspend fun rememberSharedTrack(track: UnifiedTrack) = withContext(Dispatchers.IO) {
+        persist(listOf(track), asLibrary = false)
+    }
+
     private suspend fun persist(tracks: List<UnifiedTrack>, asLibrary: Boolean) {
         if (tracks.isEmpty()) return
         val libraryIds = if (asLibrary) {
@@ -539,10 +560,39 @@ class MusicRepository @Inject constructor(
 
     // ── Remote browsing ─────────────────────────────────────────────────────────────────────
 
-    suspend fun refreshAlbums(limit: Int = 50): List<UnifiedAlbum> = coroutineScope {
+    /**
+     * Every album each source will admit to, not the first page of them.
+     *
+     * This asked once for [pageSize] albums and stopped. Against a Subsonic server that is the
+     * whole library sync — measured on a real one, it saw **50 of 203 albums**, and a record it
+     * never listed can never be browsed, imported, or recognised. `getAlbums` has always taken an
+     * offset; nothing advanced it.
+     *
+     * Bounded by [MAX_LIBRARY_ALBUMS] rather than trusting the server to end: a source that
+     * ignores the offset returns the same page for ever, and this would page it until the process
+     * died. A page shorter than asked for is the ordinary end.
+     */
+    suspend fun refreshAlbums(pageSize: Int = ALBUM_PAGE_SIZE): List<UnifiedAlbum> = coroutineScope {
         val albums = activeSources()
             .filter { it.capabilities.albums }
-            .map { source -> async { source.getAlbums(limit).getOrDefault(emptyList()) } }
+            .map { source ->
+                async {
+                    val collected = ArrayList<UnifiedAlbum>()
+                    val seen = HashSet<String>()
+                    var offset = 0
+                    while (collected.size < MAX_LIBRARY_ALBUMS) {
+                        val page = source.getAlbums(pageSize, offset).getOrDefault(emptyList())
+                        if (page.isEmpty()) break
+                        // Ids, not counts, decide whether progress was made: a source that ignores
+                        // the offset hands back a full page every time and would otherwise loop.
+                        val fresh = page.filter { seen.add(it.id) }
+                        collected += fresh
+                        if (fresh.isEmpty() || page.size < pageSize) break
+                        offset += page.size
+                    }
+                    collected
+                }
+            }
             .flatMap { it.await() }
         if (albums.isNotEmpty()) {
             // The only path that marks an album as the user's. These came from a source's own
@@ -551,6 +601,42 @@ class MusicRepository @Inject constructor(
         }
         albums
     }
+
+    /**
+     * Pulls tracks for library albums that have none yet, oldest gap first, [limit] at a time.
+     *
+     * A Subsonic album's tracks used to arrive only when somebody opened it, which is a reasonable
+     * rule for a catalogue you are browsing and the wrong one for a library you own: on a real
+     * server it left 330 of 3,014 tracks in the database, and recognition can only name a track it
+     * has a row for. So a song the user owns was unfindable until they had happened to look at the
+     * record it is on.
+     *
+     * Incremental on purpose. It is one request per album and a library is hundreds of them, so a
+     * run does a bounded slice and the next one continues — the same shape as the fingerprint
+     * indexer, and for the same reason. Albums that genuinely have no tracks are re-asked each
+     * run; that is a small, self-limiting waste against the alternative of remembering a negative.
+     *
+     * Returns how many albums stopped being empty — *measured*, by asking again, not counted from
+     * how many requests returned something. The difference decides whether the caller loops: an
+     * album whose tracks come back under an id that does not match the album's own would be
+     * fetched successfully and still be empty afterwards, and a count of successful fetches would
+     * report progress for ever while a caller re-requested the same forty albums at somebody's
+     * own server. Zero here means stop, whatever the reason.
+     */
+    suspend fun importMissingAlbumTracks(limit: Int = ALBUM_IMPORT_BATCH): Int =
+        withContext(Dispatchers.IO) {
+            val empty = albumDao.libraryAlbumsWithoutTracks(limit)
+            if (empty.isEmpty()) return@withContext 0
+            for (entity in empty) getAlbumTracks(entity.toUnifiedAlbum())
+
+            val stillEmpty = albumDao.libraryAlbumsWithoutTracks(limit).mapTo(HashSet()) { it.id }
+            val filled = empty.count { it.id !in stillEmpty }
+            android.util.Log.i(
+                TAG,
+                "Album track import: asked ${empty.size}, filled $filled"
+            )
+            filled
+        }
 
     suspend fun getAlbumTracks(album: UnifiedAlbum): List<UnifiedTrack> = withContext(Dispatchers.IO) {
         val tracks = sourceFor(album.source)?.getAlbumTracks(album.id)?.getOrDefault(emptyList())
@@ -766,7 +852,24 @@ class MusicRepository @Inject constructor(
 
     private companion object {
         /** Comfortably more than a screenful, so scrolling never sits at the edge of a fetch. */
+        private const val TAG = "MusicRepository"
+
         const val PAGE_SIZE = 60
+
+        /** Albums per request while paging a source's library. Subsonic caps `size` at 500. */
+        const val ALBUM_PAGE_SIZE = 200
+
+        /**
+         * A ceiling on paging, so a source that ignores the offset cannot loop for ever.
+         *
+         * High enough not to be reached by a real library; the id check in [refreshAlbums] is the
+         * real defence, and this is what catches a source that returns a *different* page every
+         * time without ever ending.
+         */
+        const val MAX_LIBRARY_ALBUMS = 5_000
+
+        /** Albums whose tracks are fetched per run. See [importMissingAlbumTracks]. */
+        const val ALBUM_IMPORT_BATCH = 40
 
         /** Roughly a very long listening session's worth of track changes. */
         const val MAX_EPHEMERAL_STREAMS = 256

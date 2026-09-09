@@ -26,7 +26,7 @@ interface MelodyContourDao {
     @Query("SELECT trackId FROM melody_contours WHERE version = :version")
     suspend fun indexedTrackIds(version: Int): List<String>
 
-    /** The same set as a flow, for the hum half of the badge. See `FingerprintDao`. */
+    /** The same set as a flow, for the hum half of the badge. */
     @Query("SELECT trackId FROM melody_contours WHERE version = :version")
     fun indexedTrackIdsFlow(version: Int): kotlinx.coroutines.flow.Flow<List<String>>
 

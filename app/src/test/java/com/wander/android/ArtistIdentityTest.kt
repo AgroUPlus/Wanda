@@ -20,7 +20,7 @@ class ArtistIdentityTest {
             Song("Also hers", artistId = "ytm:UC_misa")
         )
 
-        val kept = ArtistIdentity.sameArtist(items, pageArtistId = "ytm:UC_misa") { it.artistId }
+        val kept = ArtistIdentity.sameArtist(items, aliases = setOf("ytm:UC_misa")) { it.artistId }
 
         assertEquals(listOf("Hers", "Also hers"), kept.map { it.title })
     }
@@ -39,7 +39,7 @@ class ArtistIdentityTest {
             Song("Someone else", artistId = "ytm:UC_other")
         )
 
-        val kept = ArtistIdentity.sameArtist(items, pageArtistId = "ytm:UC_misa") { it.artistId }
+        val kept = ArtistIdentity.sameArtist(items, aliases = setOf("ytm:UC_misa")) { it.artistId }
 
         assertEquals(listOf("From my server", "From YouTube"), kept.map { it.title })
     }
@@ -49,7 +49,6 @@ class ArtistIdentityTest {
     fun `keeps everything when the page has no id yet`() {
         val items = listOf(Song("A", "ytm:1"), Song("B", "ytm:2"), Song("C", null))
 
-        assertEquals(items, ArtistIdentity.sameArtist(items, pageArtistId = null) { it.artistId })
-        assertEquals(items, ArtistIdentity.sameArtist(items, pageArtistId = "") { it.artistId })
+        assertEquals(items, ArtistIdentity.sameArtist(items, aliases = emptySet()) { it.artistId })
     }
 }

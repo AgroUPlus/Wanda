@@ -86,8 +86,16 @@ class SubsonicApiClient @Inject constructor(
             it.album ?: throw IOException("Album $albumId not found")
         }
 
-    suspend fun getAlbumList2(type: String, size: Int): Result<List<SubsonicAlbum>> =
-        call("getAlbumList2.view", "type" to type, "size" to size)
+    /**
+     * One page of the album list.
+     *
+     * [offset] is not optional decoration. Subsonic caps `size` at 500 and returns nothing beyond
+     * it, so a caller that never advances the offset sees the first page of the server and nothing
+     * else — which is what limited a 203-album library to the 50 that one default-sized call
+     * happened to return.
+     */
+    suspend fun getAlbumList2(type: String, size: Int, offset: Int = 0): Result<List<SubsonicAlbum>> =
+        call("getAlbumList2.view", "type" to type, "size" to size, "offset" to offset)
             .map { it.albumList2?.album.orEmpty() }
 
     suspend fun getStarred2(): Result<SubsonicStarred2> =
@@ -191,7 +199,10 @@ class SubsonicApiClient @Inject constructor(
      * and never persisted or logged.
      */
     fun buildStreamUrl(trackId: String): String =
-        buildUrl("stream.view", mapOf("id" to trackId))
+        buildUrl("stream.view", mapOf(
+            "id" to trackId,
+            "estimateContentLength" to "true"
+        ))
 
     /**
      * 500 px was fine for a list row and soft as a full-screen player cover on a 1080 px-wide

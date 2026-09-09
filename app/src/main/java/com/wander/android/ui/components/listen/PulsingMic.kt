@@ -48,11 +48,16 @@ internal fun PulsingMic(
     audioLevel: Float = 0f,
     modifier: Modifier = Modifier
 ) {
+    // Stiff, because the smoothing that belongs to a level meter has already happened: MicRecorder
+    // follows the signal with a fast attack and a slow release, ~46 ms at a time. A second, much
+    // slower spring on top of that was what made the wave feel disconnected from the room — it was
+    // animating towards a value that had already moved on. This one is here to render between
+    // frames, not to smooth.
     val smoothedLevel by animateFloatAsState(
         targetValue = audioLevel.coerceIn(0f, 1f),
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessLow
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
         ),
         label = "micAudioLevel"
     )

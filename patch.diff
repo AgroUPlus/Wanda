@@ -1,0 +1,11 @@
+--- app/src/main/java/com/wander/android/ui/screens/artist/ArtistViewModel.kt
++++ app/src/main/java/com/wander/android/ui/screens/artist/ArtistViewModel.kt
+@@ -160,9 +160,6 @@
+                 hasCache.value = true
+                 // The cached id is what lets the page fetch below run at once, instead of waiting
+                 // for Room to emit something to infer it from.
+-                if (knownArtistId == null) {
+-                    knownArtistId = cached.artistId?.takeIf(String::isNotBlank)
+-                }
+                 // Seeded as a page with no shelves: enough for the header to be right and for the
+                 // identity filter to start working, while the shelves themselves arrive from the

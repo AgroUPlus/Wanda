@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.shareIn
  * package and a public function may not name an internal type in its signature.
  */
 enum class FingerprintStatus {
-    /** Both the landmark fingerprint and the melody contour exist. */
+    /** The neural fingerprint exists, so this track can be recognised. */
     INDEXED,
 
     /** Being decoded at this moment. */
