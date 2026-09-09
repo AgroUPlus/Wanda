@@ -18,8 +18,9 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -29,12 +30,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.wander.android.ui.components.rememberPressMorphShape
 
-/** Resting and pressed shapes. A dial at rest, a circle while held. */
-private val FabResting = MaterialShapes.Cookie9Sided
+/** Resting and pressed shapes. Cookie-4-sided at rest, a circle while held. */
+private val FabResting = MaterialShapes.Cookie4Sided
 private val FabPressed = MaterialShapes.Circle
 
-/** Where the button actually sits, so it grows out of its own corner rather than its centre. */
-private val CornerOrigin = TransformOrigin(0f, 1f)
+/** Where the button actually sits, on bottom-right corner. */
+private val CornerOrigin = TransformOrigin(1f, 1f)
 
 /** A quarter turn is enough to read as a dial being tuned in; more reads as a spin. */
 private const val EnterSpin = -90f
@@ -113,23 +114,12 @@ internal fun InstantRadioFab(
             }
         }
 
-        SmallFloatingActionButton(
+        FloatingActionButton(
             onClick = onClick,
             shape = shape,
             interactionSource = interaction,
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            // Flat, and this is load-bearing rather than a style choice. A drop shadow is
-            // tessellated from the outline, and the shape above is concave — Skia's concave
-            // shadow tessellator on a nine-lobed star is slow enough to wedge the render thread
-            // outright, which showed up as the whole app freezing on launch rather than as a
-            // dropped frame. The shaped buttons on the album and artist pages never hit it
-            // because icon buttons have no elevation to begin with.
-            //
-            // Nothing is lost: this could never out-stack the docked player — that is drawn after
-            // the whole nav host and always wins — so the two are kept from overlapping by the
-            // caller's bottom offset rather than by elevation, and the container colour is what
-            // separates the button from the artwork behind it. See `HomeScreen`.
             elevation = FloatingActionButtonDefaults.elevation(
                 defaultElevation = 0.dp,
                 pressedElevation = 0.dp,
@@ -144,7 +134,9 @@ internal fun InstantRadioFab(
             Icon(
                 imageVector = Icons.Rounded.Radio,
                 contentDescription = if (isStarting) "Starting radio" else "Start radio",
-                modifier = Modifier.graphicsLayer { alpha = if (isStarting) pulse else 1f }
+                modifier = Modifier
+                    .size(28.dp)
+                    .graphicsLayer { alpha = if (isStarting) pulse else 1f }
             )
         }
     }

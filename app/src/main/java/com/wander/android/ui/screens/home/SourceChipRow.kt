@@ -1,19 +1,22 @@
 package com.wander.android.ui.screens.home
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.SourceType
 
-/** Which backend Home is showing. */
+/**
+ * Which backend Home is showing.
+ *
+ * Connected expressive ButtonGroup where the active item expands and neighbours compress dynamically.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun SourceChipRow(
     sources: List<SourceType>,
@@ -21,52 +24,25 @@ internal fun SourceChipRow(
     onSelect: (SourceType?) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
+    ButtonGroup(
+        overflowIndicator = {},
         modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 4.dp)
     ) {
-        item(key = "all", contentType = "source-chip") {
-            SourceToggle(
-                label = "All",
-                selected = selected == null,
-                onClick = { onSelect(null) }
-            )
-        }
-        items(
-            items = sources,
-            key = { it.name },
-            contentType = { "source-chip" }
-        ) { source ->
-            SourceToggle(
+        toggleableItem(
+            checked = selected == null,
+            label = "All",
+            onCheckedChange = { onSelect(null) }
+        )
+        sources.forEach { source ->
+            toggleableItem(
+                checked = selected == source,
                 label = source.shortName,
-                selected = selected == source,
                 // Tapping the active chip clears it, so the row needs no separate escape.
-                onClick = { onSelect(source.takeIf { selected != source }) }
+                onCheckedChange = { onSelect(source.takeIf { selected != source }) }
             )
         }
-    }
-}
-
-/**
- * One source, as an expressive toggle rather than a `FilterChip`.
- *
- * The difference is the shape: a toggle button is a pill at rest and squares off as it is
- * selected, so which source is active is legible from the silhouette before the fill colour is
- * read at all. A row of identically-shaped chips distinguished only by tint is the stock Material
- * 2 answer, and next to the shaped play buttons on the album and artist pages it looked like it
- * had been left behind.
- *
- * No checkmark. Exactly one chip is ever selected, and the shape and fill already say which — a
- * tick adds nothing to that and costs the row width it needs to fit four sources on a line.
- */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun SourceToggle(label: String, selected: Boolean, onClick: () -> Unit) {
-    ToggleButton(
-        checked = selected,
-        onCheckedChange = { onClick() }
-    ) {
-        Text(text = label)
     }
 }

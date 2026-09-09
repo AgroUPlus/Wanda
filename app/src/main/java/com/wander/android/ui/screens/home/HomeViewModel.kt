@@ -144,10 +144,10 @@ class HomeViewModel @Inject constructor(
                 selectedSource = _uiState.value.selectedSource?.takeIf { it in sources }
             )
 
-            // Phase 2: Non-blocking Background Network Enrichment (with 3.5s timeout)
+            // Phase 2: Non-blocking Background Network Enrichment (with 7s timeout)
             launch {
                 runCatching {
-                    kotlinx.coroutines.withTimeoutOrNull(3500) {
+                    kotlinx.coroutines.withTimeoutOrNull(7000) {
                         val feedDeferred = async { recommendationRepository.getShelves() }
                         val recommendedDeferred = async {
                             val seed = homeShelfRepository.getRecentlyPlayed(1).firstOrNull()
@@ -158,6 +158,7 @@ class HomeViewModel @Inject constructor(
 
                         if (feed.isNotEmpty() || (seed != null && suggestions.isNotEmpty())) {
                             _uiState.update { state ->
+                                val feedIds = feed.map { it.id }.toSet()
                                 val updated = buildList {
                                     // Keep On Repeat first
                                     state.allSections.find { it.id == SectionOnRepeat }?.let { add(it) }
@@ -165,8 +166,8 @@ class HomeViewModel @Inject constructor(
                                     feed.forEach { shelf ->
                                         add(carousel(shelf.id, shelf.title, shelf.tracks.take(CarouselSize)))
                                     }
-                                    // Add remaining local sections
-                                    state.allSections.filterNot { it.id == SectionOnRepeat }.forEach { add(it) }
+                                    // Add remaining local sections without duplicating feed or because
+                                    state.allSections.filterNot { it.id == SectionOnRepeat || it.id in feedIds || it.id == SectionBecause }.forEach { add(it) }
                                     // Add seed radio recommendations
                                     if (seed != null && suggestions.isNotEmpty()) {
                                         add(
