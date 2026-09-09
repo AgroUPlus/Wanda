@@ -55,7 +55,7 @@ class AudioEmbedder @Inject constructor(
             raf.channel.map(FileChannel.MapMode.READ_ONLY, 0, file.length())
         }
         val options = Interpreter.Options().apply {
-            numThreads = Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
+            numThreads = 2
             setUseXNNPACK(true)
         }
         return Interpreter(model, options)

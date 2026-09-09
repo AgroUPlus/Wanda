@@ -211,7 +211,7 @@ class PlaybackService : MediaSessionService() {
          * is fifteen seconds per skip, not a whole song. Preloading remains off for anyone
          * counting megabytes; that is what the switch is for.
          */
-        const val PRELOAD_TARGET_US = 15_000_000L
+        const val PRELOAD_TARGET_US = 5_000_000L
     }
 
 }
