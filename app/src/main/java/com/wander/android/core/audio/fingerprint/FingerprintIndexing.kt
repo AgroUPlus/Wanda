@@ -52,14 +52,8 @@ object FingerprintIndexing {
                         // bounded per run with the rest deferred to the next.
                         // What is actually expensive here is the network, and that is what the
                         // remaining two constraints are for.
+                        .setRequiresCharging(true)
                         .setRequiresBatteryNotLow(true)
-                        // A network constraint at all, because this now reads audio. It used
-                        // to declare none on the grounds that it touched none, which stopped
-                        // being true the moment streamed tracks became indexable.
-                        //
-                        // Unmetered unless the user has said otherwise: measuring a streamed
-                        // library reads about a minute per track, which is free on Wi-Fi and
-                        // is somebody's data plan anywhere else.
                         .setRequiredNetworkType(
                             if (allowMobileData) NetworkType.CONNECTED else NetworkType.UNMETERED
                         )
@@ -70,15 +64,29 @@ object FingerprintIndexing {
     }
 
     /**
-     * Measures one track now, because it is the one playing.
-     *
-     * Unconstrained, and deliberately so: this is a single track, roughly a minute of audio,
-     * for a song the user is listening to at this moment. The Wi-Fi and battery constraints on
-     * the sweep exist because it walks a thousand tracks — they are a rule about bulk, not a
-     * rule about fingerprinting.
-     *
-     * Keyed per track so it neither cancels the sweep nor is cancelled by it, and `KEEP` so a
-     * track being re-observed does not restart its own measurement.
+     * Periodic background pass: runs when charging and unmetered Wi-Fi.
+     */
+    fun schedulePeriodic(context: Context) {
+        val request = androidx.work.PeriodicWorkRequestBuilder<FingerprintIndexWorker>(6, java.util.concurrent.TimeUnit.HOURS)
+            .addTag(WorkControls.tagFor(WorkProgressNotification.Kind.FINGERPRINT))
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiresCharging(true)
+                    .setRequiresBatteryNotLow(true)
+                    .setRequiredNetworkType(NetworkType.UNMETERED)
+                    .build()
+            )
+            .build()
+
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            "$NAME-periodic",
+            androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+            request
+        )
+    }
+
+    /**
+     * Queues one track to measure when charging and on Wi-Fi.
      */
     fun enqueueFor(context: Context, trackId: String) {
         WorkManager.getInstance(context).enqueueUniqueWork(
@@ -86,6 +94,13 @@ object FingerprintIndexing {
             ExistingWorkPolicy.KEEP,
             OneTimeWorkRequestBuilder<FingerprintIndexWorker>()
                 .addTag(WorkControls.tagFor(WorkProgressNotification.Kind.FINGERPRINT))
+                .setConstraints(
+                    Constraints.Builder()
+                        .setRequiresCharging(true)
+                        .setRequiresBatteryNotLow(true)
+                        .setRequiredNetworkType(NetworkType.UNMETERED)
+                        .build()
+                )
                 .setInputData(workDataOf(KEY_TRACK_ID to trackId))
                 .build()
         )

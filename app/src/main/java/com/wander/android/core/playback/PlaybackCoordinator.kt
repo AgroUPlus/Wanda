@@ -43,7 +43,7 @@ internal class PlaybackCoordinator @Inject constructor(
             .onEach { track ->
                 _lyrics.value = null
                 if (track == null) return@onEach
-                com.wander.android.core.audio.fingerprint.FingerprintIndexing.enqueueFor(context, track.id)
+                com.wander.android.core.audio.fingerprint.FingerprintIndexing.enqueue(context)
                 _lyrics.value = lyricsRepository.getLyrics(
                     trackId = track.id,
                     trackTitle = track.title,

@@ -69,6 +69,7 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
     override fun onCreate() {
         super.onCreate()
         downloadScheduler.scheduleAutoDownload()
+        com.wander.android.core.audio.fingerprint.FingerprintIndexing.schedulePeriodic(this)
         // Cheap and self-gating: the worker does nothing until an Agro server is paired.
         scrobbleSyncScheduler.schedule()
         // Embedded P2P server for direct high-speed LAN audio transfers.

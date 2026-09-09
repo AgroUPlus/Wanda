@@ -301,13 +301,13 @@ interface TrackDao {
      * Livestreams are excluded here rather than downstream: there is no fixed audio to identify,
      * and the worker would decode a different minute every run.
      */
-    @Query("SELECT * FROM tracks WHERE isLive = 0 AND (isLibrary = 1 OR playCount > 0)")
+    @Query("SELECT * FROM tracks WHERE isLive = 0 AND (isLibrary = 1 OR playCount > 0 OR lastPlayedTimestamp IS NOT NULL)")
     suspend fun getFingerprintableTracks(): List<TrackEntity>
 
-    @Query("SELECT COUNT(*) FROM tracks WHERE isLive = 0 AND (isLibrary = 1 OR playCount > 0)")
+    @Query("SELECT COUNT(*) FROM tracks WHERE isLive = 0 AND (isLibrary = 1 OR playCount > 0 OR lastPlayedTimestamp IS NOT NULL)")
     suspend fun getFingerprintableTrackCount(): Int
 
-    @Query("SELECT id FROM tracks WHERE isLive = 0 AND (isLibrary = 1 OR playCount > 0)")
+    @Query("SELECT id FROM tracks WHERE isLive = 0 AND (isLibrary = 1 OR playCount > 0 OR lastPlayedTimestamp IS NOT NULL)")
     suspend fun getFingerprintableTrackIds(): List<String>
 
     /**
@@ -319,7 +319,7 @@ interface TrackDao {
      * the question the screen exists to answer ("why can't Wanda hear this song?") could not be
      * asked about the songs most likely to be missing.
      */
-    @Query("SELECT * FROM tracks WHERE isLive = 0 AND (isLibrary = 1 OR playCount > 0)")
+    @Query("SELECT * FROM tracks WHERE isLive = 0 AND (isLibrary = 1 OR playCount > 0 OR lastPlayedTimestamp IS NOT NULL)")
     fun getFingerprintableTracksFlow(): Flow<List<TrackEntity>>
 
     /**
