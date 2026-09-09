@@ -22,12 +22,15 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import com.wander.android.data.model.LyricMatch
+import com.wander.android.data.repository.LyricsRepository
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class SearchUiState(
     val isSearching: Boolean = false,
     val results: List<UnifiedTrack> = emptyList(),
+    val lyricMatches: List<LyricMatch> = emptyList(),
     val hasQuery: Boolean = false
 )
 
@@ -35,6 +38,7 @@ data class SearchUiState(
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val musicRepository: MusicRepository,
+    private val lyricsRepository: LyricsRepository,
     private val playerConnection: PlayerConnection,
     private val shareRepository: ShareRepository,
     private val queryHolder: SearchQueryHolder
@@ -110,10 +114,17 @@ class SearchViewModel @Inject constructor(
                     return@flow
                 }
                 emit(SearchUiState(isSearching = true, hasQuery = true))
+                val tracks = musicRepository.searchAllSources(query, sources, kind)
+                val lyricMatches = if (kind == SearchKind.TRACKS) {
+                    lyricsRepository.searchByLyrics(query)
+                } else {
+                    emptyList()
+                }
                 emit(
                     SearchUiState(
                         isSearching = false,
-                        results = musicRepository.searchAllSources(query, sources, kind),
+                        results = tracks,
+                        lyricMatches = lyricMatches,
                         hasQuery = true
                     )
                 )
@@ -127,7 +138,12 @@ class SearchViewModel @Inject constructor(
         searchResults,
         musicRepository.getLikedTrackIdsFlow()
     ) { state, likedIds ->
-        state.copy(results = state.results.map { it.copy(isLiked = it.id in likedIds) })
+        state.copy(
+            results = state.results.map { it.copy(isLiked = it.id in likedIds) },
+            lyricMatches = state.lyricMatches.map { m ->
+                m.copy(track = m.track.copy(isLiked = m.track.id in likedIds))
+            }
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState())
 
     fun toggleSource(source: SourceType) {
@@ -144,6 +160,16 @@ class SearchViewModel @Inject constructor(
     fun selectAllSources() { _selectedSources.value = null }
 
     fun play(tracks: List<UnifiedTrack>, index: Int) = playerConnection.play(tracks, index)
+
+    /** Plays the track and seeks directly to the matched lyric line's timestamp offset. */
+    fun playTrackAtTimestamp(track: UnifiedTrack, timestampMs: Long?) {
+        viewModelScope.launch {
+            playerConnection.play(listOf(track))
+            if (timestampMs != null && timestampMs > 0) {
+                playerConnection.seekTo(timestampMs)
+            }
+        }
+    }
 
     fun playNext(track: UnifiedTrack) = playerConnection.playNext(listOf(track))
 
