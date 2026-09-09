@@ -79,16 +79,16 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     }
 
     /**
-     * Which version of the fingerprint algorithm built the stored index.
+     * How far the duplicate-link sweep has read, as a track id.
      *
-     * A landmark hash is only comparable with another built the same way, so changing how peaks
-     * are picked or packed makes every stored row meaningless rather than merely stale — they do
-     * not match less well, they match nothing. This is what lets the indexer notice that and start
-     * again instead of searching an index written in a language it no longer speaks.
+     * A cursor rather than a flag, because the sweep is bounded per run and has to resume rather
+     * than restart. Empty means "from the beginning", which is also what a completed sweep resets
+     * to — a library gains tracks, and two of them being the same recording is a question that
+     * comes back.
      */
-    var fingerprintIndexVersion: Int
-        get() = prefs.getInt(KEY_FINGERPRINT_VERSION, 0)
-        set(value) = prefs.edit { putInt(KEY_FINGERPRINT_VERSION, value) }
+    var duplicateScanCursor: String
+        get() = prefs.getString(KEY_DUPLICATE_SCAN_CURSOR, "").orEmpty()
+        set(value) = prefs.edit { putString(KEY_DUPLICATE_SCAN_CURSOR, value) }
 
     /** The release already announced, so the same one is not announced again every day. */
     var lastNotifiedRelease: String
@@ -577,7 +577,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_AUTO_UPDATE_CHECK = "key_auto_update_check"
         private const val KEY_RELEASE_NOTIFICATIONS = "key_release_notifications"
         private const val KEY_LAST_NOTIFIED_RELEASE = "key_last_notified_release"
-        private const val KEY_FINGERPRINT_VERSION = "fingerprint_index_version"
+        private const val KEY_DUPLICATE_SCAN_CURSOR = "duplicate_scan_cursor"
         private const val KEY_INCOGNITO = "key_incognito"
         private const val KEY_PENDING_FORGET = "key_pending_forget"
         private const val KEY_LOCAL_WATERMARK = "key_local_scan_watermark"

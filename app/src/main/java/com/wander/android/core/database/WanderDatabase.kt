@@ -6,7 +6,6 @@ import com.wander.android.core.database.dao.AlbumDao
 import com.wander.android.core.database.dao.ArtistDao
 import com.wander.android.core.database.dao.CanonicalMetadataDao
 import com.wander.android.core.database.dao.DropDao
-import com.wander.android.core.database.dao.FingerprintDao
 import com.wander.android.core.database.dao.FriendDao
 import com.wander.android.core.database.dao.HistoryDao
 import com.wander.android.core.database.dao.ShelfDao
@@ -23,7 +22,6 @@ import com.wander.android.core.database.entity.CanonicalMetadataEntity
 import com.wander.android.core.database.entity.MelodyContourEntity
 import com.wander.android.core.database.entity.TrackFeatureEntity
 import com.wander.android.core.database.entity.DropEntity
-import com.wander.android.core.database.entity.FingerprintEntity
 import com.wander.android.core.database.entity.FriendEntity
 import com.wander.android.core.database.entity.HistoryEntity
 import com.wander.android.core.database.entity.PlaylistEntity
@@ -46,7 +44,6 @@ import com.wander.android.core.database.converter.SourceTypeConverter
         ShelfEntity::class,
         FriendEntity::class,
         DropEntity::class,
-        FingerprintEntity::class,
         PlaylistEntity::class,
         RecordingSplitEntity::class,
         RecordingLinkEntity::class,
@@ -57,7 +54,7 @@ import com.wander.android.core.database.converter.SourceTypeConverter
         com.wander.android.core.database.entity.TrackLyricsEntity::class,
         com.wander.android.core.database.entity.LyricsFtsEntity::class
     ],
-    version = 27,
+    version = 29,
     exportSchema = true
 )
 @TypeConverters(SourceTypeConverter::class)
@@ -69,7 +66,6 @@ abstract class WanderDatabase : RoomDatabase() {
     abstract fun shelfDao(): ShelfDao
     abstract fun friendDao(): FriendDao
     abstract fun dropDao(): DropDao
-    abstract fun fingerprintDao(): FingerprintDao
     abstract fun playlistDao(): PlaylistDao
     abstract fun recordingSplitDao(): RecordingSplitDao
     abstract fun recordingLinkDao(): RecordingLinkDao

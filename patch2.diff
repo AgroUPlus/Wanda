@@ -1,0 +1,29 @@
+--- app/src/main/java/com/wander/android/ui/MainActivity.kt
++++ app/src/main/java/com/wander/android/ui/MainActivity.kt
+@@ -10,6 +10,8 @@
+ import androidx.activity.compose.setContent
+ import androidx.activity.enableEdgeToEdge
+ import androidx.activity.viewModels
++import androidx.lifecycle.lifecycleScope
++import kotlinx.coroutines.launch
+ import com.wander.android.ui.theme.WanderTheme
+ import dagger.hilt.android.AndroidEntryPoint
++import javax.inject.Inject
++import com.wander.android.core.database.WandaDatabase
+ 
+ @AndroidEntryPoint
+ class MainActivity : ComponentActivity() {
+ 
+     private val viewModel: WanderAppViewModel by viewModels()
++
++    @Inject lateinit var db: WandaDatabase
+ 
+     override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
++        lifecycleScope.launch {
++            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
++                db.openHelper.writableDatabase.execSQL("DELETE FROM artists")
++            }
++        }
+         
+         enableEdgeToEdge()

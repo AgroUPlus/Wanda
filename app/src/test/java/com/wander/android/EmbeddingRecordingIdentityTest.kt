@@ -64,7 +64,9 @@ class EmbeddingRecordingIdentityTest {
     }
 
     private class FakeTrackEmbeddingDao : com.wander.android.core.database.dao.TrackEmbeddingDao {
-        override suspend fun getAll(model: String, version: Int) = emptyList<com.wander.android.core.database.entity.TrackEmbeddingEntity>()
+        override suspend fun centroids(model: String, version: Int) = emptyList<com.wander.android.core.database.dao.Centroid>()
+        override suspend fun idsAfter(model: String, version: Int, after: String, limit: Int) = emptyList<String>()
+        override suspend fun setCentroid(trackId: String, centroid: ByteArray) {}
         override suspend fun getForTrack(trackId: String, model: String, version: Int) = null
         override suspend fun getForTracks(trackIds: List<String>, model: String, version: Int) = emptyList<com.wander.android.core.database.entity.TrackEmbeddingEntity>()
         override fun indexedTrackCountFlow(model: String, version: Int) = kotlinx.coroutines.flow.emptyFlow<Int>()
@@ -72,7 +74,14 @@ class EmbeddingRecordingIdentityTest {
         override suspend fun upsert(embedding: com.wander.android.core.database.entity.TrackEmbeddingEntity) {}
         override suspend fun computedSince(after: Long, model: String, version: Int, limit: Int) =
             emptyList<com.wander.android.core.database.entity.TrackEmbeddingEntity>()
-        override suspend fun needingIndex(model: String, version: Int, limit: Int) = emptyList<String>()
+        override suspend fun needingIndex(
+            model: String,
+            version: Int,
+            limit: Int,
+            bytesPerSegment: Int,
+            segmentHopMs: Int,
+            coverageToleranceMs: Int
+        ) = emptyList<String>()
         override suspend fun prune(model: String, version: Int) {}
         override suspend fun clear() {}
     }
@@ -146,5 +155,7 @@ class EmbeddingRecordingIdentityTest {
         override suspend fun clearBySource(source: com.wander.android.data.model.SourceType) {}
         override suspend fun getTracksByIds(ids: List<String>): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun findByContentHash(hash: String): com.wander.android.core.database.entity.TrackEntity? = null
+        override suspend fun getFingerprintableTrackCount(): Int = 0
+        override suspend fun getFingerprintableTrackIds(): List<String> = emptyList()
     }
 }

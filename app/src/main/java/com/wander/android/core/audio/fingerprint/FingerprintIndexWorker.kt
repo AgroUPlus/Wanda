@@ -44,6 +44,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
     private val recognitionRepository: RecognitionRepository,
     private val recordingIdentity: RecordingIdentityRepository,
     private val recordingLinks: RecordingLinkRepository,
+    private val secureStorage: com.wander.android.core.security.SecureStorage,
     private val acousticFeatures: AcousticFeatureRepository,
     private val melodySearch: MelodySearchRepository,
     private val embeddingSearch: EmbeddingRepository,
@@ -61,10 +62,10 @@ class FingerprintIndexWorker @AssistedInject constructor(
         // samples, and decoding is by far the expensive part — a separate pass for each would
         // multiply the cost of indexing a library to no purpose.
         //
-        // Each is asked about **every** track, not about the tracks that need a landmark.
+        // Each is asked about **every** track, not about the tracks one of them happens to want.
         //
         // That was the bug, and it was self-concealing. The run used to be driven entirely by
-        // `tracksNeedingIndex()` — tracks with no landmark fingerprint — and the other three
+        // the tracks with no landmark fingerprint — the engine of the day — and the other three
         // questions were then asked only about *that* list. So the moment a track acquired a
         // landmark it left the candidate set for good, and could never afterwards be given a
         // melody contour or an acoustic vector. Any library indexed before hum-to-search existed
@@ -81,9 +82,8 @@ class FingerprintIndexWorker @AssistedInject constructor(
         // request is a different urgency, not a small sweep: a track you have just started
         // listening to is the one whose missing measurement you might actually notice.
         val requestedId = inputData.getString(FingerprintIndexing.KEY_TRACK_ID)
-        val candidates = recognitionRepository.fingerprintableTracks()
-            .let { all -> if (requestedId == null) all else all.filter { it.id == requestedId } }
-        val candidateIds = candidates.map { it.id }
+        val candidateIds = recognitionRepository.fingerprintableTrackIds()
+            .let { all -> if (requestedId == null) all else all.filter { it == requestedId } }
 
         val needsFeatures = acousticFeatures.needingMeasurement(FEATURE_BATCH_LIMIT).toSet()
         // Empty while humming is off: measuring a contour is a quarter of the work of every decode,
@@ -93,6 +93,18 @@ class FingerprintIndexWorker @AssistedInject constructor(
         } else {
             emptySet()
         }
+        // Cheap, and off the critical path on purpose: a row written before the centroid column
+        // existed is shortlisted unconditionally by every recognition until it has one, so this
+        // is what stops a whole library of them making the first match after an upgrade slow.
+        embeddingSearch.backfillCentroids()
+
+        // And link the duplicates among tracks this device did not measure itself. Links are
+        // recorded per track as it is indexed below, which covers everything the phone measures
+        // and nothing a desktop indexer wrote — and an *unlinked* duplicate is worse than none:
+        // the matcher refuses a winner that a near-identical runner-up sits inside MIN_MARGIN of,
+        // so a pair nobody linked make each other permanently unrecognisable.
+        recordingIdentity.linkDuplicates(recordingLinks, secureStorage)
+
         // The neural fingerprint, on the same decode. Empty set when the model asset is absent.
         val needsEmbedding = embeddingSearch.needingIndex(EMBEDDING_BATCH_LIMIT)
             .let { needed -> needed.filterTo(mutableSetOf()) { it in candidateIds } }
@@ -100,15 +112,13 @@ class FingerprintIndexWorker @AssistedInject constructor(
         // Anything still missing any one of these is worth a decode; a track that has them all
         // is worth nothing and must not be decoded again.
         val now = System.currentTimeMillis()
+        val pendingIds = (needsFeatures + needsContour + needsEmbedding).intersect(candidateIds.toSet())
+        val candidates = if (pendingIds.isEmpty()) emptyList() else trackDao.getTracksByIds(pendingIds.toList())
         val pending = candidates.filter {
             // A track this run already failed to reach is not a candidate again.
             // Also back off tracks whose repeated failures are persisted across process deaths.
             !progress.isUnreachable(it.id) &&
-            !isBackedOff(it, now) && (
-                it.id in needsFeatures ||
-                it.id in needsContour ||
-                it.id in needsEmbedding
-            )
+            !isBackedOff(it, now)
         }
         if (pending.isEmpty()) return@withContext Result.success()
 
@@ -148,7 +158,20 @@ class FingerprintIndexWorker @AssistedInject constructor(
                     trackAttemptDao.recordAttempt(track.id, System.currentTimeMillis())
                     continue
                 }
-                val samples = decoder.decode(source.first, source.second)
+                // Only the embedding wants the whole track. Features and contours are measured
+                // over the first minute, so reading twenty for a track that needs one of those
+                // and not an embedding is nineteen minutes of decode, and of memory, for samples
+                // that are then thrown away.
+                val wantsWholeTrack = track.id in needsEmbedding
+                val samples = decoder.decode(
+                    source.first,
+                    source.second,
+                    maxSeconds = if (wantsWholeTrack) {
+                        EMBEDDING_MAX_SECONDS
+                    } else {
+                        PcmDecoder.DEFAULT_MAX_SECONDS
+                    }
+                )
                 if (samples == null) {
                     progress.couldNotReach(track.id)
                     trackAttemptDao.recordAttempt(track.id, System.currentTimeMillis())
@@ -157,8 +180,13 @@ class FingerprintIndexWorker @AssistedInject constructor(
                 if (track.attempts > 0) {
                     trackAttemptDao.clearAttempts(track.id)
                 }
-                if (track.id in needsFeatures) acousticFeatures.measure(track.id, samples)
-                if (track.id in needsContour) melodySearch.index(track.id, samples)
+                // The head of the same decode. Features and contours were measured over the first
+                // minute and their stored `version` says so, so handing them the whole track now
+                // would silently change every number they have ever written without anything
+                // marking the change. The embedding is the one that wanted the rest of the song.
+                val head = samples.headSeconds(PcmDecoder.DEFAULT_MAX_SECONDS)
+                if (track.id in needsFeatures) acousticFeatures.measure(track.id, head)
+                if (track.id in needsContour) melodySearch.index(track.id, head)
                 if (track.id in needsEmbedding) {
                     embeddingSearch.index(track.id, samples)
                     // With neural embeddings now stored, find duplicates among other indexed tracks
@@ -248,16 +276,22 @@ class FingerprintIndexWorker @AssistedInject constructor(
          * day across the whole app** — spending that budget on one indexing marathon would stop
          * the library sync too.
          */
-        /** How many extra windows are read past the first minute. */
-        private const val DEEP_WINDOWS = 3
-
         /**
-         * How long each is.
+         * How much of a track is decoded, and therefore embedded.
          *
-         * Fifteen seconds is several hundred landmarks — far more than a match needs — and three of
-         * them cost less than doubling the first pass. Coverage was what was missing, not density.
+         * Was `PcmDecoder.DEFAULT_MAX_SECONDS`, one minute, which is why recognition could only
+         * ever find a clip taken from a song's opening and why the position it reported was never
+         * more than 59 seconds — on a library averaging three minutes a track, most of the music
+         * had no vectors at all. The whole track is indexed now.
+         *
+         * Bounded all the same, and the bound matters more than it looks. Audio is buffered at
+         * the *source* rate before it is resampled, so a minute of 44.1 kHz stereo is ~10 MB and
+         * the cost is linear in this number — a mis-tagged podcast or a twelve-hour sleep mix
+         * would otherwise decide how much heap the indexer needs. Twelve minutes covers every song
+         * and most live and classical recordings; anything longer is indexed up to here, which is
+         * worth far more than nothing.
          */
-        private const val WINDOW_SECONDS = 15
+        private const val EMBEDDING_MAX_SECONDS = 12 * 60
 
         private const val BATCH_SIZE = 100
 
@@ -292,4 +326,15 @@ class FingerprintIndexWorker @AssistedInject constructor(
         val last = track.lastAttemptAt ?: return false
         return (now - last) < backoffMs
     }
+}
+
+/**
+ * The first [seconds] of a decoded clip, or the clip itself when it is already shorter.
+ *
+ * Returns the receiver rather than a copy in that case: the common track is under the window and
+ * copying several megabytes of PCM to hand back what was passed in is pure cost.
+ */
+private fun FloatArray.headSeconds(seconds: Int): FloatArray {
+    val wanted = seconds * AudioFormat.SAMPLE_RATE
+    return if (size <= wanted) this else copyOf(wanted)
 }

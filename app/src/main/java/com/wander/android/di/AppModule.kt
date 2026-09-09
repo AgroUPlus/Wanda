@@ -8,7 +8,6 @@ import com.wander.android.core.database.dao.AlbumDao
 import com.wander.android.core.database.dao.ArtistDao
 import com.wander.android.core.database.dao.HistoryDao
 import com.wander.android.core.database.dao.DropDao
-import com.wander.android.core.database.dao.FingerprintDao
 import com.wander.android.core.database.dao.FriendDao
 import com.wander.android.core.database.dao.ShelfDao
 import com.wander.android.core.database.dao.TrackDao
@@ -57,7 +56,6 @@ object AppModule {
     @Provides fun provideShelfDao(db: WanderDatabase): ShelfDao = db.shelfDao()
     @Provides fun provideFriendDao(db: WanderDatabase): FriendDao = db.friendDao()
     @Provides fun provideDropDao(db: WanderDatabase): DropDao = db.dropDao()
-    @Provides fun provideFingerprintDao(db: WanderDatabase): FingerprintDao = db.fingerprintDao()
     @Provides fun providePlaylistDao(db: WanderDatabase): com.wander.android.core.database.dao.PlaylistDao = db.playlistDao()
 
     @Provides fun provideRecordingSplitDao(db: WanderDatabase): com.wander.android.core.database.dao.RecordingSplitDao = db.recordingSplitDao()

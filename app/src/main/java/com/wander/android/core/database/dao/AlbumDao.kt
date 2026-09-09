@@ -11,6 +11,28 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface AlbumDao {
 
+    /**
+     * Library albums with no tracks stored for them, smallest first.
+     *
+     * The gap `MusicRepository.importMissingAlbumTracks` closes. A Subsonic album arrives from the
+     * server's album list as metadata only — title, artist, sleeve, song count — and its tracks
+     * are a separate request that used to be made only when somebody opened it. So the library
+     * knew about the record and had none of the songs on it.
+     *
+     * Ordered by song count so the cheapest requests go first: a run is bounded, and finishing
+     * many small albums makes more of the library recognisable than finishing one box set.
+     */
+    @Query(
+        """
+        SELECT a.* FROM albums a
+        WHERE a.isLibrary = 1
+          AND NOT EXISTS (SELECT 1 FROM tracks t WHERE t.albumId = a.id)
+        ORDER BY a.songCount
+        LIMIT :limit
+        """
+    )
+    suspend fun libraryAlbumsWithoutTracks(limit: Int): List<AlbumEntity>
+
     @Query("SELECT * FROM albums ORDER BY title ASC")
     fun getAllAlbumsFlow(): Flow<List<AlbumEntity>>
 
