@@ -163,12 +163,11 @@ class SearchViewModel @Inject constructor(
 
     /** Plays the track and seeks directly to the matched lyric line's timestamp offset. */
     fun playTrackAtTimestamp(track: UnifiedTrack, timestampMs: Long?) {
-        viewModelScope.launch {
-            playerConnection.play(listOf(track))
-            if (timestampMs != null && timestampMs > 0) {
-                playerConnection.seekTo(timestampMs)
-            }
-        }
+        playerConnection.play(
+            tracks = listOf(track),
+            startIndex = 0,
+            startPositionMs = timestampMs ?: 0L
+        )
     }
 
     fun playNext(track: UnifiedTrack) = playerConnection.playNext(listOf(track))

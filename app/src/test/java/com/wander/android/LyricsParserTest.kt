@@ -12,6 +12,7 @@ class LyricsParserTest {
 
     private val fakeDao = object : TrackLyricsDao {
         override suspend fun getLyricsForTrack(trackId: String): TrackLyricsEntity? = null
+        override suspend fun findLyricsForTrackOrMetadata(trackId: String, title: String, artist: String): TrackLyricsEntity? = null
         override suspend fun insertLyrics(lyrics: TrackLyricsEntity) {}
         override suspend fun insertFts(trackId: String, plainLyrics: String) {}
         override suspend fun deleteFts(trackId: String) {}
@@ -54,6 +55,8 @@ class LyricsParserTest {
                     syncedLyrics = "[00:10.00]Line one\n[00:20.00]Line two",
                     source = "LOCAL_CACHE"
                 )
+            override suspend fun findLyricsForTrackOrMetadata(trackId: String, title: String, artist: String): TrackLyricsEntity? =
+                getLyricsForTrack(trackId)
             override suspend fun insertLyrics(lyrics: TrackLyricsEntity) {}
             override suspend fun insertFts(trackId: String, plainLyrics: String) {}
             override suspend fun deleteFts(trackId: String) {}

@@ -297,4 +297,56 @@ internal class ArtistViewModel @Inject constructor(
     fun share(track: UnifiedTrack) {
         viewModelScope.launch { shareRepository.share(track) }
     }
+
+    fun playAlbum(album: UnifiedAlbum) {
+        viewModelScope.launch {
+            val albumTracks = musicRepository.getAlbumTracks(album)
+            if (albumTracks.isNotEmpty()) {
+                playerConnection.play(albumTracks)
+            }
+        }
+    }
+
+    fun playAlbumNext(album: UnifiedAlbum) {
+        viewModelScope.launch {
+            val albumTracks = musicRepository.getAlbumTracks(album)
+            if (albumTracks.isNotEmpty()) {
+                playerConnection.playNext(albumTracks)
+            }
+        }
+    }
+
+    fun addAlbumToQueue(album: UnifiedAlbum) {
+        viewModelScope.launch {
+            val albumTracks = musicRepository.getAlbumTracks(album)
+            if (albumTracks.isNotEmpty()) {
+                playerConnection.addToQueue(albumTracks)
+            }
+        }
+    }
+
+    fun canShareAlbum(album: UnifiedAlbum): Boolean =
+        shareRepository.canShare(album.source)
+
+    fun shareAlbum(album: UnifiedAlbum) {
+        viewModelScope.launch {
+            shareRepository.share(
+                ShareTarget(
+                    kind = ShareKind.ALBUM,
+                    source = album.source,
+                    id = album.id,
+                    title = "${album.title} - ${album.artist}"
+                )
+            )
+        }
+    }
+
+    fun getAlbumTracks(album: UnifiedAlbum, onTracks: (List<UnifiedTrack>) -> Unit) {
+        viewModelScope.launch {
+            val albumTracks = musicRepository.getAlbumTracks(album)
+            if (albumTracks.isNotEmpty()) {
+                onTracks(albumTracks)
+            }
+        }
+    }
 }

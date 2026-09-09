@@ -41,33 +41,72 @@ internal class AgroCatalogApi @Inject constructor(
         title: String?,
         artist: String?,
         album: String?,
-        sourceUri: String?
-    ): Result<String> = graphQl.execute(
-        """
-        mutation PublishRecording(
-            ${'$'}embedding: String!, ${'$'}dim: Int!, ${'$'}model: String!, ${'$'}version: Int!,
-            ${'$'}durationMs: Int!,
-            ${'$'}title: String, ${'$'}artist: String, ${'$'}album: String, ${'$'}sourceUri: String
-        ) {
-            publishRecording(
-                embedding: ${'$'}embedding, dim: ${'$'}dim, model: ${'$'}model, version: ${'$'}version,
-                durationMs: ${'$'}durationMs,
-                title: ${'$'}title, artist: ${'$'}artist, album: ${'$'}album, sourceUri: ${'$'}sourceUri
-            )
+        sourceUri: String?,
+        lyrics: String? = null
+    ): Result<String> {
+        if (!lyrics.isNullOrBlank()) {
+            val resultWithLyrics = graphQl.execute(
+                """
+                mutation PublishRecording(
+                    ${'$'}embedding: String!, ${'$'}dim: Int!, ${'$'}model: String!, ${'$'}version: Int!,
+                    ${'$'}durationMs: Int!,
+                    ${'$'}title: String, ${'$'}artist: String, ${'$'}album: String, ${'$'}sourceUri: String,
+                    ${'$'}lyrics: String
+                ) {
+                    publishRecording(
+                        embedding: ${'$'}embedding, dim: ${'$'}dim, model: ${'$'}model, version: ${'$'}version,
+                        durationMs: ${'$'}durationMs,
+                        title: ${'$'}title, artist: ${'$'}artist, album: ${'$'}album, sourceUri: ${'$'}sourceUri,
+                        lyrics: ${'$'}lyrics
+                    )
+                }
+                """.trimIndent(),
+                buildJsonObject {
+                    put("embedding", embeddingHex)
+                    put("dim", dim)
+                    put("model", model)
+                    put("version", version)
+                    put("durationMs", durationMs)
+                    put("title", title)
+                    put("artist", artist)
+                    put("album", album)
+                    put("sourceUri", sourceUri)
+                    put("lyrics", lyrics)
+                }
+            ).map { data -> data["publishRecording"]?.jsonPrimitive?.contentOrNull.orEmpty() }
+
+            if (resultWithLyrics.isSuccess) {
+                return resultWithLyrics
+            }
         }
-        """.trimIndent(),
-        buildJsonObject {
-            put("embedding", embeddingHex)
-            put("dim", dim)
-            put("model", model)
-            put("version", version)
-            put("durationMs", durationMs)
-            put("title", title)
-            put("artist", artist)
-            put("album", album)
-            put("sourceUri", sourceUri)
-        }
-    ).map { data -> data["publishRecording"]?.jsonPrimitive?.contentOrNull.orEmpty() }
+
+        return graphQl.execute(
+            """
+            mutation PublishRecording(
+                ${'$'}embedding: String!, ${'$'}dim: Int!, ${'$'}model: String!, ${'$'}version: Int!,
+                ${'$'}durationMs: Int!,
+                ${'$'}title: String, ${'$'}artist: String, ${'$'}album: String, ${'$'}sourceUri: String
+            ) {
+                publishRecording(
+                    embedding: ${'$'}embedding, dim: ${'$'}dim, model: ${'$'}model, version: ${'$'}version,
+                    durationMs: ${'$'}durationMs,
+                    title: ${'$'}title, artist: ${'$'}artist, album: ${'$'}album, sourceUri: ${'$'}sourceUri
+                )
+            }
+            """.trimIndent(),
+            buildJsonObject {
+                put("embedding", embeddingHex)
+                put("dim", dim)
+                put("model", model)
+                put("version", version)
+                put("durationMs", durationMs)
+                put("title", title)
+                put("artist", artist)
+                put("album", album)
+                put("sourceUri", sourceUri)
+            }
+        ).map { data -> data["publishRecording"]?.jsonPrimitive?.contentOrNull.orEmpty() }
+    }
 
     /**
      * Everything published after [since], oldest first.
@@ -76,22 +115,46 @@ internal class AgroCatalogApi @Inject constructor(
      * it already holds is harmless — these are facts about audio, so seeing one twice is agreeing
      * with itself.
      */
-    suspend fun since(since: Long, limit: Int = 200): Result<List<AgroCatalogEntry>> = graphQl.execute(
-        """
-        query CatalogSince(${'$'}since: Int!, ${'$'}limit: Int!) {
-            catalogSince(since: ${'$'}since, limit: ${'$'}limit) {
-                recordingId embedding dim model version durationMs title artist album sources updatedAt
+    suspend fun since(since: Long, limit: Int = 200): Result<List<AgroCatalogEntry>> {
+        val queryWithLyrics = graphQl.execute(
+            """
+            query CatalogSince(${'$'}since: Int!, ${'$'}limit: Int!) {
+                catalogSince(since: ${'$'}since, limit: ${'$'}limit) {
+                    recordingId embedding dim model version durationMs title artist album lyrics sources updatedAt
+                }
             }
+            """.trimIndent(),
+            buildJsonObject {
+                put("since", since)
+                put("limit", limit)
+            }
+        ).map { data ->
+            (data["catalogSince"] as? JsonArray)
+                ?.mapNotNull { (it as? JsonObject)?.toCatalogEntry() }
+                .orEmpty()
         }
-        """.trimIndent(),
-        buildJsonObject {
-            put("since", since)
-            put("limit", limit)
+
+        if (queryWithLyrics.isSuccess) {
+            return queryWithLyrics
         }
-    ).map { data ->
-        (data["catalogSince"] as? JsonArray)
-            ?.mapNotNull { (it as? JsonObject)?.toCatalogEntry() }
-            .orEmpty()
+
+        return graphQl.execute(
+            """
+            query CatalogSince(${'$'}since: Int!, ${'$'}limit: Int!) {
+                catalogSince(since: ${'$'}since, limit: ${'$'}limit) {
+                    recordingId embedding dim model version durationMs title artist album sources updatedAt
+                }
+            }
+            """.trimIndent(),
+            buildJsonObject {
+                put("since", since)
+                put("limit", limit)
+            }
+        ).map { data ->
+            (data["catalogSince"] as? JsonArray)
+                ?.mapNotNull { (it as? JsonObject)?.toCatalogEntry() }
+                .orEmpty()
+        }
     }
 
     private fun JsonObject.toCatalogEntry(): AgroCatalogEntry? {
@@ -107,6 +170,7 @@ internal class AgroCatalogApi @Inject constructor(
             title = this["title"]?.jsonPrimitive?.contentOrNull,
             artist = this["artist"]?.jsonPrimitive?.contentOrNull,
             album = this["album"]?.jsonPrimitive?.contentOrNull,
+            lyrics = this["lyrics"]?.jsonPrimitive?.contentOrNull,
             sources = (this["sources"] as? JsonArray)
                 ?.mapNotNull { it.jsonPrimitive.contentOrNull }
                 .orEmpty(),
@@ -128,6 +192,7 @@ internal data class AgroCatalogEntry(
     val title: String?,
     val artist: String?,
     val album: String?,
+    val lyrics: String? = null,
     /** Namespaced ids known to hold this audio — `ytm:…`, `navidrome:…`. Never a `local:` id. */
     val sources: List<String>,
     val updatedAt: Long

@@ -53,6 +53,7 @@ internal fun LazyListScope.artistPageSections(
     onLongPressTrack: (UnifiedTrack) -> Unit,
     onToggleLike: (UnifiedTrack) -> Unit,
     onOpenAlbum: (String) -> Unit,
+    onLongPressAlbum: (UnifiedAlbum) -> Unit = {},
     onOpenArtist: (String, String?) -> Unit
 ) {
     if (page.topSongs.isNotEmpty()) {
@@ -87,8 +88,8 @@ internal fun LazyListScope.artistPageSections(
         }
     }
 
-    albumShelf(page.albums, "albums", expandedShelves, loadingShelf, onExpandShelf, onOpenAlbum)
-    albumShelf(page.singles, "singles", expandedShelves, loadingShelf, onExpandShelf, onOpenAlbum)
+    albumShelf(page.albums, "albums", expandedShelves, loadingShelf, onExpandShelf, onOpenAlbum, onLongPressAlbum)
+    albumShelf(page.singles, "singles", expandedShelves, loadingShelf, onExpandShelf, onOpenAlbum, onLongPressAlbum)
 
     if (page.videos.isNotEmpty()) {
         item(key = "videos-title", contentType = SECTION_TITLE) { ArtistSectionTitle("Videos") }
@@ -112,7 +113,7 @@ internal fun LazyListScope.artistPageSections(
                 key = "other-albums-${section.title}",
                 contentType = "album-row"
             ) {
-                AlbumRow(section.albums, onOpenAlbum)
+                AlbumRow(section.albums, onOpenAlbum, onLongPressAlbum)
             }
 
             is ArtistTrackSection -> items(
@@ -160,7 +161,8 @@ private fun LazyListScope.albumShelf(
     expandedShelves: Map<String, List<UnifiedAlbum>>,
     loadingShelf: String?,
     onExpandShelf: (ArtistAlbumSection) -> Unit,
-    onOpenAlbum: (String) -> Unit
+    onOpenAlbum: (String) -> Unit,
+    onLongPressAlbum: (UnifiedAlbum) -> Unit
 ) {
     if (section == null) return
     val albums = expandedShelves[section.title] ?: section.albums
@@ -175,12 +177,16 @@ private fun LazyListScope.albumShelf(
         )
     }
     item(key = "$keyPrefix-row", contentType = "album-row") {
-        AlbumRow(albums, onOpenAlbum)
+        AlbumRow(albums, onOpenAlbum, onLongPressAlbum)
     }
 }
 
 @Composable
-private fun AlbumRow(albums: List<UnifiedAlbum>, onOpenAlbum: (String) -> Unit) {
+private fun AlbumRow(
+    albums: List<UnifiedAlbum>,
+    onOpenAlbum: (String) -> Unit,
+    onLongPressAlbum: (UnifiedAlbum) -> Unit
+) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(horizontal = 20.dp)
@@ -189,6 +195,7 @@ private fun AlbumRow(albums: List<UnifiedAlbum>, onOpenAlbum: (String) -> Unit) 
             AlbumCard(
                 album = album,
                 onClick = { onOpenAlbum(album.id) },
+                onLongClick = { onLongPressAlbum(album) },
                 artworkSize = 132.dp,
                 modifier = Modifier.width(148.dp)
             )
