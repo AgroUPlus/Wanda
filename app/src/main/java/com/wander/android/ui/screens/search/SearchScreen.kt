@@ -172,6 +172,7 @@ fun SearchScreen(
                         ) { match ->
                             com.wander.android.ui.components.LyricMatchRow(
                                 match = match,
+                                searchQuery = query,
                                 onPlay = { viewModel.playTrackAtTimestamp(match.track, match.timestampMs) },
                                 onToggleLike = { viewModel.toggleLike(match.track) },
                                 onLongPress = { actionsFor = match.track }

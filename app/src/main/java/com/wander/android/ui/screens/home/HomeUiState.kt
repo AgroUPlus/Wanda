@@ -28,10 +28,14 @@ data class HomeUiState(
         when (selectedSource) {
             null -> allSections
             else -> allSections
-                // A per-source shelf says nothing once you have filtered to that source.
-                .filterNot { it.id.startsWith(SourceSectionPrefix) }
+                // Keep the per-source shelf for the selected source itself, dropping shelves for other sources.
+                .filterNot { it.id.startsWith(SourceSectionPrefix) && it.id != "$SourceSectionPrefix${selectedSource.name}" }
                 .map { section ->
-                    section.copy(tracks = section.tracks.filter { it.source == selectedSource })
+                    if (section.id == "$SourceSectionPrefix${selectedSource.name}") {
+                        section
+                    } else {
+                        section.copy(tracks = section.tracks.filter { it.source == selectedSource })
+                    }
                 }
                 .filterNot(HomeSection::isEmpty)
         }

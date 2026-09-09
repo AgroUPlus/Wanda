@@ -25,6 +25,11 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import com.wander.android.data.model.LyricMatch
 
 /**
@@ -36,6 +41,7 @@ fun LyricMatchRow(
     match: LyricMatch,
     onPlay: () -> Unit,
     modifier: Modifier = Modifier,
+    searchQuery: String = "",
     onToggleLike: (() -> Unit)? = null,
     onLongPress: (() -> Unit)? = null
 ) {
@@ -122,7 +128,11 @@ fun LyricMatchRow(
                 }
 
                 Text(
-                    text = "“$cleanQuote”",
+                    text = buildHighlightedQuote(
+                        quote = cleanQuote,
+                        searchQuery = searchQuery,
+                        highlightColor = MaterialTheme.colorScheme.primary
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     fontStyle = FontStyle.Italic,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -135,6 +145,75 @@ fun LyricMatchRow(
 
         if (onToggleLike != null) {
             LikeButton(isLiked = track.isLiked, onToggle = onToggleLike)
+        }
+    }
+}
+
+private fun buildHighlightedQuote(
+    quote: String,
+    searchQuery: String,
+    highlightColor: Color
+): AnnotatedString {
+    val fullQuote = "“$quote”"
+    if (searchQuery.isBlank()) {
+        return AnnotatedString(fullQuote)
+    }
+
+    return buildAnnotatedString {
+        append(fullQuote)
+
+        val queryTrimmed = searchQuery.trim()
+        val matchRanges = mutableListOf<IntRange>()
+
+        // Look for exact match first
+        var startIndex = 0
+        while (startIndex < quote.length) {
+            val idx = quote.indexOf(queryTrimmed, startIndex, ignoreCase = true)
+            if (idx == -1) break
+            matchRanges.add(idx until (idx + queryTrimmed.length))
+            startIndex = idx + queryTrimmed.length
+        }
+
+        // If whole query wasn't matched as a contiguous string, highlight individual words (len >= 2)
+        if (matchRanges.isEmpty()) {
+            val terms = queryTrimmed.split(Regex("\\s+")).filter { it.length >= 2 }
+            for (term in terms) {
+                startIndex = 0
+                while (startIndex < quote.length) {
+                    val idx = quote.indexOf(term, startIndex, ignoreCase = true)
+                    if (idx == -1) break
+                    matchRanges.add(idx until (idx + term.length))
+                    startIndex = idx + term.length
+                }
+            }
+        }
+
+        // Sort and merge overlapping match ranges
+        val mergedRanges = mutableListOf<IntRange>()
+        val sortedRanges = matchRanges.sortedBy { it.first }
+        for (range in sortedRanges) {
+            if (mergedRanges.isEmpty()) {
+                mergedRanges.add(range)
+            } else {
+                val last = mergedRanges.last()
+                if (range.first <= last.last + 1) {
+                    mergedRanges[mergedRanges.size - 1] = last.first..maxOf(last.last, range.last)
+                } else {
+                    mergedRanges.add(range)
+                }
+            }
+        }
+
+        val highlightSpan = SpanStyle(
+            color = highlightColor,
+            fontWeight = FontWeight.Bold
+        )
+
+        for (range in mergedRanges) {
+            // Offset by 1 for the leading "“"
+            val start = (range.first + 1).coerceIn(0, fullQuote.length)
+            val end = (range.last + 2).coerceIn(start, fullQuote.length)
+            addStyle(highlightSpan, start, end)
         }
     }
 }

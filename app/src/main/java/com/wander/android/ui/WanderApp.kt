@@ -406,12 +406,12 @@ fun WanderApp(
                 visible = playerDocked && currentRoute == TopLevelDestination.HOME.route,
                 onClick = viewModel::startInstantRadio,
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
+                    .align(Alignment.BottomEnd)
                     // Clears whatever the shell has parked at the bottom: the navigation bar
                     // always, and the docked strip when there is a track. Both are measured
                     // rather than assumed, so the button sits the same distance clear of the
                     // strip as it does of the bar on its own.
-                    .padding(start = 20.dp, bottom = dockBottom + RadioFabClearance)
+                    .padding(end = 20.dp, bottom = dockBottom + RadioFabClearance)
             )
 
             // Offered whenever this device is idle — not merely when it has never played anything.

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -59,17 +60,19 @@ fun StatsScreen(
         }
 
         item(key = "period") {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ButtonGroup(
+                overflowIndicator = {},
                 modifier = Modifier
+                    .fillMaxWidth()
                     .horizontalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
                 StatsPeriod.entries.forEach { period ->
-                    ToggleButton(
+                    toggleableItem(
                         checked = state.period == period,
+                        label = period.label,
                         onCheckedChange = { viewModel.setPeriod(period) }
-                    ) { Text(period.label) }
+                    )
                 }
             }
         }
