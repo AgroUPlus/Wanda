@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.Text
@@ -120,7 +121,7 @@ fun SearchScreen(
                     modifier = centred
                 )
 
-                state.results.isEmpty() -> EmptyState(
+                state.results.isEmpty() && state.lyricMatches.isEmpty() -> EmptyState(
                     title = "No matches",
                     message = "Nothing found for \"$query\" in your connected sources.",
                     modifier = centred
@@ -130,6 +131,41 @@ fun SearchScreen(
                     contentPadding = contentPadding.listInset(),
                     modifier = Modifier.fillMaxSize()
                 ) {
+                    if (state.lyricMatches.isNotEmpty()) {
+                        item(key = "header_lyrics") {
+                            Text(
+                                text = "Matched in lyrics",
+                                style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
+                        items(
+                            items = state.lyricMatches,
+                            key = { "lyric_${it.track.id}" },
+                            contentType = { "lyric_match" }
+                        ) { match ->
+                            com.wander.android.ui.components.LyricMatchRow(
+                                match = match,
+                                onPlay = { viewModel.playTrackAtTimestamp(match.track, match.timestampMs) },
+                                onToggleLike = { viewModel.toggleLike(match.track) },
+                                onLongPress = { actionsFor = match.track }
+                            )
+                        }
+                        if (state.results.isNotEmpty()) {
+                            item(key = "header_tracks") {
+                                Text(
+                                    text = "Songs",
+                                    style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
+                                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier
+                                        .padding(horizontal = 16.dp)
+                                        .padding(top = 16.dp, bottom = 8.dp)
+                                )
+                            }
+                        }
+                    }
+
                     itemsIndexed(
                         items = state.results,
                         key = { _, track -> track.id },
