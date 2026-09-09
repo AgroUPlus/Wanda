@@ -227,7 +227,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
         return stream.uri to stream.headers
     }
 
-    private companion object {
+    internal companion object {
         /**
          * Tracks per run.
          *

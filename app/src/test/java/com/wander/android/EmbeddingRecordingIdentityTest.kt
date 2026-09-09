@@ -21,7 +21,7 @@ class EmbeddingRecordingIdentityTest {
     fun `sequenceSimilarity on identical sequences is 1_0`() {
         val repo = RecordingIdentityRepository(
             embeddingDao = FakeTrackEmbeddingDao(),
-            trackDao = FakeTrackDao()
+            trackDao = FakeTrackDao.create()
         )
         val seqA = Array(5) { unitVector(128, it) }
         val seqB = Array(5) { unitVector(128, it) }
@@ -34,7 +34,7 @@ class EmbeddingRecordingIdentityTest {
     fun `sequenceSimilarity on distinct random sequences is low`() {
         val repo = RecordingIdentityRepository(
             embeddingDao = FakeTrackEmbeddingDao(),
-            trackDao = FakeTrackDao()
+            trackDao = FakeTrackDao.create()
         )
         // Two completely different sets of orthogonal-ish vectors
         val seqA = Array(5) { i ->
@@ -52,7 +52,7 @@ class EmbeddingRecordingIdentityTest {
     fun `meanVector normalizes properly`() {
         val repo = RecordingIdentityRepository(
             embeddingDao = FakeTrackEmbeddingDao(),
-            trackDao = FakeTrackDao()
+            trackDao = FakeTrackDao.create()
         )
         val seq = Array(4) { unitVector(128, it) }
         val mean = repo.meanVector(seq)
@@ -75,39 +75,23 @@ class EmbeddingRecordingIdentityTest {
         override suspend fun clear() {}
     }
 
-    private class FakeTrackDao : com.wander.android.core.database.dao.TrackDao {
-        override fun getAllTracksFlow() = kotlinx.coroutines.flow.emptyFlow<List<com.wander.android.core.database.entity.TrackEntity>>()
-        override fun pagedTracks(): androidx.paging.PagingSource<Int, com.wander.android.core.database.entity.TrackEntity> = throw NotImplementedError()
-        override fun pagedTracksBySource(source: com.wander.android.data.model.SourceType): androidx.paging.PagingSource<Int, com.wander.android.core.database.entity.TrackEntity> = throw NotImplementedError()
-        override suspend fun libraryTrackIds() = emptyList<String>()
-        override suspend fun libraryTrackIdsBySource(source: com.wander.android.data.model.SourceType) = emptyList<String>()
-        override suspend fun getAllTracksOnce() = emptyList<com.wander.android.core.database.entity.TrackEntity>()
-        override fun getTracksBySourceFlow(source: com.wander.android.data.model.SourceType) = kotlinx.coroutines.flow.emptyFlow<List<com.wander.android.core.database.entity.TrackEntity>>()
-        override fun getLikedTracksFlow() = kotlinx.coroutines.flow.emptyFlow<List<com.wander.android.core.database.entity.TrackEntity>>()
-        override fun getLikedTrackIdsFlow() = kotlinx.coroutines.flow.emptyFlow<List<String>>()
-        override fun getDownloadedTracksFlow() = kotlinx.coroutines.flow.emptyFlow<List<com.wander.android.core.database.entity.TrackEntity>>()
-        override suspend fun getOfflineTracksOnce() = emptyList<com.wander.android.core.database.entity.TrackEntity>()
-        override fun getTracksByAlbumFlow(albumId: String) = kotlinx.coroutines.flow.emptyFlow<List<com.wander.android.core.database.entity.TrackEntity>>()
-        override suspend fun getTrackById(id: String): com.wander.android.core.database.entity.TrackEntity? = null
-        override suspend fun getCandidateIdsByDuration(excludingId: String, minDurationMs: Long, maxDurationMs: Long) = emptyList<String>()
-        override suspend fun getTracksInAlbum(albumId: String) = emptyList<com.wander.android.core.database.entity.TrackEntity>()
-        override suspend fun getTracksInSource(source: com.wander.android.data.model.SourceType) = emptyList<com.wander.android.core.database.entity.TrackEntity>()
-        override fun getTracksByArtistFlow(artist: String) = kotlinx.coroutines.flow.emptyFlow<List<com.wander.android.core.database.entity.TrackEntity>>()
-        override suspend fun searchTracksOnce(query: String) = emptyList<com.wander.android.core.database.entity.TrackEntity>()
-        override fun getTracksBySourceAndTitleFlow(source: com.wander.android.data.model.SourceType, query: String) = kotlinx.coroutines.flow.emptyFlow<List<com.wander.android.core.database.entity.TrackEntity>>()
-        override suspend fun insert(track: com.wander.android.core.database.entity.TrackEntity) = 0L
-        override suspend fun insertAll(tracks: List<com.wander.android.core.database.entity.TrackEntity>) = emptyList<Long>()
-        override suspend fun upsert(track: com.wander.android.core.database.entity.TrackEntity) = 0L
-        override suspend fun update(track: com.wander.android.core.database.entity.TrackEntity) {}
-        override suspend fun updateSourceMetadata(tracks: List<com.wander.android.core.database.entity.TrackSourceFields>) {}
-        override suspend fun updateLikeStatus(trackId: String, isLiked: Boolean) {}
-        override suspend fun markDownloaded(trackId: String, localFilePath: String) {}
-        override suspend fun removeDownloaded(trackId: String) {}
-        override suspend fun recordPlay(trackId: String, timestamp: Long) {}
-        override suspend fun deleteById(trackId: String) {}
-        override suspend fun deleteTracks(trackIds: List<String>) {}
-        override suspend fun clearNonLibraryTracks() {}
-        override suspend fun clear() {}
-        override suspend fun pruneOneShotTracks() {}
+    private class FakeTrackDao {
+        companion object {
+            fun create(): com.wander.android.core.database.dao.TrackDao {
+                val clazz = com.wander.android.core.database.dao.TrackDao::class.java
+                return java.lang.reflect.Proxy.newProxyInstance(
+                    clazz.classLoader,
+                    arrayOf(clazz)
+                ) { _, method, _ ->
+                    when (method.returnType) {
+                        Boolean::class.javaPrimitiveType -> false
+                        Int::class.javaPrimitiveType -> 0
+                        Long::class.javaPrimitiveType -> 0L
+                        List::class.java -> emptyList<Any>()
+                        else -> null
+                    }
+                } as com.wander.android.core.database.dao.TrackDao
+            }
+        }
     }
 }
