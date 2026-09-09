@@ -29,7 +29,8 @@ internal class PlaybackCoordinator @Inject constructor(
     private val connection: PlayerConnection,
     private val musicRepository: MusicRepository,
     private val lyricsRepository: LyricsRepository,
-    private val jamRepository: JamRepository
+    private val jamRepository: JamRepository,
+    private val secureStorage: com.wander.android.core.security.SecureStorage
 ) {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -43,7 +44,10 @@ internal class PlaybackCoordinator @Inject constructor(
             .onEach { track ->
                 _lyrics.value = null
                 if (track == null) return@onEach
-                com.wander.android.core.audio.fingerprint.FingerprintIndexing.enqueue(context)
+                com.wander.android.core.audio.fingerprint.FingerprintIndexing.enqueue(
+                    context,
+                    allowMobileData = secureStorage.isIndexOnMobileDataEnabled.value
+                )
                 _lyrics.value = lyricsRepository.getLyrics(
                     trackId = track.id,
                     trackTitle = track.title,

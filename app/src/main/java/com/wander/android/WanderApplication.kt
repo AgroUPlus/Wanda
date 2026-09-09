@@ -30,6 +30,7 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
     @Inject lateinit var downloadScheduler: DownloadScheduler
     @Inject lateinit var scrobbleSyncScheduler: ScrobbleSyncScheduler
     @Inject lateinit var p2pServer: com.wander.android.core.sync.P2PServer
+    @Inject lateinit var secureStorage: com.wander.android.core.security.SecureStorage
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -69,7 +70,10 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
     override fun onCreate() {
         super.onCreate()
         downloadScheduler.scheduleAutoDownload()
-        com.wander.android.core.audio.fingerprint.FingerprintIndexing.schedulePeriodic(this)
+        com.wander.android.core.audio.fingerprint.FingerprintIndexing.schedulePeriodic(
+            this,
+            allowMobileData = secureStorage.isIndexOnMobileDataEnabled.value
+        )
         // Cheap and self-gating: the worker does nothing until an Agro server is paired.
         scrobbleSyncScheduler.schedule()
         // Embedded P2P server for direct high-speed LAN audio transfers.

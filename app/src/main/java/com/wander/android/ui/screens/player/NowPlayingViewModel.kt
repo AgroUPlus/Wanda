@@ -33,7 +33,8 @@ internal class NowPlayingViewModel @Inject constructor(
     private val playerConnection: PlayerConnection,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     fingerprintStatuses: FingerprintStatusRepository,
-    jamRepository: JamRepository
+    jamRepository: JamRepository,
+    private val secureStorage: com.wander.android.core.security.SecureStorage
 ) : ViewModel() {
 
     /** What has been measured about the track on screen. */
@@ -66,7 +67,11 @@ internal class NowPlayingViewModel @Inject constructor(
                 .collect { (trackId, status) ->
                     if (trackId == null || status != null) return@collect
                     if (!requested.add(trackId)) return@collect
-                    FingerprintIndexing.enqueueFor(context, trackId)
+                    FingerprintIndexing.enqueueFor(
+                        context,
+                        trackId,
+                        allowMobileData = secureStorage.isIndexOnMobileDataEnabled.value
+                    )
                 }
         }
     }

@@ -64,31 +64,33 @@ object FingerprintIndexing {
     }
 
     /**
-     * Periodic background pass: runs when charging and unmetered Wi-Fi.
+     * Periodic background pass: runs when charging and on Wi-Fi (or mobile data if enabled).
      */
-    fun schedulePeriodic(context: Context) {
+    fun schedulePeriodic(context: Context, allowMobileData: Boolean = false) {
         val request = androidx.work.PeriodicWorkRequestBuilder<FingerprintIndexWorker>(6, java.util.concurrent.TimeUnit.HOURS)
             .addTag(WorkControls.tagFor(WorkProgressNotification.Kind.FINGERPRINT))
             .setConstraints(
                 Constraints.Builder()
                     .setRequiresCharging(true)
                     .setRequiresBatteryNotLow(true)
-                    .setRequiredNetworkType(NetworkType.UNMETERED)
+                    .setRequiredNetworkType(
+                        if (allowMobileData) NetworkType.CONNECTED else NetworkType.UNMETERED
+                    )
                     .build()
             )
             .build()
 
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             "$NAME-periodic",
-            androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+            androidx.work.ExistingPeriodicWorkPolicy.UPDATE,
             request
         )
     }
 
     /**
-     * Queues one track to measure when charging and on Wi-Fi.
+     * Queues one track to measure when charging and on Wi-Fi (or mobile data if enabled).
      */
-    fun enqueueFor(context: Context, trackId: String) {
+    fun enqueueFor(context: Context, trackId: String, allowMobileData: Boolean = false) {
         WorkManager.getInstance(context).enqueueUniqueWork(
             "$NAME:$trackId",
             ExistingWorkPolicy.KEEP,
@@ -98,7 +100,9 @@ object FingerprintIndexing {
                     Constraints.Builder()
                         .setRequiresCharging(true)
                         .setRequiresBatteryNotLow(true)
-                        .setRequiredNetworkType(NetworkType.UNMETERED)
+                        .setRequiredNetworkType(
+                            if (allowMobileData) NetworkType.CONNECTED else NetworkType.UNMETERED
+                        )
                         .build()
                 )
                 .setInputData(workDataOf(KEY_TRACK_ID to trackId))

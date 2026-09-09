@@ -445,6 +445,10 @@ internal class SettingsViewModel @Inject constructor(
      */
     fun setIndexOnMobileDataEnabled(enabled: Boolean) {
         secureStorage.setIndexOnMobileDataEnabled(enabled)
+        com.wander.android.core.audio.fingerprint.FingerprintIndexing.schedulePeriodic(
+            context,
+            allowMobileData = enabled
+        )
         if (enabled) indexFingerprintsNow()
     }
 
