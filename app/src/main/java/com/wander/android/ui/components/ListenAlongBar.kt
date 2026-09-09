@@ -101,9 +101,13 @@ internal fun ListenAlongBar(
  * host changed track, nothing happened here, and without this the app said nothing at all about
  * why.
  */
-private fun ListenAlongSession.statusLine(): String {
+internal fun ListenAlongSession.statusLine(): String {
     unresolvable?.let { return "Can't find “$it” in any of your sources" }
     val track = nowPlaying ?: return "Waiting for them to play something"
+    // Sealed to a key this device does not hold. Without this the line renders the server's
+    // placeholder against an empty artist — a blank half-line that reads as a bug rather than as
+    // the one thing it actually means.
+    if (track.isLocked) return "Private session — you can't open this one"
     // The transport used to be spelled out here as well; it is the badge's job now, and repeating
     // it cost the half of the line that says what is actually playing.
     return "${track.trackTitle} — ${track.artistName}"

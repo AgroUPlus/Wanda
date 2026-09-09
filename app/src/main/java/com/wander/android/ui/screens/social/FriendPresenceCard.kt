@@ -75,21 +75,42 @@ internal fun FriendPresenceCard(
                     ) {}
                 }
             }
-            Text(
-                text = nowPlaying.trackTitle,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Clip,
-                modifier = Modifier.scrollingTitle()
-            )
-            Text(
-                text = nowPlaying.artistName,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Clip,
-                modifier = Modifier.scrollingTitle()
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // A sealed session travelled through the server as ciphertext. The lock says so
+                // whether or not it opened — that it was encrypted is true either way, and it is
+                // the same badge the drops inbox uses for the same fact.
+                if (nowPlaying.encryptedPresence != null) {
+                    EncryptedThreadLock()
+                }
+                Text(
+                    // A session that arrived sealed and would not open: this device knows a friend
+                    // is playing but not what. Saying so is honest; showing the server's
+                    // placeholder as though it were a title would not be.
+                    text = if (nowPlaying.isLocked) "Private session" else nowPlaying.trackTitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (nowPlaying.isLocked) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.weight(1f).scrollingTitle()
+                )
+            }
+            if (!nowPlaying.isLocked) {
+                Text(
+                    text = nowPlaying.artistName,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.scrollingTitle()
+                )
+            }
         }
     }
 }

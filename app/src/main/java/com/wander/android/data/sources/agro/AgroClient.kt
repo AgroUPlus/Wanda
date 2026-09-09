@@ -2,6 +2,8 @@ package com.wander.android.data.sources.agro
 
 import com.wander.android.core.security.AgroVault
 import com.wander.android.core.security.SecureStorage
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -72,53 +74,6 @@ class AgroClient @Inject constructor(
     }
 
     /**
-     * Event-driven handoff: called only on Media3 playback transitions, never on timers.
-     * See [AgroHandoffPublisher], which is what decides an event is worth sending.
-     */
-    suspend fun sendHandoffState(
-        trackUri: String,
-        title: String,
-        artist: String,
-        album: String?,
-        artworkUrl: String?,
-        positionMs: Long,
-        durationMs: Long,
-        isPlaying: Boolean,
-        contentHash: String? = null
-    ): Result<Unit> {
-        val mutation = """
-            mutation UpdateHandoff(${'$'}input: HandoffInput!) {
-                updateHandoff(input: ${'$'}input)
-            }
-        """.trimIndent()
-
-        val variables = buildJsonObject {
-            put("input", buildJsonObject {
-                put("userId", secureStorage.agroUsername)
-                put("trackUri", trackUri)
-                put("trackTitle", title)
-                put("artistName", artist)
-                album?.let { put("albumName", it) }
-                // Optional in `HandoffInput`, but it is what lets the receiving client show the
-                // right cover without looking the track up again.
-                artworkUrl?.let { put("artworkUrl", it) }
-                put("positionMs", positionMs)
-                // What the position is measured against. Without it anything rendering this
-                // session can only show an elapsed count — a progress bar needs both ends.
-                put("durationMs", durationMs)
-                put("isPlaying", isPlaying)
-                put("deviceId", secureStorage.agroDeviceId)
-                // Only sent when this device actually has the file and has hashed it. Omitted
-                // rather than nulled: the server keeps the hash a track change established instead
-                // of erasing it on the next heartbeat.
-                contentHash?.takeIf { it.isNotBlank() }?.let { put("contentHash", it) }
-            })
-        }
-
-        return graphQl.execute(mutation, variables).discardPayload()
-    }
-
-    /**
      * Asks the server who this device's stored token belongs to.
      *
      * The only way to find out that a credential has stopped working. A revoked app password or a
@@ -166,6 +121,9 @@ class AgroClient @Inject constructor(
 
     companion object {
         const val DEFAULT_SERVER_URL = "https://agro.kolbxyz.xyz"
+
+        /** Placeholder title on a sealed handoff — the real one is inside [HandoffInput]'s envelope. */
+        const val PRIVATE_SESSION_TITLE = "Private Session"
     }
 
     /**
@@ -361,4 +319,5 @@ internal data class AgroIdentity(val username: String, val role: String) {
  * These mutations return an acknowledgement the caller has no use for — what matters is that the
  * server accepted the write. Named rather than an empty `map { }` so that is legible as a choice.
  */
-private fun <T> Result<T>.discardPayload(): Result<Unit> = map { Unit }
+/** Shared with [AgroHandoffApi]: a mutation whose only interesting answer is whether it failed. */
+internal fun <T> Result<T>.discardPayload(): Result<Unit> = map { Unit }

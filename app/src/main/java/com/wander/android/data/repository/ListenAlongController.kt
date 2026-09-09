@@ -241,6 +241,16 @@ internal class ListenAlongController @Inject constructor(
             return
         }
         if (frame.trackTitle.isBlank()) return
+        if (frame.isLocked) {
+            // The host sealed this session to a key this device does not hold. There is no uri and
+            // no hash to resolve, so there is nothing to follow — the session stays, showing that
+            // it is private, rather than the player chasing a track it cannot name.
+            _session.value = current.copy(
+                nowPlaying = current.nowPlaying?.copy(isLocked = true),
+                unresolvable = null
+            )
+            return
+        }
 
         pending = AgroFriendNowPlaying(
             username = frame.host,

@@ -197,7 +197,15 @@ internal sealed interface AgroLiveMessage {
         /** Set only when the server judged both devices to be on one local network. */
         val peerLanAddress: String? = null,
         /** The bearer token to present to [peerLanAddress]. Useless, and absent, without it. */
-        val peerLanToken: String? = null
+        val peerLanToken: String? = null,
+        /**
+         * True when the host sealed this session and this device could not open it.
+         *
+         * Everything above it is then the server's placeholder rather than the track. Following is
+         * impossible — there is no uri and no hash to resolve — so the bar says so instead of
+         * showing an empty line where a title should be.
+         */
+        val isLocked: Boolean = false
     ) : AgroLiveMessage
 
     /**

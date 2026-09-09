@@ -96,6 +96,30 @@ class RecordingFingerprinterTest {
         assertTrue("noise destroyed the fingerprint: $similarity", similarity > 0.60)
     }
 
+    /**
+     * A pair with no exact sub-hash in common is still compared, not scored zero.
+     *
+     * The offset vote needs two sub-hashes equal in all 32 bits. Degradation flips bits, so a
+     * genuine re-encode can share very few exact values and often none — and treating "no votes"
+     * as "no similarity" scored a degraded copy of a track *below* an unrelated one, which is the
+     * single comparison the fingerprint exists to get right. The vote says where to look, never
+     * whether to look.
+     */
+    @Test
+    fun `a degraded copy is still compared when the vote finds nothing`() {
+        val audio = music(3)
+        val alignment = RecordingFingerprinter.aligned(
+            RecordingFingerprinter.fingerprint(audio),
+            RecordingFingerprinter.fingerprint(noisy(audio, 0.002f, 9))
+        )
+
+        assertEquals(0, alignment.votes)
+        assertTrue(
+            "an unvoted pair was scored without being compared: ${alignment.similarity}",
+            alignment.similarity > 0.60
+        )
+    }
+
     /** The margin the matcher has to work in: degraded-same must beat unrelated, clearly. */
     @Test
     fun `a degraded copy scores well above an unrelated recording`() {
