@@ -39,7 +39,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var playerConnection: PlayerConnection
     @Inject lateinit var secureStorage: SecureStorage
     @Inject lateinit var agroClient: AgroClient
-    @Inject lateinit var agroHandoffPublisher: AgroHandoffPublisher
+    @Inject internal lateinit var agroHandoffPublisher: AgroHandoffPublisher
     @Inject lateinit var linkRepository: LinkRepository
     @Inject lateinit var musicRepository: com.wander.android.data.repository.MusicRepository
     @Inject lateinit var shareLinkRewriter: ShareLinkRewriter

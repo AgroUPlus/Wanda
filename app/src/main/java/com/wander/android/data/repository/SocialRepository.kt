@@ -44,7 +44,8 @@ internal class SocialRepository @Inject constructor(
     private val friendDao: FriendDao,
     private val statsApi: AgroStatsApi,
     private val feedApi: AgroFeedApi,
-    private val secureStorage: SecureStorage
+    private val secureStorage: SecureStorage,
+    private val friendKeys: FriendKeyDirectory
 ) {
     val friends: Flow<List<AgroProfile>> =
         friendDao.observeFriends().map { rows -> rows.map { it.toProfile() } }
@@ -226,11 +227,19 @@ internal class SocialRepository @Inject constructor(
         friendsApi.redeemFriendCode(code).also { if (it.getOrNull() != null) refresh() }
 
     private suspend fun Result<Boolean>.alsoRefresh(): Result<Boolean> =
-        also { if (it.getOrDefault(false)) refresh() }
+        also {
+            if (it.getOrDefault(false)) {
+                // The cached key lists describe a graph that has just changed. Sealing the next
+                // track to them would either miss a new friend or keep sealing to one who is gone.
+                friendKeys.invalidate()
+                refresh()
+            }
+        }
 
     /** Cleared on unpair: another account's friends are not this one's to keep. */
     suspend fun clear() {
         friendDao.clear()
+        friendKeys.invalidate()
         _nowPlaying.value = emptyList()
     }
 

@@ -19,7 +19,7 @@ internal const val PROFILE_FIELDS =
 
 internal const val NOW_PLAYING_FIELDS =
     "username trackUri trackTitle artistName albumName artworkUrl positionMs isPlaying updatedAt " +
-        "deviceId contentHash peerLanAddress peerLanToken"
+        "deviceId contentHash peerLanAddress peerLanToken encryptedPresence"
 
 internal fun JsonObject.toProfile(): AgroProfile = AgroProfile(
     username = str("username") ?: error("profile has no username"),
@@ -49,7 +49,8 @@ internal fun JsonObject.toNowPlaying(): AgroFriendNowPlaying = AgroFriendNowPlay
     deviceId = str("deviceId"),
     contentHash = str("contentHash"),
     peerLanAddress = str("peerLanAddress"),
-    peerLanToken = str("peerLanToken")
+    peerLanToken = str("peerLanToken"),
+    encryptedPresence = str("encryptedPresence")
 )
 
 internal fun JsonObject.toFriend(): AgroFriend = AgroFriend(

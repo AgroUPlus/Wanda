@@ -58,7 +58,9 @@ internal class SettingsViewModel @Inject constructor(
     private val accountApi: AgroAccountApi,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val workControls: com.wander.android.core.work.WorkControls,
-    private val fingerprintProgress: com.wander.android.core.audio.fingerprint.FingerprintProgress
+    private val fingerprintProgress: com.wander.android.core.audio.fingerprint.FingerprintProgress,
+    private val socialRepository: com.wander.android.data.repository.SocialRepository,
+    private val dropsRepository: com.wander.android.data.repository.DropsRepository
 ) : ViewModel() {
 
     val appVersion: String get() = com.wander.android.BuildConfig.VERSION_NAME
@@ -287,6 +289,9 @@ internal class SettingsViewModel @Inject constructor(
     /** Off until asked for, like everything else that sends something outward. */
     val popularityEnabled: StateFlow<Boolean> = secureStorage.agroPopularityContributionFlow
 
+    /** Same reason, and the same default. */
+    val catalogTradeEnabled: StateFlow<Boolean> = secureStorage.agroCatalogTradeFlow
+
     /**
      * Whether the server lets this account archive.
      *
@@ -357,6 +362,10 @@ internal class SettingsViewModel @Inject constructor(
 
     fun setPopularityContribution(enabled: Boolean) {
         secureStorage.setAgroPopularityContribution(enabled)
+    }
+
+    fun setCatalogTrade(enabled: Boolean) {
+        secureStorage.setAgroCatalogTrade(enabled)
     }
 
     fun setServerArchive(enabled: Boolean) {
@@ -504,6 +513,13 @@ internal class SettingsViewModel @Inject constructor(
                 runCatching { accountManager.signOut() }
             }
             secureStorage.clearAllCredentials()
+            // The credentials go, and so does everything they were used to fetch. Both caches are
+            // documented as "cleared on unpair" and neither was being cleared by anything: the
+            // friend graph and the drop inbox — including the notes' ciphertexts and the friends'
+            // published keys — survived "forget all credentials" and would have been handed
+            // straight to whoever paired next.
+            runCatching { socialRepository.clear() }
+            runCatching { dropsRepository.clear() }
             resetAgroPairing()
         }
     }

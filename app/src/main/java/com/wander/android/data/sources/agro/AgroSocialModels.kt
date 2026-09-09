@@ -75,7 +75,23 @@ internal data class AgroFriendNowPlaying(
      * is usable without the other: the address alone reaches a server that will refuse it.
      */
     val peerLanAddress: String? = null,
-    val peerLanToken: String? = null
+    val peerLanToken: String? = null,
+    /**
+     * The session's real metadata, sealed to this device's key, when the friend sealed it.
+     *
+     * Present means the plaintext [trackTitle] and [artistName] above are a placeholder and this is
+     * where the truth is. Opened at the source boundary, so nothing above this layer has to know a
+     * sealed session from an ordinary one.
+     */
+    val encryptedPresence: String? = null,
+    /**
+     * True when this session arrived sealed and could not be opened.
+     *
+     * Distinct from an ordinary session: the app knows something is playing but not what, and says
+     * so rather than showing the placeholder as if it were a track name. Happens when a friend has
+     * sealed to a device key this install no longer holds — a reinstall, or a restore.
+     */
+    val isLocked: Boolean = false
 )
 
 /** A friend, with whatever they are playing when they allow that to be seen. */
