@@ -50,9 +50,11 @@ import com.wander.android.core.database.converter.SourceTypeConverter
         CanonicalMetadataEntity::class,
         TrackFeatureEntity::class,
         MelodyContourEntity::class,
-        TrackEmbeddingEntity::class
+        TrackEmbeddingEntity::class,
+        com.wander.android.core.database.entity.TrackLyricsEntity::class,
+        com.wander.android.core.database.entity.LyricsFtsEntity::class
     ],
-    version = 28,
+    version = 29,
     exportSchema = true
 )
 @TypeConverters(SourceTypeConverter::class)
@@ -72,4 +74,5 @@ abstract class WanderDatabase : RoomDatabase() {
     abstract fun melodyContourDao(): MelodyContourDao
     abstract fun trackEmbeddingDao(): TrackEmbeddingDao
     abstract fun trackAttemptDao(): com.wander.android.core.database.dao.TrackAttemptDao
+    abstract fun trackLyricsDao(): com.wander.android.core.database.dao.TrackLyricsDao
 }

@@ -155,5 +155,7 @@ class EmbeddingRecordingIdentityTest {
         override suspend fun clearBySource(source: com.wander.android.data.model.SourceType) {}
         override suspend fun getTracksByIds(ids: List<String>): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun findByContentHash(hash: String): com.wander.android.core.database.entity.TrackEntity? = null
+        override suspend fun getFingerprintableTrackCount(): Int = 0
+        override suspend fun getFingerprintableTrackIds(): List<String> = emptyList()
     }
 }

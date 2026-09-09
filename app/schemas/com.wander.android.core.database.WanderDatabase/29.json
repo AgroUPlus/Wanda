@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 27,
-    "identityHash": "c1e26954620679f6ce910adf17da09c1",
+    "version": 29,
+    "identityHash": "4a351dbfced185b49ac674e3ad8acf8d",
     "entities": [
       {
         "tableName": "tracks",
@@ -743,49 +743,6 @@
         ]
       },
       {
-        "tableName": "fingerprints",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`hash` INTEGER NOT NULL, `trackId` TEXT NOT NULL, `anchorFrame` INTEGER NOT NULL, PRIMARY KEY(`hash`, `trackId`, `anchorFrame`))",
-        "fields": [
-          {
-            "fieldPath": "hash",
-            "columnName": "hash",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "trackId",
-            "columnName": "trackId",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "anchorFrame",
-            "columnName": "anchorFrame",
-            "affinity": "INTEGER",
-            "notNull": true
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": false,
-          "columnNames": [
-            "hash",
-            "trackId",
-            "anchorFrame"
-          ]
-        },
-        "indices": [
-          {
-            "name": "index_fingerprints_trackId",
-            "unique": false,
-            "columnNames": [
-              "trackId"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_fingerprints_trackId` ON `${TABLE_NAME}` (`trackId`)"
-          }
-        ]
-      },
-      {
         "tableName": "local_playlists",
         "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `comment` TEXT, `coverArtUrl` TEXT, `trackIds` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
@@ -1054,7 +1011,7 @@
       },
       {
         "tableName": "track_embeddings",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`trackId` TEXT NOT NULL, `vector` BLOB NOT NULL, `dim` INTEGER NOT NULL, `model` TEXT NOT NULL, `version` INTEGER NOT NULL, `computedAt` INTEGER NOT NULL, PRIMARY KEY(`trackId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`trackId` TEXT NOT NULL, `vector` BLOB NOT NULL, `centroid` BLOB, `dim` INTEGER NOT NULL, `model` TEXT NOT NULL, `version` INTEGER NOT NULL, `computedAt` INTEGER NOT NULL, PRIMARY KEY(`trackId`))",
         "fields": [
           {
             "fieldPath": "trackId",
@@ -1067,6 +1024,11 @@
             "columnName": "vector",
             "affinity": "BLOB",
             "notNull": true
+          },
+          {
+            "fieldPath": "centroid",
+            "columnName": "centroid",
+            "affinity": "BLOB"
           },
           {
             "fieldPath": "dim",
@@ -1180,7 +1142,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c1e26954620679f6ce910adf17da09c1')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4a351dbfced185b49ac674e3ad8acf8d')"
     ]
   }
 }
