@@ -67,4 +67,5 @@ object AppModule {
     @Provides fun provideMelodyContourDao(db: WanderDatabase): com.wander.android.core.database.dao.MelodyContourDao = db.melodyContourDao()
     @Provides fun provideTrackEmbeddingDao(db: WanderDatabase): com.wander.android.core.database.dao.TrackEmbeddingDao = db.trackEmbeddingDao()
     @Provides fun provideTrackAttemptDao(db: WanderDatabase): com.wander.android.core.database.dao.TrackAttemptDao = db.trackAttemptDao()
+    @Provides fun provideTrackLyricsDao(db: WanderDatabase): com.wander.android.core.database.dao.TrackLyricsDao = db.trackLyricsDao()
 }
