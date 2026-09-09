@@ -25,6 +25,7 @@ import javax.inject.Singleton
  */
 @Singleton
 internal class PlaybackCoordinator @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val connection: PlayerConnection,
     private val musicRepository: MusicRepository,
     private val lyricsRepository: LyricsRepository,
@@ -42,6 +43,7 @@ internal class PlaybackCoordinator @Inject constructor(
             .onEach { track ->
                 _lyrics.value = null
                 if (track == null) return@onEach
+                com.wander.android.core.audio.fingerprint.FingerprintIndexing.enqueueFor(context, track.id)
                 _lyrics.value = lyricsRepository.getLyrics(
                     trackId = track.id,
                     trackTitle = track.title,

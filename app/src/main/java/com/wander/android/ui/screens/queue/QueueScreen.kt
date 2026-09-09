@@ -37,6 +37,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -45,10 +48,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.agro.Jam
 import com.wander.android.data.sources.agro.JamTrack
+import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.EmptyState
+import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.scrollingTitle
 import com.wander.android.ui.screens.social.JamViewModel
@@ -58,11 +64,50 @@ internal fun QueueScreen(
     playerConnection: PlayerConnection,
     onClose: () -> Unit,
     onOpenJam: () -> Unit = {},
-    jamViewModel: JamViewModel = hiltViewModel()
+    onOpenArtist: ((String, String?) -> Unit)? = null,
+    jamViewModel: JamViewModel = hiltViewModel(),
+    queueViewModel: QueueViewModel = hiltViewModel()
 ) {
     val state by playerConnection.state.collectAsStateWithLifecycle()
     val jamState by jamViewModel.state.collectAsStateWithLifecycle()
     val jam = jamState.jam
+    var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
+    val addToPlaylist = AddToPlaylistHost()
+
+    actionsFor?.let { track ->
+        TrackActionsSheet(
+            track = track,
+            isLiked = track.isLiked,
+            onPlayNext = {
+                queueViewModel.playNext(track)
+                actionsFor = null
+            },
+            onAddToQueue = {
+                queueViewModel.addToQueue(track)
+                actionsFor = null
+            },
+            onStartRadio = {
+                queueViewModel.startRadio(track)
+                actionsFor = null
+            },
+            onToggleLike = { queueViewModel.toggleLike(track) },
+            onRemove = {
+                val idx = state.queue.indexOfFirst { it.id == track.id }
+                if (idx >= 0) queueViewModel.removeFromQueue(idx)
+                actionsFor = null
+            },
+            onOpenArtist = track.artist
+                .takeIf { it.isNotBlank() }
+                ?.let { artist -> onOpenArtist?.let { open -> { open(artist, track.artistId) } } },
+            onDismiss = { actionsFor = null },
+            onShare = if (queueViewModel.canShare(track)) {
+                { queueViewModel.share(track) }
+            } else null,
+            onAddToPlaylist = if (addToPlaylist.canAdd(track)) {
+                { addToPlaylist.open(track) }
+            } else null
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -118,7 +163,9 @@ internal fun QueueScreen(
         } else {
             LocalQueueContent(
                 state = state,
-                playerConnection = playerConnection
+                playerConnection = playerConnection,
+                onTrackLongPress = { actionsFor = it },
+                onToggleLike = { queueViewModel.toggleLike(it) }
             )
         }
     }
@@ -375,7 +422,9 @@ private fun JamProposalItem(
 @Composable
 private fun LocalQueueContent(
     state: com.wander.android.core.playback.PlaybackState,
-    playerConnection: PlayerConnection
+    playerConnection: PlayerConnection,
+    onTrackLongPress: (UnifiedTrack) -> Unit,
+    onToggleLike: (UnifiedTrack) -> Unit
 ) {
     if (state.queue.isEmpty()) {
         EmptyState(
@@ -396,7 +445,9 @@ private fun LocalQueueContent(
                 track = track,
                 isPlaying = index == state.currentIndex,
                 onPlay = { playerConnection.seekToIndex(index) },
-                onRemove = { playerConnection.removeFromQueue(index) }
+                onToggleLike = { onToggleLike(track) },
+                onRemove = { playerConnection.removeFromQueue(index) },
+                onLongPress = { onTrackLongPress(track) }
             )
         }
     }

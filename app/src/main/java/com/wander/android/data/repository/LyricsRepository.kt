@@ -45,9 +45,14 @@ class LyricsRepository @Inject constructor(
         albumName: String? = null,
         durationSeconds: Long? = null
     ): LyricsData? = withContext(Dispatchers.IO) {
-        // Step 1: Check offline Room database
-        val cached = trackLyricsDao.getLyricsForTrack(trackId)
+        // Step 1: Check offline Room database (source-agnostic: by trackId or by title & artist)
+        val cached = trackLyricsDao.findLyricsForTrackOrMetadata(trackId, trackTitle.trim(), artistName.trim())
+            ?: trackLyricsDao.getLyricsForTrack(trackId)
         if (cached != null) {
+            if (cached.trackId != trackId) {
+                // Link these lyrics to the current trackId so future lookups are instant
+                trackLyricsDao.saveLyricsWithFts(cached.copy(trackId = trackId))
+            }
             if (!cached.syncedLyrics.isNullOrBlank()) {
                 val lines = parseLrc(cached.syncedLyrics)
                 return@withContext LyricsData(
@@ -147,8 +152,8 @@ class LyricsRepository @Inject constructor(
         if (ftsQuery.isBlank()) return@withContext emptyList()
 
         try {
-            val results = trackLyricsDao.searchTracksByLyrics(ftsQuery, limit)
-            results.map { res ->
+            val results = trackLyricsDao.searchTracksByLyrics(ftsQuery, limit * 2)
+            val matches = results.map { res ->
                 val (line, ts) = findMatchingLine(res.plainLyrics, res.syncedLyrics, query)
                 LyricMatch(
                     track = res.track.toUnifiedTrack(),
@@ -158,6 +163,17 @@ class LyricsRepository @Inject constructor(
                     source = "LyricsFTS"
                 )
             }
+            // Deduplicate across sources (Local > Navidrome > YTM) using canonical recordingKey
+            val seenKeys = mutableSetOf<String>()
+            val deduplicated = mutableListOf<LyricMatch>()
+            for (match in matches.sortedBy { it.track.source.priority }) {
+                val key = TrackDeduplicator.recordingKey(match.track)
+                if (seenKeys.add(key)) {
+                    deduplicated.add(match)
+                }
+                if (deduplicated.size >= limit) break
+            }
+            deduplicated
         } catch (e: Exception) {
             emptyList()
         }

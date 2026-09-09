@@ -25,6 +25,18 @@ interface TrackLyricsDao {
     @Query("SELECT * FROM track_lyrics WHERE trackId = :trackId")
     suspend fun getLyricsForTrack(trackId: String): TrackLyricsEntity?
 
+    @Query(
+        """
+        SELECT l.* FROM track_lyrics l
+        LEFT JOIN tracks t ON t.id = l.trackId
+        WHERE l.trackId = :trackId
+           OR (LOWER(t.title) = LOWER(:title) AND LOWER(t.artist) = LOWER(:artist))
+        ORDER BY CASE WHEN l.trackId = :trackId THEN 0 ELSE 1 END, l.syncedAt DESC
+        LIMIT 1
+        """
+    )
+    suspend fun findLyricsForTrackOrMetadata(trackId: String, title: String, artist: String): TrackLyricsEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLyrics(lyrics: TrackLyricsEntity)
 

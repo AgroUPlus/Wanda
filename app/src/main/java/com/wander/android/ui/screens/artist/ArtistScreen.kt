@@ -22,8 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistHost
+import com.wander.android.ui.components.AlbumActionsSheet
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.headerInset
@@ -45,6 +47,7 @@ internal fun ArtistScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
+    var albumActionsFor by remember { mutableStateOf<UnifiedAlbum?>(null) }
     // Survives rotation but not the back stack: "show all" is a decision about this visit to this
     // page, not a preference.
     var showAllSongs by rememberSaveable { mutableStateOf(false) }
@@ -70,6 +73,34 @@ internal fun ArtistScreen(
                 { addToPlaylist.open(track) }
             } else {
                 null
+            }
+        )
+    }
+
+    albumActionsFor?.let { album ->
+        AlbumActionsSheet(
+            album = album,
+            onPlay = {
+                viewModel.playAlbum(album)
+                albumActionsFor = null
+            },
+            onPlayNext = {
+                viewModel.playAlbumNext(album)
+                albumActionsFor = null
+            },
+            onAddToQueue = {
+                viewModel.addAlbumToQueue(album)
+                albumActionsFor = null
+            },
+            onDismiss = { albumActionsFor = null },
+            onShare = if (viewModel.canShareAlbum(album)) {
+                { viewModel.shareAlbum(album) }
+            } else null,
+            onAddToPlaylist = {
+                viewModel.getAlbumTracks(album) { tracks ->
+                    addToPlaylist.openForTracks(tracks, album.source)
+                }
+                albumActionsFor = null
             }
         )
     }
@@ -132,6 +163,7 @@ internal fun ArtistScreen(
                     onLongPressTrack = { actionsFor = it },
                     onToggleLike = viewModel::toggleLike,
                     onOpenAlbum = onOpenAlbum,
+                    onLongPressAlbum = { albumActionsFor = it },
                     onOpenArtist = onOpenArtist
                 )
             }

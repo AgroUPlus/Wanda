@@ -243,6 +243,7 @@ fun NavGraphBuilder.wanderNavGraph(
         QueueScreen(
             playerConnection = playerConnection,
             onClose = navController::popBackStack,
+            onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) },
             onOpenJam = {
                 // The queue is opened from the maximized player, so the sheet is still expanded
                 // behind it — without this the room opens correctly and is completely hidden.

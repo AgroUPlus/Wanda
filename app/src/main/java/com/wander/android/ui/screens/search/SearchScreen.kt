@@ -1,8 +1,10 @@
 package com.wander.android.ui.screens.search
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -11,12 +13,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -44,6 +49,7 @@ fun SearchScreen(
     val selectedSources by viewModel.selectedSources.collectAsStateWithLifecycle()
     val kind by viewModel.kind.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
+    var isLyricsExpanded by rememberSaveable(query) { mutableStateOf(false) }
 
     val addToPlaylist = AddToPlaylistHost()
 
@@ -132,16 +138,35 @@ fun SearchScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     if (state.lyricMatches.isNotEmpty()) {
+                        val displayedLyrics = if (isLyricsExpanded) state.lyricMatches else state.lyricMatches.take(5)
                         item(key = "header_lyrics") {
-                            Text(
-                                text = "Matched in lyrics",
-                                style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
-                                color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Matched in lyrics",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                if (state.lyricMatches.size > 5) {
+                                    TextButton(
+                                        onClick = { isLyricsExpanded = !isLyricsExpanded },
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                                    ) {
+                                        Text(
+                                            text = if (isLyricsExpanded) "Show less" else "See all (${state.lyricMatches.size})",
+                                            style = MaterialTheme.typography.labelMedium
+                                        )
+                                    }
+                                }
+                            }
                         }
                         items(
-                            items = state.lyricMatches,
+                            items = displayedLyrics,
                             key = { "lyric_${it.track.id}" },
                             contentType = { "lyric_match" }
                         ) { match ->
@@ -152,12 +177,27 @@ fun SearchScreen(
                                 onLongPress = { actionsFor = match.track }
                             )
                         }
+                        if (state.lyricMatches.size > 5) {
+                            item(key = "footer_lyrics_toggle") {
+                                TextButton(
+                                    onClick = { isLyricsExpanded = !isLyricsExpanded },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp)
+                                ) {
+                                    Text(
+                                        text = if (isLyricsExpanded) "Show fewer" else "Show ${state.lyricMatches.size - 5} more lyric matches",
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                }
+                            }
+                        }
                         if (state.results.isNotEmpty()) {
                             item(key = "header_tracks") {
                                 Text(
                                     text = "Songs",
-                                    style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
-                                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier
                                         .padding(horizontal = 16.dp)
                                         .padding(top = 16.dp, bottom = 8.dp)

@@ -3,6 +3,8 @@ package com.wander.android.data.repository
 import android.util.Log
 import com.wander.android.core.audio.fingerprint.AudioEmbedder
 import com.wander.android.core.database.dao.TrackEmbeddingDao
+import com.wander.android.core.database.dao.TrackLyricsDao
+import com.wander.android.core.database.entity.TrackLyricsEntity
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.sources.agro.AgroCatalogApi
 import javax.inject.Inject
@@ -29,6 +31,7 @@ internal class CatalogSyncRepository @Inject constructor(
     private val canonicalMetadata: CanonicalMetadataRepository,
     private val recordingIdentity: RecordingIdentityRepository,
     private val embeddingDao: TrackEmbeddingDao,
+    private val trackLyricsDao: TrackLyricsDao,
     private val secureStorage: SecureStorage
 ) {
 
@@ -90,6 +93,10 @@ internal class CatalogSyncRepository @Inject constructor(
             val track = musicRepository.trackById(embedding.trackId) ?: continue
             if (track.durationMs <= 0L) continue
 
+            val lyricsEntity = trackLyricsDao.findLyricsForTrackOrMetadata(track.id, track.title, track.artist)
+                ?: trackLyricsDao.getLyricsForTrack(embedding.trackId)
+            val lyricsPayload = lyricsEntity?.syncedLyrics ?: lyricsEntity?.plainLyrics
+
             val published = catalogApi.publish(
                 embeddingHex = quantiseToHex(AudioEmbedder.unpack(embedding.vector)),
                 dim = embedding.dim,
@@ -99,7 +106,8 @@ internal class CatalogSyncRepository @Inject constructor(
                 title = track.title,
                 artist = track.artist,
                 album = track.album,
-                sourceUri = embedding.trackId.takeUnless { it.startsWith(LOCAL_PREFIX) }
+                sourceUri = embedding.trackId.takeUnless { it.startsWith(LOCAL_PREFIX) },
+                lyrics = lyricsPayload
             )
             if (published.isFailure) break
             sent++
@@ -149,6 +157,29 @@ internal class CatalogSyncRepository @Inject constructor(
                     )
                 ) {
                     applied++
+                }
+
+                if (!entry.lyrics.isNullOrBlank()) {
+                    val existing = trackLyricsDao.getLyricsForTrack(match.trackId)
+                    if (existing == null || (existing.syncedLyrics.isNullOrBlank() && entry.lyrics.startsWith("["))) {
+                        val isSynced = entry.lyrics.startsWith("[")
+                        val plain = if (isSynced) {
+                            entry.lyrics.lineSequence()
+                                .map { it.replace(Regex("""^\[\d{2}:\d{2}\.\d{2,3}\]"""), "").trim() }
+                                .filter { it.isNotBlank() }
+                                .joinToString("\n")
+                        } else {
+                            entry.lyrics
+                        }
+                        trackLyricsDao.saveLyricsWithFts(
+                            TrackLyricsEntity(
+                                trackId = match.trackId,
+                                plainLyrics = plain,
+                                syncedLyrics = if (isSynced) entry.lyrics else null,
+                                source = "Agro"
+                            )
+                        )
+                    }
                 }
             }
         }
