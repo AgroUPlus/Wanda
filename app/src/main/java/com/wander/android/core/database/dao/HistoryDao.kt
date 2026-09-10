@@ -65,23 +65,28 @@ interface HistoryDao {
     suspend fun markAgroSynced(ids: List<Long>)
 
     /**
-     * Every play since a point in time, with what the track was.
+     * Every play inside a window, with what the track was.
      *
-     * The local half of the statistics screen, used when no Agro server is paired. Same projection
-     * as [getPendingAgroScrobbles] and the same join for the same reason — the only difference is
-     * that this one does not care whether a play has been reported anywhere.
+     * Half-open on purpose — `>= since` and `< until` — so two adjacent windows partition the
+     * history rather than sharing the play that lands exactly on the boundary. The statistics
+     * screen compares a window against the one before it, and a play counted in both would show
+     * up as growth that never happened.
+     *
+     * Wider than [getPendingAgroScrobbles]'s projection because this one feeds a screen rather
+     * than an upload: the artwork and the track id are what let the top song be *shown* instead of
+     * named.
      */
     @Query(
         """
-        SELECT h.historyId AS historyId, h.playedAt AS playedAt, t.title AS title,
-               t.artist AS artist, t.album AS album, t.genre AS genre, t.durationMs AS durationMs
+        SELECT h.playedAt AS playedAt, t.id AS trackId, t.title AS title, t.artist AS artist,
+               t.album AS album, t.artworkUrl AS artworkUrl, t.durationMs AS durationMs
         FROM history h
         INNER JOIN tracks t ON t.id = h.trackId
-        WHERE h.playedAt >= :since
+        WHERE h.playedAt >= :since AND h.playedAt < :until
         ORDER BY h.playedAt ASC
         """
     )
-    suspend fun getHistorySince(since: Long): List<PendingScrobble>
+    suspend fun getPlaysBetween(since: Long, until: Long): List<PlayedTrack>
 
     @Insert
     suspend fun recordHistory(entry: HistoryEntity): Long
@@ -89,3 +94,4 @@ interface HistoryDao {
     @Query("DELETE FROM history")
     suspend fun clearHistory()
 }
+

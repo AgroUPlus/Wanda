@@ -252,6 +252,38 @@ UI change end to end needs it kept awake.
 
 ---
 
+## Decided this session, not yet built
+
+### Artist subscriptions and a single notification centre
+
+Agreed shape, in the order it has to be built:
+
+1. **Subscribe to an artist.** A `artist_subscriptions` table (Room v31) and a
+   control in `ArtistHero`. When the artist came from YouTube Music the
+   subscribe also goes *there*, through the same authenticated InnerTube path
+   `setLiked` already uses — so it writes to the signed-in Google account, and
+   that has to be said in the UI rather than discovered.
+2. **New-release detection.** A periodic worker walks each subscribed artist's
+   page and diffs the albums and singles against what Room already holds.
+   Anything new raises an Android notification that opens the record. Cost is
+   one request per subscribed artist, so it wants a wide interval and a cap.
+3. **A notification centre** that gathers all of it in one place: new releases,
+   tracks friends sent, Circle activity.
+
+**The inbox is being replaced, not merely joined.** The threaded conversation —
+`InboxScreen`, `InboxConversation`, `InboxThreadList`, `InboxViewModel`,
+`InboxUiState` and their skeletons — goes away. Drops do **not**: a shared track
+is the thing worth keeping, and it survives as a read-only entry in the
+notification list ("X sent you Y", tap to play). What disappears is the reply,
+the thread, and the message body as a place to hold a conversation.
+
+That distinction is the whole decision, because a drop *is* a track plus a note,
+end-to-end encrypted, carried by `AgroDropsApi`. Deleting the messaging system
+without separating the two would take shared tracks with it. `EncryptionBoundary`
+stays: the drop payload is still sealed, only its presentation changes.
+
+---
+
 ## PR Description Draft
 
 - **Compare / Open PR**: [feat/recording-identity-and-expressive-pass](https://github.com/Kolbxyz/Wanda/compare/main...feat/recording-identity-and-expressive-pass?expand=1)

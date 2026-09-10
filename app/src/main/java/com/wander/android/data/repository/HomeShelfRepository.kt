@@ -20,8 +20,7 @@ import javax.inject.Singleton
 class HomeShelfRepository @Inject constructor(
     private val trackDao: TrackDao,
     private val recordingPlayCounts: RecordingPlayCounts,
-    private val splitRepository: RecordingSplitRepository,
-    private val linkRepository: RecordingLinkRepository
+    private val recordingRules: RecordingRulesRepository
 ) {
 
     /**
@@ -35,8 +34,8 @@ class HomeShelfRepository @Inject constructor(
         val tracks = withContext(Dispatchers.IO) {
             trackDao.getRecentlyPlayedTracks(limit * OVERFETCH).map(TrackEntity::toUnifiedTrack)
         }
-        return TrackDeduplicator
-            .distinctRecordings(tracks, splitRepository.splits(), linkRepository.links())
+        return recordingRules.current()
+            .distinct(tracks)
             .take(limit)
     }
 

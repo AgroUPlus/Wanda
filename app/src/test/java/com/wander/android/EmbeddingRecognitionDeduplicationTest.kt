@@ -4,6 +4,7 @@ import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.EmbeddingRepository
 import com.wander.android.data.repository.RecordingLinkSet
+import com.wander.android.data.repository.RecordingRules
 import com.wander.android.data.repository.SplitSet
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -69,8 +70,7 @@ class EmbeddingRecognitionDeduplicationTest {
         val result = EmbeddingRepository.findCompetitor(
             bestUnified = winner,
             candidates = candidates,
-            splits = SplitSet.EMPTY,
-            links = RecordingLinkSet.EMPTY
+            rules = RecordingRules.NONE
         ) { id -> trackMap[id] }
 
         assertEquals("navidrome:2", result?.trackId)
@@ -118,12 +118,12 @@ class EmbeddingRecognitionDeduplicationTest {
             match("navidrome:2", 0.350f)
         )
 
-        val links = RecordingLinkSet.of(listOf("navidrome:1" to "ytm:1"))
+        val rules = RecordingRules(SplitSet.EMPTY, RecordingLinkSet.of(listOf("navidrome:1" to "ytm:1")))
 
         val result = EmbeddingRepository.findCompetitor(
             bestUnified = winner,
             candidates = candidates,
-            links = links
+            rules = rules
         ) { id -> trackMap[id] }
 
         assertEquals("navidrome:2", result?.trackId)
@@ -144,12 +144,12 @@ class EmbeddingRecognitionDeduplicationTest {
             match("ytm:1", 0.995f)
         )
 
-        val splits = SplitSet.of(listOf("navidrome:1" to "ytm:1"))
+        val rules = RecordingRules(SplitSet.of(listOf("navidrome:1" to "ytm:1")), RecordingLinkSet.EMPTY)
 
         val result = EmbeddingRepository.findCompetitor(
             bestUnified = winner,
             candidates = candidates,
-            splits = splits
+            rules = rules
         ) { id -> trackMap[id] }
 
         // Because of the split, ytm:1 is treated as a distinct performance / competitor
