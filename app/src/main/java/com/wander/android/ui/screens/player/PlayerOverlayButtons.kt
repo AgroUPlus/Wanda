@@ -3,7 +3,6 @@ package com.wander.android.ui.screens.player
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.Lyrics
@@ -45,21 +44,22 @@ internal fun BoxScope.PlayerOverlayButtons(
     onShare: (() -> Unit)?,
     contentAlpha: () -> Float,
     /**
-     * Whether these have to inset themselves off the system bars.
+     * How much of the container's top edge is already occupied, measured rather than assumed.
      *
-     * They do not in the standard layout: there they sit inside the artwork square, which is
-     * already inside a column that has taken the window insets for the whole screen. The immersive
-     * layout puts them straight onto a full-bleed `Box` with nothing between them and the edge of
-     * the display, and the share button landed in the status bar.
+     * Zero in the standard layout, where these sit inside the artwork square and the column around
+     * it has already taken the window insets for the whole screen. The immersive layout draws its
+     * own bar and its own controls straight onto a full-bleed `Box`, and passes what they actually
+     * measured — including the system bars, which are inside those measurements.
+     *
+     * It was a pair of constants written from the heights the layouts are built out of. They were
+     * wrong, because the real column is a title row, a seek bar, transport controls *and* the
+     * navigation bar's inset, and the lyrics toggle came down on top of the like button.
      */
-    applyWindowInsets: Boolean = false,
-    /** Clearance for whatever the caller has drawn along the top edge, above the 12 dp margin. */
     topInset: Dp = 0.dp,
     /** The same for the bottom edge — controls, a seek bar — under the lyrics toggle. */
     bottomInset: Dp = 0.dp
 ) {
     val colors = overlayButtonColors(showLyrics)
-    val insets = if (applyWindowInsets) Modifier.safeDrawingPadding() else Modifier
 
     onShare?.let { share ->
         FilledTonalIconButton(
@@ -67,7 +67,6 @@ internal fun BoxScope.PlayerOverlayButtons(
             colors = colors,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .then(insets)
                 .padding(top = topInset)
                 .padding(12.dp)
                 .graphicsLayer { alpha = contentAlpha() }
@@ -84,7 +83,6 @@ internal fun BoxScope.PlayerOverlayButtons(
         colors = colors,
         modifier = Modifier
             .align(Alignment.BottomEnd)
-            .then(insets)
             .padding(bottom = bottomInset)
             .padding(12.dp)
             .graphicsLayer { alpha = contentAlpha() }

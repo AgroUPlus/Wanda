@@ -46,6 +46,8 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -69,20 +71,6 @@ import com.wander.android.ui.theme.OnCoverArt
 /** Nominal edge of the full-screen cover; drives the decode size, not the layout. */
 private val FullArtworkSize = 360.dp
 
-/**
- * How much of the immersive layout's top and bottom edges are already spoken for.
- *
- * The immersive branch draws its own top bar and its own controls column straight onto the cover,
- * both of them inset off the system bars. Anything else floating on that cover — the overlay
- * buttons, a verse of lyrics — has to clear them, and there is no layout relationship to derive
- * that from: they are siblings in a `Box`, aligned to opposite edges. Measuring them to find out
- * would cost a layout pass per frame of the sheet's drag, so these are the heights they are built
- * from, and they move together with the paddings in the branch itself.
- */
-private val ImmersiveTopBarHeight = 56.dp
-
-/** Title row, seek bar and transport controls, plus the column's own vertical padding. */
-private val ImmersiveControlsInset = 172.dp
 
 /**
  * @param artworkSlot fills the cover-art area. By default the screen draws its own artwork; the
@@ -167,6 +155,21 @@ internal fun NowPlayingScreen(
     var rateAnchor by remember { mutableStateOf<IntOffset?>(null) }
     val speedAndPitch by playerConnection.speedAndPitch.collectAsStateWithLifecycle()
 
+    // What the immersive branch's own bar and controls actually occupy.
+    //
+    // Measured rather than written down. They are siblings of the overlay buttons and the lyrics in
+    // a `Box`, aligned to opposite edges, so there is no layout relationship to derive a clearance
+    // from — and the constants that stood here instead were wrong: the controls column is a title
+    // row, a seek bar, transport controls *and* the navigation bar's inset, which is a good deal
+    // more than the sum of the paddings it is written with. The lyrics toggle landed on the like
+    // button.
+    //
+    // Reported by `onGloballyPositioned` at the head of each modifier chain, so the figure includes
+    // the `safeDrawingPadding` inside it and nothing has to add the system bars back on.
+    var immersiveTopBar by remember { mutableStateOf(0.dp) }
+    var immersiveControls by remember { mutableStateOf(0.dp) }
+    val density = LocalDensity.current
+
     if (immersivePlayer && artworkSlot != null) {
         // ── Immersive layout ──────────────────────────────────────────────────────
         // Artwork fills the screen edge-to-edge (MorphingArtwork will match these
@@ -231,8 +234,7 @@ internal fun NowPlayingScreen(
                     onSeek = playerConnection::seekTo,
                     modifier = Modifier
                         .fillMaxSize()
-                        .safeDrawingPadding()
-                        .padding(top = ImmersiveTopBarHeight, bottom = ImmersiveControlsInset)
+                        .padding(top = immersiveTopBar, bottom = immersiveControls)
                         .graphicsLayer { alpha = contentAlpha() }
                 )
             }
@@ -242,6 +244,9 @@ internal fun NowPlayingScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .align(Alignment.TopStart)
+                    .onGloballyPositioned {
+                        immersiveTopBar = with(density) { it.size.height.toDp() }
+                    }
                     .fillMaxWidth()
                     .safeDrawingPadding()
                     .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -334,9 +339,8 @@ internal fun NowPlayingScreen(
                 onToggleLyrics = onToggleLyrics,
                 onShare = { viewModel.share(track) }.takeIf { viewModel.canShare(track) },
                 contentAlpha = overlayAlpha,
-                applyWindowInsets = true,
-                topInset = ImmersiveTopBarHeight,
-                bottomInset = ImmersiveControlsInset
+                topInset = immersiveTopBar,
+                bottomInset = immersiveControls
             )
 
             if (state.audioTracks.size > 1) {
@@ -359,6 +363,9 @@ internal fun NowPlayingScreen(
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
+                    .onGloballyPositioned {
+                        immersiveControls = with(density) { it.size.height.toDp() }
+                    }
                     .fillMaxWidth()
                     .safeDrawingPadding()
                     .padding(horizontal = 24.dp, vertical = 12.dp)
