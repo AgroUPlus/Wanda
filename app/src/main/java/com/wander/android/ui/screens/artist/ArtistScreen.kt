@@ -142,6 +142,8 @@ internal fun ArtistScreen(
                         onRadio = viewModel::startArtistRadio,
                         onShuffle = viewModel::shuffle,
                         onShare = viewModel::shareArtist.takeIf { state.canShare },
+                        isFollowing = state.isFollowing,
+                        onToggleFollow = viewModel::toggleFollow,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                 }

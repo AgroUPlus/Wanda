@@ -56,7 +56,7 @@ internal data class SettingsActions(
     val onProxyChange: (Boolean) -> Unit,
     val onForgetEverything: () -> Unit,
     // About
-    val onReleaseNotificationsChange: (Boolean) -> Unit,
+    val onArtistReleaseNotificationsChange: (Boolean) -> Unit,
     val onAutoUpdateCheckChange: (Boolean) -> Unit,
     val onCheckForUpdate: () -> Unit,
     /**

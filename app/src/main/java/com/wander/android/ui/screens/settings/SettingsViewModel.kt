@@ -9,7 +9,7 @@ import com.wander.android.core.security.SecureStorage
 import com.wander.android.core.sync.LibrarySyncScheduler
 import com.wander.android.core.sync.LocalFileDeleter
 import com.wander.android.core.update.UpdateCheckResult
-import com.wander.android.core.update.ReleaseCheckScheduler
+import com.wander.android.core.work.ArtistReleaseScheduler
 import com.wander.android.core.update.UpdateChecker
 import com.wander.android.data.repository.IncognitoRepository
 import com.wander.android.data.repository.LibrarySyncRepository
@@ -54,7 +54,7 @@ internal class SettingsViewModel @Inject constructor(
     private val localFileDeleter: LocalFileDeleter,
     private val updateChecker: UpdateChecker,
     private val incognitoRepository: IncognitoRepository,
-    private val releaseCheckScheduler: ReleaseCheckScheduler,
+    private val artistReleaseScheduler: ArtistReleaseScheduler,
     private val accountApi: AgroAccountApi,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val workControls: com.wander.android.core.work.WorkControls,
@@ -87,8 +87,8 @@ internal class SettingsViewModel @Inject constructor(
 
     val isAutoUpdateCheckEnabled: StateFlow<Boolean> = secureStorage.isAutoUpdateCheckEnabled
 
-    val isReleaseNotificationEnabled: StateFlow<Boolean> =
-        secureStorage.isReleaseNotificationEnabled
+    val isArtistReleaseNotificationEnabled: StateFlow<Boolean> =
+        secureStorage.isArtistReleaseNotificationEnabled
 
     /**
      * Turning it on schedules the daily check; turning it off cancels it.
@@ -96,9 +96,9 @@ internal class SettingsViewModel @Inject constructor(
      * The work is scheduled here rather than left to the next launch, so the switch takes effect
      * when it is touched — a setting that only starts working after a restart reads as broken.
      */
-    fun setReleaseNotificationEnabled(enabled: Boolean) {
-        secureStorage.setReleaseNotificationEnabled(enabled)
-        if (enabled) releaseCheckScheduler.enable() else releaseCheckScheduler.disable()
+    fun setArtistReleaseNotificationEnabled(enabled: Boolean) {
+        secureStorage.setArtistReleaseNotificationEnabled(enabled)
+        if (enabled) artistReleaseScheduler.enable() else artistReleaseScheduler.disable()
     }
     fun setAutoUpdateCheckEnabled(enabled: Boolean) = secureStorage.setAutoUpdateCheckEnabled(enabled)
 

@@ -130,7 +130,7 @@ internal fun SettingsScreen(
             onVisibilityChange = viewModel::setAgroVisibility,
             onProxyChange = viewModel::setAgroProxyEnabled,
             onForgetEverything = { dialogs.confirmForgetEverything = true },
-            onReleaseNotificationsChange = viewModel::setReleaseNotificationEnabled,
+            onArtistReleaseNotificationsChange = viewModel::setArtistReleaseNotificationEnabled,
             onAutoUpdateCheckChange = viewModel::setAutoUpdateCheckEnabled,
             onCheckForUpdate = viewModel::checkForUpdate,
             onOpenUrl = uriHandler::openUri,

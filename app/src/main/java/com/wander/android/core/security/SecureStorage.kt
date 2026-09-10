@@ -71,15 +71,25 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
      * happens to be open. This one puts something on the lock screen, so it is its own consent and
      * defaults off like every other switch that reaches outside the app.
      */
-    private val _isReleaseNotificationEnabled =
+    private val _isArtistReleaseNotificationEnabled =
         MutableStateFlow(prefs.getBoolean(KEY_RELEASE_NOTIFICATIONS, false))
-    val isReleaseNotificationEnabled: StateFlow<Boolean> =
-        _isReleaseNotificationEnabled.asStateFlow()
+    val isArtistReleaseNotificationEnabled: StateFlow<Boolean> =
+        _isArtistReleaseNotificationEnabled.asStateFlow()
 
-    fun setReleaseNotificationEnabled(enabled: Boolean) {
+    fun setArtistReleaseNotificationEnabled(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_RELEASE_NOTIFICATIONS, enabled) }
-        _isReleaseNotificationEnabled.value = enabled
+        _isArtistReleaseNotificationEnabled.value = enabled
     }
+
+    /**
+     * The highest catalogue position this device has already been told about.
+     *
+     * Kept here rather than on the server, which is what lets Agro hold no per-device delivery
+     * state at all: the phone asks what has been published since its own watermark and moves it.
+     */
+    var lastSeenReleaseWatermark: Long
+        get() = prefs.getLong(KEY_RELEASE_WATERMARK, 0L)
+        set(value) = prefs.edit { putLong(KEY_RELEASE_WATERMARK, value) }
 
     /**
      * How far the duplicate-link sweep has read, as a track id.
@@ -360,7 +370,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _shareDomain.value = ""
         _agroShareDomain.value = ""
         _isAutoUpdateCheckEnabled.value = false
-        _isReleaseNotificationEnabled.value = false
+        _isArtistReleaseNotificationEnabled.value = false
     }
 
     private val _agroConfigured = MutableStateFlow(hasAgroCredentials())
@@ -613,6 +623,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_IMMERSIVE_PLAYER = "key_immersive_player"
         private const val KEY_AUTO_UPDATE_CHECK = "key_auto_update_check"
         private const val KEY_RELEASE_NOTIFICATIONS = "key_release_notifications"
+        private const val KEY_RELEASE_WATERMARK = "key_release_watermark"
         private const val KEY_LAST_NOTIFIED_RELEASE = "key_last_notified_release"
         private const val KEY_DUPLICATE_SCAN_CURSOR = "duplicate_scan_cursor"
         private const val KEY_INCOGNITO = "key_incognito"

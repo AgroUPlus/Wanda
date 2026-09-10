@@ -64,7 +64,7 @@ internal data class SettingsUiState(
     val updateCheck: UpdateCheckResult?,
     val isCheckingForUpdate: Boolean,
     val autoUpdateCheckEnabled: Boolean,
-    val releaseNotificationsEnabled: Boolean
+    val artistReleaseNotificationsEnabled: Boolean
 ) {
     /**
      * Whether the "free up space" row has anything to offer.
@@ -117,8 +117,8 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val updateCheck by viewModel.updateCheck.collectAsStateWithLifecycle()
     val isCheckingForUpdate by viewModel.isCheckingForUpdate.collectAsStateWithLifecycle()
     val autoUpdateCheckEnabled by viewModel.isAutoUpdateCheckEnabled.collectAsStateWithLifecycle()
-    val releaseNotificationsEnabled by
-        viewModel.isReleaseNotificationEnabled.collectAsStateWithLifecycle()
+    val artistReleaseNotificationsEnabled by
+        viewModel.isArtistReleaseNotificationEnabled.collectAsStateWithLifecycle()
 
     return SettingsUiState(
         navidrome = navidrome,
@@ -166,6 +166,6 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         updateCheck = updateCheck,
         isCheckingForUpdate = isCheckingForUpdate,
         autoUpdateCheckEnabled = autoUpdateCheckEnabled,
-        releaseNotificationsEnabled = releaseNotificationsEnabled
+        artistReleaseNotificationsEnabled = artistReleaseNotificationsEnabled
     )
 }

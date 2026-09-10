@@ -186,7 +186,8 @@ fun NavGraphBuilder.wanderNavGraph(
             onBack = navController::popBackStack,
             onOpenThread = { navController.navigateSettled(Routes.inbox(it)) },
             onOpenCircleRecap = { navController.navigateSettled(Routes.CIRCLE) },
-            onOpenProfile = { navController.navigateSettled(Routes.profile(it)) }
+            onOpenProfile = { navController.navigateSettled(Routes.profile(it)) },
+            onOpenArtist = { navController.navigateSettled(Routes.artist(it)) }
         )
     }
 
