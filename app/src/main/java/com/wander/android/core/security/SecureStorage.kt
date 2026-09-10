@@ -56,6 +56,9 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     private val _isMonetDynamic = MutableStateFlow(prefs.getBoolean(KEY_MONET_DYNAMIC, true))
     val isMonetDynamic: StateFlow<Boolean> = _isMonetDynamic.asStateFlow()
 
+    private val _isImmersivePlayer = MutableStateFlow(prefs.getBoolean(KEY_IMMERSIVE_PLAYER, false))
+    val isImmersivePlayer: StateFlow<Boolean> = _isImmersivePlayer.asStateFlow()
+
     /** Off by default: a version check on every launch is a network call the user did not ask for. */
     private val _isAutoUpdateCheckEnabled =
         MutableStateFlow(prefs.getBoolean(KEY_AUTO_UPDATE_CHECK, false))
@@ -274,6 +277,11 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     fun setMonetDynamic(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_MONET_DYNAMIC, enabled) }
         _isMonetDynamic.value = enabled
+    }
+
+    fun setImmersivePlayer(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_IMMERSIVE_PLAYER, enabled) }
+        _isImmersivePlayer.value = enabled
     }
 
     fun setAutoUpdateCheckEnabled(enabled: Boolean) {
@@ -602,6 +610,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_RADIO_MODE = "key_radio_mode"
         private const val KEY_AMOLED_BLACK = "key_amoled_black"
         private const val KEY_MONET_DYNAMIC = "key_monet_dynamic"
+        private const val KEY_IMMERSIVE_PLAYER = "key_immersive_player"
         private const val KEY_AUTO_UPDATE_CHECK = "key_auto_update_check"
         private const val KEY_RELEASE_NOTIFICATIONS = "key_release_notifications"
         private const val KEY_LAST_NOTIFIED_RELEASE = "key_last_notified_release"

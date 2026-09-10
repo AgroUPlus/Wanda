@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Share
@@ -15,24 +14,25 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.wander.android.ui.components.Artwork
+import com.wander.android.ui.components.ImmersiveHero
 import com.wander.android.ui.components.ShapedActionButton
 import com.wander.android.ui.components.ShapedPlayButton
 
 /**
- * The top of an album page: the sleeve, at the size a sleeve is worth looking at.
+ * The top of an album or playlist page: the cover, at the size a cover is worth looking at.
  *
- * This was a 96dp thumbnail in a card with the title beside it — the layout a *list row* uses,
- * scaled up slightly and given buttons. A record's cover is the one piece of artwork the page has
- * and the thing the user recognises it by, so it leads, full width and square, and the type sits
- * under it rather than competing for the same line.
+ * It began as a 96 dp thumbnail in a card with the title beside it — a list row scaled up and
+ * given buttons — then became a centred 260 dp square. It is the full width of the window now,
+ * running to the top of it, with the title set into the foot of the artwork. See [ImmersiveHero]
+ * for why the caption needs no scrim and why the artist page and the statistics screen open the
+ * same way.
  *
- * No surrounding card. The cover is its own container — a card behind it only drew a second,
- * slightly larger rectangle around a rectangle, and the shadow does the lifting instead.
+ * Playlists use this too. A playlist's cover is a cover, and giving the two pages different
+ * headers would say they were different kinds of thing when the only real difference is who chose
+ * the running order.
  */
 @Composable
 internal fun AlbumHero(
@@ -45,53 +45,42 @@ internal fun AlbumHero(
     /** Null when this record's backend cannot publish a link for it. */
     onShare: (() -> Unit)? = null
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp)
-    ) {
-        Artwork(
-            url = artworkUrl,
+    Column(modifier = modifier.fillMaxWidth()) {
+        ImmersiveHero(
+            imageUrl = artworkUrl,
             contentDescription = title,
-            sizeDp = CoverSize,
-            shape = MaterialTheme.shapes.extraLarge,
-            modifier = Modifier
-                .size(CoverSize)
-                .shadow(
-                    elevation = 18.dp,
-                    shape = MaterialTheme.shapes.extraLarge,
-                    clip = false
-                )
-        )
-
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineMedium,
-            textAlign = TextAlign.Center,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 24.dp)
-        )
-        if (subtitle.isNotBlank()) {
+            aspect = CoverAspect,
+            horizontalPadding = 24.dp
+        ) {
             Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = title,
+                style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 6.dp)
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
             )
+            if (subtitle.isNotBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+            }
         }
 
         // Centred under the cover rather than pushed to the edges. With the artwork centred above
         // them, actions pinned left and right read as belonging to the screen instead of to the
         // record — and Play keeps its size advantage, which is what states the hierarchy here.
         Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(top = 22.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 14.dp, bottom = 4.dp)
         ) {
             ShapedActionButton(
                 onClick = onShuffle,
@@ -115,7 +104,9 @@ internal fun AlbumHero(
 }
 
 /**
- * Big enough to be the page's subject, short enough that the first track is still on screen under
- * it on a normal phone — the tracklist is the other half of what this page is for.
+ * A little taller than the artwork itself is.
+ *
+ * A cover is square, so a square hero would put the caption across the middle of it. The extra
+ * height is the room the title needs without covering the record's own centre.
  */
-internal val CoverSize = 260.dp
+internal const val CoverAspect = 0.86f

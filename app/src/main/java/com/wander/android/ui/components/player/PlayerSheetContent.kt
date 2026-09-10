@@ -85,7 +85,8 @@ fun PlayerSheetContent(
      * belongs to the track the *player* is on, which the caller already has.
      */
     fingerprintStatus: com.wander.android.data.repository.FingerprintStatus =
-        com.wander.android.data.repository.FingerprintStatus.MISSING
+        com.wander.android.data.repository.FingerprintStatus.MISSING,
+    immersivePlayer: Boolean = false,
 ) {
     val anchors = remember { PlayerArtworkAnchors() }
     // Owned here, not in `NowPlayingScreen`. The sheet is what draws the cover the lyrics replace,
@@ -319,6 +320,7 @@ fun PlayerSheetContent(
                             .onGloballyPositioned(anchors::onFullPositioned)
                     )
                 },
+                immersivePlayer = immersivePlayer,
                 modifier = Modifier.fillMaxSize()
             )
         }
