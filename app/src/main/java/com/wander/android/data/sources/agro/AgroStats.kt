@@ -4,9 +4,9 @@ import androidx.compose.runtime.Immutable
 
 /** How far back a statistics query reaches. The names are what the server expects on the wire. */
 enum class StatsPeriod(val wireName: String, val label: String) {
-    WEEK("WEEK", "Week"),
-    MONTH("MONTH", "Month"),
-    YEAR("YEAR", "Year"),
+    WEEK("WEEK", "Last 7 days"),
+    MONTH("MONTH", "Last 30 days"),
+    YEAR("YEAR", "Last 12 months"),
     ALL("ALL", "All time")
 }
 

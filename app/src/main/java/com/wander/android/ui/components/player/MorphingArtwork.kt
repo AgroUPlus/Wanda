@@ -79,8 +79,8 @@ internal fun MorphingArtwork(
 
     if (swipe.isSwiping) {
         // Drawn before the current cover so it stays on top as the neighbours slide under it.
-        PeekArtwork(previousUrl, anchors, mini, progress, swipe, side = -1)
-        PeekArtwork(nextUrl, anchors, mini, progress, swipe, side = 1)
+        PeekArtwork(previousUrl, anchors, mini, progress, rawProgress, swipe, side = -1)
+        PeekArtwork(nextUrl, anchors, mini, progress, rawProgress, swipe, side = 1)
     }
 
     Box(
@@ -150,6 +150,7 @@ private fun PeekArtwork(
     anchors: PlayerArtworkAnchors,
     mini: Rect,
     progress: () -> Float,
+    rawProgress: () -> Float,
     swipe: TrackSwipeState,
     side: Int
 ) {
@@ -160,7 +161,12 @@ private fun PeekArtwork(
         // placed at the same offsets and would be clipped the same way.
         modifier = Modifier
             .layout { measurable, _ ->
-                val rect = anchors.currentRect(mini, progress)
+                // The same rect the current cover is using, overshoot included. Ranking these off
+                // the clamped `progress` while the cover rode `rawProgress` meant the filmstrip
+                // was pitched from a *different* box than `swipe.stepPx` for the whole settle:
+                // the neighbours held still at their resting spacing while the cover between them
+                // grew past its frame, so the gaps visibly closed up and sprang back open.
+                val rect = anchors.currentRect(mini, rawProgress)
                 val width = rect.width.roundToInt().coerceAtLeast(0)
                 val height = rect.height.roundToInt().coerceAtLeast(0)
                 val placeable = measurable.measure(Constraints.fixed(width, height))

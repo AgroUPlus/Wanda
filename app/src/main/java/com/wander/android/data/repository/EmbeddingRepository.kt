@@ -31,8 +31,7 @@ class EmbeddingRepository @Inject constructor(
     private val embeddingDao: TrackEmbeddingDao,
     private val embedder: AudioEmbedder,
     private val trackDao: TrackDao,
-    private val linkRepository: RecordingLinkRepository,
-    private val splitRepository: RecordingSplitRepository
+    private val recordingRules: RecordingRulesRepository
 ) {
 
 
@@ -217,9 +216,7 @@ class EmbeddingRepository @Inject constructor(
         // If the runner-up is the same recording stored under another id (e.g. Navidrome vs YTM),
         // it must not steal the margin and cause a false rejection.
         val bestTrack = withContext(Dispatchers.IO) { trackDao.getTrackById(best.trackId) }
-        val splits = splitRepository.splits()
-        val links = linkRepository.links()
-        val competitor = findCompetitor(bestTrack?.toUnifiedTrack(), ranked, splits, links) { tid ->
+        val competitor = findCompetitor(bestTrack?.toUnifiedTrack(), ranked, recordingRules.current()) { tid ->
             withContext(Dispatchers.IO) { trackDao.getTrackById(tid)?.toUnifiedTrack() }
         }
 
@@ -603,15 +600,14 @@ class EmbeddingRepository @Inject constructor(
         internal suspend fun findCompetitor(
             bestUnified: UnifiedTrack?,
             candidates: List<Match>,
-            splits: SplitSet = SplitSet.EMPTY,
-            links: RecordingLinkSet = RecordingLinkSet.EMPTY,
+            rules: RecordingRules = RecordingRules.NONE,
             resolveTrack: suspend (String) -> UnifiedTrack?
         ): Match? {
             if (bestUnified == null) return candidates.getOrNull(1)
             for (i in 1 until candidates.size) {
                 val candidate = candidates[i]
                 val track = resolveTrack(candidate.trackId)
-                if (track == null || !TrackDeduplicator.isSameRecording(bestUnified, track, splits, links)) {
+                if (track == null || !rules.isSame(bestUnified, track)) {
                     return candidate
                 }
             }

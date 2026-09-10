@@ -19,7 +19,7 @@ import javax.inject.Singleton
  * this is the same judgement made deliberately, for one track, so the user can be shown the choice
  * and take it.
  *
- * Identity comes from [TrackDeduplicator.isSameRecording], not from the search engine's ranking.
+ * Identity comes from [RecordingRules.isSame], not from the search engine's ranking.
  * A search answers *something* for almost any query, and a picker that offered the top hit
  * unchecked would quietly hand the user a cover or a karaoke version under the label of a source
  * they trust.
@@ -27,8 +27,7 @@ import javax.inject.Singleton
 @Singleton
 class RenditionFinder @Inject constructor(
     private val musicRepository: MusicRepository,
-    private val splitRepository: RecordingSplitRepository,
-    private val linkRepository: RecordingLinkRepository
+    private val recordingRules: RecordingRulesRepository
 ) {
 
     /**
@@ -45,8 +44,9 @@ class RenditionFinder @Inject constructor(
      */
     suspend fun findRenditions(track: UnifiedTrack): List<UnifiedTrack> = coroutineScope {
         // A copy the user has said is a different performance is not an alternative to this one.
-        val splits = splitRepository.splits()
-        val links = linkRepository.links()
+        // Taken once and threaded through the parallel searches below, so every branch judges by
+        // the same rules even if a pin is written while they are in flight.
+        val rules = recordingRules.current()
         val query = listOf(track.artist, track.title)
             .filter { it.isNotBlank() }
             .joinToString(" ")
@@ -62,13 +62,13 @@ class RenditionFinder @Inject constructor(
                     runCatching {
                         musicRepository
                             .searchAllSources(query, onlySources = setOf(source), kind = SearchKind.TRACKS)
-                            .firstOrNull { TrackDeduplicator.isSameRecording(track, it, splits, links) }
+                            .firstOrNull { rules.isSame(track, it) }
                     }.getOrNull()
                 }
             }
             .mapNotNull { it.await() }
 
-        (listOf(track) + found + downloadedCopies(track, splits, links))
+        (listOf(track) + found + downloadedCopies(track, rules))
             .distinctBy { it.source }
             .sortedWith(
                 compareByDescending<UnifiedTrack> { it.isPlayableOffline() }
@@ -86,12 +86,10 @@ class RenditionFinder @Inject constructor(
      */
     private suspend fun downloadedCopies(
         track: UnifiedTrack,
-        splits: SplitSet,
-        links: RecordingLinkSet
+        rules: RecordingRules
     ): List<UnifiedTrack> =
         withContext(Dispatchers.IO) {
-            musicRepository.downloadedTracks()
-                .filter { it.id != track.id && TrackDeduplicator.isSameRecording(track, it, splits, links) }
+            rules.renditionsAmong(track, musicRepository.downloadedTracks())
         }
 
     /**
