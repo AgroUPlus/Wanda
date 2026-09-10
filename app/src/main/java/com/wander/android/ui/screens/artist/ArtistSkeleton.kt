@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -13,14 +15,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 import com.wander.android.ui.components.ShapedActionSize
+import com.wander.android.ui.components.ShapedPlaySize
 import com.wander.android.ui.components.SkeletonBox
 import com.wander.android.ui.components.SkeletonLine
 import com.wander.android.ui.components.SkeletonRow
@@ -83,42 +85,34 @@ internal fun ArtistSkeleton(contentPadding: PaddingValues, modifier: Modifier = 
 }
 
 /**
- * Matches `ArtistHero` exactly — same card, same portrait size, same control row — so the hero is
+ * Matches `ArtistHero` exactly — same portrait aspect, same centred control row — so the hero is
  * the one part of the page that does not move at all when the real data arrives.
  */
 @Composable
 private fun HeroSkeleton() {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = MaterialTheme.shapes.extraLarge,
-        modifier = Modifier.padding(horizontal = 16.dp)
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                SkeletonBox(modifier = Modifier.size(PortraitSize), shape = CircleShape)
-                Column(modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 16.dp)
-                ) {
-                    SkeletonLine(widthFraction = 0.78f, height = 22.dp)
-                    Spacer(Modifier.height(10.dp))
-                    SkeletonLine(widthFraction = 0.5f, height = 13.dp)
-                }
-            }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 18.dp)
-            ) {
-                repeat(2) {
-                    SkeletonBox(
-                        modifier = Modifier.size(ShapedActionSize),
-                        shape = MaterialTheme.shapes.small
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {}
-                SkeletonBox(modifier = Modifier.size(64.dp), shape = CircleShape)
-            }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        SkeletonBox(
+            modifier = Modifier.fillMaxWidth().aspectRatio(PortraitAspect),
+            shape = RectangleShape
+        )
+        Spacer(Modifier.height(16.dp))
+        SkeletonLine(widthFraction = 0.6f, height = 26.dp)
+        Spacer(Modifier.height(10.dp))
+        SkeletonLine(widthFraction = 0.35f, height = 13.dp)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(top = 18.dp)
+        ) {
+            SkeletonBox(
+                modifier = Modifier.size(ShapedActionSize),
+                shape = MaterialTheme.shapes.small
+            )
+            SkeletonBox(modifier = Modifier.size(ShapedPlaySize), shape = CircleShape)
+            SkeletonBox(
+                modifier = Modifier.size(ShapedActionSize),
+                shape = MaterialTheme.shapes.small
+            )
         }
     }
 }

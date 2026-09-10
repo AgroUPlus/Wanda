@@ -50,8 +50,7 @@ class MusicRepository @Inject constructor(
     private val connectivity: ConnectivityObserver,
     private val scrobbleSyncScheduler: ScrobbleSyncScheduler,
     private val scrobbleSuppression: ScrobbleSuppression,
-    private val splitRepository: RecordingSplitRepository,
-    private val linkRepository: RecordingLinkRepository,
+    private val recordingRules: RecordingRulesRepository,
     private val acousticFeatures: AcousticFeatureRepository,
     val sources: Set<@JvmSuppressWildcards IMusicSource>
 ) {
@@ -111,7 +110,7 @@ class MusicRepository @Inject constructor(
             // Navidrome and once on YouTube Music appeared twice, as if it were two songs. The
             // collapse cannot be done in SQL because whether two rows are one recording depends on
             // their durations and on what the user has pinned apart.
-            .map { tracks -> TrackDeduplicator.distinctRecordings(tracks, splitRepository.splits(), linkRepository.links()) }
+            .map { tracks -> recordingRules.current().distinct(tracks) }
 
     fun getDownloadedTracksFlow(): Flow<List<UnifiedTrack>> =
         trackDao.getDownloadedTracksFlow().mapToTracks()
@@ -252,11 +251,7 @@ class MusicRepository @Inject constructor(
                 // Secondary check: query Navidrome search directly
                 val navResults = sourceFor(SourceType.NAVIDROME)?.search("${cached.title} ${cached.artist}")?.getOrNull().orEmpty()
                 val wanted = cached.toUnifiedTrack()
-                val splits = splitRepository.splits()
-                val links = linkRepository.links()
-                val navHit = navResults.firstOrNull {
-                    TrackDeduplicator.isSameRecording(wanted, it, splits, links)
-                }
+                val navHit = recordingRules.current().substituteFor(wanted, navResults)
                 if (navHit != null) {
                     sourceFor(SourceType.NAVIDROME)?.getStreamInfo(navHit.id)?.getOrNull()?.let { info ->
                         return@withContext Result.success(info)
@@ -678,7 +673,7 @@ class MusicRepository @Inject constructor(
      * The other rows that are the same performance as [track].
      *
      * Name-matched in SQL to get a small candidate set, then judged by
-     * [TrackDeduplicator.isSameRecording] — the artist name alone cannot tell two same-named
+     * [RecordingRules.isSame] — the artist name alone cannot tell two same-named
      * artists apart, and the title alone cannot tell a live take from a studio one.
      *
      * The user's pins are applied here rather than at the call sites, because this is the one
@@ -686,11 +681,8 @@ class MusicRepository @Inject constructor(
      * `toggleLike` and `unifySplitLikes` alike, without either having to remember to ask.
      */
     private suspend fun renditionsOf(track: UnifiedTrack): List<UnifiedTrack> {
-        val splits = splitRepository.splits()
-        val links = linkRepository.links()
-        return trackDao.getTracksByArtistOnce(track.artist)
-            .map(TrackEntity::toUnifiedTrack)
-            .filter { it.id != track.id && TrackDeduplicator.isSameRecording(track, it, splits, links) }
+        val candidates = trackDao.getTracksByArtistOnce(track.artist).map(TrackEntity::toUnifiedTrack)
+        return recordingRules.current().renditionsAmong(track, candidates)
     }
 
     /**
@@ -763,10 +755,15 @@ class MusicRepository @Inject constructor(
             val tracksById = trackDao.getTracksByIds(ids).associateBy { it.id }
             val baseTracks = ids.mapNotNull { id -> tracksById[id]?.toUnifiedTrack() }
             val downloadedTracks = trackDao.getOfflineTracksOnce().map(TrackEntity::toUnifiedTrack)
+            // Judged with the same rules as everywhere else. This call used to pass neither the
+            // pins nor the links, so it fell back to the tags-and-duration defaults: a pair the
+            // user had explicitly pinned apart could still be substituted here, and a pair the
+            // fingerprinter had linked would not be. Taken once for the whole list rather than
+            // per track — it is a snapshot, and re-reading it per row could straddle a write.
+            val rules = recordingRules.current()
             return@withContext baseTracks.map { track ->
                 if (track.isPlayableOffline()) return@map track
-                val offlineCopy = downloadedTracks.firstOrNull { TrackDeduplicator.isSameRecording(track, it) }
-                offlineCopy ?: track
+                rules.substituteFor(track, downloadedTracks) ?: track
             }
         }
         emptyList()
@@ -807,8 +804,7 @@ class MusicRepository @Inject constructor(
      */
     suspend fun generateRadio(seed: UnifiedTrack, count: Int = 20): List<UnifiedTrack> =
         withContext(Dispatchers.IO) {
-            val source = sourceFor(seed.source)?.takeIf { it.capabilities.radio }
-            val fromSource = source?.getRadio(seed.id, count * 2)?.getOrNull().orEmpty()
+            val fromSource = radioAcrossSources(seed, count * 2)
             if (fromSource.isNotEmpty()) persist(fromSource, asLibrary = false)
 
             // The library is added to the pool rather than used only when the source fails: a
@@ -817,7 +813,16 @@ class MusicRepository @Inject constructor(
             val fromLibrary = trackDao.getTopPlayedTracks(count * 2)
                 .map(TrackEntity::toUnifiedTrack)
 
-            val pool = (fromSource + fromLibrary).filter { it.id != seed.id }
+            // Interleaved before the library is added, for the reason spelled out on
+            // [interleaveBySource]: the per-source answers arrive concatenated, and when the seed
+            // has no vector [SmartRadioBuilder] keeps the pool in arrival order — so without this
+            // a station could open with nothing but whichever backend replied with the most rows.
+            //
+            // Collapsed by recording afterwards, because asking several backends for the same seed
+            // is exactly how one song comes back three times under three different ids.
+            val pool = recordingRules.current()
+                .distinct(interleaveBySource(fromSource) + fromLibrary)
+                .filter { it.id != seed.id }
             if (pool.isEmpty()) return@withContext emptyList()
 
             val vectors = acousticFeatures.allFeatures()
@@ -829,7 +834,38 @@ class MusicRepository @Inject constructor(
         }
 
     /**
-     * The row that may stand in for [wanted], as [selectSameRecording] judges it, mapped back to
+     * Every configured backend's own radio for [seed], asked in parallel.
+     *
+     * Asking only the seed's own source was the limit here: a Navidrome seed never reached YouTube
+     * Music's station even with the account signed in, so which backend a song happened to be
+     * tapped from decided how far the radio could see.
+     *
+     * A backend can only answer for an id it issued — [IMusicSource.getRadio] takes a seed id, and
+     * both Navidrome and YouTube Music strip their own prefix off it, so handing one a foreign id
+     * sends it a string it cannot resolve. The seed is therefore translated first: [renditionsOf]
+     * finds the copies of this recording the library already holds, which is a Room read and costs
+     * no network. A source with no known copy is not asked rather than asked with somebody else's
+     * id.
+     *
+     * Failures are dropped, not propagated. One backend being unreachable should narrow the
+     * station, not empty it.
+     */
+    private suspend fun radioAcrossSources(seed: UnifiedTrack, count: Int): List<UnifiedTrack> =
+        coroutineScope {
+            // Seed last: `associateBy` keeps the final entry, and for the seed's own source the
+            // id the caller actually tapped beats any other copy the library holds of it.
+            val seedPerSource = (renditionsOf(seed) + seed).associateBy { it.source }
+            activeSources()
+                .filter { it.capabilities.radio }
+                .mapNotNull { source ->
+                    val id = seedPerSource[source.sourceType]?.id ?: return@mapNotNull null
+                    async { source.getRadio(id, count).getOrNull().orEmpty() }
+                }
+                .flatMap { it.await() }
+        }
+
+    /**
+     * The row that may stand in for [wanted], as [RecordingRules.substituteFor] judges it, mapped back to
      * the entity the caller needs a file path from.
      *
      * A candidate with no duration no longer substitutes unless a fingerprint link says it is the
@@ -841,11 +877,9 @@ class MusicRepository @Inject constructor(
         candidates: List<TrackEntity>
     ): TrackEntity? {
         if (candidates.isEmpty()) return null
-        val chosen = selectSameRecording(
+        val chosen = recordingRules.current().substituteFor(
             wanted = wanted.toUnifiedTrack(),
-            candidates = candidates.map(TrackEntity::toUnifiedTrack),
-            splits = splitRepository.splits(),
-            links = linkRepository.links()
+            candidates = candidates.map(TrackEntity::toUnifiedTrack)
         ) ?: return null
         return candidates.first { it.id == chosen.id }
     }

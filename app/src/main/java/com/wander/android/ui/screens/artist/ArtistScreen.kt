@@ -2,15 +2,16 @@ package com.wander.android.ui.screens.artist
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -105,14 +106,10 @@ internal fun ArtistScreen(
         )
     }
 
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(contentPadding.headerInset())
-    ) {
-        IconButton(onClick = onBack, modifier = Modifier.padding(start = 4.dp, top = 4.dp)) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
-        }
-
+    // A single Box rather than a header above a list: the portrait runs to the top of the window,
+    // under the status bar, so there is no bar to put a back control in. It floats over the image
+    // instead, inset by the status bar itself.
+    Box(modifier = Modifier.fillMaxSize()) {
         // Three states, and only three. A skeleton while nothing definite is known, the empty
         // state once every source has answered with nothing, and the page itself otherwise —
         // including while a refresh is still running underneath it.
@@ -120,7 +117,9 @@ internal fun ArtistScreen(
             state.isLoading -> ArtistSkeleton(contentPadding.listInset())
 
             state.isEmpty -> Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(contentPadding),
                 contentAlignment = Alignment.Center
             ) {
                 EmptyState(
@@ -167,6 +166,21 @@ internal fun ArtistScreen(
                     onOpenArtist = onOpenArtist
                 )
             }
+        }
+
+        // Tinted rather than plain: a bare icon lands on whatever the portrait happens to be, and
+        // a back arrow that disappears into a light photo is a page with no way out of it.
+        FilledTonalIconButton(
+            onClick = onBack,
+            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
+            ),
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(contentPadding.headerInset())
+                .padding(start = 12.dp, top = 8.dp)
+        ) {
+            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
         }
     }
 }
