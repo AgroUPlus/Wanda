@@ -114,6 +114,7 @@ internal fun SettingsScreen(
             },
             onMonetChange = viewModel::setMonetDynamic,
             onAmoledChange = viewModel::setAmoledBlack,
+            onImmersivePlayerChange = viewModel::setImmersivePlayer,
             onOfflineChange = viewModel::setOfflineMode,
             onPreloadNextChange = viewModel::setPreloadNextEnabled,
             onIndexOnMobileDataChange = viewModel::setIndexOnMobileDataEnabled,

@@ -9,8 +9,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,66 +73,78 @@ fun PlaylistScreen(
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(contentPadding.headerInset())
-    ) {
-        IconButton(onClick = onBack, modifier = Modifier.padding(start = 4.dp, top = 4.dp)) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
-        }
-
-        if (isLoading && playlist == null && tracks.isEmpty()) {
-            AlbumSkeleton(contentPadding.listInset())
-            return@Column
-        }
-
-        if (playlist == null && tracks.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                EmptyState(
-                    title = "Playlist unavailable",
-                    message = "This playlist couldn't be loaded from any connected source."
-                )
+    Box(modifier = Modifier.fillMaxSize()) {
+        when {
+            isLoading && playlist == null && tracks.isEmpty() -> {
+                AlbumSkeleton(contentPadding.listInset())
             }
-            return@Column
+
+            playlist == null && tracks.isEmpty() -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(contentPadding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    EmptyState(
+                        title = "Playlist unavailable",
+                        message = "This playlist couldn't be loaded from any connected source."
+                    )
+                }
+            }
+
+            else -> {
+                LazyColumn(
+                    contentPadding = contentPadding.listInset(),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    item(key = "header", contentType = "header") {
+                        val current = playlist
+                        val trackCount = if (current?.songCount != null && current.songCount > 0) current.songCount else tracks.size
+                        val subtitle = listOfNotNull(
+                            current?.source?.displayName,
+                            "$trackCount track${if (trackCount == 1) "" else "s"}",
+                            current?.comment?.takeIf { it.isNotBlank() }
+                        ).joinToString(" · ")
+
+                        AlbumHero(
+                            title = current?.name ?: "Playlist",
+                            subtitle = subtitle,
+                            artworkUrl = current?.coverArtUrl ?: tracks.firstNotNullOfOrNull { it.artworkUrl },
+                            onPlay = viewModel::playAll,
+                            onShuffle = viewModel::shuffle,
+                            onShare = viewModel::sharePlaylist.takeIf { viewModel.canSharePlaylist() },
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                    }
+
+                    itemsIndexed(
+                        items = tracks,
+                        key = { index, track -> "${track.id}_$index" },
+                        contentType = { _, _ -> "track" }
+                    ) { index, track ->
+                        TrackRow(
+                            track = track,
+                            onPlay = { viewModel.play(index) },
+                            onToggleLike = { viewModel.toggleLike(track) },
+                            onLongPress = { actionsFor = track }
+                        )
+                    }
+                }
+            }
         }
 
-        LazyColumn(
-            contentPadding = contentPadding.listInset(),
-            modifier = Modifier.fillMaxSize()
+        FilledTonalIconButton(
+            onClick = onBack,
+            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
+            ),
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(contentPadding.headerInset())
+                .padding(start = 12.dp, top = 8.dp)
         ) {
-            item(key = "header", contentType = "header") {
-                val current = playlist
-                val trackCount = if (current?.songCount != null && current.songCount > 0) current.songCount else tracks.size
-                val subtitle = listOfNotNull(
-                    current?.source?.displayName,
-                    "$trackCount track${if (trackCount == 1) "" else "s"}",
-                    current?.comment?.takeIf { it.isNotBlank() }
-                ).joinToString(" · ")
-
-                AlbumHero(
-                    title = current?.name ?: "Playlist",
-                    subtitle = subtitle,
-                    artworkUrl = current?.coverArtUrl ?: tracks.firstNotNullOfOrNull { it.artworkUrl },
-                    onPlay = viewModel::playAll,
-                    onShuffle = viewModel::shuffle,
-                    onShare = viewModel::sharePlaylist.takeIf { viewModel.canSharePlaylist() },
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            }
-
-            itemsIndexed(
-                items = tracks,
-                key = { index, track -> "${track.id}_$index" },
-                contentType = { _, _ -> "track" }
-            ) { index, track ->
-                TrackRow(
-                    track = track,
-                    onPlay = { viewModel.play(index) },
-                    onToggleLike = { viewModel.toggleLike(track) },
-                    onLongPress = { actionsFor = track }
-                )
-            }
+            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
         }
     }
 }

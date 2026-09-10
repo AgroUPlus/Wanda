@@ -1,11 +1,9 @@
 package com.wander.android.ui.screens.stats
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -24,15 +22,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.repository.TopSong
 import com.wander.android.data.sources.agro.StatsPeriod
-import com.wander.android.ui.components.Artwork
+import com.wander.android.ui.components.ImmersiveHero
 
 /**
  * The top of the statistics screen: the one song the window was mostly about, at full width.
@@ -73,34 +68,13 @@ internal fun StatsHero(
                 )
             }
         } else {
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(CoverAspect)
+            ImmersiveHero(
+                imageUrl = topSong.artworkUrl,
+                contentDescription = topSong.title,
+                aspect = CoverAspect,
+                captionAlignment = Alignment.Start
             ) {
-                Artwork(
-                    url = topSong.artworkUrl,
-                    contentDescription = topSong.title,
-                    // Constant so a cover is decoded once, not again at every measured width.
-                    sizeDp = HeroDecodeSize,
-                    shape = RectangleShape,
-                    modifier = Modifier.fillMaxWidth().aspectRatio(CoverAspect)
-                )
-
-                Row(
-                    verticalAlignment = Alignment.Bottom,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(
-                            Brush.verticalGradient(
-                                0f to Color.Transparent,
-                                0.45f to MaterialTheme.colorScheme.surface.copy(alpha = 0.75f),
-                                1f to MaterialTheme.colorScheme.surface
-                            )
-                        )
-                        .padding(horizontal = 20.dp)
-                        .padding(top = ScrimHeight, bottom = 8.dp)
-                ) {
+                Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Top song",
@@ -202,11 +176,6 @@ private fun PeriodPicker(
 
 /** Reads as a cover with room for two lines of title under it, not as a square with text on it. */
 private const val CoverAspect = 0.92f
-
-/** How much of the cover the caption is set over, and therefore how far the fade runs. */
-private val ScrimHeight = 96.dp
-
-private val HeroDecodeSize = 480.dp
 
 /** Shared by the hero's caption row and the quick-fact tiles. */
 internal val StatsGutter = 20.dp
