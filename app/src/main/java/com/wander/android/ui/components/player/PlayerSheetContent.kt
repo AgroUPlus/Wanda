@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -26,18 +28,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
-import androidx.compose.foundation.layout.offset
-import androidx.compose.ui.graphics.graphicsLayer
 import com.wander.android.ui.components.MiniArtworkSize
-import com.wander.android.ui.navigation.DockRowHeight
 import com.wander.android.ui.components.MiniPlayer
+import com.wander.android.ui.navigation.DockRowHeight
 import com.wander.android.ui.screens.player.NowPlayingScreen
 
 /**
@@ -98,8 +99,12 @@ fun PlayerSheetContent(
     // Opacity only, and read in a `graphicsLayer` rather than here — see the note on this
     // composable. The cover is drawn outside `NowPlayingScreen`'s `AnimatedContent`, so it has no
     // transition of its own; this is what cross-fades it with the lyrics instead of cutting.
+    // The immersive player keeps its cover: there the artwork *is* the background, and the lyrics
+    // are drawn over it behind a scrim of their own. Fading it out left the sheet's own
+    // `expandedColor` — plain black under the true-black theme — with the lyrics on it, which is
+    // the "lyrics are just a black frame" report.
     val artworkAlphaState = animateFloatAsState(
-        targetValue = if (lyricsVisible) 0f else 1f,
+        targetValue = if (lyricsVisible && !immersivePlayer) 0f else 1f,
         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
         label = "artwork-lyrics-fade"
     )
@@ -219,6 +224,11 @@ fun PlayerSheetContent(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
+                // The sheet measures its content at the full screen width and clips this much off
+                // each side while docked, so the strip holds itself in by the same amount. Constant
+                // rather than progress-driven: the strip has faded out well before the sheet is
+                // open, so there is nothing to see it once it stops being the right inset.
+                .padding(horizontal = DockedSideInset)
                 .height(MiniStripHeight)
                 .then(if (docked) miniSwipe else Modifier)
                 .clickable(
@@ -258,6 +268,8 @@ fun PlayerSheetContent(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
+                // Same inset as the strip above it, for the same reason.
+                .padding(horizontal = DockedSideInset)
                 .offset(y = MiniStripHeight)
                 .height(DockRowHeight)
                 .graphicsLayer { alpha = 1f - smoothStep(progress(), 0f, 0.30f) }

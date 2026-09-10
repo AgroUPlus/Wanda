@@ -70,7 +70,14 @@ val MiniPlayerShadowInset: Dp = 6.dp
  * the sheet opens so the expanded player is full-bleed — without re-measuring the content, which
  * is measured once at the docked width and simply centred as the box widens.
  */
-private val DockedSideInset: Dp = 12.dp
+/**
+ * How far the docked strip is held off each side of the screen.
+ *
+ * The sheet's content is measured once at the full screen width, so this is no longer subtracted
+ * from that measurement — the strip applies it as padding of its own instead, and the sheet's clip
+ * trims the same amount while docked. See the `layout` block below.
+ */
+internal val DockedSideInset: Dp = 12.dp
 
 /** Corner radius while docked; interpolated to square as the sheet fills the screen. */
 private val DockedCorner: Dp = 28.dp
@@ -194,9 +201,17 @@ fun PlayerSheet(
                     val fullHeight = sheetHeight.roundToPx()
                     val miniHeight = dockedHeightState.value.roundToPx()
 
-                    // One measurement for the whole gesture.
+                    // One measurement for the whole gesture — at the *full* width, not the docked
+                    // one. Measured at `dockedWidth`, an expanded sheet reported a `fullWidth` node
+                    // with content 24 dp narrower centred in it, and the background showed through
+                    // as a 12 dp bar down each edge. Nothing notices in the standard layout, where
+                    // the cover is a centred square with padding of its own, but an edge-to-edge
+                    // cover ends up framed in `background` on two sides and bled to the screen on
+                    // the other two, which is what made it look like it had escaped its frame.
+                    //
+                    // Still exactly one measurement, so the drag stays as cheap as it was.
                     val placeable = measurable.measure(
-                        Constraints.fixed(dockedWidth, fullHeight)
+                        Constraints.fixed(fullWidth, fullHeight)
                     )
 
                     val progress = sheetState.progress
@@ -206,8 +221,14 @@ fun PlayerSheet(
                     // Reporting the animated height is what keeps the docked strip from covering
                     // the navigation bar: a full-height node would paint over everything below
                     // its top edge.
+                    //
+                    // The x is negative while docked: the content is now wider than the node, so it
+                    // is centred and the `graphicsLayer` clip above trims `DockedSideInset` off
+                    // each side. The strip puts that inset back as padding of its own — see
+                    // `MiniPlayer` in `PlayerSheetContent` — landing its content in exactly the box
+                    // it occupied when the measurement itself was docked-width.
                     layout(width, height) {
-                        placeable.place(x = (width - dockedWidth) / 2, y = 0)
+                        placeable.place(x = (width - fullWidth) / 2, y = 0)
                     }
                 }
                 .draggable(

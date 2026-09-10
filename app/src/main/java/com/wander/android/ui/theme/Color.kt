@@ -15,6 +15,26 @@ private val TealDark = Color(0xFF66D9D9)
 private val Coral = Color(0xFFE8577D)
 private val CoralDark = Color(0xFFFFB1C3)
 
+/**
+ * The dot on anything happening live — a jam in progress, a listen-along in the bar.
+ *
+ * Outside the scheme on purpose, and the same in both themes: it is a recording light, and the one
+ * colour read as "on air" without a label beside it. Taking `error` instead would tie it to
+ * whatever the palette does with failure, and under Monet that is a wallpaper-derived red that can
+ * land anywhere from rust to pink.
+ */
+internal val LiveIndicator = Color(0xFFEF4444)
+
+/**
+ * Content drawn straight onto cover art rather than onto a surface.
+ *
+ * The immersive player has no surface under its text — the artwork is the background, behind a
+ * scrim dark enough to carry white. `onSurface` would follow the theme into near-black under a
+ * light scheme and disappear into the scrim, so this deliberately does not track the scheme; the
+ * scrim is what guarantees the contrast, and it is drawn to suit this.
+ */
+internal val OnCoverArt = Color.White
+
 internal val WandaLightScheme = lightColorScheme(
     primary = Violet,
     onPrimary = Color.White,
