@@ -75,4 +75,46 @@ Rules of the road:
 ./gradlew :app:installDebug           # install on connected device
 ```
 
+Research Before Implementation (MANDATORY)
+
+Before implementing code, researching code, or answering technical questions, the AI agent MUST follow this research workflow:
+Step 1: Look up official documentation
+
+    Use MCP Context7 (resolve-library-id → query-docs) to fetch up-to-date documentation for any library/framework about to be used
+    Understand the latest API surface, breaking changes, and recommended usage patterns
+
+Step 2: Evaluate pros, cons, and alternatives
+
+    Use WebSearch to research:
+        Pros and cons of the library/approach
+        Alternative libraries or approaches that solve the same problem
+        Known issues, performance concerns, or deprecation notices
+    Compare and evaluate whether the chosen library/approach is the best fit for this project
+
+Step 3: Study OSS best practices
+
+    Use Grep (on GitHub via web search) or WebSearch to find how well-known open-source projects implement similar features
+    Verify the approach follows established best practices before adopting it
+    Pay attention to patterns used in projects with similar architecture (Clean Architecture, Compose Multiplatform, etc.)
+
+Step 4: Make a decision and justify
+
+    Only proceed with implementation after completing steps 1-3
+    If a library/approach has significant drawbacks or better alternatives exist, recommend the better option to the user before proceeding
+    Document the rationale briefly when introducing new dependencies or patterns
+
+This workflow applies to: Adding new libraries, choosing architectural patterns, implementing new features with unfamiliar APIs, answering "how should we do X?" questions, and evaluating technical approaches.
+
+This workflow does NOT apply to: Simple bug fixes in existing code, minor refactoring, or tasks using libraries already well-established in the project.
+Verification After Code Changes
+
+    Do NOT build the app to verify code changes. Instead, use JetBrains MCP tools (get_file_problems, getDiagnostics) to check for compile errors and warnings in real-time.
+    Only run Gradle build when explicitly requested by the user or for final release verification and never do so inside wsl.
+
+Testing
+
+    Unit tests for Domain layer (Use cases)
+    Repository tests with fake data sources
+    UI tests with Compose Testing
+
 JDK 17 and Android SDK 36 are required (`org.gradle.java.home` is set in `gradle.properties`).
