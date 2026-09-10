@@ -69,6 +69,18 @@ class P2PServer @Inject constructor(
     private var isRunning = false
 
     /**
+     * Peers currently being served, which is the only time a high-performance Wi-Fi lock earns its
+     * cost.
+     *
+     * The lock used to be taken in [start] and released in [stop]. Nothing ever called [stop], and
+     * [start] runs from `Application.onCreate` on every launch, so every device holding this class
+     * held `WIFI_MODE_FULL_HIGH_PERF` for the whole life of the process — including the majority
+     * that never share a single track. A listening socket costs nothing to keep open; the radio is
+     * what costs, and it only matters once bytes are actually moving.
+     */
+    private val activeTransfers = java.util.concurrent.atomic.AtomicInteger(0)
+
+    /**
      * Grants Agro has issued for this device, by token.
      *
      * This server listens on every interface, and a LAN is not a trust boundary — a hotel, a
@@ -399,21 +411,10 @@ class P2PServer @Inject constructor(
     suspend fun start(port: Int = 8702): Result<Unit> {
         if (isRunning) return Result.success(Unit)
 
-        try {
-            val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
-            wifiLock = wifiManager?.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "wanda:p2p")?.apply {
-                setReferenceCounted(false)
-                acquire()
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not acquire WifiLock", e)
-        }
-
         val server = withContext(Dispatchers.IO) {
             runCatching { ServerSocket(port, 50, InetAddress.getByName("0.0.0.0")) }
         }.getOrElse { error ->
             Log.e(TAG, "Failed to start P2PServer", error)
-            releaseWifiLock()
             return Result.failure(bindFailure(port, error))
         }
 
@@ -453,6 +454,32 @@ class P2PServer @Inject constructor(
         return IOException(message, cause)
     }
 
+    /**
+     * Takes the Wi-Fi lock for the first peer being served, and lets the last one out release it.
+     *
+     * Reference counting is done here rather than by the framework's own `setReferenceCounted`
+     * because [stop] has to be able to drop the lock outright, whatever is in flight.
+     */
+    private fun acquireWifiLockForTransfer() {
+        if (activeTransfers.getAndIncrement() != 0) return
+        try {
+            val wifiManager =
+                context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+            wifiLock = wifiManager?.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "wanda:p2p")
+                ?.apply {
+                    setReferenceCounted(false)
+                    acquire()
+                }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not acquire WifiLock", e)
+        }
+    }
+
+    private fun releaseWifiLockAfterTransfer() {
+        if (activeTransfers.decrementAndGet() > 0) return
+        releaseWifiLock()
+    }
+
     private fun releaseWifiLock() {
         try {
             wifiLock?.release()
@@ -466,6 +493,7 @@ class P2PServer @Inject constructor(
 
     fun stop() {
         isRunning = false
+        activeTransfers.set(0)
         releaseWifiLock()
         try {
             serverSocket?.close()
@@ -481,10 +509,13 @@ class P2PServer @Inject constructor(
         // Every write below can throw once the peer has gone away, and most of them sit outside
         // the narrower guard around the audio path. A hung-up listener is not an error worth more
         // than a line in the log.
+        acquireWifiLockForTransfer()
         try {
             serve(socket)
         } catch (e: Exception) {
             Log.i(TAG, "peer went away mid-request: ${e.javaClass.simpleName}")
+        } finally {
+            releaseWifiLockAfterTransfer()
         }
     }
 

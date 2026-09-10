@@ -26,7 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.rememberPlaybackPosition
-import com.wander.android.data.model.LyricsData
+import com.wander.android.data.model.LyricsState
 
 /** Distance from the top the active line settles at, so upcoming lines stay visible below it. */
 private val ACTIVE_LINE_OFFSET = 96.dp
@@ -37,20 +37,23 @@ private val ACTIVE_LINE_OFFSET = 96.dp
  */
 @Composable
 fun SyncedLyricsView(
-    lyrics: LyricsData?,
+    state: LyricsState,
     playerConnection: PlayerConnection,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    if (lyrics == null) {
-        CenteredNotice("No lyrics found for this track.", modifier)
-        return
+    val lyrics = when (state) {
+        is LyricsState.Present -> state.lyrics
+        else -> {
+            CenteredNotice(state.describe(), modifier)
+            return
+        }
     }
 
     if (!lyrics.isSynced || lyrics.lines.isEmpty()) {
         val plain = lyrics.plainLyrics?.takeIf { it.isNotBlank() }
         if (plain == null) {
-            CenteredNotice("No lyrics found for this track.", modifier)
+            CenteredNotice(LyricsState.Absent.describe(), modifier)
             return
         }
         // Unsynced lyrics run long; without a scroll modifier everything past the fold was
@@ -105,6 +108,20 @@ fun SyncedLyricsView(
             )
         }
     }
+}
+
+/**
+ * What to say when there is nothing to show.
+ *
+ * Each variant gets its own sentence. Telling someone in a tunnel that their song has no lyrics
+ * sends them looking for a fault in the track instead of waiting for signal.
+ */
+private fun LyricsState.describe(): String = when (this) {
+    LyricsState.Loading -> "Looking for lyrics…"
+    LyricsState.Absent -> "No lyrics found for this track."
+    LyricsState.Instrumental -> "This recording is instrumental."
+    LyricsState.Unreachable -> "Couldn't check for lyrics. Check your connection and try again."
+    is LyricsState.Present -> ""
 }
 
 @Composable

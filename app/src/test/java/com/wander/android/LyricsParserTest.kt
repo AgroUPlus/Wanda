@@ -4,7 +4,10 @@ import com.wander.android.core.database.dao.LyricSearchResult
 import com.wander.android.core.database.dao.TrackLyricsDao
 import com.wander.android.core.database.entity.TrackLyricsEntity
 import com.wander.android.core.network.HttpClientFactory
+import com.wander.android.data.model.LyricsState
 import com.wander.android.data.repository.LyricsRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -16,8 +19,10 @@ class LyricsParserTest {
         override suspend fun insertLyrics(lyrics: TrackLyricsEntity) {}
         override suspend fun insertFts(trackId: String, plainLyrics: String) {}
         override suspend fun deleteFts(trackId: String) {}
+        override suspend fun deleteLyrics(trackId: String) {}
         override suspend fun searchTracksByLyrics(query: String, limit: Int): List<LyricSearchResult> = emptyList()
         override suspend fun countLyrics(): Int = 0
+        override fun countFromCatalogueFlow(): Flow<Int> = flowOf(0)
     }
 
     @Test
@@ -60,11 +65,14 @@ class LyricsParserTest {
             override suspend fun insertLyrics(lyrics: TrackLyricsEntity) {}
             override suspend fun insertFts(trackId: String, plainLyrics: String) {}
             override suspend fun deleteFts(trackId: String) {}
+            override suspend fun deleteLyrics(trackId: String) {}
             override suspend fun searchTracksByLyrics(query: String, limit: Int): List<LyricSearchResult> = emptyList()
             override suspend fun countLyrics(): Int = 1
+            override fun countFromCatalogueFlow(): Flow<Int> = flowOf(0)
         }
         val repo = LyricsRepository(emptySet(), cachedDao, HttpClientFactory.ktorClient)
-        val data = repo.getLyrics("track_123", "Title", "Artist")
+        val state = repo.getLyrics("track_123", "Title", "Artist")
+        val data = (state as? LyricsState.Present)?.lyrics
         org.junit.Assert.assertNotNull(data)
         assertEquals(true, data?.isSynced)
         assertEquals("LOCAL_CACHE", data?.source)

@@ -74,6 +74,18 @@ class ConnectivityObserver @Inject constructor(
     }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, manager?.hasInternet(manager.activeNetwork) ?: true)
+
+    /**
+     * Whether the connection in use now bills by the byte.
+     *
+     * Read at the moment of asking rather than kept as a flow: the callers are background workers
+     * deciding whether to start an optional transfer, and a value from a subscription that settled
+     * earlier would describe a network the phone may have already left. Assumes metered when it
+     * cannot tell — the cost of skipping an optional upload is one missed opportunity, and the cost
+     * of the opposite is somebody's data allowance.
+     */
+    val isMetered: Boolean
+        get() = manager?.isActiveNetworkMetered ?: true
 }
 
 private fun ConnectivityManager.hasInternet(network: Network?): Boolean {

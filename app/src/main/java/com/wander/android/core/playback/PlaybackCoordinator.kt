@@ -1,6 +1,6 @@
 package com.wander.android.core.playback
 
-import com.wander.android.data.model.LyricsData
+import com.wander.android.data.model.LyricsState
 import com.wander.android.data.repository.JamRepository
 import com.wander.android.data.repository.LyricsRepository
 import com.wander.android.data.repository.MusicRepository
@@ -34,16 +34,19 @@ internal class PlaybackCoordinator @Inject constructor(
 ) {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    private val _lyrics = MutableStateFlow<LyricsData?>(null)
-    val lyrics: StateFlow<LyricsData?> = _lyrics.asStateFlow()
+    private val _lyrics = MutableStateFlow<LyricsState>(LyricsState.Loading)
+    val lyrics: StateFlow<LyricsState> = _lyrics.asStateFlow()
 
     init {
         connection.state
             .map { it.currentTrack }
             .distinctUntilChanged { old, new -> old?.id == new?.id }
             .onEach { track ->
-                _lyrics.value = null
-                if (track == null) return@onEach
+                _lyrics.value = LyricsState.Loading
+                if (track == null) {
+                    _lyrics.value = LyricsState.Absent
+                    return@onEach
+                }
                 com.wander.android.core.audio.fingerprint.FingerprintIndexing.enqueue(
                     context,
                     allowMobileData = secureStorage.isIndexOnMobileDataEnabled.value
