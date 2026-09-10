@@ -62,15 +62,30 @@ internal fun LazyListScope.syncTab(
 
     item(key = "agro_catalog_trade") {
         SettingsToggle(
-            title = "Trade fingerprints with the server",
+            title = "Improve with Agro",
             // Names both directions and who ends up able to see it. The catalogue has no account
             // column, so publishing is a disclosure to everyone on the server, not just to it.
-            subtitle = "Sends the acoustic fingerprints of your tracks and takes everyone else's, " +
-                "so badly tagged music inherits good tags. Other people on this server can see " +
-                "which recordings you hold, not your listening. Recognition works either way.",
+            // Also covers lyrics: publishRecording/catalogSince carry lyrics text alongside the
+            // fingerprint under this same flag, so the label has to say so.
+            subtitle = "Sends the acoustic fingerprints and lyrics of your tracks and takes " +
+                "everyone else's, so badly tagged music inherits good tags and lyrics. Other " +
+                "people on this server can see which recordings and lyrics you hold, not your " +
+                "listening. Recognition works either way.",
             checked = state.catalogTrade,
             onCheckedChange = actions.onCatalogTradeChange
         )
+    }
+
+    if (state.catalogTrade) {
+        item(key = "agro_catalog_trade_totals") {
+            // Follows the toggle rather than living inside it: the switch says what the setting
+            // does, and this says what it has done. Only shown while it is on, because a pair of
+            // zeroes under an off switch explains nothing.
+            SettingsRow(
+                title = "What the trade has done",
+                subtitle = tradeTotals(state.fingerprintsShared, state.lyricsReceived)
+            )
+        }
     }
 
     agroDevicesSection(state = devices, onResume = actions.onResumeHandoff)
@@ -89,6 +104,21 @@ internal fun LazyListScope.syncTab(
             else -> "Archived to Agro server."
         }
     )
+}
+
+/**
+ * What the catalogue trade has amounted to, in both directions.
+ *
+ * Says "nothing yet" rather than "0 · 0" before the first sync: the trade only runs on a charger
+ * over Wi-Fi, so a freshly enabled toggle showing zeroes is the normal case and reads as broken.
+ */
+private fun tradeTotals(shared: Int, received: Int): String {
+    if (shared == 0 && received == 0) {
+        return "Nothing traded yet. The first exchange runs while charging on Wi-Fi."
+    }
+    val sharedLabel = if (shared == 1) "1 fingerprint shared" else "$shared fingerprints shared"
+    val receivedLabel = if (received == 1) "1 lyric received" else "$received lyrics received"
+    return "$sharedLabel · $receivedLabel"
 }
 
 /**

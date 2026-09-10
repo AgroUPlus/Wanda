@@ -60,7 +60,8 @@ internal class SettingsViewModel @Inject constructor(
     private val workControls: com.wander.android.core.work.WorkControls,
     private val fingerprintProgress: com.wander.android.core.audio.fingerprint.FingerprintProgress,
     private val socialRepository: com.wander.android.data.repository.SocialRepository,
-    private val dropsRepository: com.wander.android.data.repository.DropsRepository
+    private val dropsRepository: com.wander.android.data.repository.DropsRepository,
+    private val catalogSync: com.wander.android.data.repository.CatalogSyncRepository
 ) : ViewModel() {
 
     val appVersion: String get() = com.wander.android.BuildConfig.VERSION_NAME
@@ -291,6 +292,18 @@ internal class SettingsViewModel @Inject constructor(
 
     /** Same reason, and the same default. */
     val catalogTradeEnabled: StateFlow<Boolean> = secureStorage.agroCatalogTradeFlow
+
+    /**
+     * What the trade has actually amounted to, in both directions.
+     *
+     * The toggle said what it would do and then never mentioned it again, so the one thing a user
+     * could not find out about a setting they had turned on was whether it was doing anything.
+     */
+    val fingerprintsShared: StateFlow<Int> = catalogSync.fingerprintsShared
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
+    val lyricsReceived: StateFlow<Int> = catalogSync.lyricsReceived
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     /**
      * Whether the server lets this account archive.

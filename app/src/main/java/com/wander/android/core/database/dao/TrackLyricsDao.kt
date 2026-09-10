@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.database.entity.TrackLyricsEntity
+import kotlinx.coroutines.flow.Flow
 
 import androidx.room.Embedded
 
@@ -46,11 +47,20 @@ interface TrackLyricsDao {
     @Query("DELETE FROM lyrics_fts WHERE trackId = :trackId")
     suspend fun deleteFts(trackId: String)
 
+    @Query("DELETE FROM track_lyrics WHERE trackId = :trackId")
+    suspend fun deleteLyrics(trackId: String)
+
     @Transaction
     suspend fun saveLyricsWithFts(lyrics: TrackLyricsEntity) {
         insertLyrics(lyrics)
         deleteFts(lyrics.trackId)
         insertFts(lyrics.trackId, lyrics.plainLyrics)
+    }
+
+    @Transaction
+    suspend fun deleteLyricsWithFts(trackId: String) {
+        deleteLyrics(trackId)
+        deleteFts(trackId)
     }
 
     @Transaction
@@ -68,4 +78,8 @@ interface TrackLyricsDao {
 
     @Query("SELECT COUNT(*) FROM track_lyrics")
     suspend fun countLyrics(): Int
+
+    /** How many lyrics this device got from the fleet rather than fetching for itself. */
+    @Query("SELECT COUNT(*) FROM track_lyrics WHERE viaCatalog = 1")
+    fun countFromCatalogueFlow(): Flow<Int>
 }

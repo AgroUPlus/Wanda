@@ -81,7 +81,15 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
         // Launched rather than awaited: `onCreate` must not block on a bind, and nothing on this
         // path has a screen to report to. The off-grid screen starts it again and *does* wait,
         // which is where a taken port becomes something the user is told about.
-        applicationScope.launch { p2pServer.start() }
+        //
+        // Follows the P2P sync setting rather than starting unconditionally. It was the only thing
+        // this switch did not reach, so a user who turned device-to-device transfers off still had
+        // a port bound and accepting for the life of the process.
+        applicationScope.launch {
+            secureStorage.agroP2pSyncFlow.collect { enabled ->
+                if (enabled) p2pServer.start() else p2pServer.stop()
+            }
+        }
         // Needed for YT Music's PO Token / signature-cipher deobfuscation (see InnerTubeClient).
         val isDebuggable = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         ZemerCipher.initialize(context = this, debugLogging = isDebuggable)

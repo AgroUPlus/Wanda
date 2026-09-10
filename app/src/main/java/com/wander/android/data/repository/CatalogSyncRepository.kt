@@ -4,12 +4,14 @@ import android.util.Log
 import com.wander.android.core.audio.fingerprint.AudioEmbedder
 import com.wander.android.core.database.dao.TrackEmbeddingDao
 import com.wander.android.core.database.dao.TrackLyricsDao
+import com.wander.android.core.database.entity.TrackEmbeddingEntity
 import com.wander.android.core.database.entity.TrackLyricsEntity
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.sources.agro.AgroCatalogApi
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlin.math.roundToInt
 import kotlinx.coroutines.withContext
 
@@ -34,6 +36,21 @@ internal class CatalogSyncRepository @Inject constructor(
     private val trackLyricsDao: TrackLyricsDao,
     private val secureStorage: SecureStorage
 ) {
+
+    /**
+     * How many fingerprints this device has contributed, and how many lyrics it has been given.
+     *
+     * Flows rather than a count taken on demand, so a settings screen left open while a sync runs
+     * shows what changed instead of what was true when it opened.
+     */
+    val fingerprintsShared: Flow<Int>
+        get() = embeddingDao.publishedCountFlow(
+            model = AudioEmbedder.MODEL_NAME,
+            version = AudioEmbedder.EMBEDDER_VERSION,
+            publishedThrough = secureStorage.catalogLastPublishedAt
+        )
+
+    val lyricsReceived: Flow<Int> get() = trackLyricsDao.countFromCatalogueFlow()
 
     /**
      * Pushes what this device has fingerprinted, then pulls what it has not seen.
@@ -87,17 +104,18 @@ internal class CatalogSyncRepository @Inject constructor(
         )
         if (mine.isEmpty()) return 0
 
-        var sent = 0
-        var newest = lastPublished
-        for (embedding in mine) {
-            val track = musicRepository.trackById(embedding.trackId) ?: continue
-            if (track.durationMs <= 0L) continue
+        // Paired with the embedding it came from, so the cursor can advance past exactly what the
+        // server accepted whether these go one at a time or all at once.
+        val pending = mine.mapNotNull { embedding ->
+            val track = musicRepository.trackById(embedding.trackId) ?: return@mapNotNull null
+            if (track.durationMs <= 0L) return@mapNotNull null
 
             val lyricsEntity = trackLyricsDao.findLyricsForTrackOrMetadata(track.id, track.title, track.artist)
                 ?: trackLyricsDao.getLyricsForTrack(embedding.trackId)
-            val lyricsPayload = lyricsEntity?.syncedLyrics ?: lyricsEntity?.plainLyrics
+            val lyricsPayload = lyricsEntity?.syncedLyrics
+                ?: lyricsEntity?.plainLyrics?.takeIf { it.isNotBlank() }
 
-            val published = catalogApi.publish(
+            embedding to AgroCatalogApi.Publication(
                 embeddingHex = quantiseToHex(AudioEmbedder.unpack(embedding.vector)),
                 dim = embedding.dim,
                 model = embedding.model,
@@ -107,9 +125,54 @@ internal class CatalogSyncRepository @Inject constructor(
                 artist = track.artist,
                 album = track.album,
                 sourceUri = embedding.trackId.takeUnless { it.startsWith(LOCAL_PREFIX) },
-                lyrics = lyricsPayload
+                lyrics = lyricsPayload,
+                lyricsSource = lyricsEntity?.source?.takeIf { lyricsPayload != null }
             )
-            if (published.isFailure) break
+        }
+        if (pending.isEmpty()) return 0
+
+        val sent = if (catalogApi.supportsBatch) {
+            publishInBatches(pending)
+        } else {
+            publishOneAtATime(pending)
+        }
+        return sent
+    }
+
+    /**
+     * Sends the run as a handful of requests rather than one per recording.
+     *
+     * A chunk that fails outright stops the run and leaves the cursor where the last accepted
+     * entry put it, exactly as the single-shot path does — the next sync retries what did not go
+     * rather than stepping over it. An entry the server refused *individually* does not stop
+     * anything: it is one recording it will not take, and the rest of the chunk is good.
+     */
+    private suspend fun publishInBatches(pending: List<Pair<TrackEmbeddingEntity, AgroCatalogApi.Publication>>): Int {
+        var sent = 0
+        var newest = secureStorage.catalogLastPublishedAt
+        for (chunk in pending.chunked(AgroCatalogApi.MAX_BATCH)) {
+            val outcomes = catalogApi.publishAll(chunk.map { it.second }).getOrElse { break }
+            chunk.forEachIndexed { index, (embedding, _) ->
+                val outcome = outcomes.getOrNull(index)
+                if (outcome != null && outcome.error != null) {
+                    Log.w(TAG, "The catalogue would not take one recording: ${outcome.error}")
+                }
+                // Counted as dealt with either way: a recording the server refuses on its merits
+                // will be refused again next time, and holding the cursor back for it would stop
+                // everything behind it from ever being sent.
+                sent++
+                newest = maxOf(newest, embedding.computedAt)
+            }
+        }
+        secureStorage.catalogLastPublishedAt = newest
+        return sent
+    }
+
+    private suspend fun publishOneAtATime(pending: List<Pair<TrackEmbeddingEntity, AgroCatalogApi.Publication>>): Int {
+        var sent = 0
+        var newest = secureStorage.catalogLastPublishedAt
+        for ((embedding, publication) in pending) {
+            if (catalogApi.publish(publication).isFailure) break
             sent++
             newest = maxOf(newest, embedding.computedAt)
         }
@@ -176,7 +239,13 @@ internal class CatalogSyncRepository @Inject constructor(
                                 trackId = match.trackId,
                                 plainLyrics = plain,
                                 syncedLyrics = if (isSynced) entry.lyrics else null,
-                                source = "Agro"
+                                // Where the text actually came from, when the catalogue knows.
+                                // "Agro" is how it arrived, not what wrote it, and a lyric that
+                                // began at LRCLIB should still say so after a trip through the
+                                // fleet — otherwise every traded lyric loses its origin at the
+                                // first hop.
+                                source = entry.lyricsSource?.takeIf { it.isNotBlank() } ?: "Agro",
+                                viaCatalog = true
                             )
                         )
                     }

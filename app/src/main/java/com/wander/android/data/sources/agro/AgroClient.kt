@@ -2,6 +2,7 @@ package com.wander.android.data.sources.agro
 
 import com.wander.android.core.security.AgroVault
 import com.wander.android.core.security.SecureStorage
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -49,14 +50,6 @@ class AgroClient @Inject constructor(
             )
         }
 
-        val mutation = """
-            mutation RegisterNode(${'$'}userId: String!, ${'$'}deviceId: String!, ${'$'}clientType: String!, ${'$'}deviceName: String, ${'$'}lanAddress: String, ${'$'}currentTrack: String) {
-                registerNode(userId: ${'$'}userId, deviceId: ${'$'}deviceId, clientType: ${'$'}clientType, deviceName: ${'$'}deviceName, lanAddress: ${'$'}lanAddress, currentTrack: ${'$'}currentTrack) {
-                    petname
-                }
-            }
-        """.trimIndent()
-
         val variables = buildJsonObject {
             put("userId", secureStorage.agroUsername)
             put("deviceId", secureStorage.agroDeviceId)
@@ -66,11 +59,41 @@ class AgroClient @Inject constructor(
             currentTrack?.let { put("currentTrack", it) }
         }
 
-        return graphQl.execute(mutation, variables).map { data ->
-            val petname = data["registerNode"]?.jsonObject?.get("petname")?.jsonPrimitive?.contentOrNull
+        // Asks what the server can do at the same time as announcing this device. A server too old
+        // to have the field rejects the whole query, so the answer is remembered and the plain form
+        // retried — once, here, rather than by every later request discovering it for itself.
+        val withCapabilities = graphQl.execute(registerNodeMutation(askCapabilities = true), variables)
+        val result = if (withCapabilities.isSuccess ||
+            !AgroGraphQl.isUnknownFieldError(withCapabilities, "capabilities")
+        ) {
+            withCapabilities
+        } else {
+            secureStorage.agroCapabilities = emptySet()
+            graphQl.execute(registerNodeMutation(askCapabilities = false), variables)
+        }
+
+        return result.map { data ->
+            val node = data["registerNode"]?.jsonObject
+            val petname = node?.get("petname")?.jsonPrimitive?.contentOrNull
             if (!petname.isNullOrBlank()) secureStorage.setAgroDevicePetname(petname)
+            (node?.get("capabilities") as? JsonArray)?.let { advertised ->
+                secureStorage.agroCapabilities = advertised
+                    .mapNotNull { it.jsonPrimitive.contentOrNull }
+                    .toSet()
+            }
             petname
         }
+    }
+
+    private fun registerNodeMutation(askCapabilities: Boolean): String {
+        val fields = if (askCapabilities) "petname capabilities" else "petname"
+        return """
+            mutation RegisterNode(${'$'}userId: String!, ${'$'}deviceId: String!, ${'$'}clientType: String!, ${'$'}deviceName: String, ${'$'}lanAddress: String, ${'$'}currentTrack: String) {
+                registerNode(userId: ${'$'}userId, deviceId: ${'$'}deviceId, clientType: ${'$'}clientType, deviceName: ${'$'}deviceName, lanAddress: ${'$'}lanAddress, currentTrack: ${'$'}currentTrack) {
+                    $fields
+                }
+            }
+        """.trimIndent()
     }
 
     /**

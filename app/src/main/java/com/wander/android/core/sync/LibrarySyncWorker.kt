@@ -40,7 +40,8 @@ internal class LibrarySyncWorker @AssistedInject constructor(
     private val catalogSync: CatalogSyncRepository,
     private val secureStorage: com.wander.android.core.security.SecureStorage,
     private val notifications: WorkProgressNotification,
-    private val workControls: WorkControls
+    private val workControls: WorkControls,
+    private val connectivity: com.wander.android.core.network.ConnectivityObserver
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -109,8 +110,17 @@ internal class LibrarySyncWorker @AssistedInject constructor(
         // failure it logs and returns rather than throwing, because a catalogue that could not be
         // reached is an optimisation missed and not a sync that failed. Nothing here may make the
         // worker retry on its account.
-        catalogSync.sync()
-        if (isStopped) return@withContext Result.retry()
+        //
+        // Skipped outright on a metered or nearly-flat phone. The periodic schedule already
+        // requires charging, unmetered and a healthy battery, but `syncNow` — which a settings
+        // toggle or the manual button fires — asks only for a connection, because the user is
+        // waiting on the library sync above and should not be made to wait for a charger. The
+        // trade is the one step here nobody asked for: it is a background contribution, and it can
+        // wait for conditions that cost the user nothing.
+        if (canAffordCatalogueTrade()) {
+            catalogSync.sync()
+            if (isStopped) return@withContext Result.retry()
+        }
 
         // Finally, say if another device has put something here worth having. The in-app card only
         // shows while the app is open, and a phone syncing on a charger overnight is exactly the
@@ -196,8 +206,26 @@ internal class LibrarySyncWorker @AssistedInject constructor(
             total = total
         )
 
+    /**
+     * Whether this is a good moment to spend the user's battery and data on the catalogue trade.
+     *
+     * Deliberately not expressed as a WorkManager constraint: constraints apply to the whole
+     * worker, and the library sync this runs alongside is something the user asked for and should
+     * get on whatever connection they have.
+     */
+    private fun canAffordCatalogueTrade(): Boolean {
+        if (connectivity.isMetered) return false
+        val battery = context.getSystemService(android.os.BatteryManager::class.java)
+        val charging = battery?.isCharging == true
+        val level = battery?.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1
+        return charging || level < 0 || level > LOW_BATTERY_PERCENT
+    }
+
     companion object {
         const val TAG = "LibrarySyncWorker"
+
+        /** Matches what `setRequiresBatteryNotLow` means to the framework, near enough. */
+        private const val LOW_BATTERY_PERCENT = 20
         private const val OFFER_CHANNEL_ID = "wanda_new_music"
         private const val OFFER_NOTIFICATION_ID = 4712
     }
