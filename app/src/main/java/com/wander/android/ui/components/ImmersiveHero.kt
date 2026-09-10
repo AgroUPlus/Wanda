@@ -52,20 +52,55 @@ fun ImmersiveHero(
     overlay: @Composable BoxScope.() -> Unit = {},
     caption: @Composable ColumnScope.() -> Unit
 ) {
+    ImmersiveHero(
+        modifier = modifier,
+        aspect = aspect,
+        scrimHeight = scrimHeight,
+        horizontalPadding = horizontalPadding,
+        captionAlignment = captionAlignment,
+        overlay = overlay,
+        caption = caption,
+        backdrop = {
+            Artwork(
+                url = imageUrl,
+                contentDescription = contentDescription,
+                // Constant, not measured. A decode size derived from the laid-out box changes on
+                // the first frame after measurement, which is a different `ImageRequest` — so Coil
+                // decodes a second bitmap of the same picture and swaps it in. Generous enough for
+                // a tablet.
+                sizeDp = DecodeSize,
+                shape = RectangleShape,
+                modifier = Modifier.fillMaxWidth().aspectRatio(aspect)
+            )
+        }
+    )
+}
+
+/**
+ * The same shape, for a page whose subject is not a picture.
+ *
+ * The social side of the app has nothing to open on: Wanda hosts no uploads, so a person has an
+ * avatar and a circle has a handful of them, and stretching either into a banner is a blur. What
+ * carries over is not the photograph but the silhouette — full width, running under the status
+ * bar, fading into `surface` at its foot with the caption set into the part of the fade that has
+ * already arrived. [backdrop] fills the picture's place with whatever the page does have.
+ */
+@Composable
+fun ImmersiveHero(
+    modifier: Modifier = Modifier,
+    aspect: Float = DefaultAspect,
+    scrimHeight: Dp = DefaultScrimHeight,
+    horizontalPadding: Dp = 20.dp,
+    captionAlignment: Alignment.Horizontal = Alignment.CenterHorizontally,
+    overlay: @Composable BoxScope.() -> Unit = {},
+    backdrop: @Composable BoxScope.() -> Unit,
+    caption: @Composable ColumnScope.() -> Unit
+) {
     Box(modifier = modifier
         .fillMaxWidth()
         .aspectRatio(aspect)
     ) {
-        Artwork(
-            url = imageUrl,
-            contentDescription = contentDescription,
-            // Constant, not measured. A decode size derived from the laid-out box changes on the
-            // first frame after measurement, which is a different `ImageRequest` — so Coil decodes
-            // a second bitmap of the same picture and swaps it in. Generous enough for a tablet.
-            sizeDp = DecodeSize,
-            shape = RectangleShape,
-            modifier = Modifier.fillMaxWidth().aspectRatio(aspect)
-        )
+        backdrop()
 
         Column(
             horizontalAlignment = captionAlignment,

@@ -214,14 +214,34 @@ private fun PlaceholderAvatar(size: Dp) {
     }
 }
 
+/** The one hash, so a seed's palette is the same wherever it is asked for. */
+private fun seedHash(seed: String): Long =
+    seed.lowercase().fold(0L) { acc, c -> (acc * 37L + c.code) and 0x7FFFFFFFFFFFFFFFL }
+
+/**
+ * The two background colours of [seed]'s avatar, for painting something larger in their colours.
+ *
+ * A page about a person has no picture to open on the way an album does — Wanda hosts no uploads,
+ * and blowing an avatar up into a banner is a blur. This is the other thing that avatar is made
+ * of: the same deterministic pair every time, so somebody's page and the face on it agree, and two
+ * people no more collide here than their avatars do.
+ */
+internal fun avatarGradient(seed: String): Pair<Color, Color> {
+    val clean = seed.trim()
+    val palette = if (clean.isEmpty()) {
+        AVATAR_PALETTES[0]
+    } else {
+        AVATAR_PALETTES[(seedHash(clean) % AVATAR_PALETTES.size).toInt().absoluteValue]
+    }
+    return palette.bgStart to palette.bgEnd
+}
+
 @Composable
 private fun ProceduralCanvasAvatar(
     seed: String,
     size: Dp
 ) {
-    val hash = remember(seed) {
-        seed.lowercase().fold(0L) { acc, c -> (acc * 37L + c.code) and 0x7FFFFFFFFFFFFFFFL }
-    }
+    val hash = remember(seed) { seedHash(seed) }
 
     val paletteIndex = (hash % AVATAR_PALETTES.size).toInt().absoluteValue
     val palette = AVATAR_PALETTES[paletteIndex]
