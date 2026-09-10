@@ -13,11 +13,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -91,7 +91,7 @@ fun ImportLoadingOverlay(modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxSize().padding(24.dp)
         ) {
-            CircularProgressIndicator(modifier = Modifier.size(48.dp))
+            LoadingIndicator(modifier = Modifier.size(48.dp))
             Spacer(Modifier.height(16.dp))
             Text(
                 text = "Reading playlist tracks...",

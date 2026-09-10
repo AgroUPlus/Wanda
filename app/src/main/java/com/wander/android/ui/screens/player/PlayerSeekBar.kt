@@ -1,14 +1,18 @@
 package com.wander.android.ui.screens.player
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -16,15 +20,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.wander.android.ui.components.rememberHaptics
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.rememberPlaybackPosition
 import com.wander.android.ui.components.LiveChip
+import com.wander.android.ui.components.rememberHaptics
 import java.util.Locale
 
 /**
  * Expressive wavy slider. While the user drags, the local value wins so the thumb tracks the
  * finger instead of fighting the periodic position updates.
+ *
+ * The wave is the playing state, not decoration: it runs while the track does and flattens when it
+ * stops, so a glance at the bar says whether anything is coming out of the speaker. It also
+ * flattens under a finger — a scrub wants a straight edge to aim the thumb along, and a travelling
+ * wave under it reads as the position still moving while you are trying to place it.
+ *
+ * The docked strip has had [androidx.compose.material3.LinearWavyProgressIndicator] since it was
+ * written; this is the same treatment for the player you get when you open it, which was still a
+ * flat track despite what this comment has always claimed.
  */
 @Composable
 fun PlayerSeekBar(
@@ -32,7 +45,8 @@ fun PlayerSeekBar(
     durationMs: Long,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
-    isLive: Boolean = false
+    isLive: Boolean = false,
+    isPlaying: Boolean = true
 ) {
     val position by rememberPlaybackPosition(playerConnection, intervalMs = 250L)
     PlayerSeekBarInternal(
@@ -40,7 +54,8 @@ fun PlayerSeekBar(
         durationMs = durationMs,
         onSeek = onSeek,
         modifier = modifier,
-        isLive = isLive
+        isLive = isLive,
+        isPlaying = isPlaying
     )
 }
 
@@ -50,9 +65,10 @@ fun PlayerSeekBar(
     durationMs: Long,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
-    isLive: Boolean = false
+    isLive: Boolean = false,
+    isPlaying: Boolean = true
 ) {
-    PlayerSeekBarInternal(positionMs, durationMs, onSeek, modifier, isLive)
+    PlayerSeekBarInternal(positionMs, durationMs, onSeek, modifier, isLive, isPlaying)
 }
 
 @Composable
@@ -61,7 +77,8 @@ private fun PlayerSeekBarInternal(
     durationMs: Long,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
-    isLive: Boolean = false
+    isLive: Boolean = false,
+    isPlaying: Boolean = true
 ) {
     var scrubbing by remember { mutableFloatStateOf(-1f) }
     val haptics = rememberHaptics()
@@ -95,6 +112,22 @@ private fun PlayerSeekBarInternal(
         return
     }
 
+    // The same idiom as the docked strip's `PlaybackProgressBar`, and deliberately so — the two
+    // bars are the same bar as far as anyone looking at them is concerned, and the strip's is what
+    // the expanded player morphs out of.
+    //
+    // `SliderDefaults.Track` has no wave of its own in this version of Material — the only wavy
+    // drawing in the library is on the progress indicators — so the slider's track slot is filled
+    // with the indicator instead and the slider keeps its thumb and its gesture handling.
+    val waving = isPlaying && scrubbing < 0f && durationMs > 0L
+    val amplitude = remember { Animatable(if (waving) 1f else 0f) }
+    val amplitudeSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+    LaunchedEffect(waving) { amplitude.animateTo(if (waving) 1f else 0f, amplitudeSpec) }
+
+    // Wavy the instant it resumes, even mid-decay; flat only once fully settled. Reading `.value`
+    // here rather than through a lambda is what makes this recompose while the amplitude moves.
+    val showWavy = waving || amplitude.value > 0f
+
     Column(modifier = modifier.fillMaxWidth()) {
         Slider(
             value = fraction,
@@ -108,7 +141,21 @@ private fun PlayerSeekBarInternal(
                 }
                 scrubbing = -1f
             },
-            enabled = durationMs > 0L
+            enabled = durationMs > 0L,
+            track = { sliderState ->
+                if (showWavy) {
+                    LinearWavyProgressIndicator(
+                        progress = { sliderState.value },
+                        amplitude = { amplitude.value },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    LinearProgressIndicator(
+                        progress = { sliderState.value },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
         )
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(
