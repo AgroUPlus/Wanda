@@ -20,6 +20,7 @@ import com.wander.android.ui.screens.login.NavidromeLoginScreen
 import com.wander.android.ui.screens.login.YouTubeLoginScreen
 import com.wander.android.ui.screens.queue.QueueScreen
 import com.wander.android.ui.screens.settings.SettingsScreen
+import com.wander.android.ui.screens.social.ActivityScreen
 import com.wander.android.ui.screens.social.CircleScreen
 import com.wander.android.ui.screens.social.InboxScreen
 import com.wander.android.ui.screens.settings.FingerprintsScreen
@@ -77,8 +78,7 @@ fun NavGraphBuilder.wanderNavGraph(
             contentPadding = contentPadding,
             onOpenProfile = { navController.navigateSettled(Routes.profile(it)) },
             onOpenJam = { navController.navigateSettled(Routes.JAM) },
-            onOpenInbox = { navController.navigateSettled(Routes.INBOX) },
-            onOpenCircle = { navController.navigateSettled(Routes.CIRCLE) },
+            onOpenActivity = { navController.navigateSettled(Routes.ACTIVITY) },
             onOpenOffGrid = { navController.navigateSettled(Routes.OFFGRID) },
             onOpenMyProfile = { navController.navigateSettled(Routes.MY_PROFILE) },
             onOpenSettings = { navController.navigateSettled(Routes.SETTINGS) }
@@ -180,10 +180,21 @@ fun NavGraphBuilder.wanderNavGraph(
         )
     }
 
-    detailDestination(motion, route = Routes.INBOX) {
+    detailDestination(motion, route = Routes.ACTIVITY) {
+        ActivityScreen(
+            contentPadding = contentPadding,
+            onBack = navController::popBackStack,
+            onOpenThread = { navController.navigateSettled(Routes.inbox(it)) },
+            onOpenCircleRecap = { navController.navigateSettled(Routes.CIRCLE) },
+            onOpenProfile = { navController.navigateSettled(Routes.profile(it)) }
+        )
+    }
+
+    detailDestination(motion, route = Routes.INBOX) { entry ->
         InboxScreen(
             contentPadding = contentPadding,
-            onBack = navController::popBackStack
+            onBack = navController::popBackStack,
+            openWith = entry.arguments?.getString("username")
         )
     }
 

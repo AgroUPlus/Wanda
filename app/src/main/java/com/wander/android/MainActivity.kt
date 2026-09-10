@@ -80,7 +80,7 @@ class MainActivity : ComponentActivity() {
         when {
             uri.scheme == "agro" -> handleAgroPairing(uri)
             // A tapped drop notification.
-            uri.scheme == "wanda" && uri.host == "inbox" -> deepLinkRouter.request(Routes.INBOX)
+            uri.scheme == "wanda" && uri.host == "inbox" -> deepLinkRouter.request(Routes.ACTIVITY)
             // A tapped "measuring your library" notification. The progress bar says how far along
             // it is; this screen is where you find out what it is stuck on.
             uri.scheme == "wanda" && uri.host == "fingerprints" ->

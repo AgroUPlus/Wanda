@@ -59,10 +59,29 @@ object Routes {
     const val JAM_ROUTE = "jam?code={code}"
     fun jam(code: String? = null): String = if (code.isNullOrBlank()) "jam" else "jam?code=$code"
 
-    /** Songs friends have handed you. A detail screen off Friends, for the same reason [JAM] is. */
-    const val INBOX = "inbox"
+    /**
+     * Everything that has happened lately: the circle's events and the songs friends have sent, in
+     * one list. A detail screen off Friends, for the same reason [JAM] is.
+     */
+    const val ACTIVITY = "activity"
 
-    /** The activity feed and the circle's shared recap. Reached from Friends, beside the inbox. */
+    /**
+     * One exchange with one person.
+     *
+     * Still its own screen now that [ACTIVITY] has absorbed the inbox list: a conversation is a
+     * place you go and come back from, not a row in a feed.
+     */
+    const val INBOX = "inbox?with={username}"
+
+    fun inbox(username: String? = null): String =
+        if (username.isNullOrBlank()) "inbox" else "inbox?with=${username.encodeForRoute()}"
+
+    /**
+     * The circle's recap — anthem, leaderboards, taste matrix. Reached from [ACTIVITY].
+     *
+     * Deliberately not folded into that feed. A recap summarises a period rather than reporting an
+     * event, and a bar chart filed between two things that happened on Tuesday is not news.
+     */
     const val CIRCLE = "circle"
 
     /**
@@ -136,7 +155,8 @@ object Routes {
      */
     private val withChrome: Set<String> =
         (topLevel + ALBUM + PLAYLIST + ARTIST + PROFILE + MY_PROFILE + SETTINGS + STATS +
-            HISTORY + MERGE_PREVIEW + JAM + JAM_ROUTE + INBOX + CIRCLE + OFFGRID + FINGERPRINTS)
+            HISTORY + MERGE_PREVIEW + JAM + JAM_ROUTE + ACTIVITY + INBOX + CIRCLE + OFFGRID +
+            FINGERPRINTS)
             .map { it.withoutArgs() }
             .toSet()
 

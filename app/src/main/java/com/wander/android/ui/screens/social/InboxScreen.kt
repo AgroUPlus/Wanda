@@ -52,9 +52,23 @@ import kotlin.coroutines.cancellation.CancellationException
 internal fun InboxScreen(
     contentPadding: PaddingValues,
     onBack: () -> Unit = {},
+    /**
+     * Whose conversation to land in, when the caller already knows.
+     *
+     * Opening a shared song from Activity means one particular exchange; going by way of a list of
+     * every exchange, to pick the one just tapped, is a step that exists only because this screen
+     * used to be the only way in.
+     */
+    openWith: String? = null,
     viewModel: InboxViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // Keyed on the argument, so returning to a list this screen was opened *into* does not
+    // immediately reopen the thread the back press just left.
+    LaunchedEffect(openWith) {
+        if (!openWith.isNullOrBlank()) viewModel.openThread(openWith)
+    }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(viewModel) {
