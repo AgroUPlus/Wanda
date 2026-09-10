@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -96,8 +96,13 @@ internal fun LazyListScope.librarySyncSection(
                     if (state.pendingUploads > 0) append(" · ${state.pendingUploads} pending sync")
                 }
                 
-                LinearProgressIndicator(
+                LinearWavyProgressIndicator(
                     progress = { if (maxTracks > 0) state.syncedTracks.toFloat() / maxTracks else 0f },
+                    // The wave is whether the upload is actually moving, the same as it means on
+                    // the fingerprints screen. A determinate bar sitting at 60% looks identical
+                    // whether a sync is running or stopped hours ago, and that is precisely the
+                    // question this section is opened to answer.
+                    amplitude = { if (state.syncProgress.running) 1f else 0f },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 10.dp, bottom = 4.dp),

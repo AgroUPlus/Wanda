@@ -371,7 +371,7 @@ internal fun NowPlayingScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = track.title,
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = MaterialTheme.typography.headlineSmallEmphasized,
                             color = OnCoverArt,
                             maxLines = 1,
                             overflow = TextOverflow.Clip,
@@ -422,7 +422,8 @@ internal fun NowPlayingScreen(
                     durationMs = state.durationMs,
                     onSeek = playerConnection::seekTo,
                     modifier = Modifier.padding(top = 12.dp),
-                    isLive = track.isLive
+                    isLive = track.isLive,
+                    isPlaying = state.isPlaying
                 )
 
                 PlayerControls(
@@ -665,7 +666,7 @@ internal fun NowPlayingScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = track.title,
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.headlineSmallEmphasized,
                         maxLines = 1,
                         overflow = TextOverflow.Clip,
                         modifier = Modifier.scrollingTitle()
@@ -722,7 +723,8 @@ internal fun NowPlayingScreen(
                 durationMs = state.durationMs,
                 onSeek = playerConnection::seekTo,
                 modifier = Modifier.padding(top = 12.dp),
-                isLive = track.isLive
+                isLive = track.isLive,
+                isPlaying = state.isPlaying
             )
 
             PlayerControls(

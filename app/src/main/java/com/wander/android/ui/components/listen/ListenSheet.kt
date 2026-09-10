@@ -7,10 +7,10 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MicOff
@@ -18,16 +18,15 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
-import com.wander.android.ui.components.Artwork
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -35,9 +34,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.wander.android.data.repository.Recognition
 import com.wander.android.data.repository.IndexReadiness
+import com.wander.android.data.repository.Recognition
 import com.wander.android.data.repository.RecognitionEngine
+import com.wander.android.ui.components.Artwork
 
 /**
  * "What is this?" — the microphone, matched against the user's own library.
@@ -147,7 +147,7 @@ private fun Identifying(readiness: IndexReadiness) {
         contentAlignment = Alignment.Center,
         modifier = Modifier.size(140.dp)
     ) {
-        CircularProgressIndicator(modifier = Modifier.size(56.dp))
+        LoadingIndicator(modifier = Modifier.size(56.dp))
     }
 
     Text("Identifying…", style = MaterialTheme.typography.headlineSmall)
