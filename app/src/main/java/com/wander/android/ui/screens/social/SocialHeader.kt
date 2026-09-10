@@ -27,8 +27,8 @@ import com.wander.android.ui.components.headerInset
 /**
  * The top of the Friends tab.
  *
- * It used to be three identical tonal circles in a row — inbox, find people, my profile — which
- * said nothing about which was which, and made the one that was *you* look like just another
+ * It used to be three identical tonal circles in a row — activity, find people, my profile —
+ * which said nothing about which was which, and made the one that was *you* look like just another
  * action. You lead the header instead, as your own face, the way every other person on this screen
  * is represented; the two things you do *to* the roster sit together at the other end.
  *
@@ -43,7 +43,7 @@ internal fun SocialHeader(
     state: SocialUiState,
     unread: Int,
     contentPadding: PaddingValues,
-    onOpenInbox: () -> Unit,
+    onOpenActivity: () -> Unit,
     onOpenMyProfile: () -> Unit,
     onOpenOffGrid: () -> Unit,
     onFindPeople: () -> Unit
@@ -83,7 +83,7 @@ internal fun SocialHeader(
                 Icon(Icons.Rounded.Sensors, contentDescription = "Share off-grid")
             }
             if (state.isPaired) {
-                InboxAction(unread = unread, onClick = onOpenInbox)
+                ActivityAction(unread = unread, onClick = onOpenActivity)
                 FilledTonalIconButton(onClick = onFindPeople) {
                     Icon(Icons.Rounded.PersonAdd, contentDescription = "Find people")
                 }

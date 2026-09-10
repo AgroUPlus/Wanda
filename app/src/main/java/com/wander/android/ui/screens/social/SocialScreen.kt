@@ -57,8 +57,7 @@ internal fun SocialScreen(
     onOpenProfile: (String) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenJam: () -> Unit = {},
-    onOpenInbox: () -> Unit = {},
-    onOpenCircle: () -> Unit = {},
+    onOpenActivity: () -> Unit = {},
     onOpenOffGrid: () -> Unit = {},
     onOpenMyProfile: () -> Unit = {},
     viewModel: SocialViewModel = hiltViewModel()
@@ -92,7 +91,7 @@ internal fun SocialScreen(
             state = state,
             unread = unread,
             contentPadding = contentPadding,
-            onOpenInbox = onOpenInbox,
+            onOpenActivity = onOpenActivity,
             onOpenMyProfile = onOpenMyProfile,
             onOpenOffGrid = onOpenOffGrid,
             onFindPeople = { searching = true }
@@ -151,6 +150,16 @@ internal fun SocialScreen(
                 }
             }
 
+            // Before the roster rather than above the whole list: the header carries actions and
+            // has to stay reachable, so it stays pinned and this scrolls under it the way a
+            // record's hero scrolls under its own.
+            item(key = "hero") {
+                FriendsHero(
+                    friends = state.friends,
+                    listeningNow = state.nowPlaying.size
+                )
+            }
+
             if (state.friends.isNotEmpty()) {
                 item(key = "friend_grid") {
                     FriendGrid(
@@ -159,7 +168,7 @@ internal fun SocialScreen(
                             state.nowPlaying.map { it.username.lowercase() }.toSet()
                         },
                         onOpenProfile = onOpenProfile,
-                        modifier = Modifier.padding(vertical = 12.dp)
+                        modifier = Modifier.padding(bottom = 12.dp)
                     )
                 }
             }
@@ -167,9 +176,9 @@ internal fun SocialScreen(
             item(key = "destinations") {
                 SocialTiles(
                     jamSubtitle = jam?.let { "Jam · ${it.code}" },
-                    circleSubtitle = "Recap & activity",
+                    activitySubtitle = if (unread > 0) "$unread unread" else "Circle & shared songs",
                     onOpenJam = onOpenJam,
-                    onOpenCircle = onOpenCircle,
+                    onOpenActivity = onOpenActivity,
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
             }

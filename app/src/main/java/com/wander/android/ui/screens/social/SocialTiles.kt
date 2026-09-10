@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.MoveToInbox
+import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -48,9 +48,9 @@ import androidx.compose.ui.unit.dp
 @Composable
 internal fun SocialTiles(
     jamSubtitle: String?,
-    circleSubtitle: String,
+    activitySubtitle: String,
     onOpenJam: () -> Unit,
-    onOpenCircle: () -> Unit,
+    onOpenActivity: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -71,12 +71,12 @@ internal fun SocialTiles(
         )
         SocialTile(
             icon = Icons.Rounded.AutoAwesome,
-            title = "Circle",
-            subtitle = circleSubtitle,
+            title = "Activity",
+            subtitle = activitySubtitle,
             container = MaterialTheme.colorScheme.tertiaryContainer,
             content = MaterialTheme.colorScheme.onTertiaryContainer,
             live = false,
-            onClick = onOpenCircle,
+            onClick = onOpenActivity,
             modifier = Modifier.weight(1f)
         )
     }
@@ -138,13 +138,16 @@ private fun SocialTile(
 }
 
 /**
- * The inbox, as a header action rather than a card.
+ * Activity, as a header action rather than a card.
  *
  * It is a place you visit when something arrives, and the badge is what tells you something has —
- * so it earns an icon and a count, not a row of its own competing with the people below it.
+ * so it earns an icon and a count, not a row of its own competing with the people below it. The
+ * count is still the unread songs alone: the circle's events are things that happened, not things
+ * addressed to you, and counting them would make the badge mean "there is news somewhere", which
+ * is never a number worth clearing.
  */
 @Composable
-internal fun InboxAction(unread: Int, onClick: () -> Unit) {
+internal fun ActivityAction(unread: Int, onClick: () -> Unit) {
     BadgedBox(
         badge = {
             if (unread > 0) {
@@ -156,7 +159,7 @@ internal fun InboxAction(unread: Int, onClick: () -> Unit) {
             onClick = onClick,
             colors = IconButtonDefaults.filledTonalIconButtonColors()
         ) {
-            Icon(Icons.Rounded.MoveToInbox, contentDescription = "Inbox")
+            Icon(Icons.Rounded.Bolt, contentDescription = "Activity")
         }
     }
 }
