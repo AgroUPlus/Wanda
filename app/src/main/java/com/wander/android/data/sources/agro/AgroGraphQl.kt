@@ -100,6 +100,34 @@ class AgroGraphQl @Inject constructor(
         else -> null
     }
 
+    companion object {
+        /** Phrasing a GraphQL server uses to reject a field or argument it does not define. */
+        private val UNKNOWN_FIELD_PHRASES = listOf(
+            "unknown argument",
+            "unknown field",
+            "cannot query field",
+            "unrecognized field",
+            "no field named"
+        )
+
+        /**
+         * Whether a failure means "this server is older than this query" rather than anything else.
+         *
+         * The distinction matters because the answer to an old server is to ask for less, and the
+         * answer to a rejected token or a dropped connection is not — retrying those without the
+         * new field just fails twice and reports the second failure instead of the real one.
+         *
+         * Matched on the server's own words because GraphQL has no error code for this. Anything
+         * unrecognised is treated as a real failure, which is the safe direction: the cost is one
+         * fallback not taken on a server phrased unusually, against masking every genuine error.
+         */
+        fun isUnknownFieldError(result: Result<*>, field: String): Boolean {
+            val message = result.exceptionOrNull()?.message ?: return false
+            if (!message.contains(field, ignoreCase = true)) return false
+            return UNKNOWN_FIELD_PHRASES.any { message.contains(it, ignoreCase = true) }
+        }
+    }
+
     /**
      * The live-update socket for the paired server. `https` hosts get `wss`, so a server behind a
      * reverse proxy needs no separate configuration.
