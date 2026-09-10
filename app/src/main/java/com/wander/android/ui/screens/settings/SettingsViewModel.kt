@@ -121,6 +121,7 @@ internal class SettingsViewModel @Inject constructor(
 
     val isMonetDynamic: StateFlow<Boolean> = secureStorage.isMonetDynamic
     val isAmoledBlack: StateFlow<Boolean> = secureStorage.isAmoledBlack
+    val isImmersivePlayer: StateFlow<Boolean> = secureStorage.isImmersivePlayer
     val isOfflineMode: StateFlow<Boolean> = secureStorage.isOfflineMode
 
     val isPreloadNextEnabled: StateFlow<Boolean> = secureStorage.isPreloadNextEnabled
@@ -446,6 +447,7 @@ internal class SettingsViewModel @Inject constructor(
 
     fun setMonetDynamic(enabled: Boolean) = secureStorage.setMonetDynamic(enabled)
     fun setAmoledBlack(enabled: Boolean) = secureStorage.setAmoledBlack(enabled)
+    fun setImmersivePlayer(enabled: Boolean) = secureStorage.setImmersivePlayer(enabled)
     fun setOfflineMode(enabled: Boolean) = secureStorage.setOfflineMode(enabled)
 
     fun setPreloadNextEnabled(enabled: Boolean) = secureStorage.setPreloadNextEnabled(enabled)

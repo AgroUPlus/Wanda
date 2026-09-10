@@ -9,8 +9,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -74,79 +75,87 @@ fun AlbumScreen(
         )
     }
 
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(contentPadding.headerInset())
-    ) {
-        IconButton(onClick = onBack, modifier = Modifier.padding(start = 4.dp, top = 4.dp)) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
-        }
-
-        // A skeleton while nothing is known, the empty state once the sources have answered with
-        // nothing, and the page itself otherwise. A spinner over a blank screen could not tell the
-        // first two apart, and letting a partly-loaded album through showed a tracklist that was
-        // still growing as if it were the whole record.
-        if (isLoading && album == null && tracks.isEmpty()) {
-            AlbumSkeleton(contentPadding.listInset())
-            return@Column
-        }
-
-        // Nothing in Room and nothing from the server: an id that resolves to no album at all.
-        if (album == null && tracks.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                EmptyState(
-                    title = "Album unavailable",
-                    message = "This album isn't on any of your connected sources."
-                )
-            }
-            return@Column
-        }
-
-        LazyColumn(
-            contentPadding = contentPadding.listInset(),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            item(key = "header", contentType = "header") {
-                val current = album
-                AlbumHero(
-                    title = current?.title ?: tracks.firstOrNull()?.album.orEmpty(),
-                    subtitle = albumSubtitle(
-                        artist = current?.artist ?: tracks.firstOrNull()?.artist.orEmpty(),
-                        year = current?.year,
-                        trackCount = tracks.size
-                    ),
-                    artworkUrl = current?.coverArtUrl
-                        ?: tracks.firstNotNullOfOrNull { it.artworkUrl },
-                    onPlay = viewModel::playAll,
-                    onShuffle = viewModel::shuffle,
-                    onShare = viewModel::shareAlbum.takeIf { viewModel.canShareAlbum() },
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
+    Box(modifier = Modifier.fillMaxSize()) {
+        when {
+            isLoading && album == null && tracks.isEmpty() -> {
+                AlbumSkeleton(contentPadding.listInset())
             }
 
-            // The artist name is a way *out* of this page, into the rest of their work.
-            item(key = "artist-link", contentType = "artist-link") {
-                val artist = album?.artist ?: tracks.firstOrNull()?.artist
-                if (!artist.isNullOrBlank()) {
-                    ArtistLinkRow(
-                        artist = artist,
-                        onClick = { onOpenArtist(artist, album?.artistId) }
+            album == null && tracks.isEmpty() -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(contentPadding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    EmptyState(
+                        title = "Album unavailable",
+                        message = "This album isn't on any of your connected sources."
                     )
                 }
             }
 
-            itemsIndexed(
-                items = tracks,
-                key = { _, track -> track.id },
-                contentType = { _, _ -> "track" }
-            ) { index, track ->
-                TrackRow(
-                    track = track,
-                    onPlay = { viewModel.play(index) },
-                    onToggleLike = { viewModel.toggleLike(track) },
-                    onLongPress = { actionsFor = track }
-                )
+            else -> {
+                LazyColumn(
+                    contentPadding = contentPadding.listInset(),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    item(key = "header", contentType = "header") {
+                        val current = album
+                        AlbumHero(
+                            title = current?.title ?: tracks.firstOrNull()?.album.orEmpty(),
+                            subtitle = albumSubtitle(
+                                artist = current?.artist ?: tracks.firstOrNull()?.artist.orEmpty(),
+                                year = current?.year,
+                                trackCount = tracks.size
+                            ),
+                            artworkUrl = current?.coverArtUrl
+                                ?: tracks.firstNotNullOfOrNull { it.artworkUrl },
+                            onPlay = viewModel::playAll,
+                            onShuffle = viewModel::shuffle,
+                            onShare = viewModel::shareAlbum.takeIf { viewModel.canShareAlbum() },
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                    }
+
+                    // The artist name is a way *out* of this page, into the rest of their work.
+                    item(key = "artist-link", contentType = "artist-link") {
+                        val artist = album?.artist ?: tracks.firstOrNull()?.artist
+                        if (!artist.isNullOrBlank()) {
+                            ArtistLinkRow(
+                                artist = artist,
+                                onClick = { onOpenArtist(artist, album?.artistId) }
+                            )
+                        }
+                    }
+
+                    itemsIndexed(
+                        items = tracks,
+                        key = { _, track -> track.id },
+                        contentType = { _, _ -> "track" }
+                    ) { index, track ->
+                        TrackRow(
+                            track = track,
+                            onPlay = { viewModel.play(index) },
+                            onToggleLike = { viewModel.toggleLike(track) },
+                            onLongPress = { actionsFor = track }
+                        )
+                    }
+                }
             }
+        }
+
+        FilledTonalIconButton(
+            onClick = onBack,
+            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
+            ),
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(contentPadding.headerInset())
+                .padding(start = 12.dp, top = 8.dp)
+        ) {
+            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
         }
     }
 }

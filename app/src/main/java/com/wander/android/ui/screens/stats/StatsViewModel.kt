@@ -7,6 +7,7 @@ import com.wander.android.data.repository.StatsRepository
 import com.wander.android.data.repository.StatsWindow
 import com.wander.android.data.sources.agro.StatsPeriod
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +24,8 @@ class StatsViewModel @Inject constructor(
         StatsUiState(isFleetWide = repository.isFleetWide)
     )
     val state: StateFlow<StatsUiState> = _state.asStateFlow()
+
+    private var loadJob: Job? = null
 
     init {
         load(_state.value.window)
@@ -41,10 +44,19 @@ class StatsViewModel @Inject constructor(
 
     fun retry() = load(_state.value.window)
 
+    /**
+     * Replaces whatever load is in flight.
+     *
+     * There used to be a guard here that skipped a load for the window already being loaded. It
+     * matched the *initial* state exactly — same window, `isLoading` already true — so the screen's
+     * very first load returned without doing anything and the spinner ran until the user changed
+     * the period. Cancelling the previous job is what that guard was reaching for anyway: it stops
+     * a slow answer for an abandoned window from landing on top of a newer one.
+     */
     private fun load(window: StatsWindow) {
-        if (window == _state.value.window && _state.value.isLoading) return
+        loadJob?.cancel()
         _state.update { it.copy(window = window, isLoading = true, error = null) }
-        viewModelScope.launch {
+        loadJob = viewModelScope.launch {
             repository.report(window)
                 .onSuccess { report ->
                     _state.update {
