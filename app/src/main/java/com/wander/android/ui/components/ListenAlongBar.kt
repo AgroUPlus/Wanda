@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.wander.android.data.repository.ListenAlongSession
 import com.wander.android.data.repository.ResolvedFrom
 import com.wander.android.data.sources.agro.Jam
+import com.wander.android.ui.theme.LiveIndicator
 
 /**
  * The banner shown while following a friend, above the mini-player.
@@ -148,7 +149,7 @@ internal fun JamBar(
                     modifier = Modifier
                         .size(8.dp)
                         .background(
-                            color = androidx.compose.ui.graphics.Color(0xFFEF4444),
+                            color = LiveIndicator,
                             shape = CircleShape
                         )
                 )
