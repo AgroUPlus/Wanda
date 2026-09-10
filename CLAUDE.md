@@ -51,6 +51,28 @@ Rules of the road:
 - Prefer expressive components (`ShortNavigationBar`, wavy progress, `FloatingToolbar`,
   `LoadingIndicator`, `MaterialShapes` morphs) over stable equivalents.
 
+## Window insets (safe zones)
+
+The app is edge-to-edge (`enableEdgeToEdge()` in `MainActivity`, no `WindowInsetsController` calls
+anywhere). Nothing is inset for you. Two bugs have shipped from forgetting this — a share button in
+the status bar, a back arrow behind the clock — so:
+
+- **Any composable aligned to a container edge must account for the insets itself**, unless a parent
+  demonstrably already has. `Modifier.align(...)` + `padding(n.dp)` inside a full-bleed `Box` is the
+  shape this bug takes every time.
+- **Put the inset in the shared component, not in each caller.** `ImmersiveHero` insets its own
+  `overlay` slot; `PlayerOverlayButtons` takes measured insets from its caller. A rule each new
+  caller has to remember is a rule that gets forgotten.
+- Prefer `windowInsetsPadding(WindowInsets.safeDrawing.only(...))` over `safeDrawingPadding()` when
+  only some edges matter. A hero at the top of a page has no business insetting its bottom.
+- **Never clear a sibling by a hard-coded height.** Two composables aligned to opposite edges of a
+  `Box` have no layout relationship, so a constant written from the paddings a layout is declared
+  with will be wrong — the real height includes the system bar inset too. Measure with
+  `onGloballyPositioned` at the *head* of the modifier chain (so the figure includes the padding
+  inside it) and pass that. This is exactly how the lyrics toggle landed on the like button.
+- When you add a control to a full-bleed layout, check it against a gesture-nav device *and* a
+  three-button one — the bottom inset differs by ~30dp and only one of them will look right by luck.
+
 ## Battery
 
 - No polling loops. Position updates come from `Player.Listener` + a ticker that runs **only**
