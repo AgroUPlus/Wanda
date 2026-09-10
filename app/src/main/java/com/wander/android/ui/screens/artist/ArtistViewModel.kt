@@ -12,6 +12,7 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.ArtistPageMerger
 import com.wander.android.data.repository.CatalogRepository
 import com.wander.android.data.repository.MusicRepository
+import com.wander.android.data.repository.ArtistSubscriptionRepository
 import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.sources.ShareKind
 import com.wander.android.data.sources.ShareTarget
@@ -33,6 +34,7 @@ internal class ArtistViewModel @Inject constructor(
     private val catalogRepository: CatalogRepository,
     private val musicRepository: MusicRepository,
     private val shareRepository: ShareRepository,
+    private val subscriptions: ArtistSubscriptionRepository,
     private val playerConnection: PlayerConnection,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -102,6 +104,22 @@ internal class ArtistViewModel @Inject constructor(
      */
     private val hasCache = MutableStateFlow(false)
 
+    /**
+     * Whether this account follows the artist. Null until Agro has answered.
+     *
+     * Its own flow rather than a field folded into the page: following is about this account, not
+     * about the artist, so it must survive the page being re-merged and must not wait on it.
+     */
+    private val following = MutableStateFlow<Boolean?>(null)
+
+    init {
+        // Asked once when the page opens. The answer is about this account and this name, so
+        // nothing on the page changing can invalidate it.
+        viewModelScope.launch {
+            following.value = subscriptions.isSubscribed(artist)
+        }
+    }
+
 
     /**
      * One state, assembled from Room and the backend page together.
@@ -116,7 +134,9 @@ internal class ArtistViewModel @Inject constructor(
         combine(loading, refreshing, expanded, loadingShelf, hasCache) { l, r, e, s, c ->
             Progress(l as Boolean, r as Boolean, e as Map<String, List<UnifiedAlbum>>, s as String?, c as Boolean)
         }
-    ) { albums, tracks, details, progress ->
+        ,
+        following
+    ) { albums, tracks, details, progress, following ->
         val page = ArtistPageMerger.merge(details, albums, tracks)
         ArtistUiState(
             artist = artist,
@@ -124,6 +144,7 @@ internal class ArtistViewModel @Inject constructor(
             heroImage = page.imageUrl ?: catalogRepository.artistImage(page.albums?.albums.orEmpty(), page.topSongs),
             albumCount = page.albums?.albums?.size ?: 0,
             trackCount = page.topSongs.size,
+            isFollowing = following,
             // The skeleton stays up until the backend has actually answered.
             //
             // This used to be `progress.loading && page.isEmpty` — content beat the flag — so the
@@ -250,6 +271,34 @@ internal class ArtistViewModel @Inject constructor(
      */
     private fun artistId(): String? = state.value.page.topSongs
         .firstNotNullOfOrNull { it.artistId?.takeIf(String::isNotBlank) }
+
+    /**
+     * Follows or unfollows, flipping the control before the request lands.
+     *
+     * Optimistic because the answer is already known — this is a toggle, not a query — and a
+     * button that waits a round trip to change reads as not having been pressed. A failure puts it
+     * back rather than leaving it lying about what the server holds.
+     */
+    fun toggleFollow() {
+        val wasFollowing = following.value ?: return
+        following.value = !wasFollowing
+        viewModelScope.launch {
+            val ok = if (wasFollowing) {
+                subscriptions.subscribed()
+                    .firstOrNull { it.normName.equals(artist.trim(), ignoreCase = true) ||
+                        it.displayName.equals(artist.trim(), ignoreCase = true) }
+                    ?.let { subscriptions.unsubscribe(it) } ?: false
+            } else {
+                subscriptions.subscribe(artist, channelId = ytChannelId())
+            }
+            if (!ok) following.value = wasFollowing
+        }
+    }
+
+    /** The YouTube Music channel behind this page, when it came from there. */
+    private fun ytChannelId(): String? = pageArtistId.value
+        ?.takeIf { it.startsWith("ytm:") }
+        ?.removePrefix("ytm:")
 
     fun shareArtist() {
         val target = artistTarget(state.value.page.topSongs) ?: return

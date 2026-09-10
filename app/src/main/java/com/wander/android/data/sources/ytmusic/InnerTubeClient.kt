@@ -17,9 +17,11 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import com.zemer.cipher.CipherDeobfuscator
 import com.zemer.cipher.potoken.PoTokenGenerator
@@ -295,6 +297,25 @@ class InnerTubeClient @Inject constructor(
         buildJsonObject {
             put("context", webContext())
             putJsonObject("target") { put("videoId", videoId) }
+        }
+    ).map { }
+
+    /**
+     * Follows or unfollows a channel on the signed-in YouTube Music account.
+     *
+     * Mirrors a follow made here onto the account the user already has, so the two do not drift —
+     * following somebody in Wanda and then opening YouTube Music to find nothing changed is worse
+     * than not offering it. Takes a *channel* id: `subscription/subscribe` addresses artists by the
+     * channel behind them, which is what `externalId` carries as `ytm:UC…`.
+     *
+     * Fails, and is meant to fail quietly at the call site, when nobody is signed in. The Agro
+     * subscription is the one that matters and it has already been made by then; this is the copy.
+     */
+    suspend fun setSubscribed(channelId: String, subscribed: Boolean): Result<Unit> = post(
+        if (subscribed) "subscription/subscribe" else "subscription/unsubscribe",
+        buildJsonObject {
+            put("context", webContext())
+            putJsonArray("channelIds") { add(channelId) }
         }
     ).map { }
 

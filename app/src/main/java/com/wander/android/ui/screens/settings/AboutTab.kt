@@ -70,14 +70,4 @@ internal fun LazyListScope.aboutTab(
         )
     }
 
-    item(key = "release_notifications") {
-        SettingsToggle(
-            title = "Notify me about new releases",
-            subtitle = "Checks once a day on Wi-Fi and posts a notification when a new version " +
-                "is published. Off by default: it is a network call you did not ask for, and a " +
-                "notification you did not ask for.",
-            checked = state.releaseNotificationsEnabled,
-            onCheckedChange = actions.onReleaseNotificationsChange
-        )
-    }
 }

@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.material.icons.rounded.QueryStats
 import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.Card
@@ -58,6 +59,7 @@ internal fun ActivityScreen(
     onOpenThread: (String) -> Unit,
     onOpenCircleRecap: () -> Unit,
     onOpenProfile: (String) -> Unit = {},
+    onOpenArtist: (String) -> Unit = {},
     viewModel: ActivityViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -103,6 +105,7 @@ internal fun ActivityScreen(
                 when (item) {
                     is ActivityItem.Milestone -> "m_" + item.item.username + "_" + item.at
                     is ActivityItem.Shared -> "s_" + item.drop.id
+                    is ActivityItem.Release -> "r_" + item.release.recordingId
                 }
             }
         ) { item ->
@@ -116,6 +119,12 @@ internal fun ActivityScreen(
                 is ActivityItem.Shared -> SharedWithMeCard(
                     item = item,
                     onOpen = { onOpenThread(item.drop.fromUser) },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+
+                is ActivityItem.Release -> NewReleaseCard(
+                    item = item,
+                    onOpen = { onOpenArtist(item.release.artist) },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                 )
             }
@@ -173,6 +182,53 @@ private fun SharedWithMeCard(
                     text = drop.artistName,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Something a followed artist put out.
+ *
+ * Says the artist first, like every other row here: the feed is a list of things people did, and
+ * the person is what makes one row different from the next.
+ */
+@Composable
+private fun NewReleaseCard(
+    item: ActivityItem.Release,
+    onOpen: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val release = item.release
+
+    Card(
+        onClick = onOpen,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = MaterialTheme.shapes.medium,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.NewReleases,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "New from " + release.artist,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = release.title ?: release.album ?: "Something new",
+                    style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

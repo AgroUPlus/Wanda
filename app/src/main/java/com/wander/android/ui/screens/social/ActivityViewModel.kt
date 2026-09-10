@@ -3,9 +3,11 @@ package com.wander.android.ui.screens.social
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.data.repository.ArtistSubscriptionRepository
 import com.wander.android.data.repository.DropsRepository
 import com.wander.android.data.sources.agro.AgroDrop
 import com.wander.android.data.sources.agro.AgroFeedApi
+import com.wander.android.data.sources.agro.AgroArtistRelease
 import com.wander.android.data.sources.agro.AgroFeedItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
 import javax.inject.Inject
 
 /**
@@ -38,6 +41,22 @@ internal sealed interface ActivityItem {
     data class Shared(val drop: AgroDrop) : ActivityItem {
         override val at: String get() = drop.createdAt
     }
+
+    /**
+     * Somebody the user follows put something out.
+     *
+     * The catalogue counts in epoch seconds while the other two kinds carry ISO-8601, so this is
+     * converted on the way in rather than compared as a number against a date string — which would
+     * have sorted every release before every event, always, and looked like an ordering bug
+     * rather than a units one.
+     */
+    @Immutable
+    data class Release(val release: AgroArtistRelease, override val at: String) : ActivityItem {
+        companion object {
+            fun of(release: AgroArtistRelease) =
+                Release(release, Instant.ofEpochSecond(release.updatedAt).toString())
+        }
+    }
 }
 
 /** Which slice of the feed is showing. */
@@ -61,8 +80,7 @@ internal data class ActivityUiState(
             ActivityFilter.ALL -> items
             ActivityFilter.CIRCLE -> items.filterIsInstance<ActivityItem.Milestone>()
             ActivityFilter.SHARED -> items.filterIsInstance<ActivityItem.Shared>()
-            // Nothing produces these yet; the artist subscriptions that will are not built.
-            ActivityFilter.RELEASES -> emptyList()
+            ActivityFilter.RELEASES -> items.filterIsInstance<ActivityItem.Release>()
         }
 }
 
@@ -81,7 +99,8 @@ internal data class ActivityUiState(
 @HiltViewModel
 internal class ActivityViewModel @Inject constructor(
     private val feedApi: AgroFeedApi,
-    private val drops: DropsRepository
+    private val drops: DropsRepository,
+    private val subscriptions: ArtistSubscriptionRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ActivityUiState())
@@ -105,7 +124,7 @@ internal class ActivityViewModel @Inject constructor(
             drops.inbox.collect { incoming ->
                 _state.update { current ->
                     current.copy(
-                        items = merge(current.milestones(), incoming),
+                        items = merge(current.milestones(), incoming, current.releases()),
                         unread = incoming.count { it.readAt == null }
                     )
                 }
@@ -117,8 +136,12 @@ internal class ActivityViewModel @Inject constructor(
         viewModelScope.launch {
             drops.refresh()
             val feed = feedApi.friendActivity().getOrElse { emptyList() }
+            // Everything the catalogue holds by a followed artist, not only what is unannounced:
+            // the notification watermark is the release *job's* business, and a feed that hid
+            // what had already been notified would be empty exactly when the user came to look.
+            val releases = subscriptions.newReleases(since = 0L)
             _state.update { current ->
-                current.copy(items = merge(feed, current.shared()), loading = false)
+                current.copy(items = merge(feed, current.shared(), releases), loading = false)
             }
         }
     }
@@ -129,6 +152,9 @@ internal class ActivityViewModel @Inject constructor(
     private fun ActivityUiState.shared(): List<AgroDrop> =
         items.filterIsInstance<ActivityItem.Shared>().map { it.drop }
 
+    private fun ActivityUiState.releases(): List<AgroArtistRelease> =
+        items.filterIsInstance<ActivityItem.Release>().map { it.release }
+
     /**
      * Newest first, by the timestamp each kind carries.
      *
@@ -136,7 +162,13 @@ internal class ActivityViewModel @Inject constructor(
      * format that sorts lexicographically in the same order it sorts chronologically. Parsing every
      * item on every emission to get the same answer would be work for nothing.
      */
-    private fun merge(feed: List<AgroFeedItem>, incoming: List<AgroDrop>): List<ActivityItem> =
-        (feed.map(ActivityItem::Milestone) + incoming.map(ActivityItem::Shared))
+    private fun merge(
+        feed: List<AgroFeedItem>,
+        incoming: List<AgroDrop>,
+        releases: List<AgroArtistRelease>
+    ): List<ActivityItem> =
+        (feed.map(ActivityItem::Milestone) +
+            incoming.map(ActivityItem::Shared) +
+            releases.map(ActivityItem.Release::of))
             .sortedByDescending { it.at }
 }

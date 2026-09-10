@@ -153,4 +153,15 @@ internal fun LazyListScope.externalTab(
             enabled = !state.incognito
         )
     }
+
+    item(key = "artist_release_notifications") {
+        SettingsToggle(
+            title = "New music from artists you follow",
+            subtitle = "Checks every few hours on Wi-Fi and tells you when someone you follow " +
+                "puts something out. Follow an artist from their page. Off by default: it is a " +
+                "network call you did not ask for, and a notification you did not ask for.",
+            checked = state.artistReleaseNotificationsEnabled,
+            onCheckedChange = actions.onArtistReleaseNotificationsChange
+        )
+    }
 }

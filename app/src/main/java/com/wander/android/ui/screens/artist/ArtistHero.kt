@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Podcasts
+import androidx.compose.material.icons.rounded.NotificationAdd
+import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.MaterialTheme
@@ -43,7 +45,15 @@ internal fun ArtistHero(
     onShuffle: () -> Unit,
     modifier: Modifier = Modifier,
     /** Null until a track has loaded with a backend artist id — see `ArtistViewModel`. */
-    onShare: (() -> Unit)? = null
+    onShare: (() -> Unit)? = null,
+    /**
+     * Whether this account follows the artist, or null while that is still unknown.
+     *
+     * Null rather than false: drawing "Follow" and flipping it to "Following" a moment later reads
+     * as the tap having failed, so the control waits until there is an answer to show.
+     */
+    isFollowing: Boolean? = null,
+    onToggleFollow: () -> Unit = {}
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         ImmersiveHero(
@@ -101,6 +111,21 @@ internal fun ArtistHero(
                     onClick = share,
                     contentDescription = "Share",
                     icon = Icons.Rounded.Share
+                )
+            }
+            if (isFollowing != null) {
+                ShapedActionButton(
+                    onClick = onToggleFollow,
+                    contentDescription = if (isFollowing) {
+                        "Stop following ${'$'}name"
+                    } else {
+                        "Follow ${'$'}name for new releases"
+                    },
+                    icon = if (isFollowing) {
+                        Icons.Rounded.NotificationsActive
+                    } else {
+                        Icons.Rounded.NotificationAdd
+                    }
                 )
             }
         }

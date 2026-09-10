@@ -28,6 +28,13 @@ internal data class ArtistUiState(
     val isRefreshing: Boolean = false,
     val canShare: Boolean = false,
     /**
+     * Whether this account follows the artist, or null while the answer is still being fetched.
+     *
+     * Null rather than false so the control can wait: drawing "Follow" and flipping it a moment
+     * later reads as the tap having failed rather than as the page having caught up.
+     */
+    val isFollowing: Boolean? = null,
+    /**
      * Shelves the user asked to see in full, keyed by the shelf's heading.
      *
      * Absent means the shelf is showing the tiles the artist's page came with, and its "See all"
