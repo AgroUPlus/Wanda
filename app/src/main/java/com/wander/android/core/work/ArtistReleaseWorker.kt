@@ -53,7 +53,9 @@ internal class ArtistReleaseWorker @AssistedInject constructor(
         }
 
         val since = secureStorage.lastSeenReleaseWatermark
-        val releases = subscriptions.newReleases(since)
+        // Retried on failure rather than treated as "nothing new": an unreachable or
+        // out-of-date server must not silently advance the watermark past releases it never sent.
+        val releases = subscriptions.newReleases(since).getOrElse { return@withContext Result.retry() }
         if (releases.isEmpty()) return@withContext Result.success()
 
         // The watermark moves before anything is shown, and deliberately: a notification that fails

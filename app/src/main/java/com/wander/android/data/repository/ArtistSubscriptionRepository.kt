@@ -52,9 +52,16 @@ internal class ArtistSubscriptionRepository @Inject constructor(
         return removed
     }
 
-    /** Everything followed artists have published after [since], oldest first. */
-    suspend fun newReleases(since: Long, limit: Int = 100): List<AgroArtistRelease> =
-        api.newReleases(since, limit).getOrElse { emptyList() }
+    /**
+     * Everything followed artists have published after [since], oldest first.
+     *
+     * The `Result` is handed back rather than flattened to an empty list. Against an Agro that
+     * predates artist subscriptions the query fails on an unknown field, and swallowing that made
+     * an out-of-date server look exactly like an artist who had not released anything — which is
+     * not a distinction a caller can afford to lose, since one of them is worth saying out loud.
+     */
+    suspend fun newReleases(since: Long, limit: Int = 100): Result<List<AgroArtistRelease>> =
+        api.newReleases(since, limit)
 
     private suspend fun mirrorToYouTube(externalId: String?, subscribed: Boolean) {
         val channel = externalId?.removePrefix("ytm:")?.takeIf { it.isNotBlank() } ?: return

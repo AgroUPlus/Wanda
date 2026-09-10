@@ -72,7 +72,16 @@ internal data class ActivityUiState(
     val items: List<ActivityItem> = emptyList(),
     val filter: ActivityFilter = ActivityFilter.ALL,
     val unread: Int = 0,
-    val loading: Boolean = true
+    val loading: Boolean = true,
+    /**
+     * True when the server does not know what an artist subscription is.
+     *
+     * An Agro older than the feature answers the query with an unknown-field error, which is
+     * indistinguishable from an empty result unless it is carried. Worth carrying: "nobody you
+     * follow has released anything" and "this server cannot answer that" are different facts and
+     * only one of them is the user's to act on.
+     */
+    val releasesUnsupported: Boolean = false
 ) {
     /** [items] with [filter] applied. Computed here so the screen has nothing to decide. */
     val visible: List<ActivityItem>
@@ -141,7 +150,11 @@ internal class ActivityViewModel @Inject constructor(
             // what had already been notified would be empty exactly when the user came to look.
             val releases = subscriptions.newReleases(since = 0L)
             _state.update { current ->
-                current.copy(items = merge(feed, current.shared(), releases), loading = false)
+                current.copy(
+                    items = merge(feed, current.shared(), releases.getOrDefault(emptyList())),
+                    releasesUnsupported = releases.isFailure,
+                    loading = false
+                )
             }
         }
     }

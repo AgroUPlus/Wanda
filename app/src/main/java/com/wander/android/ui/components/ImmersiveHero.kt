@@ -2,6 +2,11 @@ package com.wander.android.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -39,6 +44,14 @@ import androidx.compose.ui.unit.dp
  *
  * [overlay] is for controls that float on the picture itself — a back arrow, a menu — and is
  * placed in the hero's own `Box`, so callers align it with `Modifier.align`.
+ *
+ * **The overlay is inset off the status bar and the cutout here, not by its callers.** The whole
+ * point of this hero is that the picture runs to the top of the window, underneath the system bars;
+ * anything drawn on top of it therefore starts underneath them too, and a caller who forgets lands
+ * a back arrow in the status bar. Doing it once, here, is what stops that being a thing each new
+ * caller has to remember. Top and sides only: the bottom of this box is in the middle of the page,
+ * nowhere near the navigation bar, and insetting it there would just push a bottom-aligned control
+ * up by nothing.
  */
 @Composable
 fun ImmersiveHero(
@@ -119,7 +132,17 @@ fun ImmersiveHero(
             content = caption
         )
 
-        overlay()
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(
+                    WindowInsets.safeDrawing.only(
+                        WindowInsetsSides.Top + WindowInsetsSides.Horizontal
+                    )
+                )
+        ) {
+            overlay()
+        }
     }
 }
 

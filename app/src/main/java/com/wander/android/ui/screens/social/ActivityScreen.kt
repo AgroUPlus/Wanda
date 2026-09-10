@@ -96,7 +96,12 @@ internal fun ActivityScreen(
 
         val visible = state.visible
         if (visible.isEmpty() && !state.loading) {
-            item(key = "empty") { ActivityEmptyState(state.filter) }
+            item(key = "empty") {
+                ActivityEmptyState(
+                    filter = state.filter,
+                    releasesUnsupported = state.releasesUnsupported
+                )
+            }
         }
 
         items(
@@ -293,15 +298,22 @@ private fun ActivityHero(
 
 /** Says which of the four lists is empty, because "nothing here" under a filter is ambiguous. */
 @Composable
-private fun ActivityEmptyState(filter: ActivityFilter) {
-    val message = when (filter) {
-        ActivityFilter.ALL ->
+private fun ActivityEmptyState(filter: ActivityFilter, releasesUnsupported: Boolean) {
+    val message = when {
+        // Said plainly rather than as "nothing here". A server too old to answer the question is
+        // not the same as an answer of none, and it is the one the user can actually do something
+        // about.
+        releasesUnsupported && filter == ActivityFilter.RELEASES ->
+            "This Agro server is too old to know about artist subscriptions. Update the server " +
+                "to follow artists and see their releases here."
+
+        filter == ActivityFilter.ALL ->
             "Nothing yet. Friends show up here once they share activity, or send you something."
-        ActivityFilter.CIRCLE ->
+        filter == ActivityFilter.CIRCLE ->
             "No circle activity. Friends appear here once they turn on activity sharing."
-        ActivityFilter.SHARED ->
+        filter == ActivityFilter.SHARED ->
             "Nobody has sent you a song yet."
-        ActivityFilter.RELEASES ->
+        else ->
             "Subscribe to an artist and new releases will land here."
     }
 
