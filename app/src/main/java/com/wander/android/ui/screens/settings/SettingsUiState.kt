@@ -42,6 +42,9 @@ internal data class SettingsUiState(
     val serverArchive: Boolean,
     val popularityContribution: Boolean,
     val catalogTrade: Boolean,
+    /** What the trade has amounted to, so an enabled toggle can show its own effect. */
+    val fingerprintsShared: Int,
+    val lyricsReceived: Int,
     val canArchive: Boolean,
     val syncProgress: SyncProgress,
     val pendingUploads: Int,
@@ -98,6 +101,8 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val serverArchive by viewModel.serverArchiveEnabled.collectAsStateWithLifecycle()
     val popularityContribution by viewModel.popularityEnabled.collectAsStateWithLifecycle()
     val catalogTrade by viewModel.catalogTradeEnabled.collectAsStateWithLifecycle()
+    val fingerprintsShared by viewModel.fingerprintsShared.collectAsStateWithLifecycle()
+    val lyricsReceived by viewModel.lyricsReceived.collectAsStateWithLifecycle()
     val canArchive by viewModel.canArchive.collectAsStateWithLifecycle()
     val syncProgress by viewModel.librarySyncProgress.collectAsStateWithLifecycle()
     val pendingUploads by viewModel.pendingUploads.collectAsStateWithLifecycle()
@@ -139,6 +144,8 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         serverArchive = serverArchive,
         popularityContribution = popularityContribution,
         catalogTrade = catalogTrade,
+        fingerprintsShared = fingerprintsShared,
+        lyricsReceived = lyricsReceived,
         canArchive = canArchive,
         syncProgress = syncProgress,
         pendingUploads = pendingUploads,

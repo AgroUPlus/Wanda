@@ -392,6 +392,22 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         get() = prefs.getLong(KEY_CATALOG_PUBLISHED_AT, 0L)
         set(value) = prefs.edit { putLong(KEY_CATALOG_PUBLISHED_AT, value) }
 
+    /**
+     * What the paired server said it can do, from the last registration.
+     *
+     * Learned once at pairing and refreshed on every registration, rather than probed per request:
+     * the alternative is what the catalogue client used to do, which was send every publish twice
+     * whenever the server turned out not to know a field.
+     *
+     * Empty means either "not asked yet" or "a server too old to answer", and both take the same
+     * path — the client uses what it knows works everywhere.
+     */
+    var agroCapabilities: Set<String>
+        get() = prefs.getStringSet(KEY_AGRO_CAPABILITIES, emptySet()).orEmpty()
+        set(value) = prefs.edit { putStringSet(KEY_AGRO_CAPABILITIES, value) }
+
+    fun serverSupports(capability: String): Boolean = capability in agroCapabilities
+
     val agroDeviceId: String
         get() = prefs.getString(KEY_AGRO_DEVICE_ID, null)?.takeIf { it.isNotBlank() }
             ?: ("wanda-" + java.util.UUID.randomUUID().toString().take(12)).also { generated ->
@@ -574,6 +590,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_AGRO_CATALOG_TRADE = "key_agro_catalog_trade"
         const val KEY_CATALOG_CURSOR = "catalog_cursor"
         const val KEY_CATALOG_PUBLISHED_AT = "catalog_published_at"
+        private const val KEY_AGRO_CAPABILITIES = "key_agro_capabilities"
         private const val KEY_AGRO_P2P_SYNC = "key_agro_p2p_sync"
         private const val KEY_AGRO_SERVER_ARCHIVE = "key_agro_server_archive"
         private const val KEY_AGRO_POPULARITY = "key_agro_popularity_contribution"

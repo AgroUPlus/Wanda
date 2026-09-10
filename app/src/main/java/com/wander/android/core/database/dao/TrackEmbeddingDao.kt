@@ -72,6 +72,19 @@ interface TrackEmbeddingDao {
     fun indexedTrackCountFlow(model: String, version: Int): Flow<Int>
 
     /**
+     * How many fingerprints have gone to the catalogue.
+     *
+     * Derived from the publish cursor rather than counted as they are sent: the cursor is already
+     * the record of what the server has taken, and a separate tally would be a second answer to
+     * the same question, free to drift from the first.
+     */
+    @Query(
+        "SELECT COUNT(*) FROM track_embeddings WHERE model = :model AND version = :version " +
+            "AND computedAt <= :publishedThrough"
+    )
+    fun publishedCountFlow(model: String, version: Int, publishedThrough: Long): Flow<Int>
+
+    /**
      * Which tracks have a current neural fingerprint, for the badge and the Fingerprints screen.
      *
      * Ids rather than rows: the caller wants set membership, and a vector is ~1 KB per second of

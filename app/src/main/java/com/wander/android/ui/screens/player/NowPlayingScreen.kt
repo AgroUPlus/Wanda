@@ -279,7 +279,7 @@ internal fun NowPlayingScreen(
                 ) { lyricsVisible ->
                     if (lyricsVisible) {
                         SyncedLyricsView(
-                            lyrics = lyrics,
+                            state = lyrics,
                             playerConnection = playerConnection,
                             onSeek = playerConnection::seekTo,
                             modifier = Modifier
