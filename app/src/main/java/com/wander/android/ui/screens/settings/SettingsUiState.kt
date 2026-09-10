@@ -24,6 +24,7 @@ internal data class SettingsUiState(
     val syncedNavidrome: AgroSyncedSettings?,
     val monet: Boolean,
     val amoled: Boolean,
+    val immersivePlayer: Boolean,
     val offline: Boolean,
     val preloadNext: Boolean,
     val indexOnMobileData: Boolean,
@@ -83,6 +84,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val syncedNavidrome by viewModel.syncedNavidrome.collectAsStateWithLifecycle()
     val monet by viewModel.isMonetDynamic.collectAsStateWithLifecycle()
     val amoled by viewModel.isAmoledBlack.collectAsStateWithLifecycle()
+    val immersivePlayer by viewModel.isImmersivePlayer.collectAsStateWithLifecycle()
     val offline by viewModel.isOfflineMode.collectAsStateWithLifecycle()
     val preloadNext by viewModel.isPreloadNextEnabled.collectAsStateWithLifecycle()
     val indexOnMobileData by viewModel.isIndexOnMobileDataEnabled.collectAsStateWithLifecycle()
@@ -126,6 +128,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         syncedNavidrome = syncedNavidrome,
         monet = monet,
         amoled = amoled,
+        immersivePlayer = immersivePlayer,
         offline = offline,
         preloadNext = preloadNext,
         indexOnMobileData = indexOnMobileData,

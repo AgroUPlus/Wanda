@@ -93,6 +93,7 @@ internal fun NowPlayingScreen(
     artworkModifier: Modifier = Modifier,
     showLyrics: Boolean = false,
     onToggleLyrics: () -> Unit = {},
+    immersivePlayer: Boolean = false,
     viewModel: NowPlayingViewModel = hiltViewModel()
 ) {
     val state by playerConnection.state.collectAsStateWithLifecycle()
@@ -138,14 +139,247 @@ internal fun NowPlayingScreen(
         )
     }
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween,
-        modifier = modifier
-            .fillMaxSize()
-            .safeDrawingPadding()
-            .padding(horizontal = 24.dp, vertical = 12.dp)
-    ) {
+    // Long-pressing the cover opens speed and pitch at the point that was touched.
+    var rateAnchor by remember { mutableStateOf<IntOffset?>(null) }
+    val speedAndPitch by playerConnection.speedAndPitch.collectAsStateWithLifecycle()
+
+    if (immersivePlayer && artworkSlot != null) {
+        // ── Immersive layout ──────────────────────────────────────────────────────
+        // Artwork fills the screen edge-to-edge (MorphingArtwork will match these
+        // bounds). Controls sit in a Column at the bottom, readable over the
+        // gradient scrim drawn between them.
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .then(artworkModifier)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onLongPress = { rateAnchor = IntOffset(it.x.toInt(), it.y.toInt()) }
+                    )
+                }
+        ) {
+            // Invisible anchor — MorphingArtwork follows these bounds.
+            artworkSlot(track.artworkUrl, track.title)
+
+            // Gradient scrim so controls are readable over the artwork.
+            androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                drawRect(
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        0f to androidx.compose.ui.graphics.Color.Transparent,
+                        0.45f to androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.15f),
+                        1f to androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.72f)
+                    )
+                )
+            }
+
+            // Top bar
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .fillMaxWidth()
+                    .safeDrawingPadding()
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                    .graphicsLayer { alpha = contentAlpha() }
+            ) {
+                IconButton(onClick = onCollapse) {
+                    Icon(
+                        Icons.Rounded.ExpandMore,
+                        contentDescription = "Close player",
+                        tint = androidx.compose.ui.graphics.Color.White
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    val activeJam = jam
+                    if (activeJam != null) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            shape = MaterialTheme.shapes.small,
+                            modifier = Modifier.clickable(onClick = onOpenJam)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .background(androidx.compose.ui.graphics.Color(0xFFEF4444), androidx.compose.foundation.shape.CircleShape)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = "Jam",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                com.wander.android.ui.components.AvatarGroup(
+                                    usernames = activeJam.members,
+                                    size = 18.dp,
+                                    overlap = 5.dp,
+                                    maxDisplay = 3
+                                )
+                            }
+                        }
+                    } else {
+                        val canSwitch = viewModel.canSwitchSource(track, state.durationMs)
+                        Text(
+                            text = track.source.displayName,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = androidx.compose.ui.graphics.Color.White.copy(
+                                alpha = if (canSwitch) 1f else 0.75f
+                            ),
+                            textAlign = TextAlign.Center,
+                            modifier = if (canSwitch) {
+                                Modifier
+                                    .clip(MaterialTheme.shapes.small)
+                                    .clickable {
+                                        showSourcePicker = true
+                                        viewModel.findRenditions(track, state.durationMs)
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            } else Modifier
+                        )
+                        track.audioQualityLabel?.let { quality ->
+                            AudioQualityBadge(
+                                quality = quality,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                    }
+                }
+                QueueRadioButton(
+                    isRadioMode = state.isRadioMode,
+                    onOpenQueue = onOpenQueue,
+                    onToggleRadio = playerConnection::toggleRadio
+                )
+            }
+
+            // Overlay buttons (lyrics / share) ride the cover in immersive mode too.
+            PlayerOverlayButtons(
+                showLyrics = showLyrics,
+                onToggleLyrics = onToggleLyrics,
+                onShare = { viewModel.share(track) }.takeIf { viewModel.canShare(track) },
+                contentAlpha = overlayAlpha
+            )
+
+            if (state.audioTracks.size > 1) {
+                FilledTonalIconButton(
+                    onClick = { showAudioTrackPicker = true },
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .safeDrawingPadding()
+                        .padding(start = 60.dp, top = 4.dp)
+                        .graphicsLayer { alpha = overlayAlpha() }
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Translate,
+                        contentDescription = "Change audio language"
+                    )
+                }
+            }
+
+            // Bottom controls column overlaid on the artwork.
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .safeDrawingPadding()
+                    .padding(horizontal = 24.dp, vertical = 12.dp)
+                    .graphicsLayer { alpha = contentAlpha() }
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = track.title,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = androidx.compose.ui.graphics.Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Clip,
+                            modifier = Modifier.scrollingTitle()
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = track.artist,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Clip,
+                                modifier = Modifier.scrollingTitle()
+                                    .clip(MaterialTheme.shapes.extraSmall)
+                                    .clickable(
+                                        enabled = onOpenArtist != null && track.artist.isNotBlank()
+                                    ) { onOpenArtist?.invoke(track.artist, track.artistId) }
+                            )
+                            val albumId = track.albumId
+                            if (!track.album.isNullOrBlank()) {
+                                Text(
+                                    text = " · ${track.album}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Clip,
+                                    modifier = Modifier.scrollingTitle()
+                                        .clip(MaterialTheme.shapes.extraSmall)
+                                        .clickable(enabled = albumId != null && onOpenAlbum != null) {
+                                            albumId?.let { onOpenAlbum?.invoke(it) }
+                                        }
+                                )
+                            }
+                        }
+                    }
+                    LikeButton(
+                        isLiked = track.id in likedTrackIds,
+                        onToggle = { viewModel.toggleLike(track) },
+                        size = 28.dp
+                    )
+                }
+
+                PlayerSeekBar(
+                    playerConnection = playerConnection,
+                    durationMs = state.durationMs,
+                    onSeek = playerConnection::seekTo,
+                    modifier = Modifier.padding(top = 12.dp),
+                    isLive = track.isLive
+                )
+
+                PlayerControls(
+                    state = state,
+                    connection = playerConnection,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                )
+            }
+
+            rateAnchor?.let { anchor ->
+                SpeedPitchPopup(
+                    value = speedAndPitch,
+                    onChange = { playerConnection.setSpeedAndPitch(it.speed, it.pitch) },
+                    onDismiss = { rateAnchor = null },
+                    offset = anchor
+                )
+            }
+        }
+    } else {
+        // ── Standard layout ───────────────────────────────────────────────────────
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween,
+            modifier = modifier
+                .fillMaxSize()
+                .safeDrawingPadding()
+                .padding(horizontal = 24.dp, vertical = 12.dp)
+        ) {
         // Top action bar
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -232,12 +466,6 @@ internal fun NowPlayingScreen(
                 onToggleRadio = playerConnection::toggleRadio
             )
         }
-
-        // Long-pressing the cover opens speed and pitch at the point that was touched. Kept off
-        // the top bar deliberately: it is an adjustment made mid-listen and does not deserve a
-        // permanent slot next to the controls that are used every time.
-        var rateAnchor by remember { mutableStateOf<IntOffset?>(null) }
-        val speedAndPitch by playerConnection.speedAndPitch.collectAsStateWithLifecycle()
 
         // Swipeable Artwork / Lyrics Area
         Box(
@@ -431,6 +659,7 @@ internal fun NowPlayingScreen(
                 connection = playerConnection,
                 modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
             )
+        }
         }
     }
 }

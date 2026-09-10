@@ -23,4 +23,13 @@ internal fun LazyListScope.appearanceTab(
             onCheckedChange = actions.onAmoledChange
         )
     }
+
+    item(key = "immersive_player") {
+        SettingsToggle(
+            title = "Immersive player",
+            subtitle = "Cover art fills the screen edge-to-edge when playing",
+            checked = state.immersivePlayer,
+            onCheckedChange = actions.onImmersivePlayerChange
+        )
+    }
 }
