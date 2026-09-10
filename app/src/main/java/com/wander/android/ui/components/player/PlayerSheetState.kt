@@ -53,9 +53,14 @@ class PlayerSheetState(
      *
      * The clamp above is what used to swallow the bounce entirely — the spring overshot the
      * *offset* and `progress` flattened it back to 1, so a bouncier spec changed nothing you could
-     * see. Only the travelling artwork reads this, where overshooting past the final frame is the
-     * whole effect; the lower bound is still held at 0 because a sheet that reads as less than
-     * closed has nothing to show.
+     * see. Only the travelling cover *and the neighbours pitched off it* read this, where
+     * overshooting past the final frame is the whole effect; the lower bound is still held at 0
+     * because a sheet that reads as less than closed has nothing to show.
+     *
+     * The filmstrip has to ride the same value as the cover it is spaced around. Everything else —
+     * the corner radius, the shadow, the reported box — stays on [progress] because it has nowhere
+     * to overshoot *to*: each is already at its terminal value at 1, and a box reported larger
+     * than the screen would break the layout rather than decorate it.
      */
     internal val rawProgress: Float by derivedStateOf {
         if (maxOffsetPx <= 0f) {
@@ -73,7 +78,14 @@ class PlayerSheetState(
         val wasCollapsed = targetValue == PlayerSheetValue.COLLAPSED
         val wasAtMax = abs(offset.value - maxOffsetPx) < 10f
         maxOffsetPx = newMaxOffset
-        if (isFirstMeasure || wasCollapsed || wasAtMax || offset.value > newMaxOffset) {
+        // A settle in flight owns the offset, and `snapTo` *cancels* the running `animateTo`.
+        // The docked height is itself a spring, so every frame of it arrives here: a dock row
+        // appearing while the sheet was still moving killed the expand partway and left the cover
+        // stranded mid-overshoot. An offset that no longer fits the new travel is the one case
+        // that must still be brought back into range, whatever is running.
+        val outOfRange = offset.value > newMaxOffset
+        if (offset.isRunning && !outOfRange) return
+        if (isFirstMeasure || wasCollapsed || wasAtMax || outOfRange) {
             if (targetValue == PlayerSheetValue.EXPANDED) {
                 offset.snapTo(0f)
             } else {

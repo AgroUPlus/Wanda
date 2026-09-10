@@ -85,8 +85,10 @@ private val DockedCorner: Dp = 28.dp
  * `graphicsLayer` lambda, and the content slot receives a `() -> Float` so it can do the same.
  *
  * Two of them, in fact: `progress` is clamped to 0..1 and is what almost everything wants, while
- * `rawProgress` keeps the spring's overshoot for the one element that animates past its resting
- * frame. The sheet's own radius and box lerp deliberately stay on the clamped one.
+ * `rawProgress` keeps the spring's overshoot for the cover that animates past its resting frame,
+ * and for the peek neighbours spaced off that same box — they have to agree, or the filmstrip is
+ * pitched from one rect while the cover between them is drawn at another. The sheet's own radius
+ * and box lerp deliberately stay on the clamped one.
  *
  * The content is measured **once**, at a constant size; only the node's drawn box animates.
  */

@@ -2,7 +2,6 @@ package com.wander.android.data.repository
 
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.TrackEntity
-import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -73,17 +72,6 @@ class InstantRadioRepository @Inject constructor(
                 liked.shuffled().take(LIKED_TAKE) +
                 recent.shuffled().take(RECENT_TAKE)
         ).shuffled()
-    }
-
-    /** One track from each source in turn, until every source has run out. */
-    private fun interleaveBySource(tracks: List<UnifiedTrack>): List<UnifiedTrack> {
-        val bySource: Map<SourceType, List<UnifiedTrack>> = tracks.groupBy { it.source }
-        val queues = bySource.values.map { it.shuffled().toMutableList() }
-        return buildList {
-            while (queues.any { it.isNotEmpty() }) {
-                queues.forEach { queue -> if (queue.isNotEmpty()) add(queue.removeAt(0)) }
-            }
-        }
     }
 
     private companion object {

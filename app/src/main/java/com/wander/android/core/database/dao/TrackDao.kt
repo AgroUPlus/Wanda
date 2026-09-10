@@ -91,6 +91,24 @@ interface TrackDao {
     @Query("SELECT * FROM tracks WHERE id = :id LIMIT 1")
     suspend fun getTrackById(id: String): TrackEntity?
 
+    /**
+     * A cover for a song named only by its title and artist.
+     *
+     * Agro reports the account's top tracks as text, because the fleet's history is shared across
+     * devices that do not agree on track ids. This is what lets the statistics screen still *show*
+     * that song when this device happens to know it. Null when it does not, and the screen falls
+     * back to the placeholder rather than to a wrong cover.
+     */
+    @Query(
+        """
+        SELECT artworkUrl FROM tracks
+        WHERE title = :title COLLATE NOCASE AND artist = :artist COLLATE NOCASE
+          AND artworkUrl IS NOT NULL
+        LIMIT 1
+        """
+    )
+    suspend fun artworkFor(title: String, artist: String): String?
+
     /** Candidate track ids within duration tolerance for duplicate matching, excluding target track. */
     @Query("SELECT id FROM tracks WHERE id != :excludingId AND durationMs BETWEEN :minDurationMs AND :maxDurationMs")
     suspend fun getCandidateIdsByDuration(excludingId: String, minDurationMs: Long, maxDurationMs: Long): List<String>
