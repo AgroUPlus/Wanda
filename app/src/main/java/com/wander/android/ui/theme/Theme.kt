@@ -42,18 +42,3 @@ fun WanderTheme(
         content = content
     )
 }
-
-/**
- * Pins the darkest surfaces to true black. On an OLED panel those pixels are switched off
- * entirely, so a dark UI genuinely costs less battery rather than just looking like it should.
- */
-private fun ColorScheme.toAmoled(): ColorScheme = copy(
-    background = Color.Black,
-    surface = Color.Black,
-    surfaceDim = Color.Black,
-    surfaceContainerLowest = Color.Black,
-    surfaceContainerLow = Color(0xFF0A0A0A),
-    surfaceContainer = Color(0xFF121212),
-    surfaceContainerHigh = Color(0xFF1A1A1A),
-    surfaceContainerHighest = Color(0xFF222222)
-)

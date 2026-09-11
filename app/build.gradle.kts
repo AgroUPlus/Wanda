@@ -24,8 +24,8 @@ android {
         applicationId = "com.wander.android"
         minSdk = 26
         targetSdk = 37
-        versionCode = 32
-        versionName = "1.5.0-beta.16"
+        versionCode = 33
+        versionName = "1.5.0-beta.17"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
@@ -167,6 +167,7 @@ dependencies {
     implementation(libs.androidx.security.crypto)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+    implementation(libs.palette.ktx)
 
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)

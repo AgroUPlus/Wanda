@@ -66,8 +66,12 @@ import com.wander.android.ui.components.AvatarGroup
 import com.wander.android.ui.components.FingerprintBadge
 import com.wander.android.ui.components.LikeButton
 import com.wander.android.ui.components.scrollingTitle
+import com.wander.android.ui.theme.CoverTintedTheme
 import com.wander.android.ui.theme.LiveIndicator
 import com.wander.android.ui.theme.OnCoverArt
+import com.wander.android.ui.theme.rememberCoverSeedColor
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
 
 /** Nominal edge of the full-screen cover; drives the decode size, not the layout. */
 private val FullArtworkSize = 360.dp
@@ -121,6 +125,14 @@ internal fun NowPlayingScreen(
     val track = state.currentTrack
 
     if (track == null) return
+
+    // Extract the dominant colour from the cover art and use it to tint the player surface.
+    // The palette loads async; until it arrives the base scheme is used unchanged.
+    val coverSeed = rememberCoverSeedColor(track.artworkUrl)
+    val dark = isSystemInDarkTheme()
+    val base = MaterialTheme.colorScheme
+
+    CoverTintedTheme(seedColor = coverSeed, base = base, dark = dark, amoled = false) {
 
     if (showSourcePicker) {
         SourcePickerDialog(
@@ -754,4 +766,5 @@ internal fun NowPlayingScreen(
         }
         }
     }
+    } // end CoverTintedTheme
 }
