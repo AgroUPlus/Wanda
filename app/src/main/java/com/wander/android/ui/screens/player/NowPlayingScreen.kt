@@ -573,8 +573,19 @@ internal fun NowPlayingScreen(
         ) {
             Box(
                 modifier = Modifier
-                    .aspectRatio(1f)
-                    .fillMaxSize()
+                    // Square for the cover, the whole area for the lyrics.
+                    //
+                    // A cover is square and has to be centred in whatever space is going; a verse is
+                    // not, and pinning it to the same square left the band between it and the title
+                    // empty on any phone taller than it is wide. The lyrics now run down to the
+                    // title, which is the only thing below them.
+                    //
+                    // Safe to resize only because this state is also the one where the travelling
+                    // cover is gone: `PlayerSheetContent` fades it out whenever the lyrics are up in
+                    // this layout, and drops it from composition once it is invisible. Nothing is
+                    // following these bounds by the time they change — which is the constraint the
+                    // note below is about.
+                    .then(if (showLyrics) Modifier.fillMaxSize() else Modifier.aspectRatio(1f).fillMaxSize())
                     .then(artworkModifier)
                     // `pointerInput` after the swipe modifier, so a horizontal drag still reaches
                     // the skip gesture — only a press that stays put becomes a tap or a long press.
