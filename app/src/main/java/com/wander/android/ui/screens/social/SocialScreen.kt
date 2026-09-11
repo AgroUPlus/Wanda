@@ -89,10 +89,7 @@ internal fun SocialScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         SocialHeader(
             state = state,
-            unread = unread,
             contentPadding = contentPadding,
-            onOpenActivity = onOpenActivity,
-            onOpenMyProfile = onOpenMyProfile,
             onOpenOffGrid = onOpenOffGrid,
             onFindPeople = { searching = true }
         )
@@ -156,7 +153,10 @@ internal fun SocialScreen(
             item(key = "hero") {
                 FriendsHero(
                     friends = state.friends,
-                    listeningNow = state.nowPlaying.size
+                    listeningNow = state.nowPlaying.size,
+                    myUsername = state.myUsername,
+                    myAvatarUrl = state.myAvatarUrl,
+                    onOpenMyProfile = onOpenMyProfile
                 )
             }
 
@@ -168,7 +168,9 @@ internal fun SocialScreen(
                             state.nowPlaying.map { it.username.lowercase() }.toSet()
                         },
                         onOpenProfile = onOpenProfile,
-                        modifier = Modifier.padding(bottom = 12.dp)
+                        // The hero's caption stops 8dp above its own foot, so a row that only
+                        // carried bottom padding began flush against it.
+                        modifier = Modifier.padding(top = 14.dp, bottom = 12.dp)
                     )
                 }
             }
@@ -250,18 +252,10 @@ internal fun SocialScreen(
                 }
             }
 
-            if (state.friends.isNotEmpty()) {
-                item(key = "friends_header") { SectionHeader("Friends") }
-                items(state.friends, key = { "friend_" + it.username }) { profile ->
-                    FriendRow(
-                        profile = profile,
-                        subtitle = friendSubtitle(profile, state.playing(profile.username)),
-                        actionLabel = null,
-                        onAction = null,
-                        onClick = { onOpenProfile(profile.username) }
-                    )
-                }
-            }
+            // No second pass over `state.friends` here. The roster is the avatar row above, and
+            // repeating it as a text list lower down said the same thing twice — once as faces,
+            // once as names — so the tab ended on a list nobody had asked for. Requests still get
+            // their own sections, because those are things to answer rather than people to open.
 
             if (state.outgoing.isNotEmpty()) {
                 item(key = "outgoing_header") { SectionHeader("Waiting for an answer") }

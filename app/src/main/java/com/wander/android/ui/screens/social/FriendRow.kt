@@ -15,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.wander.android.data.sources.agro.AgroFriendNowPlaying
 import com.wander.android.data.sources.agro.AgroProfile
 
 /**
@@ -63,17 +62,4 @@ internal fun FriendRow(
             }
         }
     }
-}
-
-/**
- * The line under a friend's name.
- *
- * Three cases, and the difference between the last two matters: a friend who is not listening is
- * simply idle, whereas one who keeps their playback private is telling you something about their
- * settings, not about their evening.
- */
-internal fun friendSubtitle(profile: AgroProfile, nowPlaying: AgroFriendNowPlaying?): String = when {
-    nowPlaying != null -> "${nowPlaying.trackTitle} · ${nowPlaying.artistName}"
-    !profile.showNowPlaying -> "Keeps their listening private"
-    else -> "Not listening right now"
 }
