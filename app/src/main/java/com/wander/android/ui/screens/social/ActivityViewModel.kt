@@ -51,10 +51,18 @@ internal sealed interface ActivityItem {
      * rather than a units one.
      */
     @Immutable
-    data class Release(val release: AgroArtistRelease, override val at: String) : ActivityItem {
+    data class Release(
+        val release: AgroArtistRelease,
+        override val at: String,
+        /**
+         * A cover, when the library already holds the record. Null is ordinary for something just
+         * out — the catalogue carries no artwork of its own, so this is a local lookup by name.
+         */
+        val artworkUrl: String? = null
+    ) : ActivityItem {
         companion object {
-            fun of(release: AgroArtistRelease) =
-                Release(release, Instant.ofEpochSecond(release.updatedAt).toString())
+            fun of(release: AgroArtistRelease, artworkUrl: String? = null) =
+                Release(release, Instant.ofEpochSecond(release.updatedAt).toString(), artworkUrl)
         }
     }
 }
@@ -149,9 +157,14 @@ internal class ActivityViewModel @Inject constructor(
             // the notification watermark is the release *job's* business, and a feed that hid
             // what had already been notified would be empty exactly when the user came to look.
             val releases = subscriptions.newReleases(since = 0L)
+            // Covers are resolved once, here, rather than per row: a lookup is a Room read and the
+            // list recomposes far more often than it reloads.
+            val releaseItems = releases.getOrDefault(emptyList()).map { release ->
+                ActivityItem.Release.of(release, subscriptions.artworkFor(release))
+            }
             _state.update { current ->
                 current.copy(
-                    items = merge(feed, current.shared(), releases.getOrDefault(emptyList())),
+                    items = merge(feed, current.shared(), releaseItems),
                     releasesUnsupported = releases.isFailure,
                     loading = false
                 )
@@ -165,8 +178,15 @@ internal class ActivityViewModel @Inject constructor(
     private fun ActivityUiState.shared(): List<AgroDrop> =
         items.filterIsInstance<ActivityItem.Shared>().map { it.drop }
 
-    private fun ActivityUiState.releases(): List<AgroArtistRelease> =
-        items.filterIsInstance<ActivityItem.Release>().map { it.release }
+    /**
+     * The release rows as they stand, covers included.
+     *
+     * Kept as the wrapper rather than unwrapped back to [AgroArtistRelease]: the cover was resolved
+     * when the list was loaded, and handing the bare catalogue record to [merge] would throw it
+     * away every time a drop arrived.
+     */
+    private fun ActivityUiState.releases(): List<ActivityItem.Release> =
+        items.filterIsInstance<ActivityItem.Release>()
 
     /**
      * Newest first, by the timestamp each kind carries.
@@ -178,10 +198,10 @@ internal class ActivityViewModel @Inject constructor(
     private fun merge(
         feed: List<AgroFeedItem>,
         incoming: List<AgroDrop>,
-        releases: List<AgroArtistRelease>
+        releases: List<ActivityItem.Release>
     ): List<ActivityItem> =
         (feed.map(ActivityItem::Milestone) +
             incoming.map(ActivityItem::Shared) +
-            releases.map(ActivityItem.Release::of))
+            releases)
             .sortedByDescending { it.at }
 }
