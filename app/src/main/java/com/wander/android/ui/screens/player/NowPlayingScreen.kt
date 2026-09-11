@@ -121,13 +121,14 @@ internal fun NowPlayingScreen(
     val renditions by viewModel.renditions.collectAsStateWithLifecycle()
     val isFindingRenditions by viewModel.isFindingRenditions.collectAsStateWithLifecycle()
     val jam by viewModel.jam.collectAsStateWithLifecycle()
+    val isCoverArtThemeEnabled by viewModel.isCoverArtThemeEnabled.collectAsStateWithLifecycle()
     val track = state.currentTrack
 
     if (track == null) return
 
-    // Extract the dominant colour from the cover art and use it to tint the player surface.
-    // The palette loads async; until it arrives the base scheme is used unchanged.
-    val coverSeed = rememberCoverSeedColor(track.artworkUrl)
+    // Extract the dominant colour from the cover art and use it to tint the player surface,
+    // if enabled in Settings -> Appearance. Until it arrives or if disabled, base scheme is used.
+    val coverSeed = if (isCoverArtThemeEnabled) rememberCoverSeedColor(track.artworkUrl) else null
     val dark = isSystemInDarkTheme()
     val base = MaterialTheme.colorScheme
 

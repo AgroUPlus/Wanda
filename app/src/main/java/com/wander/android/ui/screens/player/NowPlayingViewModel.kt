@@ -37,6 +37,8 @@ internal class NowPlayingViewModel @Inject constructor(
     private val secureStorage: com.wander.android.core.security.SecureStorage
 ) : ViewModel() {
 
+    val isCoverArtThemeEnabled: StateFlow<Boolean> = secureStorage.isCoverArtThemeEnabled
+
     /** What has been measured about the track on screen. */
     val fingerprintStatus: StateFlow<Map<String, FingerprintStatus>> = fingerprintStatuses
         .statuses()

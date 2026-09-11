@@ -24,8 +24,8 @@ android {
         applicationId = "com.wander.android"
         minSdk = 26
         targetSdk = 37
-        versionCode = 33
-        versionName = "1.5.0-beta.17"
+        versionCode = 34
+        versionName = "1.5.0-beta.18"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
