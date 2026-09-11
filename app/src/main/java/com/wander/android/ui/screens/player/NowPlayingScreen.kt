@@ -14,13 +14,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -268,7 +273,16 @@ internal fun NowPlayingScreen(
                         immersiveTopBar = with(density) { it.size.height.toDp() }
                     }
                     .fillMaxWidth()
-                    .safeDrawingPadding()
+                    // Top and sides only. `safeDrawingPadding()` insets all four edges, so this bar
+                    // — which is pinned to the top — was also carrying the navigation bar's inset
+                    // along its bottom as dead space. That is invisible on its own, but the height
+                    // measured below is what the lyrics are inset by, so it pushed the first line
+                    // down by a navigation bar for no reason.
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(
+                            WindowInsetsSides.Top + WindowInsetsSides.Horizontal
+                        )
+                    )
                     .padding(horizontal = 8.dp, vertical = 4.dp)
                     .graphicsLayer { alpha = contentAlpha() }
             ) {
@@ -384,7 +398,16 @@ internal fun NowPlayingScreen(
                         immersiveControls = with(density) { it.size.height.toDp() }
                     }
                     .fillMaxWidth()
-                    .safeDrawingPadding()
+                    // Bottom and sides only, for the same reason as the top bar: pinned to the
+                    // bottom, this column was also insetting its *top* by the status bar. The
+                    // lyrics are padded by the height measured here, so that inset sat between the
+                    // last lyric line and the title as a band of empty space belonging to nothing —
+                    // the gap this layout was reported for.
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(
+                            WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal
+                        )
+                    )
                     .padding(horizontal = 24.dp, vertical = 12.dp)
                     .graphicsLayer { alpha = contentAlpha() }
             ) {
@@ -573,19 +596,8 @@ internal fun NowPlayingScreen(
         ) {
             Box(
                 modifier = Modifier
-                    // Square for the cover, the whole area for the lyrics.
-                    //
-                    // A cover is square and has to be centred in whatever space is going; a verse is
-                    // not, and pinning it to the same square left the band between it and the title
-                    // empty on any phone taller than it is wide. The lyrics now run down to the
-                    // title, which is the only thing below them.
-                    //
-                    // Safe to resize only because this state is also the one where the travelling
-                    // cover is gone: `PlayerSheetContent` fades it out whenever the lyrics are up in
-                    // this layout, and drops it from composition once it is invisible. Nothing is
-                    // following these bounds by the time they change — which is the constraint the
-                    // note below is about.
-                    .then(if (showLyrics) Modifier.fillMaxSize() else Modifier.aspectRatio(1f).fillMaxSize())
+                    .aspectRatio(1f)
+                    .fillMaxSize()
                     .then(artworkModifier)
                     // `pointerInput` after the swipe modifier, so a horizontal drag still reaches
                     // the skip gesture — only a press that stays put becomes a tap or a long press.
