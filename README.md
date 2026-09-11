@@ -54,6 +54,8 @@ Each backend implements one interface (`IMusicSource`) and declares what it supp
 
 **Auto-update check** — Settings → About → Check for update compares against the latest GitHub release. The app never downloads or installs anything on its own.
 
+<img width="1600" height="1000" alt="image" src="https://github.com/user-attachments/assets/9d40cd8e-4cb6-4e2a-a7ee-5ca7a8be6c39" />
+
 ---
 
 ## Battery & Privacy
