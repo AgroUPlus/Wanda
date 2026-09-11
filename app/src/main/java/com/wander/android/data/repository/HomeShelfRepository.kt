@@ -64,6 +64,42 @@ class HomeShelfRepository @Inject constructor(
         }
 
     /**
+     * Home's lead shelf: what gets played most, with every configured backend represented.
+     *
+     * [getTopTracks] alone is play counts, and play counts lean local. [RecordingPlayCounts] hands
+     * back one rendition per recording chosen by source priority — local first, then Navidrome,
+     * then YouTube Music — so a library with a few local files could fill the shelf with them and
+     * never show the backend holding most of the music. The shelf was "what you play", drawn almost
+     * entirely from one source.
+     *
+     * So the played recordings lead and each source's own recent rows are blended in behind them,
+     * round-robin. Still one Room read per source and nothing on the network: this is the shelf the
+     * screen opens on, and it has to be there before the first frame, offline included.
+     *
+     * Duplicates are collapsed by *recording* rather than by id — the same song held on two
+     * backends is one pick, not two.
+     */
+    suspend fun getQuickPicks(
+        limit: Int = 20,
+        sources: List<SourceType>
+    ): List<UnifiedTrack> {
+        val top = recordingPlayCounts.topRecordings(limit)
+        // One backend configured means there is nothing to balance, and interleaving would only
+        // cost the shelf its play-count order.
+        if (sources.size <= 1) return top
+
+        val perSource = withContext(Dispatchers.IO) {
+            sources.flatMap { source ->
+                trackDao.getRecentlyAddedInSource(source, limit).map(TrackEntity::toUnifiedTrack)
+            }
+        }
+
+        return recordingRules.current()
+            .distinct(interleaveBySource(top + perSource))
+            .take(limit)
+    }
+
+    /**
      * Recently played, one track per album, so the shelf reads as "records you were listening to"
      * rather than repeating six tracks off the same one.
      */
