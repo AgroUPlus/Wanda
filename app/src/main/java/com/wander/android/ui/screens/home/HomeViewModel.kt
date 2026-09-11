@@ -99,12 +99,14 @@ class HomeViewModel @Inject constructor(
             // Phase 1: Instant Local-First Room Database Read (< 5ms)
             var sources: List<SourceType> = emptyList()
             val localSections = coroutineScope {
-                val onRepeat = async { homeShelfRepository.getTopTracks(CarouselSize) }
+                // Read before the shelves rather than beside them: the lead shelf is built across
+                // whichever backends are configured, so it cannot start until that is known.
+                sources = musicRepository.configuredSources()
+                val onRepeat = async { homeShelfRepository.getQuickPicks(CarouselSize, sources) }
                 val jumpBackIn = async { homeShelfRepository.getRecentAlbumStarters(CarouselSize) }
                 val recentlyPlayed = async { homeShelfRepository.getRecentlyPlayed(CarouselSize) }
                 val liked = async { homeShelfRepository.getLikedTracks(CarouselSize) }
                 val discover = async { homeShelfRepository.getNeverPlayed(CarouselSize) }
-                sources = musicRepository.configuredSources()
                 val perSource = sources
                     .map { source ->
                         source to async {
