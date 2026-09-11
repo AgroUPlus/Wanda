@@ -1,6 +1,8 @@
 package com.wander.android.ui.screens.social
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -35,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.CuteAvatar
 import com.wander.android.ui.components.ImmersiveHero
 import com.wander.android.ui.components.listInset
@@ -78,17 +82,28 @@ internal fun ActivityScreen(
 
         // A connected group, the same as the circle's period switch: the filters are mutually
         // exclusive and between them cover everything the list can hold.
+        //
+        // Each item takes the width its own label needs, and the row scrolls if the four together
+        // outrun the screen — the idiom the source rows already use. An equal `weight` split them
+        // into four identical slots instead, which sizes every button to the *average* label: with
+        // "All" beside "Releases" the long one had less room than its text, so it sat off-centre in
+        // its own button, and worse whenever a neighbour was checked and took the expressive
+        // squash's extra width.
         item(key = "filters") {
             ButtonGroup(
                 overflowIndicator = {},
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    // More above than below: the hero's caption stops 8dp short of its own foot,
+                    // so a symmetric 6dp left these sitting on the gradient's last pixel.
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 6.dp)
             ) {
                 ActivityFilter.entries.forEach { filter ->
                     toggleableItem(
                         checked = state.filter == filter,
                         label = filter.label,
-                        onCheckedChange = { viewModel.setFilter(filter) },
-                        weight = 1f
+                        onCheckedChange = { viewModel.setFilter(filter) }
                     )
                 }
             }
@@ -220,11 +235,26 @@ private fun NewReleaseCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.padding(12.dp)
         ) {
-            Icon(
-                imageVector = Icons.Rounded.NewReleases,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
+            // The sleeve when the library has one, the badge when it does not. A release genuinely
+            // just out is usually not held yet, and a grey square where a cover should be says less
+            // than the icon that at least names what kind of row this is.
+            val artwork = item.artworkUrl
+            if (artwork != null) {
+                Artwork(
+                    url = artwork,
+                    contentDescription = null,
+                    sizeDp = ReleaseArtSize,
+                    shape = MaterialTheme.shapes.small,
+                    crossfade = true,
+                    modifier = Modifier.size(ReleaseArtSize)
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.NewReleases,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "New from " + release.artist,
@@ -332,3 +362,6 @@ private fun ActivityEmptyState(filter: ActivityFilter, releasesUnsupported: Bool
 
 /** A band, not a page opener — there is a list under this and it is the point of the screen. */
 private const val ActivityAspect = 2.4f
+
+/** Matches the sender's avatar on the row above, so the two kinds of card line up. */
+private val ReleaseArtSize = 40.dp
