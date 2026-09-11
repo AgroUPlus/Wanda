@@ -2,11 +2,15 @@
   The launcher foreground: Wanda's prism motif.
 
   Three diamond/wing shapes that form a prism, plus a sharp diamond anchor below —
-  the same geometry as the brand SVG. Filled in #00201A (on-teal dark tone) so the
-  icon reads on any mask shape and at any density without anti-aliasing artefacts.
+  scaled and centered within Android's adaptive icon safe zone.
 
-  All paths are well inside the safe zone (roughly 66dp of the 108dp canvas on circular
-  masks), keeping the motif clear of cropping on all Android launchers.
+  On a 108dp canvas, Android adaptive launcher masks (circle, rounded rect, squircle)
+  guarantee a safe zone of only ~66dp diameter centered at (54, 54). The raw vector
+  was 82dp tall (y=10 to y=92), extending well beyond the mask boundary and getting
+  cropped at the top and bottom.
+
+  Scaling by 0.65 brings the motif to ~53.3dp tall and shifts it to center at y=54
+  (span y=27.35..80.65), keeping all tips comfortably inside the mask with padding.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -14,23 +18,31 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Central prism spine -->
-    <path
-        android:pathData="M54,10 L62,38 L54,70 L46,38 Z"
-        android:fillColor="#00201A"/>
+    <group
+        android:pivotX="54"
+        android:pivotY="51"
+        android:scaleX="0.65"
+        android:scaleY="0.65"
+        android:translateY="3">
 
-    <!-- Left wing -->
-    <path
-        android:pathData="M46,38 L24,48 L38,72 L49,54 Z"
-        android:fillColor="#00201A"/>
+        <!-- Central prism spine -->
+        <path
+            android:pathData="M54,10 L62,38 L54,70 L46,38 Z"
+            android:fillColor="#00201A"/>
 
-    <!-- Right wing -->
-    <path
-        android:pathData="M62,38 L84,48 L70,72 L59,54 Z"
-        android:fillColor="#00201A"/>
+        <!-- Left wing -->
+        <path
+            android:pathData="M46,38 L24,48 L38,72 L49,54 Z"
+            android:fillColor="#00201A"/>
 
-    <!-- Diamond anchor at the bottom -->
-    <path
-        android:pathData="M54,76 L60,84 L54,92 L48,84 Z"
-        android:fillColor="#00201A"/>
+        <!-- Right wing -->
+        <path
+            android:pathData="M62,38 L84,48 L70,72 L59,54 Z"
+            android:fillColor="#00201A"/>
+
+        <!-- Diamond anchor at the bottom -->
+        <path
+            android:pathData="M54,76 L60,84 L54,92 L48,84 Z"
+            android:fillColor="#00201A"/>
+    </group>
 </vector>
