@@ -3,12 +3,11 @@ package com.wander.android.ui.theme
 import android.graphics.Bitmap
 import android.os.Build
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -18,6 +17,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.palette.graphics.Palette
 import coil3.ImageLoader
@@ -121,42 +121,62 @@ fun extractSeedColor(bitmap: Bitmap): Color? {
 // ---------------------------------------------------------------------------
 
 /**
- * Derives a full M3 [ColorScheme] seeded from [seed], respecting [dark] and [amoled].
+ * Returns [this] scheme re-coloured around [seed], by [strength] (0 = untouched, 1 = fully
+ * applied), respecting [dark].
  *
- * Uses tonal blending — the result harmonises with the cover art without being a direct pixel
- * sample: the accent is tinted by the art colour, not lifted verbatim from it.
+ * Two intensities, on purpose:
  *
- * When [seed] is null the function returns null so callers can fall back to the app scheme.
+ * - **Accent roles** (primary/secondary/tertiary and their containers) are *derived* from the
+ *   seed by tonal blending, so buttons, active states and highlights take the cover's colour.
+ * - **Neutral roles** (surfaces, background, outlines, `onSurfaceVariant`) are only *washed*
+ *   toward it by a few percent. That is what carries the tint across the rest of the interface —
+ *   text, dividers, sheets, cards — without turning the chrome into a second album cover. The
+ *   cover stays the focus.
+ *
+ * Tinting only the accents was the earlier behaviour, and it left everything drawn with a neutral
+ * role — which is most of the player — visibly unaffected.
  */
 @Stable
-fun coverColorScheme(seed: Color?, dark: Boolean, amoled: Boolean): ColorScheme? {
-    seed ?: return null
+fun ColorScheme.tintedByCover(seed: Color, strength: Float, dark: Boolean): ColorScheme {
+    if (strength <= 0f) return this
 
-    val scheme = if (dark) {
-        darkColorScheme(
-            primary              = seed.harmonise(0.6f, dark = true),
-            onPrimary            = Color.Black,
-            primaryContainer     = seed.harmonise(0.25f, dark = true),
-            onPrimaryContainer   = seed.harmonise(0.9f, dark = true),
-            secondary            = seed.harmonise(0.4f, dark = true),
-            onSecondary          = Color.Black,
-            secondaryContainer   = seed.harmonise(0.2f, dark = true),
-            onSecondaryContainer = seed.harmonise(0.85f, dark = true),
-        )
-    } else {
-        lightColorScheme(
-            primary              = seed.harmonise(0.5f, dark = false),
-            onPrimary            = Color.White,
-            primaryContainer     = seed.harmonise(0.9f, dark = false),
-            onPrimaryContainer   = seed.harmonise(0.1f, dark = false),
-            secondary            = seed.harmonise(0.4f, dark = false),
-            onSecondary          = Color.White,
-            secondaryContainer   = seed.harmonise(0.85f, dark = false),
-            onSecondaryContainer = seed.harmonise(0.15f, dark = false),
-        )
-    }
+    // Blends toward the seed's tonal variant: an accent that reads as the cover's colour.
+    fun accent(from: Color, factor: Float) = lerp(from, seed.harmonise(factor, dark), strength)
+    // Barely moves: a wash of the seed over a neutral.
+    fun wash(from: Color, amount: Float) = lerp(from, seed, amount * strength)
 
-    return if (amoled && dark) scheme.toAmoled() else scheme
+    val onAccent = if (dark) Color.Black else Color.White
+    return copy(
+        primary              = accent(primary,              if (dark) 0.60f else 0.50f),
+        onPrimary            = lerp(onPrimary, onAccent, strength),
+        primaryContainer     = accent(primaryContainer,     if (dark) 0.25f else 0.90f),
+        onPrimaryContainer   = accent(onPrimaryContainer,   if (dark) 0.90f else 0.10f),
+        secondary            = accent(secondary,            0.40f),
+        onSecondary          = lerp(onSecondary, onAccent, strength),
+        secondaryContainer   = accent(secondaryContainer,   if (dark) 0.20f else 0.85f),
+        onSecondaryContainer = accent(onSecondaryContainer, if (dark) 0.85f else 0.15f),
+        tertiary             = accent(tertiary,             if (dark) 0.50f else 0.60f),
+        onTertiary           = lerp(onTertiary, onAccent, strength),
+        tertiaryContainer    = accent(tertiaryContainer,    if (dark) 0.30f else 0.88f),
+        onTertiaryContainer  = accent(onTertiaryContainer,  if (dark) 0.88f else 0.12f),
+
+        background              = wash(background,              0.06f),
+        onBackground            = wash(onBackground,            0.05f),
+        surface                 = wash(surface,                 0.06f),
+        onSurface               = wash(onSurface,               0.05f),
+        surfaceVariant          = wash(surfaceVariant,          0.10f),
+        onSurfaceVariant        = wash(onSurfaceVariant,        0.12f),
+        surfaceDim              = wash(surfaceDim,              0.08f),
+        surfaceBright           = wash(surfaceBright,           0.08f),
+        surfaceContainerLowest  = wash(surfaceContainerLowest,  0.08f),
+        surfaceContainerLow     = wash(surfaceContainerLow,     0.08f),
+        surfaceContainer        = wash(surfaceContainer,        0.08f),
+        surfaceContainerHigh    = wash(surfaceContainerHigh,    0.08f),
+        surfaceContainerHighest = wash(surfaceContainerHighest, 0.08f),
+        outline                 = wash(outline,                 0.14f),
+        outlineVariant          = wash(outlineVariant,          0.12f),
+        surfaceTint             = accent(surfaceTint,           if (dark) 0.60f else 0.50f),
+    )
 }
 
 /**
@@ -196,10 +216,15 @@ internal fun ColorScheme.toAmoled(): ColorScheme = copy(
  * Wraps [content] in a [MaterialExpressiveTheme] whose colour scheme smoothly transitions to
  * one seeded from [seedColor] whenever the playing track changes.
  *
- * - When [seedColor] is null the [base] scheme is used unchanged.
- * - The transition is a 600 ms ease-out so it follows the cover crossfade.
- * - Only primary/secondary roles are tinted — neutral surfaces stay neutral so the cover
- *   itself remains the visual focus, not the chrome.
+ * The seed itself is animated, and the scheme derived from the animated value, rather than each
+ * role being animated separately — one 600 ms ease-out (matching the cover crossfade) then covers
+ * every role [tintedByCover] touches, and adding a role later needs no second edit here.
+ *
+ * [strength] falls to 0 when [seedColor] is null, so turning the setting off or losing the art
+ * fades back to [base] instead of cutting.
+ *
+ * When [amoled] and [dark], the darkest surfaces are pinned back to true black afterwards: the
+ * wash must not lift an OLED panel off black.
  */
 @Composable
 fun CoverTintedTheme(
@@ -209,30 +234,21 @@ fun CoverTintedTheme(
     amoled: Boolean,
     content: @Composable () -> Unit,
 ) {
-    val target = remember(seedColor, dark, amoled) {
-        coverColorScheme(seedColor, dark, amoled) ?: base
-    }
+    val seed by animateColorAsState(
+        seedColor ?: base.primary,
+        tween(600),
+        label = "coverSeed",
+    )
+    val strength by animateFloatAsState(
+        if (seedColor != null) 1f else 0f,
+        tween(600),
+        label = "coverTintStrength",
+    )
 
-    val primary              by animateColorAsState(target.primary,              tween(600), label = "primary")
-    val onPrimary            by animateColorAsState(target.onPrimary,            tween(600), label = "onPrimary")
-    val primaryContainer     by animateColorAsState(target.primaryContainer,     tween(600), label = "primaryContainer")
-    val onPrimaryContainer   by animateColorAsState(target.onPrimaryContainer,   tween(600), label = "onPrimaryContainer")
-    val secondary            by animateColorAsState(target.secondary,            tween(600), label = "secondary")
-    val onSecondary          by animateColorAsState(target.onSecondary,          tween(600), label = "onSecondary")
-    val secondaryContainer   by animateColorAsState(target.secondaryContainer,   tween(600), label = "secondaryContainer")
-    val onSecondaryContainer by animateColorAsState(target.onSecondaryContainer, tween(600), label = "onSecondaryContainer")
+    val scheme = base.tintedByCover(seed, strength, dark)
 
     MaterialExpressiveTheme(
-        colorScheme = base.copy(
-            primary              = primary,
-            onPrimary            = onPrimary,
-            primaryContainer     = primaryContainer,
-            onPrimaryContainer   = onPrimaryContainer,
-            secondary            = secondary,
-            onSecondary          = onSecondary,
-            secondaryContainer   = secondaryContainer,
-            onSecondaryContainer = onSecondaryContainer,
-        ),
+        colorScheme  = if (amoled && dark) scheme.toAmoled() else scheme,
         motionScheme = MotionScheme.expressive(),
         shapes       = WandaShapes,
         typography   = WandaTypography,
