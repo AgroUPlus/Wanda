@@ -1,6 +1,5 @@
 package com.wander.android.core.audio.features
 
-import kotlin.math.abs
 import kotlin.math.sqrt
 
 /**
@@ -101,8 +100,5 @@ data class AcousticFeatures(
 
         /** Seven semitones is a fifth; stepping by it walks the circle. */
         private const val FIFTHS_STEP = 7
-
-        /** How far apart two vectors may sit and still be called neighbours. */
-        fun isNear(distance: Float, limit: Float) = abs(distance) <= limit
     }
 }
