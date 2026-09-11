@@ -4,8 +4,6 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Album
-import androidx.compose.material.icons.rounded.Lyrics
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -22,42 +20,42 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * The two buttons floating over the cover/lyrics square: share, and the artwork/lyrics toggle.
+ * The share button floating over the cover/lyrics square.
  *
- * Over the cover they need a filled container to stay legible against whatever the artwork happens
- * to be. Over the lyrics they have plain background behind them and the container only gets in the
- * way of reading, so it fades out and leaves the icon on its own.
+ * Over the cover it needs a filled container to stay legible against whatever the artwork happens
+ * to be. Over the lyrics it has plain background behind it and the container only gets in the way
+ * of reading, so it fades out and leaves the icon on its own.
+ *
+ * It used to have a twin at the bottom that toggled the lyrics. The cover itself does that now —
+ * tapping it is the whole gesture — so the button is gone rather than duplicating a tap target the
+ * artwork already is. That also frees the bottom-right corner it kept having to be inset out of.
  *
  * [contentAlpha] is a lambda so the player-sheet fade is read during draw rather than composition —
  * the sheet's progress changes every frame of a drag.
  *
- * It is deliberately a *steeper* ramp than the rest of the full player. These two sit on the cover
- * but are not drawn with it — the travelling cover is painted above this layout, so the square
- * these are aligned to never moves. On the way down the cover left immediately while the buttons
- * hung in place over nothing, which is exactly what looked broken. They now go first.
+ * It is deliberately a *steeper* ramp than the rest of the full player. This sits on the cover but
+ * is not drawn with it — the travelling cover is painted above this layout, so the square it is
+ * aligned to never moves. On the way down the cover left immediately while the button hung in place
+ * over nothing, which is exactly what looked broken. It now goes first.
  */
 @Composable
 internal fun BoxScope.PlayerOverlayButtons(
     showLyrics: Boolean,
-    onToggleLyrics: () -> Unit,
     /** Null when the track's source cannot publish a link — see `SourceCapabilities.share`. */
     onShare: (() -> Unit)?,
     contentAlpha: () -> Float,
     /**
      * How much of the container's top edge is already occupied, measured rather than assumed.
      *
-     * Zero in the standard layout, where these sit inside the artwork square and the column around
+     * Zero in the standard layout, where this sits inside the artwork square and the column around
      * it has already taken the window insets for the whole screen. The immersive layout draws its
-     * own bar and its own controls straight onto a full-bleed `Box`, and passes what they actually
-     * measured — including the system bars, which are inside those measurements.
+     * own bar straight onto a full-bleed `Box`, and passes what it actually measured — including
+     * the system bars, which are inside that measurement.
      *
-     * It was a pair of constants written from the heights the layouts are built out of. They were
-     * wrong, because the real column is a title row, a seek bar, transport controls *and* the
-     * navigation bar's inset, and the lyrics toggle came down on top of the like button.
+     * It was a constant written from the heights the layouts are built out of. It was wrong, and
+     * the sibling that read the bottom edge the same way put the lyrics toggle on the like button.
      */
-    topInset: Dp = 0.dp,
-    /** The same for the bottom edge — controls, a seek bar — under the lyrics toggle. */
-    bottomInset: Dp = 0.dp
+    topInset: Dp = 0.dp
 ) {
     val colors = overlayButtonColors(showLyrics)
 
@@ -77,24 +75,9 @@ internal fun BoxScope.PlayerOverlayButtons(
             )
         }
     }
-
-    FilledTonalIconButton(
-        onClick = onToggleLyrics,
-        colors = colors,
-        modifier = Modifier
-            .align(Alignment.BottomEnd)
-            .padding(bottom = bottomInset)
-            .padding(12.dp)
-            .graphicsLayer { alpha = contentAlpha() }
-    ) {
-        Icon(
-            imageVector = if (showLyrics) Icons.Rounded.Album else Icons.Rounded.Lyrics,
-            contentDescription = if (showLyrics) "Show artwork" else "Show lyrics"
-        )
-    }
 }
 
-/** Animated so the lyrics toggle carries the buttons across rather than cutting them. */
+/** Animated so showing the lyrics carries the button across rather than cutting it. */
 @Composable
 private fun overlayButtonColors(showLyrics: Boolean): IconButtonColors {
     val base = IconButtonDefaults.filledTonalIconButtonColors()

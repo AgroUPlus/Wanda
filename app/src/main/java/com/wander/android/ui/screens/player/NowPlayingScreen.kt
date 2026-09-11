@@ -38,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -97,8 +98,8 @@ internal fun NowPlayingScreen(
     onOpenJam: () -> Unit = {},
     contentAlpha: () -> Float = { 1f },
     /**
-     * Alpha for the two buttons floating over the cover. Separate from [contentAlpha] because the
-     * cover they sit on is drawn by the sheet, not by this layout — see [PlayerOverlayButtons].
+     * Alpha for the share button floating over the cover. Separate from [contentAlpha] because the
+     * cover it sits on is drawn by the sheet, not by this layout — see [PlayerOverlayButtons].
      */
     overlayAlpha: () -> Float = contentAlpha,
     artworkSlot: (@Composable (url: String?, contentDescription: String) -> Unit)? = null,
@@ -170,6 +171,12 @@ internal fun NowPlayingScreen(
     var immersiveControls by remember { mutableStateOf(0.dp) }
     val density = LocalDensity.current
 
+    // The cover is the lyrics toggle, so the tap handler outlives any one value of the callback.
+    // `pointerInput` is keyed on `Unit` — it must not restart every recomposition, and the lambda
+    // the sheet passes is a fresh one each time — so the gesture reads the current callback through
+    // this rather than capturing the one that happened to exist when the block was first run.
+    val toggleLyrics by rememberUpdatedState(onToggleLyrics)
+
     if (immersivePlayer && artworkSlot != null) {
         // ── Immersive layout ──────────────────────────────────────────────────────
         // Artwork fills the screen edge-to-edge (MorphingArtwork will match these
@@ -179,8 +186,12 @@ internal fun NowPlayingScreen(
             modifier = modifier
                 .fillMaxSize()
                 .then(artworkModifier)
+                // A tap anywhere on the cover shows the lyrics, and a tap on the lyrics puts the
+                // cover back: the lyric lines are children of this box and consume their own taps
+                // to seek, so only the space around them reaches this handler.
                 .pointerInput(Unit) {
                     detectTapGestures(
+                        onTap = { toggleLyrics() },
                         onLongPress = { rateAnchor = IntOffset(it.x.toInt(), it.y.toInt()) }
                     )
                 }
@@ -214,10 +225,7 @@ internal fun NowPlayingScreen(
                     }
             )
 
-            // The lyrics themselves. Absent from this branch entirely until now: the toggle in
-            // `PlayerOverlayButtons` was drawn and wired, but nothing below it ever rendered
-            // `SyncedLyricsView`, so turning lyrics on faded the cover out and put nothing in its
-            // place.
+            // The lyrics themselves, shown by tapping the cover.
             //
             // Inset past the top bar and the controls column so a long verse scrolls between them
             // instead of under them.
@@ -330,17 +338,14 @@ internal fun NowPlayingScreen(
                 )
             }
 
-            // Overlay buttons (lyrics / share) ride the cover in immersive mode too — but here
-            // their parent is the full-bleed Box, not the inset column the standard layout puts
-            // them in, so they have to take the window insets themselves. Without that the share
-            // button sat in the status bar, and the lyrics toggle on top of the play controls.
+            // The share button rides the cover in immersive mode too — but here its parent is the
+            // full-bleed Box, not the inset column the standard layout puts it in, so it has to
+            // take the window inset itself. Without that it sat in the status bar.
             PlayerOverlayButtons(
                 showLyrics = showLyrics,
-                onToggleLyrics = onToggleLyrics,
                 onShare = { viewModel.share(track) }.takeIf { viewModel.canShare(track) },
                 contentAlpha = overlayAlpha,
-                topInset = immersiveTopBar,
-                bottomInset = immersiveControls
+                topInset = immersiveTopBar
             )
 
             if (state.audioTracks.size > 1) {
@@ -560,9 +565,14 @@ internal fun NowPlayingScreen(
                     .fillMaxSize()
                     .then(artworkModifier)
                     // `pointerInput` after the swipe modifier, so a horizontal drag still reaches
-                    // the skip gesture — only a press that stays put becomes a long press.
+                    // the skip gesture — only a press that stays put becomes a tap or a long press.
+                    //
+                    // The tap is the lyrics toggle, both ways: `SyncedLyricsView` is swapped into
+                    // this same box, and its lines consume their own taps to seek, so only the
+                    // space around them comes back here to turn the cover on again.
                     .pointerInput(Unit) {
                         detectTapGestures(
+                            onTap = { toggleLyrics() },
                             onLongPress = { rateAnchor = IntOffset(it.x.toInt(), it.y.toInt()) }
                         )
                     }
@@ -632,7 +642,6 @@ internal fun NowPlayingScreen(
 
                 PlayerOverlayButtons(
                     showLyrics = showLyrics,
-                    onToggleLyrics = onToggleLyrics,
                     onShare = { viewModel.share(track) }.takeIf { viewModel.canShare(track) },
                     contentAlpha = overlayAlpha
                 )
