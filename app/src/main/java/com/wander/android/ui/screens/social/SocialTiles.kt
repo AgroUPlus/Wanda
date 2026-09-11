@@ -17,15 +17,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.GraphicEq
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -133,33 +128,6 @@ private fun SocialTile(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-        }
-    }
-}
-
-/**
- * Activity, as a header action rather than a card.
- *
- * It is a place you visit when something arrives, and the badge is what tells you something has —
- * so it earns an icon and a count, not a row of its own competing with the people below it. The
- * count is still the unread songs alone: the circle's events are things that happened, not things
- * addressed to you, and counting them would make the badge mean "there is news somewhere", which
- * is never a number worth clearing.
- */
-@Composable
-internal fun ActivityAction(unread: Int, onClick: () -> Unit) {
-    BadgedBox(
-        badge = {
-            if (unread > 0) {
-                Badge { Text(if (unread > 99) "99+" else unread.toString()) }
-            }
-        }
-    ) {
-        FilledTonalIconButton(
-            onClick = onClick,
-            colors = IconButtonDefaults.filledTonalIconButtonColors()
-        ) {
-            Icon(Icons.Rounded.Bolt, contentDescription = "Activity")
         }
     }
 }
