@@ -20,8 +20,6 @@ Wanda unifies **Navidrome**, **local files**, **YouTube Music**, and the **Inter
 
 ---
 
-## Screenshots
-
 <p align="center">
   <img width="1600" height="1000" alt="image" src="https://github.com/user-attachments/assets/9f226e44-bf8b-4800-a497-593527fc0ade" />
 </p>
