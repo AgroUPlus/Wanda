@@ -18,8 +18,6 @@
 
 Wanda unifies **Navidrome**, **local files**, **YouTube Music**, and the **Internet Archive** behind a single library, queue, and player. Material 3 Expressive throughout. Battery-first, privacy-first, no telemetry. Pairs with [Agro](https://github.com/AgroUPlus/Agro) for playback handoff, listen-along, and cross-device sync.
 
----
-
 <p align="center">
   <img width="1600" height="1000" alt="image" src="https://github.com/user-attachments/assets/9f226e44-bf8b-4800-a497-593527fc0ade" />
 </p>
