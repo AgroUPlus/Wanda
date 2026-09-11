@@ -23,10 +23,7 @@ Wanda unifies **Navidrome**, **local files**, **YouTube Music**, and the **Inter
 ## Screenshots
 
 <p align="center">
-  <img src="docs/shot-artist.jpg" width="180" alt="Artist profile" />
-  <img src="docs/shot-lyrics.jpg" width="180" alt="Player & lyrics" />
-  <img src="docs/shot-mix.jpg" width="180" alt="Daily mix" />
-  <img src="docs/shot-stats.jpg" width="180" alt="Listening stats" />
+  <img width="1600" height="1000" alt="image" src="https://github.com/user-attachments/assets/9f226e44-bf8b-4800-a497-593527fc0ade" />
 </p>
 
 ---
