@@ -12,8 +12,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.security.SecureStorage
+import com.wander.android.data.model.ArtistTrackSection
+import com.wander.android.data.model.SourceType
+import com.wander.android.data.repository.CatalogRepository
 import com.wander.android.data.repository.LinkRepository
 import com.wander.android.data.repository.ShareLinkRewriter
+import com.wander.android.data.sources.ytmusic.YouTubeEntity
+import com.wander.android.data.sources.ytmusic.YouTubeEntityKind
 import com.wander.android.data.repository.SocialRepository
 import com.wander.android.data.sources.agro.AgroAuthError
 import com.wander.android.data.sources.agro.AgroClient
@@ -42,6 +47,7 @@ class MainActivity : ComponentActivity() {
     @Inject internal lateinit var agroHandoffPublisher: AgroHandoffPublisher
     @Inject lateinit var linkRepository: LinkRepository
     @Inject lateinit var musicRepository: com.wander.android.data.repository.MusicRepository
+    @Inject lateinit var catalogRepository: CatalogRepository
     @Inject lateinit var shareLinkRewriter: ShareLinkRewriter
     @Inject lateinit var deepLinkRouter: DeepLinkRouter
     @Inject internal lateinit var socialRepository: SocialRepository
@@ -77,6 +83,9 @@ class MainActivity : ComponentActivity() {
      */
     private fun handleIntent(intent: Intent?) {
         val uri = intent?.data ?: return
+        // Parsed once, before the branches, because two of them need the answer. It is string work
+        // over a URL that is already in hand — no network, no disk.
+        val entity = linkRepository.sharedEntity(uri)
         when {
             uri.scheme == "agro" -> handleAgroPairing(uri)
             // A tapped drop notification.
@@ -92,9 +101,12 @@ class MainActivity : ComponentActivity() {
             isJamLink(uri) -> handleJamLink(uri)
             linkRepository.isAlbumLink(uri) -> openSharedAlbum(uri)
             linkRepository.canOpen(uri) -> openSharedLink(uri)
+            // After the track branches, never before: a song shared from inside a record or a
+            // playlist carries both, and the song is the thing that was tapped.
+            entity != null -> openSharedEntity(entity)
             uri.scheme == "https" || uri.scheme == "wanda" -> Toast.makeText(
                 this,
-                "That link isn't a track or Jam Wanda can open.",
+                "That link isn't something Wanda can open.",
                 Toast.LENGTH_LONG
             ).show()
         }
@@ -167,6 +179,46 @@ class MainActivity : ComponentActivity() {
                     ).show()
                 }
             )
+        }
+    }
+
+    /**
+     * Plays a shared record, playlist or artist.
+     *
+     * These all arrive as a YouTube id and all end as a list of tracks, so the only thing that
+     * differs is which lookup answers — each of which already existed for the screens that browse
+     * the same things. The link was never the problem; the dispatch simply had no branch for
+     * anything that was not a single track, and said so in those words.
+     *
+     * An artist plays their top songs, the same shelf their page's play button uses. Their page is
+     * a set of shelves rather than a queue, and picking the first one is what "play this artist"
+     * means everywhere else in the app.
+     */
+    private fun openSharedEntity(entity: YouTubeEntity) {
+        lifecycleScope.launch {
+            val id = SourceType.YTMUSIC.idPrefix + entity.id
+            val tracks = when (entity.kind) {
+                YouTubeEntityKind.ALBUM -> musicRepository.getAlbumTracksById(id)
+                YouTubeEntityKind.PLAYLIST -> musicRepository.getPlaylistTracksById(id)
+                YouTubeEntityKind.ARTIST -> catalogRepository.artistDetails(id)
+                    ?.sections
+                    ?.filterIsInstance<ArtistTrackSection>()
+                    ?.firstOrNull()
+                    ?.tracks
+                    .orEmpty()
+            }
+            if (tracks.isEmpty()) {
+                // Said as the miss it is. Reaching here means the link *was* understood — the
+                // source simply had nothing behind it, which is not the same as an unopenable link
+                // and should not be reported in the same words.
+                Toast.makeText(
+                    this@MainActivity,
+                    "Nothing playable behind that link.",
+                    Toast.LENGTH_LONG
+                ).show()
+            } else {
+                playerConnection.play(tracks)
+            }
         }
     }
 
