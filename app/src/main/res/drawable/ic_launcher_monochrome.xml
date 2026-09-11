@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?><!--
   The themed-icon layer (Android 13+).
 
-  Without one, Wanda is left out of themed icons entirely: the launcher keeps showing the full
-  colour icon while every other app on the home screen takes the wallpaper's palette, which is the
-  most visible way an app can look like it predates Material You.
+  Without one, Wanda is left out of themed icons entirely: the launcher keeps showing
+  the full-colour icon while every other app takes the wallpaper's palette.
 
-  The same wave as the foreground, with no background and no colour of its own — the system tints
-  this and supplies the surface behind it. The stroke is a little heavier than the colour version
-  because a single-tint glyph has no gradient to give it weight.
+  Same prism/wing motif as the foreground, no background, no colour of its own —
+  the system tints this and supplies the surface behind it. Filled rather than stroked
+  because a monochrome glyph has no gradient to give it weight at small sizes.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -15,11 +14,23 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
+    <!-- Central prism spine -->
     <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="11"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:fillColor="@android:color/transparent"
-        android:pathData="M30,54 C34,38 38,38 42,54 C46,70 50,70 54,54 C58,38 62,38 66,54 C70,70 74,70 78,54" />
+        android:pathData="M54,10 L62,38 L54,70 L46,38 Z"
+        android:fillColor="#FFFFFF"/>
+
+    <!-- Left wing -->
+    <path
+        android:pathData="M46,38 L24,48 L38,72 L49,54 Z"
+        android:fillColor="#FFFFFF"/>
+
+    <!-- Right wing -->
+    <path
+        android:pathData="M62,38 L84,48 L70,72 L59,54 Z"
+        android:fillColor="#FFFFFF"/>
+
+    <!-- Diamond anchor at the bottom -->
+    <path
+        android:pathData="M54,76 L60,84 L54,92 L48,84 Z"
+        android:fillColor="#FFFFFF"/>
 </vector>

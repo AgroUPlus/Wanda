@@ -1,32 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-  The launcher background: the app's own violet-to-teal brand pair, on the diagonal.
+  The launcher background: Wanda's brand teal (#4EE2C0), flat fill.
 
-  It used to be flat black, which is the one thing a Material 3 Expressive icon must not be — the
-  style is built on saturated colour and bold shape, and a black square reads as an icon nobody got
-  round to drawing. The two stops are `Violet` and `Teal` from `ui/theme/Color.kt`, so the icon and
-  the app it opens are recognisably the same product.
+  The previous violet-to-teal gradient was the Agro ecosystem palette rather than
+  Wanda's own identity. The new logo uses a single saturated teal that reads cleanly
+  under any launcher mask shape and distinguishes Wanda from Agro at a glance.
 
-  Full-bleed across the 108dp canvas rather than shaped, because the launcher supplies the mask —
-  drawing our own rounded corners here would show through as a shape inside a shape.
+  Full-bleed across the 108dp canvas — the launcher supplies the mask shape.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <path android:pathData="M0,0h108v108h-108z">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:type="linear"
-                android:startX="0"
-                android:startY="0"
-                android:endX="108"
-                android:endY="108"
-                android:startColor="#7C6BFF"
-                android:centerColor="#5A63E8"
-                android:endColor="#00A3A3" />
-        </aapt:attr>
-    </path>
+    <path
+        android:pathData="M0,0h108v108h-108z"
+        android:fillColor="#4EE2C0"/>
 </vector>
