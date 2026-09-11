@@ -198,9 +198,23 @@ class SubsonicApiClient @Inject constructor(
      * Stream and cover URLs carry credentials in the query string, so they are built on demand
      * and never persisted or logged.
      */
+    /**
+     * `format=raw` is what makes the track seekable.
+     *
+     * Left to itself the server decides per client whether to transcode, and a transcode is
+     * produced as it is sent — so there is no byte at an arbitrary offset to answer a `Range`
+     * request with, and ExoPlayer's seek is refused or served from zero. The thumb springs back to
+     * where it was. It only happens to the formats a given server is configured to convert, which
+     * is why FLAC would not scrub while MP3 did.
+     *
+     * `estimateContentLength` stays for the case where a server transcodes anyway despite `raw`:
+     * without it such a response carries no `Content-Length`, Media3 reports `TIME_UNSET` and the
+     * duration falls back to the metadata's — see the resolution in `PlayerConnection.snapshot`.
+     */
     fun buildStreamUrl(trackId: String): String =
         buildUrl("stream.view", mapOf(
             "id" to trackId,
+            "format" to "raw",
             "estimateContentLength" to "true"
         ))
 
