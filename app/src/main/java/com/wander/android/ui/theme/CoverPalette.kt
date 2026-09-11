@@ -22,6 +22,7 @@ import androidx.palette.graphics.Palette
 import coil3.ImageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
+import coil3.request.allowRgb565
 import coil3.toBitmap
 
 // ---------------------------------------------------------------------------
