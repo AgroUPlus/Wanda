@@ -1,6 +1,7 @@
 package com.wander.android.ui.theme
 
 import android.graphics.Bitmap
+import android.os.Build
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.ColorScheme
@@ -22,7 +23,9 @@ import androidx.palette.graphics.Palette
 import coil3.ImageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
+import coil3.request.allowHardware
 import coil3.request.allowRgb565
+import coil3.request.bitmapConfig
 import coil3.toBitmap
 
 // ---------------------------------------------------------------------------
@@ -47,6 +50,9 @@ val LocalCoverSeedColor = compositionLocalOf<Color?> { null }
  * decode) and extracts a seed colour using [Palette]. Returns null until the image arrives or
  * if the palette is empty (solid-black cover, etc.).
  *
+ * Disallows hardware bitmaps in the Coil request and converts hardware bitmaps to software
+ * copies if needed, preventing `IllegalStateException: pixel access is not supported on Config#HARDWARE`.
+ *
  * The result is stable across recompositions for the same URL; a new URL resets to null then
  * resolves to the new cover's colour.
  */
@@ -63,8 +69,10 @@ fun rememberCoverSeedColor(url: String?): Color? {
         val loader = ImageLoader(context)
         val request = ImageRequest.Builder(context)
             .data(url)
-            .size(128)          // palette accuracy is fine at 128 px
-            .allowRgb565(false) // palette needs full RGB
+            .size(128)                             // palette accuracy is fine at 128 px
+            .allowHardware(false)                  // Palette requires software pixels
+            .allowRgb565(false)                    // palette needs full RGB
+            .bitmapConfig(Bitmap.Config.ARGB_8888) // explicit software config
             .build()
         val result = loader.execute(request)
         if (result is SuccessResult) {
@@ -80,16 +88,31 @@ fun rememberCoverSeedColor(url: String?): Color? {
 /**
  * Extracts a dominant seed colour from [bitmap] using [Palette], picking in priority order:
  * vibrant → muted → dominant. Returns null if the palette is empty.
+ *
+ * Safely converts [Config#HARDWARE] bitmaps to software bitmaps to avoid crashes on Android 8+.
  */
 fun extractSeedColor(bitmap: Bitmap): Color? {
-    val palette = Palette.from(bitmap)
-        .maximumColorCount(16)
-        .generate()
+    val safeBitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && bitmap.config == Bitmap.Config.HARDWARE) {
+        bitmap.copy(Bitmap.Config.ARGB_8888, false) ?: return null
+    } else {
+        bitmap
+    }
+    val palette = try {
+        Palette.from(safeBitmap)
+            .maximumColorCount(16)
+            .generate()
+    } catch (_: Throwable) {
+        if (safeBitmap != bitmap) safeBitmap.recycle()
+        return null
+    }
     val argb = palette.getVibrantColor(
         palette.getMutedColor(
             palette.getDominantColor(0)
         )
     )
+    if (safeBitmap != bitmap) {
+        safeBitmap.recycle()
+    }
     return if (argb == 0) null else Color(argb)
 }
 

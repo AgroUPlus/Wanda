@@ -15,6 +15,15 @@ internal fun LazyListScope.appearanceTab(
         )
     }
 
+    item(key = "cover_art_theme") {
+        SettingsToggle(
+            title = "Dynamic cover art theme",
+            subtitle = "Subtly tint the player with colours from the album cover",
+            checked = state.coverArtTheme,
+            onCheckedChange = actions.onCoverArtThemeChange
+        )
+    }
+
     item(key = "amoled") {
         SettingsToggle(
             title = "True black",

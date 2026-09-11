@@ -59,6 +59,9 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     private val _isImmersivePlayer = MutableStateFlow(prefs.getBoolean(KEY_IMMERSIVE_PLAYER, false))
     val isImmersivePlayer: StateFlow<Boolean> = _isImmersivePlayer.asStateFlow()
 
+    private val _isCoverArtThemeEnabled = MutableStateFlow(prefs.getBoolean(KEY_COVER_ART_THEME, true))
+    val isCoverArtThemeEnabled: StateFlow<Boolean> = _isCoverArtThemeEnabled.asStateFlow()
+
     /** Off by default: a version check on every launch is a network call the user did not ask for. */
     private val _isAutoUpdateCheckEnabled =
         MutableStateFlow(prefs.getBoolean(KEY_AUTO_UPDATE_CHECK, false))
@@ -294,6 +297,11 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _isImmersivePlayer.value = enabled
     }
 
+    fun setCoverArtThemeEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_COVER_ART_THEME, enabled) }
+        _isCoverArtThemeEnabled.value = enabled
+    }
+
     fun setAutoUpdateCheckEnabled(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_AUTO_UPDATE_CHECK, enabled) }
         _isAutoUpdateCheckEnabled.value = enabled
@@ -365,6 +373,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _hasCompletedSetup.value = false
         _isAmoledBlack.value = false
         _isMonetDynamic.value = true
+        _isCoverArtThemeEnabled.value = true
         _agroConfigured.value = false
         _agroSyncSettings.value = false
         _shareDomain.value = ""
@@ -621,6 +630,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_AMOLED_BLACK = "key_amoled_black"
         private const val KEY_MONET_DYNAMIC = "key_monet_dynamic"
         private const val KEY_IMMERSIVE_PLAYER = "key_immersive_player"
+        private const val KEY_COVER_ART_THEME = "key_cover_art_theme"
         private const val KEY_AUTO_UPDATE_CHECK = "key_auto_update_check"
         private const val KEY_RELEASE_NOTIFICATIONS = "key_release_notifications"
         private const val KEY_RELEASE_WATERMARK = "key_release_watermark"

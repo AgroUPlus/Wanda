@@ -25,6 +25,7 @@ internal data class SettingsUiState(
     val monet: Boolean,
     val amoled: Boolean,
     val immersivePlayer: Boolean,
+    val coverArtTheme: Boolean,
     val offline: Boolean,
     val preloadNext: Boolean,
     val indexOnMobileData: Boolean,
@@ -85,6 +86,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val monet by viewModel.isMonetDynamic.collectAsStateWithLifecycle()
     val amoled by viewModel.isAmoledBlack.collectAsStateWithLifecycle()
     val immersivePlayer by viewModel.isImmersivePlayer.collectAsStateWithLifecycle()
+    val coverArtTheme by viewModel.isCoverArtThemeEnabled.collectAsStateWithLifecycle()
     val offline by viewModel.isOfflineMode.collectAsStateWithLifecycle()
     val preloadNext by viewModel.isPreloadNextEnabled.collectAsStateWithLifecycle()
     val indexOnMobileData by viewModel.isIndexOnMobileDataEnabled.collectAsStateWithLifecycle()
@@ -129,6 +131,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         monet = monet,
         amoled = amoled,
         immersivePlayer = immersivePlayer,
+        coverArtTheme = coverArtTheme,
         offline = offline,
         preloadNext = preloadNext,
         indexOnMobileData = indexOnMobileData,
