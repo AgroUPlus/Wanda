@@ -66,12 +66,11 @@ import com.wander.android.ui.components.AvatarGroup
 import com.wander.android.ui.components.FingerprintBadge
 import com.wander.android.ui.components.LikeButton
 import com.wander.android.ui.components.scrollingTitle
+import androidx.compose.foundation.isSystemInDarkTheme
 import com.wander.android.ui.theme.CoverTintedTheme
 import com.wander.android.ui.theme.LiveIndicator
 import com.wander.android.ui.theme.OnCoverArt
 import com.wander.android.ui.theme.rememberCoverSeedColor
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
 
 /** Nominal edge of the full-screen cover; drives the decode size, not the layout. */
 private val FullArtworkSize = 360.dp
