@@ -92,6 +92,7 @@ class StreamResolver @Inject constructor(
         return dataSpec
             .buildUpon()
             .setUri(streamInfo.uri.toUri())
+            .setKey(streamCacheKey(trackId, streamInfo.format, streamInfo.bitRateKbps))
             .setHttpRequestHeaders(dataSpec.httpRequestHeaders + streamInfo.headers)
             // A borrowed track is never cached, and this is where that gets decided.
             //
@@ -126,6 +127,23 @@ class StreamResolver @Inject constructor(
             .build()
     }
 }
+
+/**
+ * The cache key for a resolved stream.
+ *
+ * Without one, [androidx.media3.datasource.cache.CacheDataSource] falls back to the resolved URI —
+ * and none of the URIs here are stable. A Navidrome stream URL carries a freshly salted auth token
+ * per request, and a googlevideo URL carries a throttling nonce and an expiry. So every play of a
+ * track wrote a new entry and read none back: the cache filled with copies of the same songs and
+ * never produced a hit, which is the opposite of both things it exists for.
+ *
+ * The encoding is part of the key, not just [trackId], because the id does not determine the bytes.
+ * A YouTube track can resolve to a different rendition on a later play, and serving webm out of the
+ * cache for an mp4 request would be a corrupt stream rather than a miss. Navidrome reports one
+ * constant format and bitrate, so its keys are stable — which is the case that was broken.
+ */
+internal fun streamCacheKey(trackId: String, format: String, bitRateKbps: Int): String =
+    "$trackId|$format|$bitRateKbps"
 
 /**
  * Whether a host is one of YouTube's, and so one the live identity belongs to.
