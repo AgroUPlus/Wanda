@@ -643,7 +643,10 @@ internal fun NowPlayingScreen(
                 PlayerOverlayButtons(
                     showLyrics = showLyrics,
                     onShare = { viewModel.share(track) }.takeIf { viewModel.canShare(track) },
-                    contentAlpha = overlayAlpha
+                    contentAlpha = overlayAlpha,
+                    // Only here. The square is bounded, so the corner is free — which it is not in
+                    // the immersive layout, where the controls own the bottom of the window.
+                    onToggleLyrics = onToggleLyrics
                 )
 
                 // Language button — top-left of the cover, only when multiple audio tracks exist.

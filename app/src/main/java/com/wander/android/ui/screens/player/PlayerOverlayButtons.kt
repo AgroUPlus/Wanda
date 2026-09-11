@@ -4,6 +4,8 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.Lyrics
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -20,23 +22,26 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * The share button floating over the cover/lyrics square.
+ * The buttons floating over the cover/lyrics square: share, and the artwork/lyrics toggle.
  *
- * Over the cover it needs a filled container to stay legible against whatever the artwork happens
- * to be. Over the lyrics it has plain background behind it and the container only gets in the way
- * of reading, so it fades out and leaves the icon on its own.
+ * Over the cover they need a filled container to stay legible against whatever the artwork happens
+ * to be. Over the lyrics they have plain background behind them and the container only gets in the
+ * way of reading, so it fades out and leaves the icon on its own.
  *
- * It used to have a twin at the bottom that toggled the lyrics. The cover itself does that now —
- * tapping it is the whole gesture — so the button is gone rather than duplicating a tap target the
- * artwork already is. That also frees the bottom-right corner it kept having to be inset out of.
+ * Tapping the cover toggles the lyrics in both layouts. The button is the visible way to say so,
+ * and it is offered only where there is somewhere to put it: in the standard layout it sits in the
+ * corner of a bounded square, clear of everything. The immersive layout has no such corner — the
+ * artwork is the whole window, the bottom-right belongs to the controls, and this is the button
+ * that once came down on top of the like button trying to share that space. There it passes null
+ * and the cover carries the gesture alone.
  *
  * [contentAlpha] is a lambda so the player-sheet fade is read during draw rather than composition —
  * the sheet's progress changes every frame of a drag.
  *
- * It is deliberately a *steeper* ramp than the rest of the full player. This sits on the cover but
- * is not drawn with it — the travelling cover is painted above this layout, so the square it is
- * aligned to never moves. On the way down the cover left immediately while the button hung in place
- * over nothing, which is exactly what looked broken. It now goes first.
+ * It is deliberately a *steeper* ramp than the rest of the full player. These sit on the cover but
+ * are not drawn with it — the travelling cover is painted above this layout, so the square they are
+ * aligned to never moves. On the way down the cover left immediately while the buttons hung in
+ * place over nothing, which is exactly what looked broken. They now go first.
  */
 @Composable
 internal fun BoxScope.PlayerOverlayButtons(
@@ -44,6 +49,11 @@ internal fun BoxScope.PlayerOverlayButtons(
     /** Null when the track's source cannot publish a link — see `SourceCapabilities.share`. */
     onShare: (() -> Unit)?,
     contentAlpha: () -> Float,
+    /**
+     * Null where the layout has no room for it, and the cover's own tap is the only way through.
+     * See the note on this function.
+     */
+    onToggleLyrics: (() -> Unit)? = null,
     /**
      * How much of the container's top edge is already occupied, measured rather than assumed.
      *
@@ -72,6 +82,22 @@ internal fun BoxScope.PlayerOverlayButtons(
             Icon(
                 imageVector = Icons.Rounded.Share,
                 contentDescription = "Share a link to this track"
+            )
+        }
+    }
+
+    onToggleLyrics?.let { toggle ->
+        FilledTonalIconButton(
+            onClick = toggle,
+            colors = colors,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(12.dp)
+                .graphicsLayer { alpha = contentAlpha() }
+        ) {
+            Icon(
+                imageVector = if (showLyrics) Icons.Rounded.Album else Icons.Rounded.Lyrics,
+                contentDescription = if (showLyrics) "Show artwork" else "Show lyrics"
             )
         }
     }
