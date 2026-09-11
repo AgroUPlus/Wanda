@@ -1,5 +1,8 @@
 package com.wander.android.data.repository
 
+import com.wander.android.core.database.dao.AnnouncedReleaseDao
+import com.wander.android.core.database.dao.TrackDao
+import com.wander.android.core.database.entity.AnnouncedReleaseEntity
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.sources.agro.AgroArtistRelease
 import com.wander.android.data.sources.agro.AgroArtistSubscription
@@ -24,6 +27,8 @@ import javax.inject.Singleton
 internal class ArtistSubscriptionRepository @Inject constructor(
     private val api: AgroArtistsApi,
     private val innerTube: InnerTubeClient,
+    private val announced: AnnouncedReleaseDao,
+    private val trackDao: TrackDao,
     private val secureStorage: SecureStorage
 ) {
     suspend fun subscribed(): List<AgroArtistSubscription> =
@@ -62,6 +67,39 @@ internal class ArtistSubscriptionRepository @Inject constructor(
      */
     suspend fun newReleases(since: Long, limit: Int = 100): Result<List<AgroArtistRelease>> =
         api.newReleases(since, limit)
+
+    /**
+     * Those of [releases] this device has not already announced.
+     *
+     * The watermark pages the query; this decides what is worth saying. The two are different
+     * questions, and only the second one survives a republished catalogue — `updatedAt` is the
+     * position a row was published at, so re-indexing a server lifts an artist's entire back
+     * catalogue above any stored watermark, while their recording ids stay exactly what they were.
+     */
+    suspend fun notYetAnnounced(releases: List<AgroArtistRelease>): List<AgroArtistRelease> {
+        if (releases.isEmpty()) return releases
+        val already = announced.announcedAmong(releases.map { it.recordingId }).toSet()
+        return releases.filterNot { it.recordingId in already }
+    }
+
+    /** Records that these have been said out loud, so a later republish cannot say them again. */
+    suspend fun recordAnnounced(releases: List<AgroArtistRelease>) {
+        if (releases.isEmpty()) return
+        announced.markAnnounced(releases.map { AnnouncedReleaseEntity(it.recordingId) })
+    }
+
+    /**
+     * A cover for [release], if this device happens to know one.
+     *
+     * The catalogue answers `newReleases` with text — artist, title, album — and no artwork, so the
+     * only picture available is one the library already holds, matched by name the same way the
+     * statistics screen matches the fleet's top tracks. Null is the ordinary answer for a record
+     * genuinely just out, and the caller shows its placeholder rather than a wrong sleeve.
+     */
+    suspend fun artworkFor(release: AgroArtistRelease): String? {
+        val title = release.title ?: release.album ?: return null
+        return trackDao.artworkFor(title, release.artist)
+    }
 
     private suspend fun mirrorToYouTube(externalId: String?, subscribed: Boolean) {
         val channel = externalId?.removePrefix("ytm:")?.takeIf { it.isNotBlank() } ?: return
