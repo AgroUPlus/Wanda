@@ -714,8 +714,32 @@ val MIGRATION_29_30 = object : Migration(29, 30) {
     }
 }
 
+/**
+ * Adds `announced_releases`: which new releases have already been notified.
+ *
+ * The release job paged with a watermark alone — the highest `updatedAt` it had been told about —
+ * and that only works while a catalogue position keeps meaning the same thing. It does not survive
+ * a server being republished: `updatedAt` is when the *row* was published, not when the record came
+ * out, so re-indexing restamps a followed artist's whole back catalogue above the stored watermark
+ * and every album they ever made is announced as new. Recording ids are stable across that, so they
+ * are what the decision to notify now rests on.
+ *
+ * Created empty. Existing installs therefore treat whatever the next poll returns as unannounced,
+ * once, and are proof against every republish after that — the alternative, seeding it from the
+ * library, would claim releases had been announced that never were.
+ */
+val MIGRATION_30_31 = object : Migration(30, 31) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `announced_releases` (" +
+                "`recordingId` TEXT NOT NULL, `announcedAt` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`recordingId`))"
+        )
+    }
+}
+
 /** Every migration, in order. Room applies whichever ones a given database still needs. */
 val WANDER_MIGRATIONS: Array<Migration> = arrayOf(
     MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
-    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30
+    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31
 )

@@ -3,6 +3,7 @@ package com.wander.android.core.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.wander.android.core.database.dao.AlbumDao
+import com.wander.android.core.database.dao.AnnouncedReleaseDao
 import com.wander.android.core.database.dao.ArtistDao
 import com.wander.android.core.database.dao.CanonicalMetadataDao
 import com.wander.android.core.database.dao.DropDao
@@ -17,6 +18,7 @@ import com.wander.android.core.database.dao.RecordingLinkDao
 import com.wander.android.core.database.dao.RecordingSplitDao
 import com.wander.android.core.database.dao.TrackEmbeddingDao
 import com.wander.android.core.database.entity.AlbumEntity
+import com.wander.android.core.database.entity.AnnouncedReleaseEntity
 import com.wander.android.core.database.entity.ArtistEntity
 import com.wander.android.core.database.entity.CanonicalMetadataEntity
 import com.wander.android.core.database.entity.MelodyContourEntity
@@ -52,9 +54,10 @@ import com.wander.android.core.database.converter.SourceTypeConverter
         MelodyContourEntity::class,
         TrackEmbeddingEntity::class,
         com.wander.android.core.database.entity.TrackLyricsEntity::class,
-        com.wander.android.core.database.entity.LyricsFtsEntity::class
+        com.wander.android.core.database.entity.LyricsFtsEntity::class,
+        AnnouncedReleaseEntity::class
     ],
-    version = 30,
+    version = 31,
     exportSchema = true
 )
 @TypeConverters(SourceTypeConverter::class)
@@ -75,4 +78,5 @@ abstract class WanderDatabase : RoomDatabase() {
     abstract fun trackEmbeddingDao(): TrackEmbeddingDao
     abstract fun trackAttemptDao(): com.wander.android.core.database.dao.TrackAttemptDao
     abstract fun trackLyricsDao(): com.wander.android.core.database.dao.TrackLyricsDao
+    abstract fun announcedReleaseDao(): AnnouncedReleaseDao
 }
