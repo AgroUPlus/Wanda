@@ -7,6 +7,8 @@ import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.agro.AgroGraphQl
 import com.wander.android.data.sources.navidrome.NavidromeSource
+import com.wander.android.data.sources.ytmusic.YouTubeEntity
+import com.wander.android.data.sources.ytmusic.youTubeEntity
 import com.wander.android.data.sources.ytmusic.youTubeVideoId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -82,6 +84,22 @@ class LinkRepository @Inject constructor(
 
     /** Whether this is an album link. Separate from [canOpen] because it resolves to an album. */
     fun isAlbumLink(uri: Uri): Boolean = UniversalAlbumLink.matches(uri.toString())
+
+    /**
+     * The record, playlist or artist [uri] names, when it names one of those rather than a track.
+     *
+     * Kept apart from [canOpen], which answers "is there a *track* behind this". These resolve to a
+     * list of tracks rather than to one, so they are a different question with a different answer,
+     * and folding them in would have [resolve] returning something it cannot type.
+     *
+     * A video wins wherever both are present — `watch?v=…&list=…` is a song in a playlist, and the
+     * song is what was tapped — so this declines anything [youTubeVideoId] already claims.
+     */
+    internal fun sharedEntity(uri: Uri): YouTubeEntity? {
+        val targetUri = target(uri)
+        if (youTubeVideoId(targetUri) != null) return null
+        return youTubeEntity(targetUri)
+    }
 
     /**
      * The link itself, or what it stands for. A link shared through the user's own domain wraps
