@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Lyrics
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.FilledTonalIconButton
@@ -12,6 +14,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonColors
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import com.wander.android.data.model.LyricsSyncType
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -54,18 +57,8 @@ internal fun BoxScope.PlayerOverlayButtons(
      * See the note on this function.
      */
     onToggleLyrics: (() -> Unit)? = null,
-    /**
-     * How much of the container's top edge is already occupied, measured rather than assumed.
-     *
-     * Zero in the standard layout, where this sits inside the artwork square and the column around
-     * it has already taken the window insets for the whole screen. The immersive layout draws its
-     * own bar straight onto a full-bleed `Box`, and passes what it actually measured — including
-     * the system bars, which are inside that measurement.
-     *
-     * It was a constant written from the heights the layouts are built out of. It was wrong, and
-     * the sibling that read the bottom edge the same way put the lyrics toggle on the like button.
-     */
-    topInset: Dp = 0.dp
+    topInset: Dp = 0.dp,
+    lyricsSyncType: LyricsSyncType = LyricsSyncType.NONE
 ) {
     val colors = overlayButtonColors(showLyrics)
 
@@ -87,6 +80,19 @@ internal fun BoxScope.PlayerOverlayButtons(
     }
 
     onToggleLyrics?.let { toggle ->
+        val lyricsIcon = when {
+            showLyrics -> Icons.Rounded.Album
+            lyricsSyncType == LyricsSyncType.WORD_SYNCED -> Icons.Rounded.AutoAwesome
+            lyricsSyncType == LyricsSyncType.LINE_SYNCED -> Icons.Rounded.Lyrics
+            else -> Icons.Rounded.Description
+        }
+        val lyricsDescription = when {
+            showLyrics -> "Show artwork"
+            lyricsSyncType == LyricsSyncType.WORD_SYNCED -> "Show word-synced lyrics"
+            lyricsSyncType == LyricsSyncType.LINE_SYNCED -> "Show synced lyrics"
+            else -> "Show plain lyrics"
+        }
+
         FilledTonalIconButton(
             onClick = toggle,
             colors = colors,
@@ -96,8 +102,8 @@ internal fun BoxScope.PlayerOverlayButtons(
                 .graphicsLayer { alpha = contentAlpha() }
         ) {
             Icon(
-                imageVector = if (showLyrics) Icons.Rounded.Album else Icons.Rounded.Lyrics,
-                contentDescription = if (showLyrics) "Show artwork" else "Show lyrics"
+                imageVector = lyricsIcon,
+                contentDescription = lyricsDescription
             )
         }
     }
