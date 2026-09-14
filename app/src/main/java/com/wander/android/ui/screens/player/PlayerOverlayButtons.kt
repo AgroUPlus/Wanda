@@ -62,7 +62,11 @@ internal fun BoxScope.PlayerOverlayButtons(
 ) {
     val colors = overlayButtonColors(showLyrics)
 
-    onShare?.let { share ->
+    // Gone entirely with the lyrics up, not merely faded to a bare glyph. Over the cover it sits on
+    // artwork and needs its container to stay legible; over the lyrics it sits on text it is
+    // covering, and a share control is not what anyone reached for when they asked to read along.
+    // The toggle below stays, because that is the way back.
+    onShare?.takeIf { !showLyrics }?.let { share ->
         FilledTonalIconButton(
             onClick = share,
             colors = colors,

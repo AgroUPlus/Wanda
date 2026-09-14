@@ -286,7 +286,12 @@ fun PlayerSheetContent(
             enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()) +
                 slideInVertically(MaterialTheme.motionScheme.slowSpatialSpec()) { it / 2 } +
                 scaleIn(MaterialTheme.motionScheme.slowSpatialSpec(), initialScale = 0.92f),
-            exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
+            // The fade rides the *same* spec as the slide, and as the sheet's own resting height
+            // (`PlayerSheet`'s `docked-height` spring). It used to fade on `fastEffectsSpec` while
+            // the sheet shrank on `slowSpatialSpec`, so navigating to a page with no dock row made
+            // the search field disappear well before the player finished collapsing around it —
+            // leaving a reserved, empty band under the strip for the difference between the two.
+            exit = fadeOut(MaterialTheme.motionScheme.slowSpatialSpec()) +
                 slideOutVertically(MaterialTheme.motionScheme.slowSpatialSpec()) { it / 2 } +
                 scaleOut(MaterialTheme.motionScheme.slowSpatialSpec(), targetScale = 0.92f),
             modifier = Modifier
