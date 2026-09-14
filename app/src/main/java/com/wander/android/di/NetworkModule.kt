@@ -24,7 +24,7 @@ object NetworkModule {
             .addInterceptor { chain ->
                 val request = chain.request()
 
-                if (ProxyRouting.shouldRelay(request.url.host, request.url.encodedPath) &&
+                if (ProxyRouting.shouldRelay(request.url.host) &&
                     secureStorage.agroProxyEnabled.value &&
                     secureStorage.agroApiKey.isNotEmpty()
                 ) {
