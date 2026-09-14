@@ -22,7 +22,7 @@ local.properties
 *.jks
 *.keystore
 
-# Claude Code local settings
+# AI agent local settings
 .claude/settings.local.json
 
 # WSL debug keystore, copied so Windows builds match the APK already on the test device

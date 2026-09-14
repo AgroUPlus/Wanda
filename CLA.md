@@ -72,6 +72,23 @@ express or implied.
 
 You agree to notify the maintainer if any statement You made in this agreement becomes inaccurate.
 
+## 8. AI-assisted contributions and non-appropriation
+
+8.1. Artificial intelligence models, LLMs, and automated code-generation agents (including,
+without limitation, Anthropic Claude, OpenAI models, or any similar tools) are assistive
+utilities operated by human contributors. They are not authors, contributors, or copyright
+holders of this project.
+
+8.2. No contribution to Wanda shall be attributed to an AI system as a co-author, contributor,
+or copyright claimant. Automated git trailers (such as `Co-Authored-By: Claude...` or
+similar AI vendor tags) are strictly non-authorial and do not confer contributor status,
+licence rights, or ownership. The project maintainer reserves the right to strip or reject
+any such trailers.
+
+8.3. Contributors warrant that their use of AI tools complies with Section 4 and does not
+grant any third-party AI provider any proprietary right, licence, or appropriation claim
+over project code.
+
 ---
 
 ## How to accept
