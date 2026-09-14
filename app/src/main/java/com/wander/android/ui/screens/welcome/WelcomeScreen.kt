@@ -23,7 +23,6 @@ import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -137,8 +136,8 @@ private fun SourcesStep(
 ) {
     Text(text = "Welcome to Wanda", style = MaterialTheme.typography.headlineLarge)
     Text(
-        text = "One library, one queue, one player — across your own server, this device, " +
-            "YouTube Music and the Internet Archive. No accounts, no telemetry.",
+        text = "One library, one queue, one player — across your own server, this device and " +
+            "YouTube Music. No accounts, no telemetry.",
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -167,14 +166,6 @@ private fun SourcesStep(
         isConfigured = status.ytMusicConfigured,
         actionLabel = "Sign in",
         onAction = onYouTubeLogin
-    )
-    SourceSetupCard(
-        title = "Internet Archive",
-        description = "Live sets and public-domain recordings. Nothing to set up.",
-        icon = Icons.Rounded.Public,
-        isConfigured = true,
-        actionLabel = "",
-        onAction = {}
     )
 }
 

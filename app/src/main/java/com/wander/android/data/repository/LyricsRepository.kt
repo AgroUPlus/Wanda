@@ -282,29 +282,5 @@ class LyricsRepository @Inject constructor(
         return Pair(plainLine.trim(), null)
     }
 
-    fun parseLrc(lrcContent: String): List<LyricLine> {
-        val lines = mutableListOf<LyricLine>()
-        val lrcRegex = Regex("""\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)""")
-
-        lrcContent.lineSequence().forEach { lineText ->
-            val match = lrcRegex.find(lineText.trim())
-            if (match != null) {
-                val min = match.groupValues[1].toLongOrNull() ?: 0L
-                val sec = match.groupValues[2].toLongOrNull() ?: 0L
-                val fractionStr = match.groupValues[3]
-                val fractionMs = if (fractionStr.length == 2) {
-                    (fractionStr.toLongOrNull() ?: 0L) * 10
-                } else {
-                    fractionStr.toLongOrNull() ?: 0L
-                }
-                val totalMs = (min * 60 * 1000) + (sec * 1000) + fractionMs
-                val text = match.groupValues[4].trim()
-                if (text.isNotEmpty()) {
-                    lines.add(LyricLine(timestampMs = totalMs, text = text))
-                }
-            }
-        }
-
-        return lines.sortedBy { it.timestampMs }
-    }
+    fun parseLrc(lrcContent: String): List<LyricLine> = LrcParser.parse(lrcContent)
 }

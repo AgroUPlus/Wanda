@@ -122,8 +122,7 @@ fun SearchScreen(
 
                 !state.hasQuery -> EmptyState(
                     title = "Search everything at once",
-                    message = "Navidrome, YouTube Music, the Internet Archive and music on this " +
-                        "device, in one list.",
+                    message = "Navidrome, YouTube Music and music on this device, in one list.",
                     modifier = centred
                 )
 

@@ -79,4 +79,64 @@ class LyricsParserTest {
         assertEquals(2, data?.lines?.size)
         assertEquals(10000L, data?.lines?.get(0)?.timestampMs)
     }
+
+    @Test
+    fun testEnhancedLrcWordTimestamps() {
+        val repo = LyricsRepository(emptySet(), fakeDao, HttpClientFactory.ktorClient)
+        val enhancedLrc = """
+            [00:10.00]<00:10.00>Never <00:10.50>gonna <00:11.00>give <00:11.50>you <00:12.00>up
+        """.trimIndent()
+
+        val lines = repo.parseLrc(enhancedLrc)
+        assertEquals(1, lines.size)
+        val line = lines[0]
+        assertEquals("Never gonna give you up", line.text)
+        assertEquals(5, line.words.size)
+        assertEquals("Never", line.words[0].text)
+        assertEquals(10000L, line.words[0].startMs)
+        assertEquals(10500L, line.words[0].endMs)
+        assertEquals("up", line.words[4].text)
+        assertEquals(12000L, line.words[4].startMs)
+    }
+
+    @Test
+    fun testResolveWordsInterpolation() {
+        val sampleLrc = "[00:10.00]Hello world here"
+        val lines = com.wander.android.data.repository.LrcParser.parse(sampleLrc)
+        assertEquals(1, lines.size)
+        val words = com.wander.android.data.repository.LrcParser.resolveWords(lines[0], nextLineTimestampMs = 13000L)
+        assertEquals(3, words.size)
+        assertEquals("Hello", words[0].text)
+        assertEquals(10000L, words[0].startMs)
+        assertEquals("world", words[1].text)
+        assertEquals("here", words[2].text)
+        // Words complete when vocal finishes, leaving pause before next line at 13000ms
+        org.junit.Assert.assertTrue(words[2].endMs in 11000L..13000L)
+    }
+
+    @Test
+    fun testLyricsSyncType() {
+        val unsynced = com.wander.android.data.model.LyricsData("1", isSynced = false)
+        assertEquals(com.wander.android.data.model.LyricsSyncType.NONE, unsynced.syncType)
+
+        val lineSynced = com.wander.android.data.model.LyricsData(
+            "2",
+            isSynced = true,
+            lines = listOf(com.wander.android.data.model.LyricLine(1000L, "Line 1"))
+        )
+        assertEquals(com.wander.android.data.model.LyricsSyncType.LINE_SYNCED, lineSynced.syncType)
+
+        val wordSynced = com.wander.android.data.model.LyricsData(
+            "3",
+            isSynced = true,
+            lines = listOf(
+                com.wander.android.data.model.LyricLine(
+                    1000L,
+                    "Line 1",
+                    words = listOf(com.wander.android.data.model.LyricWord("Line", 1000L, 1500L))
+                )
+            )
+        )
+        assertEquals(com.wander.android.data.model.LyricsSyncType.WORD_SYNCED, wordSynced.syncType)
+    }
 }

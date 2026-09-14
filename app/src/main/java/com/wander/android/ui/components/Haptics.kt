@@ -41,6 +41,9 @@ internal class Haptics(private val feedback: HapticFeedback) {
 
     /** A press held long enough to mean something. */
     fun heldDown() = feedback.performHapticFeedback(HapticFeedbackType.LongPress)
+
+    /** A subtle micro-tick for intervals, boundaries, or slider stepping. */
+    fun tick() = feedback.performHapticFeedback(HapticFeedbackType.SegmentTick)
 }
 
 @Composable
