@@ -63,7 +63,13 @@ private val seedColorCache = java.util.Collections.synchronizedMap(
 @Composable
 fun rememberCoverSeedColor(url: String?): Color? {
     val context = LocalContext.current
-    var seedColor by remember(url) { mutableStateOf(url?.let { seedColorCache[it] }) }
+    // Deliberately **not** `remember(url)`.
+    //
+    // Keying on the url threw the colour away the instant the track changed, so every skip went
+    // seed → null → seed: callers read the null, fell back to white or the base primary, and the
+    // player flashed pale for as long as the decode took. The old colour is the best answer
+    // available until the new one exists, so it stays until it is replaced.
+    var seedColor by remember { mutableStateOf(url?.let { seedColorCache[it] }) }
 
     LaunchedEffect(url) {
         if (url.isNullOrBlank()) {
@@ -87,16 +93,34 @@ fun rememberCoverSeedColor(url: String?): Color? {
         if (result is SuccessResult) {
             val bitmap = result.image.toBitmap()
             val extracted = extractSeedColor(bitmap)
+            // Only on success. A cover with no usable palette — a solid black sleeve, say — used to
+            // assign null here, which is the same pale flash by another route, and permanent rather
+            // than momentary. Keeping the previous track's colour is wrong in a way nobody can see;
+            // blanking it is wrong in a way everybody can.
             if (extracted != null) {
                 seedColorCache[url] = extracted
+                seedColor = extracted
             }
-            seedColor = extracted
         }
         loader.shutdown()
     }
 
-    return seedColor
+    // Crossfaded rather than cut, so a skip carries the tint and the backlight from one cover's
+    // colour to the next instead of stepping between them.
+    //
+    // The target is read unconditionally — never inside the null check — because a composable that
+    // is called on some compositions and not others loses its state to positional memoisation, and
+    // the animation would restart on every track that happens to have no palette.
+    val animated by animateColorAsState(
+        targetValue = seedColor ?: Color.Transparent,
+        animationSpec = tween(SeedTweenMs),
+        label = "coverSeed"
+    )
+    return if (seedColor == null) null else animated
 }
+
+/** Long enough to read as a crossfade, short enough to have finished before the cover settles. */
+private const val SeedTweenMs = 450
 
 /**
  * Extracts a dominant seed colour from [bitmap] using [Palette], picking in priority order:
