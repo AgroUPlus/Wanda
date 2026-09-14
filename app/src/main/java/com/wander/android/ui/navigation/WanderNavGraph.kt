@@ -19,6 +19,7 @@ import com.wander.android.ui.screens.library.LibrarySurface
 import com.wander.android.ui.screens.login.NavidromeLoginScreen
 import com.wander.android.ui.screens.login.YouTubeLoginScreen
 import com.wander.android.ui.screens.queue.QueueScreen
+import com.wander.android.ui.screens.settings.SettingsCategory
 import com.wander.android.ui.screens.settings.SettingsScreen
 import com.wander.android.ui.screens.social.ActivityScreen
 import com.wander.android.ui.screens.social.CircleScreen
@@ -81,7 +82,10 @@ fun NavGraphBuilder.wanderNavGraph(
             onOpenActivity = { navController.navigateSettled(Routes.ACTIVITY) },
             onOpenOffGrid = { navController.navigateSettled(Routes.OFFGRID) },
             onOpenMyProfile = { navController.navigateSettled(Routes.MY_PROFILE) },
-            onOpenSettings = { navController.navigateSettled(Routes.SETTINGS) }
+            // Straight to Sync, not the hub. This button exists because there is no Agro server
+            // paired, and pairing lives on that one page — dropping the reader at the top of
+            // Settings makes them find it, which is the job the button offered to do.
+            onOpenSettings = { navController.navigateSettled(SYNC_SETTINGS) }
         )
     }
 
@@ -245,7 +249,8 @@ fun NavGraphBuilder.wanderNavGraph(
         }
         JamScreen(
             contentPadding = contentPadding,
-            onOpenSettings = { navController.navigateSettled(Routes.SETTINGS) },
+            // Same notice, same destination — see the Friends tab above.
+            onOpenSettings = { navController.navigateSettled(SYNC_SETTINGS) },
             onBack = navController::popBackStack,
             initialCode = initialCode
         )
@@ -331,6 +336,9 @@ private fun NavGraphBuilder.tabDestination(
 )
 
 private fun NavBackStackEntry.route(): String? = destination.route
+
+/** Where "Open Settings" goes when the thing that is missing is an Agro server. */
+private val SYNC_SETTINGS = Routes.settingsCategory(SettingsCategory.SYNC.name)
 
 /** A screen opened on top of another: shared-axis Z. */
 private fun NavGraphBuilder.detailDestination(

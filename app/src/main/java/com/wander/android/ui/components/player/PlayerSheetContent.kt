@@ -126,6 +126,14 @@ fun PlayerSheetContent(
     val fullPlayerPresent by remember { derivedStateOf { progress() > 0f } }
     val docked by remember { derivedStateOf { progress() == 0f } }
 
+    // Deliberately *not* [fullPlayerPresent], which is true from the first pixel of the drag
+    // because the full player has to be composed while it travels. Arming the queue gesture that
+    // early meant an upward swipe on the docked strip — the gesture that opens the player — could
+    // land on the queue instead, and reliably did whenever the collapse had settled a hair short
+    // of zero. The queue lives *inside* the full player, so it is reachable only once the player
+    // actually is: not merely present, but open.
+    val playerFullyOpen by remember { derivedStateOf { progress() >= QueueGestureArmed } }
+
     // Collapsing puts the cover back. The docked strip is a cover and two lines of text — there is
     // nowhere for lyrics to be, so carrying the toggle down into it only ever means a missing
     // cover.
@@ -192,6 +200,8 @@ fun PlayerSheetContent(
     // rather than the index so a queue edit cannot strand the override — and rather than the
     // artwork URL, which two tracks off the same album share, leaving the override set.
     val currentArtwork = playback.currentTrack?.artworkUrl
+    // Pre-warm the seed colour for the current track so expanding the player never flashes the default theme.
+    com.wander.android.ui.theme.rememberCoverSeedColor(currentArtwork)
     LaunchedEffect(playback.currentTrack?.id) {
         swipe.clearPending()
     }
@@ -203,6 +213,11 @@ fun PlayerSheetContent(
             .fillMaxWidth()
             .height(expandedHeight)
             .onGloballyPositioned(anchors::onRootPositioned)
+            // Only while the full player is up: on the docked strip an upward drag is how the
+            // player itself is opened, and stealing it would make the strip unopenable by gesture.
+            .swipeUpToOpenQueue(enabled = playerFullyOpen) {
+                if (playback.orderLocked) onOpenQueue() else queueDrawerOpen = true
+            }
     ) {
         // Draw order matters and is the whole point of this Box:
         //   mini strip → travelling artwork → full player.
@@ -381,6 +396,14 @@ internal fun smoothStep(value: Float, from: Float, to: Float): Float {
  */
 private fun swipeFade(offsetX: Float): Float =
     1f - smoothStep(kotlin.math.abs(offsetX), SwipeFadeStart, DistanceThreshold)
+
+/**
+ * How far open the player must be before an upward drag means "queue" rather than "open me".
+ *
+ * Not `1f`. The sheet settles by spring, so it rests a hair under its target and a strict equality
+ * would leave the gesture permanently disarmed on a player that is, to the eye, fully open.
+ */
+private const val QueueGestureArmed = 0.98f
 
 private const val SwipeFadeStart = 12f
 
