@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -234,14 +235,15 @@ fun CoverTintedTheme(
     amoled: Boolean,
     content: @Composable () -> Unit,
 ) {
+    val motion = MaterialTheme.motionScheme
     val seed by animateColorAsState(
         seedColor ?: base.primary,
-        tween(600),
+        motion.slowEffectsSpec(),
         label = "coverSeed",
     )
     val strength by animateFloatAsState(
         if (seedColor != null) 1f else 0f,
-        tween(600),
+        motion.slowEffectsSpec(),
         label = "coverTintStrength",
     )
 

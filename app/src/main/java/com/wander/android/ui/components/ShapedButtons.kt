@@ -91,8 +91,8 @@ fun rememberPressMorphShape(
 }
 
 /** Resting and pressed shapes of the big play control. */
-private val PlayResting = MaterialShapes.Cookie12Sided
-private val PlayPressed = MaterialShapes.Circle
+internal val PlayResting = MaterialShapes.Cookie12Sided
+internal val PlayPressed = MaterialShapes.Circle
 
 /** Resting and pressed shapes of the satellites beside it. */
 private val ActionResting = MaterialShapes.Square

@@ -1,7 +1,6 @@
 package com.wander.android.ui.components
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -52,6 +51,8 @@ fun LikeButton(
     // is not composable and cannot reach into the theme itself.
     val settle = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
     val currentSettle = rememberUpdatedState(settle)
+    val burstSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    val currentBurst = rememberUpdatedState(burstSpec)
 
     // Was it liked the last time this composable saw it?
     //
@@ -68,7 +69,7 @@ fun LikeButton(
 
         burst.snapTo(0f)
         scale.snapTo(PressedScale)
-        launch { burst.animateTo(1f, tween(BurstMillis)) }
+        launch { burst.animateTo(1f, currentBurst.value) }
         scale.animateTo(1f, currentSettle.value)
     }
 
@@ -118,5 +119,3 @@ private const val PressedScale = 0.6f
 
 /** The ring ends up half again the heart's size; big enough to read, small enough not to crowd. */
 private const val BurstSizeFactor = 1.8f
-
-private const val BurstMillis = 420

@@ -2,8 +2,7 @@ package com.wander.android.ui.components.player
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Stable
@@ -27,10 +26,7 @@ enum class PlayerSheetValue {
 @Stable
 class PlayerSheetState(
     initialValue: PlayerSheetValue = PlayerSheetValue.COLLAPSED,
-    private val animationSpec: AnimationSpec<Float> = spring(
-        dampingRatio = ExpressiveDamping,
-        stiffness = Spring.StiffnessMediumLow
-    )
+    private val animationSpec: AnimationSpec<Float> = MotionScheme.expressive().defaultSpatialSpec()
 ) {
     var targetValue by mutableStateOf(initialValue)
         internal set
@@ -120,6 +116,12 @@ class PlayerSheetState(
         offset.snapTo(newOffset)
     }
 
+    internal suspend fun updatePredictiveBackProgress(backProgress: Float) {
+        if (maxOffsetPx <= 0f) return
+        val target = (backProgress.coerceIn(0f, 1f) * maxOffsetPx)
+        offset.snapTo(target)
+    }
+
     internal suspend fun settle(velocity: Float) {
         if (maxOffsetPx <= 0f) return
         val target = when {
@@ -141,16 +143,6 @@ class PlayerSheetState(
     companion object {
         const val FLING_VELOCITY = 1000f
 
-        /**
-         * A hint of overshoot, and no more.
-         *
-         * Between `DampingRatioLowBouncy` (0.55) and `DampingRatioNoBouncy` (1.0). This started at
-         * 0.75 and was too loose in the hand: the player is a full-screen surface with the cover
-         * art riding on it, so an overshoot that reads as playful on a small chip reads as the
-         * sheet wobbling. Big surfaces want less bounce than small ones.
-         */
-        const val ExpressiveDamping = 0.9f
-
         val Saver: Saver<PlayerSheetState, PlayerSheetValue> = Saver(
             save = { it.targetValue },
             restore = { PlayerSheetState(it) }
@@ -162,12 +154,14 @@ class PlayerSheetState(
 fun rememberPlayerSheetState(
     initialValue: PlayerSheetValue = PlayerSheetValue.COLLAPSED
 ): PlayerSheetState {
-    // The spec comes from the theme rather than the class's own default. `PlayerSheetState` is a
-    // plain class and cannot read `MaterialTheme`, which is why the default exists at all — but
-    // every real instance is created here, in composition, where the scheme is available. The
-    // hand-rolled fallback stays for tests and previews that construct one directly.
     val spec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
-    return rememberSaveable(saver = PlayerSheetState.Saver) {
+    val saver = androidx.compose.runtime.remember(spec) {
+        Saver<PlayerSheetState, PlayerSheetValue>(
+            save = { it.targetValue },
+            restore = { PlayerSheetState(it, spec) }
+        )
+    }
+    return rememberSaveable(saver = saver) {
         PlayerSheetState(initialValue, spec)
     }
 }

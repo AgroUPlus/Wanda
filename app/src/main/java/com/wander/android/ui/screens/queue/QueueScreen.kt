@@ -249,7 +249,11 @@ private fun JamQueueContent(
                 )
             }
             items(jam.proposals, key = { "proposal_${it.id}" }) { track ->
-                JamProposalItem(track = track, onApprove = { onApprove(track.id) })
+                JamProposalItem(
+                    track = track,
+                    onApprove = { onApprove(track.id) },
+                    modifier = Modifier.animateItem()
+                )
             }
         }
 
@@ -286,7 +290,8 @@ private fun JamQueueContent(
                     index = index + 1,
                     track = track,
                     canRemove = jam.isHost || track.addedBy.equals(jam.members.firstOrNull(), ignoreCase = true),
-                    onRemove = { onRemove(track.id) }
+                    onRemove = { onRemove(track.id) },
+                    modifier = Modifier.animateItem()
                 )
             }
         }
@@ -298,12 +303,13 @@ private fun JamQueueItem(
     index: Int,
     track: JamTrack,
     canRemove: Boolean,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
         shape = MaterialTheme.shapes.small,
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -365,12 +371,13 @@ private fun JamQueueItem(
 @Composable
 private fun JamProposalItem(
     track: JamTrack,
-    onApprove: () -> Unit
+    onApprove: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
         shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -447,7 +454,8 @@ private fun LocalQueueContent(
                 onPlay = { playerConnection.seekToIndex(index) },
                 onToggleLike = { onToggleLike(track) },
                 onRemove = { playerConnection.removeFromQueue(index) },
-                onLongPress = { onTrackLongPress(track) }
+                onLongPress = { onTrackLongPress(track) },
+                modifier = Modifier.animateItem()
             )
         }
     }

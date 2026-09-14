@@ -8,11 +8,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -157,14 +157,26 @@ fun MiniPlayer(
                 }
 
                 Row(modifier = Modifier.graphicsLayer { alpha = contentAlpha() }) {
-                    IconButton(onClick = playerConnection::togglePlayPause) {
+                    val playInteraction = remember { MutableInteractionSource() }
+                    val playScale by rememberPressScale(playInteraction)
+                    IconButton(
+                        onClick = playerConnection::togglePlayPause,
+                        interactionSource = playInteraction,
+                        modifier = Modifier.graphicsLayer { scaleX = playScale; scaleY = playScale }
+                    ) {
                         PlayPauseIcon(
                             isPlaying = isPlaying,
                             isBuffering = isBuffering,
                             iconSize = MiniPlayIconSize
                         )
                     }
-                    IconButton(onClick = playerConnection::next) {
+                    val nextInteraction = remember { MutableInteractionSource() }
+                    val nextScale by rememberPressScale(nextInteraction)
+                    IconButton(
+                        onClick = playerConnection::next,
+                        interactionSource = nextInteraction,
+                        modifier = Modifier.graphicsLayer { scaleX = nextScale; scaleY = nextScale }
+                    ) {
                         Icon(Icons.Rounded.SkipNext, contentDescription = "Next track")
                     }
                 }
@@ -221,26 +233,16 @@ private fun PlaybackProgressBar(
         amplitude.animateTo(if (isPlaying) 1f else 0f, amplitudeSpec)
     }
 
-    // Wavy the instant playback resumes, even mid-decay; flat only once fully settled and still
-    // paused. Reading `.value` here (not through a lambda) is deliberate: it is what makes this
-    // recompose — and therefore correct — every frame the amplitude is actually changing, at the
-    // cost of those few animated frames instead of the whole idle lifetime of the strip.
-    val showWavy = isPlaying || amplitude.value > 0f
-
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .fillMaxWidth()
             .height(MiniProgressBarHeight)
     ) {
-        if (showWavy) {
-            LinearWavyProgressIndicator(
-                progress = progress,
-                amplitude = { amplitude.value },
-                modifier = Modifier.fillMaxWidth()
-            )
-        } else {
-            LinearProgressIndicator(progress = progress, modifier = Modifier.fillMaxWidth())
-        }
+        LinearWavyProgressIndicator(
+            progress = progress,
+            amplitude = { amplitude.value },
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }

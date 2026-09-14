@@ -1,6 +1,8 @@
 package com.wander.android.ui.screens.player
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,16 +17,24 @@ import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.ui.components.PlayPressed
+import com.wander.android.ui.components.PlayResting
 import com.wander.android.ui.components.rememberHaptics
+import com.wander.android.ui.components.rememberPressMorphShape
+import com.wander.android.ui.components.rememberPressScale
 import com.wander.android.ui.components.player.PlayPauseIcon
 import com.wander.android.core.playback.RepeatMode
 
@@ -47,6 +57,16 @@ fun PlayerControls(
         label = "playButtonSize"
     )
 
+    val playInteraction = remember { MutableInteractionSource() }
+    val playPressed by playInteraction.collectIsPressedAsState()
+    val playShape = rememberPressMorphShape(PlayResting, PlayPressed, playPressed)
+
+    val prevInteraction = remember { MutableInteractionSource() }
+    val prevScale by rememberPressScale(prevInteraction)
+
+    val nextInteraction = remember { MutableInteractionSource() }
+    val nextScale by rememberPressScale(nextInteraction)
+
     Row(
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
@@ -64,7 +84,13 @@ fun PlayerControls(
             disabledDescription = "Shuffle, unavailable while the room chooses the order"
         )
 
-        IconButton(onClick = connection::previous, modifier = Modifier.size(56.dp)) {
+        IconButton(
+            onClick = connection::previous,
+            interactionSource = prevInteraction,
+            modifier = Modifier
+                .size(56.dp)
+                .graphicsLayer { scaleX = prevScale; scaleY = prevScale }
+        ) {
             Icon(
                 Icons.Rounded.SkipPrevious,
                 contentDescription = "Previous track",
@@ -80,7 +106,8 @@ fun PlayerControls(
                 haptics.toggled(!state.isPlaying)
                 connection.togglePlayPause()
             },
-            shape = MaterialTheme.shapes.large,
+            shape = playShape,
+            interactionSource = playInteraction,
             modifier = Modifier.size(playButtonSize)
         ) {
             PlayPauseIcon(
@@ -90,7 +117,13 @@ fun PlayerControls(
             )
         }
 
-        IconButton(onClick = connection::next, modifier = Modifier.size(56.dp)) {
+        IconButton(
+            onClick = connection::next,
+            interactionSource = nextInteraction,
+            modifier = Modifier
+                .size(56.dp)
+                .graphicsLayer { scaleX = nextScale; scaleY = nextScale }
+        ) {
             Icon(
                 Icons.Rounded.SkipNext,
                 contentDescription = "Next track",
@@ -121,16 +154,23 @@ private fun ToggleButton(
     enabled: Boolean = true,
     disabledDescription: String? = null
 ) {
-    IconButton(onClick = onClick, enabled = enabled) {
+    val interaction = remember { MutableInteractionSource() }
+    val scale by rememberPressScale(interaction)
+    IconToggleButton(
+        checked = active,
+        onCheckedChange = { onClick() },
+        enabled = enabled,
+        interactionSource = interaction,
+        colors = IconButtonDefaults.iconToggleButtonColors(
+            checkedContentColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DisabledAlpha)
+        ),
+        modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale }
+    ) {
         Icon(
             imageVector = icon,
-            // Says *why* it is inert, for a screen reader that cannot see the dimming.
-            contentDescription = if (enabled) description else disabledDescription ?: description,
-            tint = when {
-                !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DisabledAlpha)
-                active -> MaterialTheme.colorScheme.primary
-                else -> MaterialTheme.colorScheme.onSurfaceVariant
-            }
+            contentDescription = if (enabled) description else disabledDescription ?: description
         )
     }
 }

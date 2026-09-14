@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -150,18 +149,11 @@ private fun PlayerSeekBarInternal(
             // duration alone drew a live-looking bar over a stream that swallowed every gesture.
             enabled = durationMs > 0L && isSeekable,
             track = { sliderState ->
-                if (showWavy) {
-                    LinearWavyProgressIndicator(
-                        progress = { sliderState.value },
-                        amplitude = { amplitude.value },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                } else {
-                    LinearProgressIndicator(
-                        progress = { sliderState.value },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                LinearWavyProgressIndicator(
+                    progress = { sliderState.value },
+                    amplitude = { amplitude.value },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         )
         Row(modifier = Modifier.fillMaxWidth()) {

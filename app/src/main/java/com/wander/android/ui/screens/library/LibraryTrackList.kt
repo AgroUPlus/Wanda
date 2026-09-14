@@ -77,7 +77,8 @@ internal fun TrackList(
                 track = track,
                 onPlay = { viewModel.play(tracks, index) },
                 onToggleLike = { viewModel.toggleLike(track) },
-                onLongPress = { onLongPress(track) }
+                onLongPress = { onLongPress(track) },
+                modifier = Modifier.animateItem()
             )
         }
         if (hasMore) {

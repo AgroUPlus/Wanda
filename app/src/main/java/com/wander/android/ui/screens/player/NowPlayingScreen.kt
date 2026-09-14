@@ -379,7 +379,11 @@ internal fun NowPlayingScreen(
                     onClick = { showAudioTrackPicker = true },
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .safeDrawingPadding()
+                        .windowInsetsPadding(
+                            WindowInsets.safeDrawing.only(
+                                WindowInsetsSides.Top + WindowInsetsSides.Start
+                            )
+                        )
                         .padding(start = 60.dp, top = 4.dp)
                         .graphicsLayer { alpha = overlayAlpha() }
                 ) {

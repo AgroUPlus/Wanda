@@ -1,6 +1,7 @@
 package com.wander.android.ui.components.player
 
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
+import kotlin.coroutines.cancellation.CancellationException
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
@@ -151,8 +152,15 @@ fun PlayerSheet(
                 }
         }
 
-        BackHandler(enabled = sheetState.isExpanded) {
-            scope.launch { sheetState.collapse() }
+        PredictiveBackHandler(enabled = sheetState.isExpanded) { progressFlow ->
+            try {
+                progressFlow.collect { backEvent ->
+                    sheetState.updatePredictiveBackProgress(backEvent.progress)
+                }
+                sheetState.collapse()
+            } catch (e: CancellationException) {
+                sheetState.expand()
+            }
         }
 
         // Two colours, not one. Docked, this is a card lifted off the screen and wants a raised
