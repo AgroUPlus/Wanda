@@ -117,7 +117,6 @@ fun WanderApp(
     val playback = playbackState.value
     val showChrome = remember(currentRoute) { Routes.showsChrome(currentRoute) }
     val isImmersivePlayer by viewModel.isImmersivePlayer.collectAsStateWithLifecycle()
-    val isCoverCarouselEnabled by viewModel.isCoverCarouselEnabled.collectAsStateWithLifecycle()
     // Two tiers, not one. An artist or album page keeps the player — the controls for what is
     // playing must stay reachable from the page you opened out of it — but not the dock row: the
     // search field belongs to the library you searched from, and a page reached from there is not
@@ -378,7 +377,7 @@ fun WanderApp(
                     dockRow = dockRow,
                     showDockRow = showDockRow,
                     immersivePlayer = isImmersivePlayer,
-                    coverCarousel = isCoverCarouselEnabled
+                    coverCarousel = true
                 )
             }
 

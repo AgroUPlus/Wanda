@@ -29,7 +29,8 @@ internal fun LazyListScope.syncTab(
                 state.agroPaired -> actions.onAgroUnpair
                 else -> actions.onAgroPair
             },
-            destructive = state.agroConnection is AgroConnectionState.Rejected
+            destructive = state.agroConnection is AgroConnectionState.Rejected,
+            leading = { SourceBadge(SourceIdentity.AGRO, SettingsCategory.SYNC.hue) }
         )
     }
 

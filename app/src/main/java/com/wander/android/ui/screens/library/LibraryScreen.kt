@@ -133,12 +133,13 @@ fun LibraryScreen(
     // reading it directly recomposed the title, tab row and chip row for each of those frames.
     val selectedPage by remember { derivedStateOf { pagerState.currentPage } }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            // Top inset here rather than on the lists, so the title and tabs clear the status bar.
-            .padding(contentPadding.headerInset())
-    ) {
+    androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                // Top inset here rather than on the lists, so the title and tabs clear the status bar.
+                .padding(contentPadding.headerInset())
+        ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -164,20 +165,31 @@ fun LibraryScreen(
         // tab is legible from its silhouette before any text is read.
         PrimaryTabRow(
             selectedTabIndex = selectedPage,
+            divider = {},
             indicator = {
                 TabRowDefaults.PrimaryIndicator(
                     modifier = Modifier.tabIndicatorOffset(selectedPage, matchContentSize = true),
                     width = Dp.Unspecified,
-                    height = 3.dp,
-                    shape = MaterialTheme.shapes.extraSmall
+                    height = 4.dp,
+                    shape = MaterialTheme.shapes.large
                 )
             }
         ) {
-            LibraryTab.entries.forEach { entry ->
+            LibraryTab.entries.forEachIndexed { index, entry ->
+                val isSelected = index == selectedPage
                 Tab(
-                    selected = LibraryTab.entries.indexOf(entry) == selectedPage,
+                    selected = isSelected,
                     onClick = { viewModel.selectTab(entry) },
-                    text = { Text(entry.label, maxLines = 1, softWrap = false) }
+                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = {
+                        Text(
+                            text = entry.label,
+                            style = if (isSelected) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
                 )
             }
         }
@@ -234,5 +246,22 @@ fun LibraryScreen(
                 }
             }
         }
+
+        }
+
+        // Outside the Column, inside the Box: the pill floats over the list rather than taking a
+        // row at the bottom of it, which is the reason the Box was wrapped around this at all.
+        val currentTab = LibraryTab.entries[selectedPage]
+        val activeTracks = when (currentTab) {
+            LibraryTab.LIKED -> likedTracks
+            LibraryTab.DOWNLOADS -> downloadedTracks
+            else -> emptyList()
+        }
+        LibraryPlayShufflePill(
+            visible = activeTracks.isNotEmpty(),
+            onPlayAll = { viewModel.play(activeTracks, 0) },
+            onShuffle = { viewModel.play(activeTracks.shuffled(), 0) },
+            bottomInset = contentPadding.calculateBottomPadding()
+        )
     }
 }

@@ -41,9 +41,15 @@ fun SettingsRow(
     destructive: Boolean = false,
     enabled: Boolean = true,
     /** A second, less common action on the same row. Requires [onClick] to be set. */
-    onLongClick: (() -> Unit)? = null
+    onLongClick: (() -> Unit)? = null,
+    /**
+     * A badge for a row that names something — a server, an account, a device. See [SourceBadge]
+     * for why most rows deliberately have none.
+     */
+    leading: (@Composable () -> Unit)? = null
 ) {
-    Column(
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .then(
@@ -55,22 +61,26 @@ fun SettingsRow(
             )
             .padding(horizontal = 20.dp, vertical = 14.dp)
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = when {
-                !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = DisabledAlpha)
-                destructive -> MaterialTheme.colorScheme.error
-                else -> Color.Unspecified
-            }
-        )
-        if (subtitle != null) {
+        leading?.invoke()
+
+        Column(modifier = if (leading != null) Modifier.padding(start = 16.dp) else Modifier) {
             Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-                    .copy(alpha = if (enabled) 1f else DisabledAlpha)
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = when {
+                    !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = DisabledAlpha)
+                    destructive -> MaterialTheme.colorScheme.error
+                    else -> Color.Unspecified
+                }
             )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                        .copy(alpha = if (enabled) 1f else DisabledAlpha)
+                )
+            }
         }
     }
 }

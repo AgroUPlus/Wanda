@@ -103,7 +103,6 @@ internal fun rememberSettingsHost(
             onAmoledChange = viewModel::setAmoledBlack,
             onImmersivePlayerChange = viewModel::setImmersivePlayer,
             onCoverArtThemeChange = viewModel::setCoverArtThemeEnabled,
-            onCoverCarouselChange = viewModel::setCoverCarouselEnabled,
             onOfflineChange = viewModel::setOfflineMode,
             onPreloadNextChange = viewModel::setPreloadNextEnabled,
             onIndexOnMobileDataChange = viewModel::setIndexOnMobileDataEnabled,
