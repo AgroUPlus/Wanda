@@ -22,9 +22,11 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.TrackRow
@@ -33,22 +35,10 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 /**
- * What is coming next: draggable by its handle, removable by a swipe.
- *
- * The row carries neither a like button nor a remove button. The heart was the same control the
- * player and every other list already offer for the track that is *playing*, repeated against songs
- * you have not heard yet — a second place to do a thing nobody comes to the queue to do. The remove
- * button is gone because a swipe does it better and, unlike the button, is undoable: see the
- * snackbar in [QueueDrawer]. What is left on the row is the song and the handle, which is what the
- * screen is for.
- *
- * Swipe direction is start-to-end only. End-to-start on a list row is the platform's second
- * gesture in mail apps, but the queue has one destructive action and a single direction cannot be
- * mistaken for the other.
- *
- * The row is written inline inside [ReorderableItem] rather than factored into its own composable:
- * `draggableHandle` exists only in that scope, and passing it outwards means passing a modifier
- * built in a scope the caller does not have.
+ * The unified queue timeline: a single continuous list of all tracks.
+ * Past tracks sit above the currently playing track with muted opacity,
+ * the active song is seamlessly highlighted with its animated equalizer,
+ * and upcoming tracks sit below. Every track can be reordered or swiped to remove.
  */
 @Composable
 internal fun QueueUpNext(
@@ -63,14 +53,16 @@ internal fun QueueUpNext(
     val haptics = rememberHaptics()
     val listState = rememberLazyListState()
 
-    // The move is applied to the player, not to a local copy of the list.
-    //
-    // `state.queue` is rebuilt from the controller's own timeline, so committing the move upstream
-    // is what makes the row stay where it was dropped; keeping a local list in step as well would
-    // give the same reorder two sources of truth and let them disagree mid-drag.
+    val currentIdx = entries.indexOfFirst { it.role == QueueItemRole.CURRENT }
+    LaunchedEffect(Unit) {
+        if (currentIdx > 0) {
+            listState.scrollToItem((currentIdx - 1).coerceAtLeast(0))
+        }
+    }
+
     val reorderState = rememberReorderableLazyListState(listState) { from, to ->
-        val fromEntry = entries.getOrNull(from.index) ?: return@rememberReorderableLazyListState
-        val toEntry = entries.getOrNull(to.index) ?: return@rememberReorderableLazyListState
+        val fromEntry = entries.firstOrNull { it.key == from.key } ?: return@rememberReorderableLazyListState
+        val toEntry = entries.firstOrNull { it.key == to.key } ?: return@rememberReorderableLazyListState
         onMove(fromEntry.queueIndex, toEntry.queueIndex)
     }
 
@@ -83,12 +75,16 @@ internal fun QueueUpNext(
             ReorderableItem(reorderState, key = entry.key, enabled = canReorder) { isDragging ->
                 val dismissState = rememberSwipeToDismissBoxState()
 
+                LaunchedEffect(entry.key) {
+                    if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
+                        dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+                    }
+                }
+
                 SwipeToDismissBox(
                     state = dismissState,
                     enableDismissFromStartToEnd = true,
                     enableDismissFromEndToStart = false,
-                    // Disabled mid-drag: the two gestures are perpendicular, but a row being
-                    // carried by the handle should not also be removable by the hand carrying it.
                     gesturesEnabled = !isDragging,
                     onDismiss = { value ->
                         if (value == SwipeToDismissBoxValue.StartToEnd) {
@@ -100,14 +96,23 @@ internal fun QueueUpNext(
                 ) {
                     Surface(
                         tonalElevation = if (isDragging) DraggingElevation else 0.dp,
-                        shadowElevation = if (isDragging) DraggingElevation else 0.dp
+                        shadowElevation = if (isDragging) DraggingElevation else 0.dp,
+                        color = if (isDragging) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        val isCurrent = entry.role == QueueItemRole.CURRENT
+                        val isPrevious = entry.role == QueueItemRole.PREVIOUS
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .alpha(if (isPrevious) 0.60f else 1f)
+                        ) {
                             if (canReorder) {
                                 IconButton(
                                     onClick = {},
                                     modifier = Modifier
-                                        .padding(start = 8.dp)
+                                        .padding(start = 4.dp)
                                         .draggableHandle(
                                             onDragStarted = { haptics.heldDown() },
                                             onDragStopped = { haptics.settled() }
@@ -116,13 +121,18 @@ internal fun QueueUpNext(
                                     Icon(
                                         imageVector = Icons.Rounded.DragHandle,
                                         contentDescription = "Reorder ${entry.track.title}",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        tint = if (isCurrent) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
                                         modifier = Modifier.size(24.dp)
                                     )
                                 }
                             }
                             TrackRow(
                                 track = entry.track,
+                                isPlaying = isCurrent,
                                 onPlay = { onPlay(entry.queueIndex) },
                                 onLongPress = { onLongPress(entry.track) },
                                 modifier = Modifier.weight(1f)
@@ -161,41 +171,5 @@ private fun RemoveBackdrop() {
         }
     }
 }
-
-/**
- * One row of the drawer: the track, where it actually sits in the player's queue, and a key that
- * survives a reorder.
- *
- * [queueIndex] is the position in the *whole* queue, which is not the row's position in this list —
- * the list starts after whatever is playing. Every action goes through it, so dragging the third
- * row does not remove the third song in the queue.
- */
-internal data class QueueEntry(
-    val key: String,
-    val track: UnifiedTrack,
-    val queueIndex: Int
-)
-
-/**
- * The queue after the current track, keyed so that reordering works.
- *
- * The key used to be `"$index-${track.id}"`, and an index in a key is fatal to a drag: every row
- * below the one being moved changes identity the instant it moves, so the list re-composes from
- * scratch under the finger instead of animating. The id alone will not do either — a queue may hold
- * the same song twice, and duplicate keys are an error in a `LazyColumn`. So the key is the id plus
- * how many times that id has already appeared, which is stable per row and unique per list.
- */
-@Composable
-internal fun rememberQueueEntries(
-    queue: List<UnifiedTrack>,
-    currentIndex: Int
-): List<QueueEntry> =
-    remember(queue, currentIndex) {
-        val seen = mutableMapOf<String, Int>()
-        queue.mapIndexed { index, track ->
-            val occurrence = seen.merge(track.id, 1, Int::plus)!! - 1
-            QueueEntry(key = "${track.id}#$occurrence", track = track, queueIndex = index)
-        }.filterIndexed { index, _ -> index > currentIndex }
-    }
 
 private val DraggingElevation = 6.dp

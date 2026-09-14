@@ -39,12 +39,19 @@ import kotlinx.coroutines.launch
  * It used to be a full navigation destination, which meant looking at what was coming next replaced
  * the thing you were listening to. A sheet keeps the player behind it and puts the running order in
  * reach of a thumb, which is what it is for. It opens from the button in the player's top bar or by
- * dragging the handle at its foot — see `QueuePullTab`.
+ * dragging upwards anywhere on the player — see `swipeUpToOpenQueue`.
  *
  * Only the local queue. A jam's order is voted on rather than dragged, and that screen is
  * substantially its own thing — the caller sends a jam to `QueueScreen` instead; see
  * `PlayerSheetContent`.
  */
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.text.font.FontWeight
+
 @Composable
 internal fun QueueDrawer(
     playerConnection: PlayerConnection,
@@ -62,6 +69,7 @@ internal fun QueueDrawer(
     // everything, so a snackbar raised at the shell would come up *behind* the queue — which, for
     // the one message in the app offering to undo something, is the same as not showing it.
     val snackbarHostState = remember { SnackbarHostState() }
+    var itemGenerations by remember { mutableStateOf(mapOf<String, Int>()) }
 
     actionsFor?.let { track ->
         TrackActionsSheet(
@@ -109,35 +117,39 @@ internal fun QueueDrawer(
                 .navigationBarsPadding()
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                state.currentTrack?.let { current ->
-                    Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 6.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = current.title,
-                            style = MaterialTheme.typography.headlineSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Clip,
-                            modifier = Modifier.scrollingTitle()
+                            text = "Queue",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
                         )
-                        Text(
-                            text = current.artist,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Clip,
-                            modifier = Modifier.scrollingTitle()
-                        )
+                        if (state.queue.isNotEmpty()) {
+                            Text(
+                                text = "${state.currentIndex + 1} of ${state.queue.size} tracks",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    if (state.queue.isNotEmpty() && !state.orderLocked) {
+                        IconButton(onClick = playerConnection::clearQueue) {
+                            Icon(
+                                imageVector = Icons.Rounded.DeleteSweep,
+                                contentDescription = "Clear queue",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
 
-                Text(
-                    text = "Up next",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 24.dp, top = 16.dp, bottom = 4.dp)
-                )
-
                 QueueUpNext(
-                    entries = rememberQueueEntries(state.queue, state.currentIndex),
+                    entries = rememberQueueEntries(state.queue, state.currentIndex, itemGenerations),
                     canReorder = !state.orderLocked,
                     onPlay = { playerConnection.seekToIndex(it) },
                     onMove = { from, to ->
@@ -154,6 +166,7 @@ internal fun QueueDrawer(
                                 withDismissAction = true
                             )
                             if (result == SnackbarResult.ActionPerformed) {
+                                itemGenerations = itemGenerations + (entry.track.id to (itemGenerations[entry.track.id] ?: 0) + 1)
                                 queueViewModel.insertInQueue(entry.queueIndex, entry.track)
                             }
                         }

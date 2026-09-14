@@ -453,7 +453,9 @@ private fun LocalQueueContent(
                 isPlaying = index == state.currentIndex,
                 onPlay = { playerConnection.seekToIndex(index) },
                 onToggleLike = { onToggleLike(track) },
-                onRemove = { playerConnection.removeFromQueue(index) },
+                // No remove button. Swiping a row away removes it, with an undo — a second control
+                // for the same action costs a slot on every row to say what the gesture already
+                // does, and it was the one thing between the row and its like button.
                 onLongPress = { onTrackLongPress(track) },
                 modifier = Modifier.animateItem()
             )
