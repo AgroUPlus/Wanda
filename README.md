@@ -98,7 +98,7 @@ ui/
   screens/    home · library · search · settings · player · queue · login
 ```
 
-Conventions are in [CLAUDE.md](CLAUDE.md): 300-line file cap, no speculative fallbacks, no dead code, Room as source of truth, Media3 as owner of playback state.
+Conventions are in [AGENTS.md](AGENTS.md): 300-line file cap, no speculative fallbacks, no dead code, Room as source of truth, Media3 as owner of playback state.
 
 ---
 

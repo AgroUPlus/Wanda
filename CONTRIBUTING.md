@@ -31,9 +31,15 @@ contribution merged without one, which is why this is asked for up front rather 
 ./gradlew :app:assembleDebug
 ```
 
-`CLAUDE.md` holds the rules of the road — the 300-line file cap, `IMusicSource` as the only source
+`AGENTS.md` holds the rules of the road — the 300-line file cap, `IMusicSource` as the only source
 abstraction, Room as the offline source of truth, no speculative fallbacks. Read it first; it is
 shorter than this paragraph implies.
+
+## AI tools and authorship
+
+AI coding assistants may be used as development aids, but they are not contributors.
+Do not include `Co-Authored-By` trailers or metadata for AI models (e.g. Claude, ChatGPT).
+All contributions must be attributed solely to human developers adhering to [`CLA.md`](CLA.md).
 
 ## `TrackDeduplicator` has a second implementation
 
