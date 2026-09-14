@@ -30,10 +30,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
-import com.wander.android.ui.components.PlayPressed
-import com.wander.android.ui.components.PlayResting
 import com.wander.android.ui.components.rememberHaptics
-import com.wander.android.ui.components.rememberPressMorphShape
+import com.wander.android.ui.components.rememberPlayPauseMorphShape
 import com.wander.android.ui.components.rememberPressScale
 import com.wander.android.ui.components.player.PlayPauseIcon
 import com.wander.android.core.playback.RepeatMode
@@ -59,7 +57,7 @@ fun PlayerControls(
 
     val playInteraction = remember { MutableInteractionSource() }
     val playPressed by playInteraction.collectIsPressedAsState()
-    val playShape = rememberPressMorphShape(PlayResting, PlayPressed, playPressed)
+    val playShape = rememberPlayPauseMorphShape(state.isPlaying, playPressed)
 
     val prevInteraction = remember { MutableInteractionSource() }
     val prevScale by rememberPressScale(prevInteraction)

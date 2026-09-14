@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -164,11 +165,7 @@ fun MiniPlayer(
                         interactionSource = playInteraction,
                         modifier = Modifier.graphicsLayer { scaleX = playScale; scaleY = playScale }
                     ) {
-                        PlayPauseIcon(
-                            isPlaying = isPlaying,
-                            isBuffering = isBuffering,
-                            iconSize = MiniPlayIconSize
-                        )
+                        PlayPauseIcon(isPlaying = isPlaying, isBuffering = isBuffering, iconSize = MiniPlayIconSize)
                     }
                     val nextInteraction = remember { MutableInteractionSource() }
                     val nextScale by rememberPressScale(nextInteraction)
@@ -233,16 +230,20 @@ private fun PlaybackProgressBar(
         amplitude.animateTo(if (isPlaying) 1f else 0f, amplitudeSpec)
     }
 
+    val showWavy = isPlaying || amplitude.value > 0f
+
     Box(
         contentAlignment = Alignment.Center,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(MiniProgressBarHeight)
+        modifier = modifier.fillMaxWidth().height(MiniProgressBarHeight)
     ) {
-        LinearWavyProgressIndicator(
-            progress = progress,
-            amplitude = { amplitude.value },
-            modifier = Modifier.fillMaxWidth()
-        )
+        if (showWavy) {
+            LinearWavyProgressIndicator(
+                progress = progress,
+                amplitude = { amplitude.value },
+                modifier = Modifier.fillMaxWidth()
+            )
+        } else {
+            LinearProgressIndicator(progress = progress, modifier = Modifier.fillMaxWidth())
+        }
     }
 }

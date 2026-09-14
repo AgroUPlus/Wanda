@@ -94,6 +94,30 @@ fun rememberPressMorphShape(
 internal val PlayResting = MaterialShapes.Cookie12Sided
 internal val PlayPressed = MaterialShapes.Circle
 
+/**
+ * Shape for the main playback toggle: resting as a clean Circle when paused and morphing into a
+ * Cookie12Sided when playing, while also reacting to finger presses.
+ */
+@Composable
+fun rememberPlayPauseMorphShape(
+    isPlaying: Boolean,
+    isPressed: Boolean
+): Shape {
+    val targetProgress = when {
+        isPlaying && isPressed -> 0.4f
+        isPlaying -> 1f
+        isPressed -> 0.6f
+        else -> 0f
+    }
+    val progress by animateFloatAsState(
+        targetValue = targetProgress,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        label = "playPauseMorph"
+    )
+    val morph = remember { Morph(PlayPressed, PlayResting) }
+    return remember(morph) { MorphShape(morph) { progress } }
+}
+
 /** Resting and pressed shapes of the satellites beside it. */
 private val ActionResting = MaterialShapes.Square
 private val ActionPressed = MaterialShapes.Circle
