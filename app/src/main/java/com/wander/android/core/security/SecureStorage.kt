@@ -362,6 +362,53 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     }
 
     /**
+     * Every stored preference, for [com.wander.android.core.backup.SettingsBackupStore].
+     *
+     * The whole map rather than a listed subset: an enumerated list is a second place to remember
+     * every setting, and a preference added later would quietly stop being backed up with nothing
+     * failing to say so.
+     *
+     * This includes credentials, because this store is where credentials live — which is precisely
+     * why the only caller encrypts what it receives and there is no unencrypted export path.
+     *
+     * [KEY_AGRO_DEVICE_ID] is withheld. It names *this device* to the Agro server rather than
+     * describing a preference, so carrying it into a backup would let a restore onto a second
+     * phone claim the first one's identity — two devices answering to one registration. A device
+     * that restores a backup keeps its own, exactly as [clearAllCredentials] preserves it.
+     */
+    fun exportAll(): Map<String, Any?> = prefs.all.filterKeys { it != KEY_AGRO_DEVICE_ID }
+
+    /**
+     * Replaces every stored preference with [values].
+     *
+     * Replaces rather than merges: a backup is a picture of a device, and merging would leave
+     * whatever this device happened to hold for a key the backup does not carry — a half-restored
+     * state belonging to neither.
+     *
+     * The in-memory `StateFlow`s above are *not* refreshed, and cannot usefully be: they were read
+     * at construction and the app is full of collectors holding the old values. The caller tells
+     * the user to restart, which is the only honest way to apply this.
+     */
+    fun importAll(values: Map<String, Any>) {
+        val deviceId = prefs.getString(KEY_AGRO_DEVICE_ID, null)
+        prefs.edit {
+            clear()
+            deviceId?.let { putString(KEY_AGRO_DEVICE_ID, it) }
+            values.forEach { (key, value) ->
+                if (key == KEY_AGRO_DEVICE_ID) return@forEach
+                when (value) {
+                    is Boolean -> putBoolean(key, value)
+                    is Int -> putInt(key, value)
+                    is Long -> putLong(key, value)
+                    is Float -> putFloat(key, value)
+                    is String -> putString(key, value)
+                    is Set<*> -> putStringSet(key, value.filterIsInstance<String>().toSet())
+                }
+            }
+        }
+    }
+
+    /**
      * `clear()` wipes preferences as well as credentials, so **every** flow has to be reset to the
      * value the store now actually holds. Leaving some of them stale meant a wipe left the app
      * showing a paired Agro server and the previous theme until the next cold start.
