@@ -57,6 +57,9 @@ class PlayerConnection @Inject constructor(
     private val _controller = MutableStateFlow<MediaController?>(null)
     val controller: StateFlow<MediaController?> = _controller.asStateFlow()
 
+    /** 2-second grace window to restore playback position when returning from an accidental skip. */
+    private var skipGraceWindow: SkipGraceWindow? = null
+
     /**
      * Endless-radio top-up. Owned by [SecureStorage] rather than held here, because a flag that
      * only lived in this singleton was gone the moment the process was.
@@ -564,12 +567,43 @@ class PlayerConnection @Inject constructor(
 
     fun seekToIndex(index: Int) {
         if (isFollowing) return
-        _controller.value?.seekToDefaultPosition(index)
+        val ctrl = _controller.value ?: return
+        val grace = skipGraceWindow
+        if (grace != null && grace.fromIndex == index && System.currentTimeMillis() - grace.timestampSystemMs <= SKIP_GRACE_WINDOW_MS) {
+            skipGraceWindow = null
+            ctrl.seekTo(index, grace.fromPositionMs)
+        } else {
+            ctrl.seekToDefaultPosition(index)
+        }
     }
 
     fun next() {
         if (isFollowing) return
-        _controller.value?.seekToNextMediaItem()
+        val ctrl = _controller.value ?: return
+        val currentIndex = ctrl.currentMediaItemIndex
+        val currentPos = ctrl.currentPosition
+        val nextIndex = ctrl.nextMediaItemIndex
+        if (nextIndex == C.INDEX_UNSET) return
+
+        val grace = skipGraceWindow
+        if (grace != null && grace.fromIndex == nextIndex && System.currentTimeMillis() - grace.timestampSystemMs <= SKIP_GRACE_WINDOW_MS) {
+            skipGraceWindow = null
+            ctrl.seekTo(nextIndex, grace.fromPositionMs)
+            return
+        }
+
+        skipGraceWindow = if (currentPos > 1000L) {
+            SkipGraceWindow(
+                fromIndex = currentIndex,
+                fromPositionMs = currentPos,
+                toIndex = nextIndex,
+                timestampSystemMs = System.currentTimeMillis()
+            )
+        } else {
+            null
+        }
+
+        ctrl.seekToNextMediaItem()
     }
 
     /**
@@ -580,13 +614,41 @@ class PlayerConnection @Inject constructor(
      * moment a gesture starts, never in composition — it changes with playback position.
      */
     val restartsOnPrevious: Boolean
-        get() = (_controller.value?.currentPosition ?: 0L) > RESTART_THRESHOLD_MS
+        get() {
+            val grace = skipGraceWindow
+            val prevIndex = _controller.value?.previousMediaItemIndex ?: C.INDEX_UNSET
+            if (grace != null &&
+                prevIndex != C.INDEX_UNSET &&
+                grace.fromIndex == prevIndex &&
+                System.currentTimeMillis() - grace.timestampSystemMs <= SKIP_GRACE_WINDOW_MS
+            ) {
+                return false
+            }
+            return (_controller.value?.currentPosition ?: 0L) > RESTART_THRESHOLD_MS
+        }
 
     /** Restarts the track when we are past the intro, otherwise steps back — the usual convention. */
     fun previous() {
         if (isFollowing) return
         val ctrl = _controller.value ?: return
-        if (restartsOnPrevious) ctrl.seekTo(0L) else ctrl.seekToPreviousMediaItem()
+        val prevIndex = ctrl.previousMediaItemIndex
+
+        val grace = skipGraceWindow
+        if (grace != null &&
+            prevIndex != C.INDEX_UNSET &&
+            grace.fromIndex == prevIndex &&
+            System.currentTimeMillis() - grace.timestampSystemMs <= SKIP_GRACE_WINDOW_MS
+        ) {
+            skipGraceWindow = null
+            ctrl.seekTo(prevIndex, grace.fromPositionMs)
+            return
+        }
+
+        if (restartsOnPrevious) {
+            ctrl.seekTo(0L)
+        } else {
+            recordSkipAndStepBack(ctrl)
+        }
     }
 
     /**
@@ -600,7 +662,41 @@ class PlayerConnection @Inject constructor(
      */
     fun previousTrack() {
         if (isFollowing) return
-        _controller.value?.seekToPreviousMediaItem()
+        val ctrl = _controller.value ?: return
+        val prevIndex = ctrl.previousMediaItemIndex
+
+        val grace = skipGraceWindow
+        if (grace != null &&
+            prevIndex != C.INDEX_UNSET &&
+            grace.fromIndex == prevIndex &&
+            System.currentTimeMillis() - grace.timestampSystemMs <= SKIP_GRACE_WINDOW_MS
+        ) {
+            skipGraceWindow = null
+            ctrl.seekTo(prevIndex, grace.fromPositionMs)
+            return
+        }
+
+        recordSkipAndStepBack(ctrl)
+    }
+
+    private fun recordSkipAndStepBack(ctrl: MediaController) {
+        val currentIndex = ctrl.currentMediaItemIndex
+        val currentPos = ctrl.currentPosition
+        val prevIndex = ctrl.previousMediaItemIndex
+        if (prevIndex == C.INDEX_UNSET) return
+
+        skipGraceWindow = if (currentPos > 1000L) {
+            SkipGraceWindow(
+                fromIndex = currentIndex,
+                fromPositionMs = currentPos,
+                toIndex = prevIndex,
+                timestampSystemMs = System.currentTimeMillis()
+            )
+        } else {
+            null
+        }
+
+        ctrl.seekToPreviousMediaItem()
     }
 
     fun toggleShuffle() {
@@ -723,6 +819,7 @@ class PlayerConnection @Inject constructor(
 
     private companion object {
         const val RESTART_THRESHOLD_MS = 3_000L
+        const val SKIP_GRACE_WINDOW_MS = 2_000L
 
         /**
          * Both ways a container can fail to parse.
@@ -735,9 +832,15 @@ class PlayerConnection @Inject constructor(
             PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
             PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED
         )
-
     }
 }
+
+private data class SkipGraceWindow(
+    val fromIndex: Int,
+    val fromPositionMs: Long,
+    val toIndex: Int,
+    val timestampSystemMs: Long
+)
 
 /**
  * The most specific message available.
@@ -823,12 +926,20 @@ private fun Player.buildSnapshot(
     }
     // "Not known yet" is not "not allowed": an empty timeline means the item has not been prepared,
     // and reporting false there would leave the bar dead for the first frames of every track.
-    // Livestreams are unseekable; recorded tracks with a known duration are always seekable.
+    // Past that the player's own answer decides, and nothing overrides it.
+    //
+    // It briefly also accepted "the metadata knows a duration" as proof of seekability. That was a
+    // workaround for Navidrome tracks whose bar was dead, and it treated the symptom: the bar lit
+    // up and the seek was still refused underneath, because a duration off the track's metadata
+    // says nothing about whether the *stream* can be scrubbed. The cause was a discarded length in
+    // `RelayDecryptingDataSource` — see the note there — and with that fixed
+    // [Player.isCurrentMediaItemSeekable] is true whenever it should be. A grey bar has to stay
+    // possible: it is how a genuinely unscrubbable stream says so, instead of swallowing the drag.
     val seekable = runCatching {
         if (track?.isLive == true) {
             false
         } else {
-            currentTimeline.isEmpty || isCurrentMediaItemSeekable || (track?.durationMs ?: 0L) > 0L
+            currentTimeline.isEmpty || isCurrentMediaItemSeekable
         }
     }.getOrDefault(true)
     val curIndex = runCatching { currentMediaItemIndex }.getOrDefault(0)

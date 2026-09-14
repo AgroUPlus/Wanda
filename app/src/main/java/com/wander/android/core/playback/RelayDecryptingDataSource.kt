@@ -36,11 +36,26 @@ internal class RelayDecryptingDataSource(
     private var openedUri: Uri? = null
 
     override fun open(dataSpec: DataSpec): Long {
-        upstream.open(dataSpec)
+        // The length upstream resolved, which is the one this method is contracted to return.
+        //
+        // This used to call `upstream.open(dataSpec)` and discard the answer, returning the length
+        // the *request* asked for instead — `C.LENGTH_UNSET` for any ordinary open, since that is
+        // what "read to the end" is spelled as. So every plain HTTP stream in the app reported its
+        // length as unknown, however plainly the server had stated it.
+        //
+        // That is not a cosmetic inaccuracy. With no length an Ogg or FLAC extractor cannot work
+        // out a duration or binary-search for a position, so it publishes an *unseekable*
+        // `SeekMap`; ExoPlayer then withdraws `COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM`, and the
+        // `MediaController` refuses the seek before the player ever sees it — logged as
+        // "Controller isn't allowed to call command= 5". The seek bar moved under the finger and
+        // the position never changed. YouTube Music was unaffected because MP4 and WebM carry
+        // their own index and seek without needing a length, which is why this looked like a
+        // Navidrome bug for as long as it did, and had the server blamed for it in two comments.
+        val resolvedLength = upstream.open(dataSpec)
         openedUri = upstream.uri
 
         val sealedKey = upstream.responseHeaders[SEALED_KEY_HEADER]?.firstOrNull()?.trim()
-        if (sealedKey.isNullOrEmpty()) return lengthOf(dataSpec)
+        if (sealedKey.isNullOrEmpty()) return resolvedLength
 
         val sessionId = dataSpec.uri.relaySessionId()
             ?: throw IOException("An encrypted relay stream arrived at a URL with no session")
@@ -87,9 +102,6 @@ internal class RelayDecryptingDataSource(
     override fun getUri(): Uri? = openedUri ?: upstream.uri
 
     override fun getResponseHeaders(): Map<String, List<String>> = upstream.responseHeaders
-
-    private fun lengthOf(dataSpec: DataSpec): Long =
-        if (dataSpec.length != C.LENGTH_UNSET.toLong()) dataSpec.length else C.LENGTH_UNSET.toLong()
 
     @UnstableApi
     class Factory(

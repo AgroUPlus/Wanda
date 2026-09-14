@@ -194,9 +194,17 @@ class CatalogRepository @Inject constructor(
      * and a discography does not change between two visits a few minutes apart. Stale entries
      * still render instantly from cache; they simply refresh underneath the page rather than in
      * front of it.
+     *
+     * A row with no [ArtistEntity.artistId] is never fresh, however recently it was written. Such a
+     * row records a visit that ended up knowing nothing, and the search is the very thing that
+     * would have fixed that — skipping it leaves the page with no tracks, therefore no id to infer,
+     * therefore nothing to fetch, and the next visit writes the same empty row again. One failed
+     * lookup became six hours of "nothing by this artist in any source" for an artist whose work
+     * was a search away.
      */
     fun isFresh(cached: ArtistEntity): Boolean =
-        System.currentTimeMillis() - cached.fetchedAt < ARTIST_CACHE_MS
+        cached.artistId != null &&
+            System.currentTimeMillis() - cached.fetchedAt < ARTIST_CACHE_MS
 
     /**
      * The artist's own page from the backend that has one.
@@ -259,35 +267,6 @@ class CatalogRepository @Inject constructor(
             it.capabilities.artists && browseId.startsWith(it.sourceType.idPrefix)
         } ?: return@withContext emptyList()
         source.getArtistAlbumPage(browseId, params, artist).getOrDefault(emptyList())
-    }
-
-    /**
-     * Cover for the artist header: a record this artist is *verifiably* credited with, or none.
-     *
-     * This used to be the first cover art in either list, and that is how a K-pop singer ended up
-     * with a stranger's face over her own biography. The lists reaching here have been through
-     * [ArtistIdentity.sameArtist], which deliberately keeps anything it cannot *disprove* — the
-     * right rule for deciding what to list on a page, and the wrong one for deciding whose face to
-     * put at the top of it. A compilation, or a record by someone whose name differs only in case,
-     * satisfies "could be them" and still supplies the wrong photograph.
-     *
-     * So the header applies the stricter test: the record must be credited to this exact name, and
-     * where ids are known it must carry one of theirs. Nothing qualifying means no image — the hero
-     * draws a monogram, which is never wrong about who someone is.
-     */
-    fun artistImage(
-        albums: List<UnifiedAlbum>,
-        tracks: List<UnifiedTrack>,
-        artist: String,
-        artistId: String?
-    ): String? {
-        val aliases = ArtistIdentity.aliasesOf(tracks, artistId?.takeIf { it.isNotBlank() })
-        fun credited(name: String, id: String?): Boolean =
-            name.equals(artist, ignoreCase = true) &&
-                (id.isNullOrBlank() || aliases.isEmpty() || id in aliases)
-
-        return albums.firstOrNull { credited(it.artist, it.artistId) }?.coverArtUrl
-            ?: tracks.firstOrNull { credited(it.artist, it.artistId) }?.artworkUrl
     }
 
     /** Which backends this artist's known material came from, for the page's subtitle. */

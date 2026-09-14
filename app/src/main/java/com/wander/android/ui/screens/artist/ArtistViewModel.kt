@@ -142,12 +142,11 @@ internal class ArtistViewModel @Inject constructor(
         ArtistUiState(
             artist = artist,
             page = page,
-            heroImage = page.imageUrl ?: catalogRepository.artistImage(
-                albums = page.albums?.albums.orEmpty(),
-                tracks = page.topSongs,
-                artist = artist,
-                artistId = details?.id ?: knownArtistId
-            ),
+            // A published portrait or nothing. The fallback that used to sit here picked a cover
+            // off a record credited to this artist — their own sleeve at best, and a sleeve is not
+            // a face. `ArtistHero` has always documented the header as being "never a cover off one
+            // of their records"; this is the line that made that untrue.
+            heroImage = page.imageUrl,
             albumCount = page.albums?.albums?.size ?: 0,
             trackCount = page.topSongs.size,
             isFollowing = following,
@@ -214,8 +213,21 @@ internal class ArtistViewModel @Inject constructor(
                 if (!skipSearchIfFresh) catalogRepository.refreshArtist(artist)
                 // *After* the search, not before: the artist's backend id comes off a track, and
                 // until the search has persisted one there is nothing to ask the backend about.
+                //
+                // Whether the id is *trusted* decides whether the name is checked against the page
+                // that comes back. An id we already hold came from the caller — a tapped track, a
+                // tapped tile, a shared link — or from a page a backend already vouched for, and in
+                // both cases the id is the identity. Only an id inferred by [artistId], off a row
+                // Room matched by name, can be about the wrong person.
+                val idWasGiven = knownArtistId != null
                 val id = knownArtistId ?: artistId()?.also { knownArtistId = it }
-                val page = id?.let { catalogRepository.artistDetails(it, artist) }
+                // Checking a given id against the route's spelling rejects correct pages: an artist
+                // is credited on a track the way that release spelled them and titles their channel
+                // the way they spell themselves now, and the two are allowed to differ. That is why
+                // opening Kesha from a track showed a page with no portrait, bio or shelves.
+                val page = id?.let {
+                    catalogRepository.artistDetails(it, if (idWasGiven) null else artist)
+                }
                 if (page != null) {
                     details.value = page
                     knownArtistId = page.id

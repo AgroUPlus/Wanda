@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * The only thing ViewModels talk to for music data. Room is the source of truth; sources fill it.
@@ -242,22 +243,8 @@ class MusicRepository @Inject constructor(
 
         // ── Tier 2: Navidrome (Personal Server) ──────────────────────────────────────────────
         if (cached != null && cached.source != SourceType.NAVIDROME && sourceFor(SourceType.NAVIDROME)?.isConfigured?.value == true) {
-            val navidromeMatch = sameRecordingAs(cached, trackDao.findNavidromeCandidates(cached.title, TITLE_CANDIDATES))
-            if (navidromeMatch != null) {
-                sourceFor(SourceType.NAVIDROME)?.getStreamInfo(navidromeMatch.id)?.getOrNull()?.let { info ->
-                    return@withContext Result.success(info)
-                }
-            } else {
-                // Secondary check: query Navidrome search directly
-                val navResults = sourceFor(SourceType.NAVIDROME)?.search("${cached.title} ${cached.artist}")?.getOrNull().orEmpty()
-                val wanted = cached.toUnifiedTrack()
-                val navHit = recordingRules.current().substituteFor(wanted, navResults)
-                if (navHit != null) {
-                    sourceFor(SourceType.NAVIDROME)?.getStreamInfo(navHit.id)?.getOrNull()?.let { info ->
-                        return@withContext Result.success(info)
-                    }
-                }
-            }
+            withTimeoutOrNull(SUBSTITUTION_BUDGET_MS) { navidromeSubstituteFor(cached) }
+                ?.let { return@withContext Result.success(it) }
         }
 
         // ── Tier 3: Original Source / YouTube Music ─────────────────────────────────────────
@@ -321,9 +308,9 @@ class MusicRepository @Inject constructor(
      * Persists fetched tracks so they are available offline next time.
      *
      * [asLibrary] separates "this is the user's collection" from "this is something they merely
-     * looked at". Browsing your own Navidrome albums is the former; a search hit, a radio pick or
-     * an Internet Archive result is the latter. Only the former reaches the Library screen — which
-     * is what stops typing in Search from growing the library.
+     * looked at". Browsing your own Navidrome albums is the former; a search hit or a radio pick
+     * is the latter. Only the former reaches the Library screen — which is what stops typing in
+     * Search from growing the library.
      *
      * Sources whose catalogue is not personal ([SourceType.isPersonalLibrary]) never count as
      * library, whichever path fetched them.
@@ -770,9 +757,9 @@ class MusicRepository @Inject constructor(
     }
 
     /**
-     * "Recently added" means added to *your* library, so the Internet Archive is left out: its
-     * recent uploads are a public catalogue, and this call marks what it fetches as library, which
-     * put strangers' uploads in the Library tab.
+     * "Recently added" means added to *your* library, so a source whose catalogue is not yours is
+     * left out: this call marks what it fetches as library, and a public catalogue's recent
+     * uploads are not something the reader added. See [SourceType.isPersonalLibrary].
      */
     suspend fun getRecentTracks(limit: Int = 30): List<UnifiedTrack> = coroutineScope {
         val remote = activeSources()
@@ -872,6 +859,34 @@ class MusicRepository @Inject constructor(
      * same audio. That is the intended loss: an untagged length used to be enough to hand back
      * somebody else's song.
      */
+    /**
+     * The user's own copy of a track they are about to play from somewhere else, if the server has
+     * one — the whole point of hosting your own music.
+     *
+     * Two ways to find it, cheapest first: the Navidrome rows already in Room, and failing that a
+     * search on the server itself, for a track Room has simply never seen.
+     *
+     * That second half is a network round trip, and the caller runs this on the critical path to
+     * the first byte of audio — [com.wander.android.core.playback.StreamResolver] resolves inside
+     * ExoPlayer's loader. So it is bounded by [SUBSTITUTION_BUDGET_MS], and null here means only
+     * "not found in time", never "not present". Unbounded, a slow or unreachable server spent the
+     * HTTP client's full 15s connect plus 30s read budget here *before* the source that was always
+     * going to serve the track was asked — a track that plays fine, half a minute late, for a
+     * substitution that is a preference rather than a requirement.
+     */
+    private suspend fun navidromeSubstituteFor(cached: TrackEntity): StreamInfo? {
+        val navidrome = sourceFor(SourceType.NAVIDROME) ?: return null
+        val known = sameRecordingAs(
+            cached,
+            trackDao.findNavidromeCandidates(cached.title, TITLE_CANDIDATES)
+        )
+        if (known != null) return navidrome.getStreamInfo(known.id).getOrNull()
+
+        val found = navidrome.search("${cached.title} ${cached.artist}").getOrNull().orEmpty()
+        val hit = recordingRules.current().substituteFor(cached.toUnifiedTrack(), found) ?: return null
+        return navidrome.getStreamInfo(hit.id).getOrNull()
+    }
+
     private suspend fun sameRecordingAs(
         wanted: TrackEntity,
         candidates: List<TrackEntity>
@@ -913,5 +928,14 @@ class MusicRepository @Inject constructor(
          * library is a tagging accident, not a track the extra reads would help find.
          */
         const val TITLE_CANDIDATES = 20
+
+        /**
+         * How long the search for a local substitute may hold up playback.
+         *
+         * Short on purpose. This is spent before any audio is fetched, so it is silence the user
+         * is listening to; a server that answers in time improves the track it serves, and one
+         * that does not costs a second rather than the HTTP client's 45-second worst case.
+         */
+        const val SUBSTITUTION_BUDGET_MS = 1_500L
     }
 }
