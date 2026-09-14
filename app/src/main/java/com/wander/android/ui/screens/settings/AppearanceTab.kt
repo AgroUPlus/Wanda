@@ -41,4 +41,13 @@ internal fun LazyListScope.appearanceTab(
             onCheckedChange = actions.onImmersivePlayerChange
         )
     }
+
+    item(key = "cover_carousel") {
+        SettingsToggle(
+            title = "Album cover carousel",
+            subtitle = "M3 Expressive scale and peeking covers when swiping tracks",
+            checked = state.coverCarousel,
+            onCheckedChange = actions.onCoverCarouselChange
+        )
+    }
 }

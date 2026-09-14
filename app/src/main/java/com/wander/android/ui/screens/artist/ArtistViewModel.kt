@@ -141,7 +141,12 @@ internal class ArtistViewModel @Inject constructor(
         ArtistUiState(
             artist = artist,
             page = page,
-            heroImage = page.imageUrl ?: catalogRepository.artistImage(page.albums?.albums.orEmpty(), page.topSongs),
+            heroImage = page.imageUrl ?: catalogRepository.artistImage(
+                albums = page.albums?.albums.orEmpty(),
+                tracks = page.topSongs,
+                artist = artist,
+                artistId = details?.id ?: knownArtistId
+            ),
             albumCount = page.albums?.albums?.size ?: 0,
             trackCount = page.topSongs.size,
             isFollowing = following,

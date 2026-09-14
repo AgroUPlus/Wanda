@@ -1,0 +1,85 @@
+package com.wander.android.ui.screens.settings
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.wander.android.ui.components.headerInset
+import com.wander.android.ui.components.listInset
+
+/**
+ * One page of settings — the rows that used to be one tab of the pager.
+ *
+ * The bodies are the same `LazyListScope` extensions they always were, unchanged: a tab and a page
+ * are the same list of rows, and the only thing that differs is how you arrive at it.
+ *
+ * The header takes the top inset and the list takes the bottom, as on every other screen with a
+ * fixed header over a scroll — see `ScreenInsets`. Doing it here rather than in each page body is
+ * the point: a rule each new page had to remember is a rule that gets forgotten, and this app has
+ * shipped a back arrow behind the clock before.
+ */
+@Composable
+internal fun SettingsCategoryScreen(
+    category: SettingsCategory,
+    contentPadding: PaddingValues,
+    onBack: () -> Unit,
+    onNavidromeLogin: () -> Unit,
+    onYouTubeLogin: () -> Unit,
+    onOpenImport: () -> Unit,
+    onOpenMergePreview: () -> Unit,
+    onOpenFingerprints: () -> Unit
+) {
+    val host = rememberSettingsHost(
+        onNavidromeLogin = onNavidromeLogin,
+        onYouTubeLogin = onYouTubeLogin,
+        onOpenImport = onOpenImport,
+        onOpenMergePreview = onOpenMergePreview,
+        onOpenFingerprints = onOpenFingerprints
+    )
+
+    Column(modifier = Modifier.fillMaxSize().padding(contentPadding.headerInset())) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 4.dp, end = 20.dp, top = 8.dp, bottom = 8.dp)
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = "Back to settings"
+                )
+            }
+            Text(
+                text = category.label,
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+        }
+
+        LazyColumn(
+            contentPadding = contentPadding.listInset(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            when (category) {
+                SettingsCategory.CONNECTIONS -> connectionsTab(host.state, host.actions)
+                SettingsCategory.SYNC -> syncTab(host.state, host.actions, host.devices)
+                SettingsCategory.APPEARANCE -> appearanceTab(host.state, host.actions)
+                SettingsCategory.PLAYBACK -> playbackStorageTab(host.state, host.actions)
+                SettingsCategory.EXTERNAL -> externalTab(host.state, host.actions)
+                SettingsCategory.PRIVACY -> privacyTab(host.state, host.actions)
+                SettingsCategory.ABOUT -> aboutTab(host.state, host.actions)
+            }
+        }
+    }
+}

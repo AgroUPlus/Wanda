@@ -165,9 +165,16 @@ class NavidromeSource @Inject constructor(
             ArtistDetails(
                 id = "$PREFIX${artist.id}",
                 name = artist.name,
-                imageUrl = info?.largeImageUrl
-                    ?: info?.mediumImageUrl
-                    ?: apiClient.buildCoverArtUrl(artist.coverArt),
+                // The portrait the server publishes, or none.
+                //
+                // `artist.coverArt` used to be the last resort here and it is not a portrait: on
+                // Navidrome it is an *album* cover id. Last.fm stopped serving artist images, so
+                // `getArtistInfo2` commonly answers with a biography and empty image URLs — and
+                // this expression then put one of that artist's record sleeves, or a sleeve off a
+                // name-collided record, on the page as their face. A correct bio beside a stranger's
+                // photograph is worse than no photograph, so null it is; `ArtistHero` draws a
+                // monogram instead.
+                imageUrl = info?.largeImageUrl ?: info?.mediumImageUrl,
                 bio = info?.biography?.stripBiographyMarkup(),
                 sections = if (albums.isEmpty()) {
                     emptyList()

@@ -62,6 +62,9 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     private val _isCoverArtThemeEnabled = MutableStateFlow(prefs.getBoolean(KEY_COVER_ART_THEME, true))
     val isCoverArtThemeEnabled: StateFlow<Boolean> = _isCoverArtThemeEnabled.asStateFlow()
 
+    private val _isCoverCarouselEnabled = MutableStateFlow(prefs.getBoolean(KEY_COVER_CAROUSEL, true))
+    val isCoverCarouselEnabled: StateFlow<Boolean> = _isCoverCarouselEnabled.asStateFlow()
+
     /** Off by default: a version check on every launch is a network call the user did not ask for. */
     private val _isAutoUpdateCheckEnabled =
         MutableStateFlow(prefs.getBoolean(KEY_AUTO_UPDATE_CHECK, false))
@@ -302,6 +305,11 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _isCoverArtThemeEnabled.value = enabled
     }
 
+    fun setCoverCarouselEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_COVER_CAROUSEL, enabled) }
+        _isCoverCarouselEnabled.value = enabled
+    }
+
     fun setAutoUpdateCheckEnabled(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_AUTO_UPDATE_CHECK, enabled) }
         _isAutoUpdateCheckEnabled.value = enabled
@@ -374,6 +382,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _isAmoledBlack.value = false
         _isMonetDynamic.value = true
         _isCoverArtThemeEnabled.value = true
+        _isCoverCarouselEnabled.value = true
         _agroConfigured.value = false
         _agroSyncSettings.value = false
         _shareDomain.value = ""
@@ -631,6 +640,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_MONET_DYNAMIC = "key_monet_dynamic"
         private const val KEY_IMMERSIVE_PLAYER = "key_immersive_player"
         private const val KEY_COVER_ART_THEME = "key_cover_art_theme"
+        private const val KEY_COVER_CAROUSEL = "key_cover_carousel"
         private const val KEY_AUTO_UPDATE_CHECK = "key_auto_update_check"
         private const val KEY_RELEASE_NOTIFICATIONS = "key_release_notifications"
         private const val KEY_RELEASE_WATERMARK = "key_release_watermark"

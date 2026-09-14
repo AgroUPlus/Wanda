@@ -235,10 +235,34 @@ class CatalogRepository @Inject constructor(
         source.getArtistAlbumPage(browseId, params, artist).getOrDefault(emptyList())
     }
 
-    /** Cover for the artist header: whichever of their records has one. */
-    fun artistImage(albums: List<UnifiedAlbum>, tracks: List<UnifiedTrack>): String? =
-        albums.firstNotNullOfOrNull { it.coverArtUrl }
-            ?: tracks.firstNotNullOfOrNull { it.artworkUrl }
+    /**
+     * Cover for the artist header: a record this artist is *verifiably* credited with, or none.
+     *
+     * This used to be the first cover art in either list, and that is how a K-pop singer ended up
+     * with a stranger's face over her own biography. The lists reaching here have been through
+     * [ArtistIdentity.sameArtist], which deliberately keeps anything it cannot *disprove* — the
+     * right rule for deciding what to list on a page, and the wrong one for deciding whose face to
+     * put at the top of it. A compilation, or a record by someone whose name differs only in case,
+     * satisfies "could be them" and still supplies the wrong photograph.
+     *
+     * So the header applies the stricter test: the record must be credited to this exact name, and
+     * where ids are known it must carry one of theirs. Nothing qualifying means no image — the hero
+     * draws a monogram, which is never wrong about who someone is.
+     */
+    fun artistImage(
+        albums: List<UnifiedAlbum>,
+        tracks: List<UnifiedTrack>,
+        artist: String,
+        artistId: String?
+    ): String? {
+        val aliases = ArtistIdentity.aliasesOf(tracks, artistId?.takeIf { it.isNotBlank() })
+        fun credited(name: String, id: String?): Boolean =
+            name.equals(artist, ignoreCase = true) &&
+                (id.isNullOrBlank() || aliases.isEmpty() || id in aliases)
+
+        return albums.firstOrNull { credited(it.artist, it.artistId) }?.coverArtUrl
+            ?: tracks.firstOrNull { credited(it.artist, it.artistId) }?.artworkUrl
+    }
 
     /** Which backends this artist's known material came from, for the page's subtitle. */
     fun sourcesOf(tracks: List<UnifiedTrack>): List<SourceType> =

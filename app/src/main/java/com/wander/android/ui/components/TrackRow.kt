@@ -2,6 +2,7 @@ package com.wander.android.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,8 +20,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -56,6 +60,15 @@ fun TrackRow(
     // separately made the artwork and the text disagree about how unavailable the track was.
     val rowAlpha = if (enabled) 1f else DisabledAlpha
 
+    // The press answers on the artwork, not on the whole row.
+    //
+    // A row is mostly text and mostly empty space, and scaling all of it reads as the list itself
+    // flinching. Every card in the app already springs its picture under a finger via
+    // [rememberPressScale]; this is the same answer in the row-shaped places — the artist page's
+    // song lists among them, which had no press feedback at all.
+    val interactionSource = remember { MutableInteractionSource() }
+    val artworkScale by rememberPressScale(interactionSource, label = "trackRowPress")
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
@@ -63,6 +76,8 @@ fun TrackRow(
             // Long press stays live while the tap does not: the actions sheet is still useful on
             // an unplayable track — it is where "download" and "add to playlist" live.
             .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null,
                 onClick = { if (enabled) onPlay() },
                 onLongClick = onLongPress
             )
@@ -75,6 +90,7 @@ fun TrackRow(
             shape = MaterialTheme.shapes.small,
             modifier = Modifier
                 .size(52.dp)
+                .scale(artworkScale)
                 .graphicsLayer { alpha = rowAlpha }
         )
 

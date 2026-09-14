@@ -31,6 +31,20 @@ data class PlaybackState(
     val isPlaying: Boolean = false,
     val isBuffering: Boolean = false,
     val durationMs: Long = 0L,
+    /**
+     * Whether the player can actually move the playhead in this item.
+     *
+     * Separate from [durationMs] because the two genuinely disagree. A Navidrome stream reports a
+     * duration from its metadata while the extractor may publish no seek table at all, so the bar
+     * gated on duration alone drew itself enabled over a stream that silently swallowed every
+     * scrub — the defect this was added for. See `PlayerFactory.seekableExtractors`, which fixes
+     * the common cause; this is what stops the remaining cases lying about it.
+     *
+     * Defaults to true, and is only ever set false by an answer from a prepared timeline: "not
+     * known yet" must not read as "not allowed", or the bar would be dead for the first frames of
+     * every track.
+     */
+    val isSeekable: Boolean = true,
     val isShuffle: Boolean = false,
     val repeatMode: RepeatMode = RepeatMode.OFF,
     val isRadioMode: Boolean = false,

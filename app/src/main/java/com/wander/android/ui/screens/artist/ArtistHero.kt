@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.artist
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -20,6 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.RectangleShape
+import com.wander.android.ui.components.ArtistMonogram
+import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.ImmersiveHero
 import com.wander.android.ui.components.ShapedActionButton
 import com.wander.android.ui.components.ShapedPlayButton
@@ -32,8 +36,9 @@ import com.wander.android.ui.components.ShapedPlayButton
  * to match the album page's header. The two pages *should* differ here, and now do — see
  * [ImmersiveHero], which is the shape both of them settled on.
  *
- * The portrait is the backend's when it publishes one, otherwise a cover off one of their records.
- * Wanda has no artist photography and does not invent any.
+ * The portrait is the backend's when it publishes one, and a monogram when it does not. It is
+ * deliberately never a cover off one of their records: that fallback is how a correct biography
+ * ended up beside a stranger's photograph. Wanda has no artist photography and does not guess.
  */
 @Composable
 internal fun ArtistHero(
@@ -57,11 +62,29 @@ internal fun ArtistHero(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         ImmersiveHero(
-            imageUrl = imageUrl,
-            contentDescription = name,
             aspect = PortraitAspect,
             scrimHeight = 108.dp,
-            horizontalPadding = 24.dp
+            horizontalPadding = 24.dp,
+            backdrop = {
+                // A portrait or a letter, and nothing in between.
+                //
+                // This used to hand `imageUrl` straight to `Artwork`, which draws a music note for
+                // null — fine for a missing album cover, wrong for a person. What made it a real
+                // bug is what fed it: the fallback below `imageUrl` was a cover off any record the
+                // page could not *disprove* was theirs, so a correct biography was being published
+                // next to a stranger's face. That fallback is gone; this is what stands in for it.
+                if (imageUrl.isNullOrBlank()) {
+                    ArtistMonogram(name = name)
+                } else {
+                    Artwork(
+                        url = imageUrl,
+                        contentDescription = name,
+                        sizeDp = PortraitDecodeSize,
+                        shape = RectangleShape,
+                        modifier = Modifier.fillMaxWidth().aspectRatio(PortraitAspect)
+                    )
+                }
+            }
         ) {
             Text(
                 text = name,
@@ -134,3 +157,6 @@ internal fun ArtistHero(
 
 /** A shade taller than the shared default: a head-and-shoulders shot needs the extra height. */
 internal const val PortraitAspect = 0.86f
+
+/** Constant, not measured — see the note in [ImmersiveHero]'s own backdrop. */
+private val PortraitDecodeSize = 480.dp

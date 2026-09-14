@@ -46,4 +46,8 @@ class QueueViewModel @Inject constructor(
     fun removeFromQueue(index: Int) {
         playerConnection.removeFromQueue(index)
     }
+
+    fun moveInQueue(from: Int, to: Int) {
+        playerConnection.moveInQueue(from, to)
+    }
 }
