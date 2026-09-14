@@ -1,6 +1,7 @@
 package com.wander.android.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -68,11 +70,18 @@ fun TrackRow(
     // song lists among them, which had no press feedback at all.
     val interactionSource = remember { MutableInteractionSource() }
     val artworkScale by rememberPressScale(interactionSource, label = "trackRowPress")
+    val rowBackground = if (isPlaying) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.30f)
+    } else {
+        Color.Transparent
+    }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .background(rowBackground, MaterialTheme.shapes.medium)
             // Long press stays live while the tap does not: the actions sheet is still useful on
             // an unplayable track — it is where "download" and "add to playlist" live.
             .combinedClickable(
@@ -81,7 +90,7 @@ fun TrackRow(
                 onClick = { if (enabled) onPlay() },
                 onLongClick = onLongPress
             )
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {
         Artwork(
             url = track.artworkUrl,
@@ -153,11 +162,7 @@ fun TrackRow(
         }
 
         if (isPlaying) {
-            Icon(
-                imageVector = Icons.Rounded.Equalizer,
-                contentDescription = "Now playing",
-                tint = MaterialTheme.colorScheme.primary
-            )
+            KineticEqualizer(isPlaying = true)
         } else if (onToggleLike != null) {
             LikeButton(isLiked = track.isLiked, onToggle = onToggleLike)
         }
