@@ -16,15 +16,14 @@ class ProxyRoutingTest {
 
     @Test
     fun `the relayed domains are relayed`() {
-        assertTrue(ProxyRouting.shouldRelay("lrclib.net", "/api/get"))
-        assertTrue(ProxyRouting.shouldRelay("nyaa.si", "/"))
+        assertTrue(ProxyRouting.shouldRelay("lrclib.net"))
+        assertTrue(ProxyRouting.shouldRelay("nyaa.si"))
     }
 
     /** Backends move hosts around; a subdomain of a relayed domain is still that domain. */
     @Test
     fun `subdomains of a relayed domain are relayed`() {
-        assertTrue(ProxyRouting.shouldRelay("api.lrclib.net", "/api/get"))
-        assertTrue(ProxyRouting.shouldRelay("ia800.us.archive.org", "/metadata/x"))
+        assertTrue(ProxyRouting.shouldRelay("api.lrclib.net"))
     }
 
     /**
@@ -38,34 +37,16 @@ class ProxyRoutingTest {
      */
     @Test
     fun `a host that merely contains a relayed domain is not relayed`() {
-        assertFalse(ProxyRouting.shouldRelay("lrclib.net.example.com", "/api/get"))
-        assertFalse(ProxyRouting.shouldRelay("notlrclib.net", "/api/get"))
-        assertFalse(ProxyRouting.shouldRelay("evil-archive.org", "/metadata/x"))
+        assertFalse(ProxyRouting.shouldRelay("lrclib.net.example.com"))
+        assertFalse(ProxyRouting.shouldRelay("notlrclib.net"))
+        assertFalse(ProxyRouting.shouldRelay("evillrclib.net"))
     }
 
     /** Case is not part of a host's identity, and a redirect can change it. */
     @Test
     fun `host matching ignores case`() {
-        assertTrue(ProxyRouting.shouldRelay("LRCLIB.NET", "/api/get"))
-        assertTrue(ProxyRouting.shouldRelay("API.Archive.Org", "/metadata/x"))
-    }
-
-    /**
-     * Archive.org is relayed for catalogue lookups only — the rest is audio and artwork, which the
-     * relay cannot carry because Agro buffers whole bodies in memory.
-     */
-    @Test
-    fun `only archive metadata is relayed`() {
-        assertTrue(ProxyRouting.shouldRelay("archive.org", "/advancedsearch.php?q=x"))
-        assertTrue(ProxyRouting.shouldRelay("archive.org", "/metadata/some-item"))
-        assertFalse(ProxyRouting.shouldRelay("archive.org", "/download/some-item/track.mp3"))
-        assertFalse(ProxyRouting.shouldRelay("archive.org", "/services/img/some-item"))
-    }
-
-    /** The path is matched at its start, not anywhere in it. */
-    @Test
-    fun `a path that merely mentions metadata is not relayed`() {
-        assertFalse(ProxyRouting.shouldRelay("archive.org", "/download/metadata/track.mp3"))
+        assertTrue(ProxyRouting.shouldRelay("LRCLIB.NET"))
+        assertTrue(ProxyRouting.shouldRelay("API.LrcLib.Net"))
     }
 
     /**
@@ -75,12 +56,12 @@ class ProxyRoutingTest {
      */
     @Test
     fun `youtube music is not relayed today`() {
-        assertFalse(ProxyRouting.shouldRelay("music.youtube.com", "/youtubei/v1/browse"))
+        assertFalse(ProxyRouting.shouldRelay("music.youtube.com"))
     }
 
     @Test
     fun `everything else goes direct`() {
-        assertFalse(ProxyRouting.shouldRelay("example.com", "/"))
-        assertFalse(ProxyRouting.shouldRelay("", ""))
+        assertFalse(ProxyRouting.shouldRelay("example.com"))
+        assertFalse(ProxyRouting.shouldRelay(""))
     }
 }

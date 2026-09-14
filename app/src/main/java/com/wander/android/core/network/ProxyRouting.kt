@@ -10,16 +10,13 @@ package com.wander.android.core.network
 object ProxyRouting {
 
     /**
-     * Whether a request to [host] and [path] should be relayed.
+     * Whether a request to [host] should be relayed.
      *
      * Only metadata. Streaming audio through the relay is a separate, unbuilt feature — Agro
      * buffers whole response bodies in memory today, so an album would be tens of megabytes of
      * server RAM per listener.
      */
-    fun shouldRelay(host: String, path: String): Boolean = when {
-        matchesDomain(host, ARCHIVE_ORG) -> isArchiveMetadata(path)
-        else -> RELAYED_DOMAINS.any { matchesDomain(host, it) }
-    }
+    fun shouldRelay(host: String): Boolean = RELAYED_DOMAINS.any { matchesDomain(host, it) }
 
     /**
      * Whether [host] *is* [domain], or a subdomain of it.
@@ -31,22 +28,10 @@ object ProxyRouting {
      * substring test standing in for a host comparison in a privacy path, and the next person to
      * move this code has no reason to suspect it of being one.
      *
-     * The dot matters: without it `evil-archive.org` would pass a naive `endsWith`.
+     * The dot matters: `endsWith(domain)` alone would match `evilexample.com` for `example.com`.
      */
     private fun matchesDomain(host: String, domain: String): Boolean =
         host.equals(domain, ignoreCase = true) || host.endsWith(".$domain", ignoreCase = true)
-
-    /**
-     * Archive.org is relayed for catalogue lookups only.
-     *
-     * Its audio and artwork go direct, and deliberately: they are the large bodies the relay cannot
-     * carry. Worth knowing that this means archive.org still sees the listener's address for
-     * anything they actually play.
-     */
-    private fun isArchiveMetadata(path: String): Boolean =
-        path.startsWith("/advancedsearch.php") || path.startsWith("/metadata/")
-
-    private const val ARCHIVE_ORG = "archive.org"
 
     /**
      * Relayed in full.
