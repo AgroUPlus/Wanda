@@ -47,7 +47,22 @@ internal val WandaLightScheme = lightColorScheme(
     tertiary = Coral,
     onTertiary = Color.White,
     tertiaryContainer = Color(0xFFFFD9E1),
-    onTertiaryContainer = Color(0xFF3E0018)
+    onTertiaryContainer = Color(0xFF3E0018),
+    background = Color(0xFFFAF8FF),
+    onBackground = Color(0xFF1B1A22),
+    surface = Color(0xFFFAF8FF),
+    onSurface = Color(0xFF1B1A22),
+    surfaceVariant = Color(0xFFE5E0F2),
+    onSurfaceVariant = Color(0xFF474553),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFF4F2FA),
+    surfaceContainer = Color(0xFFEEEBF4),
+    surfaceContainerHigh = Color(0xFFE8E5EE),
+    surfaceContainerHighest = Color(0xFFE2DFE9),
+    surfaceDim = Color(0xFFDCD8E2),
+    surfaceBright = Color(0xFFFAF8FF),
+    outline = Color(0xFF787584),
+    outlineVariant = Color(0xFFC9C4D5)
 )
 
 internal val WandaDarkScheme = darkColorScheme(
@@ -62,5 +77,21 @@ internal val WandaDarkScheme = darkColorScheme(
     tertiary = CoralDark,
     onTertiary = Color(0xFF61001F),
     tertiaryContainer = Color(0xFF8A2F4C),
-    onTertiaryContainer = Color(0xFFFFD9E1)
+    onTertiaryContainer = Color(0xFFFFD9E1),
+    background = Color(0xFF13121A),
+    onBackground = Color(0xFFE5E1EC),
+    surface = Color(0xFF13121A),
+    onSurface = Color(0xFFE5E1EC),
+    surfaceVariant = Color(0xFF484554),
+    onSurfaceVariant = Color(0xFFC9C4D5),
+    surfaceContainerLowest = Color(0xFF0E0D14),
+    surfaceContainerLow = Color(0xFF1B1A23),
+    surfaceContainer = Color(0xFF201F29),
+    surfaceContainerHigh = Color(0xFF2B2934),
+    surfaceContainerHighest = Color(0xFF36343F),
+    surfaceDim = Color(0xFF13121A),
+    surfaceBright = Color(0xFF3A3844),
+    outline = Color(0xFF938F9F),
+    outlineVariant = Color(0xFF484554)
 )
+

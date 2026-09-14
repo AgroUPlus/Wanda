@@ -46,25 +46,33 @@ val LocalCoverSeedColor = compositionLocalOf<Color?> { null }
 // Bitmap loading + colour extraction
 // ---------------------------------------------------------------------------
 
+private val seedColorCache = java.util.Collections.synchronizedMap(
+    object : java.util.LinkedHashMap<String, Color>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Color>?): Boolean = size > 24
+    }
+)
+
 /**
  * Loads [url] through Coil at a small size (128 px — enough for palette accuracy, cheap to
  * decode) and extracts a seed colour using [Palette]. Returns null until the image arrives or
  * if the palette is empty (solid-black cover, etc.).
  *
- * Disallows hardware bitmaps in the Coil request and converts hardware bitmaps to software
- * copies if needed, preventing `IllegalStateException: pixel access is not supported on Config#HARDWARE`.
- *
- * The result is stable across recompositions for the same URL; a new URL resets to null then
- * resolves to the new cover's colour.
+ * Caches extracted seeds in an LRU memory cache so when the player is expanded, the colour scheme
+ * applies instantly without falling back to default theme during the decode.
  */
 @Composable
 fun rememberCoverSeedColor(url: String?): Color? {
     val context = LocalContext.current
-    var seedColor by remember(url) { mutableStateOf<Color?>(null) }
+    var seedColor by remember(url) { mutableStateOf(url?.let { seedColorCache[it] }) }
 
     LaunchedEffect(url) {
         if (url.isNullOrBlank()) {
             seedColor = null
+            return@LaunchedEffect
+        }
+        val cached = seedColorCache[url]
+        if (cached != null) {
+            seedColor = cached
             return@LaunchedEffect
         }
         val loader = ImageLoader(context)
@@ -78,7 +86,11 @@ fun rememberCoverSeedColor(url: String?): Color? {
         val result = loader.execute(request)
         if (result is SuccessResult) {
             val bitmap = result.image.toBitmap()
-            seedColor = extractSeedColor(bitmap)
+            val extracted = extractSeedColor(bitmap)
+            if (extracted != null) {
+                seedColorCache[url] = extracted
+            }
+            seedColor = extracted
         }
         loader.shutdown()
     }
@@ -203,10 +215,10 @@ internal fun ColorScheme.toAmoled(): ColorScheme = copy(
     surface                 = Color.Black,
     surfaceDim              = Color.Black,
     surfaceContainerLowest  = Color.Black,
-    surfaceContainerLow     = Color(0xFF0A0A0A),
-    surfaceContainer        = Color(0xFF121212),
-    surfaceContainerHigh    = Color(0xFF1A1A1A),
-    surfaceContainerHighest = Color(0xFF222222)
+    surfaceContainerLow     = Color(0xFF0C0B12),
+    surfaceContainer        = Color(0xFF14131C),
+    surfaceContainerHigh    = Color(0xFF1C1B26),
+    surfaceContainerHighest = Color(0xFF242330)
 )
 
 // ---------------------------------------------------------------------------
