@@ -209,12 +209,38 @@ class CatalogRepository @Inject constructor(
      *
      * Null when nothing was reachable, which the screen treats as "no extra page", not an error —
      * the library-derived one underneath it is still perfectly good.
+     *
+     * [expectedName] is the name the caller was browsing, when they were browsing a name at all.
+     * Null means the id came from somewhere authoritative — a shared link, a tapped tile — where
+     * the id *is* the identity and there is nothing to check it against. It is only supplied when
+     * the id was inferred from a name, which is the one way it can be about the wrong person.
      */
-    suspend fun artistDetails(artistId: String): ArtistDetails? = withContext(Dispatchers.IO) {
+    suspend fun artistDetails(
+        artistId: String,
+        expectedName: String? = null
+    ): ArtistDetails? = withContext(Dispatchers.IO) {
         val source = musicRepository.sources.firstOrNull {
             it.capabilities.artists && artistId.startsWith(it.sourceType.idPrefix)
         } ?: return@withContext null
-        source.getArtist(artistId).getOrNull()
+        val page = source.getArtist(artistId).getOrNull() ?: return@withContext null
+
+        // The page has to be about the artist we asked for, or it is not this artist's page.
+        //
+        // [artistId] can be wrong through no fault of the caller: where nobody passed an id, it is
+        // picked off a track Room matched by *name*, and Room folds case deliberately so that one
+        // artist spelled two ways stays together. On a name two artists share, that picks one of
+        // them at random — and the fetch then succeeds, returning a complete, genuine page about
+        // the other person. That is how a portrait of a stranger arrives with a matching biography
+        // and no error anywhere: nothing downstream could tell, because nothing downstream knows
+        // which name was asked for. This is the only place that does.
+        //
+        // Rejected rather than repaired. A page about somebody else has nothing salvageable on it,
+        // and the artist screen renders perfectly well from the library alone with a monogram at
+        // the top — see `ArtistHero`.
+        if (expectedName != null && !ArtistIdentity.sameName(page.name, expectedName)) {
+            return@withContext null
+        }
+        page
     }
 
     /**

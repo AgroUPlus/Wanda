@@ -738,8 +738,29 @@ val MIGRATION_30_31 = object : Migration(30, 31) {
     }
 }
 
+/**
+ * Empties the cached artist identities.
+ *
+ * The rows are not merely stale, they are wrong: until now an artist's page could be fetched using
+ * an id picked off a track Room had matched by *name*, and on a name two artists share that
+ * returned a complete, genuine page about the other person — whose portrait, biography and backend
+ * id were then written here under the name that was asked for. Nothing downstream could detect it,
+ * so every later visit served a stranger's face from cache, and the fix upstream cannot repair a
+ * row it no longer has any reason to overwrite.
+ *
+ * Deleted rather than patched: there is no way to tell a poisoned row from a sound one after the
+ * fact, and this table is a cache. The cost of clearing it is one cross-source search per artist on
+ * next visit, which is exactly what the table exists to skip and precisely what a wrong portrait is
+ * worth.
+ */
+val MIGRATION_31_32 = object : Migration(31, 32) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DELETE FROM artists")
+    }
+}
+
 /** Every migration, in order. Room applies whichever ones a given database still needs. */
 val WANDER_MIGRATIONS: Array<Migration> = arrayOf(
     MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
-    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31
+    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32
 )

@@ -9,6 +9,7 @@ import com.wander.android.core.database.entity.ArtistEntity
 import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.ArtistIdentity
 import com.wander.android.data.repository.ArtistPageMerger
 import com.wander.android.data.repository.CatalogRepository
 import com.wander.android.data.repository.MusicRepository
@@ -214,7 +215,7 @@ internal class ArtistViewModel @Inject constructor(
                 // *After* the search, not before: the artist's backend id comes off a track, and
                 // until the search has persisted one there is nothing to ask the backend about.
                 val id = knownArtistId ?: artistId()?.also { knownArtistId = it }
-                val page = id?.let { catalogRepository.artistDetails(it) }
+                val page = id?.let { catalogRepository.artistDetails(it, artist) }
                 if (page != null) {
                     details.value = page
                     knownArtistId = page.id
@@ -275,6 +276,7 @@ internal class ArtistViewModel @Inject constructor(
      * exactly why [routeArtistId] wins whenever it exists.
      */
     private fun artistId(): String? = state.value.page.topSongs
+        .filter { ArtistIdentity.sameName(it.artist, artist) }
         .firstNotNullOfOrNull { it.artistId?.takeIf(String::isNotBlank) }
 
     /**

@@ -145,9 +145,8 @@ private fun PlayerSeekBarInternal(
                 }
                 scrubbing = -1f
             },
-            // A duration is not permission to scrub. A Navidrome track carries one from its
-            // metadata whether or not the extractor published a seek table, so gating on the
-            // duration alone drew a live-looking bar over a stream that swallowed every gesture.
+            // Scrubbing requires a known duration and seekability. Recorded library tracks
+            // are seekable; livestreams are handled above with LiveChip.
             enabled = durationMs > 0L && isSeekable,
             track = { sliderState ->
                 if (showWavy) {

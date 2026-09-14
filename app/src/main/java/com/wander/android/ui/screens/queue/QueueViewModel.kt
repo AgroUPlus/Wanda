@@ -47,6 +47,10 @@ class QueueViewModel @Inject constructor(
         playerConnection.removeFromQueue(index)
     }
 
+    fun insertInQueue(index: Int, track: UnifiedTrack) {
+        playerConnection.insertInQueue(index, track)
+    }
+
     fun moveInQueue(from: Int, to: Int) {
         playerConnection.moveInQueue(from, to)
     }

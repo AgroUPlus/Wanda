@@ -346,6 +346,20 @@ class PlayerConnection @Inject constructor(
     }
 
     /**
+     * Puts a track back where it was, for the queue drawer's undo.
+     *
+     * Removal in the drawer is a swipe, which is easy to do by accident and — without this — would
+     * be the one destructive edit in the app with no way back. The index is clamped rather than
+     * rejected: by the time undo is tapped the queue may have moved on, and landing the track
+     * nearby is a better answer than silently dropping it.
+     */
+    fun insertInQueue(index: Int, track: UnifiedTrack) {
+        val ctrl = _controller.value ?: return
+        trackCache[track.id] = track
+        ctrl.addMediaItems(index.coerceIn(0, ctrl.mediaItemCount), listOf(track.toMediaItem()))
+    }
+
+    /**
      * Moves a queued track, for the queue drawer's drag handles.
      *
      * Refused while the order is locked: a jam or a listen-along decides what plays next, and a
@@ -808,10 +822,14 @@ private fun Player.buildSnapshot(
         reported
     }
     // "Not known yet" is not "not allowed": an empty timeline means the item has not been prepared,
-    // and reporting false there would leave the bar dead for the first frames of every track. Only
-    // a prepared timeline is allowed to say no.
+    // and reporting false there would leave the bar dead for the first frames of every track.
+    // Livestreams are unseekable; recorded tracks with a known duration are always seekable.
     val seekable = runCatching {
-        currentTimeline.isEmpty || isCurrentMediaItemSeekable
+        if (track?.isLive == true) {
+            false
+        } else {
+            currentTimeline.isEmpty || isCurrentMediaItemSeekable || (track?.durationMs ?: 0L) > 0L
+        }
     }.getOrDefault(true)
     val curIndex = runCatching { currentMediaItemIndex }.getOrDefault(0)
     val shuffle = runCatching { shuffleModeEnabled }.getOrDefault(false)

@@ -474,7 +474,8 @@ internal fun NowPlayingScreen(
                     onSeek = playerConnection::seekTo,
                     modifier = Modifier.padding(top = 12.dp),
                     isLive = track.isLive,
-                    isPlaying = state.isPlaying
+                    isPlaying = state.isPlaying,
+                    isSeekable = state.isSeekable
                 )
 
                 PlayerControls(
@@ -482,6 +483,8 @@ internal fun NowPlayingScreen(
                     connection = playerConnection,
                     modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
                 )
+
+                QueuePullTab(onOpen = onOpenQueue, contentAlpha = contentAlpha)
             }
 
             rateAnchor?.let { anchor ->
@@ -791,6 +794,8 @@ internal fun NowPlayingScreen(
                 connection = playerConnection,
                 modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
             )
+
+            QueuePullTab(onOpen = onOpenQueue, contentAlpha = contentAlpha)
         }
         }
     }
