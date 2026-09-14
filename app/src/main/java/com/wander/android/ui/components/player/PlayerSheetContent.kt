@@ -40,6 +40,7 @@ import com.wander.android.ui.components.MiniArtworkSize
 import com.wander.android.ui.components.MiniPlayer
 import com.wander.android.ui.navigation.DockRowHeight
 import com.wander.android.ui.screens.player.NowPlayingScreen
+import com.wander.android.ui.screens.queue.QueueDrawer
 
 /**
  * Grows the docked strip into the full player as the sheet is dragged.
@@ -88,6 +89,7 @@ fun PlayerSheetContent(
     fingerprintStatus: com.wander.android.data.repository.FingerprintStatus =
         com.wander.android.data.repository.FingerprintStatus.MISSING,
     immersivePlayer: Boolean = false,
+    coverCarousel: Boolean = true,
 ) {
     val anchors = remember { PlayerArtworkAnchors() }
     // Owned here, not in `NowPlayingScreen`. The sheet is what draws the cover the lyrics replace,
@@ -95,6 +97,11 @@ fun PlayerSheetContent(
     // stays, so state kept down there left the strip's cover hidden with nothing on screen able to
     // bring it back.
     var lyricsVisible by rememberSaveable { mutableStateOf(false) }
+
+    // Owned here for the same reason as the lyrics flag: the drawer is opened from a button inside
+    // `NowPlayingScreen`, which is disposed the moment the sheet leaves the top, and a sheet that
+    // disposes its own dismissal state cannot be closed.
+    var queueDrawerOpen by rememberSaveable { mutableStateOf(false) }
 
     // Opacity only, and read in a `graphicsLayer` rather than here — see the note on this
     // composable. The cover is drawn outside `NowPlayingScreen`'s `AnimatedContent`, so it has no
@@ -292,7 +299,8 @@ fun PlayerSheetContent(
             swipe = swipe,
             previousUrl = previousArtwork,
             nextUrl = nextArtwork,
-            fingerprintStatus = fingerprintStatus
+            fingerprintStatus = fingerprintStatus,
+            carouselEnabled = coverCarousel
         )
 
         // Composed as soon as the drag starts, so its artwork bounds are known and nothing
@@ -301,7 +309,13 @@ fun PlayerSheetContent(
             NowPlayingScreen(
                 playerConnection = playerConnection,
                 onCollapse = onCollapse,
-                onOpenQueue = onOpenQueue,
+                // A local queue opens as a drawer over the player; a jam's does not.
+                //
+                // The drawer exists to reorder what is coming next, and in a jam the running order
+                // is voted on rather than dragged — plus that screen carries the proposals and the
+                // vote counts, which are not a sheet's worth of content. `orderLocked` is exactly
+                // the "something else owns the order" flag, so it is what decides.
+                onOpenQueue = { if (playback.orderLocked) onOpenQueue() else queueDrawerOpen = true },
                 onOpenArtist = onOpenArtist,
                 onOpenAlbum = onOpenAlbum,
                 onOpenJam = onOpenJam,
@@ -334,6 +348,19 @@ fun PlayerSheetContent(
                 },
                 immersivePlayer = immersivePlayer,
                 modifier = Modifier.fillMaxSize()
+            )
+        }
+
+        // Outside the `fullPlayerPresent` branch: a sheet is its own window, and tying it to the
+        // composable that opened it would dismiss it the instant the player was dragged down.
+        if (queueDrawerOpen) {
+            QueueDrawer(
+                playerConnection = playerConnection,
+                onDismiss = { queueDrawerOpen = false },
+                onOpenArtist = { artist, artistId ->
+                    queueDrawerOpen = false
+                    onOpenArtist(artist, artistId)
+                }
             )
         }
     }

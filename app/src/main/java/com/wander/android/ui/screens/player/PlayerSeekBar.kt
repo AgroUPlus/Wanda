@@ -46,7 +46,8 @@ fun PlayerSeekBar(
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
     isLive: Boolean = false,
-    isPlaying: Boolean = true
+    isPlaying: Boolean = true,
+    isSeekable: Boolean = true
 ) {
     val position by rememberPlaybackPosition(playerConnection, intervalMs = 250L)
     PlayerSeekBarInternal(
@@ -55,7 +56,8 @@ fun PlayerSeekBar(
         onSeek = onSeek,
         modifier = modifier,
         isLive = isLive,
-        isPlaying = isPlaying
+        isPlaying = isPlaying,
+        isSeekable = isSeekable
     )
 }
 
@@ -66,9 +68,10 @@ fun PlayerSeekBar(
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
     isLive: Boolean = false,
-    isPlaying: Boolean = true
+    isPlaying: Boolean = true,
+    isSeekable: Boolean = true
 ) {
-    PlayerSeekBarInternal(positionMs, durationMs, onSeek, modifier, isLive, isPlaying)
+    PlayerSeekBarInternal(positionMs, durationMs, onSeek, modifier, isLive, isPlaying, isSeekable)
 }
 
 @Composable
@@ -78,7 +81,8 @@ private fun PlayerSeekBarInternal(
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
     isLive: Boolean = false,
-    isPlaying: Boolean = true
+    isPlaying: Boolean = true,
+    isSeekable: Boolean = true
 ) {
     var scrubbing by remember { mutableFloatStateOf(-1f) }
     val haptics = rememberHaptics()
@@ -141,7 +145,10 @@ private fun PlayerSeekBarInternal(
                 }
                 scrubbing = -1f
             },
-            enabled = durationMs > 0L,
+            // A duration is not permission to scrub. A Navidrome track carries one from its
+            // metadata whether or not the extractor published a seek table, so gating on the
+            // duration alone drew a live-looking bar over a stream that swallowed every gesture.
+            enabled = durationMs > 0L && isSeekable,
             track = { sliderState ->
                 if (showWavy) {
                     LinearWavyProgressIndicator(

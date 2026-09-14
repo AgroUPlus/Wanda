@@ -27,6 +27,10 @@ securityCrypto = "1.1.0"
 bouncycastle = "1.85.2"
 coil = "3.5.0"
 palette = "1.0.0"
+# Drag-to-reorder for the queue's LazyColumn. Compose has no first-party equivalent: the pieces
+# that are fiddly to hand-roll — auto-scroll at the list edges, and keeping the drag from fighting
+# the list's own scroll — are exactly what this provides.
+reorderable = "3.1.0"
 coroutines = "1.11.0"
 serialization = "1.11.0"
 # LiteRT (formerly TensorFlow Lite) — runs models/wanda_embedder.tflite for neural
@@ -90,6 +94,7 @@ bouncycastle = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "boun
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
 palette-ktx = { module = "androidx.palette:palette-ktx", version.ref = "palette" }
+reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }

@@ -117,12 +117,33 @@ fun NavGraphBuilder.wanderNavGraph(
     tabDestination(motion, Routes.SETTINGS) {
         SettingsScreen(
             contentPadding = contentPadding,
-            onNavidromeLogin = { navController.navigateSettled(Routes.NAVIDROME_LOGIN) },
-            onYouTubeLogin = { navController.navigateSettled(Routes.YTMUSIC_LOGIN) },
-            onOpenImport = { navController.navigateSettled(Routes.IMPORT_PLAYLIST) },
-            onOpenMergePreview = { navController.navigateSettled(Routes.MERGE_PREVIEW) },
-            onOpenFingerprints = { navController.navigateSettled(Routes.FINGERPRINTS) }
+            onOpenCategory = { navController.navigateSettled(Routes.settingsCategory(it.name)) }
         )
+    }
+
+    detailDestination(
+        motion,
+        route = Routes.SETTINGS_CATEGORY,
+        arguments = listOf(navArgument("category") { type = NavType.StringType })
+    ) { entry ->
+        val category = com.wander.android.ui.screens.settings.SettingsCategory
+            .fromRoute(entry.arguments?.getString("category"))
+        // A route naming no category is not a page to guess at — pop back to the hub rather than
+        // draw an arbitrary one.
+        if (category == null) {
+            navController.popBackStack()
+        } else {
+            com.wander.android.ui.screens.settings.SettingsCategoryScreen(
+                category = category,
+                contentPadding = contentPadding,
+                onBack = navController::popBackStack,
+                onNavidromeLogin = { navController.navigateSettled(Routes.NAVIDROME_LOGIN) },
+                onYouTubeLogin = { navController.navigateSettled(Routes.YTMUSIC_LOGIN) },
+                onOpenImport = { navController.navigateSettled(Routes.IMPORT_PLAYLIST) },
+                onOpenMergePreview = { navController.navigateSettled(Routes.MERGE_PREVIEW) },
+                onOpenFingerprints = { navController.navigateSettled(Routes.FINGERPRINTS) }
+            )
+        }
     }
 
     detailDestination(motion, Routes.IMPORT_PLAYLIST) {

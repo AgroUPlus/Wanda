@@ -12,6 +12,7 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.extractor.DefaultExtractorsFactory
 import com.wander.android.core.cache.AudioCacheManager
 import javax.inject.Inject
 
@@ -37,7 +38,7 @@ class PlayerFactory @Inject constructor(
             streamResolver
         )
         val mediaSourceFactory = LiveAwareMediaSourceFactory(
-            cached = DefaultMediaSourceFactory(upstream),
+            cached = DefaultMediaSourceFactory(upstream, seekableExtractors()),
             uncachedHls = HlsMediaSource.Factory(liveUpstream)
                 // A live window moves on whether or not this device kept up. Letting the player
                 // re-join at the edge is what the chunkless preparation and the rolling playlist
@@ -60,6 +61,29 @@ class PlayerFactory @Inject constructor(
             .build()
             .apply { trackSelectionParameters = withOffload(trackSelectionParameters, enabled = true) }
     }
+
+    /**
+     * Extractors that can seek a file with no seek table in it.
+     *
+     * This is what makes a Navidrome track scrub. `format=raw` on the stream URL was only half the
+     * answer: it stops the server transcoding, so the bytes at an offset exist and `Range` is
+     * honoured — but an MP3 written without a Xing/VBRI header still carries no index, and
+     * [androidx.media3.extractor.mp3.Mp3Extractor] then publishes an *unseekable* `SeekMap` for it.
+     * `seekTo` was accepted by the player, the extractor had nowhere to go, and the thumb sprang
+     * back. The same is true of ADTS AAC and AMR, and it is per-file rather than per-server, which
+     * is why some tracks scrubbed and others never did.
+     *
+     * Constant-bitrate seeking computes the byte offset from the bitrate instead. It is off by
+     * default because the position can drift on a genuinely variable-bitrate file; a second or two
+     * of drift is the correct trade against a seek bar that does nothing.
+     *
+     * `Always` is the half that matters here: without it Media3 only falls back to CBR seeking when
+     * the stream length is known, and Navidrome's `estimateContentLength` case is exactly the one
+     * where it is not.
+     */
+    private fun seekableExtractors(): DefaultExtractorsFactory = DefaultExtractorsFactory()
+        .setConstantBitrateSeekingEnabled(true)
+        .setConstantBitrateSeekingAlwaysEnabled(true)
 
     companion object {
         /**

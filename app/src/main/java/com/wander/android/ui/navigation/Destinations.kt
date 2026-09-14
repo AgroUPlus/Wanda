@@ -35,7 +35,26 @@ object Routes {
      * that has not happened yet, not something the app needs the user to look at.
      */
     const val MERGE_PREVIEW = "merge-preview"
+    /**
+     * The queue as a screen.
+     *
+     * The local queue is a drawer over the player now — see `QueueDrawer`. This route is what a
+     * *shared* order still opens: a jam carries proposals and vote counts, and a listen-along has
+     * an order this device does not own, neither of which is a sheet's worth of content.
+     */
     const val QUEUE = "queue"
+
+    /**
+     * One page of settings — see `SettingsCategory`.
+     *
+     * The settings are a hub of pages rather than a pager of tabs, so each group is somewhere you
+     * navigate to and come back from. The argument is the category's enum name, which keeps the
+     * route stable against the labels being reworded.
+     */
+    const val SETTINGS_CATEGORY = "settings/{category}"
+
+    fun settingsCategory(category: String): String = "settings/${category.encodeForRoute()}"
+
     const val NAVIDROME_LOGIN = "login/navidrome"
     const val YTMUSIC_LOGIN = "login/ytmusic"
     const val IMPORT_PLAYLIST = "import/playlist"
@@ -154,7 +173,8 @@ object Routes {
      * login flows still take the screen over.
      */
     private val withChrome: Set<String> =
-        (topLevel + ALBUM + PLAYLIST + ARTIST + PROFILE + MY_PROFILE + SETTINGS + STATS +
+        (topLevel + ALBUM + PLAYLIST + ARTIST + PROFILE + MY_PROFILE + SETTINGS +
+            SETTINGS_CATEGORY + STATS +
             HISTORY + MERGE_PREVIEW + JAM + JAM_ROUTE + ACTIVITY + INBOX + CIRCLE + OFFGRID +
             FINGERPRINTS)
             .map { it.withoutArgs() }

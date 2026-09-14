@@ -67,7 +67,8 @@ internal fun MorphingArtwork(
     modifier: Modifier = Modifier,
     alpha: () -> Float = { 1f },
     fingerprintStatus: com.wander.android.data.repository.FingerprintStatus =
-        com.wander.android.data.repository.FingerprintStatus.MISSING
+        com.wander.android.data.repository.FingerprintStatus.MISSING,
+    carouselEnabled: Boolean = true
 ) {
     if (!visible) return
 
@@ -77,10 +78,11 @@ internal fun MorphingArtwork(
     // started playing.
     val mini = anchors.miniBounds ?: return
 
-    if (swipe.isSwiping) {
+    val showPeeks = swipe.isSwiping || (carouselEnabled && rawProgress() > 0.8f)
+    if (showPeeks) {
         // Drawn before the current cover so it stays on top as the neighbours slide under it.
-        PeekArtwork(previousUrl, anchors, mini, progress, rawProgress, swipe, side = -1)
-        PeekArtwork(nextUrl, anchors, mini, progress, rawProgress, swipe, side = 1)
+        PeekArtwork(previousUrl, anchors, mini, progress, rawProgress, swipe, side = -1, carouselEnabled = carouselEnabled)
+        PeekArtwork(nextUrl, anchors, mini, progress, rawProgress, swipe, side = 1, carouselEnabled = carouselEnabled)
     }
 
     Box(
@@ -106,7 +108,19 @@ internal fun MorphingArtwork(
                     )
                 }
             }
-            .graphicsLayer { this.alpha = alpha() }
+            .graphicsLayer {
+                this.alpha = alpha()
+                if (carouselEnabled && progress() > 0.8f) {
+                    val step = swipe.stepPx.takeIf { it > 0f } ?: FullExitDistance
+                    val offset = swipe.offsetX.value
+                    val progressAway = (abs(offset) / step).coerceIn(0f, 1f)
+                    val scale = lerpFloat(1f, 0.85f, progressAway)
+                    scaleX = scale
+                    scaleY = scale
+                    rotationY = (-offset / step * 12f).coerceIn(-14f, 14f)
+                    cameraDistance = 12f * density
+                }
+            }
     ) {
         Artwork(
             // While a skip is settling this is the cover the gesture already put in the slot; see
@@ -152,7 +166,8 @@ private fun PeekArtwork(
     progress: () -> Float,
     rawProgress: () -> Float,
     swipe: TrackSwipeState,
-    side: Int
+    side: Int,
+    carouselEnabled: Boolean = true
 ) {
     if (url == null) return
 
@@ -179,17 +194,26 @@ private fun PeekArtwork(
                 }
             }
             .graphicsLayer {
-                // Invisible while docked and through the first half of the drag open, so the
-                // filmstrip only appears once there is room for it — and, within that, faded in
-                // proportion to how far the finger has travelled.
-                //
-                // The second factor is what stops the neighbours *popping* out of existence when a
-                // short drag is released: they used to be composed at full opacity for as long as
-                // `isSwiping` was set and simply vanish when it cleared, which read as a glitch.
-                // Tying the alpha to the live offset means they fade in with the drag and fade back
-                // out with the spring, and it costs nothing — this lambda already runs per frame.
-                val reach = abs(swipe.offsetX.value) / DistanceThreshold
-                alpha = smoothStep(progress(), 0.5f, 0.9f) * reach.coerceIn(0f, 1f)
+                val step = swipe.stepPx.takeIf { it > 0f } ?: FullExitDistance
+                val offset = swipe.offsetX.value
+                val reach = abs(offset) / DistanceThreshold
+
+                if (carouselEnabled) {
+                    val currentX = offset + side * step
+                    val distRatio = (abs(currentX) / step).coerceIn(0f, 1f)
+                    val centerProximity = (1f - distRatio).coerceIn(0f, 1f)
+
+                    val scale = lerpFloat(0.85f, 1f, centerProximity)
+                    scaleX = scale
+                    scaleY = scale
+                    rotationY = (side * (1f - centerProximity) * 12f).coerceIn(-14f, 14f)
+                    cameraDistance = 12f * density
+
+                    val baseAlpha = lerpFloat(0.5f, 1f, centerProximity)
+                    alpha = smoothStep(progress(), 0.82f, 0.98f) * baseAlpha
+                } else {
+                    alpha = smoothStep(progress(), 0.5f, 0.9f) * reach.coerceIn(0f, 1f)
+                }
             }
     ) {
         Artwork(
@@ -202,6 +226,9 @@ private fun PeekArtwork(
         )
     }
 }
+
+private fun lerpFloat(start: Float, stop: Float, fraction: Float): Float =
+    start + (stop - start) * fraction
 
 /**
  * Where the cover sits right now, between the docked strip and the full player.

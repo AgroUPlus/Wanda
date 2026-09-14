@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.library
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,12 +10,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.ui.components.Artwork
+import com.wander.android.ui.components.rememberPressScale
 import com.wander.android.ui.components.scrollingTitle
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -31,9 +36,18 @@ fun AlbumCard(
     /** Nominal cell width. The grid is `Adaptive(156.dp)`, so cells never fall below this. */
     artworkSize: Dp = 160.dp
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val scale by rememberPressScale(interactionSource, label = "albumCardPress")
+
     Column(
         modifier = modifier
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .scale(scale)
+            .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .padding(8.dp)
     ) {
         Artwork(

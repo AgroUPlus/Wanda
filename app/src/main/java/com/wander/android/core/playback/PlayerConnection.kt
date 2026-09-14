@@ -345,6 +345,23 @@ class PlayerConnection @Inject constructor(
         _controller.value?.removeMediaItem(index)
     }
 
+    /**
+     * Moves a queued track, for the queue drawer's drag handles.
+     *
+     * Refused while the order is locked: a jam or a listen-along decides what plays next, and a
+     * local drag would be overwritten by the next sync from whoever owns it — which reads as the
+     * gesture having failed rather than having been disallowed. The drawer hides the handles in
+     * that case, and this is the guard behind them; see [PlaybackState.orderLocked].
+     */
+    fun moveInQueue(from: Int, to: Int) {
+        if (state.value.orderLocked) return
+        val ctrl = _controller.value ?: return
+        if (from == to) return
+        val count = ctrl.mediaItemCount
+        if (from !in 0 until count || to !in 0 until count) return
+        ctrl.moveMediaItem(from, to)
+    }
+
     fun clearQueue() {
         _controller.value?.clearMediaItems()
         lastQueue = emptyList()
@@ -790,6 +807,12 @@ private fun Player.buildSnapshot(
     } else {
         reported
     }
+    // "Not known yet" is not "not allowed": an empty timeline means the item has not been prepared,
+    // and reporting false there would leave the bar dead for the first frames of every track. Only
+    // a prepared timeline is allowed to say no.
+    val seekable = runCatching {
+        currentTimeline.isEmpty || isCurrentMediaItemSeekable
+    }.getOrDefault(true)
     val curIndex = runCatching { currentMediaItemIndex }.getOrDefault(0)
     val shuffle = runCatching { shuffleModeEnabled }.getOrDefault(false)
     val repMode = runCatching { repeatMode }.getOrDefault(Player.REPEAT_MODE_OFF)
@@ -828,6 +851,7 @@ private fun Player.buildSnapshot(
         isPlaying = playing,
         isBuffering = buffering,
         durationMs = dur,
+        isSeekable = seekable,
         isShuffle = shuffle,
         repeatMode = when (repMode) {
             Player.REPEAT_MODE_ALL -> RepeatMode.ALL
