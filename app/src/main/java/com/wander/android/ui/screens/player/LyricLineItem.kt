@@ -1,0 +1,177 @@
+package com.wander.android.ui.screens.player
+
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
+import com.wander.android.data.model.LyricLine
+import com.wander.android.data.repository.LrcParser
+
+/**
+ * Renders a single lyric line with smooth Material 3 Expressive motion between lines and
+ * progressive word-by-word karaoke illumination.
+ */
+@Composable
+fun LyricLineItem(
+    line: LyricLine,
+    nextLineTimestampMs: Long?,
+    isActive: Boolean,
+    currentPositionMs: Long,
+    onSeek: (Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val lineAlpha by animateFloatAsState(
+        targetValue = if (isActive) 1f else 0.40f,
+        animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
+        label = "lyricAlpha"
+    )
+    val lineScale by animateFloatAsState(
+        targetValue = if (isActive) 1.03f else 0.97f,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        label = "lyricScale"
+    )
+    val verticalPadding by animateDpAsState(
+        targetValue = if (isActive) 10.dp else 6.dp,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        label = "lyricPadding"
+    )
+    val textColor by animateColorAsState(
+        targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+        animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
+        label = "lyricColor"
+    )
+
+    val contentModifier = modifier
+        .fillMaxWidth()
+        .clickable { onSeek(line.timestampMs) }
+        .padding(vertical = verticalPadding, horizontal = 16.dp)
+        .graphicsLayer {
+            alpha = lineAlpha
+            scaleX = lineScale
+            scaleY = lineScale
+        }
+
+    if (!isActive) {
+        Text(
+            text = line.text,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Medium,
+            color = textColor,
+            textAlign = TextAlign.Center,
+            modifier = contentModifier
+        )
+        return
+    }
+
+    // Active line: progressive word-by-word highlight
+    val words = remember(line, nextLineTimestampMs) {
+        LrcParser.resolveWords(line, nextLineTimestampMs)
+    }
+
+    if (words.isEmpty()) {
+        Text(
+            text = line.text,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.ExtraBold,
+            color = textColor,
+            textAlign = TextAlign.Center,
+            modifier = contentModifier
+        )
+        return
+    }
+
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val upcomingColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+    val syncPositionMs = currentPositionMs + LyricsLeadOffsetMs
+
+    val annotatedText = remember(words, syncPositionMs, primaryColor, upcomingColor) {
+        buildAnnotatedString {
+            words.forEachIndexed { wordIdx, word ->
+                when {
+                    syncPositionMs >= word.endMs -> {
+                        withStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Bold)) {
+                            append(word.text)
+                        }
+                    }
+                    syncPositionMs < word.startMs -> {
+                        withStyle(SpanStyle(color = upcomingColor, fontWeight = FontWeight.Medium)) {
+                            append(word.text)
+                        }
+                    }
+                    else -> {
+                        // Word is actively being sung: progress letter by letter with glowing shine
+                        val wordDuration = (word.endMs - word.startMs).coerceAtLeast(60L)
+                        val elapsed = syncPositionMs - word.startMs
+                        val wordProgress = (elapsed.toFloat() / wordDuration).coerceIn(0f, 1f)
+                        val activeCharIdx = (wordProgress * word.text.length).toInt().coerceIn(0, word.text.length)
+
+                        word.text.forEachIndexed { charIdx, char ->
+                            val charStyle = when {
+                                charIdx < activeCharIdx -> SpanStyle(
+                                    color = primaryColor,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                charIdx == activeCharIdx -> SpanStyle(
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Black,
+                                    shadow = Shadow(
+                                        color = primaryColor,
+                                        blurRadius = 14f,
+                                        offset = Offset.Zero
+                                    )
+                                )
+                                else -> SpanStyle(
+                                    color = upcomingColor,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                            withStyle(charStyle) {
+                                append(char)
+                            }
+                        }
+                    }
+                }
+
+                if (wordIdx < words.size - 1) {
+                    val spaceSung = syncPositionMs >= word.endMs
+                    withStyle(
+                        SpanStyle(
+                            color = if (spaceSung) primaryColor else upcomingColor,
+                            fontWeight = FontWeight.Normal
+                        )
+                    ) {
+                        append(" ")
+                    }
+                }
+            }
+        }
+    }
+
+    Text(
+        text = annotatedText,
+        style = MaterialTheme.typography.titleLarge,
+        textAlign = TextAlign.Center,
+        modifier = contentModifier
+    )
+}
+
+/** Pre-compensation offset to align human audio perception and hardware buffer latency. */
+private const val LyricsLeadOffsetMs = 120L

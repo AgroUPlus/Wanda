@@ -1,9 +1,14 @@
 package com.wander.android.ui.components.player
 
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.padding
@@ -68,7 +73,9 @@ internal fun MorphingArtwork(
     alpha: () -> Float = { 1f },
     fingerprintStatus: com.wander.android.data.repository.FingerprintStatus =
         com.wander.android.data.repository.FingerprintStatus.MISSING,
-    carouselEnabled: Boolean = true
+    carouselEnabled: Boolean = true,
+    /** The cover's own colour, for the backlight behind it. Null draws no glow. */
+    glowColor: Color? = null
 ) {
     if (!visible) return
 
@@ -122,6 +129,40 @@ internal fun MorphingArtwork(
                 }
             }
     ) {
+        // The backlight, and it has to be drawn *here* — first child of the box that holds the
+        // cover, so the cover is painted over it.
+        //
+        // It lived in `NowPlayingScreen` for a while, on a `drawBehind`, and that could never work:
+        // `drawBehind` puts the drawing behind *that node*, but the whole screen is composed after
+        // the travelling cover (see `PlayerSheetContent`'s draw order), so the glow landed on top
+        // of the artwork whatever it did locally. Layer order is the fix, not draw order.
+        //
+        // Scaled past the cover's own bounds rather than drawn inside them: a glow confined to the
+        // square would be entirely hidden behind an opaque album cover, which is what made moving
+        // it in front look like the only option.
+        glowColor?.let { seed ->
+            val glow = seed.asBacklight()
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        scaleX = GlowScale
+                        scaleY = GlowScale
+                        this.alpha = smoothStep(progress(), 0.65f, 1f)
+                    }
+                    .background(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                glow.copy(alpha = 0.55f),
+                                glow.copy(alpha = 0.22f),
+                                Color.Transparent
+                            )
+                        ),
+                        shape = CircleShape
+                    )
+            )
+        }
+
         Artwork(
             // While a skip is settling this is the cover the gesture already put in the slot; see
             // [TrackSwipeState.pendingArtworkUrl].
@@ -229,6 +270,29 @@ private fun PeekArtwork(
 
 private fun lerpFloat(start: Float, stop: Float, fraction: Float): Float =
     start + (stop - start) * fraction
+
+/** How far past the cover the backlight spills. */
+private const val GlowScale = 1.22f
+
+/**
+ * A cover's seed colour, made fit to glow with.
+ *
+ * **Never white**, and that is the whole reason this exists. The seed is whatever dominates the
+ * artwork, so a sleeve that is mostly white paper — or any pale, washed-out cover — yields a near
+ * white seed, and a white backlight is not a glow: it is a grey halo that looks like a rendering
+ * fault, and under the AMOLED theme it is the brightest thing on a black screen.
+ *
+ * Saturation is floored so a near-grey seed still reads as a colour, and value is capped well below
+ * full so the glow stays a light *behind* something rather than a lamp pointed at the reader. Hue is
+ * never touched — that is the part actually taken from the artwork, and the part worth keeping.
+ */
+private fun Color.asBacklight(): Color {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(toArgb(), hsv)
+    hsv[1] = hsv[1].coerceAtLeast(0.45f)
+    hsv[2] = hsv[2].coerceIn(0.35f, 0.72f)
+    return Color(android.graphics.Color.HSVToColor(hsv))
+}
 
 /**
  * Where the cover sits right now, between the docked strip and the full player.

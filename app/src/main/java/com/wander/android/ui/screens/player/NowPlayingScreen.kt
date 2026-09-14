@@ -64,6 +64,7 @@ import androidx.compose.ui.util.lerp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.data.model.syncType
 import com.wander.android.data.repository.FingerprintStatus
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.AudioQualityBadge
@@ -371,7 +372,8 @@ internal fun NowPlayingScreen(
                 showLyrics = showLyrics,
                 onShare = { viewModel.share(track) }.takeIf { viewModel.canShare(track) },
                 contentAlpha = overlayAlpha,
-                topInset = immersiveTopBar
+                topInset = immersiveTopBar,
+                lyricsSyncType = lyrics.syncType()
             )
 
             if (state.audioTracks.size > 1) {
@@ -472,7 +474,7 @@ internal fun NowPlayingScreen(
                     playerConnection = playerConnection,
                     durationMs = state.durationMs,
                     onSeek = playerConnection::seekTo,
-                    modifier = Modifier.padding(top = 12.dp),
+                    modifier = Modifier.padding(top = 8.dp),
                     isLive = track.isLive,
                     isPlaying = state.isPlaying,
                     isSeekable = state.isSeekable
@@ -481,10 +483,8 @@ internal fun NowPlayingScreen(
                 PlayerControls(
                     state = state,
                     connection = playerConnection,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                    modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
                 )
-
-                QueuePullTab(onOpen = onOpenQueue, contentAlpha = contentAlpha)
             }
 
             rateAnchor?.let { anchor ->
@@ -605,6 +605,9 @@ internal fun NowPlayingScreen(
                 modifier = Modifier
                     .aspectRatio(1f)
                     .fillMaxSize()
+                    // No glow here. It belongs behind the cover, and the cover is drawn by the
+                    // sheet *before* this screen — so anything painted here is necessarily in
+                    // front of it. See the backlight in `MorphingArtwork`.
                     .then(artworkModifier)
                     // `pointerInput` after the swipe modifier, so a horizontal drag still reaches
                     // the skip gesture — only a press that stays put becomes a tap or a long press.
@@ -688,7 +691,8 @@ internal fun NowPlayingScreen(
                     contentAlpha = overlayAlpha,
                     // Only here. The square is bounded, so the corner is free — which it is not in
                     // the immersive layout, where the controls own the bottom of the window.
-                    onToggleLyrics = onToggleLyrics
+                    onToggleLyrics = onToggleLyrics,
+                    lyricsSyncType = lyrics.syncType()
                 )
 
                 // Language button — top-left of the cover, only when multiple audio tracks exist.
@@ -783,7 +787,7 @@ internal fun NowPlayingScreen(
                 playerConnection = playerConnection,
                 durationMs = state.durationMs,
                 onSeek = playerConnection::seekTo,
-                modifier = Modifier.padding(top = 12.dp),
+                modifier = Modifier.padding(top = 8.dp),
                 isLive = track.isLive,
                 isPlaying = state.isPlaying,
                 isSeekable = state.isSeekable
@@ -792,10 +796,9 @@ internal fun NowPlayingScreen(
             PlayerControls(
                 state = state,
                 connection = playerConnection,
-                modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
             )
 
-            QueuePullTab(onOpen = onOpenQueue, contentAlpha = contentAlpha)
         }
         }
     }

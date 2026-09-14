@@ -1,16 +1,31 @@
 package com.wander.android.ui.screens.player
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -74,6 +89,7 @@ fun PlayerSeekBar(
     PlayerSeekBarInternal(positionMs, durationMs, onSeek, modifier, isLive, isPlaying, isSeekable)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PlayerSeekBarInternal(
     positionMs: Long,
@@ -85,6 +101,7 @@ private fun PlayerSeekBarInternal(
     isSeekable: Boolean = true
 ) {
     var scrubbing by remember { mutableFloatStateOf(-1f) }
+    var lastTickInterval by remember { mutableIntStateOf(-1) }
     val haptics = rememberHaptics()
     val fraction = if (scrubbing >= 0f) {
         scrubbing
@@ -94,16 +111,6 @@ private fun PlayerSeekBarInternal(
         0f
     }
 
-    // A broadcast gets the chip alone, centred where the slider would have been.
-    //
-    // Nothing else on this row means anything for a livestream. There is no track to scrub — an
-    // HLS live window reports a duration, the hour or so the broadcaster keeps available, so the
-    // thumb used to be draggable; dragging it back and returning to the edge asks for segments
-    // that have rolled out of the window and the stream dies with a source error. And an elapsed
-    // count is a stopwatch on the listener, not a position in anything.
-    //
-    // The box keeps the height the slider and its labels occupied, so the artwork and the
-    // transport controls above and below it do not shift when a live item starts.
     if (isLive) {
         Box(
             modifier = modifier
@@ -116,51 +123,70 @@ private fun PlayerSeekBarInternal(
         return
     }
 
-    // The same idiom as the docked strip's `PlaybackProgressBar`, and deliberately so — the two
-    // bars are the same bar as far as anyone looking at them is concerned, and the strip's is what
-    // the expanded player morphs out of.
-    //
-    // `SliderDefaults.Track` has no wave of its own in this version of Material — the only wavy
-    // drawing in the library is on the progress indicators — so the slider's track slot is filled
-    // with the indicator instead and the slider keeps its thumb and its gesture handling.
-    val waving = isPlaying && scrubbing < 0f && durationMs > 0L
+    val waving = isPlaying && durationMs > 0L
     val amplitude = remember { Animatable(if (waving) 1f else 0f) }
     val amplitudeSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
     LaunchedEffect(waving) { amplitude.animateTo(if (waving) 1f else 0f, amplitudeSpec) }
 
-    // Wavy the instant it resumes, even mid-decay; flat only once fully settled. Reading `.value`
-    // here rather than through a lambda is what makes this recompose while the amplitude moves.
-    val showWavy = waving || amplitude.value > 0f
+    val isScrubbing = scrubbing >= 0f
+    val thumbSpatial = MaterialTheme.motionScheme.fastSpatialSpec<androidx.compose.ui.unit.Dp>()
+    val thumbWidth by animateDpAsState(
+        targetValue = if (isScrubbing) 8.dp else 4.dp,
+        animationSpec = thumbSpatial,
+        label = "thumbWidth"
+    )
+    val thumbHeight by animateDpAsState(
+        targetValue = if (isScrubbing) 28.dp else 16.dp,
+        animationSpec = thumbSpatial,
+        label = "thumbHeight"
+    )
 
     Column(modifier = modifier.fillMaxWidth()) {
         Slider(
             value = fraction,
-            onValueChange = { scrubbing = it },
+            onValueChange = {
+                scrubbing = it
+                if (durationMs > 0L) {
+                    val currentSec = ((it * durationMs) / 1000).toInt()
+                    val interval = currentSec / 15
+                    if (interval != lastTickInterval) {
+                        lastTickInterval = interval
+                        haptics.tick()
+                    }
+                }
+            },
             onValueChangeFinished = {
-                // On release only, never while dragging. A tick per pixel of travel is the
-                // definition of overdoing it; one on landing tells you the seek was taken.
                 if (durationMs > 0L) {
                     haptics.settled()
                     onSeek((scrubbing * durationMs).toLong())
                 }
                 scrubbing = -1f
+                lastTickInterval = -1
             },
-            // Scrubbing requires a known duration and seekability. Recorded library tracks
-            // are seekable; livestreams are handled above with LiveChip.
             enabled = durationMs > 0L && isSeekable,
-            track = { sliderState ->
-                if (showWavy) {
-                    LinearWavyProgressIndicator(
-                        progress = { sliderState.value },
-                        amplitude = { amplitude.value },
-                        modifier = Modifier.fillMaxWidth()
+            thumb = {
+                Box(
+                    modifier = Modifier.size(width = 16.dp, height = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    ScrubTooltip(
+                        visible = isScrubbing,
+                        text = formatTime((fraction * durationMs).toLong())
                     )
-                } else {
-                    LinearProgressIndicator(
-                        progress = { sliderState.value },
-                        modifier = Modifier.fillMaxWidth()
+
+                    Box(
+                        modifier = Modifier
+                            .size(width = thumbWidth, height = thumbHeight)
+                            .background(MaterialTheme.colorScheme.primary, CircleShape)
                     )
                 }
+            },
+            track = { sliderState ->
+                LinearWavyProgressIndicator(
+                    progress = { sliderState.value },
+                    amplitude = { amplitude.value },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         )
         Row(modifier = Modifier.fillMaxWidth()) {
@@ -183,6 +209,49 @@ private fun PlayerSeekBarInternal(
                 text = if (durationMs > 0L) formatTime(durationMs) else "--:--",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/**
+ * The time bubble that rides above the thumb while a finger is on it.
+ *
+ * A function of its own rather than written inline, and not for tidiness: inline, it sat lexically
+ * inside the seek bar's `Column`, so `ColumnScope.AnimatedVisibility` won overload resolution — and
+ * was then rejected, because the slider's `thumb` lambda is not a `ColumnScope`. Out here there is
+ * no such receiver in scope and the ordinary overload is chosen. Forcing the receiver instead would
+ * have compiled and animated the bubble as a column child, which is not what it is.
+ */
+@Composable
+private fun ScrubTooltip(visible: Boolean, text: String) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()) +
+            scaleIn(MaterialTheme.motionScheme.fastSpatialSpec(), initialScale = 0.8f),
+        exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
+            scaleOut(MaterialTheme.motionScheme.fastSpatialSpec(), targetScale = 0.8f),
+        modifier = Modifier.layout { measurable, _ ->
+            val placeable = measurable.measure(Constraints())
+            layout(0, 0) {
+                placeable.placeRelative(
+                    x = -placeable.width / 2,
+                    y = -placeable.height - 24.dp.roundToPx()
+                )
+            }
+        }
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.inverseSurface,
+            contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+            shadowElevation = 6.dp
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
             )
         }
     }

@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.rememberPlaybackPosition
 import com.wander.android.data.model.LyricsState
+import com.wander.android.data.model.LyricsSyncType
 
 /** Distance from the top the active line settles at, so upcoming lines stay visible below it. */
 private val ACTIVE_LINE_OFFSET = 96.dp
@@ -69,14 +71,16 @@ fun SyncedLyricsView(
         return
     }
 
-    val positionState = rememberPlaybackPosition(playerConnection, intervalMs = 250L)
+    val positionState = rememberPlaybackPosition(playerConnection, intervalMs = 40L)
     val listState = rememberLazyListState()
 
-    // Reads positionState inside the derivation, so it actually recomputes as playback advances
-    // while still only recomposing when the *line* changes rather than on every tick.
+    // Reads positionState inside the derivation, so it recomputes as playback advances
+    // while LazyColumn only re-indexes when the *line* changes. 120ms lead offset ensures
+    // the line scroll and visual onset match vocalist attack.
     val activeIndex by remember(lyrics) {
         derivedStateOf {
-            lyrics.lines.indexOfLast { it.timestampMs <= positionState.value.positionMs }
+            val playhead = positionState.value.positionMs + 120L
+            lyrics.lines.indexOfLast { it.timestampMs <= playhead }
                 .coerceAtLeast(0)
         }
     }
@@ -86,28 +90,55 @@ fun SyncedLyricsView(
         listState.animateScrollToItem(index = activeIndex, scrollOffset = offsetPx)
     }
 
-    LazyColumn(state = listState, modifier = modifier) {
-        itemsIndexed(
-            items = lyrics.lines,
-            key = { index, line -> "${line.timestampMs}-$index" }
-        ) { index, line ->
-            val isActive = index == activeIndex
-            Text(
-                text = line.text,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                // Deliberately not animated per line: one animateColorAsState per lyric meant
-                // dozens of concurrent animations in a scrolling list.
-                color = if (isActive) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onSeek(line.timestampMs) }
-                    .padding(vertical = 8.dp, horizontal = 12.dp)
-            )
+    Column(modifier = modifier) {
+        SyncTypeLabel(lyrics.syncType)
+
+        LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+            itemsIndexed(
+                items = lyrics.lines,
+                key = { index, line -> "${line.timestampMs}-$index" }
+            ) { index, line ->
+                val isActive = index == activeIndex
+                val nextLineTs = lyrics.lines.getOrNull(index + 1)?.timestampMs
+                LyricLineItem(
+                    line = line,
+                    nextLineTimestampMs = nextLineTs,
+                    isActive = isActive,
+                    currentPositionMs = if (isActive) positionState.value.positionMs else 0L,
+                    onSeek = onSeek
+                )
+            }
         }
     }
+}
+
+/**
+ * Says, in words, how closely these lyrics follow the song.
+ *
+ * The app already knew this and only ever whispered it: the lyrics button's *icon* changes shape
+ * with the sync type, and the difference between three glyphs is not something anyone reads. The
+ * actual words lived in a `contentDescription`, which only a screen reader ever speaks — and in the
+ * immersive layout that button is not drawn at all, so there was nothing to look at either way.
+ *
+ * Here instead, at the head of the thing it describes, where it is read once and answers the
+ * question it is about: is this going to follow along with me, and how finely.
+ */
+@Composable
+private fun SyncTypeLabel(syncType: LyricsSyncType) {
+    val label = when (syncType) {
+        LyricsSyncType.WORD_SYNCED -> "Synced · word by word"
+        LyricsSyncType.LINE_SYNCED -> "Synced · line by line"
+        LyricsSyncType.NONE -> "Not synced"
+    }
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+    )
 }
 
 /**

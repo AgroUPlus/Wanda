@@ -15,16 +15,18 @@ import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledIconToggleButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -32,6 +34,7 @@ import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.ui.components.rememberHaptics
 import com.wander.android.ui.components.rememberPlayPauseMorphShape
+import com.wander.android.ui.components.rememberPressMorphShape
 import com.wander.android.ui.components.rememberPressScale
 import com.wander.android.ui.components.player.PlayPauseIcon
 import com.wander.android.core.playback.RepeatMode
@@ -49,8 +52,13 @@ fun PlayerControls(
     modifier: Modifier = Modifier
 ) {
     val haptics = rememberHaptics()
+    // Sized against the space that actually exists. The row lives inside a container padded 24dp
+    // each side, so on a 411dp phone these five buttons share 363dp — and `SpaceEvenly` puts a gap
+    // at each end as well as between, six in all. At these sizes they total 328dp, leaving about
+    // 6dp a gap. Another 30% on top would be 391dp of button in 363dp of row, which does not
+    // overflow gracefully; it clips.
     val playButtonSize by animateDpAsState(
-        targetValue = if (state.isPlaying) 76.dp else 72.dp,
+        targetValue = if (state.isPlaying) 84.dp else 80.dp,
         animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
         label = "playButtonSize"
     )
@@ -60,10 +68,20 @@ fun PlayerControls(
     val playShape = rememberPlayPauseMorphShape(state.isPlaying, playPressed)
 
     val prevInteraction = remember { MutableInteractionSource() }
-    val prevScale by rememberPressScale(prevInteraction)
+    val prevPressed by prevInteraction.collectIsPressedAsState()
+    val prevShape = rememberPressMorphShape(
+        resting = MaterialShapes.Square,
+        pressed = MaterialShapes.Circle,
+        isPressed = prevPressed
+    )
 
     val nextInteraction = remember { MutableInteractionSource() }
-    val nextScale by rememberPressScale(nextInteraction)
+    val nextPressed by nextInteraction.collectIsPressedAsState()
+    val nextShape = rememberPressMorphShape(
+        resting = MaterialShapes.Square,
+        pressed = MaterialShapes.Circle,
+        isPressed = nextPressed
+    )
 
     Row(
         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -82,17 +100,16 @@ fun PlayerControls(
             disabledDescription = "Shuffle, unavailable while the room chooses the order"
         )
 
-        IconButton(
+        FilledTonalIconButton(
             onClick = connection::previous,
+            shape = prevShape,
             interactionSource = prevInteraction,
-            modifier = Modifier
-                .size(56.dp)
-                .graphicsLayer { scaleX = prevScale; scaleY = prevScale }
+            modifier = Modifier.size(66.dp)
         ) {
             Icon(
                 Icons.Rounded.SkipPrevious,
                 contentDescription = "Previous track",
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(35.dp)
             )
         }
 
@@ -111,21 +128,20 @@ fun PlayerControls(
             PlayPauseIcon(
                 isPlaying = state.isPlaying,
                 isBuffering = state.isBuffering,
-                iconSize = 38.dp
+                iconSize = 42.dp
             )
         }
 
-        IconButton(
+        FilledTonalIconButton(
             onClick = connection::next,
+            shape = nextShape,
             interactionSource = nextInteraction,
-            modifier = Modifier
-                .size(56.dp)
-                .graphicsLayer { scaleX = nextScale; scaleY = nextScale }
+            modifier = Modifier.size(66.dp)
         ) {
             Icon(
                 Icons.Rounded.SkipNext,
                 contentDescription = "Next track",
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(35.dp)
             )
         }
 
@@ -154,21 +170,30 @@ private fun ToggleButton(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val scale by rememberPressScale(interaction)
-    IconToggleButton(
+    FilledIconToggleButton(
         checked = active,
         onCheckedChange = { onClick() },
         enabled = enabled,
+        shape = MaterialTheme.shapes.medium,
         interactionSource = interaction,
-        colors = IconButtonDefaults.iconToggleButtonColors(
-            checkedContentColor = MaterialTheme.colorScheme.primary,
+        colors = IconButtonDefaults.filledIconToggleButtonColors(
+            containerColor = Color.Transparent,
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            checkedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+            checkedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            disabledContainerColor = Color.Transparent,
             disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DisabledAlpha)
         ),
-        modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale }
+        modifier = Modifier
+            // 48dp is the floor, not a preference: Material's minimum touch target, and these
+            // sat under it at 44. Shuffle and repeat are the two controls people miss.
+            .size(56.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = if (enabled) description else disabledDescription ?: description
+            contentDescription = if (enabled) description else disabledDescription ?: description,
+            modifier = Modifier.size(28.dp)
         )
     }
 }

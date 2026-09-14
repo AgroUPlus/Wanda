@@ -201,7 +201,9 @@ fun PlayerSheetContent(
     // artwork URL, which two tracks off the same album share, leaving the override set.
     val currentArtwork = playback.currentTrack?.artworkUrl
     // Pre-warm the seed colour for the current track so expanding the player never flashes the default theme.
-    com.wander.android.ui.theme.rememberCoverSeedColor(currentArtwork)
+    // Also the backlight's colour — see `MorphingArtwork`'s `glowColor`. Read here because this is
+    // where the cover it sits behind is drawn.
+    val coverSeed = com.wander.android.ui.theme.rememberCoverSeedColor(currentArtwork)
     LaunchedEffect(playback.currentTrack?.id) {
         swipe.clearPending()
     }
@@ -315,7 +317,8 @@ fun PlayerSheetContent(
             previousUrl = previousArtwork,
             nextUrl = nextArtwork,
             fingerprintStatus = fingerprintStatus,
-            carouselEnabled = coverCarousel
+            carouselEnabled = coverCarousel,
+            glowColor = coverSeed
         )
 
         // Composed as soon as the drag starts, so its artwork bounds are known and nothing
