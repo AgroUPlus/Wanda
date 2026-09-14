@@ -165,16 +165,25 @@ class NavidromeSource @Inject constructor(
             ArtistDetails(
                 id = "$PREFIX${artist.id}",
                 name = artist.name,
-                // The portrait the server publishes, or none.
+                // No portrait from this source. Deliberately, and this is the whole of the fix for
+                // a bug that survived two other attempts at it.
                 //
-                // `artist.coverArt` used to be the last resort here and it is not a portrait: on
-                // Navidrome it is an *album* cover id. Last.fm stopped serving artist images, so
-                // `getArtistInfo2` commonly answers with a biography and empty image URLs — and
-                // this expression then put one of that artist's record sleeves, or a sleeve off a
-                // name-collided record, on the page as their face. A correct bio beside a stranger's
-                // photograph is worse than no photograph, so null it is; `ArtistHero` draws a
-                // monogram instead.
-                imageUrl = info?.largeImageUrl ?: info?.mediumImageUrl,
+                // `getArtistInfo2` is Subsonic's metadata-agent endpoint, and on Navidrome the
+                // agent is Last.fm, which resolves an artist *by name*. A name is not an identity:
+                // asked about "Mili" or "ROSÉ" it answers with whichever artist it matched, and the
+                // response carries no id, no disambiguation, nothing that says whose face this is.
+                // So the server returns a correct name and a correct biography beside a photograph
+                // of a different person, and every check this app could make passes — the name
+                // matches, because the name was never the thing that was wrong.
+                //
+                // It cannot be validated client-side and it cannot be repaired, so it is not used.
+                // `artist.coverArt` is no better: on Navidrome that is an *album* cover id, a
+                // record sleeve rather than a face. The biography below is kept because it is the
+                // half Last.fm gets right, and because a wrong biography is legible as wrong in a
+                // way a wrong photograph is not.
+                //
+                // `ArtistHero` draws a monogram instead. A letter is never the wrong person.
+                imageUrl = null,
                 bio = info?.biography?.stripBiographyMarkup(),
                 sections = if (albums.isEmpty()) {
                     emptyList()

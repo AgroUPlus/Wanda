@@ -15,11 +15,14 @@ import androidx.compose.ui.text.style.TextAlign
 /**
  * An artist's initial over a tinted ground, for when nobody has published their photograph.
  *
- * This exists because the alternative was worse. The header used to fall back to a cover off one of
- * the artist's records, and the lists it picked from are filtered by a rule that keeps anything it
- * cannot *disprove* belongs to them — so a name collision or a compilation put a stranger's face
- * over a correct biography. A wrong photograph of a real person is a claim; a letter is not. See
- * `CatalogRepository.artistImage`.
+ * This exists because every alternative was worse, and there were two of them.
+ *
+ * The header used to fall back to a cover off one of the artist's records — their own sleeve at
+ * best, and a sleeve is not a face. Underneath that, Navidrome's own portrait came from Last.fm,
+ * which matches artists *by name* and so returns a correct name and biography beside a photograph
+ * of a different person, with nothing in the response admitting it. Neither could be validated.
+ *
+ * A wrong photograph of a real person is a claim; a letter is not. See `NavidromeSource.getArtist`.
  *
  * The tint is derived from the name, so one artist keeps the same colour everywhere they appear and
  * two artists next to each other do not come out identical. Hue only — the surface it blends into
