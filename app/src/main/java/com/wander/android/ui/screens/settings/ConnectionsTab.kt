@@ -2,6 +2,8 @@ package com.wander.android.ui.screens.settings
 
 import androidx.compose.foundation.lazy.LazyListScope
 
+private val Hue = SettingsCategory.CONNECTIONS.hue
+
 /**
  * Where the music comes from: one row per backend, each saying whether it is connected and what
  * tapping it will do.
@@ -22,7 +24,8 @@ internal fun LazyListScope.connectionsTab(
                     "Agro has ${state.syncedNavidrome.serverUrl} — tap to sign in"
                 else -> "Not connected"
             },
-            onClick = if (state.navidrome) actions.onNavidromeSignOut else actions.onNavidromeLogin
+            onClick = if (state.navidrome) actions.onNavidromeSignOut else actions.onNavidromeLogin,
+            leading = { SourceBadge(SourceIdentity.NAVIDROME, Hue) }
         )
     }
 
@@ -37,12 +40,11 @@ internal fun LazyListScope.connectionsTab(
             } else {
                 "Signed out. Search still works; your library needs sign-in."
             },
-            onClick = if (state.youTube) actions.onYouTubeSignOut else actions.onYouTubeLogin
+            onClick = if (state.youTube) actions.onYouTubeSignOut else actions.onYouTubeLogin,
+            leading = { SourceBadge(SourceIdentity.YOUTUBE_MUSIC, Hue) }
         )
     }
 
-    // No Internet Archive row: it needs no account, so it had nothing to configure and no
-    // onClick — a dead entry sitting among actionable ones.
     item(key = "local") {
         SettingsRow(
             title = "Music on this device",
@@ -57,7 +59,8 @@ internal fun LazyListScope.connectionsTab(
             // A phone's audio is not all music: ringtones, podcast downloads and voice memos all
             // satisfy MediaStore's IS_MUSIC. Narrowing the scan is set once and forgotten, so it
             // sits behind a long press rather than taking a row from the action used every time.
-            onLongClick = actions.onPickLocalFolder
+            onLongClick = actions.onPickLocalFolder,
+            leading = { SourceBadge(SourceIdentity.LOCAL, Hue) }
         )
     }
 }

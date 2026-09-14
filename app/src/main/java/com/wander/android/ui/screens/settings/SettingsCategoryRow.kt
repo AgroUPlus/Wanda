@@ -25,7 +25,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.material3.MaterialShapes
 import com.wander.android.ui.components.rememberHaptics
+import com.wander.android.ui.components.rememberPressMorphShape
 import com.wander.android.ui.components.rememberPressScale
 
 /**
@@ -61,6 +64,24 @@ internal fun SettingsCategoryRow(
         wiggle.animateTo(0f, wiggleSpec)
     }
 
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val restingPolygon = remember(category) {
+        when (category) {
+            SettingsCategory.CONNECTIONS -> MaterialShapes.Clover4Leaf
+            SettingsCategory.SYNC -> MaterialShapes.Burst
+            SettingsCategory.APPEARANCE -> MaterialShapes.Cookie12Sided
+            SettingsCategory.PLAYBACK -> MaterialShapes.Square
+            SettingsCategory.EXTERNAL -> MaterialShapes.Cookie4Sided
+            SettingsCategory.PRIVACY -> MaterialShapes.Pentagon
+            SettingsCategory.ABOUT -> MaterialShapes.Circle
+        }
+    }
+    val badgeShape = rememberPressMorphShape(
+        resting = restingPolygon,
+        pressed = MaterialShapes.Circle,
+        isPressed = isPressed
+    )
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
@@ -81,7 +102,7 @@ internal fun SettingsCategoryRow(
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .size(BadgeSize)
-                .background(category.hue.copy(alpha = BadgeAlpha), CircleShape)
+                .background(category.hue.copy(alpha = BadgeAlpha), badgeShape)
         ) {
             Icon(
                 imageVector = category.icon,
