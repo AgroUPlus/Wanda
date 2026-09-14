@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
@@ -26,6 +27,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.SmartMix
 import com.wander.android.ui.components.scrollingTitle
+
+private val SmartMixShape = RoundedCornerShape(topStart = 32.dp, topEnd = 16.dp, bottomEnd = 32.dp, bottomStart = 16.dp)
 
 /**
  * A one-press mix. Each mix carries its own gradient so the row reads as a set of distinct
@@ -60,7 +63,7 @@ fun SmartMixCard(
             .width(210.dp)
             .height(128.dp)
             .scale(scale)
-            .clip(MaterialTheme.shapes.extraLarge)
+            .clip(SmartMixShape)
             .background(brush)
             .clickable(
                 interactionSource = interactionSource,
