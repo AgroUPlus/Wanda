@@ -1,6 +1,9 @@
 package com.wander.android.ui.screens.settings
 
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import com.wander.android.ui.components.rememberShelfEntranceScale
 
 /**
  * Everything Agro: the pairing itself, then the two things a pairing buys — settings shared between
@@ -14,8 +17,12 @@ internal fun LazyListScope.syncTab(
     actions: SettingsActions,
     devices: AgroDevicesState
 ) {
+    var i = 0
+
+    val agroIndex = i++
     item(key = "agro") {
         SettingsRow(
+            modifier = Modifier.scale(rememberShelfEntranceScale(agroIndex)),
             title = "Agro Device",
             subtitle = state.agroConnection.describe(
                 state.agroDevicePetname,
@@ -36,16 +43,19 @@ internal fun LazyListScope.syncTab(
 
     if (!state.agroPaired) return
 
+    val agroSyncIndex = i++
     item(key = "agro_sync") {
         SettingsToggle(
             title = "Sync settings with Agro",
             subtitle = "Share the Navidrome address between devices.",
             checked = state.agroSyncSettings && !state.incognito,
             onCheckedChange = actions.onSyncSettingsChange,
-            enabled = !state.incognito
+            enabled = !state.incognito,
+            modifier = Modifier.scale(rememberShelfEntranceScale(agroSyncIndex))
         )
     }
 
+    val agroPopularityIndex = i++
     item(key = "agro_popularity") {
         SettingsToggle(
             title = "Contribute to \u201cPopular on Agro\u201d",
@@ -57,10 +67,12 @@ internal fun LazyListScope.syncTab(
                 "Other people on this server see the totals, not you. The shelf works either way.",
             checked = state.popularityContribution && !state.incognito,
             onCheckedChange = actions.onPopularityChange,
-            enabled = !state.incognito
+            enabled = !state.incognito,
+            modifier = Modifier.scale(rememberShelfEntranceScale(agroPopularityIndex))
         )
     }
 
+    val agroCatalogTradeIndex = i++
     item(key = "agro_catalog_trade") {
         SettingsToggle(
             title = "Improve with Agro",
@@ -73,18 +85,21 @@ internal fun LazyListScope.syncTab(
                 "people on this server can see which recordings and lyrics you hold, not your " +
                 "listening. Recognition works either way.",
             checked = state.catalogTrade,
-            onCheckedChange = actions.onCatalogTradeChange
+            onCheckedChange = actions.onCatalogTradeChange,
+            modifier = Modifier.scale(rememberShelfEntranceScale(agroCatalogTradeIndex))
         )
     }
 
     if (state.catalogTrade) {
+        val tradeTotalsIndex = i++
         item(key = "agro_catalog_trade_totals") {
             // Follows the toggle rather than living inside it: the switch says what the setting
             // does, and this says what it has done. Only shown while it is on, because a pair of
             // zeroes under an off switch explains nothing.
             SettingsRow(
                 title = "What the trade has done",
-                subtitle = tradeTotals(state.fingerprintsShared, state.lyricsReceived)
+                subtitle = tradeTotals(state.fingerprintsShared, state.lyricsReceived),
+                modifier = Modifier.scale(rememberShelfEntranceScale(tradeTotalsIndex))
             )
         }
     }

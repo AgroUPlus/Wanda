@@ -17,11 +17,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.sources.agro.AgroHandoffState
 import com.wander.android.data.sources.agro.AgroNode
 import com.wander.android.ui.components.ListeningGreen
+import com.wander.android.ui.components.rememberShelfEntranceScale
 
 /**
  * The other devices registered with Agro.
@@ -43,7 +45,9 @@ internal fun LazyListScope.agroDevicesSection(
     state: AgroDevicesState,
     onResume: (AgroHandoffState) -> Unit
 ) {
-    item(key = "agro_devices_header") { SettingsSection("Devices") }
+    item(key = "agro_devices_header") {
+        SettingsSection("Devices", modifier = Modifier.scale(rememberShelfEntranceScale(0)))
+    }
 
     if (state.devices.isEmpty()) {
         item(key = "agro_devices_empty") {

@@ -16,7 +16,13 @@ private val fontProvider = GoogleFont.Provider(
     certificates = R.array.com_google_android_gms_fonts_certs
 )
 
-private val PlayfulFont = GoogleFont("Plus Jakarta Sans")
+/**
+ * The same variable font Material 3 Expressive's own "Rounded" style is built from — Google made
+ * it public (OFL) in late 2025. Requesting it by weight through the downloadable-fonts provider,
+ * same as the font it replaces; the provider serves the family's own default instance on its
+ * roundness/grade/width axes rather than anything Compose can dial in per-weight.
+ */
+private val PlayfulFont = GoogleFont("Google Sans Flex")
 
 val WandaFontFamily = FontFamily(
     Font(googleFont = PlayfulFont, fontProvider = fontProvider, weight = FontWeight.Normal),
@@ -27,10 +33,10 @@ val WandaFontFamily = FontFamily(
 )
 
 /**
- * Plus Jakarta Sans has tall ascenders and deep descenders. Compose defaults to trimming the line
- * box to the requested `lineHeight`, and Material's `Tab` positions a label by its last baseline
- * inside a fixed 48 dp slot — between them the descender of a "y" ("Playlists") was being clipped.
- * Centring the glyphs in the line box and trimming nothing keeps every tail intact.
+ * Compose defaults to trimming the line box to the requested `lineHeight`, and Material's `Tab`
+ * positions a label by its last baseline inside a fixed 48 dp slot — between them the descender of
+ * a tall-descender glyph ("Playlists") was being clipped. Centring the glyphs in the line box and
+ * trimming nothing keeps every tail intact regardless of which font is loaded.
  */
 private val FullLineHeight = LineHeightStyle(
     alignment = LineHeightStyle.Alignment.Center,

@@ -122,6 +122,7 @@ internal fun LazyListScope.homeSection(
                 ) { index, track ->
                     HorizontalTrackCard(
                         track = track,
+                        index = index,
                         onPlay = { viewModel.play(section.tracks, index) },
                         onLongPress = { onLongPress(track) }
                     )
@@ -152,6 +153,42 @@ internal fun LazyListScope.homeSection(
                 onPlay = { index -> viewModel.play(section.tracks, index) },
                 onLongPress = onLongPress,
                 onToggleLike = viewModel::toggleLike
+            )
+        }
+
+        HomeSectionStyle.FEATURED_HERO -> item(
+            key = "${section.id}-row",
+            contentType = "featured-hero"
+        ) {
+            FeaturedHeroShelf(
+                tracks = section.tracks,
+                sectionId = section.id,
+                onPlay = { index -> viewModel.play(section.tracks, index) },
+                onLongPress = onLongPress
+            )
+        }
+
+        HomeSectionStyle.OVERLAPPING_STACK -> item(
+            key = "${section.id}-row",
+            contentType = "overlapping-stack"
+        ) {
+            OverlappingStackShelf(
+                tracks = section.tracks,
+                sectionId = section.id,
+                onPlay = { index -> viewModel.play(section.tracks, index) },
+                onLongPress = onLongPress
+            )
+        }
+
+        HomeSectionStyle.DISCOVER_MASONRY -> item(
+            key = "${section.id}-row",
+            contentType = "discover-masonry"
+        ) {
+            DiscoverMasonryShelf(
+                tracks = section.tracks,
+                sectionId = section.id,
+                onPlay = { index -> viewModel.play(section.tracks, index) },
+                onLongPress = onLongPress
             )
         }
 

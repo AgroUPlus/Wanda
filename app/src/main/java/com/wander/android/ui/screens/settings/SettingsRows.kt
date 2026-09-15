@@ -17,12 +17,12 @@ import androidx.compose.ui.unit.dp
 import com.wander.android.ui.components.rememberHaptics
 
 @Composable
-fun SettingsSection(title: String) {
+fun SettingsSection(title: String, modifier: Modifier = Modifier) {
     Text(
         text = title,
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 4.dp)
+        modifier = modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 4.dp)
     )
 }
 
@@ -46,11 +46,12 @@ fun SettingsRow(
      * A badge for a row that names something — a server, an account, a device. See [SourceBadge]
      * for why most rows deliberately have none.
      */
-    leading: (@Composable () -> Unit)? = null
+    leading: (@Composable () -> Unit)? = null,
+    modifier: Modifier = Modifier
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .then(
                 if (onClick != null && enabled) {
@@ -92,12 +93,13 @@ fun SettingsToggle(
     subtitle: String?,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
     val haptics = rememberHaptics()
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .then(
                 if (enabled) {

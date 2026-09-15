@@ -7,6 +7,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.core.update.UpdateCheckResult
 import com.wander.android.data.repository.SyncProgress
 import com.wander.android.data.sources.agro.AgroSyncedSettings
+import com.wander.android.ui.theme.rememberSystemAnimationsDisabled
 
 /**
  * One snapshot of everything the settings tabs read.
@@ -26,6 +27,9 @@ internal data class SettingsUiState(
     val amoled: Boolean,
     val immersivePlayer: Boolean,
     val coverArtTheme: Boolean,
+    val reduceMotion: Boolean,
+    /** The phone's own Accessibility "Remove animations" setting — see `rememberSystemAnimationsDisabled`. */
+    val systemReduceMotion: Boolean,
     val offline: Boolean,
     val preloadNext: Boolean,
     val indexOnMobileData: Boolean,
@@ -87,6 +91,8 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val amoled by viewModel.isAmoledBlack.collectAsStateWithLifecycle()
     val immersivePlayer by viewModel.isImmersivePlayer.collectAsStateWithLifecycle()
     val coverArtTheme by viewModel.isCoverArtThemeEnabled.collectAsStateWithLifecycle()
+    val reduceMotion by viewModel.isReduceMotion.collectAsStateWithLifecycle()
+    val systemReduceMotion = rememberSystemAnimationsDisabled()
     val offline by viewModel.isOfflineMode.collectAsStateWithLifecycle()
     val preloadNext by viewModel.isPreloadNextEnabled.collectAsStateWithLifecycle()
     val indexOnMobileData by viewModel.isIndexOnMobileDataEnabled.collectAsStateWithLifecycle()
@@ -132,6 +138,8 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         amoled = amoled,
         immersivePlayer = immersivePlayer,
         coverArtTheme = coverArtTheme,
+        reduceMotion = reduceMotion,
+        systemReduceMotion = systemReduceMotion,
         offline = offline,
         preloadNext = preloadNext,
         indexOnMobileData = indexOnMobileData,

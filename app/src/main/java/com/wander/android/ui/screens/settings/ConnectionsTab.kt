@@ -1,6 +1,9 @@
 package com.wander.android.ui.screens.settings
 
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import com.wander.android.ui.components.rememberShelfEntranceScale
 
 private val Hue = SettingsCategory.CONNECTIONS.hue
 
@@ -12,8 +15,12 @@ internal fun LazyListScope.connectionsTab(
     state: SettingsUiState,
     actions: SettingsActions
 ) {
+    var i = 0
+
+    val navidromeIndex = i++
     item(key = "navidrome") {
         SettingsRow(
+            modifier = Modifier.scale(rememberShelfEntranceScale(navidromeIndex)),
             title = "Navidrome",
             // With settings sync on, an unconnected Navidrome still knows where it should point —
             // saying so is the difference between "sync did nothing" and "sync told this device
@@ -29,8 +36,10 @@ internal fun LazyListScope.connectionsTab(
         )
     }
 
+    val ytMusicIndex = i++
     item(key = "ytmusic") {
         SettingsRow(
+            modifier = Modifier.scale(rememberShelfEntranceScale(ytMusicIndex)),
             title = "YouTube Music",
             subtitle = if (state.youTube) {
                 // A Google account can hold several YouTube channels and only the session knows
@@ -45,8 +54,10 @@ internal fun LazyListScope.connectionsTab(
         )
     }
 
+    val localIndex = i++
     item(key = "local") {
         SettingsRow(
+            modifier = Modifier.scale(rememberShelfEntranceScale(localIndex)),
             title = "Music on this device",
             subtitle = when {
                 !state.localReady -> "Waiting for permission to read audio files"

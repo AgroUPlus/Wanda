@@ -40,7 +40,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.data.repository.IndexReadiness
 import com.wander.android.data.repository.Recognition
-import com.wander.android.data.repository.RecognitionEngine
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.listen.ListenState
 import com.wander.android.ui.components.listen.ListenViewModel
@@ -183,8 +182,7 @@ private fun MatchedView(recognition: Recognition, onPlay: () -> Unit) {
         overflow = TextOverflow.Ellipsis
     )
     Button(onClick = onPlay, shapes = ButtonDefaults.shapes()) {
-        if (recognition.engine == RecognitionEngine.MELODY) Text("Play")
-        else Text("Play")
+        Text("Play")
     }
 }
 

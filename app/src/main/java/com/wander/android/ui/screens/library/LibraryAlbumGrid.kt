@@ -1,19 +1,23 @@
 package com.wander.android.ui.screens.library
 
+import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -89,17 +93,36 @@ internal fun AlbumGrid(
                 )
             }
             item(span = { GridItemSpan(maxLineSpan) }, key = "recent_row") {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.padding(bottom = 16.dp)
-                ) {
-                    items(recentAlbums, key = { "recent_${it.id}" }) { album ->
-                        AlbumCard(
-                            album = album,
-                            onClick = { onOpenAlbum(album.id) },
-                            onLongClick = { onAlbumLongPress(album) }
-                        )
+                // No overscroll here: this row lives inside `LibraryScreen`'s `HorizontalPager`, and
+                // the default stretch/glow overscroll effect swallows a horizontal drag at this
+                // row's own scroll bounds before it can bubble up to the pager — a swipe that starts
+                // (or ends) over the Recent row could never turn into a page change, even sitting
+                // dead on the first or last album. Nested scrolling still hands the pager unconsumed
+                // delta with the effect off; it just no longer eats the delta that would be zero
+                // anyway once the row can't scroll further.
+                CompositionLocalProvider(LocalOverscrollFactory provides null) {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    ) {
+                        itemsIndexed(recentAlbums, key = { _, album -> "recent_${album.id}" }) { index, album ->
+                            AlbumCard(
+                                album = album,
+                                index = index,
+                                onClick = { onOpenAlbum(album.id) },
+                                onLongClick = { onAlbumLongPress(album) },
+                                artworkSize = 132.dp,
+                                // A `LazyRow` gives its items infinite width along the scroll axis,
+                                // so without an explicit width `Artwork`'s own `fillMaxWidth()` was
+                                // a no-op (Compose special-cases `fillMaxWidth` under an infinite
+                                // constraint as doing nothing) and the title never had a bounded box
+                                // to overflow against — it just sat there, uncropped and unscrolled,
+                                // for anything long enough to need either. Same width and artwork
+                                // size the artist page's own album row already uses.
+                                modifier = Modifier.width(148.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -111,9 +134,10 @@ internal fun AlbumGrid(
                 )
             }
         }
-        items(visibleAlbums, key = { album -> album.id }) { album ->
+        itemsIndexed(visibleAlbums, key = { _, album -> album.id }) { index, album ->
             AlbumCard(
                 album = album,
+                index = index,
                 onClick = { onOpenAlbum(album.id) },
                 onLongClick = { onAlbumLongPress(album) }
             )

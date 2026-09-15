@@ -148,7 +148,7 @@ fun PlayerSheet(
                     val travel = with(density) {
                         (sheetHeight - docked - bottomInset - MiniPlayerGap).toPx()
                     }
-                    sheetState.updateMaxOffset(travel)
+                    sheetState.updateMaxOffset(travel, scope)
                 }
         }
 

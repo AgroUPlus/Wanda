@@ -1,7 +1,10 @@
 package com.wander.android.ui.screens.settings
 
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import com.wander.android.core.update.UpdateCheckResult
+import com.wander.android.ui.components.rememberShelfEntranceScale
 
 /**
  * App identity and the manual update check.
@@ -16,16 +19,21 @@ internal fun LazyListScope.aboutTab(
     state: SettingsUiState,
     actions: SettingsActions
 ) {
+    var i = 0
+
+    val duplicateRecordingsIndex = i++
     item(key = "duplicate_recordings") {
         SettingsRow(
             title = "Duplicate recordings",
             subtitle = "Review which of your tracks are the same recording, before anything merges",
-            onClick = actions.onOpenMergePreview
+            onClick = actions.onOpenMergePreview,
+            modifier = Modifier.scale(rememberShelfEntranceScale(duplicateRecordingsIndex))
         )
     }
 
     // Version and the update check are one row: the version is the question "am I current?" and
     // the check is the answer, so splitting them made the user tap two rows to learn one thing.
+    val versionIndex = i++
     item(key = "version") {
         SettingsRow(
             title = "Version",
@@ -46,27 +54,35 @@ internal fun LazyListScope.aboutTab(
                 } else {
                     actions.onCheckForUpdate()
                 }
-            }
+            },
+            modifier = Modifier.scale(rememberShelfEntranceScale(versionIndex))
         )
     }
 
-    item(key = "credits_header") { SettingsSection("Credits") }
+    val creditsHeaderIndex = i++
+    item(key = "credits_header") {
+        SettingsSection("Credits", modifier = Modifier.scale(rememberShelfEntranceScale(creditsHeaderIndex)))
+    }
 
+    val creditsOrgIndex = i++
     item(key = "credits_org") {
         SettingsRow(
             title = "AgroUPlus",
             subtitle = "Wanda and Agro are built here. Source, issues and releases on GitHub.",
-            onClick = { actions.onOpenUrl(ORG_URL) }
+            onClick = { actions.onOpenUrl(ORG_URL) },
+            modifier = Modifier.scale(rememberShelfEntranceScale(creditsOrgIndex))
         )
     }
 
+    val autoUpdateCheckIndex = i++
     item(key = "auto_update_check") {
         SettingsToggle(
             title = "Check for updates on launch",
             subtitle = "Finds the latest release automatically and tells you when there is one. " +
                 "Off by default: this is a network call at startup.",
             checked = state.autoUpdateCheckEnabled,
-            onCheckedChange = actions.onAutoUpdateCheckChange
+            onCheckedChange = actions.onAutoUpdateCheckChange,
+            modifier = Modifier.scale(rememberShelfEntranceScale(autoUpdateCheckIndex))
         )
     }
 

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -167,9 +168,10 @@ internal fun PlaylistList(
                 }
             }
         }
-        items(visiblePlaylists, key = { it.id }, contentType = { "playlist" }) { playlist ->
+        itemsIndexed(visiblePlaylists, key = { _, it -> it.id }, contentType = { _, _ -> "playlist" }) { index, playlist ->
             PlaylistRow(
                 playlist = playlist,
+                index = index,
                 onClick = { onOpenPlaylist(playlist.id) },
                 onLongPress = { actionsForPlaylist = playlist }
             )

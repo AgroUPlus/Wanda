@@ -7,6 +7,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -76,6 +77,8 @@ import com.wander.android.ui.navigation.wanderNavGraph
 import com.wander.android.ui.screens.home.InstantRadioFab
 import com.wander.android.ui.screens.social.JamViewModel
 import com.wander.android.ui.screens.social.SocialViewModel
+import com.wander.android.ui.theme.CoverTintedTheme
+import com.wander.android.ui.theme.rememberCoverSeedColor
 import kotlinx.coroutines.launch
 
 /**
@@ -220,6 +223,24 @@ fun WanderApp(
 
     val offlinePlayback by viewModel.offlinePlayback.collectAsStateWithLifecycle()
 
+    // The same wash `NowPlayingScreen` already applies to itself, widened to the whole shell —
+    // so Home and Library read as tinted by whatever's playing too, not just the expanded player.
+    // Real `amoled` here, unlike the player's own (deliberate) `amoled = false`: this covers
+    // surfaces an OLED user is looking at far more of the time, so True black has to win here.
+    val isCoverArtThemeEnabled by viewModel.isCoverArtThemeEnabled.collectAsStateWithLifecycle()
+    val isAmoledBlack by viewModel.isAmoledBlack.collectAsStateWithLifecycle()
+    val shellCoverSeed = if (isCoverArtThemeEnabled) {
+        rememberCoverSeedColor(playback.currentTrack?.artworkUrl)
+    } else {
+        null
+    }
+
+    CoverTintedTheme(
+        seedColor = shellCoverSeed,
+        base = MaterialTheme.colorScheme,
+        dark = isSystemInDarkTheme(),
+        amoled = isAmoledBlack
+    ) {
     CompositionLocalProvider(LocalOfflinePlayback provides offlinePlayback) {
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
@@ -489,6 +510,7 @@ fun WanderApp(
                     )
             )
         }
+    }
     }
 }
 

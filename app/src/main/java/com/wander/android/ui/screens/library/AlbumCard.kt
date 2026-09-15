@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.library
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,12 +21,15 @@ import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.rememberPressScale
+import com.wander.android.ui.components.rememberShelfArtworkShape
+import com.wander.android.ui.components.rememberShelfEntranceScale
 import com.wander.android.ui.components.scrollingTitle
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AlbumCard(
     album: UnifiedAlbum,
+    index: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     /**
@@ -37,11 +41,14 @@ fun AlbumCard(
     artworkSize: Dp = 160.dp
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
     val scale by rememberPressScale(interactionSource, label = "albumCardPress")
+    val entranceScale = rememberShelfEntranceScale(index)
+    val artworkShape = rememberShelfArtworkShape(isPressed)
 
     Column(
         modifier = modifier
-            .scale(scale)
+            .scale(scale * entranceScale)
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -54,7 +61,7 @@ fun AlbumCard(
             url = album.coverArtUrl,
             contentDescription = album.title,
             sizeDp = artworkSize,
-            shape = MaterialTheme.shapes.medium,
+            shape = artworkShape,
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)

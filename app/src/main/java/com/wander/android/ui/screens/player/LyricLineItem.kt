@@ -1,6 +1,7 @@
 package com.wander.android.ui.screens.player
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
@@ -61,6 +62,10 @@ fun LyricLineItem(
 
     val contentModifier = modifier
         .fillMaxWidth()
+        // The active line swaps to a bigger style below, which can push it from one wrapped line
+        // to two. Without this, that change in line count landed as a hard cut — the row's height
+        // jumped and every line below it hopped to a new position in the same frame.
+        .animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec())
         .clickable { onSeek(line.timestampMs) }
         .padding(vertical = verticalPadding, horizontal = 16.dp)
         .graphicsLayer {

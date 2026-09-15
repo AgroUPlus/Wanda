@@ -63,8 +63,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             val amoled by secureStorage.isAmoledBlack.collectAsStateWithLifecycle()
             val monet by secureStorage.isMonetDynamic.collectAsStateWithLifecycle()
+            val reduceMotion by secureStorage.isReduceMotion.collectAsStateWithLifecycle()
 
-            WanderTheme(dynamicColor = monet, amoledBlack = amoled) {
+            WanderTheme(dynamicColor = monet, amoledBlack = amoled, reduceMotion = reduceMotion) {
                 WanderApp(playerConnection = playerConnection)
             }
         }

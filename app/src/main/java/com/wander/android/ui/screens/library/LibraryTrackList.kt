@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
@@ -26,6 +27,7 @@ import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.SkeletonRow
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.rememberShelfEntranceScale
 
 private const val TRACKS_PAGE_SIZE = 40
 private const val SKELETON_ROWS = 8
@@ -73,12 +75,13 @@ internal fun TrackList(
                     pageSize = (pageSize + TRACKS_PAGE_SIZE).coerceAtMost(tracks.size)
                 }
             }
+            val entranceScale = rememberShelfEntranceScale(index)
             TrackRow(
                 track = track,
                 onPlay = { viewModel.play(tracks, index) },
                 onToggleLike = { viewModel.toggleLike(track) },
                 onLongPress = { onLongPress(track) },
-                modifier = Modifier.animateItem()
+                modifier = Modifier.animateItem().scale(entranceScale)
             )
         }
         if (hasMore) {
@@ -136,6 +139,7 @@ internal fun PagedTrackList(
             // Null while the page holding this row loads. It should not happen with placeholders
             // disabled, but the API is nullable and this is the app's busiest list to crash on.
             val track = tracks[index] ?: return@items
+            val entranceScale = rememberShelfEntranceScale(index)
             TrackRow(
                 track = track,
                 // The queue is built from the database on tap, not from what the screen holds:
@@ -143,7 +147,8 @@ internal fun PagedTrackList(
                 // fortieth track must still queue the whole library after it.
                 onPlay = { viewModel.playFromLibrary(track) },
                 onToggleLike = { viewModel.toggleLike(track) },
-                onLongPress = { onLongPress(track) }
+                onLongPress = { onLongPress(track) },
+                modifier = Modifier.scale(entranceScale)
             )
         }
         if (tracks.loadState.append is LoadState.Loading) {

@@ -13,9 +13,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.ui.components.rememberShelfEntranceScale
 
 /**
  * Export and restore everything this device remembers.
@@ -65,7 +67,8 @@ internal fun BackupSection(viewModel: BackupViewModel = hiltViewModel()) {
                 viewModel.clearStatus()
                 exportLauncher.launch(DEFAULT_FILE_NAME)
             },
-            enabled = !busy
+            enabled = !busy,
+            modifier = Modifier.scale(rememberShelfEntranceScale(0))
         )
 
         SettingsRow(
@@ -78,7 +81,8 @@ internal fun BackupSection(viewModel: BackupViewModel = hiltViewModel()) {
                 // wrote makes the user's own backup unselectable. The format is checked on read.
                 importLauncher.launch(arrayOf("*/*"))
             },
-            enabled = !busy
+            enabled = !busy,
+            modifier = Modifier.scale(rememberShelfEntranceScale(1))
         )
 
         status?.let { Outcome(it) }

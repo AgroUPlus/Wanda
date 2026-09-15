@@ -13,6 +13,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 enum class PlayerSheetValue {
@@ -68,7 +70,7 @@ class PlayerSheetState(
 
     val isExpanded: Boolean get() = progress > 0.5f
 
-    internal suspend fun updateMaxOffset(newMaxOffset: Float) {
+    internal suspend fun updateMaxOffset(newMaxOffset: Float, scope: CoroutineScope) {
         if (newMaxOffset <= 0f) return
         val isFirstMeasure = maxOffsetPx <= 0f
         val wasCollapsed = targetValue == PlayerSheetValue.COLLAPSED
@@ -80,7 +82,25 @@ class PlayerSheetState(
         // stranded mid-overshoot. An offset that no longer fits the new travel is the one case
         // that must still be brought back into range, whatever is running.
         val outOfRange = offset.value > newMaxOffset
-        if (offset.isRunning && !outOfRange) return
+        if (offset.isRunning && !outOfRange) {
+            // A collapse in flight is animating *toward* `maxOffsetPx` itself — `animateTo` below
+            // captures it by value, so when a navigation collapses the sheet and drops the dock row
+            // in the same beat, the running animation kept chasing the target it started with and
+            // settled short, leaving the strip resting in the space the dock row used to reserve
+            // until the row's own (slower) spring finished and snapped it in. Launched rather than
+            // awaited so this collector keeps reading every frame of that spring instead of
+            // blocking on one retarget at a time — `Animatable` serializes writes through its own
+            // mutex, so each new launch simply preempts the last with its current velocity intact,
+            // the same way `animateDpAsState` itself retargets.
+            //
+            // An expand in flight always heads for 0 regardless of `maxOffsetPx`, so it is left
+            // alone here — retargeting it on every frame of the dock row's spring is what stranded
+            // the cover mid-overshoot in the first place.
+            if (wasCollapsed) {
+                scope.launch { offset.animateTo(newMaxOffset, animationSpec) }
+            }
+            return
+        }
         if (isFirstMeasure || wasCollapsed || wasAtMax || outOfRange) {
             if (targetValue == PlayerSheetValue.EXPANDED) {
                 offset.snapTo(0f)

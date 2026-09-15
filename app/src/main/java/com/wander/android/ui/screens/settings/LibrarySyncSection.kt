@@ -10,8 +10,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.repository.SyncProgress
+import com.wander.android.ui.components.rememberShelfEntranceScale
 import kotlin.math.max
 
 /**
@@ -26,8 +28,17 @@ internal fun LazyListScope.librarySyncSection(
     /** One line describing where files end up, which depends on what else is connected. */
     serverSummary: String
 ) {
-    item(key = "library_sync_section") { SettingsSection("Device & library sync") }
+    var i = 0
 
+    val librarySyncSectionIndex = i++
+    item(key = "library_sync_section") {
+        SettingsSection(
+            "Device & library sync",
+            modifier = Modifier.scale(rememberShelfEntranceScale(librarySyncSectionIndex))
+        )
+    }
+
+    val p2pSyncIndex = i++
     item(key = "p2p_sync_toggle") {
         SettingsToggle(
             title = "P2P Device Sync",
@@ -38,10 +49,12 @@ internal fun LazyListScope.librarySyncSection(
             },
             checked = state.p2pSync && !state.incognito,
             onCheckedChange = actions.onP2pSyncChange,
-            enabled = !state.incognito
+            enabled = !state.incognito,
+            modifier = Modifier.scale(rememberShelfEntranceScale(p2pSyncIndex))
         )
     }
 
+    val serverArchiveIndex = i++
     item(key = "server_archive_toggle") {
         SettingsToggle(
             title = "Archive to server",
@@ -52,11 +65,13 @@ internal fun LazyListScope.librarySyncSection(
             },
             checked = state.serverArchive && !state.incognito && state.canArchive,
             onCheckedChange = actions.onServerArchiveChange,
-            enabled = !state.incognito && state.canArchive
+            enabled = !state.incognito && state.canArchive,
+            modifier = Modifier.scale(rememberShelfEntranceScale(serverArchiveIndex))
         )
     }
 
     if (state.canArchive) {
+        val librarySyncDeleteIndex = i++
         item(key = "library_sync_delete") {
             SettingsRow(
                 title = "Free up space on this device",
@@ -66,7 +81,8 @@ internal fun LazyListScope.librarySyncSection(
                     "Nothing to remove — the server has confirmed no files yet"
                 },
                 onClick = actions.onReviewDeletions,
-                destructive = state.canDelete
+                destructive = state.canDelete,
+                modifier = Modifier.scale(rememberShelfEntranceScale(librarySyncDeleteIndex))
             )
         }
     }
@@ -142,6 +158,7 @@ internal fun LazyListScope.librarySyncSection(
         }
     }
 
+    val librarySyncNowIndex = i++
     item(key = "library_sync_now") {
         SettingsRow(
             title = "Sync now",
@@ -150,7 +167,8 @@ internal fun LazyListScope.librarySyncSection(
                 state.serverArchive -> "Send files to the server now"
                 else -> "Update what your other devices can see. No files are sent."
             },
-            onClick = actions.onSyncNow
+            onClick = actions.onSyncNow,
+            modifier = Modifier.scale(rememberShelfEntranceScale(librarySyncNowIndex))
         )
     }
 }

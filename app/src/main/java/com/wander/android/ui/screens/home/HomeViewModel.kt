@@ -75,7 +75,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(
                         allSections = state.allSections.withSection(
-                            carousel(SectionLiked, "Your Favourites", liked.take(CarouselSize))
+                            shelf(SectionLiked, "Your Favourites", HomeSectionStyle.OVERLAPPING_STACK, liked.take(CarouselSize))
                         )
                     )
                 }
@@ -120,8 +120,8 @@ class HomeViewModel @Inject constructor(
                     add(shelf(SectionOnRepeat, "Quick picks", HomeSectionStyle.TRACK_PAGER, onRepeat.await()))
                     add(shelf(SectionJumpBackIn, "Keep listening", HomeSectionStyle.LARGE_GRID, jumpBackIn.await()))
                     add(carousel(SectionRecentlyPlayed, "Recently Played", recentlyPlayed.await()))
-                    add(carousel(SectionLiked, "Your Favourites", liked.await()))
-                    add(carousel(SectionDiscover, "Discover", discover.await()))
+                    add(shelf(SectionLiked, "Your Favourites", HomeSectionStyle.OVERLAPPING_STACK, liked.await()))
+                    add(shelf(SectionDiscover, "Discover", HomeSectionStyle.DISCOVER_MASONRY, discover.await()))
                     perSource.forEach { (source, deferred) ->
                         add(
                             carousel(
@@ -155,7 +155,12 @@ class HomeViewModel @Inject constructor(
                             val seed = homeShelfRepository.getRecentlyPlayed(1).firstOrNull()
                             seed to seed?.let { musicRepository.generateRadio(it, CarouselSize) }.orEmpty()
                         }
-                        val feed = feedDeferred.await()
+                        // Music videos have no video surface in this player — see `SearchKind` —
+                        // so a shelf built entirely around promoting them ("New music videos",
+                        // "Music videos") is a dead end here, not a discovery opportunity. Dropped
+                        // by title rather than by some upstream flag: YouTube Music's own feed is
+                        // the only source of these, and it names them, not tags them.
+                        val feed = feedDeferred.await().filterNot { it.title.contains("video", ignoreCase = true) }
                         val (seed, suggestions) = recommendedDeferred.await()
 
                         if (feed.isNotEmpty() || (seed != null && suggestions.isNotEmpty())) {
@@ -173,9 +178,10 @@ class HomeViewModel @Inject constructor(
                                     // Add seed radio recommendations
                                     if (seed != null && suggestions.isNotEmpty()) {
                                         add(
-                                            carousel(
+                                            shelf(
                                                 id = SectionBecause,
                                                 title = "Because you listened to ${seed.title}",
+                                                style = HomeSectionStyle.FEATURED_HERO,
                                                 tracks = suggestions
                                                     .filter { it.id != seed.id }
                                                     .distinctBy { it.title.lowercase() }

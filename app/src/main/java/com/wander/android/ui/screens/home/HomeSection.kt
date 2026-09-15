@@ -14,7 +14,13 @@ enum class HomeSectionStyle {
     /** Rows again, but dealt into swipeable pages of [com.wander.android.ui.screens.home.RowsPerPage]. */
     TRACK_PAGER,
     /** Two rows of oversized cards that scroll sideways together. */
-    LARGE_GRID
+    LARGE_GRID,
+    /** One oversized hero card leading a small strip of related tracks beside it. */
+    FEATURED_HERO,
+    /** A row of square covers that overlap like a loose stack rather than sitting edge to edge. */
+    OVERLAPPING_STACK,
+    /** Two rows of cards at alternating heights, scrolling sideways as a broken grid. */
+    DISCOVER_MASONRY
 }
 
 /**

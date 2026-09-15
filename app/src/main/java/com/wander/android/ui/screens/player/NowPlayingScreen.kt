@@ -70,6 +70,7 @@ import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.AudioQualityBadge
 import com.wander.android.ui.components.AvatarGroup
 import com.wander.android.ui.components.FingerprintBadge
+import com.wander.android.ui.components.KeepScreenOn
 import com.wander.android.ui.components.LikeButton
 import com.wander.android.ui.components.scrollingTitle
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -131,6 +132,8 @@ internal fun NowPlayingScreen(
     val track = state.currentTrack
 
     if (track == null) return
+
+    KeepScreenOn(keepAwake = showLyrics)
 
     // Extract the dominant colour from the cover art and use it to tint the player surface,
     // if enabled in Settings -> Appearance. Until it arrives or if disabled, base scheme is used.

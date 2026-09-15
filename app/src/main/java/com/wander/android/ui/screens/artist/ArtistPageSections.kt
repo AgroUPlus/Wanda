@@ -191,9 +191,10 @@ private fun AlbumRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(horizontal = 20.dp)
     ) {
-        items(albums, key = { it.id }, contentType = { "album" }) { album ->
+        itemsIndexed(albums, key = { _, album -> album.id }, contentType = { _, _ -> "album" }) { index, album ->
             AlbumCard(
                 album = album,
+                index = index,
                 onClick = { onOpenAlbum(album.id) },
                 onLongClick = { onLongPressAlbum(album) },
                 artworkSize = 132.dp,

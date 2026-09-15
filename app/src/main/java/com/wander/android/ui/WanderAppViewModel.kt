@@ -62,6 +62,12 @@ class WanderAppViewModel @Inject constructor(
     @ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
 
+    /** Whether Home/Library's background should wash toward the playing cover's colour. */
+    val isCoverArtThemeEnabled: StateFlow<Boolean> = secureStorage.isCoverArtThemeEnabled
+
+    /** True black pins the darkest surfaces regardless — see `CoverTintedTheme`'s `amoled` param. */
+    val isAmoledBlack: StateFlow<Boolean> = secureStorage.isAmoledBlack
+
     /**
      * Whether the track on the player's cover has been measured.
      *

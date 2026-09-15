@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.home
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -23,15 +24,21 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.isPlayableNow
 import com.wander.android.ui.components.rememberPressScale
+import com.wander.android.ui.components.rememberShelfArtworkShape
+import com.wander.android.ui.components.rememberShelfEntranceScale
 import com.wander.android.ui.components.scrollingTitle
 
 /**
- * Spotify-style horizontal media card for carousels (Heavy Rotation, Recently Played).
+ * Spotify-style horizontal media card for carousels (Heavy Rotation, Recently Played) — except
+ * the corners aren't a rectangle. Each card's artwork rests in a shape drawn from a small rotating
+ * set ([rememberShelfArtworkShape]) and relaxes into a circle while held, and the card pops in
+ * with a short stagger as it scrolls into view ([rememberShelfEntranceScale]).
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HorizontalTrackCard(
     track: UnifiedTrack,
+    index: Int,
     onPlay: () -> Unit,
     modifier: Modifier = Modifier,
     /** Long press, for the track actions sheet. Matches [com.wander.android.ui.components.TrackRow]. */
@@ -40,12 +47,15 @@ fun HorizontalTrackCard(
     enabled: Boolean = track.isPlayableNow()
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
     val scale by rememberPressScale(interactionSource, label = "trackCardPress")
+    val entranceScale = rememberShelfEntranceScale(index)
+    val artworkShape = rememberShelfArtworkShape(isPressed)
 
     Column(
         modifier = modifier
             .width(140.dp)
-            .scale(scale)
+            .scale(scale * entranceScale)
             .graphicsLayer { alpha = if (enabled) 1f else DisabledAlpha }
             // Deliberately no clip on the card: rounding the whole Column cropped the corners off
             // the title and artist underneath. The artwork rounds itself via its own shape.
@@ -60,7 +70,7 @@ fun HorizontalTrackCard(
             url = track.artworkUrl,
             contentDescription = track.title,
             sizeDp = 140.dp,
-            shape = MaterialTheme.shapes.large,
+            shape = artworkShape,
             modifier = Modifier.size(140.dp)
         )
 

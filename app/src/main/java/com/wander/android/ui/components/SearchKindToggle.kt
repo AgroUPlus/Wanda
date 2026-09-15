@@ -1,8 +1,8 @@
 package com.wander.android.ui.components
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.ButtonGroup
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.wander.android.data.model.SearchKind
@@ -10,35 +10,32 @@ import com.wander.android.data.model.SearchKind
 /**
  * Music / Videos / Podcasts.
  *
- * A connected group rather than a row of filter chips. The three are mutually exclusive and cover
- * the whole space of what a search can be, which is exactly what a joined control means — where
- * chips read as independent filters you might toggle in any combination, and sat confusingly next
- * to the source chips below, which genuinely are that.
- *
- * `ButtonGroup` rather than the segmented row it replaces: same meaning, but the members squash and
- * their neighbours give way as one is pressed, which is the expressive idiom the rest of the app
- * now uses. The old `SegmentedButton` had no motion at all.
+ * The three are mutually exclusive and cover the whole space of what a search can be, so they sit
+ * in one connected row with a single highlight gliding between them on selection, rather than each
+ * one snapping its own background on and off.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SearchKindToggle(
     selected: SearchKind,
     onSelect: (SearchKind) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    ButtonGroup(
-        // Nothing overflows: there are exactly three kinds and they fit any phone.
-        overflowIndicator = {},
-        modifier = modifier.fillMaxWidth()
-    ) {
-        SearchKind.entries.forEach { kind ->
-            // The group renders the label itself, so there is no content slot to fill here.
-            toggleableItem(
-                checked = kind == selected,
-                label = kind.label,
-                onCheckedChange = { onSelect(kind) },
-                weight = 1f
-            )
+    val highlightState = rememberTravelingHighlightState()
+
+    Box(modifier = modifier.fillMaxWidth()) {
+        TravelingHighlight(state = highlightState, selectedKey = selected)
+
+        Row(modifier = Modifier.fillMaxWidth()) {
+            SearchKind.entries.forEach { kind ->
+                SelectableChip(
+                    label = kind.label,
+                    selected = kind == selected,
+                    onClick = { onSelect(kind) },
+                    highlightState = highlightState,
+                    key = kind,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
 }

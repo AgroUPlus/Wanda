@@ -1,5 +1,6 @@
 package com.wander.android.ui.components
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -15,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Equalizer
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.RemoveCircleOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,7 +41,12 @@ fun TrackRow(
     modifier: Modifier = Modifier,
     isPlaying: Boolean = false,
     onToggleLike: (() -> Unit)? = null,
-    onRemove: (() -> Unit)? = null,
+    /**
+     * Whether this row paints its own "now playing" background. False in the queue, which draws
+     * one animated highlight that travels between rows instead of each row snapping its own on
+     * and off — see `QueueUpNext`.
+     */
+    showBackground: Boolean = true,
     /** Long press. Null leaves the row without a context menu, as in the queue's reorder mode. */
     onLongPress: (() -> Unit)? = null,
     /**
@@ -70,11 +75,15 @@ fun TrackRow(
     // song lists among them, which had no press feedback at all.
     val interactionSource = remember { MutableInteractionSource() }
     val artworkScale by rememberPressScale(interactionSource, label = "trackRowPress")
-    val rowBackground = if (isPlaying) {
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.30f)
-    } else {
-        Color.Transparent
-    }
+    val rowBackground by animateColorAsState(
+        targetValue = if (isPlaying && showBackground) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.30f)
+        } else {
+            Color.Transparent
+        },
+        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+        label = "trackRowBackground"
+    )
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -147,16 +156,6 @@ fun TrackRow(
                     maxLines = 1,
                     overflow = TextOverflow.Clip,
                     modifier = Modifier.scrollingTitle()
-                )
-            }
-        }
-
-        if (onRemove != null) {
-            IconButton(onClick = onRemove) {
-                Icon(
-                    imageVector = Icons.Rounded.RemoveCircleOutline,
-                    contentDescription = "Remove from queue",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

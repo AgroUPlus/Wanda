@@ -8,7 +8,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -19,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.palette.graphics.Palette
 import coil3.ImageLoader
@@ -182,18 +182,23 @@ fun ColorScheme.tintedByCover(seed: Color, strength: Float, dark: Boolean): Colo
     // Barely moves: a wash of the seed over a neutral.
     fun wash(from: Color, amount: Float) = lerp(from, seed, amount * strength)
 
-    val onAccent = if (dark) Color.Black else Color.White
+    // The resulting accent colours, computed once so their own "on" colour can be picked from
+    // what they actually turned out to be rather than assumed from the theme.
+    val newPrimary = accent(primary, if (dark) 0.60f else 0.50f)
+    val newSecondary = accent(secondary, 0.40f)
+    val newTertiary = accent(tertiary, if (dark) 0.50f else 0.60f)
+
     return copy(
-        primary              = accent(primary,              if (dark) 0.60f else 0.50f),
-        onPrimary            = lerp(onPrimary, onAccent, strength),
+        primary              = newPrimary,
+        onPrimary            = lerp(onPrimary, newPrimary.contrastingOnColor(), strength),
         primaryContainer     = accent(primaryContainer,     if (dark) 0.25f else 0.90f),
         onPrimaryContainer   = accent(onPrimaryContainer,   if (dark) 0.90f else 0.10f),
-        secondary            = accent(secondary,            0.40f),
-        onSecondary          = lerp(onSecondary, onAccent, strength),
+        secondary            = newSecondary,
+        onSecondary          = lerp(onSecondary, newSecondary.contrastingOnColor(), strength),
         secondaryContainer   = accent(secondaryContainer,   if (dark) 0.20f else 0.85f),
         onSecondaryContainer = accent(onSecondaryContainer, if (dark) 0.85f else 0.15f),
-        tertiary             = accent(tertiary,             if (dark) 0.50f else 0.60f),
-        onTertiary           = lerp(onTertiary, onAccent, strength),
+        tertiary             = newTertiary,
+        onTertiary           = lerp(onTertiary, newTertiary.contrastingOnColor(), strength),
         tertiaryContainer    = accent(tertiaryContainer,    if (dark) 0.30f else 0.88f),
         onTertiaryContainer  = accent(onTertiaryContainer,  if (dark) 0.88f else 0.12f),
 
@@ -215,6 +220,19 @@ fun ColorScheme.tintedByCover(seed: Color, strength: Float, dark: Boolean): Colo
         surfaceTint             = accent(surfaceTint,           if (dark) 0.60f else 0.50f),
     )
 }
+
+/**
+ * Black or white text for [this] background, picked from what the colour actually turned out to
+ * be rather than assumed from the theme's own dark/light mode.
+ *
+ * The bug this replaces: pairing an accent tinted toward the cover's own colour with a fixed
+ * "dark theme → black text, light theme → white text" produced black-on-black or white-on-white
+ * whenever the cover's colour pulled the accent's luminance the *other* way — a dark album sleeve
+ * in light mode, or a pale one in dark mode. Every accent role now reads its own contrast from
+ * where it actually landed.
+ */
+private fun Color.contrastingOnColor(): Color =
+    if (luminance() > 0.5f) Color.Black else Color.White
 
 /**
  * Blends [this] colour toward white (light) or black (dark) by [factor] to produce a tonal
@@ -287,7 +305,11 @@ fun CoverTintedTheme(
 
     MaterialExpressiveTheme(
         colorScheme  = if (amoled && dark) scheme.toAmoled() else scheme,
-        motionScheme = MotionScheme.expressive(),
+        // Reuses the `motion` already captured above rather than a fresh `MotionScheme.expressive()`
+        // — this used to hardcode one regardless of the ambient scheme, which was invisible while
+        // this only ever wrapped `NowPlayingScreen`, but silently overrode `WanderTheme`'s
+        // `NoMotionScheme` for "Reduce motion" once this started wrapping the whole app shell too.
+        motionScheme = motion,
         shapes       = WandaShapes,
         typography   = WandaTypography,
         content      = content,
