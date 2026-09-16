@@ -30,7 +30,7 @@ internal data class UniversalTrackLink(
             album?.takeIf { it.isNotBlank() }?.let { add("album" to it) }
             durationMs?.takeIf { it > 0 }?.let { add("duration" to it.toString()) }
         }
-        val query = parameters.joinToString("&") { (key, value) -> "$key=${encode(value)}" }
+        val query = UniversalLinkCodec.buildQuery(parameters)
         return "$SCHEME://$HOST?$query"
     }
 
@@ -51,15 +51,7 @@ internal data class UniversalTrackLink(
          */
         fun parse(uri: String): UniversalTrackLink? {
             if (!matches(uri)) return null
-            val parameters = uri.trim()
-                .substringAfter("?")
-                .split("&")
-                .mapNotNull { pair ->
-                    val key = pair.substringBefore("=", "")
-                    val value = pair.substringAfter("=", "")
-                    key.takeIf { it.isNotEmpty() }?.let { it to decode(value) }
-                }
-                .toMap()
+            val parameters = UniversalLinkCodec.parseQuery(uri)
 
             val title = parameters["title"]?.trim().orEmpty()
             val artist = parameters["artist"]?.trim().orEmpty()
@@ -71,13 +63,5 @@ internal data class UniversalTrackLink(
                 durationMs = parameters["duration"]?.toLongOrNull()?.takeIf { it > 0 }
             )
         }
-
-        // Hand-rolled rather than `Uri.Builder`, for the same reason as `UniversalAlbumLink`:
-        // testable on the JVM without an Android stub.
-        private fun encode(value: String): String =
-            java.net.URLEncoder.encode(value, "UTF-8")
-
-        private fun decode(value: String): String =
-            runCatching { java.net.URLDecoder.decode(value, "UTF-8") }.getOrDefault(value)
     }
 }

@@ -36,7 +36,7 @@ internal data class UniversalAlbumLink(
             year?.takeIf { it > 0 }?.let { add("year" to it.toString()) }
             trackCount?.takeIf { it > 0 }?.let { add("tracks" to it.toString()) }
         }
-        val query = parameters.joinToString("&") { (key, value) -> "$key=${encode(value)}" }
+        val query = UniversalLinkCodec.buildQuery(parameters)
         return "$SCHEME://$HOST?$query"
     }
 
@@ -57,15 +57,7 @@ internal data class UniversalAlbumLink(
          */
         fun parse(uri: String): UniversalAlbumLink? {
             if (!matches(uri)) return null
-            val parameters = uri.trim()
-                .substringAfter("?")
-                .split("&")
-                .mapNotNull { pair ->
-                    val key = pair.substringBefore("=", "")
-                    val value = pair.substringAfter("=", "")
-                    key.takeIf { it.isNotEmpty() }?.let { it to decode(value) }
-                }
-                .toMap()
+            val parameters = UniversalLinkCodec.parseQuery(uri)
 
             val title = parameters["title"]?.trim().orEmpty()
             val artist = parameters["artist"]?.trim().orEmpty()
@@ -77,14 +69,5 @@ internal data class UniversalAlbumLink(
                 trackCount = parameters["tracks"]?.toIntOrNull()?.takeIf { it > 0 }
             )
         }
-
-        // Hand-rolled rather than `Uri.Builder`, so that this — the part with the decisions in it —
-        // is testable on the JVM. `android.net.Uri` is a stub in unit tests, and a link format
-        // that can only be exercised on a device is a link format nobody exercises.
-        private fun encode(value: String): String =
-            java.net.URLEncoder.encode(value, "UTF-8")
-
-        private fun decode(value: String): String =
-            runCatching { java.net.URLDecoder.decode(value, "UTF-8") }.getOrDefault(value)
     }
 }
