@@ -101,6 +101,7 @@ class MainActivity : ComponentActivity() {
             uri.scheme == "wanda" && uri.host == "friend" -> handleFriendCode(uri)
             isJamLink(uri) -> handleJamLink(uri)
             linkRepository.isAlbumLink(uri) -> openSharedAlbum(uri)
+            linkRepository.isTrackLink(uri) -> openSharedTrack(uri)
             linkRepository.canOpen(uri) -> openSharedLink(uri)
             // After the track branches, never before: a song shared from inside a record or a
             // playlist carries both, and the song is the thing that was tapped.
@@ -176,6 +177,27 @@ class MainActivity : ComponentActivity() {
                     Toast.makeText(
                         this@MainActivity,
                         cause.message ?: "Couldn't open that album link.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            )
+        }
+    }
+
+    /**
+     * Resolves a universal track link against this device's own sources and plays it.
+     *
+     * The link names no backend, so what plays is whatever *this* device has. Mirrors
+     * [openSharedAlbum]: a miss is reported by name rather than silently doing nothing.
+     */
+    private fun openSharedTrack(uri: Uri) {
+        lifecycleScope.launch {
+            linkRepository.resolveTrack(uri).fold(
+                onSuccess = { track -> playerConnection.play(listOf(track)) },
+                onFailure = { cause ->
+                    Toast.makeText(
+                        this@MainActivity,
+                        cause.message ?: getString(R.string.link_track_open_failed),
                         Toast.LENGTH_LONG
                     ).show()
                 }

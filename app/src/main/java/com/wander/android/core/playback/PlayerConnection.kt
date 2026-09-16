@@ -57,6 +57,13 @@ class PlayerConnection @Inject constructor(
     private val _controller = MutableStateFlow<MediaController?>(null)
     val controller: StateFlow<MediaController?> = _controller.asStateFlow()
 
+    /**
+     * The actually-decoded format, reported by [PlaybackService] over session extras — see
+     * [ActualAudioFormat] for why `MediaController.Listener.onExtrasChanged` is the only channel
+     * for this rather than a plain `Player.Listener` callback.
+     */
+    private val _actualAudioFormat = MutableStateFlow<ActualAudioFormat?>(null)
+
     /** 2-second grace window to restore playback position when returning from an accidental skip. */
     private var skipGraceWindow: SkipGraceWindow? = null
 
@@ -105,6 +112,12 @@ class PlayerConnection @Inject constructor(
                         if (timelineChanged) {
                             lastQueue = player.queueTracks(trackCache)
                         }
+                        // A format left over from the previous track is worse than none: it claims
+                        // a lossless stream is still playing for however long it takes the new
+                        // item's first frame to decode and correct it.
+                        if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)) {
+                            _actualAudioFormat.value = null
+                        }
                         if (events.contains(Player.EVENT_POSITION_DISCONTINUITY)) seekEpoch++
                         trySend(
                             player.buildSnapshot(
@@ -149,6 +162,7 @@ class PlayerConnection @Inject constructor(
         // Patched here rather than written into `trackCache`, because the cache is only read while
         // a snapshot is being built and there is no event to build one on.
         .combine(streamResolver.resolvedLive) { state, live -> state.withLiveIds(live) }
+        .combine(_actualAudioFormat) { state, format -> state.copy(actualAudioFormat = format) }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, PlaybackState())
 
@@ -252,7 +266,13 @@ class PlayerConnection @Inject constructor(
     fun connect() {
         if (_controller.value != null) return
         val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
-        val future = MediaController.Builder(context, token).buildAsync()
+        val future = MediaController.Builder(context, token)
+            .setListener(object : MediaController.Listener {
+                override fun onExtrasChanged(controller: MediaController, extras: android.os.Bundle) {
+                    _actualAudioFormat.value = ActualAudioFormat.fromBundle(extras)
+                }
+            })
+            .buildAsync()
         future.addListener(
             {
                 val ctrl = runCatching { future.get() }.getOrNull()
