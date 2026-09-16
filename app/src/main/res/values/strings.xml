@@ -5,4 +5,8 @@
       resources left 28 orphans that drifted out of sync with the code.
     -->
     <string name="app_name">Wanda</string>
+
+    <!-- Quality upgrade advisor -->
+    <string name="quality_upgrade_format_only">Lossless %1$s available on %2$s</string>
+    <string name="quality_upgrade_format_24bit">Lossless %1$s 24-bit available on %2$s</string>
 </resources>
