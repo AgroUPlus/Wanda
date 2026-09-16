@@ -110,31 +110,51 @@ fun LyricLineItem(
     val annotatedText = remember(words, syncPositionMs, primaryColor, upcomingColor) {
         buildAnnotatedString {
             words.forEachIndexed { wordIdx, word ->
+                val hasTrailingSpace = wordIdx < words.size - 1
                 when {
                     syncPositionMs >= word.endMs -> {
                         withStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Bold)) {
                             append(word.text)
+                        }
+                        if (hasTrailingSpace) {
+                            withStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Normal)) {
+                                append(" ")
+                            }
                         }
                     }
                     syncPositionMs < word.startMs -> {
                         withStyle(SpanStyle(color = upcomingColor, fontWeight = FontWeight.Medium)) {
                             append(word.text)
                         }
+                        if (hasTrailingSpace) {
+                            withStyle(SpanStyle(color = upcomingColor, fontWeight = FontWeight.Normal)) {
+                                append(" ")
+                            }
+                        }
                     }
                     else -> {
-                        // Word is actively being sung: progress letter by letter with glowing shine
+                        // Word is actively being sung: progress letter by letter with speed adjusted for spaces and commas
                         val wordDuration = (word.endMs - word.startMs).coerceAtLeast(60L)
                         val elapsed = syncPositionMs - word.startMs
                         val wordProgress = (elapsed.toFloat() / wordDuration).coerceIn(0f, 1f)
-                        val activeCharIdx = (wordProgress * word.text.length).toInt().coerceIn(0, word.text.length)
+
+                        val charWeights = FloatArray(word.text.length + if (hasTrailingSpace) 1 else 0) { idx ->
+                            if (idx < word.text.length) charPacingWeight(word.text[idx]) else charPacingWeight(' ')
+                        }
+                        val totalWeight = charWeights.sum().coerceAtLeast(1f)
+                        var accumWeight = 0f
 
                         word.text.forEachIndexed { charIdx, char ->
+                            val startProg = accumWeight / totalWeight
+                            accumWeight += charWeights[charIdx]
+                            val endProg = accumWeight / totalWeight
+
                             val charStyle = when {
-                                charIdx < activeCharIdx -> SpanStyle(
+                                wordProgress >= endProg -> SpanStyle(
                                     color = primaryColor,
                                     fontWeight = FontWeight.Bold
                                 )
-                                charIdx == activeCharIdx -> SpanStyle(
+                                wordProgress >= startProg -> SpanStyle(
                                     color = Color.White,
                                     fontWeight = FontWeight.Black,
                                     shadow = Shadow(
@@ -152,18 +172,19 @@ fun LyricLineItem(
                                 append(char)
                             }
                         }
-                    }
-                }
 
-                if (wordIdx < words.size - 1) {
-                    val spaceSung = syncPositionMs >= word.endMs
-                    withStyle(
-                        SpanStyle(
-                            color = if (spaceSung) primaryColor else upcomingColor,
-                            fontWeight = FontWeight.Normal
-                        )
-                    ) {
-                        append(" ")
+                        if (hasTrailingSpace) {
+                            val spaceStartProg = accumWeight / totalWeight
+                            val spaceSung = wordProgress >= spaceStartProg
+                            withStyle(
+                                SpanStyle(
+                                    color = if (spaceSung) primaryColor else upcomingColor,
+                                    fontWeight = FontWeight.Normal
+                                )
+                            ) {
+                                append(" ")
+                            }
+                        }
                     }
                 }
             }
@@ -180,3 +201,15 @@ fun LyricLineItem(
 
 /** Pre-compensation offset to align human audio perception and hardware buffer latency. */
 private const val LyricsLeadOffsetMs = 120L
+
+/**
+ * Cadence weighting for characters: commas and punctuation pauses linger longer, and inter-word
+ * spaces are given dedicated duration so the visual transition feels natural rather than instant.
+ */
+private fun charPacingWeight(c: Char): Float = when (c) {
+    ',' -> 2.6f
+    ';', ':', '.' -> 2.2f
+    ' ' -> 1.6f
+    '-', '—' -> 1.4f
+    else -> 1.0f
+}
