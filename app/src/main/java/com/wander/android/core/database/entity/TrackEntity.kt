@@ -54,6 +54,11 @@ data class TrackEntity(
     val isCached: Boolean = false,
     val isDownloaded: Boolean = false,
     /**
+     * When the downloader last wrote this track's local copy. Null for a track that was never
+     * downloaded, or whose download was cleared — see [com.wander.android.data.repository.StorageButlerRepository].
+     */
+    val downloadedAt: Long? = null,
+    /**
      * True when the track belongs to the user's own collection, false when it was merely seen in
      * passing (a search hit, a radio pick, an Archive browse). The Library screen reads only rows
      * where this is set, which is what keeps searching from growing the library.

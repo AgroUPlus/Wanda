@@ -9,6 +9,7 @@ import com.wander.android.core.notification.WorkEta
 import com.wander.android.core.notification.WorkProgressNotification
 import com.wander.android.core.work.WorkControls
 import com.wander.android.data.repository.MusicRepository
+import com.wander.android.data.repository.SmartMixRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +29,7 @@ class DownloadWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val trackDao: TrackDao,
     private val musicRepository: MusicRepository,
+    private val smartMixRepository: SmartMixRepository,
     private val okHttpClient: OkHttpClient,
     private val notifications: WorkProgressNotification,
     private val workControls: WorkControls
@@ -59,7 +61,12 @@ class DownloadWorker @AssistedInject constructor(
             listOfNotNull(trackDao.getTrackById(requestedId)).filterNot { it.isDownloaded }
         } else {
             // Liked tracks, not most-played: the user explicitly asked to keep these.
-            trackDao.getLikedNotDownloaded(BATCH_SIZE)
+            val liked = trackDao.getLikedNotDownloaded(BATCH_SIZE)
+            // Room left in the batch is spent on the top smart mix rather than left idle — this
+            // only ever runs on the periodic sweep (unmetered, charging, battery not low), so the
+            // cost is a few tracks of data on a connection that was otherwise sitting unused.
+            if (liked.size < BATCH_SIZE) (liked + predictiveCandidates(BATCH_SIZE - liked.size)).distinctBy { it.id }
+            else liked
         }
         if (pending.isEmpty()) return@withContext Result.success()
 
@@ -91,6 +98,15 @@ class DownloadWorker @AssistedInject constructor(
 
         // Retry later rather than reporting success we did not achieve.
         if (failures == pending.size) Result.retry() else Result.success()
+    }
+
+    /** The top smart mix's own tracks, not yet downloaded — see the comment where this is called. */
+    private suspend fun predictiveCandidates(limit: Int): List<com.wander.android.core.database.entity.TrackEntity> {
+        val topMix = smartMixRepository.getSmartMixes().firstOrNull() ?: return emptyList()
+        return topMix.tracks
+            .take(limit)
+            .mapNotNull { trackDao.getTrackById(it.id) }
+            .filterNot { it.isDownloaded }
     }
 
     private fun download(url: String, headers: Map<String, String>, destination: File) {
