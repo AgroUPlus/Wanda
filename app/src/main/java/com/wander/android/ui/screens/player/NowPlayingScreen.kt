@@ -102,7 +102,6 @@ private val FullArtworkSize = 360.dp
 @Composable
 internal fun NowPlayingScreen(
     playerConnection: PlayerConnection,
-    onCollapse: () -> Unit,
     onOpenQueue: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenArtist: ((String, String?) -> Unit)? = null,
@@ -333,13 +332,7 @@ internal fun NowPlayingScreen(
                     .padding(horizontal = 8.dp, vertical = 4.dp)
                     .graphicsLayer { alpha = contentAlpha() }
             ) {
-                IconButton(onClick = onCollapse) {
-                    Icon(
-                        Icons.Rounded.ExpandMore,
-                        contentDescription = "Close player",
-                        tint = OnCoverArt
-                    )
-                }
+                // No collapse arrow — see the standard layout. Swiping down does it.
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
@@ -560,9 +553,9 @@ internal fun NowPlayingScreen(
                 .fillMaxWidth()
                 .graphicsLayer { alpha = contentAlpha() }
         ) {
-            IconButton(onClick = onCollapse) {
-                Icon(Icons.Rounded.ExpandMore, contentDescription = "Close player")
-            }
+            // No collapse arrow. Swiping the player down does it, from anywhere rather than from
+            // one 48dp target in the far corner, and the gesture is taught in setup now — see
+            // `GesturesStep`. The row is left to centre the source control on its own.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,

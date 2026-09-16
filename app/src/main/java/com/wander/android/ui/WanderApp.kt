@@ -379,7 +379,6 @@ fun WanderApp(
                     playback = playback,
                     playerConnection = playerConnection,
                     onExpand = { scope.launch { sheetState.expand() } },
-                    onCollapse = { scope.launch { sheetState.collapse() } },
                     onOpenQueue = { navController.navigate(Routes.QUEUE) },
                     // The sheet collapses first: the destination sits underneath it, and navigating
                     // while the player is still expanded left the user staring at the player.

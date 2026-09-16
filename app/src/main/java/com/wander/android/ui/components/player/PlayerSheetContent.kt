@@ -61,7 +61,6 @@ fun PlayerSheetContent(
     playback: PlaybackState,
     playerConnection: PlayerConnection,
     onExpand: () -> Unit,
-    onCollapse: () -> Unit,
     onOpenQueue: () -> Unit,
     onOpenArtist: (String, String?) -> Unit = { _, _ -> },
     onOpenAlbum: (String) -> Unit = {},
@@ -340,7 +339,6 @@ fun PlayerSheetContent(
         if (fullPlayerPresent) {
             NowPlayingScreen(
                 playerConnection = playerConnection,
-                onCollapse = onCollapse,
                 // A local queue opens as a drawer over the player; a jam's does not.
                 //
                 // The drawer exists to reorder what is coming next, and in a jam the running order
