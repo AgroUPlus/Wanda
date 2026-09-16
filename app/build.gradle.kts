@@ -139,6 +139,9 @@ dependencies {
     implementation(libs.reorderable)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
+
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)

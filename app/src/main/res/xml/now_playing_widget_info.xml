@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    4x2 minimum: roughly 250dp x 110dp, which is what the plan's "4×2 Now Playing widget" means in
+    the grid the launcher actually measures widgets in (a cell is ~70dp before the standard -30dp
+    inter-cell margin subtraction most launchers apply).
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_now_playing_label" />
