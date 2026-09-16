@@ -178,7 +178,7 @@ fun HomeScreen(
                     // Reachable only once `state.isGloballyEmpty` above is false, same as every
                     // other item in this column.
                     item(key = "mood_matrix", contentType = "mood-matrix") {
-                        MoodMatrixCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+                        MoodMatrixCard()
                     }
 
                     // Only earns its row when there is more than one backend to choose between.

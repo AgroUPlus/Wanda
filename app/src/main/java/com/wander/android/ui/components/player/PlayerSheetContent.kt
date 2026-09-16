@@ -208,10 +208,10 @@ fun PlayerSheetContent(
     // rather than the index so a queue edit cannot strand the override — and rather than the
     // artwork URL, which two tracks off the same album share, leaving the override set.
     val currentArtwork = playback.currentTrack?.artworkUrl
-    // Pre-warm the seed colour for the current track so expanding the player never flashes the default theme.
-    // Also the backlight's colour — see `MorphingArtwork`'s `glowColor`. Read here because this is
-    // where the cover it sits behind is drawn.
-    val coverSeed = com.wander.android.ui.theme.rememberCoverSeedColor(currentArtwork)
+    // Pre-warms the shared seed-colour cache for the current track — see `rememberCoverSeedColor` —
+    // so `NowPlayingScreen`'s own call to it, moments later, never flashes the default theme
+    // waiting on a palette decode this one already paid for.
+    com.wander.android.ui.theme.rememberCoverSeedColor(currentArtwork)
     LaunchedEffect(playback.currentTrack?.id) {
         swipe.clearPending()
     }
@@ -332,8 +332,7 @@ fun PlayerSheetContent(
             canPrevious = hasPreviousSong,
             canNext = hasNextSong,
             fingerprintStatus = fingerprintStatus,
-            carouselEnabled = coverCarousel,
-            glowColor = coverSeed
+            carouselEnabled = coverCarousel
         )
 
         // Composed as soon as the drag starts, so its artwork bounds are known and nothing

@@ -3,7 +3,6 @@ package com.wander.android.ui.screens.player
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.AutoAwesome
@@ -77,13 +76,11 @@ internal fun BoxScope.PlayerOverlayButtons(
                 .align(Alignment.TopEnd)
                 .padding(top = topInset)
                 .padding(12.dp)
-                .size(OverlayButtonSize)
                 .graphicsLayer { alpha = contentAlpha() }
         ) {
             Icon(
                 imageVector = Icons.Rounded.Share,
-                contentDescription = stringResource(R.string.action_share_track),
-                modifier = Modifier.size(OverlayIconSize)
+                contentDescription = stringResource(R.string.action_share_track)
             )
         }
     }
@@ -108,20 +105,15 @@ internal fun BoxScope.PlayerOverlayButtons(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(12.dp)
-                .size(OverlayButtonSize)
                 .graphicsLayer { alpha = contentAlpha() }
         ) {
             Icon(
                 imageVector = lyricsIcon,
-                contentDescription = lyricsDescription,
-                modifier = Modifier.size(OverlayIconSize)
+                contentDescription = lyricsDescription
             )
         }
     }
 }
-
-private val OverlayButtonSize = 52.dp
-private val OverlayIconSize = 28.dp
 
 /** Animated so showing the lyrics carries the button across rather than cutting it. */
 @Composable
