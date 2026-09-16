@@ -63,7 +63,7 @@ internal fun ActivityScreen(
     onOpenThread: (String) -> Unit,
     onOpenCircleRecap: () -> Unit,
     onOpenProfile: (String) -> Unit = {},
-    onOpenArtist: (String) -> Unit = {},
+    onOpenArtist: (artist: String, artistId: String?) -> Unit = { _, _ -> },
     viewModel: ActivityViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -144,7 +144,13 @@ internal fun ActivityScreen(
 
                 is ActivityItem.Release -> NewReleaseCard(
                     item = item,
-                    onOpen = { onOpenArtist(item.release.artist) },
+                    // Null, not a no-op lambda, when the catalogue gave no artist to open: the card
+                    // then isn't clickable at all, instead of looking tappable and doing nothing —
+                    // `Routes.artist("")` doesn't match the artist destination, so navigation
+                    // silently failed and the row appeared dead.
+                    onOpen = item.release.artist.takeIf { it.isNotBlank() }?.let { artist ->
+                        { onOpenArtist(artist, item.release.artistId.takeIf(String::isNotBlank)) }
+                    },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                 )
             }
@@ -219,13 +225,15 @@ private fun SharedWithMeCard(
 @Composable
 private fun NewReleaseCard(
     item: ActivityItem.Release,
-    onOpen: () -> Unit,
+    /** Null when there is no artist page to open — see the call site. */
+    onOpen: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     val release = item.release
 
     Card(
-        onClick = onOpen,
+        onClick = onOpen ?: {},
+        enabled = onOpen != null,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = MaterialTheme.shapes.medium,
         modifier = modifier.fillMaxWidth()

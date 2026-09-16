@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 /**
@@ -153,10 +154,14 @@ internal class ActivityViewModel @Inject constructor(
         viewModelScope.launch {
             drops.refresh()
             val feed = feedApi.friendActivity().getOrElse { emptyList() }
-            // Everything the catalogue holds by a followed artist, not only what is unannounced:
-            // the notification watermark is the release *job's* business, and a feed that hid
-            // what had already been notified would be empty exactly when the user came to look.
-            val releases = subscriptions.newReleases(since = 0L)
+            // Recent releases, not every release. Deliberately *not* filtered by the notification
+            // watermark — that is the release job's business, and a feed that hid what had already
+            // been notified would be empty exactly when the user came to look. But `since = 0L`
+            // asked for the entire catalogue of every followed artist, so following someone filled
+            // this screen with their back catalogue under the heading "new", which is the one thing
+            // it must not say. A window is the honest reading of `updatedAt`: it is when the row
+            // was published, so "published lately" is as close to "out lately" as the data gets.
+            val releases = subscriptions.newReleases(since = recentWindowStart())
             // Covers are resolved once, here, rather than per row: a lookup is a Room read and the
             // list recomposes far more often than it reloads.
             val releaseItems = releases.getOrDefault(emptyList()).map { release ->
@@ -171,6 +176,10 @@ internal class ActivityViewModel @Inject constructor(
             }
         }
     }
+
+    /** The oldest publication a release can carry and still be news. See [RECENT_WINDOW_DAYS]. */
+    private fun recentWindowStart(): Long =
+        Instant.now().minus(RECENT_WINDOW_DAYS, ChronoUnit.DAYS).epochSecond
 
     private fun ActivityUiState.milestones(): List<AgroFeedItem> =
         items.filterIsInstance<ActivityItem.Milestone>().map { it.item }
@@ -204,4 +213,14 @@ internal class ActivityViewModel @Inject constructor(
             incoming.map(ActivityItem::Shared) +
             releases)
             .sortedByDescending { it.at }
+
+    private companion object {
+        /**
+         * How far back a release still counts as news.
+         *
+         * Long enough that coming back from a fortnight away still shows what was missed, short
+         * enough that a back catalogue re-indexed by the server does not read as a release day.
+         */
+        const val RECENT_WINDOW_DAYS = 30L
+    }
 }
