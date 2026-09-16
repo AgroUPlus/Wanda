@@ -5,8 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.Composable
@@ -142,6 +140,13 @@ internal fun MorphingArtwork(
         // it in front look like the only option.
         glowColor?.let { seed ->
             val glow = seed.asBacklight()
+            val reduceMotion = com.wander.android.ui.theme.LocalReducedMotion.current
+            val brush = fluidAmbientBrush(
+                color1 = glow,
+                color2 = glow.driftedHue(),
+                backdrop = Color.Transparent,
+                reduceMotion = reduceMotion
+            )
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -150,16 +155,7 @@ internal fun MorphingArtwork(
                         scaleY = GlowScale
                         this.alpha = smoothStep(progress(), 0.65f, 1f)
                     }
-                    .background(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                glow.copy(alpha = 0.55f),
-                                glow.copy(alpha = 0.22f),
-                                Color.Transparent
-                            )
-                        ),
-                        shape = CircleShape
-                    )
+                    .background(brush = brush, shape = CircleShape)
             )
         }
 
@@ -199,78 +195,6 @@ internal fun MorphingArtwork(
  *
  * [side] is -1 for the previous track (sitting to the left) and +1 for the next.
  */
-@Composable
-private fun PeekArtwork(
-    url: String?,
-    anchors: PlayerArtworkAnchors,
-    mini: Rect,
-    progress: () -> Float,
-    rawProgress: () -> Float,
-    swipe: TrackSwipeState,
-    side: Int,
-    carouselEnabled: Boolean = true
-) {
-    if (url == null) return
-
-    Box(
-        // Layer inside the layout, for the reason spelled out in [MorphingArtwork] — these are
-        // placed at the same offsets and would be clipped the same way.
-        modifier = Modifier
-            .layout { measurable, _ ->
-                // The same rect the current cover is using, overshoot included. Ranking these off
-                // the clamped `progress` while the cover rode `rawProgress` meant the filmstrip
-                // was pitched from a *different* box than `swipe.stepPx` for the whole settle:
-                // the neighbours held still at their resting spacing while the cover between them
-                // grew past its frame, so the gaps visibly closed up and sprang back open.
-                val rect = anchors.currentRect(mini, rawProgress)
-                val width = rect.width.roundToInt().coerceAtLeast(0)
-                val height = rect.height.roundToInt().coerceAtLeast(0)
-                val placeable = measurable.measure(Constraints.fixed(width, height))
-                val step = rect.width + PeekGap.toPx()
-                layout(width, height) {
-                    placeable.place(
-                        x = (rect.left + swipe.offsetX.value + side * step).roundToInt(),
-                        y = rect.top.roundToInt()
-                    )
-                }
-            }
-            .graphicsLayer {
-                val step = swipe.stepPx.takeIf { it > 0f } ?: FullExitDistance
-                val offset = swipe.offsetX.value
-                val reach = abs(offset) / DistanceThreshold
-
-                if (carouselEnabled) {
-                    val currentX = offset + side * step
-                    val distRatio = (abs(currentX) / step).coerceIn(0f, 1f)
-                    val centerProximity = (1f - distRatio).coerceIn(0f, 1f)
-
-                    val scale = lerpFloat(0.85f, 1f, centerProximity)
-                    scaleX = scale
-                    scaleY = scale
-                    rotationY = (side * (1f - centerProximity) * 12f).coerceIn(-14f, 14f)
-                    cameraDistance = 12f * density
-
-                    val baseAlpha = lerpFloat(0.5f, 1f, centerProximity)
-                    alpha = smoothStep(progress(), 0.82f, 0.98f) * baseAlpha
-                } else {
-                    alpha = smoothStep(progress(), 0.5f, 0.9f) * reach.coerceIn(0f, 1f)
-                }
-            }
-    ) {
-        Artwork(
-            url = url,
-            contentDescription = null,
-            sizeDp = MorphArtworkSize,
-            shape = MorphShape,
-            crossfade = false,
-            modifier = Modifier.fillMaxSize()
-        )
-    }
-}
-
-private fun lerpFloat(start: Float, stop: Float, fraction: Float): Float =
-    start + (stop - start) * fraction
-
 /** How far past the cover the backlight spills. */
 private const val GlowScale = 1.22f
 
@@ -295,12 +219,25 @@ private fun Color.asBacklight(): Color {
 }
 
 /**
+ * The fluid shader's second colour: the same backlight, rotated round the colour wheel.
+ *
+ * A shader blending one colour with itself would just breathe in and out; the second hue is what
+ * makes the drift read as *fluid* rather than as one colour pulsing.
+ */
+private fun Color.driftedHue(): Color {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(toArgb(), hsv)
+    hsv[0] = (hsv[0] + 40f) % 360f
+    return Color(android.graphics.Color.HSVToColor(hsv))
+}
+
+/**
  * Where the cover sits right now, between the docked strip and the full player.
  *
  * Until the full player has been measured there is nowhere to travel to, so this stays on the
  * mini rect rather than interpolating towards a placeholder.
  */
-private fun PlayerArtworkAnchors.currentRect(mini: Rect, progress: () -> Float): Rect {
+internal fun PlayerArtworkAnchors.currentRect(mini: Rect, progress: () -> Float): Rect {
     val full = fullBounds ?: return mini
     val p = progress()
     // Past 1 the cover is overshooting its resting frame, and the easing curve cannot help: a
