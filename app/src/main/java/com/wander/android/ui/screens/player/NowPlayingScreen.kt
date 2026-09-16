@@ -32,12 +32,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import com.wander.android.ui.components.AddToPlaylistHost
+import com.wander.android.ui.screens.social.JamViewModel
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -58,7 +61,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -173,9 +175,41 @@ internal fun NowPlayingScreen(
         )
     }
 
-    // Long-pressing the cover opens speed and pitch at the point that was touched.
-    var rateAnchor by remember { mutableStateOf<IntOffset?>(null) }
+    var showSpeedPitch by remember { mutableStateOf(false) }
+    var showMenuDrawer by remember { mutableStateOf(false) }
+    val addToPlaylist = AddToPlaylistHost()
+    val jamViewModel: JamViewModel = hiltViewModel()
     val speedAndPitch by playerConnection.speedAndPitch.collectAsStateWithLifecycle()
+
+    if (showMenuDrawer) {
+        NowPlayingMenuDrawer(
+            track = track,
+            isLiked = track.id in likedTrackIds,
+            isRadioMode = state.isRadioMode,
+            queueSize = state.queue.size,
+            canSwitchSource = viewModel.canSwitchSource(track, state.durationMs),
+            canShare = viewModel.canShare(track),
+            canAddToPlaylist = addToPlaylist.canAdd(track),
+            hasMultipleAudioTracks = state.audioTracks.size > 1,
+            onOpenQueue = onOpenQueue,
+            onAddToPlaylist = { addToPlaylist.open(track) },
+            onToggleRadio = playerConnection::toggleRadio,
+            onOpenSpeedPitch = { showSpeedPitch = true },
+            onPlayNext = { playerConnection.playNext(listOf(track)) },
+            onAddToQueue = { playerConnection.addToQueue(listOf(track)) },
+            onToggleLike = { viewModel.toggleLike(track) },
+            onShare = { viewModel.share(track) }.takeIf { viewModel.canShare(track) },
+            onOpenSourcePicker = {
+                showSourcePicker = true
+                viewModel.findRenditions(track, state.durationMs)
+            }.takeIf { viewModel.canSwitchSource(track, state.durationMs) },
+            onOpenAudioTrackPicker = { showAudioTrackPicker = true }.takeIf { state.audioTracks.size > 1 },
+            onOpenArtist = onOpenArtist?.let { open -> { open(track.artist, track.artistId) } },
+            onOpenAlbum = track.albumId?.let { albumId -> onOpenAlbum?.let { open -> { open(albumId) } } },
+            onJamAction = jam?.let { { jamViewModel.suggest(track) } },
+            onDismiss = { showMenuDrawer = false }
+        )
+    }
 
     // What the immersive branch's own bar and controls actually occupy.
     //
@@ -213,7 +247,7 @@ internal fun NowPlayingScreen(
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onTap = { toggleLyrics() },
-                        onLongPress = { rateAnchor = IntOffset(it.x.toInt(), it.y.toInt()) }
+                        onLongPress = { showSpeedPitch = true }
                     )
                 }
         ) {
@@ -361,11 +395,13 @@ internal fun NowPlayingScreen(
                         }
                     }
                 }
-                QueueRadioButton(
-                    isRadioMode = state.isRadioMode,
-                    onOpenQueue = onOpenQueue,
-                    onToggleRadio = playerConnection::toggleRadio
-                )
+                IconButton(onClick = { showMenuDrawer = true }) {
+                    Icon(
+                        imageVector = Icons.Rounded.MoreVert,
+                        contentDescription = "More options",
+                        tint = OnCoverArt
+                    )
+                }
             }
 
             // The share button rides the cover in immersive mode too — but here its parent is the
@@ -490,12 +526,11 @@ internal fun NowPlayingScreen(
                 )
             }
 
-            rateAnchor?.let { anchor ->
+            if (showSpeedPitch) {
                 SpeedPitchPopup(
                     value = speedAndPitch,
                     onChange = { playerConnection.setSpeedAndPitch(it.speed, it.pitch) },
-                    onDismiss = { rateAnchor = null },
-                    offset = anchor
+                    onDismiss = { showSpeedPitch = false }
                 )
             }
         }
@@ -587,13 +622,13 @@ internal fun NowPlayingScreen(
                     }
                 }
             }
-            // Radio folded into a long press here rather than carrying its own labelled chip,
-            // which cost a whole slot in the bar to say something the icon tint can say.
-            QueueRadioButton(
-                isRadioMode = state.isRadioMode,
-                onOpenQueue = onOpenQueue,
-                onToggleRadio = playerConnection::toggleRadio
-            )
+            IconButton(onClick = { showMenuDrawer = true }) {
+                Icon(
+                    imageVector = Icons.Rounded.MoreVert,
+                    contentDescription = "More options",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
         // Swipeable Artwork / Lyrics Area
@@ -621,7 +656,7 @@ internal fun NowPlayingScreen(
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onTap = { toggleLyrics() },
-                            onLongPress = { rateAnchor = IntOffset(it.x.toInt(), it.y.toInt()) }
+                            onLongPress = { showSpeedPitch = true }
                         )
                     }
             ) {
@@ -679,12 +714,11 @@ internal fun NowPlayingScreen(
                     }
                 }
 
-                rateAnchor?.let { anchor ->
+                if (showSpeedPitch) {
                     SpeedPitchPopup(
                         value = speedAndPitch,
                         onChange = { playerConnection.setSpeedAndPitch(it.speed, it.pitch) },
-                        onDismiss = { rateAnchor = null },
-                        offset = anchor
+                        onDismiss = { showSpeedPitch = false }
                     )
                 }
 
