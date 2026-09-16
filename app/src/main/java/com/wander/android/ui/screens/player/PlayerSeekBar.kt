@@ -1,12 +1,7 @@
 package com.wander.android.ui.screens.player
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,17 +10,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.ui.layout.layout
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,7 +30,6 @@ import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.rememberPlaybackPosition
 import com.wander.android.ui.components.LiveChip
 import com.wander.android.ui.components.rememberHaptics
-import java.util.Locale
 
 /**
  * Expressive wavy slider. While the user drags, the local value wins so the thumb tracks the
@@ -62,7 +52,8 @@ fun PlayerSeekBar(
     modifier: Modifier = Modifier,
     isLive: Boolean = false,
     isPlaying: Boolean = true,
-    isSeekable: Boolean = true
+    isSeekable: Boolean = true,
+    inlineLabels: Boolean = false
 ) {
     val position by rememberPlaybackPosition(playerConnection, intervalMs = 250L)
     PlayerSeekBarInternal(
@@ -72,7 +63,8 @@ fun PlayerSeekBar(
         modifier = modifier,
         isLive = isLive,
         isPlaying = isPlaying,
-        isSeekable = isSeekable
+        isSeekable = isSeekable,
+        inlineLabels = inlineLabels
     )
 }
 
@@ -84,9 +76,12 @@ fun PlayerSeekBar(
     modifier: Modifier = Modifier,
     isLive: Boolean = false,
     isPlaying: Boolean = true,
-    isSeekable: Boolean = true
+    isSeekable: Boolean = true,
+    inlineLabels: Boolean = false
 ) {
-    PlayerSeekBarInternal(positionMs, durationMs, onSeek, modifier, isLive, isPlaying, isSeekable)
+    PlayerSeekBarInternal(
+        positionMs, durationMs, onSeek, modifier, isLive, isPlaying, isSeekable, inlineLabels
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -98,7 +93,14 @@ private fun PlayerSeekBarInternal(
     modifier: Modifier = Modifier,
     isLive: Boolean = false,
     isPlaying: Boolean = true,
-    isSeekable: Boolean = true
+    isSeekable: Boolean = true,
+    /**
+     * Put the two times either side of the track instead of under it.
+     *
+     * What the lyrics screen's pill wants: one short row rather than a two-line block, which keeps
+     * the bar clear of the words behind it. The track gives up the width the labels take.
+     */
+    inlineLabels: Boolean = false
 ) {
     var scrubbing by remember { mutableFloatStateOf(-1f) }
     var lastTickInterval by remember { mutableIntStateOf(-1) }
@@ -129,19 +131,28 @@ private fun PlayerSeekBarInternal(
     LaunchedEffect(waving) { amplitude.animateTo(if (waving) 1f else 0f, amplitudeSpec) }
 
     val isScrubbing = scrubbing >= 0f
-    val thumbSpatial = MaterialTheme.motionScheme.fastSpatialSpec<androidx.compose.ui.unit.Dp>()
-    val thumbWidth by animateDpAsState(
-        targetValue = if (isScrubbing) 8.dp else 4.dp,
-        animationSpec = thumbSpatial,
-        label = "thumbWidth"
-    )
-    val thumbHeight by animateDpAsState(
-        targetValue = if (isScrubbing) 28.dp else 16.dp,
-        animationSpec = thumbSpatial,
-        label = "thumbHeight"
+    // A dot, not a bar. One diameter rather than a width and a height: a tall thin thumb read as a
+    // divider cutting the track in two, and the wave it sits on is already the thing with a shape.
+    // It still grows under a finger — that is what says the drag has been taken.
+    val thumbSize by animateDpAsState(
+        targetValue = if (isScrubbing) ScrubbingThumbSize else RestingThumbSize,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        label = "thumbSize"
     )
 
-    Column(modifier = modifier.fillMaxWidth()) {
+    // The position, not the fraction multiplied back out by the duration.
+    //
+    // Those agree whenever the duration is known and disagree completely when it is not: an
+    // unknown duration pins `fraction` at zero, so this read `0:00` for a whole track whose
+    // position the player was reporting correctly the entire time. While a finger is on the thumb
+    // the fraction is what the user is choosing, and that is the one case where it leads.
+    val positionLabel = formatTime(
+        if (scrubbing >= 0f) (scrubbing * durationMs).toLong() else positionMs
+    )
+    val durationLabel = if (durationMs > 0L) formatTime(durationMs) else "--:--"
+
+    // Hoisted so both layouts below place the same slider rather than each declaring its own.
+    val slider: @Composable () -> Unit = {
         Slider(
             value = fraction,
             onValueChange = {
@@ -166,7 +177,7 @@ private fun PlayerSeekBarInternal(
             enabled = durationMs > 0L && isSeekable,
             thumb = {
                 Box(
-                    modifier = Modifier.size(width = 16.dp, height = 32.dp),
+                    modifier = Modifier.size(ThumbSlotSize),
                     contentAlignment = Alignment.Center
                 ) {
                     ScrubTooltip(
@@ -176,7 +187,7 @@ private fun PlayerSeekBarInternal(
 
                     Box(
                         modifier = Modifier
-                            .size(width = thumbWidth, height = thumbHeight)
+                            .size(thumbSize)
                             .background(MaterialTheme.colorScheme.primary, CircleShape)
                     )
                 }
@@ -189,70 +200,30 @@ private fun PlayerSeekBarInternal(
                 )
             }
         )
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                // The position, not the fraction multiplied back out by the duration.
-                //
-                // Those agree whenever the duration is known and disagree completely when it is
-                // not: an unknown duration pins `fraction` at zero, so this read `0:00` for a
-                // whole track whose position the player was reporting correctly the entire time.
-                // While a finger is on the thumb the fraction is what the user is choosing, and
-                // that is the one case where it leads.
-                text = formatTime(
-                    if (scrubbing >= 0f) (scrubbing * durationMs).toLong() else positionMs
-                ),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                text = if (durationMs > 0L) formatTime(durationMs) else "--:--",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
     }
-}
 
-/**
- * The time bubble that rides above the thumb while a finger is on it.
- *
- * A function of its own rather than written inline, and not for tidiness: inline, it sat lexically
- * inside the seek bar's `Column`, so `ColumnScope.AnimatedVisibility` won overload resolution — and
- * was then rejected, because the slider's `thumb` lambda is not a `ColumnScope`. Out here there is
- * no such receiver in scope and the ordinary overload is chosen. Forcing the receiver instead would
- * have compiled and animated the bubble as a column child, which is not what it is.
- */
-@Composable
-private fun ScrubTooltip(visible: Boolean, text: String) {
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()) +
-            scaleIn(MaterialTheme.motionScheme.fastSpatialSpec(), initialScale = 0.8f),
-        exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
-            scaleOut(MaterialTheme.motionScheme.fastSpatialSpec(), targetScale = 0.8f),
-        modifier = Modifier.layout { measurable, _ ->
-            val placeable = measurable.measure(Constraints())
-            layout(0, 0) {
-                placeable.placeRelative(
-                    x = -placeable.width / 2,
-                    y = -placeable.height - 24.dp.roundToPx()
-                )
-            }
-        }
-    ) {
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.inverseSurface,
-            contentColor = MaterialTheme.colorScheme.inverseOnSurface,
-            shadowElevation = 6.dp
+    if (inlineLabels) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = modifier.fillMaxWidth()
         ) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-            )
+            val inlineColor = LocalContentColor.current
+            TimeLabel(positionLabel, color = inlineColor)
+            Box(modifier = Modifier.weight(1f).padding(horizontal = 4.dp)) { slider() }
+            TimeLabel(durationLabel, color = inlineColor)
+        }
+        return
+    }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        slider()
+        // Inset to the track's own ends, not the slider's. A `Slider` reserves half a thumb-width
+        // of padding at each side so the thumb can reach 0% and 100% without being clipped, so a
+        // label row at full width starts and ends *outside* the bar it is labelling — which is
+        // exactly how the position and duration came to hang off either edge.
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = TrackInset)) {
+            TimeLabel(positionLabel, modifier = Modifier.weight(1f))
+            TimeLabel(durationLabel)
         }
     }
 }
@@ -263,14 +234,15 @@ private fun ScrubTooltip(visible: Boolean, text: String) {
  */
 private val LiveRowHeight = 68.dp
 
-internal fun formatTime(ms: Long): String {
-    val totalSeconds = (ms / 1000).coerceAtLeast(0)
-    val hours = totalSeconds / 3600
-    val minutes = (totalSeconds % 3600) / 60
-    val seconds = totalSeconds % 60
-    return if (hours > 0) {
-        String.format(Locale.US, "%d:%02d:%02d", hours, minutes, seconds)
-    } else {
-        String.format(Locale.US, "%d:%02d", minutes, seconds)
-    }
-}
+/**
+ * The box the thumb is laid out in, and the dot drawn inside it.
+ *
+ * The slot is sized for the *largest* the dot ever gets, so growing it under a finger does not
+ * change the slider's own measurement and shift the track beneath it.
+ */
+private val ThumbSlotSize = 24.dp
+private val RestingThumbSize = 14.dp
+private val ScrubbingThumbSize = 20.dp
+
+/** Half the thumb slot — the padding the slider keeps clear at each end of the track. */
+private val TrackInset = ThumbSlotSize / 2

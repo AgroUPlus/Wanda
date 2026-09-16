@@ -40,8 +40,15 @@ internal val MorphArtworkSize = 360.dp
  */
 internal val MorphShape = RoundedCornerShape(percent = 12)
 
-/** Space between the current cover and the neighbours peeking in either side of it. Shared with [PeekArtwork]. */
-internal val PeekGap = 16.dp
+/**
+ * Space between the current cover and the neighbours waiting either side of it.
+ *
+ * Wide enough to park them off-screen at rest. The cover stops short of the full width now, which
+ * left a margin either side — at the old 16dp the neighbours sat *in* that margin and were simply
+ * visible, so the player showed three covers when it meant to show one. This is the gap that keeps
+ * them past the screen edge until a swipe actually pulls one in.
+ */
+internal val PeekGap = 72.dp
 
 /**
  * The single cover art shared by the docked strip and the full player, plus the previous and next

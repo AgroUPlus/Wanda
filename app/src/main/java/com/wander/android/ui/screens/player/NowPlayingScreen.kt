@@ -1,11 +1,5 @@
 package com.wander.android.ui.screens.player
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -27,16 +21,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import com.wander.android.ui.components.AddToPlaylistHost
@@ -62,18 +50,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.lerp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.core.playback.PlayerConnection
-import com.wander.android.data.model.syncType
 import com.wander.android.data.repository.FingerprintStatus
 import com.wander.android.ui.components.Artwork
-import com.wander.android.ui.components.AudioQualityBadge
 import com.wander.android.ui.components.AvatarGroup
 import com.wander.android.ui.components.FingerprintBadge
 import com.wander.android.ui.components.KeepScreenOn
-import com.wander.android.ui.components.LikeButton
 import com.wander.android.ui.components.scrollingTitle
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.wander.android.ui.theme.CoverTintedTheme
@@ -83,6 +67,37 @@ import com.wander.android.ui.theme.rememberCoverSeedColor
 
 /** Nominal edge of the full-screen cover; drives the decode size, not the layout. */
 private val FullArtworkSize = 360.dp
+
+/*
+ * The rhythm of the block under the artwork.
+ *
+ * It used to run title → 8dp → bar → 4dp → controls → 8dp → edge, which packed four rows of
+ * different weights into the last fifth of the screen and left the gap above the title doing
+ * nothing. The artwork above is `weight(1f)`, so every dp given back here is a dp it takes:
+ * spacing the block out is also what stops the cover crowding it.
+ */
+
+/** How much of the width between the side paddings the cover square actually takes. */
+private const val CoverWidthFraction = 0.88f
+
+/**
+ * The gap between the rows that belong to the cover: title, artist, bar, transport.
+ *
+ * Tight, because they are one block — the picture, what it is, where you are in it, and the
+ * controls for it. The distance in this stack is not what separates anything; [ActionBarGap] is.
+ */
+private val PlayerRowGap = 12.dp
+
+/**
+ * The gap above the utility group at the foot.
+ *
+ * Much wider than [PlayerRowGap], and the only real division in the column. Everything above it is
+ * about the track playing; the group below is about settings that outlive it — shuffle, repeat,
+ * like, the overflow. At an even spacing the transport row sat as close to those as to its own
+ * seek bar, so the play button read as the top of the footer rather than the bottom of the player.
+ * Widening this is also what lifts the whole stack — cover included — clear of the bottom edge.
+ */
+private val ActionBarGap = 44.dp
 
 
 /**
@@ -102,7 +117,6 @@ private val FullArtworkSize = 360.dp
 @Composable
 internal fun NowPlayingScreen(
     playerConnection: PlayerConnection,
-    onCollapse: () -> Unit,
     onOpenQueue: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenArtist: ((String, String?) -> Unit)? = null,
@@ -132,11 +146,10 @@ internal fun NowPlayingScreen(
     val jam by viewModel.jam.collectAsStateWithLifecycle()
     val isCoverArtThemeEnabled by viewModel.isCoverArtThemeEnabled.collectAsStateWithLifecycle()
     val letterByLetterLyrics by viewModel.isLetterByLetterLyricsEnabled.collectAsStateWithLifecycle()
-    // Hoisted here rather than inside `SyncedLyricsView`: that composable is mounted inside an
-    // `AnimatedVisibility`/`AnimatedContent` that fully disposes it whenever lyrics are hidden, so
-    // state it owned locally — scroll position among it — was lost every time the panel toggled.
-    // This screen stays composed across that toggle, so holding it here is what lets reopening
-    // lyrics find them exactly where they were left.
+    // Hoisted here rather than inside `SyncedLyricsView`: the lyrics now live in a dialog that is
+    // composed only while it is open, so state owned down there — scroll position among it — would
+    // be lost every time it closed. This screen stays composed across that, so holding it here is
+    // what lets reopening the lyrics find them exactly where they were left.
     val lyricsListState = androidx.compose.foundation.lazy.rememberLazyListState()
     val track = state.currentTrack
 
@@ -151,6 +164,20 @@ internal fun NowPlayingScreen(
     val base = MaterialTheme.colorScheme
 
     CoverTintedTheme(seedColor = coverSeed, base = base, dark = dark, amoled = false) {
+
+    // Over both layouts, and over the player sheet itself — see `FullScreenLyrics` for why that
+    // has to be a dialog. Composed here, inside the cover tint, so it carries the same background
+    // the player has rather than the app's untinted one.
+    if (showLyrics) {
+        FullScreenLyrics(
+            lyrics = lyrics,
+            state = state,
+            playerConnection = playerConnection,
+            onDismiss = onToggleLyrics,
+            listState = lyricsListState,
+            letterByLetterEnabled = letterByLetterLyrics
+        )
+    }
 
     if (showSourcePicker) {
         SourcePickerDialog(
@@ -263,53 +290,22 @@ internal fun NowPlayingScreen(
 
             // Gradient scrim so controls are readable over the artwork.
             //
-            // It deepens towards a flat wash while the lyrics are up: the cover stays where it is
-            // in this layout rather than fading away, so the lyrics need something of their own to
-            // sit on, and a gradient tuned to carry two lines of title at the foot leaves the top
-            // of a verse on bare artwork. Animated so the toggle is a dim rather than a cut, and
-            // read inside `drawBehind` so it costs a draw rather than a recomposition per frame.
-            val lyricsScrim by animateFloatAsState(
-                targetValue = if (showLyrics) 1f else 0f,
-                animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-                label = "immersive-lyrics-scrim"
-            )
+            // It no longer deepens for the lyrics: they open as their own screen over this one
+            // (see `FullScreenLyrics`) rather than being laid over the artwork, so this is back to
+            // the one job it had — carrying the title and controls at the foot.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .drawBehind {
                         drawRect(
                             brush = Brush.verticalGradient(
-                                0f to Color.Black.copy(alpha = lerp(0f, 0.62f, lyricsScrim)),
-                                0.45f to Color.Black.copy(alpha = lerp(0.15f, 0.68f, lyricsScrim)),
-                                1f to Color.Black.copy(alpha = lerp(0.72f, 0.78f, lyricsScrim))
+                                0f to Color.Black.copy(alpha = 0f),
+                                0.45f to Color.Black.copy(alpha = 0.15f),
+                                1f to Color.Black.copy(alpha = 0.72f)
                             )
                         )
                     }
             )
-
-            // The lyrics themselves, shown by tapping the cover.
-            //
-            // Inset past the top bar and the controls column so a long verse scrolls between them
-            // instead of under them.
-            val lyricsEffects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
-            AnimatedVisibility(
-                visible = showLyrics,
-                enter = fadeIn(lyricsEffects),
-                exit = fadeOut(lyricsEffects),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                SyncedLyricsView(
-                    state = lyrics,
-                    playerConnection = playerConnection,
-                    onSeek = playerConnection::seekTo,
-                    listState = lyricsListState,
-                    letterByLetterEnabled = letterByLetterLyrics,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = immersiveTopBar, bottom = immersiveControls)
-                        .graphicsLayer { alpha = contentAlpha() }
-                )
-            }
 
             // Top bar
             Row(
@@ -333,13 +329,7 @@ internal fun NowPlayingScreen(
                     .padding(horizontal = 8.dp, vertical = 4.dp)
                     .graphicsLayer { alpha = contentAlpha() }
             ) {
-                IconButton(onClick = onCollapse) {
-                    Icon(
-                        Icons.Rounded.ExpandMore,
-                        contentDescription = "Close player",
-                        tint = OnCoverArt
-                    )
-                }
+                // No collapse arrow — see the standard layout. Swiping down does it.
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
@@ -396,32 +386,18 @@ internal fun NowPlayingScreen(
                                     .padding(horizontal = 8.dp, vertical = 2.dp)
                             } else Modifier
                         )
-                        track.audioQualityLabel?.let { quality ->
-                            AudioQualityBadge(
-                                quality = quality,
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
-                        }
                     }
                 }
-                IconButton(onClick = { showMenuDrawer = true }) {
-                    Icon(
-                        imageVector = Icons.Rounded.MoreVert,
-                        contentDescription = "More options",
-                        tint = OnCoverArt
-                    )
-                }
+                // The overflow lives in `PlayerActionBar` at the foot of the screen now.
             }
 
             // The share button rides the cover in immersive mode too — but here its parent is the
             // full-bleed Box, not the inset column the standard layout puts it in, so it has to
             // take the window inset itself. Without that it sat in the status bar.
             PlayerOverlayButtons(
-                showLyrics = showLyrics,
                 onShare = { viewModel.share(track) }.takeIf { viewModel.canShare(track) },
                 contentAlpha = overlayAlpha,
-                topInset = immersiveTopBar,
-                lyricsSyncType = lyrics.syncType()
+                topInset = immersiveTopBar
             )
 
             if (state.audioTracks.size > 1) {
@@ -465,64 +441,63 @@ internal fun NowPlayingScreen(
                     .padding(horizontal = 24.dp, vertical = 12.dp)
                     .graphicsLayer { alpha = contentAlpha() }
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                // Centred, like the bar and the controls under it. The row that used to hold this
+                // to the left was making room for the like button beside it; that moved into
+                // `PlayerActionBar`, and left-aligned text over centred controls read as a column
+                // that had come loose.
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = track.title,
+                        style = MaterialTheme.typography.headlineSmallEmphasized,
+                        color = OnCoverArt,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Clip,
+                        modifier = Modifier.scrollingTitle()
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
+                    ) {
                         Text(
-                            text = track.title,
-                            style = MaterialTheme.typography.headlineSmallEmphasized,
-                            color = OnCoverArt,
+                            text = track.artist,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = OnCoverArt.copy(alpha = 0.8f),
                             maxLines = 1,
                             overflow = TextOverflow.Clip,
                             modifier = Modifier.scrollingTitle()
+                                .clip(MaterialTheme.shapes.extraSmall)
+                                .clickable(
+                                    enabled = onOpenArtist != null && track.artist.isNotBlank()
+                                ) { onOpenArtist?.invoke(track.artist, track.artistId) }
                         )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(vertical = 2.dp)
-                        ) {
+                        val albumId = track.albumId
+                        if (!track.album.isNullOrBlank()) {
                             Text(
-                                text = track.artist,
+                                text = " · ${track.album}",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = OnCoverArt.copy(alpha = 0.8f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Clip,
                                 modifier = Modifier.scrollingTitle()
                                     .clip(MaterialTheme.shapes.extraSmall)
-                                    .clickable(
-                                        enabled = onOpenArtist != null && track.artist.isNotBlank()
-                                    ) { onOpenArtist?.invoke(track.artist, track.artistId) }
+                                    .clickable(enabled = albumId != null && onOpenAlbum != null) {
+                                        albumId?.let { onOpenAlbum?.invoke(it) }
+                                    }
                             )
-                            val albumId = track.albumId
-                            if (!track.album.isNullOrBlank()) {
-                                Text(
-                                    text = " · ${track.album}",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = OnCoverArt.copy(alpha = 0.8f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Clip,
-                                    modifier = Modifier.scrollingTitle()
-                                        .clip(MaterialTheme.shapes.extraSmall)
-                                        .clickable(enabled = albumId != null && onOpenAlbum != null) {
-                                            albumId?.let { onOpenAlbum?.invoke(it) }
-                                        }
-                                )
-                            }
                         }
                     }
-                    LikeButton(
-                        isLiked = track.id in likedTrackIds,
-                        onToggle = { viewModel.toggleLike(track) },
-                        size = 28.dp
-                    )
                 }
 
                 PlayerSeekBar(
                     playerConnection = playerConnection,
                     durationMs = state.durationMs,
                     onSeek = playerConnection::seekTo,
-                    modifier = Modifier.padding(top = 8.dp),
+                    modifier = Modifier.padding(top = PlayerRowGap),
                     isLive = track.isLive,
                     isPlaying = state.isPlaying,
                     isSeekable = state.isSeekable
@@ -531,7 +506,18 @@ internal fun NowPlayingScreen(
                 PlayerControls(
                     state = state,
                     connection = playerConnection,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+                    modifier = Modifier.padding(top = PlayerRowGap)
+                )
+
+                PlayerActionBar(
+                    state = state,
+                    connection = playerConnection,
+                    isLiked = track.id in likedTrackIds,
+                    onToggleLike = { viewModel.toggleLike(track) },
+                    onOpenMenu = { showMenuDrawer = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = ActionBarGap, bottom = 4.dp)
                 )
             }
 
@@ -560,9 +546,9 @@ internal fun NowPlayingScreen(
                 .fillMaxWidth()
                 .graphicsLayer { alpha = contentAlpha() }
         ) {
-            IconButton(onClick = onCollapse) {
-                Icon(Icons.Rounded.ExpandMore, contentDescription = "Close player")
-            }
+            // No collapse arrow. Swiping the player down does it, from anywhere rather than from
+            // one 48dp target in the far corner, and the gesture is taught in setup now — see
+            // `GesturesStep`. The row is left to centre the source control on its own.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
@@ -623,21 +609,10 @@ internal fun NowPlayingScreen(
                             Modifier
                         }
                     )
-                    track.audioQualityLabel?.let { quality ->
-                        AudioQualityBadge(
-                            quality = quality,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                    }
                 }
             }
-            IconButton(onClick = { showMenuDrawer = true }) {
-                Icon(
-                    imageVector = Icons.Rounded.MoreVert,
-                    contentDescription = "More options",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            // The overflow moved to `PlayerActionBar` at the foot of the screen. Up here it was
+            // the one control on a tall phone that could not be reached without changing grip.
         }
 
         // Swipeable Artwork / Lyrics Area
@@ -645,13 +620,18 @@ internal fun NowPlayingScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(vertical = 12.dp),
+                .padding(top = 12.dp, bottom = PlayerRowGap),
             contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
+                    // Short of the full width it is given. The square used to take every pixel
+                    // between the 24dp side paddings, which on a tall phone made it the whole
+                    // middle of the screen with the title crowded under it. Static, not animated —
+                    // `artworkSlot`'s bounds are what the travelling cover follows, so this may
+                    // change size but must never be *changing* size. See below.
+                    .fillMaxWidth(CoverWidthFraction)
                     .aspectRatio(1f)
-                    .fillMaxSize()
                     // No glow here. It belongs behind the cover, and the cover is drawn by the
                     // sheet *before* this screen — so anything painted here is necessarily in
                     // front of it. See the backlight in `MorphingArtwork`.
@@ -659,9 +639,8 @@ internal fun NowPlayingScreen(
                     // `pointerInput` after the swipe modifier, so a horizontal drag still reaches
                     // the skip gesture — only a press that stays put becomes a tap or a long press.
                     //
-                    // The tap is the lyrics toggle, both ways: `SyncedLyricsView` is swapped into
-                    // this same box, and its lines consume their own taps to seek, so only the
-                    // space around them comes back here to turn the cover on again.
+                    // The tap opens the lyrics, which are their own screen over this one now —
+                    // this box only ever holds the cover, so nothing here consumes the tap first.
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onTap = { toggleLyrics() },
@@ -669,59 +648,34 @@ internal fun NowPlayingScreen(
                         )
                     }
             ) {
-                // Opacity only. Nothing here may move, scale or resize, because [artworkSlot] is
-                // the box whose bounds `PlayerArtworkAnchors` reports and the travelling cover
-                // follows — and `graphicsLayer` transforms are included in the coordinates
-                // `onGloballyPositioned` hands back. A `SizeTransform` did it by resizing, and a
-                // `scaleIn`/`scaleOut` of even 0.98 did it by transform: either way the cover
-                // spends the transition chasing a target that is itself shrinking, which is what
-                // made the toggle look broken rather than smooth.
-                //
-                // `using null` disables the size transform for the same reason. The spec comes
-                // from the motion scheme rather than a hand-rolled spring.
-                val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
-                AnimatedContent(
-                    targetState = showLyrics,
-                    transitionSpec = { fadeIn(effects) togetherWith fadeOut(effects) using null },
-                    label = "lyrics-artwork",
-                    modifier = Modifier.fillMaxSize()
-                ) { lyricsVisible ->
-                    if (lyricsVisible) {
-                        SyncedLyricsView(
-                            state = lyrics,
-                            playerConnection = playerConnection,
-                            onSeek = playerConnection::seekTo,
-                            listState = lyricsListState,
-                            letterByLetterEnabled = letterByLetterLyrics,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .graphicsLayer { alpha = contentAlpha() }
+                // Nothing here may move, scale or resize, because [artworkSlot] is the box whose
+                // bounds `PlayerArtworkAnchors` reports and the travelling cover follows — and
+                // `graphicsLayer` transforms are included in the coordinates
+                // `onGloballyPositioned` hands back.
+                if (artworkSlot != null) {
+                    artworkSlot(track.artworkUrl, track.title)
+                } else {
+                    // The dot rides inside the cover rather than beside the title.
+                    //
+                    // It is a footnote about the track, and the cover is the track — putting it
+                    // in the title row gave a six-pixel status the same rank as the song's name.
+                    // Bottom-left because artwork is busiest in the middle and album text, when
+                    // there is any, tends to sit low-right.
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Artwork(
+                            url = track.artworkUrl,
+                            contentDescription = track.title,
+                            sizeDp = FullArtworkSize,
+                            shape = MaterialTheme.shapes.extraLarge,
+                            crossfade = true,
+                            modifier = Modifier.fillMaxSize()
                         )
-                    } else if (artworkSlot != null) {
-                        artworkSlot(track.artworkUrl, track.title)
-                    } else {
-                        // The dot rides inside the cover rather than beside the title.
-                        //
-                        // It is a footnote about the track, and the cover is the track — putting it
-                        // in the title row gave a six-pixel status the same rank as the song's name.
-                        // Bottom-left because artwork is busiest in the middle and album text, when
-                        // there is any, tends to sit low-right.
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            Artwork(
-                                url = track.artworkUrl,
-                                contentDescription = track.title,
-                                sizeDp = FullArtworkSize,
-                                shape = MaterialTheme.shapes.extraLarge,
-                                crossfade = true,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                            FingerprintBadge(
-                                status = fingerprintStatus[track.id] ?: FingerprintStatus.MISSING,
-                                modifier = Modifier
-                                    .align(Alignment.BottomStart)
-                                    .padding(14.dp)
-                            )
-                        }
+                        FingerprintBadge(
+                            status = fingerprintStatus[track.id] ?: FingerprintStatus.MISSING,
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(14.dp)
+                        )
                     }
                 }
 
@@ -734,21 +688,16 @@ internal fun NowPlayingScreen(
                 }
 
                 PlayerOverlayButtons(
-                    showLyrics = showLyrics,
                     onShare = { viewModel.share(track) }.takeIf { viewModel.canShare(track) },
-                    contentAlpha = overlayAlpha,
-                    // Only here. The square is bounded, so the corner is free — which it is not in
-                    // the immersive layout, where the controls own the bottom of the window.
-                    onToggleLyrics = onToggleLyrics,
-                    lyricsSyncType = lyrics.syncType()
+                    contentAlpha = overlayAlpha
                 )
 
                 // Language button — top-left of the cover, only when multiple audio tracks exist.
                 //
                 // Gated on `size > 1`: a single-track stream has nothing to switch to, and
                 // showing the button for it would open an empty or single-row menu. The button
-                // sits at TopStart to mirror the overlay buttons (Share/Lyrics) at TopEnd/BottomEnd
-                // and to stay off the album art's visual centre, where artwork tends to be busiest.
+                // sits at TopStart to mirror the share button at TopEnd and to stay off the album
+                // art's visual centre, where artwork tends to be busiest.
                 if (state.audioTracks.size > 1) {
                     FilledTonalIconButton(
                         onClick = { showAudioTrackPicker = true },
@@ -772,70 +721,65 @@ internal fun NowPlayingScreen(
                 .fillMaxWidth()
                 .graphicsLayer { alpha = contentAlpha() }
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            // Centred on the bar and the controls below it — see the note in the immersive layout.
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = track.title,
+                    style = MaterialTheme.typography.headlineSmallEmphasized,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.scrollingTitle()
+                )
+                // These open the artist and album pages. They used to run a *search* for the
+                // name, which is a list of loosely matching tracks rather than the record or
+                // the discography the user was asking to see.
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
+                ) {
                     Text(
-                        text = track.title,
-                        style = MaterialTheme.typography.headlineSmallEmphasized,
+                        text = track.artist,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
                         maxLines = 1,
                         overflow = TextOverflow.Clip,
                         modifier = Modifier.scrollingTitle()
+                            .clip(MaterialTheme.shapes.extraSmall)
+                            .clickable(
+                                enabled = onOpenArtist != null && track.artist.isNotBlank()
+                            ) { onOpenArtist?.invoke(track.artist, track.artistId) }
                     )
-                    // These open the artist and album pages. They used to run a *search* for the
-                    // name, which is a list of loosely matching tracks rather than the record or
-                    // the discography the user was asking to see.
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 2.dp)
-                    ) {
+                    // Only linked when the track carries an album id: without one there is no
+                    // page to open, and a tap that goes nowhere is worse than plain text.
+                    val albumId = track.albumId
+                    if (!track.album.isNullOrBlank()) {
                         Text(
-                            text = track.artist,
+                            text = " · ${track.album}",
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = if (albumId != null) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Clip,
                             modifier = Modifier.scrollingTitle()
                                 .clip(MaterialTheme.shapes.extraSmall)
-                                .clickable(
-                                    enabled = onOpenArtist != null && track.artist.isNotBlank()
-                                ) { onOpenArtist?.invoke(track.artist, track.artistId) }
+                                .clickable(enabled = albumId != null && onOpenAlbum != null) {
+                                    albumId?.let { onOpenAlbum?.invoke(it) }
+                                }
                         )
-                        // Only linked when the track carries an album id: without one there is no
-                        // page to open, and a tap that goes nowhere is worse than plain text.
-                        val albumId = track.albumId
-                        if (!track.album.isNullOrBlank()) {
-                            Text(
-                                text = " · ${track.album}",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = if (albumId != null) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Clip,
-                                modifier = Modifier.scrollingTitle()
-                                    .clip(MaterialTheme.shapes.extraSmall)
-                                    .clickable(enabled = albumId != null && onOpenAlbum != null) {
-                                        albumId?.let { onOpenAlbum?.invoke(it) }
-                                    }
-                            )
-                        }
                     }
                 }
-
-                LikeButton(
-                    isLiked = track.id in likedTrackIds,
-                    onToggle = { viewModel.toggleLike(track) },
-                    size = 28.dp
-                )
             }
 
             PlayerSeekBar(
                 playerConnection = playerConnection,
                 durationMs = state.durationMs,
                 onSeek = playerConnection::seekTo,
-                modifier = Modifier.padding(top = 8.dp),
+                modifier = Modifier.padding(top = PlayerRowGap),
                 isLive = track.isLive,
                 isPlaying = state.isPlaying,
                 isSeekable = state.isSeekable
@@ -844,9 +788,19 @@ internal fun NowPlayingScreen(
             PlayerControls(
                 state = state,
                 connection = playerConnection,
-                modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+                modifier = Modifier.padding(top = PlayerRowGap)
             )
 
+            PlayerActionBar(
+                state = state,
+                connection = playerConnection,
+                isLiked = track.id in likedTrackIds,
+                onToggleLike = { viewModel.toggleLike(track) },
+                onOpenMenu = { showMenuDrawer = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = ActionBarGap, bottom = 4.dp)
+            )
         }
         }
     }
