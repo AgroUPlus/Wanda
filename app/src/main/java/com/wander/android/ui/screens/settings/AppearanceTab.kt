@@ -81,7 +81,7 @@ internal fun LazyListScope.appearanceTab(
         SettingsToggle(
             title = "Letter-by-letter lyrics",
             subtitle = "Sweep the active word in one letter at a time, karaoke-style. " +
-                "Off highlights a word the instant it's sung.",
+                "Off highlights the whole line as it's sung.",
             checked = state.letterByLetterLyrics,
             onCheckedChange = actions.onLetterByLetterLyricsChange,
             modifier = Modifier.scale(rememberShelfEntranceScale(letterByLetterLyricsIndex))

@@ -38,7 +38,14 @@ fun LyricLineItem(
     currentPositionMs: Long,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
-    letterByLetterEnabled: Boolean = true
+    letterByLetterEnabled: Boolean = true,
+    /**
+     * Where the line sits in its own width.
+     *
+     * Centred reads as a poster; ragged-right reads as something to follow line by line, which is
+     * what a lyric sheet is for. The full-screen view asks for [TextAlign.Start].
+     */
+    textAlign: TextAlign = TextAlign.Center
 ) {
     val lineAlpha by animateFloatAsState(
         targetValue = if (isActive) 1f else 0.40f,
@@ -78,24 +85,29 @@ fun LyricLineItem(
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Medium,
             color = textColor,
-            textAlign = TextAlign.Center,
+            textAlign = textAlign,
             modifier = contentModifier
         )
         return
     }
 
-    // Active line: progressive word-by-word highlight
-    val words = remember(line, nextLineTimestampMs) {
-        LrcParser.resolveWords(line, nextLineTimestampMs)
+    // Active line: progressive word-by-word highlight, when the sweep is on.
+    val words = remember(line, nextLineTimestampMs, letterByLetterEnabled) {
+        if (letterByLetterEnabled) LrcParser.resolveWords(line, nextLineTimestampMs) else emptyList()
     }
 
+    // No words to sweep — either the line carries no per-word timings, or the sweep is switched
+    // off. Both mean the same thing on screen: the line lights as a line, the moment it is sung.
+    // Off used to still progress word by word, which is the thing the switch was meant to stop;
+    // it also rebuilt an annotated string on every position tick to do it, so turning the sweep
+    // off now genuinely costs nothing per frame rather than nearly as much as leaving it on.
     if (words.isEmpty()) {
         Text(
             text = line.text,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.ExtraBold,
             color = textColor,
-            textAlign = TextAlign.Center,
+            textAlign = textAlign,
             modifier = contentModifier
         )
         return
@@ -105,7 +117,7 @@ fun LyricLineItem(
     val upcomingColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
     val syncPositionMs = currentPositionMs + LyricsLeadOffsetMs
 
-    val annotatedText = remember(words, syncPositionMs, primaryColor, upcomingColor, letterByLetterEnabled) {
+    val annotatedText = remember(words, syncPositionMs, primaryColor, upcomingColor) {
         buildAnnotatedString {
             words.forEachIndexed { wordIdx, word ->
                 val hasTrailingSpace = wordIdx < words.size - 1
@@ -126,22 +138,6 @@ fun LyricLineItem(
                         }
                         if (hasTrailingSpace) {
                             withStyle(SpanStyle(color = upcomingColor, fontWeight = FontWeight.Normal)) {
-                                append(" ")
-                            }
-                        }
-                    }
-                    !letterByLetterEnabled -> {
-                        // Word is actively being sung, but the per-character sweep is off: light
-                        // the whole word the instant it starts rather than progressing through it.
-                        // This branch only runs once the earlier two have ruled out "not yet sung"
-                        // and "already sung" — `when` still checks top to bottom, but by the time a
-                        // word reaches here `syncPositionMs` is already known to sit inside its
-                        // [startMs, endMs) window, which is exactly "currently being sung".
-                        withStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Bold)) {
-                            append(word.text)
-                        }
-                        if (hasTrailingSpace) {
-                            withStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Normal)) {
                                 append(" ")
                             }
                         }
@@ -208,7 +204,7 @@ fun LyricLineItem(
     Text(
         text = annotatedText,
         style = MaterialTheme.typography.titleLarge,
-        textAlign = TextAlign.Center,
+        textAlign = textAlign,
         modifier = contentModifier
     )
 }
