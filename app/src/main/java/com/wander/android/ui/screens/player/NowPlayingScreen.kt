@@ -620,13 +620,18 @@ internal fun NowPlayingScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(vertical = 12.dp),
+                .padding(top = 12.dp, bottom = PlayerRowGap),
             contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
+                    // Short of the full width it is given. The square used to take every pixel
+                    // between the 24dp side paddings, which on a tall phone made it the whole
+                    // middle of the screen with the title crowded under it. Static, not animated —
+                    // `artworkSlot`'s bounds are what the travelling cover follows, so this may
+                    // change size but must never be *changing* size. See below.
+                    .fillMaxWidth(CoverWidthFraction)
                     .aspectRatio(1f)
-                    .fillMaxSize()
                     // No glow here. It belongs behind the cover, and the cover is drawn by the
                     // sheet *before* this screen — so anything painted here is necessarily in
                     // front of it. See the backlight in `MorphingArtwork`.
