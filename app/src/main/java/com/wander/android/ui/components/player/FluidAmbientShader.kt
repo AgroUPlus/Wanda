@@ -91,9 +91,9 @@ private const val LOOP_SECONDS = 24f
  */
 private const val AGSL_SOURCE = """
     uniform float time;
-    uniform half4 color1;
-    uniform half4 color2;
-    uniform half4 color3;
+    layout(color) uniform half4 color1;
+    layout(color) uniform half4 color2;
+    layout(color) uniform half4 color3;
     uniform float2 resolution;
 
     half4 main(float2 fragCoord) {

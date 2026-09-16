@@ -57,10 +57,10 @@
     <string name="lyrics_unreachable">Couldn\'t check for lyrics. Check your connection and try again.</string>
 
     <!-- Mood & Energy matrix (Home) -->
-    <string name="mood_matrix_title">Mood &amp; Energy</string>
-    <string name="mood_matrix_subtitle">Drag to shape a radio by feel</string>
+    <string name="mood_matrix_title">Mood Radio</string>
+    <string name="mood_matrix_subtitle">Pick a mood, from everything you have</string>
     <string name="mood_matrix_play">Play Mood Radio</string>
-    <string name="mood_matrix_empty_preview">Move the puck to preview</string>
+    <string name="mood_matrix_empty_preview">No tracks measured for this mood yet</string>
     <string name="mood_preset_late_night_chill">Late Night Chill</string>
     <string name="mood_preset_focus_flow">Focus Flow</string>
     <string name="mood_preset_morning_energizer">Morning Energizer</string>
