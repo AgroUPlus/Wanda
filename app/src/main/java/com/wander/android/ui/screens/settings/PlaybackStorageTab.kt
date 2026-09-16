@@ -113,6 +113,11 @@ internal fun LazyListScope.playbackStorageTab(
             modifier = Modifier.scale(rememberShelfEntranceScale(cacheIndex))
         )
     }
+
+    val storageButlerIndex = i++
+    item(key = "storage_butler") {
+        StorageButlerSection(modifier = Modifier.scale(rememberShelfEntranceScale(storageButlerIndex)))
+    }
 }
 
 internal fun formatBytes(bytes: Long): String = when {
