@@ -2,6 +2,7 @@ package com.wander.android.core.playback
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.os.Bundle
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -11,6 +12,10 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import com.wander.android.MainActivity
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.sources.agro.AgroHandoffPublisher
@@ -57,6 +62,8 @@ class PlaybackService : MediaSessionService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        val likeButton = NotificationLikeButton(player, musicRepository, scope)
+
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(sessionActivity)
             .setCallback(object : MediaSession.Callback {
@@ -66,10 +73,32 @@ class PlaybackService : MediaSessionService() {
                 ): MediaSession.ConnectionResult {
                     return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                         .setAvailablePlayerCommands(MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS)
+                        // The defaults plus the heart. Without adding it here the button is drawn
+                        // but every tap on it is rejected as an unavailable command.
+                        .setAvailableSessionCommands(
+                            MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
+                                .add(likeButton.sessionCommand)
+                                .build()
+                        )
+                        // Seeds the controller as it connects; `likeButton` republishes from then on.
+                        .setMediaButtonPreferences(likeButton.preferences())
                         .build()
                 }
+
+                override fun onCustomCommand(
+                    session: MediaSession,
+                    controller: MediaSession.ControllerInfo,
+                    customCommand: SessionCommand,
+                    args: Bundle
+                ): ListenableFuture<SessionResult> =
+                    if (likeButton.handle(customCommand)) {
+                        Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                    } else {
+                        super.onCustomCommand(session, controller, customCommand, args)
+                    }
             })
             .build()
+            .also(likeButton::attach)
     }
 
     /**
