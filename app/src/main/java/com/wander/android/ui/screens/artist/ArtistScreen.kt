@@ -162,7 +162,6 @@ internal fun ArtistScreen(
                     onPlaySong = viewModel::play,
                     onPlayTrack = viewModel::playOne,
                     onLongPressTrack = { actionsFor = it },
-                    onToggleLike = viewModel::toggleLike,
                     onOpenAlbum = onOpenAlbum,
                     onLongPressAlbum = { albumActionsFor = it },
                     onOpenArtist = onOpenArtist

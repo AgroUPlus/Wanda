@@ -89,20 +89,27 @@ object LrcParser {
             3200L
         }
 
-        // Natural vocal pace estimation: ~200ms baseline per word plus ~45ms per character.
-        // Prevents words from stretching across instrumental pauses before the next lyric line.
-        val estimatedSingingDuration = tokens.sumOf { (it.length * 45L) + 200L }
+        // Natural vocal pace estimation: ~200ms baseline per word, ~45ms per character, plus
+        // ~120ms pause for commas. Prevents words from stretching across instrumental pauses.
+        val estimatedSingingDuration = tokens.sumOf { token ->
+            val commas = token.count { it == ',' }
+            (token.length * 45L) + (commas * 120L) + 200L
+        }
         val lineDuration = if (rawGap > estimatedSingingDuration + 400L) {
             estimatedSingingDuration.coerceIn(800L, rawGap - 200L)
         } else {
             (rawGap - 80L).coerceIn(800L, 7000L)
         }
 
-        val totalWeight = tokens.sumOf { it.length + 1 }
+        val totalWeight = tokens.sumOf { token ->
+            val commas = token.count { it == ',' }
+            token.length + 1 + (commas * 2)
+        }
         var currentOffset = line.timestampMs
 
         return tokens.mapIndexed { idx, token ->
-            val weight = token.length + 1
+            val commas = token.count { it == ',' }
+            val weight = token.length + 1 + (commas * 2)
             val duration = (lineDuration * weight) / totalWeight
             val start = currentOffset
             val end = if (idx == tokens.size - 1) line.timestampMs + lineDuration else currentOffset + duration

@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.wander.android.ui.components.rememberHaptics
 import kotlinx.coroutines.launch
 
 /** Past this many pixels, or this fling velocity, the drag counts as a skip. */
@@ -89,6 +90,13 @@ internal class TrackSwipeState {
     var pendingArtworkUrl by mutableStateOf<String?>(null)
         internal set
 
+    /**
+     * Whether the drag has already crossed [DistanceThreshold] this gesture — plain `var`, like
+     * [stepPx]: only ever read and written from inside the drag callbacks, never composition, so a
+     * tick fires once per crossing instead of once per frame past it.
+     */
+    internal var thresholdCrossed: Boolean = false
+
     /** Drops [pendingArtworkUrl] once playback has caught up with the skip. */
     internal fun clearPending() {
         pendingArtworkUrl = null
@@ -114,9 +122,12 @@ internal fun Modifier.swipeToChangeTrack(
     onPrevious: () -> Unit,
     nextArtworkUrl: String?,
     previousArtworkUrl: String?,
+    canNext: Boolean = true,
+    canPrevious: Boolean = true,
     exitDistance: Float = FullExitDistance
 ): Modifier {
     val scope = rememberCoroutineScope()
+    val haptics = rememberHaptics()
 
     // Read here, in composition, and captured by the gesture coroutines below — which run inside
     // `draggable` and cannot reach the theme themselves.
@@ -131,16 +142,34 @@ internal fun Modifier.swipeToChangeTrack(
 
     return draggable(
         orientation = Orientation.Horizontal,
+        enabled = canNext || canPrevious,
         state = rememberDraggableState { delta ->
-            state.isSwiping = true
-            scope.launch { state.offsetX.snapTo(state.offsetX.value + delta * DragResistance) }
+            val current = state.offsetX.value
+            val raw = current + delta * DragResistance
+            val clamped = when {
+                !canPrevious && !canNext -> 0f
+                !canPrevious -> raw.coerceAtMost(0f)
+                !canNext -> raw.coerceAtLeast(0f)
+                else -> raw
+            }
+            if (clamped != current) {
+                state.isSwiping = true
+                scope.launch { state.offsetX.snapTo(clamped) }
+            }
+            // A tick right as the drag crosses into "this would skip if you let go" — the same
+            // boundary `onDragStopped` commits on — so releasing carries no surprise.
+            val crossed = kotlin.math.abs(clamped) >= DistanceThreshold
+            if (crossed != state.thresholdCrossed) {
+                state.thresholdCrossed = crossed
+                if (crossed) haptics.tick()
+            }
         },
         onDragStopped = { velocity ->
             scope.launch {
                 try {
                     val offset = state.offsetX.value
-                    val skipNext = offset < -DistanceThreshold || velocity < -VelocityThreshold
-                    val skipPrevious = offset > DistanceThreshold || velocity > VelocityThreshold
+                    val skipNext = (offset < -DistanceThreshold || velocity < -VelocityThreshold) && canNext
+                    val skipPrevious = (offset > DistanceThreshold || velocity > VelocityThreshold) && canPrevious
 
                     if (skipNext || skipPrevious) {
                         // Slide the whole filmstrip by exactly one slot, and stop.
@@ -177,6 +206,7 @@ internal fun Modifier.swipeToChangeTrack(
                     // In a `finally` because a second gesture starting mid-settle cancels this
                     // coroutine, and leaving the flag set would strand the peek covers on screen.
                     state.isSwiping = false
+                    state.thresholdCrossed = false
                 }
             }
         }
