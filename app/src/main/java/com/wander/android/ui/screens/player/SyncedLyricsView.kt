@@ -7,12 +7,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -62,7 +64,32 @@ fun SyncedLyricsView(
     onSeek: (Long) -> Unit,
     listState: LazyListState,
     modifier: Modifier = Modifier,
-    letterByLetterEnabled: Boolean = true
+    letterByLetterEnabled: Boolean = true,
+    /**
+     * Render synced lyrics as a plain block anyway.
+     *
+     * What the full-screen view's "Static" half asks for: the same words without the playhead
+     * deciding which one is lit, for reading ahead or reading back.
+     */
+    forcePlain: Boolean = false,
+    /** Passed through to each line — see [LyricLineItem]. */
+    textAlign: TextAlign = TextAlign.Center,
+    /**
+     * Room inside the scroll, not around it.
+     *
+     * The full-screen view floats its transport over the foot of the list so the lines keep
+     * running underneath it and fade out there. Padding the list itself is what lets the last verse
+     * still be scrolled up clear of the bar rather than ending permanently behind it.
+     */
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    /**
+     * The plain block's scroll, hoisted for the same reason [listState] is.
+     *
+     * The full-screen view fades its edges only when there is something to scroll to, and that
+     * question has a different answer in each mode — so the caller needs to be able to ask the one
+     * that is actually on screen.
+     */
+    scrollState: ScrollState = rememberScrollState()
 ) {
     val lyrics = when (state) {
         is LyricsState.Present -> state.lyrics
@@ -72,8 +99,12 @@ fun SyncedLyricsView(
         }
     }
 
-    if (!lyrics.isSynced || lyrics.lines.isEmpty()) {
+    if (forcePlain || !lyrics.isSynced || lyrics.lines.isEmpty()) {
+        // Falls back to the synced lines flattened, which is what makes "Static" work for a track
+        // whose lyrics arrived *only* as timed lines: the words are right there, and answering a
+        // request to read them as a block with "no lyrics found" would be plainly wrong.
         val plain = lyrics.plainLyrics?.takeIf { it.isNotBlank() }
+            ?: lyrics.lines.joinToString("\n") { it.text }.takeIf { it.isNotBlank() }
         if (plain == null) {
             CenteredNotice(LyricsState.Absent.describe(), modifier)
             return
@@ -83,15 +114,21 @@ fun SyncedLyricsView(
         Text(
             text = plain,
             style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
+            textAlign = textAlign,
             modifier = modifier
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(vertical = 8.dp)
         )
         return
     }
 
-    val positionState = rememberPlaybackPosition(playerConnection, intervalMs = 40L)
+    // 25 Hz is what the per-character sweep needs to look continuous. With the sweep off, the only
+    // thing the playhead still decides is *which line* is active, and a line lasts seconds — so
+    // sampling that fast would be twenty extra wakeups a second to re-answer the same question.
+    val positionState = rememberPlaybackPosition(
+        playerConnection,
+        intervalMs = if (letterByLetterEnabled) 40L else 200L
+    )
 
     // Reads positionState inside the derivation, so it recomputes as playback advances
     // while LazyColumn only re-indexes when the *line* changes. 120ms lead offset ensures
@@ -121,6 +158,7 @@ fun SyncedLyricsView(
 
             LazyColumn(
                 state = listState,
+                contentPadding = contentPadding,
                 modifier = Modifier
                     .fillMaxSize()
                     // A raw pointer-down is enough to mean "the user is taking over" — waiting for
@@ -147,7 +185,8 @@ fun SyncedLyricsView(
                         isActive = isActive,
                         currentPositionMs = if (isActive) positionState.value.positionMs else 0L,
                         onSeek = onSeek,
-                        letterByLetterEnabled = letterByLetterEnabled
+                        letterByLetterEnabled = letterByLetterEnabled,
+                        textAlign = textAlign
                     )
                 }
             }
