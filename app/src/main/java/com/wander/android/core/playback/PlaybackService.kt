@@ -5,8 +5,10 @@ import android.content.Intent
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.Format
 import androidx.media3.common.Timeline
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.wander.android.MainActivity
@@ -45,6 +47,7 @@ class PlaybackService : MediaSessionService() {
         player.addListener(PlayCountRecorder(player))
         player.addListener(AgroHandoffReporter(player))
         player.addListener(NextTrackPreloader(player))
+        player.addAnalyticsListener(AudioFormatReporter())
 
         val sessionActivity = PendingIntent.getActivity(
             this,
@@ -100,6 +103,24 @@ class PlaybackService : MediaSessionService() {
             } else {
                 ExoPlayer.PreloadConfiguration.DEFAULT
             }
+        }
+    }
+
+    /**
+     * Publishes the *actually* decoded audio format — see [ActualAudioFormat] for why this is a
+     * separate source of truth from the track's own container tags.
+     *
+     * [MediaSession] extras are the only channel for this: `AnalyticsListener` runs on the
+     * `ExoPlayer` instance itself, which [PlayerConnection] never touches directly — it only holds
+     * a `MediaController`, whose `Player` interface has no such callback.
+     */
+    private inner class AudioFormatReporter : AnalyticsListener {
+        override fun onAudioInputFormatChanged(
+            eventTime: AnalyticsListener.EventTime,
+            format: Format,
+            decoderReuseEvaluation: androidx.media3.exoplayer.DecoderReuseEvaluation?
+        ) {
+            mediaSession?.setSessionExtras(ActualAudioFormat.of(format).toBundle())
         }
     }
 

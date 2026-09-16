@@ -77,7 +77,16 @@ data class PlaybackState(
      * UI gates the button on `audioTracks.size > 1` rather than `isNotEmpty()` to avoid showing
      * a single-option menu.
      */
-    val audioTracks: List<AudioTrackInfo> = emptyList()
+    val audioTracks: List<AudioTrackInfo> = emptyList(),
+    /**
+     * What the decoder is actually producing for [currentTrack], when known.
+     *
+     * Distinct from `currentTrack.audioQualityLabel`, which is a guess from the container tags a
+     * backend reported — see [ActualAudioFormat]. Null until the first frame decodes, and cleared
+     * on every track change so a stale format never survives onto the wrong track; see
+     * `PlayerConnection`'s extras listener.
+     */
+    val actualAudioFormat: ActualAudioFormat? = null
 ) {
     /**
      * The same snapshot with [liveIds] known to be livestreams marked as such.
