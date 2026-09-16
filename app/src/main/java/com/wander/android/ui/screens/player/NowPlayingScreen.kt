@@ -84,6 +84,37 @@ import com.wander.android.ui.theme.rememberCoverSeedColor
 /** Nominal edge of the full-screen cover; drives the decode size, not the layout. */
 private val FullArtworkSize = 360.dp
 
+/*
+ * The rhythm of the block under the artwork.
+ *
+ * It used to run title → 8dp → bar → 4dp → controls → 8dp → edge, which packed four rows of
+ * different weights into the last fifth of the screen and left the gap above the title doing
+ * nothing. The artwork above is `weight(1f)`, so every dp given back here is a dp it takes:
+ * spacing the block out is also what stops the cover crowding it.
+ */
+
+/** How much of the width between the side paddings the cover square actually takes. */
+private const val CoverWidthFraction = 0.88f
+
+/**
+ * The gap between the rows that belong to the cover: title, artist, bar, transport.
+ *
+ * Tight, because they are one block — the picture, what it is, where you are in it, and the
+ * controls for it. The distance in this stack is not what separates anything; [ActionBarGap] is.
+ */
+private val PlayerRowGap = 12.dp
+
+/**
+ * The gap above the utility group at the foot.
+ *
+ * Much wider than [PlayerRowGap], and the only real division in the column. Everything above it is
+ * about the track playing; the group below is about settings that outlive it — shuffle, repeat,
+ * like, the overflow. At an even spacing the transport row sat as close to those as to its own
+ * seek bar, so the play button read as the top of the footer rather than the bottom of the player.
+ * Widening this is also what lifts the whole stack — cover included — clear of the bottom edge.
+ */
+private val ActionBarGap = 44.dp
+
 
 /**
  * @param artworkSlot fills the cover-art area. By default the screen draws its own artwork; the
@@ -391,13 +422,7 @@ internal fun NowPlayingScreen(
                         )
                     }
                 }
-                IconButton(onClick = { showMenuDrawer = true }) {
-                    Icon(
-                        imageVector = Icons.Rounded.MoreVert,
-                        contentDescription = "More options",
-                        tint = OnCoverArt
-                    )
-                }
+                // The overflow lives in `PlayerActionBar` at the foot of the screen now.
             }
 
             // The share button rides the cover in immersive mode too — but here its parent is the
@@ -452,64 +477,63 @@ internal fun NowPlayingScreen(
                     .padding(horizontal = 24.dp, vertical = 12.dp)
                     .graphicsLayer { alpha = contentAlpha() }
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                // Centred, like the bar and the controls under it. The row that used to hold this
+                // to the left was making room for the like button beside it; that moved into
+                // `PlayerActionBar`, and left-aligned text over centred controls read as a column
+                // that had come loose.
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = track.title,
+                        style = MaterialTheme.typography.headlineSmallEmphasized,
+                        color = OnCoverArt,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Clip,
+                        modifier = Modifier.scrollingTitle()
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
+                    ) {
                         Text(
-                            text = track.title,
-                            style = MaterialTheme.typography.headlineSmallEmphasized,
-                            color = OnCoverArt,
+                            text = track.artist,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = OnCoverArt.copy(alpha = 0.8f),
                             maxLines = 1,
                             overflow = TextOverflow.Clip,
                             modifier = Modifier.scrollingTitle()
+                                .clip(MaterialTheme.shapes.extraSmall)
+                                .clickable(
+                                    enabled = onOpenArtist != null && track.artist.isNotBlank()
+                                ) { onOpenArtist?.invoke(track.artist, track.artistId) }
                         )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(vertical = 2.dp)
-                        ) {
+                        val albumId = track.albumId
+                        if (!track.album.isNullOrBlank()) {
                             Text(
-                                text = track.artist,
+                                text = " · ${track.album}",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = OnCoverArt.copy(alpha = 0.8f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Clip,
                                 modifier = Modifier.scrollingTitle()
                                     .clip(MaterialTheme.shapes.extraSmall)
-                                    .clickable(
-                                        enabled = onOpenArtist != null && track.artist.isNotBlank()
-                                    ) { onOpenArtist?.invoke(track.artist, track.artistId) }
+                                    .clickable(enabled = albumId != null && onOpenAlbum != null) {
+                                        albumId?.let { onOpenAlbum?.invoke(it) }
+                                    }
                             )
-                            val albumId = track.albumId
-                            if (!track.album.isNullOrBlank()) {
-                                Text(
-                                    text = " · ${track.album}",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = OnCoverArt.copy(alpha = 0.8f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Clip,
-                                    modifier = Modifier.scrollingTitle()
-                                        .clip(MaterialTheme.shapes.extraSmall)
-                                        .clickable(enabled = albumId != null && onOpenAlbum != null) {
-                                            albumId?.let { onOpenAlbum?.invoke(it) }
-                                        }
-                                )
-                            }
                         }
                     }
-                    LikeButton(
-                        isLiked = track.id in likedTrackIds,
-                        onToggle = { viewModel.toggleLike(track) },
-                        size = 28.dp
-                    )
                 }
 
                 PlayerSeekBar(
                     playerConnection = playerConnection,
                     durationMs = state.durationMs,
                     onSeek = playerConnection::seekTo,
-                    modifier = Modifier.padding(top = 8.dp),
+                    modifier = Modifier.padding(top = PlayerRowGap),
                     isLive = track.isLive,
                     isPlaying = state.isPlaying,
                     isSeekable = state.isSeekable
@@ -518,7 +542,18 @@ internal fun NowPlayingScreen(
                 PlayerControls(
                     state = state,
                     connection = playerConnection,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+                    modifier = Modifier.padding(top = PlayerRowGap)
+                )
+
+                PlayerActionBar(
+                    state = state,
+                    connection = playerConnection,
+                    isLiked = track.id in likedTrackIds,
+                    onToggleLike = { viewModel.toggleLike(track) },
+                    onOpenMenu = { showMenuDrawer = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = ActionBarGap, bottom = 4.dp)
                 )
             }
 
@@ -612,13 +647,8 @@ internal fun NowPlayingScreen(
                     )
                 }
             }
-            IconButton(onClick = { showMenuDrawer = true }) {
-                Icon(
-                    imageVector = Icons.Rounded.MoreVert,
-                    contentDescription = "More options",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            // The overflow moved to `PlayerActionBar` at the foot of the screen. Up here it was
+            // the one control on a tall phone that could not be reached without changing grip.
         }
 
         // Swipeable Artwork / Lyrics Area
@@ -753,70 +783,65 @@ internal fun NowPlayingScreen(
                 .fillMaxWidth()
                 .graphicsLayer { alpha = contentAlpha() }
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            // Centred on the bar and the controls below it — see the note in the immersive layout.
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = track.title,
+                    style = MaterialTheme.typography.headlineSmallEmphasized,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.scrollingTitle()
+                )
+                // These open the artist and album pages. They used to run a *search* for the
+                // name, which is a list of loosely matching tracks rather than the record or
+                // the discography the user was asking to see.
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
+                ) {
                     Text(
-                        text = track.title,
-                        style = MaterialTheme.typography.headlineSmallEmphasized,
+                        text = track.artist,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
                         maxLines = 1,
                         overflow = TextOverflow.Clip,
                         modifier = Modifier.scrollingTitle()
+                            .clip(MaterialTheme.shapes.extraSmall)
+                            .clickable(
+                                enabled = onOpenArtist != null && track.artist.isNotBlank()
+                            ) { onOpenArtist?.invoke(track.artist, track.artistId) }
                     )
-                    // These open the artist and album pages. They used to run a *search* for the
-                    // name, which is a list of loosely matching tracks rather than the record or
-                    // the discography the user was asking to see.
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 2.dp)
-                    ) {
+                    // Only linked when the track carries an album id: without one there is no
+                    // page to open, and a tap that goes nowhere is worse than plain text.
+                    val albumId = track.albumId
+                    if (!track.album.isNullOrBlank()) {
                         Text(
-                            text = track.artist,
+                            text = " · ${track.album}",
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = if (albumId != null) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Clip,
                             modifier = Modifier.scrollingTitle()
                                 .clip(MaterialTheme.shapes.extraSmall)
-                                .clickable(
-                                    enabled = onOpenArtist != null && track.artist.isNotBlank()
-                                ) { onOpenArtist?.invoke(track.artist, track.artistId) }
+                                .clickable(enabled = albumId != null && onOpenAlbum != null) {
+                                    albumId?.let { onOpenAlbum?.invoke(it) }
+                                }
                         )
-                        // Only linked when the track carries an album id: without one there is no
-                        // page to open, and a tap that goes nowhere is worse than plain text.
-                        val albumId = track.albumId
-                        if (!track.album.isNullOrBlank()) {
-                            Text(
-                                text = " · ${track.album}",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = if (albumId != null) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Clip,
-                                modifier = Modifier.scrollingTitle()
-                                    .clip(MaterialTheme.shapes.extraSmall)
-                                    .clickable(enabled = albumId != null && onOpenAlbum != null) {
-                                        albumId?.let { onOpenAlbum?.invoke(it) }
-                                    }
-                            )
-                        }
                     }
                 }
-
-                LikeButton(
-                    isLiked = track.id in likedTrackIds,
-                    onToggle = { viewModel.toggleLike(track) },
-                    size = 28.dp
-                )
             }
 
             PlayerSeekBar(
                 playerConnection = playerConnection,
                 durationMs = state.durationMs,
                 onSeek = playerConnection::seekTo,
-                modifier = Modifier.padding(top = 8.dp),
+                modifier = Modifier.padding(top = PlayerRowGap),
                 isLive = track.isLive,
                 isPlaying = state.isPlaying,
                 isSeekable = state.isSeekable
@@ -825,9 +850,19 @@ internal fun NowPlayingScreen(
             PlayerControls(
                 state = state,
                 connection = playerConnection,
-                modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+                modifier = Modifier.padding(top = PlayerRowGap)
             )
 
+            PlayerActionBar(
+                state = state,
+                connection = playerConnection,
+                isLiked = track.id in likedTrackIds,
+                onToggleLike = { viewModel.toggleLike(track) },
+                onOpenMenu = { showMenuDrawer = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = ActionBarGap, bottom = 4.dp)
+            )
         }
         }
     }

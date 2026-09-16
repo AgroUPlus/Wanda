@@ -4,21 +4,15 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Repeat
-import androidx.compose.material.icons.rounded.RepeatOne
-import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -26,9 +20,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
@@ -37,15 +28,17 @@ import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.ui.components.rememberHaptics
 import com.wander.android.ui.components.rememberPlayPauseMorphShape
 import com.wander.android.ui.components.rememberPressMorphShape
-import com.wander.android.ui.components.rememberPressScale
 import com.wander.android.ui.components.player.PlayPauseIcon
-import com.wander.android.core.playback.RepeatMode
 
 /**
- * Transport controls.
+ * Transport controls: previous, play/pause, next.
  *
- * The radio toggle is deliberately not here: it lives on a long press of the queue button in the
- * top action bar — see `QueueRadioButton`.
+ * Shuffle and repeat used to flank these. They are secondary — you set them once and forget them,
+ * while these three are pressed constantly — and they now sit in [PlayerActionBar] below, which is
+ * also where the like button and the overflow menu ended up. See the note there.
+ *
+ * The radio toggle is deliberately not here either: it lives on a long press of the queue button
+ * in the top action bar — see `QueueRadioButton`.
  */
 @Composable
 fun PlayerControls(
@@ -54,13 +47,12 @@ fun PlayerControls(
     modifier: Modifier = Modifier
 ) {
     val haptics = rememberHaptics()
-    // Sized against the space that actually exists. The row lives inside a container padded 24dp
-    // each side, so on a 411dp phone these five buttons share 363dp — and `SpaceEvenly` puts a gap
-    // at each end as well as between, six in all. At these sizes they total 328dp, leaving about
-    // 6dp a gap. Another 30% on top would be 391dp of button in 363dp of row, which does not
-    // overflow gracefully; it clips.
+    // Sized against the space that actually exists. With shuffle and repeat moved out to
+    // [PlayerActionBar], three buttons share the 363dp this row gets on a 411dp phone instead of
+    // five — so the play button takes the room the other two were using rather than the row
+    // sitting in the middle of a gap.
     val playButtonSize by animateDpAsState(
-        targetValue = if (state.isPlaying) 84.dp else 80.dp,
+        targetValue = if (state.isPlaying) 100.dp else 96.dp,
         animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
         label = "playButtonSize"
     )
@@ -71,8 +63,11 @@ fun PlayerControls(
 
     val prevInteraction = remember { MutableInteractionSource() }
     val prevPressed by prevInteraction.collectIsPressedAsState()
+    // Gem, against the play button's own rounded morph. The three are deliberately *unalike*: a
+    // cookie either side of a cookie made the row read as three of the same thing, and the one
+    // control you aim for without looking should be the one shaped differently from its neighbours.
     val prevShape = rememberPressMorphShape(
-        resting = MaterialShapes.Square,
+        resting = MaterialShapes.Gem,
         pressed = MaterialShapes.Circle,
         isPressed = prevPressed
     )
@@ -80,38 +75,29 @@ fun PlayerControls(
     val nextInteraction = remember { MutableInteractionSource() }
     val nextPressed by nextInteraction.collectIsPressedAsState()
     val nextShape = rememberPressMorphShape(
-        resting = MaterialShapes.Square,
+        resting = MaterialShapes.Gem,
         pressed = MaterialShapes.Circle,
         isPressed = nextPressed
     )
 
     Row(
-        horizontalArrangement = Arrangement.SpaceEvenly,
+        // Centred with a fixed gap, not `SpaceEvenly`. Even spacing puts a gap at each end of the
+        // row as well as between the buttons, so making the buttons bigger widened the outer gaps
+        // instead of closing the inner ones — the three controls drifted apart as they grew.
+        horizontalArrangement = Arrangement.spacedBy(ControlGap, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier.fillMaxWidth()
     ) {
-        ToggleButton(
-            icon = Icons.Rounded.Shuffle,
-            description = stringResource(R.string.action_shuffle),
-            active = state.isShuffle,
-            onClick = connection::toggleShuffle,
-            // In a jam or a listen-along the running order is somebody else's. The button stays
-            // in place rather than disappearing — a control that vanishes reads as a bug, one
-            // that dims reads as "not right now".
-            enabled = !state.orderLocked,
-            disabledDescription = "Shuffle, unavailable while the room chooses the order"
-        )
-
         FilledTonalIconButton(
             onClick = connection::previous,
             shape = prevShape,
             interactionSource = prevInteraction,
-            modifier = Modifier.size(66.dp)
+            modifier = Modifier.size(SkipButtonSize)
         ) {
             Icon(
                 Icons.Rounded.SkipPrevious,
                 contentDescription = stringResource(R.string.action_previous),
-                modifier = Modifier.size(35.dp)
+                modifier = Modifier.size(SkipIconSize)
             )
         }
 
@@ -130,7 +116,7 @@ fun PlayerControls(
             PlayPauseIcon(
                 isPlaying = state.isPlaying,
                 isBuffering = state.isBuffering,
-                iconSize = 42.dp
+                iconSize = 48.dp
             )
         }
 
@@ -138,67 +124,26 @@ fun PlayerControls(
             onClick = connection::next,
             shape = nextShape,
             interactionSource = nextInteraction,
-            modifier = Modifier.size(66.dp)
+            modifier = Modifier.size(SkipButtonSize)
         ) {
             Icon(
                 Icons.Rounded.SkipNext,
                 contentDescription = stringResource(R.string.action_next),
-                modifier = Modifier.size(35.dp)
+                modifier = Modifier.size(SkipIconSize)
             )
         }
 
-        ToggleButton(
-            icon = when (state.repeatMode) {
-                RepeatMode.ONE -> Icons.Rounded.RepeatOne
-                else -> Icons.Rounded.Repeat
-            },
-            description = stringResource(if (state.repeatMode == RepeatMode.ONE) R.string.action_repeat_one else R.string.action_repeat),
-            active = state.repeatMode != RepeatMode.OFF,
-            onClick = connection::toggleRepeat,
-            enabled = !state.orderLocked,
-            disabledDescription = "Repeat, unavailable while the room chooses the order"
-        )
     }
 }
 
-@Composable
-private fun ToggleButton(
-    icon: ImageVector,
-    description: String,
-    active: Boolean,
-    onClick: () -> Unit,
-    enabled: Boolean = true,
-    disabledDescription: String? = null
-) {
-    val interaction = remember { MutableInteractionSource() }
-    val scale by rememberPressScale(interaction)
-    FilledIconToggleButton(
-        checked = active,
-        onCheckedChange = { onClick() },
-        enabled = enabled,
-        shape = MaterialTheme.shapes.medium,
-        interactionSource = interaction,
-        colors = IconButtonDefaults.filledIconToggleButtonColors(
-            containerColor = Color.Transparent,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            checkedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-            checkedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            disabledContainerColor = Color.Transparent,
-            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DisabledAlpha)
-        ),
-        modifier = Modifier
-            // 48dp is the floor, not a preference: Material's minimum touch target, and these
-            // sat under it at 44. Shuffle and repeat are the two controls people miss.
-            .size(56.dp)
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = if (enabled) description else disabledDescription ?: description,
-            modifier = Modifier.size(28.dp)
-        )
-    }
-}
+/**
+ * Fatter than they were, and closer in.
+ *
+ * The skip buttons carry the same weight as the play button in use and used to be barely half its
+ * size with a wide gap either side, which read as one control with two afterthoughts.
+ */
+private val SkipButtonSize = 84.dp
+private val SkipIconSize = 42.dp
 
-/** Material's disabled-content opacity, for an icon that is present but not yours to press. */
-private const val DisabledAlpha = 0.38f
+/** Tight enough that the three read as one cluster. */
+private val ControlGap = 10.dp
