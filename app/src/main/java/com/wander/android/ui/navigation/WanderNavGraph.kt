@@ -212,7 +212,7 @@ fun NavGraphBuilder.wanderNavGraph(
             onOpenThread = { navController.navigateSettled(Routes.inbox(it)) },
             onOpenCircleRecap = { navController.navigateSettled(Routes.CIRCLE) },
             onOpenProfile = { navController.navigateSettled(Routes.profile(it)) },
-            onOpenArtist = { navController.navigateSettled(Routes.artist(it)) }
+            onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) }
         )
     }
 
