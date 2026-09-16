@@ -218,7 +218,21 @@
                 android:name="androidx.work.WorkManagerInitializer"
                 android:value="androidx.startup"
                 tools:node="remove" />
-        </provider>
+        <!--
+          The home-screen Now Playing widget. Exported: home-screen widgets are always launched by
+          the launcher app, on the OS's own behalf, not by anything of this app's choosing.
+        -->
+        <receiver
+            android:name=".ui.widget.NowPlayingWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_now_playing_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/now_playing_widget_info" />
+        </receiver>
 
         <service
             android:name=".core.audio.recognition.RecognitionTileService"

@@ -48,6 +48,7 @@ class PlaybackService : MediaSessionService() {
         player.addListener(AgroHandoffReporter(player))
         player.addListener(NextTrackPreloader(player))
         player.addAnalyticsListener(AudioFormatReporter())
+        player.addListener(com.wander.android.ui.widget.PlaybackWidgetUpdater(applicationContext, scope))
 
         val sessionActivity = PendingIntent.getActivity(
             this,
