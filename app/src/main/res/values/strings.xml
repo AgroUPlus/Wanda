@@ -5,4 +5,9 @@
       resources left 28 orphans that drifted out of sync with the code.
     -->
     <string name="app_name">Wanda</string>
+
+    <!-- Swipe actions -->
+    <string name="swipe_action_play_next">Play Next</string>
+    <string name="swipe_action_like">Like</string>
+    <string name="swipe_action_unlike">Unlike</string>
 </resources>
