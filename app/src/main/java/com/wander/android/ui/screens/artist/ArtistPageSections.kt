@@ -51,7 +51,6 @@ internal fun LazyListScope.artistPageSections(
     onPlaySong: (Int) -> Unit,
     onPlayTrack: (UnifiedTrack) -> Unit,
     onLongPressTrack: (UnifiedTrack) -> Unit,
-    onToggleLike: (UnifiedTrack) -> Unit,
     onOpenAlbum: (String) -> Unit,
     onLongPressAlbum: (UnifiedAlbum) -> Unit = {},
     onOpenArtist: (String, String?) -> Unit
@@ -81,7 +80,6 @@ internal fun LazyListScope.artistPageSections(
             TrackRow(
                 track = track,
                 onPlay = { onPlaySong(index) },
-                onToggleLike = { onToggleLike(track) },
                 onLongPress = { onLongPressTrack(track) },
                 modifier = Modifier.animateItem()
             )
@@ -97,7 +95,6 @@ internal fun LazyListScope.artistPageSections(
             TrackRow(
                 track = track,
                 onPlay = { onPlayTrack(track) },
-                onToggleLike = { onToggleLike(track) },
                 onLongPress = { onLongPressTrack(track) },
                 modifier = Modifier.animateItem()
             )
@@ -124,7 +121,6 @@ internal fun LazyListScope.artistPageSections(
                 TrackRow(
                     track = track,
                     onPlay = { onPlayTrack(track) },
-                    onToggleLike = { onToggleLike(track) },
                     onLongPress = { onLongPressTrack(track) },
                     modifier = Modifier.animateItem()
                 )

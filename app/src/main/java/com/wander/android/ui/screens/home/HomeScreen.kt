@@ -31,12 +31,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.agro.AgroSessionViewModel
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.ExpressiveRefreshIndicator
 import com.wander.android.ui.components.SessionSheet
+import com.wander.android.ui.components.SourceFilterChips
 import com.wander.android.ui.components.TrackActionsSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -182,10 +184,12 @@ fun HomeScreen(
                     // Only earns its row when there is more than one backend to choose between.
                     if (state.sources.size > 1) {
                         item(key = "sources", contentType = "source-chips") {
-                            SourceChipRow(
+                            SourceFilterChips(
                                 sources = state.sources,
                                 selected = state.selectedSource,
-                                onSelect = viewModel::selectSource
+                                onSelect = viewModel::selectSource,
+                                label = SourceType::shortName,
+                                modifier = Modifier.padding(vertical = 4.dp)
                             )
                         }
                     }

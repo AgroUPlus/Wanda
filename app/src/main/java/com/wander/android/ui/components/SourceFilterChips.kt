@@ -3,6 +3,7 @@ package com.wander.android.ui.components
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -13,9 +14,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.SourceType
@@ -31,7 +34,9 @@ fun SourceFilterChips(
     onSelect: (SourceType?) -> Unit,
     modifier: Modifier = Modifier,
     /** When false the row still occupies its space but does not respond — see `LibraryScreen`. */
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    /** Home passes `SourceType::shortName` — the row is narrower there and can't spare the width. */
+    label: (SourceType) -> String = SourceType::displayName
 ) {
     val highlightState = rememberTravelingHighlightState()
 
@@ -54,7 +59,7 @@ fun SourceFilterChips(
             )
             sources.forEach { source ->
                 SelectableChip(
-                    label = source.displayName,
+                    label = label(source),
                     selected = selected == source,
                     onClick = { onSelect(if (selected == source) null else source) },
                     highlightState = highlightState,
@@ -88,12 +93,19 @@ internal fun SelectableChip(
         label = "chipContentColor"
     )
 
+    // Scale, not ripple, for press feedback — the same M3 Expressive answer `TrackRow`'s artwork
+    // gives a press, applied here so every enum-chip row in the app (this one, `SearchKindToggle`,
+    // and Home's source filter once it moved onto this component) bounces identically.
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressScale by rememberPressScale(interactionSource, label = "chipPress")
+
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
+            .scale(pressScale)
             .recordHighlightBounds(highlightState, key)
             .clip(MaterialTheme.shapes.extraLarge)
-            .clickable(enabled = enabled) {
+            .clickable(interactionSource = interactionSource, indication = null, enabled = enabled) {
                 haptics.toggled(!selected)
                 onClick()
             }

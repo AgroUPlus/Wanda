@@ -151,8 +151,7 @@ internal fun LazyListScope.homeSection(
                 tracks = section.tracks,
                 pagerState = states.pager(section.id, pageCountFor(section.tracks.size)),
                 onPlay = { index -> viewModel.play(section.tracks, index) },
-                onLongPress = onLongPress,
-                onToggleLike = viewModel::toggleLike
+                onLongPress = onLongPress
             )
         }
 
@@ -200,7 +199,6 @@ internal fun LazyListScope.homeSection(
             TrackRow(
                 track = track,
                 onPlay = { viewModel.play(section.tracks, index) },
-                onToggleLike = { viewModel.toggleLike(track) },
                 onLongPress = { onLongPress(track) }
             )
         }

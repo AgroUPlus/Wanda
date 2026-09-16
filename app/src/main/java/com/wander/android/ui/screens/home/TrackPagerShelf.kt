@@ -49,7 +49,6 @@ internal fun TrackPagerShelf(
                 TrackRow(
                     track = track,
                     onPlay = { onPlay(index) },
-                    onToggleLike = { onToggleLike(track) },
                     onLongPress = { onLongPress(track) }
                 )
             }

@@ -173,7 +173,6 @@ fun SearchScreen(
                                 match = match,
                                 searchQuery = query,
                                 onPlay = { viewModel.playTrackAtTimestamp(match.track, match.timestampMs) },
-                                onToggleLike = { viewModel.toggleLike(match.track) },
                                 onLongPress = { actionsFor = match.track }
                             )
                         }
@@ -214,7 +213,6 @@ fun SearchScreen(
                         TrackRow(
                             track = track,
                             onPlay = { viewModel.play(state.results, index) },
-                            onToggleLike = { viewModel.toggleLike(track) },
                             onLongPress = { actionsFor = track }
                         )
                     }

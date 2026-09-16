@@ -137,7 +137,6 @@ fun AlbumScreen(
                         TrackRow(
                             track = track,
                             onPlay = { viewModel.play(index) },
-                            onToggleLike = { viewModel.toggleLike(track) },
                             onLongPress = { actionsFor = track }
                         )
                     }
