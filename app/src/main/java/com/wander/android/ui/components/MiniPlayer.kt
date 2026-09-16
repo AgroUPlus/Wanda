@@ -8,11 +8,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -58,6 +61,19 @@ val MiniRowVerticalPadding = 8.dp
 
 /** The strip's transport icons. `IconButton`'s own default, stated so the loading shape matches. */
 private val MiniPlayIconSize = 24.dp
+
+/**
+ * The containers behind those icons.
+ *
+ * 40dp rather than `IconButton`'s 48: the strip is only [MiniArtworkSize] plus its padding tall,
+ * and two 48dp shapes in it read as a toolbar rather than as a detail on a strip. The touch target
+ * is unchanged — `IconButton`'s minimum still applies underneath the visual size.
+ */
+private val MiniButtonSize = 40.dp
+private val MiniButtonGap = 4.dp
+
+/** Tonal, not solid: the strip is translucent over the sheet and this should not fight it. */
+private const val MiniButtonContainerAlpha = 0.55f
 
 /**
  * The docked strip at the top of the player sheet.
@@ -157,22 +173,43 @@ fun MiniPlayer(
                     )
                 }
 
-                Row(modifier = Modifier.graphicsLayer { alpha = contentAlpha() }) {
+                // Each button gets a container of its own. Bare glyphs on the strip sat directly
+                // on whatever the sheet's cover tint happened to be that track, which is a colour
+                // chosen by the artwork rather than for legibility — a pale sleeve left them
+                // barely there. A tonal shape behind each one is a constant background to read
+                // against, and it gives the two targets a visible edge on a strip where they are
+                // otherwise a pair of icons floating next to the title.
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(MiniButtonGap),
+                    modifier = Modifier.graphicsLayer { alpha = contentAlpha() }
+                ) {
                     val playInteraction = remember { MutableInteractionSource() }
                     val playScale by rememberPressScale(playInteraction)
-                    IconButton(
+                    FilledIconButton(
                         onClick = playerConnection::togglePlayPause,
                         interactionSource = playInteraction,
-                        modifier = Modifier.graphicsLayer { scaleX = playScale; scaleY = playScale }
+                        // The one filled button: play is what the strip is for, and the other is
+                        // beside it. Two equally solid shapes would make it a choice of two.
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier
+                            .size(MiniButtonSize)
+                            .graphicsLayer { scaleX = playScale; scaleY = playScale }
                     ) {
                         PlayPauseIcon(isPlaying = isPlaying, isBuffering = isBuffering, iconSize = MiniPlayIconSize)
                     }
                     val nextInteraction = remember { MutableInteractionSource() }
                     val nextScale by rememberPressScale(nextInteraction)
-                    IconButton(
+                    FilledTonalIconButton(
                         onClick = playerConnection::next,
                         interactionSource = nextInteraction,
-                        modifier = Modifier.graphicsLayer { scaleX = nextScale; scaleY = nextScale }
+                        shape = MaterialTheme.shapes.medium,
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                                .copy(alpha = MiniButtonContainerAlpha)
+                        ),
+                        modifier = Modifier
+                            .size(MiniButtonSize)
+                            .graphicsLayer { scaleX = nextScale; scaleY = nextScale }
                     ) {
                         Icon(Icons.Rounded.SkipNext, contentDescription = "Next track")
                     }
