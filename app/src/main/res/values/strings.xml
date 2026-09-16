@@ -6,6 +6,10 @@
     -->
     <string name="app_name">Wanda</string>
 
+    <!-- Swipe actions -->
+    <string name="swipe_action_play_next">Play Next</string>
+    <string name="swipe_action_like">Like</string>
+    <string name="swipe_action_unlike">Unlike</string>
     <!-- Quality upgrade advisor -->
     <string name="quality_upgrade_format_only">Lossless %1$s available on %2$s</string>
     <string name="quality_upgrade_format_24bit">Lossless %1$s 24-bit available on %2$s</string>
