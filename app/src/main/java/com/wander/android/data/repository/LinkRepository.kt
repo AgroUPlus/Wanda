@@ -85,6 +85,33 @@ class LinkRepository @Inject constructor(
     /** Whether this is an album link. Separate from [canOpen] because it resolves to an album. */
     fun isAlbumLink(uri: Uri): Boolean = UniversalAlbumLink.matches(uri.toString())
 
+    /** Whether this is a universal track link. Separate from [canOpen], same reason as [isAlbumLink]. */
+    fun isTrackLink(uri: Uri): Boolean = UniversalTrackLink.matches(uri.toString())
+
+    /**
+     * Resolves a universal track link against whatever this device has configured.
+     *
+     * Mirrors [resolveAlbum]: every configured source is searched, and [TrackResolution] decides
+     * strictly. This is the path a local file or a private Navidrome track takes when shared —
+     * see [ShareRepository.shareUniversal] — since neither has a backend link a recipient could
+     * otherwise open.
+     */
+    suspend fun resolveTrack(uri: Uri): Result<UnifiedTrack> = withContext(Dispatchers.IO) {
+        val link = UniversalTrackLink.parse(uri.toString())
+            ?: return@withContext Result.failure(
+                IllegalArgumentException("That link doesn't name a track.")
+            )
+
+        val candidates = musicRepository.searchAllSources("${link.artist} ${link.title}")
+        val match = TrackResolution.bestMatch(link, candidates)
+            ?: return@withContext Result.failure(
+                IllegalArgumentException(
+                    "“${link.title}” by ${link.artist} isn't in any of your sources."
+                )
+            )
+        Result.success(match)
+    }
+
     /**
      * The record, playlist or artist [uri] names, when it names one of those rather than a track.
      *

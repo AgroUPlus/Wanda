@@ -50,16 +50,53 @@ class ShareRepository @Inject constructor(
      * never appears in their links. Sharing a track you have pitched down is sharing the version
      * you meant rather than the one the file happens to hold.
      */
-    suspend fun share(track: UnifiedTrack, speedPitch: SpeedAndPitch = SpeedAndPitch()) = share(
-        ShareTarget(
-            kind = ShareKind.TRACK,
-            source = track.source,
-            id = track.id,
+    suspend fun share(track: UnifiedTrack, speedPitch: SpeedAndPitch = SpeedAndPitch()) {
+        // Local files and a private Navidrome with sharing off have no backend link a recipient
+        // could open at all — see `shareUniversal` — so those go straight to a universal link
+        // instead of making a doomed `createShareLink` call first.
+        if (!canShare(track)) {
+            shareUniversal(track)
+            return
+        }
+        share(
+            ShareTarget(
+                kind = ShareKind.TRACK,
+                source = track.source,
+                id = track.id,
+                title = track.title,
+                subtitle = track.artist
+            ),
+            speedPitch
+        )
+    }
+
+    /**
+     * Shares a track as a link that names no backend — the track equivalent of [shareAlbum].
+     *
+     * Unlike [share], this cannot fail: no network call, and it works for a source with no
+     * sharing capability at all, including the local library. It resolves on the *recipient's*
+     * device against [LinkRepository.resolveTrack].
+     */
+    fun shareUniversal(track: UnifiedTrack) {
+        val link = UniversalTrackLink(
             title = track.title,
-            subtitle = track.artist
-        ),
-        speedPitch
-    )
+            artist = track.artist,
+            album = track.album,
+            durationMs = track.durationMs.takeIf { it > 0 }
+        )
+        _links.tryEmit(
+            ShareLink(
+                target = ShareTarget(
+                    kind = ShareKind.TRACK,
+                    source = track.source,
+                    id = track.id,
+                    title = track.title,
+                    subtitle = track.artist
+                ),
+                url = link.toUri()
+            )
+        )
+    }
 
     /**
      * Shares an album as a link that does not name a backend.
