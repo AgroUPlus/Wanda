@@ -389,12 +389,6 @@ internal fun NowPlayingScreen(
                                     .padding(horizontal = 8.dp, vertical = 2.dp)
                             } else Modifier
                         )
-                        track.audioQualityLabel?.let { quality ->
-                            AudioQualityBadge(
-                                quality = quality,
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
-                        }
                     }
                 }
                 IconButton(onClick = { showMenuDrawer = true }) {
@@ -616,12 +610,6 @@ internal fun NowPlayingScreen(
                             Modifier
                         }
                     )
-                    track.audioQualityLabel?.let { quality ->
-                        AudioQualityBadge(
-                            quality = quality,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                    }
                 }
             }
             IconButton(onClick = { showMenuDrawer = true }) {
