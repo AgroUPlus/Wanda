@@ -46,12 +46,17 @@ import kotlinx.coroutines.launch
 
 private const val STEP_SOURCES = 0
 private const val STEP_RECOGNITION = 1
-private const val STEP_COUNT = 2
+private const val STEP_GESTURES = 2
+private const val STEP_COUNT = 3
 
 /**
- * First-run setup, as two steps: where your music comes from, then the one optional capability
- * that needs a download. Everything here is skippable — music on the device works with nothing
- * configured — and every part is reachable again later from Settings.
+ * First-run setup, as three steps: where your music comes from, the one optional capability that
+ * needs a download, and how the player is driven. Everything here is skippable — music on the
+ * device works with nothing configured — and every part is reachable again later from Settings.
+ *
+ * Gestures come last because they are the only step that teaches rather than asks: the two before
+ * it want a decision, and putting the thing with no buttons to press between them would read as a
+ * step that had been skipped.
  */
 @Composable
 fun WelcomeScreen(
@@ -92,6 +97,7 @@ fun WelcomeScreen(
                         onNavidromeLogin, onYouTubeLogin)
                     STEP_RECOGNITION -> RecognitionStep(
                         status.recognitionModel, viewModel::downloadRecognitionModel)
+                    STEP_GESTURES -> GesturesStep()
                 }
             }
         }
@@ -113,12 +119,24 @@ fun WelcomeScreen(
             }
             STEP_RECOGNITION -> {
                 Button(
+                    onClick = { scope.launch { pager.animateScrollToPage(STEP_GESTURES) } },
+                    modifier = Modifier.fillMaxWidth(),
+                    shapes = ButtonDefaults.shapes()
+                ) { Text("Next") }
+                TextButton(
+                    onClick = { scope.launch { pager.animateScrollToPage(STEP_SOURCES) } },
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    shapes = ButtonDefaults.shapes()
+                ) { Text("Back") }
+            }
+            STEP_GESTURES -> {
+                Button(
                     onClick = ::finish,
                     modifier = Modifier.fillMaxWidth(),
                     shapes = ButtonDefaults.shapes()
                 ) { Text("Start listening") }
                 TextButton(
-                    onClick = { scope.launch { pager.animateScrollToPage(STEP_SOURCES) } },
+                    onClick = { scope.launch { pager.animateScrollToPage(STEP_RECOGNITION) } },
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     shapes = ButtonDefaults.shapes()
                 ) { Text("Back") }
