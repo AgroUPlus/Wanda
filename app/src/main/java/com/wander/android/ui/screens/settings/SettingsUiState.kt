@@ -30,6 +30,7 @@ internal data class SettingsUiState(
     val reduceMotion: Boolean,
     /** The phone's own Accessibility "Remove animations" setting — see `rememberSystemAnimationsDisabled`. */
     val systemReduceMotion: Boolean,
+    val letterByLetterLyrics: Boolean,
     val offline: Boolean,
     val preloadNext: Boolean,
     val indexOnMobileData: Boolean,
@@ -93,6 +94,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val coverArtTheme by viewModel.isCoverArtThemeEnabled.collectAsStateWithLifecycle()
     val reduceMotion by viewModel.isReduceMotion.collectAsStateWithLifecycle()
     val systemReduceMotion = rememberSystemAnimationsDisabled()
+    val letterByLetterLyrics by viewModel.isLetterByLetterLyricsEnabled.collectAsStateWithLifecycle()
     val offline by viewModel.isOfflineMode.collectAsStateWithLifecycle()
     val preloadNext by viewModel.isPreloadNextEnabled.collectAsStateWithLifecycle()
     val indexOnMobileData by viewModel.isIndexOnMobileDataEnabled.collectAsStateWithLifecycle()
@@ -140,6 +142,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         coverArtTheme = coverArtTheme,
         reduceMotion = reduceMotion,
         systemReduceMotion = systemReduceMotion,
+        letterByLetterLyrics = letterByLetterLyrics,
         offline = offline,
         preloadNext = preloadNext,
         indexOnMobileData = indexOnMobileData,

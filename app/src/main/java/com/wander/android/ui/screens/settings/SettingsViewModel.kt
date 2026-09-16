@@ -124,6 +124,7 @@ internal class SettingsViewModel @Inject constructor(
     val isImmersivePlayer: StateFlow<Boolean> = secureStorage.isImmersivePlayer
     val isCoverArtThemeEnabled: StateFlow<Boolean> = secureStorage.isCoverArtThemeEnabled
     val isReduceMotion: StateFlow<Boolean> = secureStorage.isReduceMotion
+    val isLetterByLetterLyricsEnabled: StateFlow<Boolean> = secureStorage.isLetterByLetterLyricsEnabled
     val isOfflineMode: StateFlow<Boolean> = secureStorage.isOfflineMode
 
     val isPreloadNextEnabled: StateFlow<Boolean> = secureStorage.isPreloadNextEnabled
@@ -452,6 +453,8 @@ internal class SettingsViewModel @Inject constructor(
     fun setImmersivePlayer(enabled: Boolean) = secureStorage.setImmersivePlayer(enabled)
     fun setCoverArtThemeEnabled(enabled: Boolean) = secureStorage.setCoverArtThemeEnabled(enabled)
     fun setReduceMotion(enabled: Boolean) = secureStorage.setReduceMotion(enabled)
+    fun setLetterByLetterLyricsEnabled(enabled: Boolean) =
+        secureStorage.setLetterByLetterLyricsEnabled(enabled)
     fun setOfflineMode(enabled: Boolean) = secureStorage.setOfflineMode(enabled)
 
     fun setPreloadNextEnabled(enabled: Boolean) = secureStorage.setPreloadNextEnabled(enabled)

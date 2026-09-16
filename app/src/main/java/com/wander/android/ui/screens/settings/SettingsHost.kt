@@ -104,6 +104,7 @@ internal fun rememberSettingsHost(
             onImmersivePlayerChange = viewModel::setImmersivePlayer,
             onCoverArtThemeChange = viewModel::setCoverArtThemeEnabled,
             onReduceMotionChange = viewModel::setReduceMotion,
+            onLetterByLetterLyricsChange = viewModel::setLetterByLetterLyricsEnabled,
             onOfflineChange = viewModel::setOfflineMode,
             onPreloadNextChange = viewModel::setPreloadNextEnabled,
             onIndexOnMobileDataChange = viewModel::setIndexOnMobileDataEnabled,

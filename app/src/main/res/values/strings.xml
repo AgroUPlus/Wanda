@@ -55,6 +55,7 @@
     <string name="lyrics_absent">No lyrics found for this track.</string>
     <string name="lyrics_instrumental">This recording is instrumental.</string>
     <string name="lyrics_unreachable">Couldn\'t check for lyrics. Check your connection and try again.</string>
+    <string name="lyrics_sync_back">Sync</string>
 
     <!-- Mood picker (Home) -->
     <string name="mood_preset_late_night_chill">Late Night Chill</string>

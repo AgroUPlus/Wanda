@@ -39,6 +39,7 @@ internal data class SettingsActions(
     val onImmersivePlayerChange: (Boolean) -> Unit,
     val onCoverArtThemeChange: (Boolean) -> Unit,
     val onReduceMotionChange: (Boolean) -> Unit,
+    val onLetterByLetterLyricsChange: (Boolean) -> Unit,
     // Playback and storage
     val onOfflineChange: (Boolean) -> Unit,
     val onPreloadNextChange: (Boolean) -> Unit,

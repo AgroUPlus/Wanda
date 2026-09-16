@@ -75,4 +75,16 @@ internal fun LazyListScope.appearanceTab(
             modifier = Modifier.scale(rememberShelfEntranceScale(reduceMotionIndex))
         )
     }
+
+    val letterByLetterLyricsIndex = i++
+    item(key = "letter_by_letter_lyrics") {
+        SettingsToggle(
+            title = "Letter-by-letter lyrics",
+            subtitle = "Sweep the active word in one letter at a time, karaoke-style. " +
+                "Off highlights a word the instant it's sung.",
+            checked = state.letterByLetterLyrics,
+            onCheckedChange = actions.onLetterByLetterLyricsChange,
+            modifier = Modifier.scale(rememberShelfEntranceScale(letterByLetterLyricsIndex))
+        )
+    }
 }

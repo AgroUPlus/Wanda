@@ -65,6 +65,11 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     private val _isReduceMotion = MutableStateFlow(prefs.getBoolean(KEY_REDUCE_MOTION, false))
     val isReduceMotion: StateFlow<Boolean> = _isReduceMotion.asStateFlow()
 
+    /** On by default: this is the karaoke sweep the lyrics view already shipped with. */
+    private val _isLetterByLetterLyricsEnabled =
+        MutableStateFlow(prefs.getBoolean(KEY_LETTER_BY_LETTER_LYRICS, true))
+    val isLetterByLetterLyricsEnabled: StateFlow<Boolean> = _isLetterByLetterLyricsEnabled.asStateFlow()
+
     private val _isCoverCarouselEnabled = MutableStateFlow(prefs.getBoolean(KEY_COVER_CAROUSEL, true))
     val isCoverCarouselEnabled: StateFlow<Boolean> = _isCoverCarouselEnabled.asStateFlow()
 
@@ -303,6 +308,11 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _isReduceMotion.value = enabled
     }
 
+    fun setLetterByLetterLyricsEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_LETTER_BY_LETTER_LYRICS, enabled) }
+        _isLetterByLetterLyricsEnabled.value = enabled
+    }
+
     fun setImmersivePlayer(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_IMMERSIVE_PLAYER, enabled) }
         _isImmersivePlayer.value = enabled
@@ -438,6 +448,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _isMonetDynamic.value = true
         _isCoverArtThemeEnabled.value = true
         _isReduceMotion.value = false
+        _isLetterByLetterLyricsEnabled.value = true
         _isCoverCarouselEnabled.value = true
         _agroConfigured.value = false
         _agroSyncSettings.value = false
@@ -695,6 +706,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_AMOLED_BLACK = "key_amoled_black"
         private const val KEY_MONET_DYNAMIC = "key_monet_dynamic"
         private const val KEY_REDUCE_MOTION = "key_reduce_motion"
+        private const val KEY_LETTER_BY_LETTER_LYRICS = "key_letter_by_letter_lyrics"
         private const val KEY_IMMERSIVE_PLAYER = "key_immersive_player"
         private const val KEY_COVER_ART_THEME = "key_cover_art_theme"
         private const val KEY_COVER_CAROUSEL = "key_cover_carousel"

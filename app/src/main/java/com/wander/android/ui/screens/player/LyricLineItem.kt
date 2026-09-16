@@ -37,17 +37,13 @@ fun LyricLineItem(
     isActive: Boolean,
     currentPositionMs: Long,
     onSeek: (Long) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    letterByLetterEnabled: Boolean = true
 ) {
     val lineAlpha by animateFloatAsState(
         targetValue = if (isActive) 1f else 0.40f,
         animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
         label = "lyricAlpha"
-    )
-    val lineScale by animateFloatAsState(
-        targetValue = if (isActive) 1.03f else 0.97f,
-        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
-        label = "lyricScale"
     )
     val verticalPadding by animateDpAsState(
         targetValue = if (isActive) 10.dp else 6.dp,
@@ -65,14 +61,16 @@ fun LyricLineItem(
         // The active line swaps to a bigger style below, which can push it from one wrapped line
         // to two. Without this, that change in line count landed as a hard cut — the row's height
         // jumped and every line below it hopped to a new position in the same frame.
+        //
+        // This used to run alongside an independent `graphicsLayer` scale (0.97 -> 1.03) on top of
+        // the font itself jumping from titleMedium to titleLarge/ExtraBold — three animations
+        // converging on one transition, each settling on its own schedule, which is what made the
+        // line visibly overshoot as it grew. The size change and the font change are the real
+        // transition; the scale was decoration on top of it and is gone.
         .animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec())
         .clickable { onSeek(line.timestampMs) }
         .padding(vertical = verticalPadding, horizontal = 16.dp)
-        .graphicsLayer {
-            alpha = lineAlpha
-            scaleX = lineScale
-            scaleY = lineScale
-        }
+        .graphicsLayer { alpha = lineAlpha }
 
     if (!isActive) {
         Text(
@@ -107,7 +105,7 @@ fun LyricLineItem(
     val upcomingColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
     val syncPositionMs = currentPositionMs + LyricsLeadOffsetMs
 
-    val annotatedText = remember(words, syncPositionMs, primaryColor, upcomingColor) {
+    val annotatedText = remember(words, syncPositionMs, primaryColor, upcomingColor, letterByLetterEnabled) {
         buildAnnotatedString {
             words.forEachIndexed { wordIdx, word ->
                 val hasTrailingSpace = wordIdx < words.size - 1
@@ -128,6 +126,22 @@ fun LyricLineItem(
                         }
                         if (hasTrailingSpace) {
                             withStyle(SpanStyle(color = upcomingColor, fontWeight = FontWeight.Normal)) {
+                                append(" ")
+                            }
+                        }
+                    }
+                    !letterByLetterEnabled -> {
+                        // Word is actively being sung, but the per-character sweep is off: light
+                        // the whole word the instant it starts rather than progressing through it.
+                        // This branch only runs once the earlier two have ruled out "not yet sung"
+                        // and "already sung" — `when` still checks top to bottom, but by the time a
+                        // word reaches here `syncPositionMs` is already known to sit inside its
+                        // [startMs, endMs) window, which is exactly "currently being sung".
+                        withStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Bold)) {
+                            append(word.text)
+                        }
+                        if (hasTrailingSpace) {
+                            withStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Normal)) {
                                 append(" ")
                             }
                         }

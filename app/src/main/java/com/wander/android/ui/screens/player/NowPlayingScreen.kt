@@ -131,6 +131,13 @@ internal fun NowPlayingScreen(
     val isFindingRenditions by viewModel.isFindingRenditions.collectAsStateWithLifecycle()
     val jam by viewModel.jam.collectAsStateWithLifecycle()
     val isCoverArtThemeEnabled by viewModel.isCoverArtThemeEnabled.collectAsStateWithLifecycle()
+    val letterByLetterLyrics by viewModel.isLetterByLetterLyricsEnabled.collectAsStateWithLifecycle()
+    // Hoisted here rather than inside `SyncedLyricsView`: that composable is mounted inside an
+    // `AnimatedVisibility`/`AnimatedContent` that fully disposes it whenever lyrics are hidden, so
+    // state it owned locally — scroll position among it — was lost every time the panel toggled.
+    // This screen stays composed across that toggle, so holding it here is what lets reopening
+    // lyrics find them exactly where they were left.
+    val lyricsListState = androidx.compose.foundation.lazy.rememberLazyListState()
     val track = state.currentTrack
 
     if (track == null) return
@@ -295,6 +302,8 @@ internal fun NowPlayingScreen(
                     state = lyrics,
                     playerConnection = playerConnection,
                     onSeek = playerConnection::seekTo,
+                    listState = lyricsListState,
+                    letterByLetterEnabled = letterByLetterLyrics,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(top = immersiveTopBar, bottom = immersiveControls)
@@ -682,6 +691,8 @@ internal fun NowPlayingScreen(
                             state = lyrics,
                             playerConnection = playerConnection,
                             onSeek = playerConnection::seekTo,
+                            listState = lyricsListState,
+                            letterByLetterEnabled = letterByLetterLyrics,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .graphicsLayer { alpha = contentAlpha() }
