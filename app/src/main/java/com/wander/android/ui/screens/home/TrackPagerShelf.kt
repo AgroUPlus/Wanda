@@ -30,7 +30,6 @@ internal fun TrackPagerShelf(
     pagerState: PagerState,
     onPlay: (Int) -> Unit,
     onLongPress: (UnifiedTrack) -> Unit,
-    onToggleLike: (UnifiedTrack) -> Unit,
     modifier: Modifier = Modifier
 ) {
     HorizontalPager(

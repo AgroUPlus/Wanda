@@ -21,8 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 
 /**
  * The buttons floating over the cover/lyrics square: share, and the artwork/lyrics toggle.
@@ -74,11 +76,13 @@ internal fun BoxScope.PlayerOverlayButtons(
                 .align(Alignment.TopEnd)
                 .padding(top = topInset)
                 .padding(12.dp)
+                .size(OverlayButtonSize)
                 .graphicsLayer { alpha = contentAlpha() }
         ) {
             Icon(
                 imageVector = Icons.Rounded.Share,
-                contentDescription = "Share a link to this track"
+                contentDescription = stringResource(R.string.action_share_track),
+                modifier = Modifier.size(OverlayIconSize)
             )
         }
     }
@@ -91,10 +95,10 @@ internal fun BoxScope.PlayerOverlayButtons(
             else -> Icons.Rounded.Description
         }
         val lyricsDescription = when {
-            showLyrics -> "Show artwork"
-            lyricsSyncType == LyricsSyncType.WORD_SYNCED -> "Show word-synced lyrics"
-            lyricsSyncType == LyricsSyncType.LINE_SYNCED -> "Show synced lyrics"
-            else -> "Show plain lyrics"
+            showLyrics -> stringResource(R.string.lyrics_show_artwork)
+            lyricsSyncType == LyricsSyncType.WORD_SYNCED -> stringResource(R.string.lyrics_show_word_synced)
+            lyricsSyncType == LyricsSyncType.LINE_SYNCED -> stringResource(R.string.lyrics_show_synced)
+            else -> stringResource(R.string.lyrics_show_plain)
         }
 
         FilledTonalIconButton(
@@ -103,15 +107,20 @@ internal fun BoxScope.PlayerOverlayButtons(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(12.dp)
+                .size(OverlayButtonSize)
                 .graphicsLayer { alpha = contentAlpha() }
         ) {
             Icon(
                 imageVector = lyricsIcon,
-                contentDescription = lyricsDescription
+                contentDescription = lyricsDescription,
+                modifier = Modifier.size(OverlayIconSize)
             )
         }
     }
 }
+
+private val OverlayButtonSize = 52.dp
+private val OverlayIconSize = 28.dp
 
 /** Animated so showing the lyrics carries the button across rather than cutting it. */
 @Composable

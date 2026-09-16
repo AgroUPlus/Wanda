@@ -167,6 +167,10 @@ fun PlayerSheetContent(
     }
     val nextArtwork = playback.queue.getOrNull(playback.currentIndex + 1)?.artworkUrl
 
+    val hasPreviousSong = playback.currentIndex > 0
+    val hasNextSong = playback.currentIndex in 0 until (playback.queue.size - 1)
+    val canPreviousMini = if (previousRestartsCurrent) true else hasPreviousSong
+
     // The two surfaces disagree about what "previous" means, and they are both right.
     //
     // The docked strip shows no filmstrip, so it keeps the ordinary convention: far enough into a
@@ -186,6 +190,8 @@ fun PlayerSheetContent(
         },
         nextArtworkUrl = nextArtwork,
         previousArtworkUrl = previousArtwork,
+        canNext = hasNextSong,
+        canPrevious = canPreviousMini,
         exitDistance = DockedExitDistance
     )
     val fullSwipe = Modifier.swipeToChangeTrack(
@@ -193,7 +199,9 @@ fun PlayerSheetContent(
         onNext = playerConnection::next,
         onPrevious = playerConnection::previousTrack,
         nextArtworkUrl = nextArtwork,
-        previousArtworkUrl = previousArtwork
+        previousArtworkUrl = previousArtwork,
+        canNext = hasNextSong,
+        canPrevious = hasPreviousSong
     )
 
     // The skip has landed: hand the cover back to playback state. Keyed on the track's identity
@@ -321,6 +329,8 @@ fun PlayerSheetContent(
             swipe = swipe,
             previousUrl = previousArtwork,
             nextUrl = nextArtwork,
+            canPrevious = hasPreviousSong,
+            canNext = hasNextSong,
             fingerprintStatus = fingerprintStatus,
             carouselEnabled = coverCarousel,
             glowColor = coverSeed

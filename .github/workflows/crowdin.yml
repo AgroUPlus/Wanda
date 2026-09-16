@@ -1,0 +1,35 @@
+name: Crowdin Sync
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'app/src/main/res/values/strings*.xml'
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  synchronize-with-crowdin:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Crowdin GitHub Action
+        uses: crowdin/github-action@v3
+        with:
+          upload_sources: true
+          download_translations: true
+          create_pull_request: true
+          localization_branch_name: l10n_translations
+          pull_request_title: 'l10n: Update Crowdin translations'
+          pull_request_body: 'Automated pull request with latest crowdsourced translations from Crowdin.'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
