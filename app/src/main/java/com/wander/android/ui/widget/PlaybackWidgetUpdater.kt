@@ -1,6 +1,7 @@
 package com.wander.android.ui.widget
 
 import android.content.Context
+import androidx.glance.appwidget.updateAll
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import kotlinx.coroutines.CoroutineScope

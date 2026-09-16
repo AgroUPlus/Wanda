@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.Composable
@@ -33,17 +34,18 @@ import kotlin.math.roundToInt
 /** Clear of the rounded corner at full size, and off the artwork's busiest region. */
 private val BadgeInset = 14.dp
 
-private val MorphArtworkSize = 360.dp
+/** Shared with [PeekArtwork], which decodes neighbour covers at the same size. */
+internal val MorphArtworkSize = 360.dp
 
 /**
  * Corner as a percentage of the box, so the radius grows with the cover on its own. A fixed dp
  * radius would need a second animated value and would read as a small corner stretched across a
- * large image.
+ * large image. Shared with [PeekArtwork].
  */
-private val MorphShape = RoundedCornerShape(percent = 12)
+internal val MorphShape = RoundedCornerShape(percent = 12)
 
-/** Space between the current cover and the neighbours peeking in either side of it. */
-private val PeekGap = 16.dp
+/** Space between the current cover and the neighbours peeking in either side of it. Shared with [PeekArtwork]. */
+internal val PeekGap = 16.dp
 
 /**
  * The single cover art shared by the docked strip and the full player, plus the previous and next
@@ -195,12 +197,6 @@ internal fun MorphingArtwork(
     }
 }
 
-/**
- * The cover one step either side of the current one, parked just off the edge of the current
- * cover's box and dragged in with the finger.
- *
- * [side] is -1 for the previous track (sitting to the left) and +1 for the next.
- */
 /** How far past the cover the backlight spills. */
 private const val GlowScale = 1.22f
 

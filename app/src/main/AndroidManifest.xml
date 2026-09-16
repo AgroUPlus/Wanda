@@ -218,6 +218,8 @@
                 android:name="androidx.work.WorkManagerInitializer"
                 android:value="androidx.startup"
                 tools:node="remove" />
+        </provider>
+
         <!--
           The home-screen Now Playing widget. Exported: home-screen widgets are always launched by
           the launcher app, on the OS's own behalf, not by anything of this app's choosing.
