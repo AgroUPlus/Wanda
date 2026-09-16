@@ -81,6 +81,10 @@ interface TrackDao {
     @Query("SELECT * FROM tracks WHERE isDownloaded = 1 AND source != 'LOCAL' ORDER BY title ASC")
     fun getDownloadedTracksFlow(): Flow<List<TrackEntity>>
 
+    /** One-shot version of [getDownloadedTracksFlow], for a report that runs once rather than watches. */
+    @Query("SELECT * FROM tracks WHERE isDownloaded = 1 AND source != 'LOCAL'")
+    suspend fun getDownloadedTracksOnce(): List<TrackEntity>
+
     /** Everything playable with no network: local files, and anything the downloader has written. */
     @Query("SELECT * FROM tracks WHERE isDownloaded = 1 OR source = 'LOCAL'")
     suspend fun getOfflineTracksOnce(): List<TrackEntity>
@@ -374,8 +378,20 @@ interface TrackDao {
     )
     suspend fun findNavidromeCandidates(title: String, limit: Int): List<TrackEntity>
 
-    @Query("UPDATE tracks SET isDownloaded = :isDownloaded, localFilePath = :localPath WHERE id = :trackId")
-    suspend fun setDownloaded(trackId: String, isDownloaded: Boolean, localPath: String?)
+    /**
+     * [downloadedAt] defaults to now when downloading, and to null when clearing the local copy —
+     * see [com.wander.android.data.repository.StorageButlerRepository], which is what reads it.
+     */
+    @Query(
+        "UPDATE tracks SET isDownloaded = :isDownloaded, localFilePath = :localPath, " +
+            "downloadedAt = :downloadedAt WHERE id = :trackId"
+    )
+    suspend fun setDownloaded(
+        trackId: String,
+        isDownloaded: Boolean,
+        localPath: String?,
+        downloadedAt: Long? = if (isDownloaded) System.currentTimeMillis() else null
+    )
 
     @Query("UPDATE tracks SET playCount = playCount + 1, lastPlayedTimestamp = :timestamp WHERE id = :trackId")
     suspend fun incrementPlayCount(trackId: String, timestamp: Long)

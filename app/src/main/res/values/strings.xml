@@ -93,6 +93,10 @@
     <!-- Universal track link -->
     <string name="link_track_open_failed">Couldn\'t open that track link.</string>
 
+    <!-- Storage butler (Settings) -->
+    <string name="storage_source_line">%1$s · %2$d tracks · %3$s</string>
+    <string name="storage_clean_stale_title">Clean up stale downloads</string>
+    <string name="storage_clean_stale_subtitle">%1$d tracks, unplayed for 60+ days · %2$s</string>
     <!-- Now Playing widget (Glance) -->
     <string name="widget_nothing_playing">Nothing playing</string>
     <string name="widget_track_line">%1$s · %2$s</string>
