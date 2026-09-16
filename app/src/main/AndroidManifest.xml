@@ -223,6 +223,12 @@
         <!--
           The home-screen Now Playing widget. Exported: home-screen widgets are always launched by
           the launcher app, on the OS's own behalf, not by anything of this app's choosing.
+
+          No android:permission, deliberately: android.appwidget.action.APPWIDGET_UPDATE is one of
+          the platform's own <protected-broadcast> actions (declared in AOSP's own manifest), so no
+          third-party app can send it regardless of what permission this receiver names. Adding one
+          would not add protection here — it would just be a permission the system never holds when
+          it delivers this broadcast, which breaks the widget rather than securing it.
         -->
         <receiver
             android:name=".ui.widget.NowPlayingWidgetReceiver"

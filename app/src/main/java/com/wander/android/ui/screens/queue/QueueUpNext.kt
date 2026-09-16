@@ -80,8 +80,6 @@ internal fun QueueUpNext(
     }
 
     Box(modifier = modifier.fillMaxWidth()) {
-        CurrentTrackHighlight(listState = listState, currentKey = entries.getOrNull(currentIdx)?.key)
-
         LazyColumn(
             state = listState,
             verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -175,6 +173,14 @@ internal fun QueueUpNext(
                 }
             }
         }
+
+        // Drawn *after* the list, not before it: each row's own `Surface` is opaque at rest (see
+        // the comment on it — that's load-bearing for hiding `RemoveBackdrop` between rows), so a
+        // highlight drawn behind the list the way this used to be was entirely covered by it and
+        // never visible. A translucent overlay on top reads as the same "current row" tint without
+        // needing the per-row surface to know anything about it, and draws no pointer input of its
+        // own, so scrolling and swiping the row underneath is untouched.
+        CurrentTrackHighlight(listState = listState, currentKey = entries.getOrNull(currentIdx)?.key)
     }
 }
 
