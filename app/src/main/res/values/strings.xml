@@ -5,4 +5,7 @@
       resources left 28 orphans that drifted out of sync with the code.
     -->
     <string name="app_name">Wanda</string>
+
+    <!-- Universal track link -->
+    <string name="link_track_open_failed">Couldn\'t open that track link.</string>
 </resources>
