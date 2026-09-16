@@ -22,9 +22,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.rememberPlaybackPosition
 import com.wander.android.data.model.LyricsState
@@ -126,10 +128,9 @@ fun SyncedLyricsView(
 @Composable
 private fun SyncTypeLabel(syncType: LyricsSyncType) {
     val label = when (syncType) {
-        LyricsSyncType.WORD_SYNCED -> "Synced · word by word"
-        LyricsSyncType.LINE_SYNCED -> "Synced · line by line"
-        LyricsSyncType.NONE -> "Not synced"
-    }
+        LyricsSyncType.WORD_SYNCED -> stringResource(R.string.lyrics_synced_word)
+        else -> null
+    } ?: return
     Text(
         text = label,
         style = MaterialTheme.typography.labelSmall,
@@ -147,11 +148,12 @@ private fun SyncTypeLabel(syncType: LyricsSyncType) {
  * Each variant gets its own sentence. Telling someone in a tunnel that their song has no lyrics
  * sends them looking for a fault in the track instead of waiting for signal.
  */
+@Composable
 private fun LyricsState.describe(): String = when (this) {
-    LyricsState.Loading -> "Looking for lyrics…"
-    LyricsState.Absent -> "No lyrics found for this track."
-    LyricsState.Instrumental -> "This recording is instrumental."
-    LyricsState.Unreachable -> "Couldn't check for lyrics. Check your connection and try again."
+    LyricsState.Loading -> stringResource(R.string.lyrics_loading)
+    LyricsState.Absent -> stringResource(R.string.lyrics_absent)
+    LyricsState.Instrumental -> stringResource(R.string.lyrics_instrumental)
+    LyricsState.Unreachable -> stringResource(R.string.lyrics_unreachable)
     is LyricsState.Present -> ""
 }
 

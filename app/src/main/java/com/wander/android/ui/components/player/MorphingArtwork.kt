@@ -67,6 +67,8 @@ internal fun MorphingArtwork(
     swipe: TrackSwipeState,
     previousUrl: String?,
     nextUrl: String?,
+    canPrevious: Boolean = true,
+    canNext: Boolean = true,
     modifier: Modifier = Modifier,
     alpha: () -> Float = { 1f },
     fingerprintStatus: com.wander.android.data.repository.FingerprintStatus =
@@ -86,8 +88,12 @@ internal fun MorphingArtwork(
     val showPeeks = swipe.isSwiping || (carouselEnabled && rawProgress() > 0.8f)
     if (showPeeks) {
         // Drawn before the current cover so it stays on top as the neighbours slide under it.
-        PeekArtwork(previousUrl, anchors, mini, progress, rawProgress, swipe, side = -1, carouselEnabled = carouselEnabled)
-        PeekArtwork(nextUrl, anchors, mini, progress, rawProgress, swipe, side = 1, carouselEnabled = carouselEnabled)
+        if (canPrevious) {
+            PeekArtwork(previousUrl, anchors, mini, progress, rawProgress, swipe, side = -1, carouselEnabled = carouselEnabled)
+        }
+        if (canNext) {
+            PeekArtwork(nextUrl, anchors, mini, progress, rawProgress, swipe, side = 1, carouselEnabled = carouselEnabled)
+        }
     }
 
     Box(

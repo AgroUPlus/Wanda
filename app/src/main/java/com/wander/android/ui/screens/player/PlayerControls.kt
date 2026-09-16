@@ -29,7 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.ui.components.rememberHaptics
@@ -90,7 +92,7 @@ fun PlayerControls(
     ) {
         ToggleButton(
             icon = Icons.Rounded.Shuffle,
-            description = "Shuffle",
+            description = stringResource(R.string.action_shuffle),
             active = state.isShuffle,
             onClick = connection::toggleShuffle,
             // In a jam or a listen-along the running order is somebody else's. The button stays
@@ -108,7 +110,7 @@ fun PlayerControls(
         ) {
             Icon(
                 Icons.Rounded.SkipPrevious,
-                contentDescription = "Previous track",
+                contentDescription = stringResource(R.string.action_previous),
                 modifier = Modifier.size(35.dp)
             )
         }
@@ -140,7 +142,7 @@ fun PlayerControls(
         ) {
             Icon(
                 Icons.Rounded.SkipNext,
-                contentDescription = "Next track",
+                contentDescription = stringResource(R.string.action_next),
                 modifier = Modifier.size(35.dp)
             )
         }
@@ -150,7 +152,7 @@ fun PlayerControls(
                 RepeatMode.ONE -> Icons.Rounded.RepeatOne
                 else -> Icons.Rounded.Repeat
             },
-            description = "Repeat",
+            description = stringResource(if (state.repeatMode == RepeatMode.ONE) R.string.action_repeat_one else R.string.action_repeat),
             active = state.repeatMode != RepeatMode.OFF,
             onClick = connection::toggleRepeat,
             enabled = !state.orderLocked,
