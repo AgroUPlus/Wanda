@@ -380,14 +380,6 @@ class PlayerConnection @Inject constructor(
             propose(tracks, startIndex.coerceIn(0, tracks.lastIndex))
             return
         }
-        // A fresh, explicit list is exactly as unambiguous a decision as the one below it: without
-        // this, a "Radio Mode" left on from an earlier session silently attached itself to whatever
-        // was played next — and `PlaybackCoordinator`'s endless top-up fires the moment a queue is
-        // within `RADIO_LOOKAHEAD` tracks of its end, which a short list (a handful of search
-        // results, say) already is. That read as "it started a radio" when what actually happened
-        // was the requested list playing correctly, then getting drowned out immediately after.
-        // `startRadio` is unaffected: it never touches this flag, and does its own one-shot top-up.
-        secureStorage.setRadioMode(false)
         // Deliberately *not* gated on `isFollowing`. Picking something else to play is an
         // unambiguous decision, and answering it with a dialog every time — "leave the session?" —
         // is worse than simply doing what was asked. `onLeaveFollowing` ends the session quietly;
