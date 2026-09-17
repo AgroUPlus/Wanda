@@ -47,8 +47,7 @@ fun NavidromeLoginScreen(
     ) {
         Text(stringResource(R.string.login_connect_navidrome), style = MaterialTheme.typography.headlineLarge)
         Text(
-            text = stringResource(R.string.login_password_stored_android_keystore_only) +
-                "own server, as a salted hash.",
+            text = stringResource(R.string.login_password_stored_android_keystore_only),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

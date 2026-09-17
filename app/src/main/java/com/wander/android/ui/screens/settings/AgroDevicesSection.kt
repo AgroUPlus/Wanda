@@ -54,8 +54,7 @@ internal fun LazyListScope.agroDevicesSection(
     if (state.devices.isEmpty()) {
         item(key = "agro_devices_empty") {
             Text(
-                text = stringResource(R.string.settings_nothing_else_signed_other_devices) +
-                    "show up here — this one never does.",
+                text = stringResource(R.string.settings_nothing_else_signed_other_devices),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)

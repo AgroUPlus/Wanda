@@ -24,8 +24,7 @@ internal fun LazyListScope.playbackStorageTab(
             title = stringResource(R.string.settings_offline_mode),
             // Worth saying, because the app now flips this for you if you agree: without the
             // second sentence the toggle looks like it moved on its own.
-            subtitle = stringResource(R.string.settings_only_play_what_already_device) +
-                "Wanda offers to turn this on and off as your connection changes.",
+            subtitle = stringResource(R.string.settings_only_play_what_already_device),
             checked = state.offline,
             onCheckedChange = actions.onOfflineChange,
             modifier = Modifier.scale(rememberShelfEntranceScale(offlineIndex))
@@ -37,8 +36,7 @@ internal fun LazyListScope.playbackStorageTab(
         SettingsToggle(
             title = stringResource(R.string.settings_ready_next_track),
             // Said plainly, because it is a real cost and the honest reason to turn it off.
-            subtitle = stringResource(R.string.settings_fetch_first_couple_seconds_ahead) +
-                "instantly. Uses a little data on a track you might not play.",
+            subtitle = stringResource(R.string.settings_fetch_first_couple_seconds_ahead),
             checked = state.preloadNext,
             onCheckedChange = actions.onPreloadNextChange,
             modifier = Modifier.scale(rememberShelfEntranceScale(preloadNextIndex))
@@ -56,8 +54,7 @@ internal fun LazyListScope.playbackStorageTab(
             title = stringResource(R.string.settings_measure_library_now),
             // Named for what it produces rather than for the machinery. "Fingerprint" means
             // nothing to most people; recognising a song and building a radio are the results.
-            subtitle = stringResource(R.string.settings_lets_wanda_recognise_songs_build) +
-                "Otherwise this happens on Wi-Fi while charging.",
+            subtitle = stringResource(R.string.settings_lets_wanda_recognise_songs_build),
             onClick = actions.onIndexFingerprints,
             modifier = Modifier.scale(rememberShelfEntranceScale(indexFingerprintsIndex))
         )
@@ -69,8 +66,7 @@ internal fun LazyListScope.playbackStorageTab(
             title = stringResource(R.string.settings_measure_over_mobile_data),
             // The cost stated in the units it is actually paid in. "Uses data" is not something
             // anyone can weigh; "a minute per song" is.
-            subtitle = stringResource(R.string.settings_measuring_streamed_song_reads_about) +
-                "free, which is why this is off by default.",
+            subtitle = stringResource(R.string.settings_measuring_streamed_song_reads_about),
             checked = state.indexOnMobileData,
             onCheckedChange = actions.onIndexOnMobileDataChange,
             modifier = Modifier.scale(rememberShelfEntranceScale(indexOnMobileDataIndex))
@@ -84,8 +80,7 @@ internal fun LazyListScope.playbackStorageTab(
             // Pause/resume of a running pass lives on the progress notification, not here: it is
             // an action on work in flight, and the notification is where that work is already
             // visible. This screen is the report; that one is the remote control.
-            subtitle = stringResource(R.string.settings_see_which_songs_wanda_can) +
-                "waiting.",
+            subtitle = stringResource(R.string.settings_see_which_songs_wanda_can),
             onClick = actions.onOpenFingerprints,
             modifier = Modifier.scale(rememberShelfEntranceScale(viewFingerprintsIndex))
         )

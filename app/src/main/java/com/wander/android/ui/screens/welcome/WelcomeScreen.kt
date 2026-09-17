@@ -156,8 +156,7 @@ private fun SourcesStep(
 ) {
     Text(text = stringResource(R.string.welcome_welcome_wanda), style = MaterialTheme.typography.headlineLarge)
     Text(
-        text = stringResource(R.string.welcome_one_library_one_queue_one) +
-            "YouTube Music. No accounts, no telemetry.",
+        text = stringResource(R.string.welcome_one_library_one_queue_one),
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -196,8 +195,7 @@ private fun RecognitionStep(
 ) {
     Text(text = stringResource(R.string.welcome_song_recognition), style = MaterialTheme.typography.headlineLarge)
     Text(
-        text = stringResource(R.string.welcome_hold_phone_speaker_wanda_names) +
-            "your own library, on the device, with nothing sent anywhere.",
+        text = stringResource(R.string.welcome_hold_phone_speaker_wanda_names),
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )

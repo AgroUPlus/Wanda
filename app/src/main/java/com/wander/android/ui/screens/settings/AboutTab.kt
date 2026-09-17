@@ -80,8 +80,7 @@ internal fun LazyListScope.aboutTab(
     item(key = "auto_update_check") {
         SettingsToggle(
             title = stringResource(R.string.settings_check_updates_launch),
-            subtitle = stringResource(R.string.settings_finds_latest_release_automatically_tells) +
-                "Off by default: this is a network call at startup.",
+            subtitle = stringResource(R.string.settings_finds_latest_release_automatically_tells),
             checked = state.autoUpdateCheckEnabled,
             onCheckedChange = actions.onAutoUpdateCheckChange,
             modifier = Modifier.scale(rememberShelfEntranceScale(autoUpdateCheckIndex))

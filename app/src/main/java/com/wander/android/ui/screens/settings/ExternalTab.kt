@@ -54,9 +54,7 @@ internal fun LazyListScope.externalTab(
     item(key = "artist_release_notifications") {
         SettingsToggle(
             title = stringResource(R.string.settings_new_music_from_artists_follow),
-            subtitle = stringResource(R.string.settings_checks_every_few_hours_wi) +
-                "puts something out. Follow an artist from their page. Off by default: it is a " +
-                "network call you did not ask for, and a notification you did not ask for.",
+            subtitle = stringResource(R.string.settings_checks_every_few_hours_wi),
             checked = state.artistReleaseNotificationsEnabled,
             onCheckedChange = actions.onArtistReleaseNotificationsChange,
             modifier = Modifier.scale(rememberShelfEntranceScale(artistReleaseNotificationsIndex))

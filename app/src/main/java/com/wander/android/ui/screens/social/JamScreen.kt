@@ -579,8 +579,7 @@ private fun StartOrJoin(
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            text = stringResource(R.string.social_one_queue_everyone_room_plays) +
-                "and while you are in a jam anything you play goes to the room instead.",
+            text = stringResource(R.string.social_one_queue_everyone_room_plays),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

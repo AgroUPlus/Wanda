@@ -275,9 +275,7 @@ internal fun SocialScreen(
             if (state.isEmpty && !state.isRefreshing) {
                 item(key = "empty") {
                     Text(
-                        text = stringResource(R.string.social_nobody_yet_tap_add_button) +
-                            "will only turn up in their search if you have made yourself " +
-                            "discoverable in Settings → Privacy.",
+                        text = stringResource(R.string.social_nobody_yet_tap_add_button),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp)
@@ -308,8 +306,7 @@ internal fun NotPairedNotice(onOpenSettings: () -> Unit) {
             style = MaterialTheme.typography.titleMedium
         )
         Text(
-            text = stringResource(R.string.social_pair_one_create_account_one) +
-                "you know are listening to, and listen along with them.",
+            text = stringResource(R.string.social_pair_one_create_account_one),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

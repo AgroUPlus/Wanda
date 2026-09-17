@@ -64,8 +64,7 @@ internal fun EncryptionBoundary(modifier: Modifier = Modifier) {
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    text = stringResource(R.string.social_notes_from_here_sealed_device) +
-                        "them without being able to read them.",
+                    text = stringResource(R.string.social_notes_from_here_sealed_device),
                     style = MaterialTheme.typography.labelSmall,
                     textAlign = TextAlign.Center
                 )

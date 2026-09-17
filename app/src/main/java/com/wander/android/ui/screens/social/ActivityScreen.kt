@@ -267,7 +267,7 @@ private fun NewReleaseCard(
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = stringResource(R.string.social_new_from) + release.artist,
+                    text = stringResource(R.string.social_new_from, release.artist),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

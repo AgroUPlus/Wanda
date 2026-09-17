@@ -63,8 +63,7 @@ internal fun BackupSection(viewModel: BackupViewModel = hiltViewModel()) {
     Column {
         SettingsRow(
             title = stringResource(R.string.settings_export_everything),
-            subtitle = stringResource(R.string.settings_settings_customization_sign_ins_one) +
-                "Protected by a passphrase you choose.",
+            subtitle = stringResource(R.string.settings_settings_customization_sign_ins_one),
             onClick = {
                 viewModel.clearStatus()
                 exportLauncher.launch(DEFAULT_FILE_NAME)

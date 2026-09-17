@@ -28,8 +28,7 @@ internal fun LazyListScope.privacyTab(
     item(key = "incognito") {
         SettingsToggle(
             title = stringResource(R.string.settings_incognito),
-            subtitle = stringResource(R.string.settings_stop_recording_plays_stop_telling) +
-                "to. Everything below is off while this is on.",
+            subtitle = stringResource(R.string.settings_stop_recording_plays_stop_telling),
             checked = state.incognito,
             onCheckedChange = actions.onIncognitoChange,
             modifier = Modifier.scale(rememberShelfEntranceScale(incognitoIndex))
@@ -53,8 +52,7 @@ internal fun LazyListScope.privacyTab(
             val visibilityIncognitoNoteIndex = i++
             item(key = "visibility_incognito_note") {
                 SettingsRow(
-                    subtitle = stringResource(R.string.settings_incognito_so_none_being_shared) +
-                        "Your choices are kept for when you turn it off.",
+                    subtitle = stringResource(R.string.settings_incognito_so_none_being_shared),
                     title = stringResource(R.string.settings_paused_incognito),
                     modifier = Modifier.scale(rememberShelfEntranceScale(visibilityIncognitoNoteIndex))
                 )
@@ -91,8 +89,7 @@ internal fun LazyListScope.privacyTab(
         item(key = "discoverable") {
             SettingsToggle(
                 title = stringResource(R.string.settings_let_people_find_me),
-                subtitle = stringResource(R.string.settings_username_appears_when_someone_searches) +
-                    "people you have already added can see you at all.",
+                subtitle = stringResource(R.string.settings_username_appears_when_someone_searches),
                 checked = state.agroVisibility.discoverable && !state.incognito,
                 onCheckedChange = { actions.onVisibilityChange(state.agroVisibility.copy(discoverable = it)) },
                 enabled = !state.incognito,

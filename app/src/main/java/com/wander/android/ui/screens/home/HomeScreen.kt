@@ -137,9 +137,8 @@ fun HomeScreen(
             // chips to do, so the whole screen is the "go connect something" message.
             state.isGloballyEmpty -> EmptyState(
                 title = stringResource(R.string.home_nothing_play_yet),
-                message = stringResource(R.string.home_connect_navidrome_youtube_music_settings) +
-                    "music stored on this device.",
-                actionLabel = "Open Settings",
+                message = stringResource(R.string.home_connect_navidrome_youtube_music_settings),
+                actionLabel = stringResource(R.string.social_open_settings),
                 onAction = onOpenSettings,
                 modifier = Modifier.align(Alignment.Center)
             )

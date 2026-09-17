@@ -206,9 +206,7 @@ private fun OffGridExplainer() {
             )
         }
         Text(
-            text = stringResource(R.string.social_share_music_someone_beside_over) +
-                "No router, no mobile data, no server. You are only findable while this " +
-                "screen is open.",
+            text = stringResource(R.string.social_share_music_someone_beside_over),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -247,7 +245,7 @@ private fun PeerRow(
     onClick: () -> Unit
 ) {
     ListItem(
-        headlineContent = { Text(stringResource(R.string.common_device) + peer.beacon.shortFingerprint()) },
+        headlineContent = { Text(stringResource(R.string.common_device, peer.beacon.shortFingerprint())) },
         supportingContent = {
             Text(if (isLinked) "Connected, encrypted" else signalWord(peer.rssi))
         },
@@ -326,7 +324,7 @@ private fun ConnectedRow(
     onDisconnect: (OffGridLink) -> Unit
 ) {
     ListItem(
-        headlineContent = { Text(stringResource(R.string.common_device) + shortId(link.deviceId)) },
+        headlineContent = { Text(stringResource(R.string.common_device, shortId(link.deviceId))) },
         supportingContent = {
             Text(
                 when (link.role) {
@@ -372,8 +370,7 @@ private fun UnsupportedNotice() {
             style = MaterialTheme.typography.titleMedium
         )
         Text(
-            text = stringResource(R.string.social_being_findable_needs_bluetooth_peripheral) +
-                "have it. You can still listen along over Wi-Fi or through your server.",
+            text = stringResource(R.string.social_being_findable_needs_bluetooth_peripheral),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

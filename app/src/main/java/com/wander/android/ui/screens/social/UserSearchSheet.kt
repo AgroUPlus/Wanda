@@ -122,8 +122,7 @@ internal fun UserSearchSheet(
 
             if (state.query.isNotBlank() && state.results.isEmpty() && !state.isSearching) {
                 Text(
-                    text = stringResource(R.string.social_nobody_name_listed_people_only) +
-                        "made themselves discoverable.",
+                    text = stringResource(R.string.social_nobody_name_listed_people_only),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 16.dp)

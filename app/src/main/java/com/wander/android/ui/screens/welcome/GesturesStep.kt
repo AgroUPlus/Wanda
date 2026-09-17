@@ -61,8 +61,7 @@ internal fun GesturesStep() {
 
     Text(text = stringResource(R.string.welcome_gestures), style = MaterialTheme.typography.headlineLarge)
     Text(
-        text = stringResource(R.string.welcome_player_mostly_gestures_fewer_buttons) +
-            "These are all of them.",
+        text = stringResource(R.string.welcome_player_mostly_gestures_fewer_buttons),
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )

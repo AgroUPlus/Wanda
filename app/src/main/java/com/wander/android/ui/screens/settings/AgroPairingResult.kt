@@ -50,8 +50,7 @@ internal fun AgroRegisteredMessage(signup: AgroSignup, server: String) {
         style = MaterialTheme.typography.bodyMedium
     )
     Text(
-        text = stringResource(R.string.settings_write_passphrase_down_server_stores) +
-            "show it again — there is no reset.",
+        text = stringResource(R.string.settings_write_passphrase_down_server_stores),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.error
     )
@@ -73,8 +72,7 @@ internal fun AgroRegisteredMessage(signup: AgroSignup, server: String) {
 
     if (signup.isPending) {
         Text(
-            text = stringResource(R.string.settings_server_holds_new_accounts_until) +
-                "sign in yet. Come back and pair once you have been approved.",
+            text = stringResource(R.string.settings_server_holds_new_accounts_until),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

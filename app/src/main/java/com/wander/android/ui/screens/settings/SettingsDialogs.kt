@@ -85,8 +85,7 @@ internal fun SettingsDialogs(
     if (dialogs.confirmNavidromeSignOut) {
         ConfirmDialog(
             title = stringResource(R.string.settings_sign_out_navidrome),
-            message = stringResource(R.string.settings_server_address_username_password_erased) +
-                "and your library stops syncing. Anything already downloaded stays playable.",
+            message = stringResource(R.string.settings_server_address_username_password_erased),
             confirmLabel = stringResource(R.string.common_sign_out),
             onConfirm = viewModel::disconnectNavidrome,
             onDismiss = { dialogs.confirmNavidromeSignOut = false }
@@ -96,8 +95,7 @@ internal fun SettingsDialogs(
     if (dialogs.confirmYouTubeSignOut) {
         ConfirmDialog(
             title = stringResource(R.string.settings_sign_out_youtube_music),
-            message = stringResource(R.string.settings_library_likes_stop_syncing_until) +
-                "Search keeps working signed out.",
+            message = stringResource(R.string.settings_library_likes_stop_syncing_until),
             confirmLabel = stringResource(R.string.common_sign_out),
             onConfirm = viewModel::disconnectYouTube,
             onDismiss = { dialogs.confirmYouTubeSignOut = false }
@@ -107,8 +105,7 @@ internal fun SettingsDialogs(
     if (dialogs.confirmAgroUnpair) {
         ConfirmDialog(
             title = stringResource(R.string.settings_unpair_from_agro),
-            message = stringResource(R.string.settings_device_stops_appearing_other_devices) +
-                "up their sessions. You will need the server address and passphrase to pair again.",
+            message = stringResource(R.string.settings_device_stops_appearing_other_devices),
             confirmLabel = stringResource(R.string.settings_unpair),
             onConfirm = viewModel::disconnectAgro,
             onDismiss = { dialogs.confirmAgroUnpair = false }
@@ -118,8 +115,7 @@ internal fun SettingsDialogs(
     if (dialogs.confirmForgetEverything) {
         ConfirmDialog(
             title = stringResource(R.string.settings_forget_all_credentials_2),
-            message = stringResource(R.string.settings_will_sign_out_every_music) +
-                "API keys and login tokens from this device. Downloaded tracks remain on disk.",
+            message = stringResource(R.string.settings_will_sign_out_every_music),
             confirmLabel = stringResource(R.string.settings_forget_all),
             onConfirm = {
                 viewModel.forgetEverything()

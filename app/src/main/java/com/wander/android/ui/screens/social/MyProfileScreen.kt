@@ -116,8 +116,7 @@ internal fun MyProfileScreen(
 
         if (!state.isPaired) {
             Text(
-                text = stringResource(R.string.social_pair_agro_server_settings_have) +
-                    "Your listening statistics work without one.",
+                text = stringResource(R.string.social_pair_agro_server_settings_have),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(20.dp)

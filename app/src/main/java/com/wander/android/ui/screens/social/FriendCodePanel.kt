@@ -96,8 +96,7 @@ internal fun FriendCodePanel(
             }
 
             Text(
-                text = stringResource(R.string.social_have_them_point_their_camera) +
-                    "stops working as soon as you close this.",
+                text = stringResource(R.string.social_have_them_point_their_camera),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center

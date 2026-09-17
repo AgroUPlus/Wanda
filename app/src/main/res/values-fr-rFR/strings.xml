@@ -1,10 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Wanda</string>
+
     <!-- Navigation -->
     <string name="nav_library">Bibliothèque</string>
     <string name="nav_settings">Paramètres</string>
     <string name="nav_friends">Amis</string>
+
     <!-- Player & Transport Controls -->
     <string name="action_play">Jouer</string>
     <string name="action_previous">Musique précédente</string>
@@ -23,6 +24,7 @@
     <string name="action_remove_from_queue">Retirer de la file</string>
     <string name="action_add_to_playlist">Ajouter à une playlist</string>
     <string name="action_radio_mode">Mode radio</string>
+    <string name="action_radio_mode_active">Mode radio (actif)</string>
     <string name="action_start_radio">Démarrer le mode radio</string>
     <string name="action_speed_and_pitch">Vitesse &amp; hauteur</string>
     <string name="action_audio_language">Langue de l\'audio</string>
@@ -34,13 +36,16 @@
     <string name="action_close">Fermer</string>
     <string name="action_reset">Réinitialiser</string>
     <string name="action_done">Terminer</string>
+
     <!-- Language (Settings > Look and feel) -->
     <string name="language_title">Langue</string>
     <string name="language_system_default">Langue du système</string>
+
     <!-- Speed &amp; Pitch Dialog -->
     <string name="speed_label">Vitesse</string>
     <string name="pitch_label">Hauteur</string>
     <string name="speed_pitch_subtitle">Paramétrer le tempo et la clef</string>
+
     <!-- Lyrics -->
     <string name="lyrics_synced_word">Synchronisé - mot par mot</string>
     <string name="lyrics_loading">Recherche de paroles...</string>
@@ -48,19 +53,23 @@
     <string name="lyrics_instrumental">Cet enregistrement est instrumental.</string>
     <string name="lyrics_unreachable">Impossible de chercher des paroles. Vérifier la connexion et réessayer.</string>
     <string name="lyrics_sync_back">Synchroniser</string>
+
     <!-- Mood picker (Home) -->
     <string name="mood_preset_late_night_chill">Nuit calme</string>
     <string name="mood_preset_focus_flow">Concentration</string>
     <string name="mood_preset_morning_energizer">Matinée dynamique</string>
     <string name="mood_preset_high_voltage">Explosion d\'énergie</string>
+
     <!-- Swipeable track row -->
     <string name="swipe_action_play_next">Jouer après</string>
     <string name="swipe_action_unlike">Retirer des favoris</string>
     <string name="swipe_action_like">Ajouter aux favoris</string>
+
     <!-- Storage butler (Settings) -->
     <string name="storage_source_line">%1$s · %2$d pistes · %3$s</string>
     <string name="storage_clean_stale_title">Supprimer les téléchargements en attente</string>
     <string name="storage_clean_stale_subtitle">%1$d pistes, non jouées pendant 60+ jours · %2$s</string>
+
     <!-- Now Playing widget (Glance) -->
     <string name="widget_nothing_playing">Rien ne joue</string>
     <string name="widget_track_line">%1$s · %2$s</string>
@@ -69,8 +78,10 @@
     <string name="widget_pause">Pause</string>
     <string name="widget_next">Suivant</string>
     <string name="widget_now_playing_label">Joue actuellement</string>
+
     <!-- Universal track link -->
     <string name="link_track_open_failed">Impossible d\'ouvrir ce lien.</string>
+
     <!-- Shared across screens -->
     <string name="common_accept">Accepter</string>
     <string name="common_activity">Activité</string>
@@ -86,7 +97,7 @@
     <string name="common_create">Créer</string>
     <string name="common_delete_offline_file">Supprimer un fichier hors ligne</string>
     <string name="common_delete_playlist">Supprimer la playlist</string>
-    <string name="common_device">Appareil </string>
+    <string name="common_device">Appareil %1$s</string>
     <string name="common_device_2">Sur l\'appareil</string>
     <string name="common_dismiss">Fermer</string>
     <string name="common_downloaded">Téléchargé</string>
@@ -134,18 +145,22 @@
     <string name="common_view_release">View release</string>
     <string name="common_will_see_once_friends">You will see this once you are friends.</string>
     <string name="common_youtube_music">YouTube Music</string>
+
     <!-- Album -->
     <string name="album_album_isn_t_any_connected">This album isn\'t on any of your connected sources.</string>
     <string name="album_album_unavailable">Album unavailable</string>
+
     <!-- Artist -->
     <string name="artist_none_connected_sources_has_anything">None of your connected sources has anything by this artist.</string>
     <string name="artist_start_radio">Start radio</string>
     <string name="artist_top_songs">Top songs</string>
+
     <!-- Home -->
     <string name="home_connect_navidrome_youtube_music_settings">Connect Navidrome or YouTube Music in Settings, or grant access to </string>
     <string name="home_nothing_here_yet">Nothing here yet</string>
     <string name="home_nothing_play_yet">Nothing to play yet</string>
     <string name="home_sessions_other_devices">Sessions on other devices</string>
+
     <!-- Importer -->
     <string name="importer_connect_auto_detect">Connect &amp; Auto-detect</string>
     <string name="importer_detecting_playlists">Detecting your playlists...</string>
@@ -169,6 +184,7 @@
     <string name="importer_switch_account">Switch account</string>
     <string name="importer_try_again">Try Again</string>
     <string name="importer_web_view">Web view</string>
+
     <!-- Library -->
     <string name="library_albums_appear_once_connected_source">Albums appear once a connected source has been browsed at least once.</string>
     <string name="library_all_albums">All albums</string>
@@ -181,6 +197,7 @@
     <string name="library_playlists_from_sources_imported_playlists">Playlists from your sources and imported playlists appear here.</string>
     <string name="library_recent">Recent</string>
     <string name="library_shuffle_all">Shuffle all</string>
+
     <!-- Sign-in -->
     <string name="login_connect_navidrome">Connect Navidrome</string>
     <string name="login_music_example_com">music.example.com</string>
@@ -191,10 +208,12 @@
     <string name="login_sign">Sign in</string>
     <string name="login_sign_youtube_music">Sign in to YouTube Music</string>
     <string name="login_use_pasted_cookie">Use pasted cookie</string>
+
     <!-- Navigation -->
     <string name="nav_clear_search">Clear search</string>
     <string name="nav_identify_what_s_playing">Identify what\'s playing</string>
     <string name="nav_search_here">Search here</string>
+
     <!-- Player and Now Playing -->
     <string name="player_applies_every_source_default">Applies to every source by default</string>
     <string name="player_close_lyrics">Close lyrics</string>
@@ -208,9 +227,11 @@
     <string name="player_playing_from_here">Playing from here</string>
     <string name="player_static">Static</string>
     <string name="player_synced">Synced</string>
+
     <!-- Playlists -->
     <string name="playlist_playlist_couldn_t_loaded_from">This playlist couldn\'t be loaded from any connected source.</string>
     <string name="playlist_playlist_unavailable">Playlist unavailable</string>
+
     <!-- Queue -->
     <string name="queue_close_queue">Close queue</string>
     <string name="queue_jam_queue_empty_tap_any">Jam queue is empty. Tap any song in the app to suggest or add it to the room!</string>
@@ -221,12 +242,14 @@
     <string name="queue_up_next_room">Up next in room</string>
     <string name="queue_vote">Vote</string>
     <string name="queue_waiting_room_votes">Waiting for room votes</string>
+
     <!-- Search -->
     <string name="search_matched_lyrics">Matched in lyrics</string>
     <string name="search_navidrome_youtube_music_music_device">Navidrome, YouTube Music and music on this device, in one list.</string>
     <string name="search_no_matches">No matches</string>
     <string name="search_search_everything_once">Search everything at once</string>
     <string name="search_songs">Songs</string>
+
     <!-- Settings -->
     <string name="settings_account_passphrase_device_token_app">Account passphrase, or a Device Token / App Password from Agro Dashboard.</string>
     <string name="settings_adds_play_counts_server_s">Adds play counts to the server\'s shared totals, with no account or times attached. </string>
@@ -346,6 +369,7 @@
     <string name="settings_what_trade_has_done">What the trade has done</string>
     <string name="settings_will_sign_out_every_music">This will sign out of every music source and erase all stored passwords, </string>
     <string name="settings_write_passphrase_down_server_stores">Write this passphrase down. The server stores only a hash of it and can never </string>
+
     <!-- Friends and activity -->
     <string name="social_add_friend">Add friend</string>
     <string name="social_anyone_adds">Anyone adds</string>
@@ -381,7 +405,7 @@
     <string name="social_looking_phones_nearby">Looking for phones nearby…</string>
     <string name="social_my_listening">My listening</string>
     <string name="social_new_code">New code</string>
-    <string name="social_new_from">New from </string>
+    <string name="social_new_from">Nouveauté de %1$s</string>
     <string name="social_no_conversations_yet">No conversations yet</string>
     <string name="social_nobody_name_listed_people_only">Nobody by that name is listed. People only appear here if they have </string>
     <string name="social_nobody_yet_tap_add_button">Nobody yet. Tap the add button to find people by username — you </string>
@@ -419,6 +443,7 @@
     <string name="social_ve_drifted_from_room">You\'ve drifted from the room.</string>
     <string name="social_vote_add">Vote to add</string>
     <string name="social_vote_skip">Vote to skip</string>
+
     <!-- Listening stats -->
     <string name="stats_earlier">Earlier</string>
     <string name="stats_hour">By hour</string>
@@ -431,6 +456,7 @@
     <string name="stats_songs_played">Songs played</string>
     <string name="stats_top_song">Top song</string>
     <string name="stats_vs_previous_period">vs previous period</string>
+
     <!-- Welcome / onboarding -->
     <string name="welcome_can_skip_download_later_from">You can skip this and download it later from Settings › Fingerprints.</string>
     <string name="welcome_download_model">Download model</string>
@@ -443,6 +469,7 @@
     <string name="welcome_signs_through_own_session_cookie">Signs in through your own session; the cookie never leaves the device.</string>
     <string name="welcome_song_recognition">Song recognition</string>
     <string name="welcome_welcome_wanda">Welcome to Wanda</string>
+
     <!-- Strings that take values at runtime -->
     <string name="album_more_from">More from %1$s</string>
     <string name="artist_nothing_by">Nothing by %1$s</string>
@@ -486,9 +513,11 @@
     <string name="social_s_jam">%1$s\'s jam</string>
     <string name="social_shown_instead_username_leave_it">Shown instead of your username. Leave it empty to just be @%1$s.</string>
     <string name="social_voted_skip">You voted to skip · %1$s/%2$s</string>
+
     <!-- Welcome / onboarding -->
     <string name="welcome_skip_setup">Skip setup</string>
     <string name="welcome_start_listening">Start listening</string>
+
     <!-- Settings categories and welcome gestures -->
     <string name="welcome_gesture_swipe_up_queue">Swipe up for the queue</string>
     <string name="welcome_gesture_hold_cover_speed_pitch">Hold the cover for speed &amp; pitch</string>
@@ -514,6 +543,7 @@
     <string name="settings_category_sub_import_playlists_share_what_are">Import playlists and share what you are playing</string>
     <string name="settings_category_sub_incognito_visibility_what_leaves_this">Incognito, visibility and what leaves this device</string>
     <string name="settings_category_sub_version_updates_duplicates_links">Version, updates, duplicates and links</string>
+
     <!-- Notifications and smart mixes -->
     <string name="notif_measuring_library">Measuring your library</string>
     <string name="notif_downloading_music">Downloading your music</string>
@@ -525,6 +555,7 @@
     <string name="mix_sub_built_from_what_play_most">Built from what you play most</string>
     <string name="mix_sub_loved_once_not_heard_lately">Loved once, not heard lately</string>
     <string name="mix_sub_library_still_unheard">In your library, still unheard</string>
+
     <!-- Fingerprint sections -->
     <string name="fp_section_external">External</string>
     <string name="fp_section_navidrome">Navidrome</string>
@@ -532,6 +563,7 @@
     <string name="fp_section_external_sub">YouTube Music. Measuring one fetches about a minute of audio from a third party, so these are the slowest to fill in and the likeliest to fail outright.</string>
     <string name="fp_section_navidrome_sub">Your own server. Measuring one downloads about a minute of it, so these fill in over Wi-Fi.</string>
     <string name="fp_section_on_device_sub">Local files. These cost nothing but time; one that stays red has a format this phone cannot decode.</string>
+
     <!-- Transport badge, spoken descriptions -->
     <string name="transport_spoken_device">Playing from this device. Nothing leaves the phone.</string>
     <string name="transport_spoken_navidrome">Streamed from your own Navidrome server.</string>

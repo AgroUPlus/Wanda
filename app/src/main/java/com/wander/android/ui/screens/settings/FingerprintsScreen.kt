@@ -175,8 +175,7 @@ private fun Summary(state: FingerprintsUiState, onPausedChange: (Boolean) -> Uni
             // Recognition now runs on the neural fingerprint, not the landmark index. The rows
             // below still show landmark/contour state during the changeover; green there is a
             // track the old path also covers.
-            text = stringResource(R.string.settings_song_recognisable_once_has_neural) +
-                "model above). Green below is done, blue is being measured now, red is neither.",
+            text = stringResource(R.string.settings_song_recognisable_once_has_neural),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp)

@@ -65,8 +65,7 @@ internal fun LazyListScope.syncTab(
             // be the sort of reassurance that is technically true and still misleading: the server
             // already knows this account's plays from scrobbling, and what changes here is that
             // other accounts on it can see the total.
-            subtitle = stringResource(R.string.settings_adds_play_counts_server_s) +
-                "Other people on this server see the totals, not you. The shelf works either way.",
+            subtitle = stringResource(R.string.settings_adds_play_counts_server_s),
             checked = state.popularityContribution && !state.incognito,
             onCheckedChange = actions.onPopularityChange,
             enabled = !state.incognito,
@@ -82,10 +81,7 @@ internal fun LazyListScope.syncTab(
             // column, so publishing is a disclosure to everyone on the server, not just to it.
             // Also covers lyrics: publishRecording/catalogSince carry lyrics text alongside the
             // fingerprint under this same flag, so the label has to say so.
-            subtitle = stringResource(R.string.settings_sends_acoustic_fingerprints_lyrics_tracks) +
-                "everyone else's, so badly tagged music inherits good tags and lyrics. Other " +
-                "people on this server can see which recordings and lyrics you hold, not your " +
-                "listening. Recognition works either way.",
+            subtitle = stringResource(R.string.settings_sends_acoustic_fingerprints_lyrics_tracks),
             checked = state.catalogTrade,
             onCheckedChange = actions.onCatalogTradeChange,
             modifier = Modifier.scale(rememberShelfEntranceScale(agroCatalogTradeIndex))

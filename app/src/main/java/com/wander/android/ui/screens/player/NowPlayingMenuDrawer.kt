@@ -105,7 +105,7 @@ internal fun NowPlayingMenuDrawer(
 
             MenuDrawerAction(
                 icon = Icons.Rounded.Radio,
-                label = if (isRadioMode) stringResource(R.string.action_radio_mode) + " (active)" else stringResource(R.string.action_start_radio),
+                label = if (isRadioMode) stringResource(R.string.action_radio_mode_active) else stringResource(R.string.action_start_radio),
                 tint = if (isRadioMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                 onClick = { onToggleRadio(); onDismiss() }
             )

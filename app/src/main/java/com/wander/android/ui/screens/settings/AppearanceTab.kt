@@ -91,8 +91,7 @@ internal fun LazyListScope.appearanceTab(
     item(key = "letter_by_letter_lyrics") {
         SettingsToggle(
             title = stringResource(R.string.settings_letter_letter_lyrics),
-            subtitle = stringResource(R.string.settings_sweep_active_word_one_letter) +
-                "Off highlights the whole line as it's sung.",
+            subtitle = stringResource(R.string.settings_sweep_active_word_one_letter),
             checked = state.letterByLetterLyrics,
             onCheckedChange = actions.onLetterByLetterLyricsChange,
             modifier = Modifier.scale(rememberShelfEntranceScale(letterByLetterLyricsIndex))

@@ -24,6 +24,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -38,6 +39,7 @@ import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.rememberShelfEntranceScale
 
 @Composable
 fun SearchScreen(
@@ -166,16 +168,18 @@ fun SearchScreen(
                                 }
                             }
                         }
-                        items(
+                        itemsIndexed(
                             items = displayedLyrics,
-                            key = { "lyric_${it.track.id}" },
-                            contentType = { "lyric_match" }
-                        ) { match ->
+                            key = { _, match -> "lyric_${match.track.id}" },
+                            contentType = { _, _ -> "lyric_match" }
+                        ) { index, match ->
+                            val entranceScale = rememberShelfEntranceScale(index)
                             com.wander.android.ui.components.LyricMatchRow(
                                 match = match,
                                 searchQuery = query,
                                 onPlay = { viewModel.playTrackAtTimestamp(match.track, match.timestampMs) },
-                                onLongPress = { actionsFor = match.track }
+                                onLongPress = { actionsFor = match.track },
+                                modifier = Modifier.animateItem().scale(entranceScale)
                             )
                         }
                         if (state.lyricMatches.size > 5) {
@@ -185,6 +189,7 @@ fun SearchScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(horizontal = 16.dp)
+                                        .animateItem()
                                 ) {
                                     Text(
                                         text = if (isLyricsExpanded) "Show fewer" else "Show ${state.lyricMatches.size - 5} more lyric matches",
@@ -202,6 +207,7 @@ fun SearchScreen(
                                     modifier = Modifier
                                         .padding(horizontal = 16.dp)
                                         .padding(top = 16.dp, bottom = 8.dp)
+                                        .animateItem()
                                 )
                             }
                         }
@@ -212,6 +218,7 @@ fun SearchScreen(
                         key = { _, track -> track.id },
                         contentType = { _, _ -> "track" }
                     ) { index, track ->
+                        val entranceScale = rememberShelfEntranceScale(index)
                         TrackRow(
                             track = track,
                             // A radio from the tapped song, not the results list.
@@ -223,7 +230,8 @@ fun SearchScreen(
                             // plays it first and then what actually sounds like it, across every
                             // configured source — see `PlaybackCoordinator.startRadio`.
                             onPlay = { viewModel.startRadio(track) },
-                            onLongPress = { actionsFor = track }
+                            onLongPress = { actionsFor = track },
+                            modifier = Modifier.animateItem().scale(entranceScale)
                         )
                     }
                 }
