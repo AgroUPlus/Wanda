@@ -47,7 +47,7 @@ data class PlaybackState(
     val isSeekable: Boolean = true,
     val isShuffle: Boolean = false,
     val repeatMode: RepeatMode = RepeatMode.OFF,
-    val isRadioMode: Boolean = false,
+    val isRadioMode: Boolean = true,
     /**
      * True when something else decides the running order — a jam, or a listen-along.
      *

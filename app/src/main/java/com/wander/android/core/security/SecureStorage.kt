@@ -47,7 +47,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
      * Endless-radio queue top-up. Persisted because it was an in-memory flag on `PlayerConnection`,
      * so a mode the user had deliberately turned on silently reset on every launch.
      */
-    private val _isRadioMode = MutableStateFlow(prefs.getBoolean(KEY_RADIO_MODE, false))
+    private val _isRadioMode = MutableStateFlow(prefs.getBoolean(KEY_RADIO_MODE, true))
     val isRadioMode: StateFlow<Boolean> = _isRadioMode.asStateFlow()
 
     private val _isAmoledBlack = MutableStateFlow(prefs.getBoolean(KEY_AMOLED_BLACK, false))
@@ -440,7 +440,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _isOfflineMode.value = false
         _isPreloadNextEnabled.value = true
         _isIndexOnMobileDataEnabled.value = false
-        _isRadioMode.value = false
+        _isRadioMode.value = true
         _navidromeConfigured.value = false
         _ytMusicConfigured.value = false
         _hasCompletedSetup.value = false
