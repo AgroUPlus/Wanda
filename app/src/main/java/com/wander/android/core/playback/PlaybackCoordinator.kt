@@ -2,6 +2,7 @@ package com.wander.android.core.playback
 
 import com.wander.android.data.model.LyricsState
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.EpisodeProgressRepository
 import com.wander.android.data.repository.JamRepository
 import com.wander.android.data.repository.LyricsRepository
 import com.wander.android.data.repository.MusicRepository
@@ -36,9 +37,22 @@ class PlaybackCoordinator @Inject internal constructor(
     private val musicRepository: MusicRepository,
     private val lyricsRepository: LyricsRepository,
     private val jamRepository: JamRepository,
+    private val episodeProgress: EpisodeProgressRepository,
     private val secureStorage: com.wander.android.core.security.SecureStorage
 ) {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    /**
+     * Episodes already resumed this session.
+     *
+     * Declared before `init`, which collects flows that read it the moment they emit.
+     *
+     * Without it, pausing a resumed episode and playing it again would seek back to the saved
+     * position and undo whatever the listener had just scrubbed to.
+     */
+    private val resumed = java.util.Collections.newSetFromMap(
+        java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+    )
 
     private val _lyrics = MutableStateFlow<LyricsState>(LyricsState.Loading)
     val lyrics: StateFlow<LyricsState> = _lyrics.asStateFlow()
@@ -80,6 +94,29 @@ class PlaybackCoordinator @Inject internal constructor(
                 val seed = connection.state.value.currentTrack ?: return@onEach
                 val more = musicRepository.generateRadio(seed, RADIO_BATCH)
                 if (more.isNotEmpty()) scope.launch(Dispatchers.Main) { connection.addToQueue(more) }
+            }
+            .launchIn(scope)
+
+        // Episodes resume where they were left; songs do not. See EpisodeProgressRepository.
+        connection.episodeCheckpoints
+            .onEach { episodeProgress.save(it.trackId, it.positionMs, it.durationMs) }
+            .launchIn(scope)
+
+        // Resumed on the first frame rather than at the moment the track becomes current: a seek
+        // issued while the item is still preparing races the initial buffer and lands at zero —
+        // the same trap `PlayerConnection` documents on its own restore path.
+        connection.state
+            .map { EpisodeArrival(it.currentTrack?.id, it.currentTrack?.isEpisode == true, it.isPlaying) }
+            .distinctUntilChanged()
+            .onEach { (trackId, isEpisode, playing) ->
+                if (trackId == null || !isEpisode || !playing) return@onEach
+                if (!resumed.add(trackId)) return@onEach
+                val position = episodeProgress.resumePosition(trackId) ?: return@onEach
+                // Only when the player is still at the top of the episode. If the listener has
+                // already scrubbed somewhere, that is a deliberate choice and outranks the record.
+                val now = connection.currentPositionMs() ?: return@onEach
+                if (now > RESUME_GRACE_MS) return@onEach
+                scope.launch(Dispatchers.Main) { connection.seekTo(position) }
             }
             .launchIn(scope)
 
@@ -135,8 +172,17 @@ class PlaybackCoordinator @Inject internal constructor(
 
     private data class RadioTrigger(val enabled: Boolean, val index: Int, val size: Int)
 
+    private data class EpisodeArrival(
+        val trackId: String?,
+        val isEpisode: Boolean,
+        val playing: Boolean
+    )
+
     private companion object {
         const val RADIO_LOOKAHEAD = 3
         const val RADIO_BATCH = 10
+
+        /** How far in an episode may already be and still count as "just started". */
+        const val RESUME_GRACE_MS = 5_000L
     }
 }
