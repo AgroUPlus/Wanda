@@ -49,6 +49,8 @@ object AppModule {
             })
             .build()
 
+    @Provides fun provideEpisodeProgressDao(db: WanderDatabase): com.wander.android.core.database.dao.EpisodeProgressDao =
+        db.episodeProgressDao()
     @Provides fun provideTrackDao(db: WanderDatabase): TrackDao = db.trackDao()
     @Provides fun provideAlbumDao(db: WanderDatabase): AlbumDao = db.albumDao()
     @Provides fun provideArtistDao(db: WanderDatabase): ArtistDao = db.artistDao()
