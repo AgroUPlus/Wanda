@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -31,8 +32,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.ui.components.rememberHaptics
 import com.wander.android.ui.components.rememberPressScale
 
@@ -50,7 +54,11 @@ private val DockInset = 12.dp
 val DockRowHeight = DockControlSize + DockInset * 2
 
 /**
- * The dock's second row: one search field, and Friends beside it.
+ * The dock's second row: one search field, with Library and Friends beside it.
+ *
+ * Library has its own button because the search field only reaches the library by *taking focus*
+ * so the sole way to get there from the dock used to be to start typing, which opens the keyboard
+ * and puts the screen into a search that was never wanted. The button navigates and nothing else.
  */
 @Composable
 fun WanderDockRow(
@@ -103,24 +111,45 @@ fun WanderDockRow(
                 animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()
             ) + fadeOut() + scaleOut(targetScale = 0.7f)
         ) {
-            FriendsButton(
-                selected = currentRoute == TopLevelDestination.FRIENDS.route,
-                onClick = onOpenFriends
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(DockInset)) {
+                DockIconButton(
+                    icon = Icons.Rounded.LibraryMusic,
+                    contentDescription = stringResource(R.string.nav_library),
+                    selected = currentRoute == TopLevelDestination.LIBRARY.route,
+                    label = "library",
+                    onClick = onOpenLibrary
+                )
+                DockIconButton(
+                    icon = Icons.Rounded.People,
+                    contentDescription = stringResource(R.string.nav_friends),
+                    selected = currentRoute == TopLevelDestination.FRIENDS.route,
+                    label = "friends",
+                    onClick = onOpenFriends
+                )
+            }
         }
     }
 }
 
+/**
+ * One of the dock's square buttons. [label] only names the animations for the tooling.
+ */
 @Composable
-private fun FriendsButton(selected: Boolean, onClick: () -> Unit) {
+private fun DockIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    selected: Boolean,
+    label: String,
+    onClick: () -> Unit
+) {
     val haptics = rememberHaptics()
     val interactionSource = remember { MutableInteractionSource() }
-    val pressScale by rememberPressScale(interactionSource, label = "friendsPressScale")
+    val pressScale by rememberPressScale(interactionSource, label = "${label}PressScale")
 
     val scale by animateFloatAsState(
         targetValue = if (selected) 1f else 0.92f,
         animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
-        label = "friendsScale"
+        label = "${label}Scale"
     )
     val container by animateColorAsState(
         targetValue = if (selected) {
@@ -129,7 +158,7 @@ private fun FriendsButton(selected: Boolean, onClick: () -> Unit) {
             MaterialTheme.colorScheme.surfaceContainerLowest
         },
         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-        label = "friendsContainer"
+        label = stringResource(R.string.common_container, label)
     )
     val content by animateColorAsState(
         targetValue = if (selected) {
@@ -138,7 +167,7 @@ private fun FriendsButton(selected: Boolean, onClick: () -> Unit) {
             MaterialTheme.colorScheme.onSurfaceVariant
         },
         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-        label = "friendsContent"
+        label = stringResource(R.string.common_content, label)
     )
 
     FilledIconButton(
@@ -159,6 +188,6 @@ private fun FriendsButton(selected: Boolean, onClick: () -> Unit) {
                 scaleY = scale * pressScale
             }
     ) {
-        Icon(Icons.Rounded.People, contentDescription = "Friends")
+        Icon(icon, contentDescription = contentDescription)
     }
 }
