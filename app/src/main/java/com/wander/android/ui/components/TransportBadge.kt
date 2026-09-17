@@ -1,5 +1,6 @@
 package com.wander.android.ui.components
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -45,6 +46,8 @@ import com.wander.android.data.repository.ResolvedFrom
 @Composable
 internal fun TransportBadge(from: ResolvedFrom?, modifier: Modifier = Modifier) {
     val style = from.style()
+    // clearAndSetSemantics takes a plain lambda, so the string is read before it.
+    val spoken = stringResource(style.spoken)
     Row(
         modifier = modifier
             .background(
@@ -54,7 +57,7 @@ internal fun TransportBadge(from: ResolvedFrom?, modifier: Modifier = Modifier) 
             .padding(horizontal = 6.dp, vertical = 2.dp)
             // One description for the whole badge: a screen reader announcing an icon, a padlock
             // and a word separately turns a glance into three.
-            .clearAndSetSemantics { contentDescription = style.spoken },
+            .clearAndSetSemantics { contentDescription = spoken },
         horizontalArrangement = Arrangement.spacedBy(3.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -65,7 +68,7 @@ internal fun TransportBadge(from: ResolvedFrom?, modifier: Modifier = Modifier) 
             modifier = Modifier.size(12.dp)
         )
         Text(
-            text = style.label,
+            text = stringResource(style.label),
             style = MaterialTheme.typography.labelSmall,
             color = style.onContainer()
         )
@@ -80,10 +83,15 @@ internal fun TransportBadge(from: ResolvedFrom?, modifier: Modifier = Modifier) 
     }
 }
 
-/** The label, the icon, and whether the padlock is honest for this tier. */
+/**
+ * The label, the icon, and whether the padlock is honest for this tier.
+ *
+ * The two strings are resource ids rather than text: [style] is a plain function, so it has no
+ * composition to resolve them in. They are read where the badge is drawn.
+ */
 internal data class TransportStyle(
-    val label: String,
-    val spoken: String,
+    @StringRes val label: Int,
+    @StringRes val spoken: Int,
     val icon: ImageVector,
     val encrypted: Boolean,
     val container: @Composable () -> Color,
@@ -92,8 +100,8 @@ internal data class TransportStyle(
 
 internal fun ResolvedFrom?.style(): TransportStyle = when (this) {
     ResolvedFrom.LOCAL_STORAGE -> TransportStyle(
-        label = stringResource(R.string.common_device_2),
-        spoken = "Playing from this device. Nothing leaves the phone.",
+        label = R.string.common_device_2,
+        spoken = R.string.transport_spoken_device,
         icon = Icons.Filled.Storage,
         // Not marked encrypted, because there is no transport to encrypt. A padlock here would
         // imply a protection was applied rather than not being needed.
@@ -102,8 +110,8 @@ internal fun ResolvedFrom?.style(): TransportStyle = when (this) {
         onContainer = { MaterialTheme.colorScheme.onSurfaceVariant }
     )
     ResolvedFrom.NAVIDROME -> TransportStyle(
-        label = stringResource(R.string.common_navidrome),
-        spoken = "Streamed from your own Navidrome server.",
+        label = R.string.common_navidrome,
+        spoken = R.string.transport_spoken_navidrome,
         icon = Icons.Filled.Router,
         // HTTPS if the user configured it, plain HTTP if not, and this cannot tell which. Claiming
         // encryption on a self-hosted address that might be `http://` would be a guess.
@@ -112,40 +120,40 @@ internal fun ResolvedFrom?.style(): TransportStyle = when (this) {
         onContainer = { MaterialTheme.colorScheme.onSecondaryContainer }
     )
     ResolvedFrom.YOUTUBE_MUSIC -> TransportStyle(
-        label = stringResource(R.string.common_stream),
-        spoken = "Matched and streamed from YouTube Music. Uses data.",
+        label = R.string.common_stream,
+        spoken = R.string.transport_spoken_stream,
         icon = Icons.Filled.Cloud,
         encrypted = false,
         container = { MaterialTheme.colorScheme.tertiaryContainer },
         onContainer = { MaterialTheme.colorScheme.onTertiaryContainer }
     )
     ResolvedFrom.P2P_DIRECT -> TransportStyle(
-        label = stringResource(R.string.common_lan),
-        spoken = "Streamed directly from the other device over your local network, encrypted.",
+        label = R.string.common_lan,
+        spoken = R.string.transport_spoken_lan,
         icon = Icons.Filled.Wifi,
         encrypted = true,
         container = { MaterialTheme.colorScheme.primaryContainer },
         onContainer = { MaterialTheme.colorScheme.onPrimaryContainer }
     )
     ResolvedFrom.P2P_OFFGRID -> TransportStyle(
-        label = stringResource(R.string.common_off_grid),
-        spoken = "Streamed phone to phone over a direct radio link, with no network involved, encrypted.",
+        label = R.string.common_off_grid,
+        spoken = R.string.transport_spoken_offgrid,
         icon = Icons.Filled.Bluetooth,
         encrypted = true,
         container = { MaterialTheme.colorScheme.primaryContainer },
         onContainer = { MaterialTheme.colorScheme.onPrimaryContainer }
     )
     ResolvedFrom.AGRO_RELAY -> TransportStyle(
-        label = stringResource(R.string.common_relay),
-        spoken = "Streamed through your Agro server, encrypted end to end. The server cannot hear it.",
+        label = R.string.common_relay,
+        spoken = R.string.transport_spoken_relay,
         icon = Icons.Filled.Cloud,
         encrypted = true,
         container = { MaterialTheme.colorScheme.tertiaryContainer },
         onContainer = { MaterialTheme.colorScheme.onTertiaryContainer }
     )
     null -> TransportStyle(
-        label = stringResource(R.string.common_finding),
-        spoken = "Looking for a way to play this.",
+        label = R.string.common_finding,
+        spoken = R.string.transport_spoken_finding,
         icon = Icons.Filled.PhoneAndroid,
         encrypted = false,
         container = { MaterialTheme.colorScheme.surfaceVariant },

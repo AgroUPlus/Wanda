@@ -85,6 +85,8 @@ internal fun EncryptionBoundary(modifier: Modifier = Modifier) {
  */
 @Composable
 internal fun EncryptedThreadLock(modifier: Modifier = Modifier) {
+    // clearAndSetSemantics takes a plain lambda, so the string is read before it.
+    val spoken = stringResource(R.string.social_notes_conversation_end_end_encrypted)
     Icon(
         imageVector = Icons.Rounded.Lock,
         contentDescription = null,
@@ -92,7 +94,7 @@ internal fun EncryptedThreadLock(modifier: Modifier = Modifier) {
         modifier = modifier
             .size(16.dp)
             .clearAndSetSemantics {
-                contentDescription = stringResource(R.string.social_notes_conversation_end_end_encrypted)
+                contentDescription = spoken
             }
     )
 }

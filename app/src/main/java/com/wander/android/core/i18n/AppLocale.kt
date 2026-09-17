@@ -31,7 +31,7 @@ data class AppLocale(
 fun supportedAppLocales(context: Context): List<AppLocale> {
     val shipped = context.resources.assets.locales
         .asSequence()
-        .filter { it.isNotBlank() && !it.equals("en-US", ignoreCase = true) }
+        .filter { it.isNotBlank() }
         .map { Locale.forLanguageTag(it.replace('_', '-')) }
         .filter { it.language.isNotBlank() }
         // "fr" and "fr-CA" are one entry in the picker; the region only narrows the same choice.
@@ -40,9 +40,11 @@ fun supportedAppLocales(context: Context): List<AppLocale> {
         .sortedBy { it.endonym.lowercase(Locale.ROOT) }
         .toList()
 
-    // A bare "en" is always present — it is the untranslated source — but it is only worth
-    // offering as a choice once there is something to choose between.
-    return if (shipped.isEmpty()) emptyList() else listOf(systemDefaultLocale()) + shipped
+    // English is always present — it is the untranslated source — so it cannot be what decides
+    // whether the picker is worth showing. It still belongs *in* the list once the picker shows,
+    // otherwise someone whose phone is set to another language could never force English back.
+    val translated = shipped.filterNot { it.locale.language == Locale.ENGLISH.language }
+    return if (translated.isEmpty()) emptyList() else listOf(systemDefaultLocale()) + shipped
 }
 
 internal fun systemDefaultLocale(): AppLocale = AppLocale(
