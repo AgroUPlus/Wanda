@@ -74,7 +74,10 @@ class YTMusicSource @Inject constructor(
      */
     override suspend fun search(query: String, kind: SearchKind): Result<List<UnifiedTrack>> =
         innerTube.search(query, kind).map { root ->
-            root.responsiveListItems().mapNotNull(::parseResponsiveListItem)
+            val episodes = kind == SearchKind.EPISODES
+            root.responsiveListItems()
+                .mapNotNull(::parseResponsiveListItem)
+                .map { if (episodes) it.copy(isEpisode = true) else it }
         }
 
     /**
