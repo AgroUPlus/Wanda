@@ -141,6 +141,7 @@
     <string name="common_stream">Stream</string>
     <string name="common_try_again">Try again</string>
     <string name="common_update_available">Update available</string>
+    <string name="common_undo">Undo</string>
     <string name="common_username">Username</string>
     <string name="common_view_release">View release</string>
     <string name="common_will_see_once_friends">You will see this once you are friends.</string>
@@ -543,4 +544,12 @@
     <string name="fp_section_external_sub">YouTube Music. Measuring one fetches about a minute of audio from a third party, so these are the slowest to fill in and the likeliest to fail outright.</string>
     <string name="fp_section_navidrome_sub">Your own server. Measuring one downloads about a minute of it, so these fill in over Wi-Fi.</string>
     <string name="fp_section_on_device_sub">Local files. These cost nothing but time; one that stays red has a format this phone cannot decode.</string>
+    <!-- Transport badge, spoken descriptions -->
+    <string name="transport_spoken_device">Playing from this device. Nothing leaves the phone.</string>
+    <string name="transport_spoken_navidrome">Streamed from your own Navidrome server.</string>
+    <string name="transport_spoken_stream">Matched and streamed from YouTube Music. Uses data.</string>
+    <string name="transport_spoken_lan">Streamed directly from the other device over your local network, encrypted.</string>
+    <string name="transport_spoken_offgrid">Streamed phone to phone over a direct radio link, with no network involved, encrypted.</string>
+    <string name="transport_spoken_relay">Streamed through your Agro server, encrypted end to end. The server cannot hear it.</string>
+    <string name="transport_spoken_finding">Looking for a way to play this.</string>
 </resources>
