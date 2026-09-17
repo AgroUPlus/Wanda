@@ -1,11 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Wanda</string>
-
     <!-- Navigation -->
     <string name="nav_library">Bibliothèque</string>
     <string name="nav_settings">Paramètres</string>
     <string name="nav_friends">Amis</string>
-
     <!-- Player & Transport Controls -->
     <string name="action_play">Jouer</string>
     <string name="action_previous">Musique précédente</string>
@@ -24,7 +23,7 @@
     <string name="action_remove_from_queue">Retirer de la file</string>
     <string name="action_add_to_playlist">Ajouter à une playlist</string>
     <string name="action_radio_mode">Mode radio</string>
-    <string name="action_radio_mode_active">Mode radio (actif)</string>
+    <string name="action_radio_mode_active">Radio mode (active)</string>
     <string name="action_start_radio">Démarrer le mode radio</string>
     <string name="action_speed_and_pitch">Vitesse &amp; hauteur</string>
     <string name="action_audio_language">Langue de l\'audio</string>
@@ -36,16 +35,13 @@
     <string name="action_close">Fermer</string>
     <string name="action_reset">Réinitialiser</string>
     <string name="action_done">Terminer</string>
-
     <!-- Language (Settings > Look and feel) -->
     <string name="language_title">Langue</string>
     <string name="language_system_default">Langue du système</string>
-
     <!-- Speed &amp; Pitch Dialog -->
     <string name="speed_label">Vitesse</string>
     <string name="pitch_label">Hauteur</string>
     <string name="speed_pitch_subtitle">Paramétrer le tempo et la clef</string>
-
     <!-- Lyrics -->
     <string name="lyrics_synced_word">Synchronisé - mot par mot</string>
     <string name="lyrics_loading">Recherche de paroles...</string>
@@ -53,23 +49,19 @@
     <string name="lyrics_instrumental">Cet enregistrement est instrumental.</string>
     <string name="lyrics_unreachable">Impossible de chercher des paroles. Vérifier la connexion et réessayer.</string>
     <string name="lyrics_sync_back">Synchroniser</string>
-
     <!-- Mood picker (Home) -->
     <string name="mood_preset_late_night_chill">Nuit calme</string>
     <string name="mood_preset_focus_flow">Concentration</string>
     <string name="mood_preset_morning_energizer">Matinée dynamique</string>
     <string name="mood_preset_high_voltage">Explosion d\'énergie</string>
-
     <!-- Swipeable track row -->
     <string name="swipe_action_play_next">Jouer après</string>
     <string name="swipe_action_unlike">Retirer des favoris</string>
     <string name="swipe_action_like">Ajouter aux favoris</string>
-
     <!-- Storage butler (Settings) -->
     <string name="storage_source_line">%1$s · %2$d pistes · %3$s</string>
     <string name="storage_clean_stale_title">Supprimer les téléchargements en attente</string>
     <string name="storage_clean_stale_subtitle">%1$d pistes, non jouées pendant 60+ jours · %2$s</string>
-
     <!-- Now Playing widget (Glance) -->
     <string name="widget_nothing_playing">Rien ne joue</string>
     <string name="widget_track_line">%1$s · %2$s</string>
@@ -78,10 +70,8 @@
     <string name="widget_pause">Pause</string>
     <string name="widget_next">Suivant</string>
     <string name="widget_now_playing_label">Joue actuellement</string>
-
     <!-- Universal track link -->
     <string name="link_track_open_failed">Impossible d\'ouvrir ce lien.</string>
-
     <!-- Shared across screens -->
     <string name="common_accept">Accepter</string>
     <string name="common_activity">Activité</string>
@@ -97,7 +87,7 @@
     <string name="common_create">Créer</string>
     <string name="common_delete_offline_file">Supprimer un fichier hors ligne</string>
     <string name="common_delete_playlist">Supprimer la playlist</string>
-    <string name="common_device">Appareil %1$s</string>
+    <string name="common_device">Device %1$s</string>
     <string name="common_device_2">Sur l\'appareil</string>
     <string name="common_dismiss">Fermer</string>
     <string name="common_downloaded">Téléchargé</string>
@@ -115,10 +105,10 @@
     <string name="common_leave_jam">Quitter la jam</string>
     <string name="common_listen_again">Écouter à nouveau</string>
     <string name="common_listening">Écoute</string>
-    <string name="common_listening_2">Listening…</string>
+    <string name="common_listening_2">Écoute…</string>
     <string name="common_live">LIVE</string>
     <string name="common_loading_playlists">Chargement des playlists…</string>
-    <string name="common_matched_melody_guess_from_tune">Matched by melody — this is a guess from the tune, not the recording.</string>
+    <string name="common_matched_melody_guess_from_tune">Correspondance par mélodie — c\'est une hypothèse non issue de l\'enregistrement.</string>
     <string name="common_music_device">Musique sur l\'appareil</string>
     <string name="common_my_profile">Mon profil</string>
     <string name="common_name">Nom</string>
@@ -132,185 +122,173 @@
     <string name="common_play_all">Tout jouer</string>
     <string name="common_public_link_anyone_can_open">Un lien public accessible par n\'importe qui</string>
     <string name="common_relay">Relai</string>
-    <string name="common_remove">Remove</string>
-    <string name="common_say_something_optional">Say something (optional)</string>
-    <string name="common_send_friend">Send to a friend</string>
-    <string name="common_share_link">Share a link</string>
-    <string name="common_sign_out">Sign out</string>
+    <string name="common_remove">Retirer</string>
+    <string name="common_say_something_optional">Dire quelque chose (optionnel)</string>
+    <string name="common_send_friend">Envoyer à un ami</string>
+    <string name="common_share_link">Partager un lien</string>
+    <string name="common_sign_out">Déconnexion</string>
     <string name="common_stream">Stream</string>
-    <string name="common_try_again">Try again</string>
-    <string name="common_update_available">Update available</string>
-    <string name="common_undo">Undo</string>
-    <string name="common_username">Username</string>
-    <string name="common_view_release">View release</string>
-    <string name="common_will_see_once_friends">You will see this once you are friends.</string>
+    <string name="common_try_again">Réessayer</string>
+    <string name="common_update_available">Mise à jour disponible</string>
+    <string name="common_undo">Annuler</string>
+    <string name="common_username">Nom d\'utilisateur</string>
+    <string name="common_view_release">Voir la mise à jour</string>
+    <string name="common_will_see_once_friends">Vous verrez cela une fois amis.</string>
     <string name="common_youtube_music">YouTube Music</string>
-
     <!-- Album -->
-    <string name="album_album_isn_t_any_connected">This album isn\'t on any of your connected sources.</string>
-    <string name="album_album_unavailable">Album unavailable</string>
-
+    <string name="album_album_isn_t_any_connected">Cet album n\'est accessible depuis aucune de vos sources.</string>
+    <string name="album_album_unavailable">Album indisponible</string>
     <!-- Artist -->
-    <string name="artist_none_connected_sources_has_anything">None of your connected sources has anything by this artist.</string>
-    <string name="artist_start_radio">Start radio</string>
-    <string name="artist_top_songs">Top songs</string>
-
+    <string name="artist_none_connected_sources_has_anything">Aucune de vos sources n\'a de contenu de cet artiste.</string>
+    <string name="artist_start_radio">Démarrer la radio</string>
+    <string name="artist_top_songs">Musiques à la une</string>
     <!-- Home -->
-    <string name="home_connect_navidrome_youtube_music_settings">Connect Navidrome or YouTube Music in Settings, or grant access to </string>
-    <string name="home_nothing_here_yet">Nothing here yet</string>
-    <string name="home_nothing_play_yet">Nothing to play yet</string>
-    <string name="home_sessions_other_devices">Sessions on other devices</string>
-
+    <string name="home_connect_navidrome_youtube_music_settings">Connect Navidrome or YouTube Music in Settings, or grant access to music stored on this device.</string>
+    <string name="home_nothing_here_yet">Rien ici pour l\'instant</string>
+    <string name="home_nothing_play_yet">Rien à jouer pour l\'instant</string>
+    <string name="home_sessions_other_devices">Sessions sur d\'autres appareils</string>
     <!-- Importer -->
-    <string name="importer_connect_auto_detect">Connect &amp; Auto-detect</string>
-    <string name="importer_detecting_playlists">Detecting your playlists...</string>
-    <string name="importer_direct_link_text">Direct Link / Text</string>
-    <string name="importer_edit_title">Edit Title</string>
-    <string name="importer_import_playlist">Import Playlist</string>
-    <string name="importer_listen_now">Listen now</string>
-    <string name="importer_load_playlist">Load Playlist</string>
-    <string name="importer_loading_playlist">Loading playlist...</string>
-    <string name="importer_logout_switch_account">Logout / Switch Account</string>
-    <string name="importer_none">None</string>
-    <string name="importer_paste">Paste</string>
-    <string name="importer_paste_link_text_tracklist_inspect">Paste a link or text tracklist to inspect and choose tracks before importing.</string>
-    <string name="importer_playlist_detected">Playlist detected</string>
-    <string name="importer_playlist_title">Playlist Title</string>
-    <string name="importer_reading">Reading...</string>
-    <string name="importer_reading_playlist_tracks">Reading playlist tracks...</string>
-    <string name="importer_reload">Reload</string>
-    <string name="importer_retry">Retry</string>
-    <string name="importer_sign_browse">Sign In &amp; Browse</string>
-    <string name="importer_switch_account">Switch account</string>
-    <string name="importer_try_again">Try Again</string>
-    <string name="importer_web_view">Web view</string>
-
+    <string name="importer_connect_auto_detect">Connecter &amp; détection automatique</string>
+    <string name="importer_detecting_playlists">Détection de vos playlists...</string>
+    <string name="importer_direct_link_text">Lien / Texte direct</string>
+    <string name="importer_edit_title">Éditer le titre</string>
+    <string name="importer_import_playlist">Importer une playlist</string>
+    <string name="importer_listen_now">Écouter maintenant</string>
+    <string name="importer_load_playlist">Charger une playlist</string>
+    <string name="importer_loading_playlist">Chargement de la playlist...</string>
+    <string name="importer_logout_switch_account">Déconnexion / Changer de compte</string>
+    <string name="importer_none">Aucun</string>
+    <string name="importer_paste">Coller</string>
+    <string name="importer_paste_link_text_tracklist_inspect">Coller un lien ou une liste de pistes pour l\'inspecter et choisir les pistes avant l\'importation.</string>
+    <string name="importer_playlist_detected">Playlist détectée</string>
+    <string name="importer_playlist_title">Titre de la playlsit</string>
+    <string name="importer_reading">Lecture...</string>
+    <string name="importer_reading_playlist_tracks">Lecture des pistes de la playlist...</string>
+    <string name="importer_reload">Recharger</string>
+    <string name="importer_retry">Réessayer</string>
+    <string name="importer_sign_browse">Se connecter &amp; naviguer</string>
+    <string name="importer_switch_account">Changer de compte</string>
+    <string name="importer_try_again">Réessayer</string>
+    <string name="importer_web_view">Vue web</string>
     <!-- Library -->
-    <string name="library_albums_appear_once_connected_source">Albums appear once a connected source has been browsed at least once.</string>
-    <string name="library_all_albums">All albums</string>
-    <string name="library_everything_play_turns_up_here">Everything you play turns up here, newest first.</string>
-    <string name="library_history">History</string>
-    <string name="library_listening_history">Listening history</string>
-    <string name="library_no_albums_yet">No albums yet</string>
-    <string name="library_no_playlists">No playlists</string>
-    <string name="library_nothing_played_yet">Nothing played yet</string>
-    <string name="library_playlists_from_sources_imported_playlists">Playlists from your sources and imported playlists appear here.</string>
-    <string name="library_recent">Recent</string>
-    <string name="library_shuffle_all">Shuffle all</string>
-
+    <string name="library_albums_appear_once_connected_source">Les albums apparaissent lorsqu\'au moins une source a été explorée.</string>
+    <string name="library_all_albums">Tous les albums</string>
+    <string name="library_everything_play_turns_up_here">Tout ce que vous jouez apparaît ici, les récents en premier.</string>
+    <string name="library_history">Historique</string>
+    <string name="library_listening_history">Historique de lecture</string>
+    <string name="library_no_albums_yet">Aucun album actuellement</string>
+    <string name="library_no_playlists">Aucune playlist</string>
+    <string name="library_nothing_played_yet">Rien n\'a été joué pour l\'instant</string>
+    <string name="library_playlists_from_sources_imported_playlists">Les playlists de vos sources et les playlists importées apparaissent ici.</string>
+    <string name="library_recent">Récent</string>
+    <string name="library_shuffle_all">Tout mélanger</string>
     <!-- Sign-in -->
-    <string name="login_connect_navidrome">Connect Navidrome</string>
-    <string name="login_music_example_com">music.example.com</string>
-    <string name="login_password">Password</string>
-    <string name="login_password_stored_android_keystore_only">Your password is stored in the Android Keystore and only ever sent to your </string>
-    <string name="login_paste_cookie_header">Or paste a cookie header</string>
-    <string name="login_server_address">Server address</string>
-    <string name="login_sign">Sign in</string>
-    <string name="login_sign_youtube_music">Sign in to YouTube Music</string>
-    <string name="login_use_pasted_cookie">Use pasted cookie</string>
-
+    <string name="login_connect_navidrome">Connecter Navidrome</string>
+    <string name="login_music_example_com">music.exemple.com</string>
+    <string name="login_password">Mot de passe</string>
+    <string name="login_password_stored_android_keystore_only">Your password is stored in the Android Keystore and only ever sent to your own server, as a salted hash.</string>
+    <string name="login_paste_cookie_header">Ou coller un header de cookie</string>
+    <string name="login_server_address">Adresse du serveur</string>
+    <string name="login_sign">Se connecter</string>
+    <string name="login_sign_youtube_music">Se connecter à YouTube Music</string>
+    <string name="login_use_pasted_cookie">Utiliser le cookie collé</string>
     <!-- Navigation -->
-    <string name="nav_clear_search">Clear search</string>
-    <string name="nav_identify_what_s_playing">Identify what\'s playing</string>
-    <string name="nav_search_here">Search here</string>
-
+    <string name="nav_clear_search">Supprimer la recherche</string>
+    <string name="nav_identify_what_s_playing">Identifier ce qui se joue</string>
+    <string name="nav_search_here">Rechercher ici</string>
     <!-- Player and Now Playing -->
-    <string name="player_applies_every_source_default">Applies to every source by default</string>
-    <string name="player_close_lyrics">Close lyrics</string>
-    <string name="player_currently_playing">Currently playing</string>
-    <string name="player_device">On this device</string>
-    <string name="player_looking_other_sources">Looking on your other sources…</string>
-    <string name="player_lyrics">Lyrics</string>
-    <string name="player_more_options">More options</string>
-    <string name="player_only_copy_sources_have">This is the only copy your sources have.</string>
-    <string name="player_play_from">Play from</string>
-    <string name="player_playing_from_here">Playing from here</string>
-    <string name="player_static">Static</string>
-    <string name="player_synced">Synced</string>
-
+    <string name="player_applies_every_source_default">S\'applique à toutes les sources par défaut</string>
+    <string name="player_close_lyrics">Fermer les paroles</string>
+    <string name="player_currently_playing">Joue actuellement</string>
+    <string name="player_device">Sur cet appareil</string>
+    <string name="player_looking_other_sources">Recherche dans vos autres sources...</string>
+    <string name="player_lyrics">Paroles</string>
+    <string name="player_more_options">Plus d\'options</string>
+    <string name="player_only_copy_sources_have">Ceci est l\'unique copie que vos sources détiennent.</string>
+    <string name="player_play_from">Jouer depuis</string>
+    <string name="player_playing_from_here">Jouer depuis ici</string>
+    <string name="player_static">Statique</string>
+    <string name="player_synced">Synchronisé</string>
     <!-- Playlists -->
-    <string name="playlist_playlist_couldn_t_loaded_from">This playlist couldn\'t be loaded from any connected source.</string>
-    <string name="playlist_playlist_unavailable">Playlist unavailable</string>
-
+    <string name="playlist_playlist_couldn_t_loaded_from">Cette playlist ne peut être chargée depuis aucune de vos sources.</string>
+    <string name="playlist_playlist_unavailable">Playlist indisponible</string>
     <!-- Queue -->
-    <string name="queue_close_queue">Close queue</string>
-    <string name="queue_jam_queue_empty_tap_any">Jam queue is empty. Tap any song in the app to suggest or add it to the room!</string>
-    <string name="queue_play_something_will_show_up">Play something and it will show up here.</string>
-    <string name="queue_playing_jam">PLAYING IN JAM</string>
-    <string name="queue_queue_empty">The queue is empty</string>
-    <string name="queue_remove_from_jam">Remove from Jam</string>
-    <string name="queue_up_next_room">Up next in room</string>
-    <string name="queue_vote">Vote</string>
-    <string name="queue_waiting_room_votes">Waiting for room votes</string>
-
+    <string name="queue_close_queue">Fermer la file</string>
+    <string name="queue_jam_queue_empty_tap_any">La file de la jam est vide. Cliquer sur une chanson pour la suggérer ou l\'ajouter !</string>
+    <string name="queue_play_something_will_show_up">Jouer quelque chose et il apparaîtra ici.</string>
+    <string name="queue_playing_jam">EN COURS DANS LA JAM</string>
+    <string name="queue_queue_empty">La file est vide</string>
+    <string name="queue_remove_from_jam">Retirer de la jam</string>
+    <string name="queue_up_next_room">Ajouter après dans la salle</string>
+    <string name="queue_vote">Voter</string>
+    <string name="queue_waiting_room_votes">En attente de votes de la salle</string>
     <!-- Search -->
-    <string name="search_matched_lyrics">Matched in lyrics</string>
-    <string name="search_navidrome_youtube_music_music_device">Navidrome, YouTube Music and music on this device, in one list.</string>
-    <string name="search_no_matches">No matches</string>
-    <string name="search_search_everything_once">Search everything at once</string>
-    <string name="search_songs">Songs</string>
-
+    <string name="search_matched_lyrics">Correspondance par paroles</string>
+    <string name="search_navidrome_youtube_music_music_device">Navidrome, YouTube Music and musiques sur cet appareil dans une liste unifiée.</string>
+    <string name="search_no_matches">Aucune correspondance</string>
+    <string name="search_search_everything_once">Tout rechercher à la fois</string>
+    <string name="search_songs">Musiques</string>
     <!-- Settings -->
-    <string name="settings_account_passphrase_device_token_app">Account passphrase, or a Device Token / App Password from Agro Dashboard.</string>
-    <string name="settings_adds_play_counts_server_s">Adds play counts to the server\'s shared totals, with no account or times attached. </string>
-    <string name="settings_agro_device">Agro Device</string>
-    <string name="settings_agro_privacy_relay">Agro Privacy Relay</string>
+    <string name="settings_account_passphrase_device_token_app">Phrase d\'authentification, ou token d\'appareil / Mot de passe d\'application depuis le tableau de bord d\'Agro.</string>
+    <string name="settings_adds_play_counts_server_s">Adds play counts to the server\'s shared totals, with no account or times attached. Other people on this server see the totals, not you. The shelf works either way.</string>
+    <string name="settings_agro_device">Appareil Agro</string>
+    <string name="settings_agro_privacy_relay">Relai de confidentialité d\'Agro</string>
     <string name="settings_agrouplus">AgroUPlus</string>
-    <string name="settings_archive_server">Archive to server</string>
-    <string name="settings_back_settings">Back to settings</string>
-    <string name="settings_check_again">Check again</string>
-    <string name="settings_check_updates_launch">Check for updates on launch</string>
-    <string name="settings_checks_every_few_hours_wi">Checks every few hours on Wi-Fi and tells you when someone you follow </string>
-    <string name="settings_clear_streaming_cache">Clear streaming cache</string>
-    <string name="settings_connect_directly_paste_links_from">Connect directly or paste links from Spotify, Deezer, YouTube Music, Apple Music, and text files to select and import playlists.</string>
-    <string name="settings_contribute_u201cpopular_agro_u201d">Contribute to \u201cPopular on Agro\u201d</string>
-    <string name="settings_copy_passphrase">Copy passphrase</string>
-    <string name="settings_cover_art_fills_screen_edge">Cover art fills the screen edge-to-edge when playing</string>
-    <string name="settings_custom_share_domain">Custom share domain</string>
-    <string name="settings_custom_sharing_links_off_while">Custom sharing links are off while incognito is enabled in Privacy.</string>
-    <string name="settings_device_stops_appearing_other_devices">This device stops appearing to your other devices and can no longer pick </string>
-    <string name="settings_domain">Domain</string>
-    <string name="settings_download_liked_tracks_now">Download liked tracks now</string>
-    <string name="settings_dynamic_cover_art_theme">Dynamic cover art theme</string>
-    <string name="settings_export_everything">Export everything</string>
-    <string name="settings_external_libraries_links">External libraries &amp; links</string>
-    <string name="settings_fetch_first_couple_seconds_ahead">Fetch the first couple of seconds ahead of time so skipping starts </string>
-    <string name="settings_finds_latest_release_automatically_tells">Finds the latest release automatically and tells you when there is one. </string>
-    <string name="settings_fingerprints">Fingerprints</string>
-    <string name="settings_forget_all">Forget all</string>
-    <string name="settings_forget_all_credentials">Forget all credentials</string>
-    <string name="settings_forget_all_credentials_2">Forget all credentials?</string>
-    <string name="settings_free_up_space_device">Free up space on this device</string>
-    <string name="settings_friends_see_current_track_can">Friends see your current track, and can listen along with you</string>
-    <string name="settings_friends_see_top_artists_how">Friends see your top artists and how much your taste overlaps theirs</string>
-    <string name="settings_https_assumed_use_http_plain">https:// is assumed. Use http:// for a plain LAN host.</string>
-    <string name="settings_immersive_player">Immersive player</string>
-    <string name="settings_import_failed">Import failed</string>
-    <string name="settings_import_from_backup">Import from a backup</string>
-    <string name="settings_import_playlists">Import Playlists</string>
-    <string name="settings_improve_agro">Improve with Agro</string>
+    <string name="settings_archive_server">Archiver sur le serveur</string>
+    <string name="settings_back_settings">Retour aux paramètres</string>
+    <string name="settings_check_again">Vérifier à nouveau</string>
+    <string name="settings_check_updates_launch">Vérifier les mises à jour au lancement</string>
+    <string name="settings_checks_every_few_hours_wi">Checks every few hours on Wi-Fi and tells you when someone you follow puts something out. Follow an artist from their page. Off by default: it is a network call you did not ask for, and a notification you did not ask for.</string>
+    <string name="settings_clear_streaming_cache">Nettoyer le cache de streaming</string>
+    <string name="settings_connect_directly_paste_links_from">Se connecter directement ou coller un lien Spotify, Deezer, YouTube Music, Apple Music, and des fichiers textuels pour sélectionner et importer des playlists.</string>
+    <string name="settings_contribute_u201cpopular_agro_u201d">Contribuer aux statistiques d\'Agro</string>
+    <string name="settings_copy_passphrase">Copier la phrase d\'authentification</string>
+    <string name="settings_cover_art_fills_screen_edge">La pochette remplit l\'écran entièrement lors de la lecture</string>
+    <string name="settings_custom_share_domain">Domaine de partage personnalisé</string>
+    <string name="settings_custom_sharing_links_off_while">Les liens de partage personnalisés sont désactivés quand incognito est activé dans confidentialité.</string>
+    <string name="settings_device_stops_appearing_other_devices">This device stops appearing to your other devices and can no longer pick up their sessions. You will need the server address and passphrase to pair again.</string>
+    <string name="settings_domain">Domaine</string>
+    <string name="settings_download_liked_tracks_now">Télécharger les pistes favorites maintenant</string>
+    <string name="settings_dynamic_cover_art_theme">Thème de pochette dynamique</string>
+    <string name="settings_export_everything">Tout exporter</string>
+    <string name="settings_external_libraries_links">Bibliothèques externes &amp; liens</string>
+    <string name="settings_fetch_first_couple_seconds_ahead">Fetch the first couple of seconds ahead of time so skipping starts instantly. Uses a little data on a track you might not play.</string>
+    <string name="settings_finds_latest_release_automatically_tells">Finds the latest release automatically and tells you when there is one. Off by default: this is a network call at startup.</string>
+    <string name="settings_fingerprints">Empreintes</string>
+    <string name="settings_forget_all">Tout oublier</string>
+    <string name="settings_forget_all_credentials">Oublier tous les certificats</string>
+    <string name="settings_forget_all_credentials_2">Oublier tous les certificats ?</string>
+    <string name="settings_free_up_space_device">Libérer de l\'espace sur cet appareil</string>
+    <string name="settings_friends_see_current_track_can">Vos amis voient votre piste actuelle et peuvent écouter avec vous</string>
+    <string name="settings_friends_see_top_artists_how">Vos amis peuvent voir vos artistes favoris et vos goûts en commun</string>
+    <string name="settings_https_assumed_use_http_plain">https:// est supposé. Utiliser http:// pour un hôte LAN standard.</string>
+    <string name="settings_immersive_player">Lecteur immersif</string>
+    <string name="settings_import_failed">L\'importation a échoué</string>
+    <string name="settings_import_from_backup">Importer depuis une backup</string>
+    <string name="settings_import_playlists">Importer des playlists</string>
+    <string name="settings_improve_agro">Améliorer avec Agro</string>
     <string name="settings_incognito">Incognito</string>
-    <string name="settings_incognito_so_none_being_shared">Incognito is on, so none of this is being shared. </string>
-    <string name="settings_invite_code_optional">Invite code (optional)</string>
-    <string name="settings_kept_apart">Kept apart</string>
-    <string name="settings_let_people_find_me">Let people find me</string>
-    <string name="settings_let_these_merge_again">Let these merge again</string>
-    <string name="settings_lets_wanda_recognise_songs_build">Lets Wanda recognise your songs and build radios from how they sound. </string>
-    <string name="settings_letter_letter_lyrics">Letter-by-letter lyrics</string>
-    <string name="settings_letters_digits_dots_dashes_underscores">Letters, digits, dots, dashes and underscores. Up to 32.</string>
-    <string name="settings_library_likes_stop_syncing_until">Your library and likes stop syncing until you sign in again. </string>
-    <string name="settings_links_become_https_domain_listen">Links become https://your-domain/listen?…</string>
-    <string name="settings_match_system_colours">Match system colours</string>
-    <string name="settings_measure_library_now">Measure the library now</string>
-    <string name="settings_measure_over_mobile_data">Measure over mobile data</string>
-    <string name="settings_measuring_streamed_song_reads_about">Measuring a streamed song reads about a minute of it. On Wi-Fi that is </string>
-    <string name="settings_new_music_from_artists_follow">New music from artists you follow</string>
-    <string name="settings_not_same_recording_rest_group">Not the same recording as the rest of this group</string>
-    <string name="settings_nothing_else_signed_other_devices">Nothing else is signed in. Other devices using this Agro account </string>
-    <string name="settings_nothing_has_been_written_what">Nothing has been written. This is what the migration would do.</string>
-    <string name="settings_nothing_send_no_music_files">Nothing to send — no music files stored on this device</string>
-    <string name="settings_offline_mode">Offline mode</string>
-    <string name="settings_only_play_what_already_device">Only play what is already on this device. </string>
+    <string name="settings_incognito_so_none_being_shared">Incognito is on, so none of this is being shared. Your choices are kept for when you turn it off.</string>
+    <string name="settings_invite_code_optional">Code d\'invitation (optionnel)</string>
+    <string name="settings_kept_apart">Gardé à part</string>
+    <string name="settings_let_people_find_me">Laisser les personnes me trouver</string>
+    <string name="settings_let_these_merge_again">Autoriser à nouveau la fusion</string>
+    <string name="settings_lets_wanda_recognise_songs_build">Lets Wanda recognise your songs and build radios from how they sound. Otherwise this happens on Wi-Fi while charging.</string>
+    <string name="settings_letter_letter_lyrics">Paroles lettre par lettre</string>
+    <string name="settings_letters_digits_dots_dashes_underscores">Lettres, chiffres, points, tirets et \"tiret du bas\". Jusqu\'à 32.</string>
+    <string name="settings_library_likes_stop_syncing_until">Your library and likes stop syncing until you sign in again. Search keeps working signed out.</string>
+    <string name="settings_links_become_https_domain_listen">Les liens deviennent https://votre-domaine/listen?...</string>
+    <string name="settings_match_system_colours">Adapter aux couleurs du système</string>
+    <string name="settings_measure_library_now">Mesurer la bibliothèque maintenant</string>
+    <string name="settings_measure_over_mobile_data">Mesurer avec les données mobiles</string>
+    <string name="settings_measuring_streamed_song_reads_about">Measuring a streamed song reads about a minute of it. On Wi-Fi that is free, which is why this is off by default.</string>
+    <string name="settings_new_music_from_artists_follow">Nouvelle chanson d\'artistes que vous suivez</string>
+    <string name="settings_not_same_recording_rest_group">Enregistrement différent du reste du groupe</string>
+    <string name="settings_nothing_else_signed_other_devices">Nothing else is signed in. Other devices using this Agro account show up here — this one never does.</string>
+    <string name="settings_nothing_has_been_written_what">Rien n\'a été affecté. Voici ce que la migration ferait.</string>
+    <string name="settings_nothing_send_no_music_files">Rien à envoyer — aucun fichier audio sur cet appareil</string>
+    <string name="settings_offline_mode">Mode hors ligne</string>
+    <string name="settings_only_play_what_already_device">Only play what is already on this device. Wanda offers to turn this on and off as your connection changes.</string>
     <string name="settings_open">Open</string>
     <string name="settings_otherwise_happens_wi_fi_while">Otherwise this happens on Wi-Fi while charging</string>
     <string name="settings_p2p_device_sync">P2P Device Sync</string>
@@ -333,12 +311,12 @@
     <string name="settings_route_metadata_lyric_requests_through">Route metadata and lyric requests through your Agro server to mask your IP from external services like LRCLIB and Archive.org.</string>
     <string name="settings_save">Save</string>
     <string name="settings_scan_pairing_qr_code">Scan Pairing QR Code</string>
-    <string name="settings_see_which_songs_wanda_can">See which songs Wanda can recognise and hum-search, and which are still </string>
-    <string name="settings_sends_acoustic_fingerprints_lyrics_tracks">Sends the acoustic fingerprints and lyrics of your tracks and takes </string>
+    <string name="settings_see_which_songs_wanda_can">See which songs Wanda can recognise and hum-search, and which are still waiting.</string>
+    <string name="settings_sends_acoustic_fingerprints_lyrics_tracks">Sends the acoustic fingerprints and lyrics of your tracks and takes everyone else\'s, so badly tagged music inherits good tags and lyrics. Other people on this server can see which recordings and lyrics you hold, not your listening. Recognition works either way.</string>
     <string name="settings_server">Server</string>
-    <string name="settings_server_address_username_password_erased">The server address, username and password are erased from this device, </string>
-    <string name="settings_server_holds_new_accounts_until">This server holds new accounts until its admin lets them in, so you cannot </string>
-    <string name="settings_settings_customization_sign_ins_one">Settings, customization and sign-ins, in one encrypted file you keep. </string>
+    <string name="settings_server_address_username_password_erased">The server address, username and password are erased from this device, and your library stops syncing. Anything already downloaded stays playable.</string>
+    <string name="settings_server_holds_new_accounts_until">This server holds new accounts until its admin lets them in, so you cannot sign in yet. Come back and pair once you have been approved.</string>
+    <string name="settings_settings_customization_sign_ins_one">Settings, customization and sign-ins, in one encrypted file you keep. Protected by a passphrase you choose.</string>
     <string name="settings_share_example_com">share.example.com</string>
     <string name="settings_share_links">Share links</string>
     <string name="settings_share_my_listening_stats">Share my listening stats</string>
@@ -349,10 +327,10 @@
     <string name="settings_sign_out_youtube_music">Sign out of YouTube Music?</string>
     <string name="settings_signs_out_every_source_erases">Signs out of every source and erases stored secrets</string>
     <string name="settings_some_servers_let_anyone_hold">Some servers let anyone in and hold new accounts for approval. Others need a code.</string>
-    <string name="settings_song_recognisable_once_has_neural">A song is recognisable once it has a neural fingerprint (see Recognition </string>
-    <string name="settings_stop_recording_plays_stop_telling">Stop recording plays, and stop telling anyone what you are listening </string>
+    <string name="settings_song_recognisable_once_has_neural">A song is recognisable once it has a neural fingerprint (see Recognition model above). Green below is done, blue is being measured now, red is neither.</string>
+    <string name="settings_stop_recording_plays_stop_telling">Stop recording plays, and stop telling anyone what you are listening to. Everything below is off while this is on.</string>
     <string name="settings_subtly_tint_app_colours_from">Subtly tint the app with colours from the album cover</string>
-    <string name="settings_sweep_active_word_one_letter">Sweep the active word in one letter at a time, karaoke-style. </string>
+    <string name="settings_sweep_active_word_one_letter">Sweep the active word in one letter at a time, karaoke-style. Off highlights the whole line as it\'s sung.</string>
     <string name="settings_sync_now">Sync now</string>
     <string name="settings_sync_settings_agro">Sync settings with Agro</string>
     <string name="settings_true_black">True black</string>
@@ -361,66 +339,65 @@
     <string name="settings_unpair">Unpair</string>
     <string name="settings_unpair_from_agro">Unpair from Agro?</string>
     <string name="settings_use_default">Use default</string>
-    <string name="settings_use_wallpaper_palette_android_12">Use the wallpaper palette (Android 12+)</string>
-    <string name="settings_username_appears_when_someone_searches">Your username appears when someone searches for it. Off means only </string>
+    <string name="settings_use_wallpaper_palette_android_12">Utiliser la palette du fond d\'écran (Android 12+)</string>
+    <string name="settings_username_appears_when_someone_searches">Your username appears when someone searches for it. Off means only people you have already added can see you at all.</string>
     <string name="settings_version">Version</string>
-    <string name="settings_wanda_agro_built_here_source">Wanda and Agro are built here. Source, issues and releases on GitHub.</string>
-    <string name="settings_what_has_been_measured">What has been measured</string>
-    <string name="settings_what_trade_has_done">What the trade has done</string>
-    <string name="settings_will_sign_out_every_music">This will sign out of every music source and erase all stored passwords, </string>
-    <string name="settings_write_passphrase_down_server_stores">Write this passphrase down. The server stores only a hash of it and can never </string>
-
+    <string name="settings_wanda_agro_built_here_source">Wanda et Agro sont créés une seule fois. Source, issues et versions sur GitHub.</string>
+    <string name="settings_what_has_been_measured">Ce qui a été mesuré</string>
+    <string name="settings_what_trade_has_done">Ce que l\'échange a fait</string>
+    <string name="settings_will_sign_out_every_music">This will sign out of every music source and erase all stored passwords, API keys and login tokens from this device. Downloaded tracks remain on disk.</string>
+    <string name="settings_write_passphrase_down_server_stores">Write this passphrase down. The server stores only a hash of it and can never show it again — there is no reset.</string>
     <!-- Friends and activity -->
-    <string name="social_add_friend">Add friend</string>
-    <string name="social_anyone_adds">Anyone adds</string>
-    <string name="social_approved">You approved this</string>
-    <string name="social_artists_both_play">Artists you both play</string>
-    <string name="social_auto_blends_room_s_music">Auto-blends the room\'s music tastes when the queue runs out.</string>
-    <string name="social_being_findable_needs_bluetooth_peripheral">Being findable needs Bluetooth peripheral mode, and some phones simply do not </string>
+    <string name="social_add_friend">Ajouter un ami</string>
+    <string name="social_anyone_adds">Ajout libre</string>
+    <string name="social_approved">Vous avez approuvé ceci</string>
+    <string name="social_artists_both_play">Artistes en commun</string>
+    <string name="social_auto_blends_room_s_music">Mix musical de vos goûts quand la file est vide.</string>
+    <string name="social_being_findable_needs_bluetooth_peripheral">Being findable needs Bluetooth peripheral mode, and some phones simply do not have it. You can still listen along over Wi-Fi or through your server.</string>
     <string name="social_bio">Bio</string>
-    <string name="social_block">Block</string>
-    <string name="social_cancel_request">Cancel request</string>
-    <string name="social_circle">Circle</string>
-    <string name="social_circle_anthem">CIRCLE ANTHEM</string>
-    <string name="social_circle_recap">Circle recap</string>
-    <string name="social_circle_s_rhythm_recap">Your circle\'s rhythm and recap</string>
-    <string name="social_connect">Connect</string>
-    <string name="social_copy_join_code">Copy the join code</string>
-    <string name="social_decline">Decline</string>
-    <string name="social_disconnect">Disconnect</string>
-    <string name="social_display_name">Display name</string>
-    <string name="social_encrypted_nothing_leaves_two_phones">Encrypted, and nothing leaves the two phones</string>
-    <string name="social_findable">Be findable</string>
-    <string name="social_friends_appear_here_once_they">Friends appear here once they turn on activity or statistics sharing.</string>
-    <string name="social_friends_jamming">Your friends are jamming</string>
-    <string name="social_friends_need_agro_server">Friends need an Agro server.</string>
-    <string name="social_have_them_point_their_camera">Have them point their camera at this. It changes every few minutes, and </string>
-    <string name="social_hours">hours</string>
-    <string name="social_how_appear">How you appear</string>
-    <string name="social_jam_radio">Jam Radio</string>
-    <string name="social_join">Join</string>
-    <string name="social_lately_circle">Lately in your Circle</string>
-    <string name="social_linked">Linked</string>
-    <string name="social_listen_along">Listen along</string>
-    <string name="social_looking_phones_nearby">Looking for phones nearby…</string>
-    <string name="social_my_listening">My listening</string>
-    <string name="social_new_code">New code</string>
-    <string name="social_new_from">Nouveauté de %1$s</string>
-    <string name="social_no_conversations_yet">No conversations yet</string>
-    <string name="social_nobody_name_listed_people_only">Nobody by that name is listed. People only appear here if they have </string>
-    <string name="social_nobody_yet_tap_add_button">Nobody yet. Tap the add button to find people by username — you </string>
-    <string name="social_not_enough_listening_between_yet">Not enough listening between you yet.</string>
-    <string name="social_notes_conversation_end_end_encrypted">Notes in this conversation are end-to-end encrypted.</string>
-    <string name="social_notes_from_here_sealed_device">Notes from here on are sealed on your device. The server stores </string>
-    <string name="social_nothing_circle_yet">Nothing in the circle yet</string>
+    <string name="social_block">Bloquer</string>
+    <string name="social_cancel_request">Annuler la requête</string>
+    <string name="social_circle">Cercle</string>
+    <string name="social_circle_anthem">HYMNE DU CERCLE</string>
+    <string name="social_circle_recap">Récap du cercle</string>
+    <string name="social_circle_s_rhythm_recap">Le rythme et le récap de votre cercle</string>
+    <string name="social_connect">Connecter</string>
+    <string name="social_copy_join_code">Copier le code pour rejoindre</string>
+    <string name="social_decline">Décliner</string>
+    <string name="social_disconnect">Déconnexion</string>
+    <string name="social_display_name">Nom d\'affichage</string>
+    <string name="social_encrypted_nothing_leaves_two_phones">Chiffré, rien ne quitte vos téléphones</string>
+    <string name="social_findable">Être découvrable</string>
+    <string name="social_friends_appear_here_once_they">Vos amis apparaissent ici une fois qu\'ils partagent leur activité.</string>
+    <string name="social_friends_jamming">Vos amis jamment</string>
+    <string name="social_friends_need_agro_server">Un serveur Agro est nécessaire.</string>
+    <string name="social_have_them_point_their_camera">Have them point their camera at this. It changes every few minutes, and stops working as soon as you close this.</string>
+    <string name="social_hours">heures</string>
+    <string name="social_how_appear">Comment vous apparaissez</string>
+    <string name="social_jam_radio">Radio de Jam</string>
+    <string name="social_join">Rejoindre</string>
+    <string name="social_lately_circle">Récémment dans votre cercle</string>
+    <string name="social_linked">Lié</string>
+    <string name="social_listen_along">Écouter avec</string>
+    <string name="social_looking_phones_nearby">Recherche de téléphones à proximité...</string>
+    <string name="social_my_listening">Mon écoute</string>
+    <string name="social_new_code">Nouveau code</string>
+    <string name="social_new_from">New from %1$s</string>
+    <string name="social_no_conversations_yet">Aucune conversation actuellement</string>
+    <string name="social_nobody_name_listed_people_only">Nobody by that name is listed. People only appear here if they have made themselves discoverable.</string>
+    <string name="social_nobody_yet_tap_add_button">Nobody yet. Tap the add button to find people by username — you will only turn up in their search if you have made yourself discoverable in Settings → Privacy.</string>
+    <string name="social_not_enough_listening_between_yet">Pas assez d\'historique d\'écoute entre vous pour l\'instant.</string>
+    <string name="social_notes_conversation_end_end_encrypted">Les notes dans cette conversation sont chiffrées de bout-en-bout.</string>
+    <string name="social_notes_from_here_sealed_device">Notes from here on are sealed on your device. The server stores them without being able to read them.</string>
+    <string name="social_nothing_circle_yet">Rien dans votre cercle pour l\'instant</string>
     <string name="social_nothing_playing_right_now">Nothing playing right now.</string>
     <string name="social_nothing_playing_yet">Nothing playing yet</string>
     <string name="social_nothing_queued_play_anything_goes">Nothing queued. Play anything and it goes to the room.</string>
-    <string name="social_one_queue_everyone_room_plays">One queue, everyone in it. The room plays the same track at the same time, </string>
+    <string name="social_one_queue_everyone_room_plays">One queue, everyone in it. The room plays the same track at the same time, and while you are in a jam anything you play goes to the room instead.</string>
     <string name="social_open_friends">Open to friends</string>
     <string name="social_open_settings">Open Settings</string>
-    <string name="social_pair_agro_server_settings_have">Pair an Agro server in Settings to have a name, a bio and friends. </string>
-    <string name="social_pair_one_create_account_one">Pair with one — or create an account on one — and you can see what the people </string>
+    <string name="social_pair_agro_server_settings_have">Pair an Agro server in Settings to have a name, a bio and friends. Your listening statistics work without one.</string>
+    <string name="social_pair_one_create_account_one">Pair with one — or create an account on one — and you can see what the people you know are listening to, and listen along with them.</string>
     <string name="social_phone_cannot_found_off_grid">This phone cannot be found off-grid.</string>
     <string name="social_plays">plays</string>
     <string name="social_press_hold_any_track_send">Press and hold any track to send it to a friend with a note.</string>
@@ -428,7 +405,7 @@
     <string name="social_remove_friend">Remove friend</string>
     <string name="social_remove_me">Remove for me</string>
     <string name="social_share_jam_link">Share jam link</string>
-    <string name="social_share_music_someone_beside_over">Share music with someone beside you, over Bluetooth and Wi-Fi Direct. </string>
+    <string name="social_share_music_someone_beside_over">Share music with someone beside you, over Bluetooth and Wi-Fi Direct. No router, no mobile data, no server. You are only findable while this screen is open.</string>
     <string name="social_share_off_grid">Share off-grid</string>
     <string name="social_start_jam">Start a jam</string>
     <string name="social_starts_need_most_name_not">Starts with — you need most of the name, not a fragment.</string>
@@ -443,7 +420,6 @@
     <string name="social_ve_drifted_from_room">You\'ve drifted from the room.</string>
     <string name="social_vote_add">Vote to add</string>
     <string name="social_vote_skip">Vote to skip</string>
-
     <!-- Listening stats -->
     <string name="stats_earlier">Earlier</string>
     <string name="stats_hour">By hour</string>
@@ -456,20 +432,18 @@
     <string name="stats_songs_played">Songs played</string>
     <string name="stats_top_song">Top song</string>
     <string name="stats_vs_previous_period">vs previous period</string>
-
     <!-- Welcome / onboarding -->
     <string name="welcome_can_skip_download_later_from">You can skip this and download it later from Settings › Fingerprints.</string>
     <string name="welcome_download_model">Download model</string>
     <string name="welcome_gestures">Gestures</string>
-    <string name="welcome_hold_phone_speaker_wanda_names">Hold your phone to a speaker and Wanda names what\'s playing — matched against </string>
-    <string name="welcome_one_library_one_queue_one">One library, one queue, one player — across your own server, this device and </string>
+    <string name="welcome_hold_phone_speaker_wanda_names">Hold your phone to a speaker and Wanda names what\'s playing — matched against your own library, on the device, with nothing sent anywhere.</string>
+    <string name="welcome_one_library_one_queue_one">One library, one queue, one player — across your own server, this device and YouTube Music. No accounts, no telemetry.</string>
     <string name="welcome_own_subsonic_compatible_server_full">Your own Subsonic-compatible server, at full quality.</string>
-    <string name="welcome_player_mostly_gestures_fewer_buttons">The player is mostly gestures — fewer buttons in the way of the artwork. </string>
+    <string name="welcome_player_mostly_gestures_fewer_buttons">The player is mostly gestures — fewer buttons in the way of the artwork. These are all of them.</string>
     <string name="welcome_plays_offline_costs_nothing_needs">Plays offline, costs nothing, needs no account.</string>
     <string name="welcome_signs_through_own_session_cookie">Signs in through your own session; the cookie never leaves the device.</string>
     <string name="welcome_song_recognition">Song recognition</string>
     <string name="welcome_welcome_wanda">Welcome to Wanda</string>
-
     <!-- Strings that take values at runtime -->
     <string name="album_more_from">More from %1$s</string>
     <string name="artist_nothing_by">Nothing by %1$s</string>
@@ -513,11 +487,9 @@
     <string name="social_s_jam">%1$s\'s jam</string>
     <string name="social_shown_instead_username_leave_it">Shown instead of your username. Leave it empty to just be @%1$s.</string>
     <string name="social_voted_skip">You voted to skip · %1$s/%2$s</string>
-
     <!-- Welcome / onboarding -->
     <string name="welcome_skip_setup">Skip setup</string>
     <string name="welcome_start_listening">Start listening</string>
-
     <!-- Settings categories and welcome gestures -->
     <string name="welcome_gesture_swipe_up_queue">Swipe up for the queue</string>
     <string name="welcome_gesture_hold_cover_speed_pitch">Hold the cover for speed &amp; pitch</string>
@@ -543,7 +515,6 @@
     <string name="settings_category_sub_import_playlists_share_what_are">Import playlists and share what you are playing</string>
     <string name="settings_category_sub_incognito_visibility_what_leaves_this">Incognito, visibility and what leaves this device</string>
     <string name="settings_category_sub_version_updates_duplicates_links">Version, updates, duplicates and links</string>
-
     <!-- Notifications and smart mixes -->
     <string name="notif_measuring_library">Measuring your library</string>
     <string name="notif_downloading_music">Downloading your music</string>
@@ -555,7 +526,6 @@
     <string name="mix_sub_built_from_what_play_most">Built from what you play most</string>
     <string name="mix_sub_loved_once_not_heard_lately">Loved once, not heard lately</string>
     <string name="mix_sub_library_still_unheard">In your library, still unheard</string>
-
     <!-- Fingerprint sections -->
     <string name="fp_section_external">External</string>
     <string name="fp_section_navidrome">Navidrome</string>
@@ -563,7 +533,6 @@
     <string name="fp_section_external_sub">YouTube Music. Measuring one fetches about a minute of audio from a third party, so these are the slowest to fill in and the likeliest to fail outright.</string>
     <string name="fp_section_navidrome_sub">Your own server. Measuring one downloads about a minute of it, so these fill in over Wi-Fi.</string>
     <string name="fp_section_on_device_sub">Local files. These cost nothing but time; one that stays red has a format this phone cannot decode.</string>
-
     <!-- Transport badge, spoken descriptions -->
     <string name="transport_spoken_device">Playing from this device. Nothing leaves the phone.</string>
     <string name="transport_spoken_navidrome">Streamed from your own Navidrome server.</string>
