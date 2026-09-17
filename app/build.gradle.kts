@@ -90,6 +90,19 @@ android {
         // phone's own "App languages" screen lists exactly what this build ships — and keeps
         // listing the right thing without anyone remembering to edit an XML file.
         generateLocaleConfig = true
+
+        // Without `localeFilters`, AGP and `assets.locales` include all 80+ locales from AndroidX
+        // and other dependencies that Wanda does not translate.
+        // Dynamically restrict packaging to only locales Crowdin delivers (plus base English).
+        val resDir = file("src/main/res")
+        val translatedLocales = resDir.listFiles { f ->
+            f.isDirectory && f.name.startsWith("values-") && f.resolve("strings.xml").exists()
+        }?.flatMap { dir ->
+            val qualifier = dir.name.removePrefix("values-")
+            val baseLang = qualifier.substringBefore('-').substringBefore('+')
+            listOf(qualifier.replace("-r", "-"), baseLang)
+        } ?: emptyList()
+        localeFilters += (setOf("en") + translatedLocales)
     }
 
     lint {

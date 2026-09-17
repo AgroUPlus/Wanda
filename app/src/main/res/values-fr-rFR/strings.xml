@@ -2,14 +2,11 @@
 <resources>
     <string name="app_name">Wanda</string>
     <!-- Navigation -->
-    <string name="nav_home">Accueil</string>
     <string name="nav_library">Bibliothèque</string>
-    <string name="nav_search">Recherche</string>
     <string name="nav_settings">Paramètres</string>
     <string name="nav_friends">Friends</string>
     <!-- Player & Transport Controls -->
     <string name="action_play">Jouer</string>
-    <string name="action_pause">Pause</string>
     <string name="action_previous">Musique précédente</string>
     <string name="action_next">Musique suivante</string>
     <string name="action_shuffle">Mélanger</string>
@@ -20,7 +17,6 @@
     <string name="action_share">Partager</string>
     <string name="action_share_track">Partager un lien vers ce son</string>
     <string name="action_queue">Queue</string>
-    <string name="action_view_queue">Voir la file</string>
     <string name="action_clear_queue">Vider la file</string>
     <string name="action_play_next">Jouer après</string>
     <string name="action_add_to_queue">Ajouter à la fin de la file</string>
@@ -35,7 +31,6 @@
     <string name="action_go_to_album">Aller à l\'album</string>
     <string name="action_jam">Jam</string>
     <string name="action_add_to_jam">Ajouter à la jam</string>
-    <string name="action_suggest_to_jam">Suggérer à la jam</string>
     <string name="action_close">Fermer</string>
     <string name="action_reset">Réinitialiser</string>
     <string name="action_done">Terminer</string>
@@ -48,10 +43,6 @@
     <string name="speed_pitch_subtitle">Paramétrer le tempo et la clef</string>
     <!-- Lyrics -->
     <string name="lyrics_synced_word">Synchronisé - mot par mot</string>
-    <string name="lyrics_show_artwork">Afficher la pochette</string>
-    <string name="lyrics_show_word_synced">Afficher les paroles synchronisées</string>
-    <string name="lyrics_show_synced">Afficher les paroles synchronisées</string>
-    <string name="lyrics_show_plain">Afficher les paroles brutes</string>
     <string name="lyrics_loading">Recherche de paroles...</string>
     <string name="lyrics_absent">Pas de paroles trouvées pour cette musique.</string>
     <string name="lyrics_instrumental">Cet enregistrement est instrumental.</string>
@@ -66,9 +57,6 @@
     <string name="swipe_action_play_next">Jouer après</string>
     <string name="swipe_action_unlike">Retirer des favoris</string>
     <string name="swipe_action_like">Ajouter aux favoris</string>
-    <!-- Quality upgrade advisor — not yet wired into a screen; see QualityUpgradeOffer -->
-    <string name="quality_upgrade_format_only">Lossless %1$s disponible sur %2$s</string>
-    <string name="quality_upgrade_format_24bit">Lossless %1$s 24-bit disponible sur %2$s</string>
     <!-- Storage butler (Settings) -->
     <string name="storage_source_line">%1$s · %2$d pistes · %3$s</string>
     <string name="storage_clean_stale_title">Supprimer les téléchargements en attente</string>
