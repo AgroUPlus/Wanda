@@ -1,5 +1,6 @@
 package com.wander.android.data.model
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
@@ -53,8 +54,8 @@ fun LyricsState.syncType(): LyricsSyncType = when (this) {
 @Serializable
 data class SmartMix(
     val id: String,
-    val title: String,
-    val subtitle: String,
+    @StringRes val title: Int,
+    @StringRes val subtitle: Int,
     val iconName: String,
     val gradientColors: List<Long>,
     val seedType: String,

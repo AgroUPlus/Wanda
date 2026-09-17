@@ -1,5 +1,7 @@
 package com.wander.android.data.repository
 
+import androidx.annotation.StringRes
+import com.wander.android.R
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.SmartMix
@@ -25,8 +27,8 @@ class SmartMixRepository @Inject constructor(
             mix(
                 id = "personal_radio",
                 // Named to match the player's Radio chip, so one feature has one name.
-                title = "Your Radio",
-                subtitle = "Built from what you play most",
+                title = R.string.mix_radio,
+                subtitle = R.string.mix_sub_built_from_what_play_most,
                 iconName = "radio",
                 gradient = listOf(0xFF6366F1, 0xFFEC4899),
                 // Per recording: a song split across two backends was under-counted and could
@@ -35,8 +37,8 @@ class SmartMixRepository @Inject constructor(
             ),
             mix(
                 id = "forgotten_favorites",
-                title = "Forgotten Favourites",
-                subtitle = "Loved once, not heard lately",
+                title = R.string.mix_forgotten_favourites,
+                subtitle = R.string.mix_sub_loved_once_not_heard_lately,
                 iconName = "history",
                 gradient = listOf(0xFFF59E0B, 0xFFEF4444),
                 // Totalled before the threshold is applied: a recording played five times across
@@ -49,8 +51,8 @@ class SmartMixRepository @Inject constructor(
             ),
             mix(
                 id = "fresh_discoveries",
-                title = "Never Played",
-                subtitle = "In your library, still unheard",
+                title = R.string.mix_never_played,
+                subtitle = R.string.mix_sub_library_still_unheard,
                 iconName = "auto_awesome",
                 gradient = listOf(0xFF10B981, 0xFF3B82F6),
                 tracks = trackDao.getNeverPlayedTracks(30).toTracks()
@@ -60,8 +62,8 @@ class SmartMixRepository @Inject constructor(
 
     private fun mix(
         id: String,
-        title: String,
-        subtitle: String,
+        @StringRes title: Int,
+        @StringRes subtitle: Int,
         iconName: String,
         gradient: List<Long>,
         tracks: List<com.wander.android.data.model.UnifiedTrack>
