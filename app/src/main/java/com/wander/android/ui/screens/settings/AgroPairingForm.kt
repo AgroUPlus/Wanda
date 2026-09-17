@@ -19,10 +19,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.sources.agro.AgroAuthError
 import com.wander.android.data.sources.agro.explain
 
@@ -77,7 +79,7 @@ internal fun AgroPairingForm(
                 contentDescription = null,
                 modifier = Modifier.padding(end = 8.dp)
             )
-            Text("Scan Pairing QR Code")
+            Text(stringResource(R.string.settings_scan_pairing_qr_code))
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -86,9 +88,9 @@ internal fun AgroPairingForm(
     OutlinedTextField(
         value = server,
         onValueChange = onServerChange,
-        label = { Text("Server") },
+        label = { Text(stringResource(R.string.settings_server)) },
         placeholder = { Text(defaultServer.substringAfter("://")) },
-        supportingText = { Text("https:// is assumed. Use http:// for a plain LAN host.") },
+        supportingText = { Text(stringResource(R.string.settings_https_assumed_use_http_plain)) },
         singleLine = true,
         enabled = enabled,
         keyboardOptions = KeyboardOptions(
@@ -100,9 +102,9 @@ internal fun AgroPairingForm(
     OutlinedTextField(
         value = username,
         onValueChange = onUsernameChange,
-        label = { Text("Username") },
+        label = { Text(stringResource(R.string.common_username)) },
         supportingText = if (mode == AgroPairingMode.CREATE) {
-            { Text("Letters, digits, dots, dashes and underscores. Up to 32.") }
+            { Text(stringResource(R.string.settings_letters_digits_dots_dashes_underscores)) }
         } else {
             null
         },
@@ -116,9 +118,9 @@ internal fun AgroPairingForm(
         OutlinedTextField(
             value = inviteCode,
             onValueChange = onInviteCodeChange,
-            label = { Text("Invite code (optional)") },
+            label = { Text(stringResource(R.string.settings_invite_code_optional)) },
             supportingText = {
-                Text("Some servers let anyone in and hold new accounts for approval. Others need a code.")
+                Text(stringResource(R.string.settings_some_servers_let_anyone_hold))
             },
             singleLine = true,
             enabled = enabled,
@@ -129,9 +131,9 @@ internal fun AgroPairingForm(
         OutlinedTextField(
             value = passphrase,
             onValueChange = onPassphraseChange,
-            label = { Text("Passphrase or Device Token") },
+            label = { Text(stringResource(R.string.settings_passphrase_device_token)) },
             supportingText = {
-                Text("Account passphrase, or a Device Token / App Password from Agro Dashboard.")
+                Text(stringResource(R.string.settings_account_passphrase_device_token_app))
             },
             singleLine = true,
             enabled = enabled,

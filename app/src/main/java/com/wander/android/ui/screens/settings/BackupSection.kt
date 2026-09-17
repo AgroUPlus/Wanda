@@ -14,9 +14,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.ui.components.rememberShelfEntranceScale
 
 /**
@@ -60,8 +62,8 @@ internal fun BackupSection(viewModel: BackupViewModel = hiltViewModel()) {
 
     Column {
         SettingsRow(
-            title = "Export everything",
-            subtitle = "Settings, customization and sign-ins, in one encrypted file you keep. " +
+            title = stringResource(R.string.settings_export_everything),
+            subtitle = stringResource(R.string.settings_settings_customization_sign_ins_one) +
                 "Protected by a passphrase you choose.",
             onClick = {
                 viewModel.clearStatus()
@@ -72,8 +74,8 @@ internal fun BackupSection(viewModel: BackupViewModel = hiltViewModel()) {
         )
 
         SettingsRow(
-            title = "Import from a backup",
-            subtitle = "Replaces the settings on this device with the ones in the file.",
+            title = stringResource(R.string.settings_import_from_backup),
+            subtitle = stringResource(R.string.settings_replaces_settings_device_ones_file),
             onClick = {
                 viewModel.clearStatus()
                 // Any type, not just JSON: a file that has been through a cloud drive or a chat app

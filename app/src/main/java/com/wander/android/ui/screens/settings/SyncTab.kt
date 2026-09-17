@@ -3,6 +3,8 @@ package com.wander.android.ui.screens.settings
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.stringResource
+import com.wander.android.R
 import com.wander.android.ui.components.rememberShelfEntranceScale
 
 /**
@@ -23,7 +25,7 @@ internal fun LazyListScope.syncTab(
     item(key = "agro") {
         SettingsRow(
             modifier = Modifier.scale(rememberShelfEntranceScale(agroIndex)),
-            title = "Agro Device",
+            title = stringResource(R.string.settings_agro_device),
             subtitle = state.agroConnection.describe(
                 state.agroDevicePetname,
                 state.agroServer,
@@ -46,8 +48,8 @@ internal fun LazyListScope.syncTab(
     val agroSyncIndex = i++
     item(key = "agro_sync") {
         SettingsToggle(
-            title = "Sync settings with Agro",
-            subtitle = "Share the Navidrome address between devices.",
+            title = stringResource(R.string.settings_sync_settings_agro),
+            subtitle = stringResource(R.string.settings_share_navidrome_address_between_devices),
             checked = state.agroSyncSettings && !state.incognito,
             onCheckedChange = actions.onSyncSettingsChange,
             enabled = !state.incognito,
@@ -58,12 +60,12 @@ internal fun LazyListScope.syncTab(
     val agroPopularityIndex = i++
     item(key = "agro_popularity") {
         SettingsToggle(
-            title = "Contribute to \u201cPopular on Agro\u201d",
+            title = stringResource(R.string.settings_contribute_u201cpopular_agro_u201d),
             // Says what leaves the device and who ends up able to see it. "Anonymous" alone would
             // be the sort of reassurance that is technically true and still misleading: the server
             // already knows this account's plays from scrobbling, and what changes here is that
             // other accounts on it can see the total.
-            subtitle = "Adds play counts to the server's shared totals, with no account or times attached. " +
+            subtitle = stringResource(R.string.settings_adds_play_counts_server_s) +
                 "Other people on this server see the totals, not you. The shelf works either way.",
             checked = state.popularityContribution && !state.incognito,
             onCheckedChange = actions.onPopularityChange,
@@ -75,12 +77,12 @@ internal fun LazyListScope.syncTab(
     val agroCatalogTradeIndex = i++
     item(key = "agro_catalog_trade") {
         SettingsToggle(
-            title = "Improve with Agro",
+            title = stringResource(R.string.settings_improve_agro),
             // Names both directions and who ends up able to see it. The catalogue has no account
             // column, so publishing is a disclosure to everyone on the server, not just to it.
             // Also covers lyrics: publishRecording/catalogSince carry lyrics text alongside the
             // fingerprint under this same flag, so the label has to say so.
-            subtitle = "Sends the acoustic fingerprints and lyrics of your tracks and takes " +
+            subtitle = stringResource(R.string.settings_sends_acoustic_fingerprints_lyrics_tracks) +
                 "everyone else's, so badly tagged music inherits good tags and lyrics. Other " +
                 "people on this server can see which recordings and lyrics you hold, not your " +
                 "listening. Recognition works either way.",
@@ -97,7 +99,7 @@ internal fun LazyListScope.syncTab(
             // does, and this says what it has done. Only shown while it is on, because a pair of
             // zeroes under an off switch explains nothing.
             SettingsRow(
-                title = "What the trade has done",
+                title = stringResource(R.string.settings_what_trade_has_done),
                 subtitle = tradeTotals(state.fingerprintsShared, state.lyricsReceived),
                 modifier = Modifier.scale(rememberShelfEntranceScale(tradeTotalsIndex))
             )

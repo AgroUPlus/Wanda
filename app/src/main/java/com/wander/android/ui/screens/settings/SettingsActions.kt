@@ -40,6 +40,8 @@ internal data class SettingsActions(
     val onCoverArtThemeChange: (Boolean) -> Unit,
     val onReduceMotionChange: (Boolean) -> Unit,
     val onLetterByLetterLyricsChange: (Boolean) -> Unit,
+    /** Takes a BCP-47 tag, or an empty string to follow the system. */
+    val onLanguageChange: (String) -> Unit,
     // Playback and storage
     val onOfflineChange: (Boolean) -> Unit,
     val onPreloadNextChange: (Boolean) -> Unit,

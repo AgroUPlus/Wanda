@@ -18,8 +18,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.sources.agro.AgroHandoffState
 import com.wander.android.data.sources.agro.AgroNode
 import com.wander.android.ui.components.ListeningGreen
@@ -52,7 +54,7 @@ internal fun LazyListScope.agroDevicesSection(
     if (state.devices.isEmpty()) {
         item(key = "agro_devices_empty") {
             Text(
-                text = "Nothing else is signed in. Other devices using this Agro account " +
+                text = stringResource(R.string.settings_nothing_else_signed_other_devices) +
                     "show up here — this one never does.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

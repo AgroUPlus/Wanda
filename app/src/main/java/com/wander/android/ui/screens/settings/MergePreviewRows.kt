@@ -16,8 +16,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.KeptApartPair
 import com.wander.android.data.repository.MergeGroup
@@ -61,7 +63,7 @@ internal fun MergeGroupRow(group: MergeGroup, onKeepApart: (UnifiedTrack) -> Uni
                     IconButton(onClick = { onKeepApart(rendition) }) {
                         Icon(
                             imageVector = Icons.Rounded.CallSplit,
-                            contentDescription = "Not the same recording as the rest of this group",
+                            contentDescription = stringResource(R.string.settings_not_same_recording_rest_group),
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -78,7 +80,7 @@ internal fun MergeGroupRow(group: MergeGroup, onKeepApart: (UnifiedTrack) -> Uni
             }
             if (group.combinedPlays > 0) {
                 Text(
-                    text = "${group.combinedPlays} plays would combine",
+                    text = stringResource(R.string.settings_plays_would_combine, group.combinedPlays),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 6.dp)
@@ -119,7 +121,7 @@ internal fun KeptApartRow(pair: KeptApartPair, onRejoin: () -> Unit) {
             IconButton(onClick = onRejoin) {
                 Icon(
                     imageVector = Icons.Rounded.Undo,
-                    contentDescription = "Let these merge again",
+                    contentDescription = stringResource(R.string.settings_let_these_merge_again),
                     modifier = Modifier.size(18.dp)
                 )
             }

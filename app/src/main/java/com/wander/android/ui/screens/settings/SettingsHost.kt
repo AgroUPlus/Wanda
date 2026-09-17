@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.settings
 
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -67,6 +68,7 @@ internal fun rememberSettingsHost(
     }
 
     val uriHandler = LocalUriHandler.current
+    val activity = LocalActivity.current
     val pickLocalFolder = rememberLocalFolderPicker(viewModel::setLocalScanFolder)
     val dialogs = rememberSettingsDialogs()
     SettingsDialogs(state = state, dialogs = dialogs, viewModel = viewModel)
@@ -75,7 +77,7 @@ internal fun rememberSettingsHost(
     // ViewModel, the dialog flags or the launchers, none of which change while the screen is up.
     // Rebuilding them would hand each page a fresh set of callbacks on every state emission and
     // undo the point of the @Immutable holder.
-    val actions = remember(viewModel, dialogs, pickLocalFolder, uriHandler) {
+    val actions = remember(viewModel, dialogs, pickLocalFolder, uriHandler, activity) {
         SettingsActions(
             onNavidromeLogin = onNavidromeLogin,
             onNavidromeSignOut = { dialogs.confirmNavidromeSignOut = true },
@@ -105,6 +107,12 @@ internal fun rememberSettingsHost(
             onCoverArtThemeChange = viewModel::setCoverArtThemeEnabled,
             onReduceMotionChange = viewModel::setReduceMotion,
             onLetterByLetterLyricsChange = viewModel::setLetterByLetterLyricsEnabled,
+            onLanguageChange = { tag ->
+                viewModel.setLanguage(tag)
+                // Below API 33 nothing restarts the activity for us, so the strings already
+                // composed would stay in the old language until the screen next died.
+                if (viewModel.languageNeedsRecreate) activity?.recreate()
+            },
             onOfflineChange = viewModel::setOfflineMode,
             onPreloadNextChange = viewModel::setPreloadNextEnabled,
             onIndexOnMobileDataChange = viewModel::setIndexOnMobileDataEnabled,

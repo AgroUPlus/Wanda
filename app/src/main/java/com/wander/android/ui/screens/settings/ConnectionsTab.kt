@@ -3,6 +3,8 @@ package com.wander.android.ui.screens.settings
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.stringResource
+import com.wander.android.R
 import com.wander.android.ui.components.rememberShelfEntranceScale
 
 private val Hue = SettingsCategory.CONNECTIONS.hue
@@ -21,7 +23,7 @@ internal fun LazyListScope.connectionsTab(
     item(key = "navidrome") {
         SettingsRow(
             modifier = Modifier.scale(rememberShelfEntranceScale(navidromeIndex)),
-            title = "Navidrome",
+            title = stringResource(R.string.common_navidrome),
             // With settings sync on, an unconnected Navidrome still knows where it should point —
             // saying so is the difference between "sync did nothing" and "sync told this device
             // where to sign in".
@@ -40,7 +42,7 @@ internal fun LazyListScope.connectionsTab(
     item(key = "ytmusic") {
         SettingsRow(
             modifier = Modifier.scale(rememberShelfEntranceScale(ytMusicIndex)),
-            title = "YouTube Music",
+            title = stringResource(R.string.common_youtube_music),
             subtitle = if (state.youTube) {
                 // A Google account can hold several YouTube channels and only the session knows
                 // which one is active, so naming it is the only way to be sure the right one is
@@ -58,7 +60,7 @@ internal fun LazyListScope.connectionsTab(
     item(key = "local") {
         SettingsRow(
             modifier = Modifier.scale(rememberShelfEntranceScale(localIndex)),
-            title = "Music on this device",
+            title = stringResource(R.string.common_music_device),
             subtitle = when {
                 !state.localReady -> "Waiting for permission to read audio files"
                 state.localScanFolder != null -> "${state.localScanFolder} — tap to rescan, hold to change folder"

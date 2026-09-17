@@ -3,6 +3,8 @@ package com.wander.android.ui.screens.settings
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.stringResource
+import com.wander.android.R
 import com.wander.android.ui.components.rememberShelfEntranceScale
 
 internal fun LazyListScope.appearanceTab(
@@ -16,11 +18,20 @@ internal fun LazyListScope.appearanceTab(
     // depend on the order Compose happens to invoke that lambda in.
     var i = 0
 
+    val languageIndex = i++
+    item(key = "language") {
+        LanguageSetting(
+            currentTag = state.languageTag,
+            onLanguageChange = actions.onLanguageChange,
+            modifier = Modifier.scale(rememberShelfEntranceScale(languageIndex))
+        )
+    }
+
     val monetIndex = i++
     item(key = "monet") {
         SettingsToggle(
-            title = "Match system colours",
-            subtitle = "Use the wallpaper palette (Android 12+)",
+            title = stringResource(R.string.settings_match_system_colours),
+            subtitle = stringResource(R.string.settings_use_wallpaper_palette_android_12),
             checked = state.monet,
             onCheckedChange = actions.onMonetChange,
             modifier = Modifier.scale(rememberShelfEntranceScale(monetIndex))
@@ -30,8 +41,8 @@ internal fun LazyListScope.appearanceTab(
     val coverArtThemeIndex = i++
     item(key = "cover_art_theme") {
         SettingsToggle(
-            title = "Dynamic cover art theme",
-            subtitle = "Subtly tint the app with colours from the album cover",
+            title = stringResource(R.string.settings_dynamic_cover_art_theme),
+            subtitle = stringResource(R.string.settings_subtly_tint_app_colours_from),
             checked = state.coverArtTheme,
             onCheckedChange = actions.onCoverArtThemeChange,
             modifier = Modifier.scale(rememberShelfEntranceScale(coverArtThemeIndex))
@@ -41,8 +52,8 @@ internal fun LazyListScope.appearanceTab(
     val amoledIndex = i++
     item(key = "amoled") {
         SettingsToggle(
-            title = "True black",
-            subtitle = "Unlit pixels on OLED screens use no power",
+            title = stringResource(R.string.settings_true_black),
+            subtitle = stringResource(R.string.settings_unlit_pixels_oled_screens_use),
             checked = state.amoled,
             onCheckedChange = actions.onAmoledChange,
             modifier = Modifier.scale(rememberShelfEntranceScale(amoledIndex))
@@ -52,8 +63,8 @@ internal fun LazyListScope.appearanceTab(
     val immersivePlayerIndex = i++
     item(key = "immersive_player") {
         SettingsToggle(
-            title = "Immersive player",
-            subtitle = "Cover art fills the screen edge-to-edge when playing",
+            title = stringResource(R.string.settings_immersive_player),
+            subtitle = stringResource(R.string.settings_cover_art_fills_screen_edge),
             checked = state.immersivePlayer,
             onCheckedChange = actions.onImmersivePlayerChange,
             modifier = Modifier.scale(rememberShelfEntranceScale(immersivePlayerIndex))
@@ -63,7 +74,7 @@ internal fun LazyListScope.appearanceTab(
     val reduceMotionIndex = i++
     item(key = "reduce_motion") {
         SettingsToggle(
-            title = "Reduce motion",
+            title = stringResource(R.string.settings_reduce_motion),
             subtitle = if (state.systemReduceMotion) {
                 "Already off — the phone's own Accessibility setting is on"
             } else {
@@ -79,8 +90,8 @@ internal fun LazyListScope.appearanceTab(
     val letterByLetterLyricsIndex = i++
     item(key = "letter_by_letter_lyrics") {
         SettingsToggle(
-            title = "Letter-by-letter lyrics",
-            subtitle = "Sweep the active word in one letter at a time, karaoke-style. " +
+            title = stringResource(R.string.settings_letter_letter_lyrics),
+            subtitle = stringResource(R.string.settings_sweep_active_word_one_letter) +
                 "Off highlights the whole line as it's sung.",
             checked = state.letterByLetterLyrics,
             onCheckedChange = actions.onLetterByLetterLyricsChange,

@@ -5,13 +5,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.LinearWavyProgressIndicator
-import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.repository.SyncProgress
 import com.wander.android.ui.components.rememberShelfEntranceScale
 import kotlin.math.max
@@ -41,7 +42,7 @@ internal fun LazyListScope.librarySyncSection(
     val p2pSyncIndex = i++
     item(key = "p2p_sync_toggle") {
         SettingsToggle(
-            title = "P2P Device Sync",
+            title = stringResource(R.string.settings_p2p_device_sync),
             subtitle = if (state.incognito) {
                 "Paused — incognito is on"
             } else {
@@ -57,7 +58,7 @@ internal fun LazyListScope.librarySyncSection(
     val serverArchiveIndex = i++
     item(key = "server_archive_toggle") {
         SettingsToggle(
-            title = "Archive to server",
+            title = stringResource(R.string.settings_archive_server),
             subtitle = when {
                 state.incognito -> "Paused — incognito is on"
                 !state.canArchive -> "Your account is not allowed to upload files to this server."
@@ -74,7 +75,7 @@ internal fun LazyListScope.librarySyncSection(
         val librarySyncDeleteIndex = i++
         item(key = "library_sync_delete") {
             SettingsRow(
-                title = "Free up space on this device",
+                title = stringResource(R.string.settings_free_up_space_device),
                 subtitle = if (state.canDelete) {
                     "Delete the ${state.syncedTracks} files your server already holds"
                 } else {
@@ -99,7 +100,7 @@ internal fun LazyListScope.librarySyncSection(
             
             if (state.localTracks == 0 && state.serverTotalTracks == 0) {
                 Text(
-                    text = "Nothing to send — no music files stored on this device",
+                    text = stringResource(R.string.settings_nothing_send_no_music_files),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp)
@@ -161,7 +162,7 @@ internal fun LazyListScope.librarySyncSection(
     val librarySyncNowIndex = i++
     item(key = "library_sync_now") {
         SettingsRow(
-            title = "Sync now",
+            title = stringResource(R.string.settings_sync_now),
             subtitle = when {
                 state.syncProgress.running -> "Running…"
                 state.serverArchive -> "Send files to the server now"

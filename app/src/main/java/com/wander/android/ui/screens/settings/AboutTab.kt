@@ -3,6 +3,8 @@ package com.wander.android.ui.screens.settings
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.stringResource
+import com.wander.android.R
 import com.wander.android.core.update.UpdateCheckResult
 import com.wander.android.ui.components.rememberShelfEntranceScale
 
@@ -24,8 +26,8 @@ internal fun LazyListScope.aboutTab(
     val duplicateRecordingsIndex = i++
     item(key = "duplicate_recordings") {
         SettingsRow(
-            title = "Duplicate recordings",
-            subtitle = "Review which of your tracks are the same recording, before anything merges",
+            title = stringResource(R.string.common_duplicate_recordings),
+            subtitle = stringResource(R.string.settings_review_which_tracks_same_recording),
             onClick = actions.onOpenMergePreview,
             modifier = Modifier.scale(rememberShelfEntranceScale(duplicateRecordingsIndex))
         )
@@ -36,7 +38,7 @@ internal fun LazyListScope.aboutTab(
     val versionIndex = i++
     item(key = "version") {
         SettingsRow(
-            title = "Version",
+            title = stringResource(R.string.settings_version),
             subtitle = when {
                 state.isCheckingForUpdate -> "${state.appVersion} · checking…"
                 state.updateCheck is UpdateCheckResult.UpdateAvailable ->
@@ -67,8 +69,8 @@ internal fun LazyListScope.aboutTab(
     val creditsOrgIndex = i++
     item(key = "credits_org") {
         SettingsRow(
-            title = "AgroUPlus",
-            subtitle = "Wanda and Agro are built here. Source, issues and releases on GitHub.",
+            title = stringResource(R.string.settings_agrouplus),
+            subtitle = stringResource(R.string.settings_wanda_agro_built_here_source),
             onClick = { actions.onOpenUrl(ORG_URL) },
             modifier = Modifier.scale(rememberShelfEntranceScale(creditsOrgIndex))
         )
@@ -77,8 +79,8 @@ internal fun LazyListScope.aboutTab(
     val autoUpdateCheckIndex = i++
     item(key = "auto_update_check") {
         SettingsToggle(
-            title = "Check for updates on launch",
-            subtitle = "Finds the latest release automatically and tells you when there is one. " +
+            title = stringResource(R.string.settings_check_updates_launch),
+            subtitle = stringResource(R.string.settings_finds_latest_release_automatically_tells) +
                 "Off by default: this is a network call at startup.",
             checked = state.autoUpdateCheckEnabled,
             onCheckedChange = actions.onAutoUpdateCheckChange,

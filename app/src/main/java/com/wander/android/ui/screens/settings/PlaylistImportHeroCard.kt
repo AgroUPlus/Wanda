@@ -35,8 +35,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.importer.PlatformType
 import com.wander.android.ui.components.rememberPressMorphShape
 import com.wander.android.ui.components.rememberPressScale
@@ -122,13 +124,13 @@ internal fun PlaylistImportHeroCard(
                     }
                     Column {
                         Text(
-                            text = "Import Playlists",
+                            text = stringResource(R.string.settings_import_playlists),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "External libraries & links",
+                            text = stringResource(R.string.settings_external_libraries_links),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -143,7 +145,7 @@ internal fun PlaylistImportHeroCard(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-                        contentDescription = "Open",
+                        contentDescription = stringResource(R.string.settings_open),
                         tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(18.dp)
                     )
@@ -151,7 +153,7 @@ internal fun PlaylistImportHeroCard(
             }
 
             Text(
-                text = "Connect directly or paste links from Spotify, Deezer, YouTube Music, Apple Music, and text files to select and import playlists.",
+                text = stringResource(R.string.settings_connect_directly_paste_links_from),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

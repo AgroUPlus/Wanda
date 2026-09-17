@@ -25,10 +25,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.KeptApartPair
 import com.wander.android.data.repository.MergeGroup
@@ -63,9 +65,9 @@ internal fun MergePreviewScreen(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack, modifier = Modifier.padding(start = 4.dp)) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
             }
-            Text("Duplicate recordings", style = MaterialTheme.typography.headlineLarge)
+            Text(stringResource(R.string.common_duplicate_recordings), style = MaterialTheme.typography.headlineLarge)
         }
 
         val current = report
@@ -105,7 +107,7 @@ internal fun MergePreviewScreen(
                             modifier = Modifier.padding(top = 6.dp)
                         )
                         Text(
-                            text = "Nothing has been written. This is what the migration would do.",
+                            text = stringResource(R.string.settings_nothing_has_been_written_what),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 10.dp)
@@ -123,7 +125,7 @@ internal fun MergePreviewScreen(
             if (current.keptApart.isNotEmpty()) {
                 item(key = "kept-apart-header") {
                     Text(
-                        text = "Kept apart",
+                        text = stringResource(R.string.settings_kept_apart),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp)
                     )

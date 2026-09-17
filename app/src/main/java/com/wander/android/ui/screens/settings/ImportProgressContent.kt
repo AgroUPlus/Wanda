@@ -18,10 +18,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -31,9 +31,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.importer.ImportProgress
 import com.wander.android.data.importer.PlatformType
 
@@ -46,7 +48,7 @@ internal fun ImportIdleContent(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            text = "Paste a link from Spotify, Deezer, YouTube Music, Apple Music, or raw text lines.",
+            text = stringResource(R.string.settings_paste_link_from_spotify_deezer),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -54,10 +56,11 @@ internal fun ImportIdleContent(
         OutlinedTextField(
             value = inputUrl,
             onValueChange = onUrlChange,
-            placeholder = { Text("https://open.spotify.com/playlist/...") },
+            placeholder = { Text(stringResource(R.string.common_https_open_spotify_com_playlist)) },
             trailingIcon = {
                 IconButton(onClick = onPaste) {
-                    Icon(Icons.Rounded.ContentPaste, contentDescription = "Paste from clipboard")
+                    Icon(Icons.Rounded.ContentPaste, contentDescription =
+                        stringResource(R.string.settings_paste_from_clipboard))
                 }
             },
             singleLine = false,
@@ -84,7 +87,7 @@ internal fun ImportIdleContent(
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = "Detected: ${platform.displayName}",
+                            text = stringResource(R.string.settings_detected, platform.displayName),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -107,7 +110,7 @@ internal fun ImportProgressContent(progress: ImportProgress) {
                 LoadingIndicator(modifier = Modifier.size(40.dp))
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    text = "Reading playlist from ${progress.platform.displayName}...",
+                    text = stringResource(R.string.settings_reading_playlist_from, progress.platform.displayName),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
@@ -133,13 +136,13 @@ internal fun ImportProgressContent(progress: ImportProgress) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "Matching track ${progress.current} of ${progress.total}",
+                        text = stringResource(R.string.settings_matching_track, progress.current, progress.total),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "${progress.matchedCount} found",
+                        text = stringResource(R.string.settings_found, progress.matchedCount),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -163,7 +166,7 @@ internal fun ImportProgressContent(progress: ImportProgress) {
                 LoadingIndicator(modifier = Modifier.size(36.dp))
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    text = "Saving \"${progress.playlistName}\" to your library...",
+                    text = stringResource(R.string.settings_saving_library, progress.playlistName),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -182,12 +185,12 @@ internal fun ImportProgressContent(progress: ImportProgress) {
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "Playlist imported! 🎉",
+                    text = stringResource(R.string.settings_playlist_imported),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "\"${progress.playlistName}\" • ${progress.matchedCount} of ${progress.totalCount} tracks matched",
+                    text = stringResource(R.string.settings_tracks_matched, progress.playlistName, progress.matchedCount, progress.totalCount),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -207,7 +210,7 @@ internal fun ImportProgressContent(progress: ImportProgress) {
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "Import failed",
+                    text = stringResource(R.string.settings_import_failed),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.error

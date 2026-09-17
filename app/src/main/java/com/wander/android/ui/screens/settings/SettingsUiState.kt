@@ -31,6 +31,8 @@ internal data class SettingsUiState(
     /** The phone's own Accessibility "Remove animations" setting — see `rememberSystemAnimationsDisabled`. */
     val systemReduceMotion: Boolean,
     val letterByLetterLyrics: Boolean,
+    /** The chosen display-language tag, empty when the app follows the system. */
+    val languageTag: String,
     val offline: Boolean,
     val preloadNext: Boolean,
     val indexOnMobileData: Boolean,
@@ -95,6 +97,9 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val reduceMotion by viewModel.isReduceMotion.collectAsStateWithLifecycle()
     val systemReduceMotion = rememberSystemAnimationsDisabled()
     val letterByLetterLyrics by viewModel.isLetterByLetterLyricsEnabled.collectAsStateWithLifecycle()
+    // Read once rather than collected: changing the language recreates the activity, so there is
+    // no moment at which this screen is alive and the value underneath it has moved.
+    val languageTag = viewModel.languageTag
     val offline by viewModel.isOfflineMode.collectAsStateWithLifecycle()
     val preloadNext by viewModel.isPreloadNextEnabled.collectAsStateWithLifecycle()
     val indexOnMobileData by viewModel.isIndexOnMobileDataEnabled.collectAsStateWithLifecycle()
@@ -143,6 +148,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         reduceMotion = reduceMotion,
         systemReduceMotion = systemReduceMotion,
         letterByLetterLyrics = letterByLetterLyrics,
+        languageTag = languageTag,
         offline = offline,
         preloadNext = preloadNext,
         indexOnMobileData = indexOnMobileData,

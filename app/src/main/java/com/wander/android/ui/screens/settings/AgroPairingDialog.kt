@@ -2,8 +2,8 @@ package com.wander.android.ui.screens.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -11,7 +11,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.sources.agro.AgroAuthError
 
 /** Whether the dialog is signing in to an existing account or making a new one. */
@@ -89,7 +91,7 @@ internal fun AgroPairingDialog(
         },
         confirmButton = {
             when (state) {
-                is AgroPairingState.Paired -> TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text("Done") }
+                is AgroPairingState.Paired -> TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.action_done)) }
 
                 is AgroPairingState.Registered -> TextButton(
                     onClick = {
@@ -132,9 +134,9 @@ internal fun AgroPairingDialog(
             // "Check again" is the only useful move while an account waits for approval: nothing
             // about what was typed is wrong, so re-submitting the form would be theatre.
             if ((state as? AgroPairingState.Failed)?.error is AgroAuthError.NotActive) {
-                TextButton(onClick = onRecheck, enabled = !busy, shapes = ButtonDefaults.shapes()) { Text("Check again") }
+                TextButton(onClick = onRecheck, enabled = !busy, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.settings_check_again)) }
             } else {
-                TextButton(onClick = onDismiss, enabled = !busy, shapes = ButtonDefaults.shapes()) { Text("Cancel") }
+                TextButton(onClick = onDismiss, enabled = !busy, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_cancel)) }
             }
         }
     )

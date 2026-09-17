@@ -1,5 +1,7 @@
 package com.wander.android.ui.screens.settings
 
+import com.wander.android.R
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.audio.fingerprint.EmbeddingModelManager
@@ -43,8 +45,8 @@ internal data class FingerprintRow(
  */
 @androidx.compose.runtime.Immutable
 internal data class FingerprintSection(
-    val title: String,
-    val subtitle: String,
+    @StringRes val title: Int,
+    @StringRes val subtitle: Int,
     val rows: List<FingerprintRow>
 ) {
     val indexed: Int get() = rows.count { it.status == FingerprintStatus.INDEXED }
@@ -159,26 +161,22 @@ internal class FingerprintsViewModel @Inject constructor(
         val sections = listOfNotNull(
             byGroup[SourceType.YTMUSIC]?.takeIf { it.isNotEmpty() }?.let {
                 FingerprintSection(
-                    title = "External",
-                    subtitle = "YouTube Music. Measuring one fetches about a minute of audio from " +
-                        "a third party, so these are the slowest to fill in and the likeliest to " +
-                        "fail outright.",
+                    title = R.string.fp_section_external,
+                    subtitle = R.string.fp_section_external_sub,
                     rows = it
                 )
             },
             byGroup[SourceType.NAVIDROME]?.takeIf { it.isNotEmpty() }?.let {
                 FingerprintSection(
-                    title = "Navidrome",
-                    subtitle = "Your own server. Measuring one downloads about a minute of it, so " +
-                        "these fill in over Wi-Fi.",
+                    title = R.string.fp_section_navidrome,
+                    subtitle = R.string.fp_section_navidrome_sub,
                     rows = it
                 )
             },
             byGroup[SourceType.LOCAL]?.takeIf { it.isNotEmpty() }?.let {
                 FingerprintSection(
-                    title = "On this device",
-                    subtitle = "Local files. These cost nothing but time; one that stays red has " +
-                        "a format this phone cannot decode.",
+                    title = R.string.fp_section_on_device,
+                    subtitle = R.string.fp_section_on_device_sub,
                     rows = it
                 )
             }

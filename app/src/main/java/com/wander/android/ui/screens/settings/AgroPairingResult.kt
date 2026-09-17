@@ -13,15 +13,17 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.sources.agro.AgroSignup
 
 /** What a completed pairing looks like, in the words of the server that confirmed it. */
 @Composable
 internal fun AgroPairedMessage(state: AgroPairingState.Paired) {
     Text(
-        text = "Signed in as ${state.username}.",
+        text = stringResource(R.string.settings_signed_as, state.username),
         style = MaterialTheme.typography.bodyMedium
     )
     Text(
@@ -44,11 +46,11 @@ internal fun AgroRegisteredMessage(signup: AgroSignup, server: String) {
     val context = LocalContext.current
 
     Text(
-        text = "“${signup.username}” now exists on $server.",
+        text = stringResource(R.string.settings_now_exists, signup.username, server),
         style = MaterialTheme.typography.bodyMedium
     )
     Text(
-        text = "Write this passphrase down. The server stores only a hash of it and can never " +
+        text = stringResource(R.string.settings_write_passphrase_down_server_stores) +
             "show it again — there is no reset.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.error
@@ -66,12 +68,12 @@ internal fun AgroRegisteredMessage(signup: AgroSignup, server: String) {
         )
     }
     TextButton(onClick = { context.copyPassphrase(signup.passphrase) }, shapes = ButtonDefaults.shapes()) {
-        Text("Copy passphrase")
+        Text(stringResource(R.string.settings_copy_passphrase))
     }
 
     if (signup.isPending) {
         Text(
-            text = "This server holds new accounts until its admin lets them in, so you cannot " +
+            text = stringResource(R.string.settings_server_holds_new_accounts_until) +
                 "sign in yet. Come back and pair once you have been approved.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant

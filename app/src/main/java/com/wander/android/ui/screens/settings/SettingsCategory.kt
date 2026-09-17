@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.settings
 
+import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CloudQueue
 import androidx.compose.material.icons.rounded.Info
@@ -10,6 +11,7 @@ import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.wander.android.R
 
 /**
  * The settings, as a list of places to go rather than a row of tabs to swipe through.
@@ -26,50 +28,50 @@ import androidx.compose.ui.graphics.vector.ImageVector
  * second palette — see [SettingsCategoryRow].
  */
 internal enum class SettingsCategory(
-    val label: String,
-    val subtitle: String,
+    @StringRes val label: Int,
+    @StringRes val subtitle: Int,
     val icon: ImageVector,
     val hue: Color
 ) {
     CONNECTIONS(
-        label = "Connections",
-        subtitle = "Navidrome, YouTube Music and your local files",
+        label = R.string.settings_category_connections,
+        subtitle = R.string.settings_category_sub_navidrome_youtube_music_local_files,
         icon = Icons.Rounded.CloudQueue,
         hue = Color(0xFF3B82F6)
     ),
     SYNC(
-        label = "Sync",
-        subtitle = "Devices, library syncing and what gets shared",
+        label = R.string.settings_category_sync,
+        subtitle = R.string.settings_category_sub_devices_library_syncing_what_gets,
         icon = Icons.Rounded.Sync,
         hue = Color(0xFF06B6D4)
     ),
     APPEARANCE(
-        label = "Look and feel",
-        subtitle = "Change the theme and colours of the app",
+        label = R.string.settings_category_look_feel,
+        subtitle = R.string.settings_category_sub_change_theme_colours_app,
         icon = Icons.Rounded.Palette,
         hue = Color(0xFF8B5CF6)
     ),
     PLAYBACK(
-        label = "Playback and storage",
-        subtitle = "Offline mode, downloads and the cache",
+        label = R.string.settings_category_playback_storage,
+        subtitle = R.string.settings_category_sub_offline_mode_downloads_cache,
         icon = Icons.Rounded.PlayCircle,
         hue = Color(0xFFEC4899)
     ),
     EXTERNAL(
-        label = "External",
-        subtitle = "Import playlists and share what you are playing",
+        label = R.string.settings_category_external,
+        subtitle = R.string.settings_category_sub_import_playlists_share_what_are,
         icon = Icons.Rounded.SwapHoriz,
         hue = Color(0xFFF59E0B)
     ),
     PRIVACY(
-        label = "Privacy",
-        subtitle = "Incognito, visibility and what leaves this device",
+        label = R.string.settings_category_privacy,
+        subtitle = R.string.settings_category_sub_incognito_visibility_what_leaves_this,
         icon = Icons.Rounded.Lock,
         hue = Color(0xFF10B981)
     ),
     ABOUT(
-        label = "About",
-        subtitle = "Version, updates, duplicates and links",
+        label = R.string.settings_category_about,
+        subtitle = R.string.settings_category_sub_version_updates_duplicates_links,
         icon = Icons.Rounded.Info,
         hue = Color(0xFF64748B)
     );
