@@ -50,6 +50,11 @@ internal fun SyncedStaticToggle(
     onSelect: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Resolved here, not at the call: ButtonGroup's toggleableItem is a scope function rather
+    // than a composable, so a stringResource() in its arguments has no composition to read from.
+    val syncedLabel = stringResource(R.string.player_synced)
+    val staticLabel = stringResource(R.string.player_static)
+
     // The group sits *in* a container rather than loose on the background. Without it the
     // unchecked half has nothing behind it — `ButtonGroup`'s members are transparent until
     // checked — so the control read as one button beside a floating word.
@@ -74,13 +79,13 @@ internal fun SyncedStaticToggle(
         ) {
             toggleableItem(
                 checked = !showStatic,
-                label = stringResource(R.string.player_synced),
+                label = syncedLabel,
                 onCheckedChange = { onSelect(false) },
                 weight = 1f
             )
             toggleableItem(
                 checked = showStatic,
-                label = stringResource(R.string.player_static),
+                label = staticLabel,
                 onCheckedChange = { onSelect(true) },
                 weight = 1f
             )

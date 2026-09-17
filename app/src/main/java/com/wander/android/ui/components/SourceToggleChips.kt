@@ -31,6 +31,9 @@ fun SourceToggleChips(
     modifier: Modifier = Modifier
 ) {
     val allSelected = selected.containsAll(sources)
+    // Resolved here, not at the call: ButtonGroup's toggleableItem is a scope function rather
+    // than a composable, so a stringResource() in its arguments has no composition to read from.
+    val allLabel = stringResource(R.string.common_all)
 
     ButtonGroup(
         overflowIndicator = {},
@@ -41,7 +44,7 @@ fun SourceToggleChips(
     ) {
         toggleableItem(
             checked = allSelected,
-            label = stringResource(R.string.common_all),
+            label = allLabel,
             onCheckedChange = { onSelectAll() }
         )
         sources.forEach { source ->

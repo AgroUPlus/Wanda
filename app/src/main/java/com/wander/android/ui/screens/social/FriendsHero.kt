@@ -56,6 +56,9 @@ internal fun FriendsHero(
         if (myUsername.isBlank()) null else avatarGradient(myUsername)
     }
 
+    // semantics {} takes a plain lambda, so the string is read before the hero is built.
+    val myProfileSpoken = stringResource(R.string.common_my_profile)
+
     ImmersiveHero(
         modifier = modifier,
         aspect = FriendsAspect,
@@ -76,7 +79,7 @@ internal fun FriendsHero(
                 modifier = Modifier
                     .clip(CircleShape)
                     .clickable(onClick = onOpenMyProfile)
-                    .semantics { contentDescription = stringResource(R.string.common_my_profile) }
+                    .semantics { contentDescription = myProfileSpoken }
             )
             Spacer(Modifier.height(10.dp))
             Text(

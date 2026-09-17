@@ -26,6 +26,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,6 +67,9 @@ internal fun QueueDrawer(
     val addToPlaylist = AddToPlaylistHost()
     val haptics = rememberHaptics()
     val scope = rememberCoroutineScope()
+    // The snackbar is raised from inside a coroutine, which is not a composition — so its text
+    // comes from the Context rather than from stringResource().
+    val context = LocalContext.current
 
     // The drawer's own, not the app's. A `ModalBottomSheet` is its own window drawn over
     // everything, so a snackbar raised at the shell would come up *behind* the queue — which, for
@@ -163,8 +167,11 @@ internal fun QueueDrawer(
                         queueViewModel.removeFromQueue(entry.queueIndex)
                         scope.launch {
                             val result = snackbarHostState.showSnackbar(
-                                message = stringResource(R.string.queue_removed, entry.track.title),
-                                actionLabel = "Undo",
+                                message = context.getString(
+                                    R.string.queue_removed,
+                                    entry.track.title
+                                ),
+                                actionLabel = context.getString(R.string.common_undo),
                                 withDismissAction = true
                             )
                             if (result == SnackbarResult.ActionPerformed) {
