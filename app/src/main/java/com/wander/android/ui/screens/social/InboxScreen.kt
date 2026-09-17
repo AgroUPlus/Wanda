@@ -32,9 +32,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.headerInset
 import kotlin.coroutines.cancellation.CancellationException
@@ -106,7 +108,8 @@ internal fun InboxScreen(
                     // would make the list unreachable without opening the inbox again.
                     onClick = { if (state.openWith != null) viewModel.closeThread() else onBack() }
                 ) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription =
+                        stringResource(R.string.common_back))
                 }
                 Text(
                     text = state.openWith?.let { state.nameOf(it) } ?: "Messages",
@@ -169,8 +172,8 @@ internal fun InboxScreen(
                         InboxThreadListSkeleton(contentPadding = contentPadding)
 
                     state.threads.isEmpty() -> EmptyState(
-                        title = "No conversations yet",
-                        message = "Press and hold any track to send it to a friend with a note."
+                        title = stringResource(R.string.social_no_conversations_yet),
+                        message = stringResource(R.string.social_press_hold_any_track_send)
                     )
 
                     else -> InboxThreadList(

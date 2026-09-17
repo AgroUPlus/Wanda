@@ -25,8 +25,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.ui.components.QrCode
 import kotlinx.coroutines.delay
 
@@ -94,7 +96,7 @@ internal fun FriendCodePanel(
             }
 
             Text(
-                text = "Have them point their camera at this. It changes every few minutes, and " +
+                text = stringResource(R.string.social_have_them_point_their_camera) +
                     "stops working as soon as you close this.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -102,7 +104,7 @@ internal fun FriendCodePanel(
             )
 
             TextButton(onClick = onRefresh, enabled = code != null, shapes = ButtonDefaults.shapes()) {
-                Text("New code")
+                Text(stringResource(R.string.social_new_code))
             }
         }
     }

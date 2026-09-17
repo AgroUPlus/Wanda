@@ -11,8 +11,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearWavyProgressIndicator
@@ -24,9 +24,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.core.permissions.rememberLocalNetworkGate
 import com.wander.android.data.sources.agro.FriendState
 import com.wander.android.ui.components.headerInset
@@ -61,7 +63,7 @@ internal fun ProfileScreen(
                 .fillMaxWidth()
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
             }
         }
 
@@ -99,26 +101,26 @@ internal fun ProfileScreen(
             ) {
                 when (profile.friendState) {
                     FriendState.NONE -> Button(onClick = viewModel::sendRequest, shapes = ButtonDefaults.shapes()) {
-                        Text("Add friend")
+                        Text(stringResource(R.string.social_add_friend))
                     }
                     FriendState.PENDING -> if (profile.outgoing) {
-                        OutlinedButton(onClick = viewModel::remove, shapes = ButtonDefaults.shapes()) { Text("Cancel request") }
+                        OutlinedButton(onClick = viewModel::remove, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.social_cancel_request)) }
                     } else {
-                        Button(onClick = viewModel::accept, shapes = ButtonDefaults.shapes()) { Text("Accept") }
-                        OutlinedButton(onClick = viewModel::remove, shapes = ButtonDefaults.shapes()) { Text("Decline") }
+                        Button(onClick = viewModel::accept, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_accept)) }
+                        OutlinedButton(onClick = viewModel::remove, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.social_decline)) }
                     }
                     FriendState.ACCEPTED -> OutlinedButton(onClick = viewModel::remove, shapes = ButtonDefaults.shapes()) {
-                        Text("Remove friend")
+                        Text(stringResource(R.string.social_remove_friend))
                     }
                 }
-                TextButton(onClick = viewModel::block, shapes = ButtonDefaults.shapes()) { Text("Block") }
+                TextButton(onClick = viewModel::block, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.social_block)) }
             }
         }
 
         val now = state.nowPlaying
         item(key = "listening") {
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
-                Text(text = "Listening", style = MaterialTheme.typography.titleMedium)
+                Text(text = stringResource(R.string.common_listening), style = MaterialTheme.typography.titleMedium)
                 when {
                     now != null -> {
                         Text(
@@ -130,17 +132,17 @@ internal fun ProfileScreen(
                                 onClick = viewModel::stopListenAlong,
                                 modifier = Modifier.padding(top = 8.dp),
                                 shapes = ButtonDefaults.shapes()
-                            ) { Text("Stop listening along") }
+                            ) { Text(stringResource(R.string.social_stop_listening_along)) }
                         } else {
                             Button(
                                 onClick = startListenAlong,
                                 modifier = Modifier.padding(top = 8.dp),
                                 shapes = ButtonDefaults.shapes()
-                            ) { Text("Listen along") }
+                            ) { Text(stringResource(R.string.social_listen_along)) }
                         }
                     }
                     profile.friendState != FriendState.ACCEPTED -> Text(
-                        text = "You will see this once you are friends.",
+                        text = stringResource(R.string.common_will_see_once_friends),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -150,7 +152,7 @@ internal fun ProfileScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     else -> Text(
-                        text = "Nothing playing right now.",
+                        text = stringResource(R.string.social_nothing_playing_right_now),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -192,7 +194,7 @@ internal fun ProfileScreen(
         val match = state.tasteMatch
         item(key = "taste") {
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
-                Text(text = "Taste match", style = MaterialTheme.typography.titleMedium)
+                Text(text = stringResource(R.string.social_taste_match), style = MaterialTheme.typography.titleMedium)
                 when {
                     match != null -> {
                         Text(
@@ -205,7 +207,7 @@ internal fun ProfileScreen(
                         )
                     }
                     profile.friendState != FriendState.ACCEPTED -> Text(
-                        text = "You will see this once you are friends.",
+                        text = stringResource(R.string.common_will_see_once_friends),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -215,7 +217,7 @@ internal fun ProfileScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     else -> Text(
-                        text = "Not enough listening between you yet.",
+                        text = stringResource(R.string.social_not_enough_listening_between_yet),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -226,7 +228,7 @@ internal fun ProfileScreen(
         if (match != null && match.sharedArtists.isNotEmpty()) {
             item(key = "shared_header") {
                 Text(
-                    text = "Artists you both play",
+                    text = stringResource(R.string.social_artists_both_play),
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp)
                 )

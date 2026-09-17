@@ -32,16 +32,18 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.core.p2p.NearbyPeers
 import com.wander.android.core.p2p.OffGridLink
 import com.wander.android.core.permissions.rememberNearbyGate
 import com.wander.android.ui.components.headerInset
-import com.wander.android.ui.components.rememberHaptics
 import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.rememberHaptics
 
 /**
  * Handing music to the phone next to you, with no network of any kind.
@@ -76,10 +78,10 @@ internal fun OffGridScreen(
                 .padding(start = 8.dp, end = 24.dp, top = 8.dp, bottom = 8.dp)
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
             }
             Text(
-                text = "Off-grid",
+                text = stringResource(R.string.common_off_grid),
                 // Weighted explicitly, because `displaySmall` is W400 in Material 3. At this size
                 // a normal weight reads *lighter* than the W500 `titleLarge` headings elsewhere in
                 // the app despite being much bigger, which is why this title looked unemphasised
@@ -128,7 +130,7 @@ internal fun OffGridScreen(
                         FilledTonalButton(
                             onClick = viewModel::stop,
                             shapes = ButtonDefaults.shapes()
-                        ) { Text("Stop sharing") }
+                        ) { Text(stringResource(R.string.social_stop_sharing)) }
                     } else {
                         Button(
                             // The permissions are asked at this tap, where the screen above says
@@ -141,7 +143,7 @@ internal fun OffGridScreen(
                                 withNearby { viewModel.startSharing() }
                             },
                             shapes = ButtonDefaults.shapes()
-                        ) { Text("Be findable") }
+                        ) { Text(stringResource(R.string.social_findable)) }
                     }
                 }
             }
@@ -199,12 +201,12 @@ private fun OffGridExplainer() {
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                text = "Encrypted, and nothing leaves the two phones",
+                text = stringResource(R.string.social_encrypted_nothing_leaves_two_phones),
                 style = MaterialTheme.typography.titleSmall
             )
         }
         Text(
-            text = "Share music with someone beside you, over Bluetooth and Wi-Fi Direct. " +
+            text = stringResource(R.string.social_share_music_someone_beside_over) +
                 "No router, no mobile data, no server. You are only findable while this " +
                 "screen is open.",
             style = MaterialTheme.typography.bodyMedium,
@@ -222,7 +224,7 @@ private fun SearchingRow() {
         LoadingIndicator(modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(12.dp))
         Text(
-            text = "Looking for phones nearby…",
+            text = stringResource(R.string.social_looking_phones_nearby),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -245,7 +247,7 @@ private fun PeerRow(
     onClick: () -> Unit
 ) {
     ListItem(
-        headlineContent = { Text("Device " + peer.beacon.shortFingerprint()) },
+        headlineContent = { Text(stringResource(R.string.common_device) + peer.beacon.shortFingerprint()) },
         supportingContent = {
             Text(if (isLinked) "Connected, encrypted" else signalWord(peer.rssi))
         },
@@ -254,7 +256,7 @@ private fun PeerRow(
         },
         trailingContent = {
             when {
-                isLinked -> Icon(Icons.Rounded.Lock, contentDescription = "Linked")
+                isLinked -> Icon(Icons.Rounded.Lock, contentDescription = stringResource(R.string.social_linked))
                 isBusy -> LoadingIndicator(modifier = Modifier.size(20.dp))
                 else -> null
             }
@@ -264,7 +266,7 @@ private fun PeerRow(
     if (!isLinked && !isBusy) {
         Row(modifier = Modifier.padding(start = 56.dp, end = 20.dp, bottom = 8.dp)) {
             FilledTonalButton(onClick = onClick, shapes = ButtonDefaults.shapes()) {
-                Text("Connect")
+                Text(stringResource(R.string.social_connect))
             }
         }
     }
@@ -324,7 +326,7 @@ private fun ConnectedRow(
     onDisconnect: (OffGridLink) -> Unit
 ) {
     ListItem(
-        headlineContent = { Text("Device " + shortId(link.deviceId)) },
+        headlineContent = { Text(stringResource(R.string.common_device) + shortId(link.deviceId)) },
         supportingContent = {
             Text(
                 when (link.role) {
@@ -340,7 +342,7 @@ private fun ConnectedRow(
         FilledTonalButton(
             onClick = { onDisconnect(link) },
             shapes = ButtonDefaults.shapes()
-        ) { Text("Disconnect") }
+        ) { Text(stringResource(R.string.social_disconnect)) }
     }
 }
 
@@ -366,11 +368,11 @@ private fun UnsupportedNotice() {
         modifier = Modifier.padding(20.dp)
     ) {
         Text(
-            text = "This phone cannot be found off-grid.",
+            text = stringResource(R.string.social_phone_cannot_found_off_grid),
             style = MaterialTheme.typography.titleMedium
         )
         Text(
-            text = "Being findable needs Bluetooth peripheral mode, and some phones simply do not " +
+            text = stringResource(R.string.social_being_findable_needs_bluetooth_peripheral) +
                 "have it. You can still listen along over Wi-Fi or through your server.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant

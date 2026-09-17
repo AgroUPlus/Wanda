@@ -32,13 +32,13 @@ import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.Stars
 import androidx.compose.material.icons.rounded.Whatshot
+import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ButtonGroup
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,11 +48,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.data.sources.agro.AgroAnthem
 import com.wander.android.data.sources.agro.AgroFeedItem
 import com.wander.android.data.sources.agro.AgroRecap
@@ -86,16 +88,16 @@ internal fun CircleScreen(
                 .fillMaxWidth()
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
             }
             Column(modifier = Modifier.weight(1f).padding(start = 4.dp)) {
                 Text(
-                    text = "Circle",
+                    text = stringResource(R.string.social_circle),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Your circle's rhythm and recap",
+                    text = stringResource(R.string.social_circle_s_rhythm_recap),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -120,8 +122,8 @@ internal fun CircleScreen(
 
         if (state.feed.isEmpty() && state.recap == null && !state.loading) {
             EmptyState(
-                title = "Nothing in the circle yet",
-                message = "Friends appear here once they turn on activity or statistics sharing."
+                title = stringResource(R.string.social_nothing_circle_yet),
+                message = stringResource(R.string.social_friends_appear_here_once_they)
             )
             return@Column
         }
@@ -170,7 +172,7 @@ internal fun CircleScreen(
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = "Lately in your Circle",
+                            text = stringResource(R.string.social_lately_circle),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -215,11 +217,11 @@ private fun AnthemHeroCard(anthem: AgroAnthem) {
                     ) {
                         Icon(Icons.Rounded.GraphicEq, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("CIRCLE ANTHEM", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.social_circle_anthem), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                     }
                 }
                 Text(
-                    text = "${anthem.plays} plays",
+                    text = stringResource(R.string.social_plays_2, anthem.plays),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -245,7 +247,7 @@ private fun AnthemHeroCard(anthem: AgroAnthem) {
             if (anthem.byMember.isNotEmpty()) {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = "Top Listeners in Room",
+                    text = stringResource(R.string.social_top_listeners_room),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
@@ -332,7 +334,7 @@ private fun TrendsetterCard(trendsetter: AgroTrendsetter) {
                     ) {
                         Icon(Icons.Rounded.AutoAwesome, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("TRENDSETTER", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.social_trendsetter), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -351,7 +353,7 @@ private fun TrendsetterCard(trendsetter: AgroTrendsetter) {
 
             Spacer(Modifier.height(10.dp))
             Text(
-                text = "First to discover ${trendsetter.firsts} of the circle's top tracks before anyone else",
+                text = stringResource(R.string.social_first_discover_circle_s_top, trendsetter.firsts),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
@@ -397,10 +399,10 @@ private fun CircleLeaderboards(
     ) {
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             if (topArtists.isNotEmpty()) {
-                LeaderboardSection(title = "Top Artists", entries = topArtists.take(5))
+                LeaderboardSection(title = stringResource(R.string.social_top_artists), entries = topArtists.take(5))
             }
             if (topTracks.isNotEmpty()) {
-                LeaderboardSection(title = "Top Tracks", entries = topTracks.take(5))
+                LeaderboardSection(title = stringResource(R.string.social_top_tracks), entries = topTracks.take(5))
             }
         }
     }
@@ -482,7 +484,7 @@ private fun TasteMatrixSection(matrix: List<AgroTasteMatrixEntry>) {
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    text = "Taste Compatibility",
+                    text = stringResource(R.string.social_taste_compatibility),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -508,7 +510,7 @@ private fun TasteMatrixSection(matrix: List<AgroTasteMatrixEntry>) {
                         shape = MaterialTheme.shapes.extraSmall
                     ) {
                         Text(
-                            text = "${entry.score}% Match",
+                            text = stringResource(R.string.social_match, entry.score),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)

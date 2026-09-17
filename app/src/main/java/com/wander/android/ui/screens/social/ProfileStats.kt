@@ -18,8 +18,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.sources.agro.StatEntry
 
 /**
@@ -35,8 +37,10 @@ internal fun StatTiles(plays: Long, hours: Long) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)
     ) {
-        StatTile(value = plays.toString(), label = "plays", modifier = Modifier.weight(1f))
-        StatTile(value = hours.toString(), label = "hours", modifier = Modifier.weight(1f))
+        StatTile(value = plays.toString(), label =
+            stringResource(R.string.social_plays), modifier = Modifier.weight(1f))
+        StatTile(value = hours.toString(), label =
+            stringResource(R.string.social_hours), modifier = Modifier.weight(1f))
     }
 }
 

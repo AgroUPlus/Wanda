@@ -17,10 +17,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.sources.agro.AgroDrop
 
 /**
@@ -62,7 +64,7 @@ internal fun EncryptionBoundary(modifier: Modifier = Modifier) {
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    text = "Notes from here on are sealed on your device. The server stores " +
+                    text = stringResource(R.string.social_notes_from_here_sealed_device) +
                         "them without being able to read them.",
                     style = MaterialTheme.typography.labelSmall,
                     textAlign = TextAlign.Center
@@ -90,7 +92,7 @@ internal fun EncryptedThreadLock(modifier: Modifier = Modifier) {
         modifier = modifier
             .size(16.dp)
             .clearAndSetSemantics {
-                contentDescription = "Notes in this conversation are end-to-end encrypted."
+                contentDescription = stringResource(R.string.social_notes_conversation_end_end_encrypted)
             }
     )
 }

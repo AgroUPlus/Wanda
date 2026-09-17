@@ -38,16 +38,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import com.wander.android.ui.components.rememberHaptics
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.sources.agro.AgroDrop
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.CuteAvatar
 import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.rememberHaptics
 
 /** One exchange, oldest first, as speech bubbles with a playable track attached to each. */
 @Composable
@@ -279,7 +281,7 @@ private fun ConversationDropMessage(
                             ) {
                                 Icon(
                                     Icons.Rounded.PlayArrow,
-                                    contentDescription = "Play",
+                                    contentDescription = stringResource(R.string.action_play),
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
