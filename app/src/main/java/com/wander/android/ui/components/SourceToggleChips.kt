@@ -8,7 +8,9 @@ import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.model.SourceType
 
 /**
@@ -39,7 +41,7 @@ fun SourceToggleChips(
     ) {
         toggleableItem(
             checked = allSelected,
-            label = "All",
+            label = stringResource(R.string.common_all),
             onCheckedChange = { onSelectAll() }
         )
         sources.forEach { source ->

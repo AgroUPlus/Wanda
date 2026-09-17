@@ -19,8 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.model.SourceType
 
 /** Stable key for "All" — a fresh object every recomposition would break bounds tracking. */
@@ -50,7 +52,7 @@ fun SourceFilterChips(
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SelectableChip(
-                label = "All",
+                label = stringResource(R.string.common_all),
                 selected = selected == null,
                 onClick = { onSelect(null) },
                 highlightState = highlightState,

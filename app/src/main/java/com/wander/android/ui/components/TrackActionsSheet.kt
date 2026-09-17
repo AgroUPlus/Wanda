@@ -38,10 +38,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.screens.social.JamViewModel
 
@@ -199,14 +201,14 @@ fun TrackActionsSheet(
             onRemove?.let {
                 SheetAction(
                     icon = Icons.Rounded.Delete,
-                    label = "Remove from queue",
+                    label = stringResource(R.string.action_remove_from_queue),
                     tint = MaterialTheme.colorScheme.error
                 ) { it(); onDismiss() }
             }
             onDeleteDownload?.let {
                 SheetAction(
                     icon = Icons.Rounded.Delete,
-                    label = "Delete offline file",
+                    label = stringResource(R.string.common_delete_offline_file),
                     tint = MaterialTheme.colorScheme.error
                 ) { it(); onDismiss() }
             }

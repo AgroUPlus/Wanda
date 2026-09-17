@@ -21,9 +21,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.repository.ResolvedFrom
 
 /**
@@ -90,7 +92,7 @@ internal data class TransportStyle(
 
 internal fun ResolvedFrom?.style(): TransportStyle = when (this) {
     ResolvedFrom.LOCAL_STORAGE -> TransportStyle(
-        label = "On device",
+        label = stringResource(R.string.common_device_2),
         spoken = "Playing from this device. Nothing leaves the phone.",
         icon = Icons.Filled.Storage,
         // Not marked encrypted, because there is no transport to encrypt. A padlock here would
@@ -100,7 +102,7 @@ internal fun ResolvedFrom?.style(): TransportStyle = when (this) {
         onContainer = { MaterialTheme.colorScheme.onSurfaceVariant }
     )
     ResolvedFrom.NAVIDROME -> TransportStyle(
-        label = "Navidrome",
+        label = stringResource(R.string.common_navidrome),
         spoken = "Streamed from your own Navidrome server.",
         icon = Icons.Filled.Router,
         // HTTPS if the user configured it, plain HTTP if not, and this cannot tell which. Claiming
@@ -110,7 +112,7 @@ internal fun ResolvedFrom?.style(): TransportStyle = when (this) {
         onContainer = { MaterialTheme.colorScheme.onSecondaryContainer }
     )
     ResolvedFrom.YOUTUBE_MUSIC -> TransportStyle(
-        label = "Stream",
+        label = stringResource(R.string.common_stream),
         spoken = "Matched and streamed from YouTube Music. Uses data.",
         icon = Icons.Filled.Cloud,
         encrypted = false,
@@ -118,7 +120,7 @@ internal fun ResolvedFrom?.style(): TransportStyle = when (this) {
         onContainer = { MaterialTheme.colorScheme.onTertiaryContainer }
     )
     ResolvedFrom.P2P_DIRECT -> TransportStyle(
-        label = "LAN",
+        label = stringResource(R.string.common_lan),
         spoken = "Streamed directly from the other device over your local network, encrypted.",
         icon = Icons.Filled.Wifi,
         encrypted = true,
@@ -126,7 +128,7 @@ internal fun ResolvedFrom?.style(): TransportStyle = when (this) {
         onContainer = { MaterialTheme.colorScheme.onPrimaryContainer }
     )
     ResolvedFrom.P2P_OFFGRID -> TransportStyle(
-        label = "Off-grid",
+        label = stringResource(R.string.common_off_grid),
         spoken = "Streamed phone to phone over a direct radio link, with no network involved, encrypted.",
         icon = Icons.Filled.Bluetooth,
         encrypted = true,
@@ -134,7 +136,7 @@ internal fun ResolvedFrom?.style(): TransportStyle = when (this) {
         onContainer = { MaterialTheme.colorScheme.onPrimaryContainer }
     )
     ResolvedFrom.AGRO_RELAY -> TransportStyle(
-        label = "Relay",
+        label = stringResource(R.string.common_relay),
         spoken = "Streamed through your Agro server, encrypted end to end. The server cannot hear it.",
         icon = Icons.Filled.Cloud,
         encrypted = true,
@@ -142,7 +144,7 @@ internal fun ResolvedFrom?.style(): TransportStyle = when (this) {
         onContainer = { MaterialTheme.colorScheme.onTertiaryContainer }
     )
     null -> TransportStyle(
-        label = "Finding…",
+        label = stringResource(R.string.common_finding),
         spoken = "Looking for a way to play this.",
         icon = Icons.Filled.PhoneAndroid,
         encrypted = false,

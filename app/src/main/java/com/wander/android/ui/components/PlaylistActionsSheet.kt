@@ -28,8 +28,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.model.UnifiedPlaylist
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -89,7 +91,7 @@ fun PlaylistActionsSheet(
 
             PlaylistSheetAction(
                 icon = Icons.Rounded.PlayArrow,
-                label = "Play"
+                label = stringResource(R.string.action_play)
             ) {
                 onPlay()
                 onDismiss()
@@ -97,7 +99,7 @@ fun PlaylistActionsSheet(
 
             PlaylistSheetAction(
                 icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
-                label = "Play next"
+                label = stringResource(R.string.action_play_next)
             ) {
                 onPlayNext()
                 onDismiss()
@@ -105,7 +107,7 @@ fun PlaylistActionsSheet(
 
             PlaylistSheetAction(
                 icon = Icons.AutoMirrored.Rounded.QueueMusic,
-                label = "Add to queue"
+                label = stringResource(R.string.common_add_queue)
             ) {
                 onAddToQueue()
                 onDismiss()
@@ -114,7 +116,7 @@ fun PlaylistActionsSheet(
             if (onAddToPlaylist != null) {
                 PlaylistSheetAction(
                     icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
-                    label = "Add to playlist"
+                    label = stringResource(R.string.action_add_to_playlist)
                 ) {
                     onAddToPlaylist()
                     onDismiss()
@@ -124,7 +126,7 @@ fun PlaylistActionsSheet(
             if (onShare != null) {
                 PlaylistSheetAction(
                     icon = Icons.Rounded.Share,
-                    label = "Share"
+                    label = stringResource(R.string.action_share)
                 ) {
                     onShare()
                     onDismiss()
@@ -134,7 +136,7 @@ fun PlaylistActionsSheet(
             if (onDelete != null) {
                 PlaylistSheetAction(
                     icon = Icons.Rounded.Delete,
-                    label = "Delete playlist",
+                    label = stringResource(R.string.common_delete_playlist),
                     tint = MaterialTheme.colorScheme.error
                 ) {
                     onDelete()

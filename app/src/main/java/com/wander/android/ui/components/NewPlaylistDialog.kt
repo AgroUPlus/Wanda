@@ -1,7 +1,7 @@
 package com.wander.android.ui.components
 
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -10,6 +10,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
+import com.wander.android.R
 
 /**
  * Asks for a playlist name.
@@ -26,13 +28,13 @@ fun NewPlaylistDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("New playlist") },
+        title = { Text(stringResource(R.string.common_new_playlist)) },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
                 singleLine = true,
-                label = { Text("Name") }
+                label = { Text(stringResource(R.string.common_name)) }
             )
         },
         confirmButton = {
@@ -42,10 +44,10 @@ fun NewPlaylistDialog(
                 onClick = { onConfirm(name) },
                 enabled = name.isNotBlank(),
                 shapes = ButtonDefaults.shapes()
-            ) { Text("Create") }
+            ) { Text(stringResource(R.string.common_create)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text("Cancel") }
+            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_cancel)) }
         }
     )
 }

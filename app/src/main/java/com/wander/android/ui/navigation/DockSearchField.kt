@@ -29,7 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import com.wander.android.R
 import com.wander.android.ui.components.rememberHaptics
 
 /**
@@ -53,7 +55,7 @@ internal fun DockSearchField(
         value = query,
         onValueChange = onQueryChange,
         singleLine = true,
-        placeholder = { Text("Search here", maxLines = 1) },
+        placeholder = { Text(stringResource(R.string.nav_search_here), maxLines = 1) },
         leadingIcon = {
             AnimatedContent(
                 targetState = searching,
@@ -72,7 +74,7 @@ internal fun DockSearchField(
                     }) {
                         Icon(
                             imageVector = Icons.Rounded.MusicNote,
-                            contentDescription = "Identify what's playing"
+                            contentDescription = stringResource(R.string.nav_identify_what_s_playing)
                         )
                     }
                 }
@@ -90,7 +92,7 @@ internal fun DockSearchField(
                     haptics.settled()
                     onQueryChange("")
                 }) {
-                    Icon(Icons.Rounded.Close, contentDescription = "Clear search")
+                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.nav_clear_search))
                 }
             }
         },

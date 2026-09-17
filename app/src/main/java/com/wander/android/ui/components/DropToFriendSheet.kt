@@ -20,9 +20,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
 
 /**
@@ -58,7 +60,7 @@ internal fun DropToFriendSheet(
                 .padding(bottom = 24.dp)
         ) {
             Text(
-                text = "Send “${track.title}”",
+                text = stringResource(R.string.common_send, track.title),
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(horizontal = 24.dp)
             )
@@ -66,7 +68,7 @@ internal fun DropToFriendSheet(
             OutlinedTextField(
                 value = note,
                 onValueChange = { if (it.length <= MAX_NOTE_LENGTH) note = it },
-                label = { Text("Say something (optional)") },
+                label = { Text(stringResource(R.string.common_say_something_optional)) },
                 supportingText = {
                     Text(
                         text = "${note.length} / $MAX_NOTE_LENGTH",
@@ -81,7 +83,7 @@ internal fun DropToFriendSheet(
 
             if (friends.isEmpty()) {
                 Text(
-                    text = "You have no friends on this server yet.",
+                    text = stringResource(R.string.common_have_no_friends_server_yet),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)

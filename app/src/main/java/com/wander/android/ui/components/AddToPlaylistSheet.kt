@@ -27,8 +27,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.model.UnifiedPlaylist
 
 /**
@@ -59,13 +61,13 @@ fun AddToPlaylistSheet(
                 .padding(bottom = 24.dp)
         ) {
             Text(
-                text = "Add to playlist",
+                text = stringResource(R.string.action_add_to_playlist),
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
             )
 
             PickerRow(
-                label = "New playlist…",
+                label = stringResource(R.string.common_new_playlist_2),
                 onClick = { namingNew = true }
             )
 
@@ -73,14 +75,14 @@ fun AddToPlaylistSheet(
 
             when {
                 isLoading -> Text(
-                    text = "Loading playlists…",
+                    text = stringResource(R.string.common_loading_playlists),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
                 )
 
                 playlists.isEmpty() -> Text(
-                    text = "No playlists yet.",
+                    text = stringResource(R.string.common_no_playlists_yet),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)

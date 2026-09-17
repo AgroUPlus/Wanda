@@ -23,9 +23,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.repository.ListenAlongSession
 import com.wander.android.data.repository.ResolvedFrom
 import com.wander.android.data.sources.agro.Jam
@@ -74,7 +76,7 @@ internal fun ListenAlongBar(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    text = "Listening along with ${session.host}",
+                    text = stringResource(R.string.common_listening_along_with, session.host),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
@@ -91,7 +93,7 @@ internal fun ListenAlongBar(
                 modifier = Modifier.scrollingTitle()
             )
         }
-        TextButton(onClick = onLeave, shapes = ButtonDefaults.shapes()) { Text("Leave") }
+        TextButton(onClick = onLeave, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_leave)) }
     }
 }
 
@@ -154,7 +156,7 @@ internal fun JamBar(
                         )
                 )
                 Text(
-                    text = "Jam",
+                    text = stringResource(R.string.action_jam),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -181,7 +183,7 @@ internal fun JamBar(
             ) {
                 androidx.compose.material3.Icon(
                     imageVector = androidx.compose.material.icons.Icons.Rounded.Close,
-                    contentDescription = "Leave Jam",
+                    contentDescription = stringResource(R.string.common_leave_jam),
                     modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )

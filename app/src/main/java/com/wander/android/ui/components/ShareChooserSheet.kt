@@ -17,7 +17,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 
 /**
  * "Share" asks *how* rather than making the caller offer two rows that mean the same verb.
@@ -48,15 +50,15 @@ internal fun ShareChooserSheet(
                 .padding(bottom = 24.dp)
         ) {
             Text(
-                text = "Share “$subject”",
+                text = stringResource(R.string.common_share, subject),
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
             )
 
             onSendToFriend?.let { send ->
                 ListItem(
-                    headlineContent = { Text("Send to a friend") },
-                    supportingContent = { Text("Lands in their messages, with a note if you like") },
+                    headlineContent = { Text(stringResource(R.string.common_send_friend)) },
+                    supportingContent = { Text(stringResource(R.string.common_lands_their_messages_note_if)) },
                     leadingContent = {
                         Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null)
                     },
@@ -65,8 +67,8 @@ internal fun ShareChooserSheet(
             }
 
             ListItem(
-                headlineContent = { Text("Share a link") },
-                supportingContent = { Text("A public link anyone can open") },
+                headlineContent = { Text(stringResource(R.string.common_share_link)) },
+                supportingContent = { Text(stringResource(R.string.common_public_link_anyone_can_open)) },
                 leadingContent = { Icon(Icons.Rounded.Link, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth().clickable(onClick = onShareLink)
             )

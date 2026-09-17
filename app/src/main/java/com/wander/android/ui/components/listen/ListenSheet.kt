@@ -29,11 +29,13 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.data.repository.IndexReadiness
 import com.wander.android.data.repository.Recognition
 import com.wander.android.data.repository.RecognitionEngine
@@ -116,7 +118,7 @@ fun ListenSheet(
 private fun Listening(readiness: IndexReadiness, audioLevel: Float = 0f) {
     PulsingMic(audioLevel = audioLevel)
 
-    Text("Listening…", style = MaterialTheme.typography.headlineSmall)
+    Text(stringResource(R.string.common_listening_2), style = MaterialTheme.typography.headlineSmall)
     Text(
         text = when (readiness) {
             // No longer "or hum it": that path is switched off, and asking for something the
@@ -150,7 +152,7 @@ private fun Identifying(readiness: IndexReadiness) {
         LoadingIndicator(modifier = Modifier.size(56.dp))
     }
 
-    Text("Identifying…", style = MaterialTheme.typography.headlineSmall)
+    Text(stringResource(R.string.common_identifying), style = MaterialTheme.typography.headlineSmall)
     Text(
         text = when (readiness) {
             is IndexReadiness.Ready ->
@@ -194,7 +196,7 @@ private fun Matched(recognition: Recognition, onPlay: () -> Unit) {
         // the record; this one matched the shape of a tune somebody hummed, and a listener shown a
         // confident wrong answer has no way to know which kind they were given.
         Text(
-            text = "Matched by melody — this is a guess from the tune, not the recording.",
+            text = stringResource(R.string.common_matched_melody_guess_from_tune),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -204,14 +206,14 @@ private fun Matched(recognition: Recognition, onPlay: () -> Unit) {
         // Says where it will start, because it is not the beginning — picking the song up where
         // the room has reached is the point, and a plain "Play" would look like a bug. A hummed
         // match has no position to resume from, so it simply plays.
-        if (recognition.engine == RecognitionEngine.MELODY) Text("Play")
-        else Text("Play from ${formatPosition(recognition.positionSeconds)}")
+        if (recognition.engine == RecognitionEngine.MELODY) Text(stringResource(R.string.action_play))
+        else Text(stringResource(R.string.common_play_from, formatPosition(recognition.positionSeconds)))
     }
 }
 
 @Composable
 private fun NoMatch(readiness: IndexReadiness, onRetry: () -> Unit) {
-    Text("No match", style = MaterialTheme.typography.headlineSmall)
+    Text(stringResource(R.string.common_no_match), style = MaterialTheme.typography.headlineSmall)
     Text(
         text = when (readiness) {
             is IndexReadiness.Ready ->
@@ -226,7 +228,7 @@ private fun NoMatch(readiness: IndexReadiness, onRetry: () -> Unit) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center
     )
-    TextButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) { Text("Listen again") }
+    TextButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_listen_again)) }
 }
 
 /**
@@ -253,14 +255,14 @@ private fun Failed(onRetry: () -> Unit) {
         tint = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.size(56.dp)
     )
-    Text("Could not listen", style = MaterialTheme.typography.headlineSmall)
+    Text(stringResource(R.string.common_could_not_listen), style = MaterialTheme.typography.headlineSmall)
     Text(
-        text = "Another app may be using the microphone.",
+        text = stringResource(R.string.common_another_app_may_using_microphone),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center
     )
-    TextButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) { Text("Try again") }
+    TextButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_try_again)) }
 }
 
 private fun formatPosition(seconds: Int): String =
