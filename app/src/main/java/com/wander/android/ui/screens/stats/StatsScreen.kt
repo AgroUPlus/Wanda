@@ -20,9 +20,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.data.repository.ListeningReport
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
@@ -87,7 +89,7 @@ fun StatsScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(text = message, style = MaterialTheme.typography.bodyMedium)
                         TextButton(onClick = viewModel::retry, shapes = ButtonDefaults.shapes()) {
-                            Text("Try again")
+                            Text(stringResource(R.string.common_try_again))
                         }
                     }
                 }
@@ -142,11 +144,11 @@ private fun LazyListScope.reportBody(
     val stats = report.stats
 
     item(key = "by_day") {
-        ChartCard(title = "Last 14 days") { BarChart(stats.byDay) }
+        ChartCard(title = stringResource(R.string.stats_last_14_days)) { BarChart(stats.byDay) }
     }
 
     item(key = "by_hour") {
-        ChartCard(title = "By hour", subtitle = "Your own clock") { BarChart(stats.byHour) }
+        ChartCard(title = stringResource(R.string.stats_hour), subtitle = "Your own clock") { BarChart(stats.byHour) }
     }
 
     if (stats.byDevice.isNotEmpty()) {

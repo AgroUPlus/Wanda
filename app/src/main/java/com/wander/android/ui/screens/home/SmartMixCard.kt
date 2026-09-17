@@ -12,19 +12,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.model.SmartMix
 import com.wander.android.ui.components.scrollingTitle
 
@@ -78,14 +80,14 @@ fun SmartMixCard(
                 .padding(16.dp)
         ) {
             Text(
-                text = mix.title,
+                text = stringResource(mix.title),
                 style = MaterialTheme.typography.titleLarge,
                 color = Color.White,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "${mix.tracks.size} tracks · ${mix.subtitle}",
+                text = stringResource(R.string.home_tracks, mix.tracks.size, stringResource(mix.subtitle)),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.85f),
                 maxLines = 1,

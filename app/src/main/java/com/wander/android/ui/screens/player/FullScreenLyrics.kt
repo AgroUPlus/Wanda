@@ -1,19 +1,19 @@
 package com.wander.android.ui.screens.player
 
 import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,16 +37,18 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.wander.android.R
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.LyricsState
-import com.wander.android.data.model.syncType
 import com.wander.android.data.model.LyricsSyncType
+import com.wander.android.data.model.syncType
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -154,10 +156,11 @@ private fun LyricsScaffold(
                         contentColor = MaterialTheme.colorScheme.onSurface
                     )
                 ) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Close lyrics")
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription =
+                        stringResource(R.string.player_close_lyrics))
                 }
                 Text(
-                    text = "Lyrics",
+                    text = stringResource(R.string.player_lyrics),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,

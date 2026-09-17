@@ -20,9 +20,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistHost
@@ -123,8 +125,8 @@ internal fun ArtistScreen(
                 contentAlignment = Alignment.Center
             ) {
                 EmptyState(
-                    title = "Nothing by ${state.artist}",
-                    message = "None of your connected sources has anything by this artist."
+                    title = stringResource(R.string.artist_nothing_by, state.artist),
+                    message = stringResource(R.string.artist_none_connected_sources_has_anything)
                 )
             }
 
@@ -181,7 +183,7 @@ internal fun ArtistScreen(
                 .padding(contentPadding.headerInset())
                 .padding(start = 12.dp, top = 8.dp)
         ) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
         }
     }
 }

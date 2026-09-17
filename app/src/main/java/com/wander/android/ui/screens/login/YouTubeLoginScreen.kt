@@ -23,10 +23,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.data.sources.ytmusic.GoogleAccountManager
 import com.wander.android.ui.components.WebViewLifecycle
 import com.wander.android.ui.components.release
@@ -68,7 +70,7 @@ fun YouTubeLoginScreen(
             .safeDrawingPadding()
     ) {
         Text(
-            text = "Sign in to YouTube Music",
+            text = stringResource(R.string.login_sign_youtube_music),
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
         )
@@ -110,7 +112,7 @@ fun YouTubeLoginScreen(
         OutlinedTextField(
             value = state.manualCookie,
             onValueChange = viewModel::onManualCookieChange,
-            label = { Text("Or paste a cookie header") },
+            label = { Text(stringResource(R.string.login_paste_cookie_header)) },
             singleLine = false,
             maxLines = 3,
             isError = state.error != null,
@@ -126,9 +128,9 @@ fun YouTubeLoginScreen(
                 enabled = state.manualCookie.isNotBlank(),
                 shapes = ButtonDefaults.shapes()
             ) {
-                Text("Use pasted cookie")
+                Text(stringResource(R.string.login_use_pasted_cookie))
             }
-            TextButton(onClick = onDone, shapes = ButtonDefaults.shapes()) { Text("Cancel") }
+            TextButton(onClick = onDone, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_cancel)) }
         }
     }
 }

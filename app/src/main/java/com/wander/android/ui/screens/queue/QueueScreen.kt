@@ -26,10 +26,10 @@ import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Group
 import androidx.compose.material3.Badge
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,11 +42,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.agro.Jam
@@ -123,7 +125,7 @@ internal fun QueueScreen(
                 .padding(horizontal = 12.dp, vertical = 4.dp)
         ) {
             IconButton(onClick = onClose) {
-                Icon(Icons.Rounded.Close, contentDescription = "Close queue")
+                Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.queue_close_queue))
             }
             Column(
                 modifier = Modifier
@@ -138,7 +140,7 @@ internal fun QueueScreen(
                 )
                 if (jam != null) {
                     Text(
-                        text = "${jam.members.size} members · Tap to open Jam",
+                        text = stringResource(R.string.queue_members_tap_open_jam, jam.members.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -149,7 +151,7 @@ internal fun QueueScreen(
             // one tap apart doing the same thing is a menu asking which one is real.
             if (jam == null && state.queue.isNotEmpty()) {
                 IconButton(onClick = playerConnection::clearQueue) {
-                    Icon(Icons.Rounded.DeleteSweep, contentDescription = "Clear queue")
+                    Icon(Icons.Rounded.DeleteSweep, contentDescription = stringResource(R.string.action_clear_queue))
                 }
             }
         }
@@ -213,7 +215,7 @@ private fun JamQueueContent(
                                 )
                                 Spacer(Modifier.width(4.dp))
                                 Text(
-                                    text = "PLAYING IN JAM",
+                                    text = stringResource(R.string.queue_playing_jam),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -242,7 +244,7 @@ private fun JamQueueContent(
         if (jam.proposals.isNotEmpty()) {
             item(key = "proposals_header") {
                 Text(
-                    text = "Waiting for room votes",
+                    text = stringResource(R.string.queue_waiting_room_votes),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
@@ -260,7 +262,7 @@ private fun JamQueueContent(
         // Up next items in the Jam
         item(key = "up_next_header") {
             Text(
-                text = "Up next in room",
+                text = stringResource(R.string.queue_up_next_room),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
@@ -277,7 +279,7 @@ private fun JamQueueContent(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                 ) {
                     Text(
-                        text = "Jam queue is empty. Tap any song in the app to suggest or add it to the room!",
+                        text = stringResource(R.string.queue_jam_queue_empty_tap_any),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp)
@@ -359,7 +361,7 @@ private fun JamQueueItem(
                 IconButton(onClick = onRemove) {
                     Icon(
                         Icons.Rounded.Close,
-                        contentDescription = "Remove from Jam",
+                        contentDescription = stringResource(R.string.queue_remove_from_jam),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -401,7 +403,7 @@ private fun JamProposalItem(
                     modifier = Modifier.scrollingTitle()
                 )
                 Text(
-                    text = "${track.artist} · from @${track.addedBy}",
+                    text = stringResource(R.string.queue_from, track.artist, track.addedBy),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -410,7 +412,7 @@ private fun JamProposalItem(
             }
             if (track.approved) {
                 Text(
-                    text = "Voted (${track.approvals})",
+                    text = stringResource(R.string.queue_voted, track.approvals),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(horizontal = 8.dp)
@@ -419,7 +421,7 @@ private fun JamProposalItem(
                 FilledTonalButton(onClick = onApprove, shapes = ButtonDefaults.shapes()) {
                     Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Vote")
+                    Text(stringResource(R.string.queue_vote))
                 }
             }
         }
@@ -435,8 +437,8 @@ private fun LocalQueueContent(
 ) {
     if (state.queue.isEmpty()) {
         EmptyState(
-            title = "The queue is empty",
-            message = "Play something and it will show up here.",
+            title = stringResource(R.string.queue_queue_empty),
+            message = stringResource(R.string.queue_play_something_will_show_up),
             modifier = Modifier.padding(top = 96.dp)
         )
         return

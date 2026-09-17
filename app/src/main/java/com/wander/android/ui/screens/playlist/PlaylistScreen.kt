@@ -10,9 +10,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,9 +20,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.EmptyState
@@ -87,8 +89,8 @@ fun PlaylistScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     EmptyState(
-                        title = "Playlist unavailable",
-                        message = "This playlist couldn't be loaded from any connected source."
+                        title = stringResource(R.string.playlist_playlist_unavailable),
+                        message = stringResource(R.string.playlist_playlist_couldn_t_loaded_from)
                     )
                 }
             }
@@ -143,7 +145,7 @@ fun PlaylistScreen(
                 .padding(contentPadding.headerInset())
                 .padding(start = 12.dp, top = 8.dp)
         ) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
         }
     }
 }

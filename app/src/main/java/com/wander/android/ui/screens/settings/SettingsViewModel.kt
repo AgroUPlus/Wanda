@@ -225,7 +225,12 @@ internal class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _agroVisibility.value = profileApi.profile(secureStorage.agroUsername)
                 .getOrNull()
-                ?.let { AgroVisibility(it.showNowPlaying, it.showStats, it.discoverable) }
+                ?.let {
+                    AgroVisibility(
+                        it.showNowPlaying, it.showStats, it.discoverable,
+                        popularOptIn = it.popularOptIn
+                    )
+                }
         }
     }
 
@@ -235,8 +240,10 @@ internal class SettingsViewModel @Inject constructor(
         _agroVisibility.value = visibility
         viewModelScope.launch {
             profileApi.setVisibility(visibility).onSuccess { profile ->
-                _agroVisibility.value =
-                    AgroVisibility(profile.showNowPlaying, profile.showStats, profile.discoverable)
+                _agroVisibility.value = AgroVisibility(
+                    profile.showNowPlaying, profile.showStats, profile.discoverable,
+                    popularOptIn = profile.popularOptIn
+                )
             }.onFailure { refreshAgroVisibility() }
         }
     }

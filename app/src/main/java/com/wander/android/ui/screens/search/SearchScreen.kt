@@ -18,20 +18,22 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.wander.android.ui.components.SearchKindToggle
+import com.wander.android.R
+import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.EmptyState
+import com.wander.android.ui.components.SearchKindToggle
 import com.wander.android.ui.components.SourceToggleChips
-import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.headerInset
@@ -121,14 +123,14 @@ fun SearchScreen(
                 state.isSearching -> LoadingIndicator(modifier = centred)
 
                 !state.hasQuery -> EmptyState(
-                    title = "Search everything at once",
-                    message = "Navidrome, YouTube Music and music on this device, in one list.",
+                    title = stringResource(R.string.search_search_everything_once),
+                    message = stringResource(R.string.search_navidrome_youtube_music_music_device),
                     modifier = centred
                 )
 
                 state.results.isEmpty() && state.lyricMatches.isEmpty() -> EmptyState(
-                    title = "No matches",
-                    message = "Nothing found for \"$query\" in your connected sources.",
+                    title = stringResource(R.string.search_no_matches),
+                    message = stringResource(R.string.search_nothing_found_connected_sources, query),
                     modifier = centred
                 )
 
@@ -147,7 +149,7 @@ fun SearchScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Matched in lyrics",
+                                    text = stringResource(R.string.search_matched_lyrics),
                                     style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -194,7 +196,7 @@ fun SearchScreen(
                         if (state.results.isNotEmpty()) {
                             item(key = "header_tracks") {
                                 Text(
-                                    text = "Songs",
+                                    text = stringResource(R.string.search_songs),
                                     style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier
@@ -212,7 +214,15 @@ fun SearchScreen(
                     ) { index, track ->
                         TrackRow(
                             track = track,
-                            onPlay = { viewModel.play(state.results, index) },
+                            // A radio from the tapped song, not the results list.
+                            //
+                            // The list is everything matching a string: searching "Signals" and
+                            // pressing one of them queued every other song with "Signals" in its
+                            // name, by unrelated artists, in relevance order. That is a spelling
+                            // coincidence, not a running order. A station seeded from the track
+                            // plays it first and then what actually sounds like it, across every
+                            // configured source — see `PlaybackCoordinator.startRadio`.
+                            onPlay = { viewModel.startRadio(track) },
                             onLongPress = { actionsFor = track }
                         )
                     }

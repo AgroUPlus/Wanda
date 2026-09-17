@@ -14,9 +14,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.ui.components.ImmersiveHero
 import com.wander.android.ui.components.ShapedActionButton
 import com.wander.android.ui.components.ShapedPlayButton
@@ -84,18 +86,18 @@ internal fun AlbumHero(
         ) {
             ShapedActionButton(
                 onClick = onShuffle,
-                contentDescription = "Shuffle",
+                contentDescription = stringResource(R.string.action_shuffle),
                 icon = Icons.Rounded.Shuffle
             )
             ShapedPlayButton(
                 onClick = onPlay,
-                contentDescription = "Play",
+                contentDescription = stringResource(R.string.action_play),
                 icon = Icons.Rounded.PlayArrow
             )
             onShare?.let { share ->
                 ShapedActionButton(
                     onClick = share,
-                    contentDescription = "Share",
+                    contentDescription = stringResource(R.string.action_share),
                     icon = Icons.Rounded.Share
                 )
             }

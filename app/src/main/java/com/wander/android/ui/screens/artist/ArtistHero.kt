@@ -7,10 +7,10 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Podcasts
 import androidx.compose.material.icons.rounded.NotificationAdd
 import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Podcasts
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.MaterialTheme
@@ -18,10 +18,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.RectangleShape
+import com.wander.android.R
 import com.wander.android.ui.components.ArtistMonogram
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.ImmersiveHero
@@ -113,7 +115,7 @@ internal fun ArtistHero(
         ) {
             ShapedActionButton(
                 onClick = onRadio,
-                contentDescription = "Start radio",
+                contentDescription = stringResource(R.string.artist_start_radio),
                 icon = Icons.Rounded.Podcasts
             )
             // Centre, and larger than its neighbours: the one control the page exists for. It sat
@@ -121,18 +123,18 @@ internal fun ArtistHero(
             // left-aligned row and the wrong one for a centred portrait.
             ShapedPlayButton(
                 onClick = onPlay,
-                contentDescription = "Play",
+                contentDescription = stringResource(R.string.action_play),
                 icon = Icons.Rounded.PlayArrow
             )
             ShapedActionButton(
                 onClick = onShuffle,
-                contentDescription = "Shuffle",
+                contentDescription = stringResource(R.string.action_shuffle),
                 icon = Icons.Rounded.Shuffle
             )
             onShare?.let { share ->
                 ShapedActionButton(
                     onClick = share,
-                    contentDescription = "Share",
+                    contentDescription = stringResource(R.string.action_share),
                     icon = Icons.Rounded.Share
                 )
             }

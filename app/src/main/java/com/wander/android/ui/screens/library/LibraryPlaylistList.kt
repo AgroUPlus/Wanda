@@ -27,11 +27,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.ui.components.AddToPlaylistController
@@ -88,8 +90,8 @@ internal fun PlaylistList(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 EmptyState(
-                    title = "No playlists",
-                    message = "Playlists from your sources and imported playlists appear here."
+                    title = stringResource(R.string.library_no_playlists),
+                    message = stringResource(R.string.library_playlists_from_sources_imported_playlists)
                 )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -101,7 +103,7 @@ internal fun PlaylistList(
                             shapes = ButtonDefaults.shapes()
                         ) {
                             Icon(Icons.Rounded.Add, contentDescription = null)
-                            Text("New playlist", modifier = Modifier.padding(start = 8.dp))
+                            Text(stringResource(R.string.common_new_playlist), modifier = Modifier.padding(start = 8.dp))
                         }
                     }
                     FilledTonalButton(
@@ -109,7 +111,7 @@ internal fun PlaylistList(
                         shapes = ButtonDefaults.shapes()
                     ) {
                         Icon(Icons.Rounded.Download, contentDescription = null)
-                        Text("Import", modifier = Modifier.padding(start = 8.dp))
+                        Text(stringResource(R.string.common_import), modifier = Modifier.padding(start = 8.dp))
                     }
                 }
             }
@@ -155,7 +157,8 @@ internal fun PlaylistList(
                         shapes = ButtonDefaults.shapes()
                     ) {
                         Icon(imageVector = Icons.Rounded.Add, contentDescription = null)
-                        Text(text = "New playlist", modifier = Modifier.padding(start = 6.dp))
+                        Text(text =
+                            stringResource(R.string.common_new_playlist), modifier = Modifier.padding(start = 6.dp))
                     }
                 }
                 FilledTonalButton(
@@ -164,7 +167,7 @@ internal fun PlaylistList(
                     shapes = ButtonDefaults.shapes()
                 ) {
                     Icon(imageVector = Icons.Rounded.Download, contentDescription = null)
-                    Text(text = "Import", modifier = Modifier.padding(start = 6.dp))
+                    Text(text = stringResource(R.string.common_import), modifier = Modifier.padding(start = 6.dp))
                 }
             }
         }

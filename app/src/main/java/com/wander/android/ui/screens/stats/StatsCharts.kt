@@ -15,8 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.sources.agro.StatEntry
 import com.wander.android.ui.components.scrollingTitle
 
@@ -77,7 +79,7 @@ internal fun TopList(
 ) {
     if (entries.isEmpty()) {
         Text(
-            text = "Nothing yet.",
+            text = stringResource(R.string.stats_nothing_yet),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = modifier.padding(horizontal = 20.dp, vertical = 8.dp)

@@ -17,17 +17,19 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.SkeletonCard
@@ -48,8 +50,8 @@ internal fun AlbumGrid(
     if (albums.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             EmptyState(
-                title = "No albums yet",
-                message = "Albums appear once a connected source has been browsed at least once."
+                title = stringResource(R.string.library_no_albums_yet),
+                message = stringResource(R.string.library_albums_appear_once_connected_source)
             )
         }
         return
@@ -87,7 +89,7 @@ internal fun AlbumGrid(
         if (showsRecentRow) {
             item(span = { GridItemSpan(maxLineSpan) }, key = "recent_header") {
                 Text(
-                    text = "Recent",
+                    text = stringResource(R.string.library_recent),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
@@ -128,7 +130,7 @@ internal fun AlbumGrid(
             }
             item(span = { GridItemSpan(maxLineSpan) }, key = "all_header") {
                 Text(
-                    text = "All albums",
+                    text = stringResource(R.string.library_all_albums),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )

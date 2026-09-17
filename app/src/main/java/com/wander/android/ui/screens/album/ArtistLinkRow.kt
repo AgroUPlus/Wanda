@@ -15,8 +15,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.ui.components.scrollingTitle
 
 /** "More from <artist>" — the way off an album page into the rest of the discography. */
@@ -41,7 +43,7 @@ internal fun ArtistLinkRow(
             modifier = Modifier.size(20.dp)
         )
         Text(
-            text = "More from $artist",
+            text = stringResource(R.string.album_more_from, artist),
             style = MaterialTheme.typography.bodyLarge,
             maxLines = 1,
             overflow = TextOverflow.Clip,

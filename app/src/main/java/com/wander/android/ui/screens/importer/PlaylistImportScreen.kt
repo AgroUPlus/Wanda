@@ -20,7 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -28,15 +27,18 @@ import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.data.importer.ImportProgress
 import com.wander.android.data.importer.PlatformType
 
@@ -92,10 +94,11 @@ fun PlaylistImportScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Import Playlist", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.importer_import_playlist), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = handleBarBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription =
+                            stringResource(R.string.common_back))
                     }
                 }
             )
@@ -151,12 +154,12 @@ fun PlaylistImportScreen(
                                 Tab(
                                     selected = state.isWebMode,
                                     onClick = { viewModel.setWebMode(true) },
-                                    text = { Text("Connect & Auto-detect", fontWeight = FontWeight.SemiBold) }
+                                    text = { Text(stringResource(R.string.importer_connect_auto_detect), fontWeight = FontWeight.SemiBold) }
                                 )
                                 Tab(
                                     selected = !state.isWebMode,
                                     onClick = { viewModel.setWebMode(false) },
-                                    text = { Text("Direct Link / Text", fontWeight = FontWeight.SemiBold) }
+                                    text = { Text(stringResource(R.string.importer_direct_link_text), fontWeight = FontWeight.SemiBold) }
                                 )
                             }
 

@@ -28,9 +28,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.agro.AgroSessionViewModel
@@ -134,8 +136,8 @@ fun HomeScreen(
             // No music anywhere, under any filter — there is nothing for the header or the source
             // chips to do, so the whole screen is the "go connect something" message.
             state.isGloballyEmpty -> EmptyState(
-                title = "Nothing to play yet",
-                message = "Connect Navidrome or YouTube Music in Settings, or grant access to " +
+                title = stringResource(R.string.home_nothing_play_yet),
+                message = stringResource(R.string.home_connect_navidrome_youtube_music_settings) +
                     "music stored on this device.",
                 actionLabel = "Open Settings",
                 onAction = onOpenSettings,
@@ -197,7 +199,7 @@ fun HomeScreen(
                     if (state.isEmpty) {
                         item(key = "filtered_empty", contentType = "empty") {
                             EmptyState(
-                                title = "Nothing here yet",
+                                title = stringResource(R.string.home_nothing_here_yet),
                                 message = "${state.selectedSource?.displayName ?: "This source"} " +
                                     "has no tracks. Tap the filter again to see everything.",
                                 modifier = Modifier.fillMaxWidth().padding(top = 48.dp)
@@ -241,11 +243,11 @@ private fun HomeHeader(
         // the sheet behind it is where "still playing" actually means something.
         if (hasSession) {
             IconButton(onClick = onOpenSessions) {
-                Icon(Icons.Rounded.Devices, contentDescription = "Sessions on other devices")
+                Icon(Icons.Rounded.Devices, contentDescription = stringResource(R.string.home_sessions_other_devices))
             }
         }
         IconButton(onClick = onOpenSettings) {
-            Icon(Icons.Rounded.Settings, contentDescription = "Settings")
+            Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.nav_settings))
         }
     }
 }

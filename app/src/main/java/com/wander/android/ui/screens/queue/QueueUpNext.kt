@@ -27,7 +27,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.rememberHaptics
@@ -131,7 +133,7 @@ internal fun QueueUpNext(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Rounded.DragHandle,
-                                        contentDescription = "Reorder ${entry.track.title}",
+                                        contentDescription = stringResource(R.string.queue_reorder, entry.track.title),
                                         tint = if (isCurrent) {
                                             MaterialTheme.colorScheme.primary
                                         } else {
@@ -185,7 +187,7 @@ private fun RemoveBackdrop() {
                 tint = MaterialTheme.colorScheme.error
             )
             Text(
-                text = "Remove",
+                text = stringResource(R.string.common_remove),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(start = 12.dp)

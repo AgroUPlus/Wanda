@@ -24,8 +24,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.importer.ImportProgress
 import com.wander.android.ui.screens.settings.ImportProgressContent
 
@@ -61,20 +63,20 @@ fun ImportProgressStage(
                 ) {
                     Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Listen now")
+                    Text(stringResource(R.string.importer_listen_now))
                 }
                 FilledTonalButton(
                     onClick = onReset,
                     modifier = Modifier.weight(1f),
                     shapes = ButtonDefaults.shapes()
                 ) {
-                    Text("Done")
+                    Text(stringResource(R.string.action_done))
                 }
             }
         } else if (progress is ImportProgress.Failed) {
             Spacer(Modifier.height(16.dp))
             Button(onClick = onReset, shapes = ButtonDefaults.shapes()) {
-                Text("Try Again")
+                Text(stringResource(R.string.importer_try_again))
             }
         }
     }
@@ -94,7 +96,7 @@ fun ImportLoadingOverlay(modifier: Modifier = Modifier) {
             LoadingIndicator(modifier = Modifier.size(48.dp))
             Spacer(Modifier.height(16.dp))
             Text(
-                text = "Reading playlist tracks...",
+                text = stringResource(R.string.importer_reading_playlist_tracks),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold
             )
