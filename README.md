@@ -9,14 +9,23 @@
 </p>
 
 <p align="center">
-  <a href="https://sonarcloud.io/summary/new_code?id=AgroUPlus_Wanda"><img src="https://sonarcloud.io/api/project_badges/measure?project=AgroUPlus_Wanda&metric=security_rating" alt="Security Rating"/></a>
-  <a href="https://sonarcloud.io/summary/new_code?id=AgroUPlus_Wanda"><img src="https://sonarcloud.io/api/project_badges/measure?project=AgroUPlus_Wanda&metric=reliability_rating" alt="Reliability Rating"/></a>
+  <a href="https://github.com/AgroUPlus/Wanda/actions/workflows/ci.yml"><img src="https://github.com/AgroUPlus/Wanda/actions/workflows/ci.yml/badge.svg" alt="CI Status"/></a>
+  <a href="https://github.com/AgroUPlus/Wanda/releases"><img src="https://img.shields.io/github/v/release/AgroUPlus/Wanda?include_prereleases&label=release" alt="Latest Release"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="License"/></a>
   <a href="https://sonarcloud.io/summary/new_code?id=AgroUPlus_Wanda"><img src="https://sonarcloud.io/api/project_badges/measure?project=AgroUPlus_Wanda&metric=alert_status" alt="Quality Gate"/></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/AgroUPlus/Agro">Agro Server</a> ·
+  <a href="https://github.com/AgroUPlus/Wander">Wander Desktop</a> ·
+  <a href="SECURITY.md">Security</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a> ·
+  <a href="CODE_OF_CONDUCT.md">Code of Conduct</a>
 </p>
 
 ---
 
-Wanda unifies **Navidrome**, **local files**, **YouTube Music**, and the **Internet Archive** behind a single library, queue, and player. Material 3 Expressive throughout. Battery-first, privacy-first, no telemetry. Pairs with [Agro](https://github.com/AgroUPlus/Agro) for playback handoff, listen-along, and cross-device sync.
+Wanda unifies **Navidrome**, **local files**, **YouTube Music**, and the **Internet Archive** behind a single library, queue, and player. Material 3 Expressive throughout. Battery-first, privacy-first, no telemetry. Seamlessly pairs with [Agro](https://github.com/AgroUPlus/Agro) for playback handoff, listen-along, and cross-device sync with [Wander](https://github.com/AgroUPlus/Wander) (desktop TUI).
 
 <p align="center">
   <img width="1600" height="1000" alt="image" src="https://github.com/user-attachments/assets/9f226e44-bf8b-4800-a497-593527fc0ade" />
@@ -118,7 +127,7 @@ Set `org.gradle.java.home` in `gradle.properties` if your JDK isn't on `PATH`.
 
 ---
 
-## Licence
+## License
 
 **AGPL-3.0.** This project links `zemer-cipher` (GPL-3.0); GPLv3 §13 explicitly permits combining GPLv3 with an AGPLv3 work, which is why Wanda can be licensed AGPL-3.0 rather than GPL-3.0.
 

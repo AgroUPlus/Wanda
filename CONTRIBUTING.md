@@ -41,7 +41,18 @@ AI coding assistants may be used as development aids, but they are not contribut
 Do not include `Co-Authored-By` trailers or metadata for AI models (e.g. Claude, ChatGPT).
 All contributions must be attributed solely to human developers adhering to [`CLA.md`](CLA.md).
 
+## Development setup & git hooks
+
+To enforce Conventional Commits and ensure no AI co-authorship trailers are committed locally:
+
+```bash
+./scripts/setup-hooks.sh
+# or manually:
+git config core.hooksPath .githooks
+```
+
 ## `TrackDeduplicator` has a second implementation
 
 Agro's `src/norm.rs` is a port of it, and the two must agree exactly — a shared library index
 built on two different normalisations produces nonsense diffs. Change both or neither.
+

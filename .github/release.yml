@@ -1,0 +1,36 @@
+changelog:
+  exclude:
+    labels:
+      - ignore
+      - internal
+    authors:
+      - dependabot
+      - dependabot[bot]
+      - crowdin-bot
+  categories:
+    - title: "✨ Features & Enhancements"
+      labels:
+        - feature
+        - enhancement
+    - title: "🐛 Bug Fixes"
+      labels:
+        - fix
+        - bug
+    - title: "🔄 Ecosystem & Synchronization"
+      labels:
+        - sync
+        - handoff
+        - agro
+    - title: "🔒 Security & Privacy"
+      labels:
+        - security
+    - title: "📖 Documentation & Governance"
+      labels:
+        - documentation
+        - docs
+    - title: "🧹 Maintenance & Build"
+      labels:
+        - maintenance
+        - chore
+        - dependencies
+        - ci

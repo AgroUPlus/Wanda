@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# .githooks/pre-commit
+# Pre-flight check to block merge conflicts, secrets, and keystores before commit creation.
+
+set -euo pipefail
+
+# 1. Block unresolved merge conflict markers in staged files
+CONFLICT_FILES=$(git diff --cached --name-only | while read -r file; do
+  if [ -f "$file" ] && grep -Eq "^(<<<<<<< |=======|>>>>>>> )" "$file"; then
+    echo "$file"
+  fi
+done)
+
+if [ -n "$CONFLICT_FILES" ]; then
+  echo -e "\033[0;31m[ERROR] Staged files contain unresolved merge conflict markers:\033[0m"
+  echo "$CONFLICT_FILES" | sed 's/^/  /'
+  echo "Please resolve conflicts before committing."
+  exit 1
+fi
+
+# 2. Block sensitive files / private keys / release keystores
+STAGED_FILES=$(git diff --cached --name-only)
+SENSITIVE_MATCHES=$(echo "$STAGED_FILES" | grep -Ei "(\.key|\.keystore|\.pem|local\.properties|\.env)$" || true)
+
+if [ -n "$SENSITIVE_MATCHES" ]; then
+  echo -e "\033[0;31m[ERROR] Attempting to commit potentially sensitive credentials or keystore files:\033[0m"
+  echo "$SENSITIVE_MATCHES" | sed 's/^/  /'
+  echo "Remove these files from git staging before proceeding."
+  exit 1
+fi
+
+exit 0
