@@ -13,8 +13,10 @@ import com.wander.android.ui.components.rememberShelfEntranceScale
  * The visibility switches only appear with an Agro server paired: without one there is nobody they
  * could reveal anything to, and a switch that cannot do anything is worse than no switch.
  *
- * All three default off, on the server as well as here. A privacy setting that defaults open has
- * already leaked by the time the user finds it.
+ * The visibility switches default off, on the server as well as here — a privacy setting that
+ * defaults open has already leaked by the time the user finds it. Popular on Agro is the one
+ * exception, defaulting on: it never carries an account id, so there is no identity in it for a
+ * default to leak.
  */
 internal fun LazyListScope.privacyTab(
     state: SettingsUiState,
@@ -95,6 +97,20 @@ internal fun LazyListScope.privacyTab(
                 onCheckedChange = { actions.onVisibilityChange(state.agroVisibility.copy(discoverable = it)) },
                 enabled = !state.incognito,
                 modifier = Modifier.scale(rememberShelfEntranceScale(discoverableIndex))
+            )
+        }
+
+        val popularOptInIndex = i++
+        item(key = "popular_opt_in") {
+            SettingsToggle(
+                title = stringResource(R.string.settings_popular_on_agro),
+                subtitle = stringResource(R.string.settings_include_plays_in_the_servers_shared_chart),
+                checked = state.agroVisibility.popularOptIn && !state.incognito,
+                onCheckedChange = {
+                    actions.onVisibilityChange(state.agroVisibility.copy(popularOptIn = it))
+                },
+                enabled = !state.incognito,
+                modifier = Modifier.scale(rememberShelfEntranceScale(popularOptInIndex))
             )
         }
     }

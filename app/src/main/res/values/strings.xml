@@ -332,6 +332,8 @@
     <string name="settings_paused_incognito">Paused by incognito</string>
     <string name="settings_paused_nothing_being_measured_until">Paused. Nothing is being measured until you resume.</string>
     <string name="settings_playlist_imported">Playlist imported! 🎉</string>
+    <string name="settings_popular_on_agro">Popular on Agro</string>
+    <string name="settings_include_plays_in_the_servers_shared_chart">Include your plays in the server\'s shared chart of what everyone is listening to. Never tied to your name — only counted in bulk.</string>
     <string name="settings_re_check_model">Re-check model</string>
     <string name="settings_ready_next_track">Ready the next track</string>
     <string name="settings_recognition_model">Recognition model</string>
