@@ -1,5 +1,6 @@
 package com.wander.android.core.audio.fingerprint
 
+import com.wander.android.R
 import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
@@ -215,7 +216,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
             kind = WorkProgressNotification.Kind.FINGERPRINT,
             // Named for the result rather than the machinery, as the Settings row is:
             // "fingerprinting" means nothing to most people, being able to recognise a song does.
-            title = "Measuring your library",
+            title = applicationContext.getString(R.string.notif_measuring_library),
             // The track being worked on and how long is left. A bare "12 of 250" says the phone is
             // busy; the title says what it is busy *with*, and the estimate says whether this is
             // worth waiting for or worth leaving on Wi-Fi overnight.

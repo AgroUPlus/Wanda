@@ -95,7 +95,7 @@ class AgroLogin @Inject constructor(
         url = "$serverUrl/api/v1/signup",
         body = buildJsonObject {
             put("username", username.trim())
-            inviteCode?.takeIf { it.isNotBlank() }?.let { put("invite_code", it.trim()) }
+            inviteCode?.takeIf { it.isNotBlank() }?.let { put("inviteCode", it.trim()) }
             put("label", secureStorage.agroDevicePetname.ifEmpty { "Wanda Android" })
         }
     ).mapCatching { json ->
