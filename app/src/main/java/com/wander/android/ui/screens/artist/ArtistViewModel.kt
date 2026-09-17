@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.artist
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.playback.PlaybackCoordinator
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.ArtistAlbumSection
 import com.wander.android.core.database.entity.ArtistEntity
@@ -37,6 +38,7 @@ internal class ArtistViewModel @Inject constructor(
     private val shareRepository: ShareRepository,
     private val subscriptions: ArtistSubscriptionRepository,
     private val playerConnection: PlayerConnection,
+    private val playbackCoordinator: PlaybackCoordinator,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -349,11 +351,7 @@ internal class ArtistViewModel @Inject constructor(
     }
 
     fun startRadio(track: UnifiedTrack) {
-        viewModelScope.launch {
-            playerConnection.play(listOf(track))
-            val radio = musicRepository.generateRadio(track)
-            if (radio.isNotEmpty()) playerConnection.addToQueue(radio)
-        }
+        viewModelScope.launch { playbackCoordinator.startRadio(track) }
     }
 
     fun toggleLike(track: UnifiedTrack) {

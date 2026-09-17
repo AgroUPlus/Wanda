@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.search
 import com.wander.android.data.model.SearchKind
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.playback.PlaybackCoordinator
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
@@ -40,6 +41,7 @@ class SearchViewModel @Inject constructor(
     private val musicRepository: MusicRepository,
     private val lyricsRepository: LyricsRepository,
     private val playerConnection: PlayerConnection,
+    private val playbackCoordinator: PlaybackCoordinator,
     private val shareRepository: ShareRepository,
     private val queryHolder: SearchQueryHolder
 ) : ViewModel() {
@@ -176,11 +178,7 @@ class SearchViewModel @Inject constructor(
 
     /** Plays the track, then fills the queue behind it with its source's radio. */
     fun startRadio(track: UnifiedTrack) {
-        viewModelScope.launch {
-            playerConnection.play(listOf(track))
-            val radio = musicRepository.generateRadio(track)
-            if (radio.isNotEmpty()) playerConnection.addToQueue(radio)
-        }
+        viewModelScope.launch { playbackCoordinator.startRadio(track) }
     }
 
     /** Whether this track's backend can mint a public link at all. */
