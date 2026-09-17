@@ -23,11 +23,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.core.audio.fingerprint.EmbeddingModelManager
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.headerInset
@@ -56,10 +58,10 @@ internal fun FingerprintsScreen(
                 .padding(start = 8.dp, end = 24.dp, top = 8.dp, bottom = 8.dp)
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
             }
             Text(
-                text = "Fingerprints",
+                text = stringResource(R.string.settings_fingerprints),
                 style = MaterialTheme.typography.headlineLarge,
                 modifier = Modifier.padding(start = 4.dp)
             )
@@ -121,7 +123,7 @@ private fun RecognitionModelRow(
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
         Text(
-            text = "Recognition model",
+            text = stringResource(R.string.settings_recognition_model),
             style = MaterialTheme.typography.titleMedium
         )
         Text(
@@ -150,7 +152,7 @@ private fun RecognitionModelRow(
                     onClick = onVerify,
                     shapes = ButtonDefaults.shapes(),
                     modifier = Modifier.padding(top = 4.dp)
-                ) { Text("Re-check model") }
+                ) { Text(stringResource(R.string.settings_re_check_model)) }
             else -> FilledTonalButton(
                 onClick = onDownload,
                 shapes = ButtonDefaults.shapes(),
@@ -166,14 +168,14 @@ private fun RecognitionModelRow(
 private fun Summary(state: FingerprintsUiState, onPausedChange: (Boolean) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)) {
         Text(
-            text = "${state.embedded} of ${state.total} recognisable",
+            text = stringResource(R.string.settings_recognisable, state.embedded, state.total),
             style = MaterialTheme.typography.titleMedium
         )
         Text(
             // Recognition now runs on the neural fingerprint, not the landmark index. The rows
             // below still show landmark/contour state during the changeover; green there is a
             // track the old path also covers.
-            text = "A song is recognisable once it has a neural fingerprint (see Recognition " +
+            text = stringResource(R.string.settings_song_recognisable_once_has_neural) +
                 "model above). Green below is done, blue is being measured now, red is neither.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -207,7 +209,7 @@ private fun Summary(state: FingerprintsUiState, onPausedChange: (Boolean) -> Uni
 
         if (state.isPaused) {
             Text(
-                text = "Paused. Nothing is being measured until you resume.",
+                text = stringResource(R.string.settings_paused_nothing_being_measured_until),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp)
@@ -216,7 +218,7 @@ private fun Summary(state: FingerprintsUiState, onPausedChange: (Boolean) -> Uni
 
         state.processing?.takeIf { !state.isPaused }?.let {
             Text(
-                text = "Measuring \"${it.track.title}\" now",
+                text = stringResource(R.string.settings_measuring_now, it.track.title),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary,
                 maxLines = 1,
@@ -233,13 +235,13 @@ private fun SectionHeader(section: FingerprintSection, modifier: Modifier = Modi
         Text(
             // The count belongs in the heading, not in a badge: "3 of 812" is the answer someone
             // opened this screen to get, per group.
-            text = "${section.title} — ${section.indexed} of ${section.rows.size}",
+            text = stringResource(R.string.settings_of, stringResource(section.title), section.indexed, section.rows.size),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = section.subtitle,
+            text = stringResource(section.subtitle),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 2.dp)

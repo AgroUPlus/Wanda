@@ -41,7 +41,9 @@ internal data class AgroProfile(
     /** Whether this account lets friends read its listening history. */
     val showActivity: Boolean = false,
     /** X25519 public identity key for E2EE drops. */
-    val publicKey: String? = null
+    val publicKey: String? = null,
+    /** Whether this account's plays count toward the fleet-wide Popular on Agro chart. */
+    val popularOptIn: Boolean = true
 ) {
     /** What to put on screen. Falls back to the username, which always exists. */
     val name: String get() = displayName?.takeIf { it.isNotBlank() } ?: username
@@ -130,7 +132,14 @@ internal data class AgroVisibility(
      * Its own switch rather than part of `showStats`, because a total and a timeline are different
      * disclosures. Defaults off, like the rest.
      */
-    val showActivity: Boolean = false
+    val showActivity: Boolean = false,
+    /**
+     * Whether this account's plays count toward the fleet-wide Popular on Agro chart.
+     *
+     * Unlike the switches above, this defaults *on* — the chart never carries an account id, so
+     * there is no identity here for a default to leak. See the server's migration 48.
+     */
+    val popularOptIn: Boolean = true
 )
 
 /**

@@ -14,8 +14,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 
 /**
  * Asks for the passphrase that seals a backup.
@@ -62,7 +64,7 @@ internal fun BackupPassphraseDialog(
                 OutlinedTextField(
                     value = passphrase,
                     onValueChange = { passphrase = it },
-                    label = { Text("Passphrase") },
+                    label = { Text(stringResource(R.string.settings_passphrase)) },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.padding(top = 16.dp)
@@ -71,11 +73,11 @@ internal fun BackupPassphraseDialog(
                     OutlinedTextField(
                         value = confirmation,
                         onValueChange = { confirmation = it },
-                        label = { Text("Repeat passphrase") },
+                        label = { Text(stringResource(R.string.settings_repeat_passphrase)) },
                         singleLine = true,
                         isError = mismatch,
                         supportingText = if (mismatch) {
-                            { Text("The two do not match") }
+                            { Text(stringResource(R.string.settings_two_do_not_match)) }
                         } else {
                             null
                         },
@@ -95,7 +97,7 @@ internal fun BackupPassphraseDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text("Cancel") }
+            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_cancel)) }
         }
     )
 }

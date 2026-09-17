@@ -200,7 +200,7 @@ internal class LibrarySyncWorker @AssistedInject constructor(
     private fun foregroundInfo(done: Int, total: Int): ForegroundInfo =
         notifications.foregroundInfo(
             kind = WorkProgressNotification.Kind.LIBRARY_SYNC,
-            title = "Syncing your library",
+            title = context.getString(R.string.notif_syncing_library),
             text = if (total > 0) "$done of $total" else "Preparing…",
             done = done,
             total = total

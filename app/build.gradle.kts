@@ -85,6 +85,13 @@ android {
         buildConfig = true
     }
 
+    androidResources {
+        // Generates `localeConfig` from the `values-xx` directories Crowdin delivers, so the
+        // phone's own "App languages" screen lists exactly what this build ships — and keeps
+        // listing the right thing without anyone remembering to edit an XML file.
+        generateLocaleConfig = true
+    }
+
     lint {
         // androidx.lifecycle's RepeatOnLifecycleDetector crashes on Kotlin 2.3 sources
         // ("AsyncExecutionService.getService must not return null"). This disables the broken

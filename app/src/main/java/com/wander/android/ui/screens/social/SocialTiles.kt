@@ -30,8 +30,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 
 /**
  * The two places you go from Friends, as a pair of tiles rather than a stack of full-width cards.
@@ -54,7 +56,7 @@ internal fun SocialTiles(
     ) {
         SocialTile(
             icon = Icons.Rounded.GraphicEq,
-            title = "Jam",
+            title = stringResource(R.string.action_jam),
             subtitle = jamSubtitle ?: "Start one",
             container = MaterialTheme.colorScheme.primaryContainer,
             content = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -66,7 +68,7 @@ internal fun SocialTiles(
         )
         SocialTile(
             icon = Icons.Rounded.AutoAwesome,
-            title = "Activity",
+            title = stringResource(R.string.common_activity),
             subtitle = activitySubtitle,
             container = MaterialTheme.colorScheme.tertiaryContainer,
             content = MaterialTheme.colorScheme.onTertiaryContainer,

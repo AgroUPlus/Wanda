@@ -1,5 +1,6 @@
 package com.wander.android
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -10,6 +11,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.wander.android.core.i18n.AppLocaleStore
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.ArtistTrackSection
@@ -51,6 +53,16 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var shareLinkRewriter: ShareLinkRewriter
     @Inject lateinit var deepLinkRouter: DeepLinkRouter
     @Inject internal lateinit var socialRepository: SocialRepository
+
+    /**
+     * Applies the chosen display language before a single resource is resolved.
+     *
+     * Only does anything below API 33, where the platform has no per-app language of its own —
+     * see [AppLocaleStore.wrap].
+     */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocaleStore.wrap(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

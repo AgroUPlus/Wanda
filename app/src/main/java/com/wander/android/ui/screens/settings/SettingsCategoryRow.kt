@@ -22,6 +22,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
@@ -121,11 +122,11 @@ internal fun SettingsCategoryRow(
 
         Column(modifier = Modifier.padding(start = 16.dp)) {
             Text(
-                text = category.label,
+                text = stringResource(category.label),
                 style = MaterialTheme.typography.titleMedium
             )
             Text(
-                text = category.subtitle,
+                text = stringResource(category.subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp)

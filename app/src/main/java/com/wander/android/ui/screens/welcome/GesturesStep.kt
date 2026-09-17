@@ -25,8 +25,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.ui.theme.LocalReducedMotion
 import kotlinx.coroutines.delay
 
@@ -57,9 +59,9 @@ internal fun GesturesStep() {
         selected = gestures[(gestures.indexOf(selected) + 1) % gestures.size]
     }
 
-    Text(text = "Gestures", style = MaterialTheme.typography.headlineLarge)
+    Text(text = stringResource(R.string.welcome_gestures), style = MaterialTheme.typography.headlineLarge)
     Text(
-        text = "The player is mostly gestures — fewer buttons in the way of the artwork. " +
+        text = stringResource(R.string.welcome_player_mostly_gestures_fewer_buttons) +
             "These are all of them.",
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -103,12 +105,12 @@ internal fun GesturesStep() {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                text = gesture.title,
+                text = stringResource(gesture.title),
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center
             )
             Text(
-                text = gesture.detail,
+                text = stringResource(gesture.detail),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,

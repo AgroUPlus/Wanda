@@ -30,17 +30,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.wander.android.R
 import com.wander.android.data.importer.IMPORT_WEB_USER_AGENT
 import com.wander.android.ui.components.WebViewLifecycle
 import com.wander.android.ui.components.release
@@ -84,18 +86,19 @@ fun ImportWebView(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             ) {
                 Text(
-                    text = "Sign In & Browse",
+                    text = stringResource(R.string.importer_sign_browse),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(onClick = reload) {
-                    Icon(Icons.Rounded.Refresh, contentDescription = "Reload", modifier = Modifier.size(20.dp))
+                    Icon(Icons.Rounded.Refresh, contentDescription =
+                        stringResource(R.string.importer_reload), modifier = Modifier.size(20.dp))
                 }
                 IconButton(onClick = onLogout) {
                     Icon(
                         Icons.AutoMirrored.Rounded.Logout,
-                        contentDescription = "Logout / Switch Account",
+                        contentDescription = stringResource(R.string.importer_logout_switch_account),
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -178,7 +181,7 @@ fun ImportWebView(
                     ) {
                         LoadingIndicator(modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Detecting your playlists...", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.importer_detecting_playlists), style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }
@@ -205,17 +208,17 @@ fun ImportWebView(
                         if (isLoadingPlaylist) {
                             LoadingIndicator(modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(10.dp))
-                            Text("Loading playlist...", style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(R.string.importer_loading_playlist), style = MaterialTheme.typography.bodyMedium)
                         } else {
                             Icon(Icons.Rounded.Download, contentDescription = null)
                             Spacer(Modifier.width(10.dp))
-                            Text("Playlist detected", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.importer_playlist_detected), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.width(12.dp))
                             Button(
                                 onClick = { detectedUrl?.let { onLoadPlaylist(it) } },
                                 shapes = ButtonDefaults.shapes()
                             ) {
-                                Text("Import")
+                                Text(stringResource(R.string.common_import))
                             }
                         }
                     }
@@ -244,7 +247,7 @@ private fun ImportWebViewError(
                 textAlign = TextAlign.Center
             )
             Button(onClick = onRetry, shapes = ButtonDefaults.shapes()) {
-                Text("Retry")
+                Text(stringResource(R.string.importer_retry))
             }
         }
     }

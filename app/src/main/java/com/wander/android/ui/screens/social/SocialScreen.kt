@@ -1,7 +1,6 @@
 package com.wander.android.ui.screens.social
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,18 +11,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -32,13 +32,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.ui.components.CuteAvatar
 import com.wander.android.ui.components.SkeletonRow
 import com.wander.android.ui.components.headerInset
@@ -273,7 +275,7 @@ internal fun SocialScreen(
             if (state.isEmpty && !state.isRefreshing) {
                 item(key = "empty") {
                     Text(
-                        text = "Nobody yet. Tap the add button to find people by username — you " +
+                        text = stringResource(R.string.social_nobody_yet_tap_add_button) +
                             "will only turn up in their search if you have made yourself " +
                             "discoverable in Settings → Privacy.",
                         style = MaterialTheme.typography.bodyMedium,
@@ -302,17 +304,17 @@ internal fun NotPairedNotice(onOpenSettings: () -> Unit) {
         modifier = Modifier.padding(20.dp)
     ) {
         Text(
-            text = "Friends need an Agro server.",
+            text = stringResource(R.string.social_friends_need_agro_server),
             style = MaterialTheme.typography.titleMedium
         )
         Text(
-            text = "Pair with one — or create an account on one — and you can see what the people " +
+            text = stringResource(R.string.social_pair_one_create_account_one) +
                 "you know are listening to, and listen along with them.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         FilledTonalButton(onClick = onOpenSettings, shapes = ButtonDefaults.shapes()) {
-            Text("Open Settings")
+            Text(stringResource(R.string.social_open_settings))
         }
     }
 }

@@ -15,7 +15,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
 
@@ -57,11 +59,11 @@ internal fun SettingsCategoryScreen(
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = "Back to settings"
+                    contentDescription = stringResource(R.string.settings_back_settings)
                 )
             }
             Text(
-                text = category.label,
+                text = stringResource(category.label),
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(start = 4.dp)
             )

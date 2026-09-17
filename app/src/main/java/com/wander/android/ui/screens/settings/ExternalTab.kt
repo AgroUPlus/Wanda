@@ -3,6 +3,8 @@ package com.wander.android.ui.screens.settings
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.stringResource
+import com.wander.android.R
 import com.wander.android.ui.components.rememberShelfEntranceScale
 
 internal fun LazyListScope.externalTab(
@@ -21,8 +23,8 @@ internal fun LazyListScope.externalTab(
         val sharingIncognitoIndex = i++
         item(key = "sharing_incognito") {
             SettingsRow(
-                title = "Sharing paused by incognito",
-                subtitle = "Custom sharing links are off while incognito is enabled in Privacy.",
+                title = stringResource(R.string.settings_sharing_paused_incognito),
+                subtitle = stringResource(R.string.settings_custom_sharing_links_off_while),
                 modifier = Modifier.scale(rememberShelfEntranceScale(sharingIncognitoIndex))
             )
         }
@@ -31,7 +33,7 @@ internal fun LazyListScope.externalTab(
     val shareDomainIndex = i++
     item(key = "share_domain") {
         SettingsRow(
-            title = "Custom share domain",
+            title = stringResource(R.string.settings_custom_share_domain),
             subtitle = when {
                 state.agroShareDomain.isNotBlank() -> "${state.agroShareDomain}/listen — configured on Agro server"
                 state.shareDomain.isNotBlank() -> "Links go out as ${state.shareDomain}/listen — tap to customize"
@@ -51,8 +53,8 @@ internal fun LazyListScope.externalTab(
     val artistReleaseNotificationsIndex = i++
     item(key = "artist_release_notifications") {
         SettingsToggle(
-            title = "New music from artists you follow",
-            subtitle = "Checks every few hours on Wi-Fi and tells you when someone you follow " +
+            title = stringResource(R.string.settings_new_music_from_artists_follow),
+            subtitle = stringResource(R.string.settings_checks_every_few_hours_wi) +
                 "puts something out. Follow an artist from their page. Off by default: it is a " +
                 "network call you did not ask for, and a notification you did not ask for.",
             checked = state.artistReleaseNotificationsEnabled,

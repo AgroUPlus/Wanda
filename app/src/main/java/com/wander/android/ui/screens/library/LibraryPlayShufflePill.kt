@@ -35,8 +35,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.ui.components.rememberHaptics
 import com.wander.android.ui.components.rememberPressScale
 
@@ -102,12 +104,12 @@ internal fun LibraryPlayShufflePill(
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.PlayArrow,
-                            contentDescription = "Play all",
+                            contentDescription = stringResource(R.string.common_play_all),
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = "Play",
+                            text = stringResource(R.string.action_play),
                             style = MaterialTheme.typography.labelLarge
                         )
                     }
@@ -131,12 +133,12 @@ internal fun LibraryPlayShufflePill(
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Shuffle,
-                            contentDescription = "Shuffle all",
+                            contentDescription = stringResource(R.string.library_shuffle_all),
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = "Shuffle",
+                            text = stringResource(R.string.action_shuffle),
                             style = MaterialTheme.typography.labelLarge
                         )
                     }

@@ -21,7 +21,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 
 /**
  * "LIVE" — shown where a recording would print its length.
@@ -71,7 +73,7 @@ internal fun LiveChip(modifier: Modifier = Modifier, pulsing: Boolean = true) {
                     .background(ListeningGreen)
             )
             Text(
-                text = "LIVE",
+                text = stringResource(R.string.common_live),
                 style = MaterialTheme.typography.labelMedium,
                 color = ListeningGreen
             )

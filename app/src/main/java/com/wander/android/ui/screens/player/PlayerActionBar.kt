@@ -113,7 +113,7 @@ internal fun PlayerActionBar(
             Segment(
                 position = SegmentPosition.END,
                 icon = Icons.Rounded.MoreVert,
-                description = "More options",
+                description = stringResource(R.string.player_more_options),
                 // Not a toggle — it opens a drawer and comes straight back, so it has no "on".
                 // It takes a segment anyway because it belongs to this group by reach, which is
                 // the whole reason it came down off the top bar.

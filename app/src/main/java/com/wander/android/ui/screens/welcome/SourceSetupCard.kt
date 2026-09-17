@@ -18,7 +18,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 
 /**
  * One backend in the welcome flow. Shows what it actually is and whether it is already set up, so
@@ -67,7 +69,7 @@ fun SourceSetupCard(
             if (isConfigured) {
                 Icon(
                     imageVector = Icons.Rounded.CheckCircle,
-                    contentDescription = "Connected",
+                    contentDescription = stringResource(R.string.common_connected),
                     tint = MaterialTheme.colorScheme.primary
                 )
             } else {

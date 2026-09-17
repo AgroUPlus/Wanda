@@ -56,21 +56,23 @@ internal class AgroProfileApi @Inject constructor(
     }
 
     /**
-     * Writes all three switches together.
+     * Writes all the switches together.
      *
-     * One call rather than three, so the privacy screen cannot land half-applied — a state where
-     * `discoverable` is on but the user believes they also turned now-playing off is exactly the
-     * kind of thing a partial write produces.
+     * One call rather than one per switch, so the privacy screen cannot land half-applied — a state
+     * where `discoverable` is on but the user believes they also turned now-playing off is exactly
+     * the kind of thing a partial write produces.
      */
     suspend fun setVisibility(visibility: AgroVisibility): Result<AgroProfile> = graphQl.execute(
         """
         mutation SetVisibility(
             ${'$'}showNowPlaying: Boolean!, ${'$'}showStats: Boolean!,
-            ${'$'}discoverable: Boolean!, ${'$'}showActivity: Boolean!
+            ${'$'}discoverable: Boolean!, ${'$'}showActivity: Boolean!,
+            ${'$'}popularOptIn: Boolean!
         ) {
             setVisibility(
                 showNowPlaying: ${'$'}showNowPlaying, showStats: ${'$'}showStats,
-                discoverable: ${'$'}discoverable, showActivity: ${'$'}showActivity
+                discoverable: ${'$'}discoverable, showActivity: ${'$'}showActivity,
+                popularOptIn: ${'$'}popularOptIn
             ) { $PROFILE_FIELDS }
         }
         """.trimIndent(),
@@ -79,6 +81,7 @@ internal class AgroProfileApi @Inject constructor(
             put("showStats", visibility.showStats)
             put("discoverable", visibility.discoverable)
             put("showActivity", visibility.showActivity)
+            put("popularOptIn", visibility.popularOptIn)
         }
     ).mapCatching { data -> data["setVisibility"]!!.jsonObject.toProfile() }
 

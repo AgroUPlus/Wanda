@@ -20,9 +20,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.model.isPlayableOffline
 import com.wander.android.ui.components.AudioQualityBadge
@@ -63,7 +65,7 @@ internal fun SourcePickerDialog(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = "Play from",
+                    text = stringResource(R.string.player_play_from),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(horizontal = 24.dp)
                 )
@@ -97,14 +99,14 @@ internal fun SourcePickerDialog(
                     ) {
                         LoadingIndicator(modifier = Modifier.size(18.dp))
                         Text(
-                            text = "Looking on your other sources…",
+                            text = stringResource(R.string.player_looking_other_sources),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 } else if (renditions.size == 1) {
                     Text(
-                        text = "This is the only copy your sources have.",
+                        text = stringResource(R.string.player_only_copy_sources_have),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
@@ -147,7 +149,7 @@ private fun RenditionRow(
                 // indistinguishable from the stream it was made from.
                 if (rendition.isPlayableOffline()) {
                     Text(
-                        text = "On this device",
+                        text = stringResource(R.string.player_device),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -160,7 +162,7 @@ private fun RenditionRow(
         if (isCurrent) {
             Icon(
                 imageVector = Icons.Rounded.Check,
-                contentDescription = "Playing from here",
+                contentDescription = stringResource(R.string.player_playing_from_here),
                 tint = MaterialTheme.colorScheme.primary
             )
         }

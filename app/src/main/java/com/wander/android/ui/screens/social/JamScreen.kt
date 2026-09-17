@@ -15,16 +15,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SkipNext
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -38,29 +37,32 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import kotlinx.coroutines.delay
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.wander.android.data.sources.agro.FriendJam
+import com.wander.android.R
 import com.wander.android.core.permissions.rememberLocalNetworkGate
+import com.wander.android.data.sources.agro.FriendJam
 import com.wander.android.data.sources.agro.Jam
 import com.wander.android.data.sources.agro.JamMode
 import com.wander.android.data.sources.agro.JamTrack
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
+import kotlinx.coroutines.delay
 
 /**
  * A jam: one queue several people build, and one track the whole room is on.
@@ -103,10 +105,10 @@ internal fun JamScreen(
                 .fillMaxWidth()
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
             }
             Text(
-                text = "Jam",
+                text = stringResource(R.string.action_jam),
                 style = MaterialTheme.typography.displaySmall,
                 modifier = Modifier.padding(start = 8.dp)
             )
@@ -163,7 +165,7 @@ internal fun JamScreen(
             if (jam.queue.isEmpty()) {
                 item(key = "queue-empty") {
                     Text(
-                        text = "Nothing queued. Play anything and it goes to the room.",
+                        text = stringResource(R.string.social_nothing_queued_play_anything_goes),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
@@ -204,7 +206,7 @@ private fun NowPlayingCard(
 
             if (now == null) {
                 Text(
-                    text = "Nothing playing yet",
+                    text = stringResource(R.string.social_nothing_playing_yet),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -285,7 +287,7 @@ private fun NowPlayingCard(
                         modifier = Modifier.padding(end = 8.dp)
                     )
                     Text(
-                        text = "You voted to skip · ${now.skipVotes}/${now.skipsNeeded}",
+                        text = stringResource(R.string.social_voted_skip, now.skipVotes, now.skipsNeeded),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -296,7 +298,7 @@ private fun NowPlayingCard(
                             contentDescription = null,
                             modifier = Modifier.padding(end = 6.dp)
                         )
-                        Text("Vote to skip")
+                        Text(stringResource(R.string.social_vote_skip))
                     }
                     if (now.skipVotes > 0) {
                         Text(
@@ -316,12 +318,12 @@ private fun NowPlayingCard(
                     modifier = Modifier.padding(top = 12.dp)
                 ) {
                     Text(
-                        text = "You've drifted from the room.",
+                        text = stringResource(R.string.social_ve_drifted_from_room),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.weight(1f)
                     )
-                    FilledTonalButton(onClick = viewModel::resync, shapes = ButtonDefaults.shapes()) { Text("Rejoin") }
+                    FilledTonalButton(onClick = viewModel::resync, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.social_rejoin)) }
                 }
             }
 
@@ -351,7 +353,7 @@ private fun RoomCard(jam: Jam, isRadioEnabled: Boolean, viewModel: JamViewModel)
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Join code", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.common_join_code), style = MaterialTheme.typography.labelMedium)
                     Text(jam.code, style = MaterialTheme.typography.headlineMedium)
                 }
                 IconButton(onClick = {
@@ -367,10 +369,10 @@ private fun RoomCard(jam: Jam, isRadioEnabled: Boolean, viewModel: JamViewModel)
                     }
                     context.startActivity(Intent.createChooser(sendIntent, "Share Jam Link"))
                 }) {
-                    Icon(Icons.Rounded.Share, contentDescription = "Share jam link")
+                    Icon(Icons.Rounded.Share, contentDescription = stringResource(R.string.social_share_jam_link))
                 }
                 IconButton(onClick = { clipboard.setText(AnnotatedString(jam.code)) }) {
-                    Icon(Icons.Rounded.ContentCopy, contentDescription = "Copy the join code")
+                    Icon(Icons.Rounded.ContentCopy, contentDescription = stringResource(R.string.social_copy_join_code))
                 }
             }
 
@@ -411,11 +413,11 @@ private fun RoomCard(jam: Jam, isRadioEnabled: Boolean, viewModel: JamViewModel)
                     ToggleButton(
                         checked = jam.mode == JamMode.DEMOCRACY,
                         onCheckedChange = { viewModel.setMode(JamMode.DEMOCRACY) }
-                    ) { Text("Vote to add") }
+                    ) { Text(stringResource(R.string.social_vote_add)) }
                     ToggleButton(
                         checked = jam.mode == JamMode.OPEN,
                         onCheckedChange = { viewModel.setMode(JamMode.OPEN) }
-                    ) { Text("Anyone adds") }
+                    ) { Text(stringResource(R.string.social_anyone_adds)) }
                 }
                 Spacer(Modifier.height(8.dp))
             }
@@ -438,9 +440,9 @@ private fun RoomCard(jam: Jam, isRadioEnabled: Boolean, viewModel: JamViewModel)
                     modifier = Modifier.padding(top = 12.dp)
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Jam Radio", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.social_jam_radio), style = MaterialTheme.typography.bodyMedium)
                         Text(
-                            text = "Auto-blends the room's music tastes when the queue runs out.",
+                            text = stringResource(R.string.social_auto_blends_room_s_music),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -456,7 +458,7 @@ private fun RoomCard(jam: Jam, isRadioEnabled: Boolean, viewModel: JamViewModel)
                     modifier = Modifier.padding(top = 12.dp)
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Open to friends", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.social_open_friends), style = MaterialTheme.typography.bodyMedium)
                         Text(
                             text = if (jam.openToFriends) {
                                 "Your friends can see this jam and join without the code."
@@ -499,7 +501,7 @@ private fun SectionLabel(text: String) {
 private fun ProposalRow(track: JamTrack, jam: Jam, viewModel: JamViewModel) {
     TrackRow(
         track = track,
-        subtitle = "${track.artist} · ${track.stillNeeded} more to go",
+        subtitle = stringResource(R.string.social_more_go, track.artist, track.stillNeeded),
         jam = jam,
         viewModel = viewModel
     ) {
@@ -507,11 +509,11 @@ private fun ProposalRow(track: JamTrack, jam: Jam, viewModel: JamViewModel) {
         if (track.approved) {
             Icon(
                 Icons.Rounded.Check,
-                contentDescription = "You approved this",
+                contentDescription = stringResource(R.string.social_approved),
                 modifier = Modifier.padding(horizontal = 12.dp)
             )
         } else {
-            FilledTonalButton(onClick = { viewModel.approve(track.id) }, shapes = ButtonDefaults.shapes()) { Text("Accept") }
+            FilledTonalButton(onClick = { viewModel.approve(track.id) }, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_accept)) }
         }
     }
 }
@@ -520,7 +522,7 @@ private fun ProposalRow(track: JamTrack, jam: Jam, viewModel: JamViewModel) {
 private fun QueueRow(track: JamTrack, jam: Jam, viewModel: JamViewModel) {
     TrackRow(
         track = track,
-        subtitle = "${track.artist} · added by ${track.addedBy}",
+        subtitle = stringResource(R.string.social_added_by, track.artist, track.addedBy),
         jam = jam,
         viewModel = viewModel
     ) {}
@@ -557,7 +559,7 @@ private fun TrackRow(
         // Yours to withdraw, or the creator's to drop — the same rule the server keeps.
         if (jam.isHost || track.addedBy.equals(jam.host, ignoreCase = true)) {
             IconButton(onClick = { viewModel.remove(track.id) }) {
-                Icon(Icons.Rounded.Close, contentDescription = "Remove")
+                Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.common_remove))
             }
         }
     }
@@ -577,7 +579,7 @@ private fun StartOrJoin(
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            text = "One queue, everyone in it. The room plays the same track at the same time, " +
+            text = stringResource(R.string.social_one_queue_everyone_room_plays) +
                 "and while you are in a jam anything you play goes to the room instead.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -586,7 +588,7 @@ private fun StartOrJoin(
         // A friend's open jam is one tap, and no code to be dictated. Only jams whose creator has
         // opened them up appear here — being someone's friend is not consent to be pulled in.
         if (friendJams.isNotEmpty()) {
-            Text("Your friends are jamming", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.social_friends_jamming), style = MaterialTheme.typography.titleSmall)
             friendJams.forEach { open ->
                 Card(
                     onClick = { onJoinFriendJam(open.id) },
@@ -594,7 +596,7 @@ private fun StartOrJoin(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("${open.host}'s jam", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.social_s_jam, open.host), style = MaterialTheme.typography.titleMedium)
                         Text(
                             text = open.nowPlayingTitle?.let { "Playing $it" }
                                 ?: "${open.members.size} in the room",
@@ -608,13 +610,13 @@ private fun StartOrJoin(
         }
 
         Button(onClick = { onCreate(JamMode.DEMOCRACY) }, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
-            Text("Start a jam")
+            Text(stringResource(R.string.social_start_jam))
         }
 
         OutlinedTextField(
             value = code,
             onValueChange = { code = it.uppercase() },
-            label = { Text("Join code") },
+            label = { Text(stringResource(R.string.common_join_code)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -624,7 +626,7 @@ private fun StartOrJoin(
             modifier = Modifier.fillMaxWidth(),
             shapes = ButtonDefaults.shapes()
         ) {
-            Text("Join")
+            Text(stringResource(R.string.social_join))
         }
 
         error?.let {

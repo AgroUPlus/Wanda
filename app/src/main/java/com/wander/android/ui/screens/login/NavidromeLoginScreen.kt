@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -18,12 +18,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 
 @Composable
 fun NavidromeLoginScreen(
@@ -43,9 +45,9 @@ fun NavidromeLoginScreen(
             .safeDrawingPadding()
             .padding(24.dp)
     ) {
-        Text("Connect Navidrome", style = MaterialTheme.typography.headlineLarge)
+        Text(stringResource(R.string.login_connect_navidrome), style = MaterialTheme.typography.headlineLarge)
         Text(
-            text = "Your password is stored in the Android Keystore and only ever sent to your " +
+            text = stringResource(R.string.login_password_stored_android_keystore_only) +
                 "own server, as a salted hash.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -54,8 +56,8 @@ fun NavidromeLoginScreen(
         OutlinedTextField(
             value = state.serverUrl,
             onValueChange = viewModel::onServerUrlChange,
-            label = { Text("Server address") },
-            placeholder = { Text("music.example.com") },
+            label = { Text(stringResource(R.string.login_server_address)) },
+            placeholder = { Text(stringResource(R.string.login_music_example_com)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Uri,
@@ -67,7 +69,7 @@ fun NavidromeLoginScreen(
         OutlinedTextField(
             value = state.username,
             onValueChange = viewModel::onUsernameChange,
-            label = { Text("Username") },
+            label = { Text(stringResource(R.string.common_username)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth()
@@ -76,7 +78,7 @@ fun NavidromeLoginScreen(
         OutlinedTextField(
             value = state.password,
             onValueChange = viewModel::onPasswordChange,
-            label = { Text("Password") },
+            label = { Text(stringResource(R.string.login_password)) },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(
@@ -100,11 +102,11 @@ fun NavidromeLoginScreen(
             modifier = Modifier.fillMaxWidth(),
             shapes = ButtonDefaults.shapes()
         ) {
-            if (state.isConnecting) LoadingIndicator() else Text("Sign in")
+            if (state.isConnecting) LoadingIndicator() else Text(stringResource(R.string.login_sign))
         }
 
         TextButton(onClick = onDone, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
-            Text("Cancel")
+            Text(stringResource(R.string.common_cancel))
         }
     }
 }

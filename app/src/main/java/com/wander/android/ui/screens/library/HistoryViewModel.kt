@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.playback.PlaybackCoordinator
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MusicRepository
@@ -15,7 +16,8 @@ import javax.inject.Inject
 @HiltViewModel
 internal class HistoryViewModel @Inject constructor(
     private val musicRepository: MusicRepository,
-    private val playerConnection: PlayerConnection
+    private val playerConnection: PlayerConnection,
+    private val playbackCoordinator: PlaybackCoordinator
 ) : ViewModel() {
 
     val tracks: StateFlow<List<UnifiedTrack>> = musicRepository.getRecentlyPlayedFlow()
@@ -28,11 +30,7 @@ internal class HistoryViewModel @Inject constructor(
     fun addToQueue(track: UnifiedTrack) = playerConnection.addToQueue(listOf(track))
 
     fun startRadio(track: UnifiedTrack) {
-        viewModelScope.launch {
-            playerConnection.play(listOf(track))
-            val radio = musicRepository.generateRadio(track)
-            if (radio.isNotEmpty()) playerConnection.addToQueue(radio)
-        }
+        viewModelScope.launch { playbackCoordinator.startRadio(track) }
     }
 
     fun toggleLike(track: UnifiedTrack) {

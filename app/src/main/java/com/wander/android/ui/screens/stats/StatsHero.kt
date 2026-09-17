@@ -22,9 +22,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.repository.TopSong
 import com.wander.android.data.sources.agro.StatsPeriod
 import com.wander.android.ui.components.ImmersiveHero
@@ -60,9 +62,9 @@ internal fun StatsHero(
                     .padding(topInset)
                     .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 8.dp)
             ) {
-                Text(text = "Listening", style = MaterialTheme.typography.headlineLarge)
+                Text(text = stringResource(R.string.common_listening), style = MaterialTheme.typography.headlineLarge)
                 Text(
-                    text = "Nothing played in this period yet.",
+                    text = stringResource(R.string.stats_nothing_played_period_yet),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -77,7 +79,7 @@ internal fun StatsHero(
                 Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Top song",
+                            text = stringResource(R.string.stats_top_song),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -105,7 +107,7 @@ internal fun StatsHero(
                             modifier = Modifier.padding(start = 16.dp)
                         ) {
                             Text(
-                                text = "Listened time",
+                                text = stringResource(R.string.stats_listened_time),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.End

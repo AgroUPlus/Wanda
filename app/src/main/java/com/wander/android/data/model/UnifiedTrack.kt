@@ -31,6 +31,15 @@ data class UnifiedTrack(
      * live tracks look like they were being skipped.
      */
     val isLive: Boolean = false,
+    /**
+     * Spoken audio rather than music: a podcast episode.
+     *
+     * Playback resumes an episode where it was left rather than starting it again — see
+     * `EpisodeProgressRepository`. Set at the search boundary, because YouTube serves an episode
+     * in exactly the same shape as a song and the only thing that knows the difference is the
+     * filter the search was made with.
+     */
+    val isEpisode: Boolean = false,
     val isLiked: Boolean = false,
     val isCached: Boolean = false,
     val isDownloaded: Boolean = false,

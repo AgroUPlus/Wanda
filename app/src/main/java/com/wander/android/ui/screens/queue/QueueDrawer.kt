@@ -2,10 +2,15 @@ package com.wander.android.ui.screens.queue
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SnackbarHost
@@ -21,10 +26,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistHost
@@ -45,12 +53,6 @@ import kotlinx.coroutines.launch
  * substantially its own thing — the caller sends a jam to `QueueScreen` instead; see
  * `PlayerSheetContent`.
  */
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.DeleteSweep
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.ui.text.font.FontWeight
 
 @Composable
 internal fun QueueDrawer(
@@ -125,13 +127,13 @@ internal fun QueueDrawer(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Queue",
+                            text = stringResource(R.string.action_queue),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
                         if (state.queue.isNotEmpty()) {
                             Text(
-                                text = "${state.currentIndex + 1} of ${state.queue.size} tracks",
+                                text = stringResource(R.string.queue_tracks, state.currentIndex + 1, state.queue.size),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -141,7 +143,7 @@ internal fun QueueDrawer(
                         IconButton(onClick = playerConnection::clearQueue) {
                             Icon(
                                 imageVector = Icons.Rounded.DeleteSweep,
-                                contentDescription = "Clear queue",
+                                contentDescription = stringResource(R.string.action_clear_queue),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -161,7 +163,7 @@ internal fun QueueDrawer(
                         queueViewModel.removeFromQueue(entry.queueIndex)
                         scope.launch {
                             val result = snackbarHostState.showSnackbar(
-                                message = "Removed ${entry.track.title}",
+                                message = stringResource(R.string.queue_removed, entry.track.title),
                                 actionLabel = "Undo",
                                 withDismissAction = true
                             )

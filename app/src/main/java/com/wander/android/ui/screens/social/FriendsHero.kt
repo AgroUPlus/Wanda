@@ -13,10 +13,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.sources.agro.AgroProfile
 import com.wander.android.ui.components.CuteAvatar
 import com.wander.android.ui.components.ImmersiveHero
@@ -74,7 +76,7 @@ internal fun FriendsHero(
                 modifier = Modifier
                     .clip(CircleShape)
                     .clickable(onClick = onOpenMyProfile)
-                    .semantics { contentDescription = "My profile" }
+                    .semantics { contentDescription = stringResource(R.string.common_my_profile) }
             )
             Spacer(Modifier.height(10.dp))
             Text(

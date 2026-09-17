@@ -12,8 +12,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.BarChart
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -29,9 +29,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.ui.components.CuteAvatar
 import com.wander.android.ui.components.headerInset
 
@@ -73,9 +75,9 @@ internal fun MyProfileScreen(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
             }
-            Text(text = "My profile", style = MaterialTheme.typography.titleLarge)
+            Text(text = stringResource(R.string.common_my_profile), style = MaterialTheme.typography.titleLarge)
         }
 
         Column(
@@ -109,12 +111,12 @@ internal fun MyProfileScreen(
             shapes = ButtonDefaults.shapes()
         ) {
             Icon(Icons.Rounded.BarChart, contentDescription = null)
-            Text("My listening", modifier = Modifier.padding(start = 8.dp))
+            Text(stringResource(R.string.social_my_listening), modifier = Modifier.padding(start = 8.dp))
         }
 
         if (!state.isPaired) {
             Text(
-                text = "Pair an Agro server in Settings to have a name, a bio and friends. " +
+                text = stringResource(R.string.social_pair_agro_server_settings_have) +
                     "Your listening statistics work without one.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -124,7 +126,7 @@ internal fun MyProfileScreen(
         }
 
         Text(
-            text = "How you appear",
+            text = stringResource(R.string.social_how_appear),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 4.dp)
         )
@@ -132,8 +134,8 @@ internal fun MyProfileScreen(
         OutlinedTextField(
             value = displayName,
             onValueChange = { displayName = it },
-            label = { Text("Display name") },
-            supportingText = { Text("Shown instead of your username. Leave it empty to just be @${state.username}.") },
+            label = { Text(stringResource(R.string.social_display_name)) },
+            supportingText = { Text(stringResource(R.string.social_shown_instead_username_leave_it, state.username)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp)
         )
@@ -141,7 +143,7 @@ internal fun MyProfileScreen(
         OutlinedTextField(
             value = bio,
             onValueChange = { bio = it },
-            label = { Text("Bio") },
+            label = { Text(stringResource(R.string.social_bio)) },
             minLines = 2,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp)
         )

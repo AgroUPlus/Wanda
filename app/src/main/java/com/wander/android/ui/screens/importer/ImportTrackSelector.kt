@@ -15,8 +15,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -31,9 +31,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.importer.RawImportPlaylist
 import com.wander.android.ui.components.Artwork
 
@@ -76,10 +78,11 @@ fun ImportTrackSelector(
                         OutlinedTextField(
                             value = editedTitle,
                             onValueChange = { editedTitle = it },
-                            label = { Text("Playlist Title") },
+                            label = { Text(stringResource(R.string.importer_playlist_title)) },
                             singleLine = true,
                             trailingIcon = {
-                                Icon(Icons.Rounded.Edit, contentDescription = "Edit Title", modifier = Modifier.size(16.dp))
+                                Icon(Icons.Rounded.Edit, contentDescription =
+                                    stringResource(R.string.importer_edit_title), modifier = Modifier.size(16.dp))
                             },
                             shape = MaterialTheme.shapes.small,
                             modifier = Modifier.fillMaxWidth()
@@ -88,7 +91,7 @@ fun ImportTrackSelector(
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    text = "${playlist.tracks.size} tracks found from ${playlist.platform.displayName}",
+                    text = stringResource(R.string.importer_tracks_found_from, playlist.tracks.size, playlist.platform.displayName),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp)
@@ -105,14 +108,14 @@ fun ImportTrackSelector(
                 .padding(horizontal = 16.dp, vertical = 4.dp)
         ) {
             Text(
-                text = "${selectedIndices.size} of ${playlist.tracks.size} selected",
+                text = stringResource(R.string.importer_selected, selectedIndices.size, playlist.tracks.size),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold
             )
             Row {
-                TextButton(onClick = onSelectAll, shapes = ButtonDefaults.shapes()) { Text("All") }
-                TextButton(onClick = onDeselectAll, shapes = ButtonDefaults.shapes()) { Text("None") }
+                TextButton(onClick = onSelectAll, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_all)) }
+                TextButton(onClick = onDeselectAll, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.importer_none)) }
             }
         }
 
@@ -170,7 +173,7 @@ fun ImportTrackSelector(
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 TextButton(onClick = onCancel, shapes = ButtonDefaults.shapes()) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_cancel))
                 }
                 Spacer(Modifier.width(8.dp))
                 Button(
@@ -178,7 +181,7 @@ fun ImportTrackSelector(
                     enabled = selectedIndices.isNotEmpty(),
                     shapes = ButtonDefaults.shapes()
                 ) {
-                    Text("Import Selected (${selectedIndices.size})")
+                    Text(stringResource(R.string.importer_import_selected, selectedIndices.size))
                 }
             }
         }

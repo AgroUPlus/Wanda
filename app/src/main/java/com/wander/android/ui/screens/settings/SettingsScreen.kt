@@ -10,7 +10,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
 
@@ -34,7 +36,7 @@ internal fun SettingsScreen(
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding.headerInset())) {
         Text(
-            text = "Settings",
+            text = stringResource(R.string.nav_settings),
             style = MaterialTheme.typography.headlineLarge,
             modifier = Modifier.padding(start = 20.dp, top = 16.dp, bottom = 12.dp)
         )

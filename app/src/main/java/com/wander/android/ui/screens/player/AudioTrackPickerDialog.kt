@@ -18,8 +18,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.wander.android.R
 import com.wander.android.core.playback.AudioTrackInfo
 
 /**
@@ -54,12 +56,12 @@ internal fun AudioTrackPickerDialog(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = "Audio language",
+                    text = stringResource(R.string.action_audio_language),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(horizontal = 24.dp)
                 )
                 Text(
-                    text = "Applies to every source by default",
+                    text = stringResource(R.string.player_applies_every_source_default),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 24.dp)
@@ -103,7 +105,7 @@ private fun AudioTrackRow(
         if (isCurrent) {
             Icon(
                 imageVector = Icons.Rounded.Check,
-                contentDescription = "Currently playing",
+                contentDescription = stringResource(R.string.player_currently_playing),
                 tint = MaterialTheme.colorScheme.primary
             )
         }

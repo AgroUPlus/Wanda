@@ -81,7 +81,7 @@ internal class ArtistReleaseNotifier @Inject constructor(
             manager.notify(
                 SUMMARY_ID,
                 build(
-                    title = "${releases.size} new releases",
+                    title = context.getString(R.string.notif_new_releases, releases.size),
                     body = when (artists.size) {
                         1 -> "From ${artists.first()}"
                         2 -> "From ${artists[0]} and ${artists[1]}"

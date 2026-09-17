@@ -1,6 +1,7 @@
 package com.wander.android.ui.screens.welcome
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +18,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.GraphicEq
@@ -25,10 +25,10 @@ import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,9 +37,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.core.audio.fingerprint.EmbeddingModelManager
 import com.wander.android.core.permissions.rememberPermissionGate
 import kotlinx.coroutines.launch
@@ -110,36 +112,36 @@ fun WelcomeScreen(
                     onClick = { scope.launch { pager.animateScrollToPage(STEP_RECOGNITION) } },
                     modifier = Modifier.fillMaxWidth(),
                     shapes = ButtonDefaults.shapes()
-                ) { Text("Next") }
+                ) { Text(stringResource(R.string.common_next)) }
                 TextButton(
                     onClick = ::finish,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     shapes = ButtonDefaults.shapes()
-                ) { Text("Skip setup") }
+                ) { Text(stringResource(R.string.welcome_skip_setup)) }
             }
             STEP_RECOGNITION -> {
                 Button(
                     onClick = { scope.launch { pager.animateScrollToPage(STEP_GESTURES) } },
                     modifier = Modifier.fillMaxWidth(),
                     shapes = ButtonDefaults.shapes()
-                ) { Text("Next") }
+                ) { Text(stringResource(R.string.common_next)) }
                 TextButton(
                     onClick = { scope.launch { pager.animateScrollToPage(STEP_SOURCES) } },
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     shapes = ButtonDefaults.shapes()
-                ) { Text("Back") }
+                ) { Text(stringResource(R.string.common_back)) }
             }
             STEP_GESTURES -> {
                 Button(
                     onClick = ::finish,
                     modifier = Modifier.fillMaxWidth(),
                     shapes = ButtonDefaults.shapes()
-                ) { Text("Start listening") }
+                ) { Text(stringResource(R.string.welcome_start_listening)) }
                 TextButton(
                     onClick = { scope.launch { pager.animateScrollToPage(STEP_RECOGNITION) } },
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     shapes = ButtonDefaults.shapes()
-                ) { Text("Back") }
+                ) { Text(stringResource(R.string.common_back)) }
             }
         }
     }
@@ -152,9 +154,9 @@ private fun SourcesStep(
     onNavidromeLogin: () -> Unit,
     onYouTubeLogin: () -> Unit
 ) {
-    Text(text = "Welcome to Wanda", style = MaterialTheme.typography.headlineLarge)
+    Text(text = stringResource(R.string.welcome_welcome_wanda), style = MaterialTheme.typography.headlineLarge)
     Text(
-        text = "One library, one queue, one player — across your own server, this device and " +
+        text = stringResource(R.string.welcome_one_library_one_queue_one) +
             "YouTube Music. No accounts, no telemetry.",
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -162,24 +164,24 @@ private fun SourcesStep(
     Spacer(modifier = Modifier.height(8.dp))
 
     SourceSetupCard(
-        title = "Music on this device",
-        description = "Plays offline, costs nothing, needs no account.",
+        title = stringResource(R.string.common_music_device),
+        description = stringResource(R.string.welcome_plays_offline_costs_nothing_needs),
         icon = Icons.Rounded.MusicNote,
         isConfigured = status.localGranted,
         actionLabel = "Grant access",
         onAction = onGrantLocal
     )
     SourceSetupCard(
-        title = "Navidrome",
-        description = "Your own Subsonic-compatible server, at full quality.",
+        title = stringResource(R.string.common_navidrome),
+        description = stringResource(R.string.welcome_own_subsonic_compatible_server_full),
         icon = Icons.Rounded.Cloud,
         isConfigured = status.navidromeConfigured,
         actionLabel = "Sign in",
         onAction = onNavidromeLogin
     )
     SourceSetupCard(
-        title = "YouTube Music",
-        description = "Signs in through your own session; the cookie never leaves the device.",
+        title = stringResource(R.string.common_youtube_music),
+        description = stringResource(R.string.welcome_signs_through_own_session_cookie),
         icon = Icons.Rounded.LibraryMusic,
         isConfigured = status.ytMusicConfigured,
         actionLabel = "Sign in",
@@ -192,9 +194,9 @@ private fun RecognitionStep(
     model: EmbeddingModelManager.State,
     onDownload: () -> Unit
 ) {
-    Text(text = "Song recognition", style = MaterialTheme.typography.headlineLarge)
+    Text(text = stringResource(R.string.welcome_song_recognition), style = MaterialTheme.typography.headlineLarge)
     Text(
-        text = "Hold your phone to a speaker and Wanda names what's playing — matched against " +
+        text = stringResource(R.string.welcome_hold_phone_speaker_wanda_names) +
             "your own library, on the device, with nothing sent anywhere.",
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -245,19 +247,19 @@ private fun RecognitionStep(
                 onClick = onDownload,
                 modifier = Modifier.padding(top = 8.dp),
                 shapes = ButtonDefaults.shapes()
-            ) { Text("Try again") }
+            ) { Text(stringResource(R.string.common_try_again)) }
         }
         EmbeddingModelManager.State.Absent ->
             FilledTonalButton(
                 onClick = onDownload,
                 modifier = Modifier.padding(top = 4.dp),
                 shapes = ButtonDefaults.shapes()
-            ) { Text("Download model") }
+            ) { Text(stringResource(R.string.welcome_download_model)) }
     }
 
     Spacer(modifier = Modifier.height(4.dp))
     Text(
-        text = "You can skip this and download it later from Settings › Fingerprints.",
+        text = stringResource(R.string.welcome_can_skip_download_later_from),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )

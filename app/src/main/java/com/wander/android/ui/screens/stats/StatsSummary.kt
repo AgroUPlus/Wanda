@@ -17,8 +17,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.repository.ListeningReport
 import com.wander.android.data.repository.Trend
 
@@ -48,7 +50,7 @@ internal fun WindowNavigator(
             FilledTonalIconButton(onClick = onEarlier) {
                 Icon(
                     Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
-                    contentDescription = "Earlier"
+                    contentDescription = stringResource(R.string.stats_earlier)
                 )
             }
         }
@@ -64,7 +66,7 @@ internal fun WindowNavigator(
             FilledTonalIconButton(onClick = onLater, enabled = !isLatest) {
                 Icon(
                     Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                    contentDescription = "Later"
+                    contentDescription = stringResource(R.string.stats_later)
                 )
             }
         }
@@ -89,7 +91,7 @@ internal fun HeadlineFigure(
                 style = MaterialTheme.typography.displaySmall
             )
             Text(
-                text = "Songs played",
+                text = stringResource(R.string.stats_songs_played),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -98,7 +100,7 @@ internal fun HeadlineFigure(
             Column(horizontalAlignment = Alignment.End) {
                 ChangeLabel(change, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = "vs previous period",
+                    text = stringResource(R.string.stats_vs_previous_period),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -125,7 +127,7 @@ internal fun QuickFacts(
         report.busiestDay?.let { day ->
             add(
                 Fact(
-                    label = "Most active day",
+                    label = stringResource(R.string.stats_most_active_day),
                     value = "${day.plays.value} plays · ${dayLabel(day.dayStartMillis)}",
                     changePercent = day.plays.changePercent
                 )

@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.player
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,8 +14,8 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -27,8 +28,6 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import com.wander.android.ui.components.AddToPlaylistHost
-import com.wander.android.ui.screens.social.JamViewModel
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,23 +42,26 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.repository.FingerprintStatus
+import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.AvatarGroup
 import com.wander.android.ui.components.FingerprintBadge
 import com.wander.android.ui.components.KeepScreenOn
 import com.wander.android.ui.components.scrollingTitle
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.wander.android.ui.screens.social.JamViewModel
 import com.wander.android.ui.theme.CoverTintedTheme
 import com.wander.android.ui.theme.LiveIndicator
 import com.wander.android.ui.theme.OnCoverArt
@@ -354,7 +356,7 @@ internal fun NowPlayingScreen(
                                 )
                                 Spacer(Modifier.width(6.dp))
                                 Text(
-                                    text = "Jam",
+                                    text = stringResource(R.string.action_jam),
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -415,7 +417,7 @@ internal fun NowPlayingScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Translate,
-                        contentDescription = "Change audio language"
+                        contentDescription = stringResource(R.string.common_change_audio_language)
                     )
                 }
             }
@@ -573,7 +575,7 @@ internal fun NowPlayingScreen(
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                text = "Jam",
+                                text = stringResource(R.string.action_jam),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                             )
@@ -708,7 +710,7 @@ internal fun NowPlayingScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Translate,
-                            contentDescription = "Change audio language"
+                            contentDescription = stringResource(R.string.common_change_audio_language)
                         )
                     }
                 }

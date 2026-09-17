@@ -33,11 +33,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.data.repository.IndexReadiness
 import com.wander.android.data.repository.Recognition
 import com.wander.android.ui.components.Artwork
@@ -129,7 +131,7 @@ fun RecognitionScreen(
 private fun ListeningView(readiness: IndexReadiness, audioLevel: Float = 0f) {
     PulsingMic(audioLevel = audioLevel)
 
-    Text("Listening…", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+    Text(stringResource(R.string.common_listening_2), style = MaterialTheme.typography.headlineSmall, color = Color.White)
     Text(
         text = when (readiness) {
             is IndexReadiness.Ready ->
@@ -153,7 +155,7 @@ private fun IdentifyingView(readiness: IndexReadiness) {
         CircularProgressIndicator(modifier = Modifier.size(56.dp), color = Color.White)
     }
 
-    Text("Identifying…", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+    Text(stringResource(R.string.common_identifying), style = MaterialTheme.typography.headlineSmall, color = Color.White)
 }
 
 @Composable
@@ -182,14 +184,14 @@ private fun MatchedView(recognition: Recognition, onPlay: () -> Unit) {
         overflow = TextOverflow.Ellipsis
     )
     Button(onClick = onPlay, shapes = ButtonDefaults.shapes()) {
-        Text("Play")
+        Text(stringResource(R.string.action_play))
     }
 }
 
 @Composable
 private fun NoMatchView(readiness: IndexReadiness, onRetry: () -> Unit) {
-    Text("No match", style = MaterialTheme.typography.headlineSmall, color = Color.White)
-    TextButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) { Text("Listen again", color = Color.White) }
+    Text(stringResource(R.string.common_no_match), style = MaterialTheme.typography.headlineSmall, color = Color.White)
+    TextButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_listen_again), color = Color.White) }
 }
 
 @Composable
@@ -200,6 +202,6 @@ private fun FailedView(onRetry: () -> Unit) {
         tint = Color.White.copy(alpha = 0.7f),
         modifier = Modifier.size(56.dp)
     )
-    Text("Could not listen", style = MaterialTheme.typography.headlineSmall, color = Color.White)
-    TextButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) { Text("Try again", color = Color.White) }
+    Text(stringResource(R.string.common_could_not_listen), style = MaterialTheme.typography.headlineSmall, color = Color.White)
+    TextButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_try_again), color = Color.White) }
 }

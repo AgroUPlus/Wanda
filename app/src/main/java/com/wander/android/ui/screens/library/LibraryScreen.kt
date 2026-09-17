@@ -1,6 +1,5 @@
 package com.wander.android.ui.screens.library
 
-import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -31,10 +30,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.compose.collectAsLazyPagingItems
+import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.AlbumActionsSheet
@@ -147,14 +149,14 @@ fun LibraryScreen(
                 .padding(start = 20.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)
         ) {
             Text(
-                text = "Library",
+                text = stringResource(R.string.nav_library),
                 style = MaterialTheme.typography.headlineLarge,
                 modifier = Modifier.weight(1f)
             )
             // Where Home keeps Settings. History is a log rather than a collection, so it reads
             // better as one thing you can go and look at than as a sixth tab competing with them.
             IconButton(onClick = onOpenHistory) {
-                Icon(Icons.Rounded.History, contentDescription = "Listening history")
+                Icon(Icons.Rounded.History, contentDescription = stringResource(R.string.library_listening_history))
             }
         }
 

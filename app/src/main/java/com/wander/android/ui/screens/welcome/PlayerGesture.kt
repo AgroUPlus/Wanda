@@ -1,5 +1,8 @@
 package com.wander.android.ui.screens.welcome
 
+import androidx.annotation.StringRes
+import com.wander.android.R
+
 /**
  * The gestures the player answers to, as the setup screen teaches them.
  *
@@ -11,33 +14,33 @@ package com.wander.android.ui.screens.welcome
  * Each carries the [motion] its demonstration traces, which is what [GesturePreview] animates.
  */
 internal enum class PlayerGesture(
-    val title: String,
-    val detail: String,
+    @StringRes val title: Int,
+    @StringRes val detail: Int,
     val motion: GestureMotion
 ) {
     OPEN_QUEUE(
-        title = "Swipe up for the queue",
-        detail = "From anywhere on the player — no handle to aim for.",
+        title = R.string.welcome_gesture_swipe_up_queue,
+        detail = R.string.welcome_gesture_detail_from_anywhere_player_no_handle,
         motion = GestureMotion.SWIPE_UP
     ),
     SPEED_PITCH(
-        title = "Hold the cover for speed & pitch",
-        detail = "Press and hold the artwork to slow a track down or tune it.",
+        title = R.string.welcome_gesture_hold_cover_speed_pitch,
+        detail = R.string.welcome_gesture_detail_press_hold_artwork_slow_track,
         motion = GestureMotion.HOLD
     ),
     LYRICS(
-        title = "Tap the cover for lyrics",
-        detail = "Tap again to bring the artwork back.",
+        title = R.string.welcome_gesture_tap_cover_lyrics,
+        detail = R.string.welcome_gesture_detail_tap_again_bring_artwork_back,
         motion = GestureMotion.TAP
     ),
     SKIP(
-        title = "Swipe the cover to skip",
-        detail = "Left for the next track, right for the previous one.",
+        title = R.string.welcome_gesture_swipe_cover_skip,
+        detail = R.string.welcome_gesture_detail_left_next_track_right_previous,
         motion = GestureMotion.SWIPE_SIDEWAYS
     ),
     COLLAPSE(
-        title = "Swipe down to tuck it away",
-        detail = "The player shrinks to the strip above the tabs and keeps playing.",
+        title = R.string.welcome_gesture_swipe_down_tuck_away,
+        detail = R.string.welcome_gesture_detail_player_shrinks_strip_above_tabs,
         motion = GestureMotion.SWIPE_DOWN
     )
 }

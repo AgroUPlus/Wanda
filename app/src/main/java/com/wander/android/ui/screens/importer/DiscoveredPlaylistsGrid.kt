@@ -39,9 +39,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.importer.PlatformType
 import com.wander.android.data.importer.RawUserPlaylistSummary
 import com.wander.android.ui.components.Artwork
@@ -115,20 +117,20 @@ private fun ExpressiveConnectedBanner(
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Connected to ${platform.displayName}",
+                            text = stringResource(R.string.importer_connected, platform.displayName),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(Modifier.width(6.dp))
                         Icon(
                             imageVector = Icons.Rounded.CheckCircle,
-                            contentDescription = "Connected",
+                            contentDescription = stringResource(R.string.common_connected),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
                     Text(
-                        text = "$count playlists discovered",
+                        text = stringResource(R.string.importer_playlists_discovered, count),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
                     )
@@ -149,7 +151,7 @@ private fun ExpressiveConnectedBanner(
                     Icon(Icons.Rounded.OpenInBrowser, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        text = "Web view",
+                        text = stringResource(R.string.importer_web_view),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
@@ -165,7 +167,7 @@ private fun ExpressiveConnectedBanner(
                     Icon(Icons.AutoMirrored.Rounded.Logout, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        text = "Switch account",
+                        text = stringResource(R.string.importer_switch_account),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,

@@ -2,7 +2,6 @@ package com.wander.android.ui.screens.social
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.NewReleases
@@ -33,11 +33,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.CuteAvatar
 import com.wander.android.ui.components.ImmersiveHero
@@ -265,7 +267,7 @@ private fun NewReleaseCard(
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "New from " + release.artist,
+                    text = stringResource(R.string.social_new_from) + release.artist,
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -306,16 +308,17 @@ private fun ActivityHero(
                 modifier = Modifier.fillMaxWidth().padding(8.dp)
             ) {
                 FilledTonalIconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription =
+                        stringResource(R.string.common_back))
                 }
                 FilledTonalIconButton(onClick = onOpenCircleRecap) {
-                    Icon(Icons.Rounded.QueryStats, contentDescription = "Circle recap")
+                    Icon(Icons.Rounded.QueryStats, contentDescription = stringResource(R.string.social_circle_recap))
                 }
             }
         },
         caption = {
             Text(
-                text = "Activity",
+                text = stringResource(R.string.common_activity),
                 style = MaterialTheme.typography.headlineMediumEmphasized,
                 textAlign = TextAlign.Center
             )

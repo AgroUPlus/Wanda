@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.cache.AudioCacheManager
 import com.wander.android.core.cache.DownloadScheduler
+import com.wander.android.core.i18n.AppLocaleStore
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.core.sync.LibrarySyncScheduler
 import com.wander.android.core.sync.LocalFileDeleter
@@ -39,6 +40,7 @@ import kotlinx.coroutines.withContext
 @HiltViewModel
 internal class SettingsViewModel @Inject constructor(
     private val secureStorage: SecureStorage,
+    private val appLocaleStore: AppLocaleStore,
     private val cacheManager: AudioCacheManager,
     private val navidromeSource: NavidromeSource,
     private val accountManager: GoogleAccountManager,
@@ -223,7 +225,12 @@ internal class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _agroVisibility.value = profileApi.profile(secureStorage.agroUsername)
                 .getOrNull()
-                ?.let { AgroVisibility(it.showNowPlaying, it.showStats, it.discoverable) }
+                ?.let {
+                    AgroVisibility(
+                        it.showNowPlaying, it.showStats, it.discoverable,
+                        popularOptIn = it.popularOptIn
+                    )
+                }
         }
     }
 
@@ -233,8 +240,10 @@ internal class SettingsViewModel @Inject constructor(
         _agroVisibility.value = visibility
         viewModelScope.launch {
             profileApi.setVisibility(visibility).onSuccess { profile ->
-                _agroVisibility.value =
-                    AgroVisibility(profile.showNowPlaying, profile.showStats, profile.discoverable)
+                _agroVisibility.value = AgroVisibility(
+                    profile.showNowPlaying, profile.showStats, profile.discoverable,
+                    popularOptIn = profile.popularOptIn
+                )
             }.onFailure { refreshAgroVisibility() }
         }
     }
@@ -455,6 +464,14 @@ internal class SettingsViewModel @Inject constructor(
     fun setReduceMotion(enabled: Boolean) = secureStorage.setReduceMotion(enabled)
     fun setLetterByLetterLyricsEnabled(enabled: Boolean) =
         secureStorage.setLetterByLetterLyricsEnabled(enabled)
+
+    /** The chosen display language, empty when the app follows the system. */
+    val languageTag: String get() = appLocaleStore.tag
+
+    /** See [AppLocaleStore.needsManualRecreate]. */
+    val languageNeedsRecreate: Boolean get() = appLocaleStore.needsManualRecreate
+
+    fun setLanguage(tag: String) { appLocaleStore.tag = tag }
     fun setOfflineMode(enabled: Boolean) = secureStorage.setOfflineMode(enabled)
 
     fun setPreloadNextEnabled(enabled: Boolean) = secureStorage.setPreloadNextEnabled(enabled)

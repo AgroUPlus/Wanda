@@ -10,8 +10,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.QrCode2
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
@@ -23,7 +23,9 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.sources.agro.AgroProfile
 import com.wander.android.data.sources.agro.FriendState
 
@@ -63,7 +65,7 @@ internal fun UserSearchSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = "Find people", style = MaterialTheme.typography.titleLarge)
+                Text(text = stringResource(R.string.common_find_people), style = MaterialTheme.typography.titleLarge)
                 // The other way in, for two people in the same room — where searching by
                 // username needs one of them to be publicly listed, and being added once is not
                 // a reason to be listed forever.
@@ -86,8 +88,8 @@ internal fun UserSearchSheet(
             OutlinedTextField(
                 value = state.query,
                 onValueChange = onQueryChange,
-                label = { Text("Username") },
-                supportingText = { Text("Starts with — you need most of the name, not a fragment.") },
+                label = { Text(stringResource(R.string.common_username)) },
+                supportingText = { Text(stringResource(R.string.social_starts_need_most_name_not)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
             )
@@ -120,7 +122,7 @@ internal fun UserSearchSheet(
 
             if (state.query.isNotBlank() && state.results.isEmpty() && !state.isSearching) {
                 Text(
-                    text = "Nobody by that name is listed. People only appear here if they have " +
+                    text = stringResource(R.string.social_nobody_name_listed_people_only) +
                         "made themselves discoverable.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

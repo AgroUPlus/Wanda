@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.playback.PlaybackCoordinator
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.SmartMix
 import com.wander.android.data.model.SourceType
@@ -33,7 +34,8 @@ class HomeViewModel @Inject constructor(
     private val homeShelfRepository: HomeShelfRepository,
     private val shareRepository: ShareRepository,
     private val smartMixRepository: SmartMixRepository,
-    private val playerConnection: PlayerConnection
+    private val playerConnection: PlayerConnection,
+    private val playbackCoordinator: PlaybackCoordinator
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -215,11 +217,7 @@ class HomeViewModel @Inject constructor(
 
     /** Plays the track, then fills the queue behind it with its source's radio. */
     fun startRadio(track: UnifiedTrack) {
-        viewModelScope.launch {
-            playerConnection.play(listOf(track))
-            val radio = musicRepository.generateRadio(track)
-            if (radio.isNotEmpty()) playerConnection.addToQueue(radio)
-        }
+        viewModelScope.launch { playbackCoordinator.startRadio(track) }
     }
 
     /** Whether this track's backend can mint a public link at all. */

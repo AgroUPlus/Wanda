@@ -15,7 +15,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.ui.components.headerInset
 
 /**
@@ -46,7 +48,7 @@ internal fun SocialHeader(
             .fillMaxWidth()
     ) {
         Text(
-            text = "Friends",
+            text = stringResource(R.string.nav_friends),
             style = MaterialTheme.typography.headlineLarge,
             modifier = Modifier.weight(1f)
         )
@@ -58,11 +60,11 @@ internal fun SocialHeader(
             // thing on this tab that works with no server at all, so hiding it until an account
             // exists would hide it from exactly the person it was built for.
             FilledTonalIconButton(onClick = onOpenOffGrid) {
-                Icon(Icons.Rounded.Sensors, contentDescription = "Share off-grid")
+                Icon(Icons.Rounded.Sensors, contentDescription = stringResource(R.string.social_share_off_grid))
             }
             if (state.isPaired) {
                 FilledTonalIconButton(onClick = onFindPeople) {
-                    Icon(Icons.Rounded.PersonAdd, contentDescription = "Find people")
+                    Icon(Icons.Rounded.PersonAdd, contentDescription = stringResource(R.string.common_find_people))
                 }
             }
         }

@@ -21,7 +21,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 
 @Composable
 fun ImportDirectLinkContent(
@@ -41,7 +43,7 @@ fun ImportDirectLinkContent(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "Paste a link or text tracklist to inspect and choose tracks before importing.",
+            text = stringResource(R.string.importer_paste_link_text_tracklist_inspect),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -49,10 +51,10 @@ fun ImportDirectLinkContent(
         OutlinedTextField(
             value = manualInput,
             onValueChange = onInputChange,
-            placeholder = { Text("https://open.spotify.com/playlist/...") },
+            placeholder = { Text(stringResource(R.string.common_https_open_spotify_com_playlist)) },
             trailingIcon = {
                 IconButton(onClick = { clipboardManager.getText()?.text?.let { onInputChange(it) } }) {
-                    Icon(Icons.Rounded.ContentPaste, contentDescription = "Paste")
+                    Icon(Icons.Rounded.ContentPaste, contentDescription = stringResource(R.string.importer_paste))
                 }
             },
             singleLine = false,
@@ -74,9 +76,9 @@ fun ImportDirectLinkContent(
             if (isLoadingPlaylist) {
                 LoadingIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary)
                 Spacer(Modifier.width(8.dp))
-                Text("Reading...")
+                Text(stringResource(R.string.importer_reading))
             } else {
-                Text("Load Playlist")
+                Text(stringResource(R.string.importer_load_playlist))
             }
         }
     }

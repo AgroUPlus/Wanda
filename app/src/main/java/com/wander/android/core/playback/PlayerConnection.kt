@@ -97,6 +97,32 @@ class PlayerConnection @Inject constructor(
     private val trackCache = java.util.concurrent.ConcurrentHashMap<String, UnifiedTrack>()
     private var lastQueue: List<UnifiedTrack> = emptyList()
 
+    /**
+     * Where an episode was left, emitted the moment it stops being the thing playing.
+     *
+     * Event-driven rather than sampled: a ticker writing the playhead to disk every few seconds
+     * would run with no UI on screen, which is exactly the kind of loop this app does not have.
+     * The two moments that matter are leaving an item and pausing on it, and the player reports
+     * both. `PlaybackCoordinator` is what persists these.
+     */
+    private val _episodeCheckpoints = MutableSharedFlow<EpisodeCheckpoint>(extraBufferCapacity = 8)
+    val episodeCheckpoints: SharedFlow<EpisodeCheckpoint> = _episodeCheckpoints.asSharedFlow()
+
+    /** One reading of how far into [trackId] the listener had got. */
+    data class EpisodeCheckpoint(val trackId: String, val positionMs: Long, val durationMs: Long)
+
+    private fun checkpoint(track: UnifiedTrack?, positionMs: Long, durationMs: Long) {
+        if (track?.isEpisode != true || positionMs <= 0L) return
+        _episodeCheckpoints.tryEmit(
+            EpisodeCheckpoint(
+                trackId = track.id,
+                positionMs = positionMs,
+                // The player knows the real duration; the track's own is what a search claimed.
+                durationMs = durationMs.takeIf { it > 0L } ?: track.durationMs
+            )
+        )
+    }
+
     val state: StateFlow<PlaybackState> = _controller
         .flatMapLatest { ctrl ->
             if (ctrl == null) flowOf(PlaybackState()) else callbackFlow {
@@ -119,6 +145,14 @@ class PlayerConnection @Inject constructor(
                             _actualAudioFormat.value = null
                         }
                         if (events.contains(Player.EVENT_POSITION_DISCONTINUITY)) seekEpoch++
+                        // Pausing on an episode is the commonest way to leave one for the day.
+                        if (events.contains(Player.EVENT_IS_PLAYING_CHANGED) && !player.isPlaying) {
+                            checkpoint(
+                                lastQueue.getOrNull(player.currentMediaItemIndex),
+                                player.currentPosition,
+                                player.duration
+                            )
+                        }
                         trySend(
                             player.buildSnapshot(
                                 secureStorage.isRadioMode.value,
@@ -126,6 +160,29 @@ class PlayerConnection @Inject constructor(
                                 trackCache,
                                 seekEpoch
                             )
+                        )
+                    }
+
+                    /**
+                     * Records the outgoing item's playhead when the player leaves it.
+                     *
+                     * A plain seek is excluded: the listener has not left anything, and writing
+                     * every scrub to disk is the polling loop this avoids, spelled differently.
+                     */
+                    override fun onPositionDiscontinuity(
+                        oldPosition: Player.PositionInfo,
+                        newPosition: Player.PositionInfo,
+                        reason: Int
+                    ) {
+                        if (reason == Player.DISCONTINUITY_REASON_SEEK &&
+                            oldPosition.mediaItemIndex == newPosition.mediaItemIndex
+                        ) {
+                            return
+                        }
+                        checkpoint(
+                            lastQueue.getOrNull(oldPosition.mediaItemIndex),
+                            oldPosition.positionMs,
+                            ctrl.duration
                         )
                     }
 

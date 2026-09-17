@@ -22,7 +22,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 
 /**
  * The six reactions on offer.
@@ -114,7 +116,7 @@ internal fun DropActionsSheet(
                     tint = MaterialTheme.colorScheme.error
                 )
                 Text(
-                    text = "Remove for me",
+                    text = stringResource(R.string.social_remove_me),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.error
                 )

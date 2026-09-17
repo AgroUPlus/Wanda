@@ -19,12 +19,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.ui.components.player.PlayPauseIcon
 import com.wander.android.ui.components.rememberHaptics
 import com.wander.android.ui.components.rememberPressScale
-import com.wander.android.ui.components.player.PlayPauseIcon
 
 /**
  * The two controls the full-screen lyrics carry: which rendering to read, and the transport.
@@ -72,13 +74,13 @@ internal fun SyncedStaticToggle(
         ) {
             toggleableItem(
                 checked = !showStatic,
-                label = "Synced",
+                label = stringResource(R.string.player_synced),
                 onCheckedChange = { onSelect(false) },
                 weight = 1f
             )
             toggleableItem(
                 checked = showStatic,
-                label = "Static",
+                label = stringResource(R.string.player_static),
                 onCheckedChange = { onSelect(true) },
                 weight = 1f
             )

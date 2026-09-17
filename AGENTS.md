@@ -43,6 +43,38 @@ Rules of the road:
 - Default to `internal`. `public` only for genuine cross-package API.
 - Prefer immutable `data class` state; `@Immutable`/`@Stable` where it helps recomposition.
 
+## Localization
+
+Every string a user can read lives in `res/values/strings.xml`. Crowdin translates that file and
+nothing else, so a literal left in Kotlin is a literal that ships in English forever.
+
+- **Never write a user-facing string literal in Kotlin.** In a composable use
+  `stringResource(R.string.key)`; in a worker or anywhere holding a `Context` use
+  `context.getString(...)`.
+- **A model or enum that carries display text carries `@StringRes Int`, not `String`** — see
+  `SettingsCategory`, `PlayerGesture`, `SmartMix`, `FingerprintSection`. The resource is resolved
+  at the composable that draws it. This is what lets a repository name something without a
+  `Context` and without freezing the language at construction time.
+- **Values go in the resource, not around it.** `stringResource(R.string.x, count)` against
+  `%1$s`, never `"$count " + stringResource(...)`. Word order differs between languages, and a
+  concatenation gives the translator no way to change it.
+- **Counted nouns use `<plurals>`**, not `if (n == 1)`. English has two forms; Polish and Arabic
+  do not.
+- **Some strings must stay hardcoded.** Anything persisted — a playlist name written to Room, a
+  stable identifier — must not change when the display language does. Animation and layout names
+  (`label = "trackRowBackground"`) are not user-facing and never get extracted.
+- **The language list is derived, never hand-kept.** `generateLocaleConfig = true` builds it from
+  the `values-xx` directories present, and `supportedAppLocales()` reads it back from
+  `assets.locales`. Adding a language means adding its translations; nothing else. The picker in
+  *Settings → Look and feel* hides itself while only one language ships, so it must never be given
+  a hardcoded list of languages the build cannot actually display.
+- Per-app language is applied by `AppLocaleStore`: `LocaleManager` on API 33+, and a
+  `attachBaseContext` config override below it. Do not add AppCompat for this — `MainActivity` is
+  a `ComponentActivity` and stays one.
+
+Translations arrive from Crowdin on the `l10n_translations` branch; merging that branch is what
+makes a new language appear.
+
 ## Motion (Material 3 Expressive)
 
 - Use `MaterialExpressiveTheme` + `MotionScheme.expressive()`. Take spring specs from

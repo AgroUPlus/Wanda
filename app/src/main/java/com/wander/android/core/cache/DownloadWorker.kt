@@ -1,5 +1,6 @@
 package com.wander.android.core.cache
 
+import com.wander.android.R
 import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
@@ -40,7 +41,7 @@ class DownloadWorker @AssistedInject constructor(
     private fun notifying(eta: WorkEta, done: Int, total: Int, title: String? = null) =
         notifications.foregroundInfo(
             kind = WorkProgressNotification.Kind.DOWNLOAD,
-            title = "Downloading your music",
+            title = applicationContext.getString(R.string.notif_downloading_music),
             text = listOfNotNull(
                 "$done of $total",
                 eta.describe(done, total, System.currentTimeMillis()),
