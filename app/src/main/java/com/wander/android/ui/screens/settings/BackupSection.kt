@@ -5,6 +5,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Upload
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
+import com.wander.android.ui.components.GroupedCard
 import com.wander.android.ui.components.rememberShelfEntranceScale
 
 /**
@@ -61,29 +65,40 @@ internal fun BackupSection(viewModel: BackupViewModel = hiltViewModel()) {
     }
 
     Column {
-        SettingsRow(
-            title = stringResource(R.string.settings_export_everything),
-            subtitle = stringResource(R.string.settings_settings_customization_sign_ins_one),
-            onClick = {
-                viewModel.clearStatus()
-                exportLauncher.launch(DEFAULT_FILE_NAME)
-            },
-            enabled = !busy,
-            modifier = Modifier.scale(rememberShelfEntranceScale(0))
-        )
-
-        SettingsRow(
-            title = stringResource(R.string.settings_import_from_backup),
-            subtitle = stringResource(R.string.settings_replaces_settings_device_ones_file),
-            onClick = {
-                viewModel.clearStatus()
-                // Any type, not just JSON: a file that has been through a cloud drive or a chat app
-                // frequently comes back as `application/octet-stream`, and filtering on the type we
-                // wrote makes the user's own backup unselectable. The format is checked on read.
-                importLauncher.launch(arrayOf("*/*"))
-            },
-            enabled = !busy,
-            modifier = Modifier.scale(rememberShelfEntranceScale(1))
+        SettingsSection(stringResource(R.string.settings_section_backup))
+        GroupedCard(
+            items = listOf<@Composable () -> Unit>(
+                {
+                    SettingsRow(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(0)),
+                        title = stringResource(R.string.settings_export_everything),
+                        subtitle = stringResource(R.string.settings_settings_customization_sign_ins_one),
+                        onClick = {
+                            viewModel.clearStatus()
+                            exportLauncher.launch(DEFAULT_FILE_NAME)
+                        },
+                        enabled = !busy,
+                        icon = Icons.Rounded.Upload
+                    )
+                },
+                {
+                    SettingsRow(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(1)),
+                        title = stringResource(R.string.settings_import_from_backup),
+                        subtitle = stringResource(R.string.settings_replaces_settings_device_ones_file),
+                        onClick = {
+                            viewModel.clearStatus()
+                            // Any type, not just JSON: a file that has been through a cloud
+                            // drive or a chat app frequently comes back as
+                            // `application/octet-stream`, and filtering on the type we wrote
+                            // makes the user's own backup unselectable. Checked on read.
+                            importLauncher.launch(arrayOf("*/*"))
+                        },
+                        enabled = !busy,
+                        icon = Icons.Rounded.Download
+                    )
+                }
+            )
         )
 
         status?.let { Outcome(it) }

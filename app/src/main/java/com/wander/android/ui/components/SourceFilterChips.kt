@@ -107,7 +107,11 @@ internal fun SelectableChip(
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        // `Center`, not the plain even-spacing overload: a plain `SelectableChip` (no width
+        // constraint from its caller) never has leftover space so this is a no-op there, but
+        // `SearchKindToggle` gives each chip `Modifier.weight(1f)` to split the row evenly, and
+        // without centering the label sat flush left in the extra width that left.
+        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
         modifier = modifier
             .scale(pressScale)
             .recordHighlightBounds(highlightState, key)

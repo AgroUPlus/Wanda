@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Update
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
@@ -27,52 +28,68 @@ internal fun LazyListScope.aboutTab(
     actions: SettingsActions
 ) {
     item(key = "about") {
-        GroupedCard(modifier = Modifier.scale(rememberShelfEntranceScale(0))) {
-            SettingsRow(
-                title = stringResource(R.string.common_duplicate_recordings),
-                subtitle = stringResource(R.string.settings_review_which_tracks_same_recording),
-                onClick = actions.onOpenMergePreview,
-                icon = Icons.Rounded.ContentCopy
-            )
-            // Version and the update check are one row: the version is the question "am I
-            // current?" and the check is the answer, so splitting them made the user tap two
-            // rows to learn one thing.
-            SettingsRow(
-                title = stringResource(R.string.settings_version),
-                subtitle = when {
-                    state.updateCheck is UpdateCheckResult.UpdateAvailable ->
-                        "Update available — ${state.updateCheck.version}"
-                    state.updateCheck is UpdateCheckResult.Failed -> "Couldn't check for updates"
-                    else -> state.appVersion
+        GroupedCard(
+            items = listOf<@Composable () -> Unit>(
+                {
+                    SettingsRow(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(0)),
+                        title = stringResource(R.string.common_duplicate_recordings),
+                        subtitle = stringResource(R.string.settings_review_which_tracks_same_recording),
+                        onClick = actions.onOpenMergePreview,
+                        icon = Icons.Rounded.ContentCopy
+                    )
                 },
-                onClick = {
-                    val available = state.updateCheck
-                    if (available is UpdateCheckResult.UpdateAvailable) {
-                        actions.onOpenUrl(available.releaseUrl)
-                    } else {
-                        actions.onCheckForUpdate()
-                    }
-                },
-                icon = Icons.Rounded.Info
+                {
+                    // Version and the update check are one row: the version is the question "am
+                    // I current?" and the check is the answer, so splitting them made the user
+                    // tap two rows to learn one thing.
+                    SettingsRow(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(1)),
+                        title = stringResource(R.string.settings_version),
+                        subtitle = when {
+                            state.updateCheck is UpdateCheckResult.UpdateAvailable ->
+                                "Update available — ${state.updateCheck.version}"
+                            state.updateCheck is UpdateCheckResult.Failed -> "Couldn't check for updates"
+                            else -> state.appVersion
+                        },
+                        onClick = {
+                            val available = state.updateCheck
+                            if (available is UpdateCheckResult.UpdateAvailable) {
+                                actions.onOpenUrl(available.releaseUrl)
+                            } else {
+                                actions.onCheckForUpdate()
+                            }
+                        },
+                        icon = Icons.Rounded.Info
+                    )
+                }
             )
-        }
+        )
     }
 
     item(key = "credits_header") { SettingsSection(stringResource(R.string.settings_section_credits)) }
     item(key = "credits") {
-        GroupedCard(modifier = Modifier.scale(rememberShelfEntranceScale(1))) {
-            SettingsRow(
-                title = stringResource(R.string.settings_agrouplus),
-                subtitle = stringResource(R.string.settings_wanda_agro_built_here_source),
-                onClick = { actions.onOpenUrl(ORG_URL) }
+        GroupedCard(
+            items = listOf<@Composable () -> Unit>(
+                {
+                    SettingsRow(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(2)),
+                        title = stringResource(R.string.settings_agrouplus),
+                        subtitle = stringResource(R.string.settings_wanda_agro_built_here_source),
+                        onClick = { actions.onOpenUrl(ORG_URL) }
+                    )
+                },
+                {
+                    SettingsToggle(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(3)),
+                        title = stringResource(R.string.settings_check_updates_launch),
+                        subtitle = stringResource(R.string.settings_finds_latest_release_automatically_tells),
+                        checked = state.autoUpdateCheckEnabled,
+                        onCheckedChange = actions.onAutoUpdateCheckChange,
+                        icon = Icons.Rounded.Update
+                    )
+                }
             )
-            SettingsToggle(
-                title = stringResource(R.string.settings_check_updates_launch),
-                subtitle = stringResource(R.string.settings_finds_latest_release_automatically_tells),
-                checked = state.autoUpdateCheckEnabled,
-                onCheckedChange = actions.onAutoUpdateCheckChange,
-                icon = Icons.Rounded.Update
-            )
-        }
+        )
     }
 }

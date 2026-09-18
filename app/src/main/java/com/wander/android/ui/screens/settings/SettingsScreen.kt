@@ -2,20 +2,27 @@ package com.wander.android.ui.screens.settings
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import com.wander.android.R
-import com.wander.android.ui.components.CollapsingTitle
 import com.wander.android.ui.components.GroupedCard
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
-import com.wander.android.ui.components.rememberCollapseFraction
+import com.wander.android.ui.components.rememberShelfEntranceScale
 
 /**
  * The settings hub: one list of places to go.
@@ -29,35 +36,54 @@ import com.wander.android.ui.components.rememberCollapseFraction
  * the *pages* need, and assembling them here would mean every visit to the settings paid for an
  * Agro refresh and a YouTube token check before drawing a list of seven labels — see
  * [rememberSettingsHost], which is where that now happens.
+ *
+ * The title reads the same as Home's own greeting — `headlineLarge`, transparent behind it — rather
+ * than [LargeTopAppBar]'s own smaller default title style and opaque container: this *is* the
+ * screen's greeting, not a bar sitting over it. It still collapses on scroll, because the row of
+ * seven categories genuinely can run past the fold on a compact phone.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SettingsScreen(
     contentPadding: PaddingValues,
     onOpenCategory: (SettingsCategory) -> Unit
 ) {
     val listState = rememberLazyListState()
-    val collapseFraction by rememberCollapseFraction(listState)
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding.headerInset())) {
-        CollapsingTitle(
-            text = stringResource(R.string.nav_settings),
-            collapseFraction = collapseFraction
+        LargeTopAppBar(
+            title = {
+                Text(
+                    text = stringResource(R.string.nav_settings),
+                    style = MaterialTheme.typography.headlineLarge
+                )
+            },
+            windowInsets = WindowInsets(0, 0, 0, 0),
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+                scrolledContainerColor = Color.Transparent
+            ),
+            scrollBehavior = scrollBehavior
         )
 
         LazyColumn(
             state = listState,
             contentPadding = contentPadding.listInset(),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection)
         ) {
             item(key = "categories") {
-                GroupedCard {
-                    SettingsCategory.entries.forEach { category ->
-                        SettingsCategoryRow(
-                            category = category,
-                            onClick = { onOpenCategory(category) }
-                        )
+                val categoryItems: List<@Composable () -> Unit> =
+                    SettingsCategory.entries.mapIndexed { index, category ->
+                        {
+                            SettingsCategoryRow(
+                                category = category,
+                                onClick = { onOpenCategory(category) },
+                                modifier = Modifier.scale(rememberShelfEntranceScale(index))
+                            )
+                        }
                     }
-                }
+                GroupedCard(items = categoryItems)
             }
         }
     }

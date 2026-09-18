@@ -260,7 +260,7 @@
     <string name="settings_back_settings">Back to settings</string>
     <string name="settings_check_again">Check again</string>
     <string name="settings_check_updates_launch">Check for updates on launch</string>
-    <string name="settings_checks_every_few_hours_wi">Checks every few hours on Wi-Fi and tells you when someone you follow puts something out. Follow an artist from their page. Off by default: it is a network call you did not ask for, and a notification you did not ask for.</string>
+    <string name="settings_checks_every_few_hours_wi">Notifies you when a followed artist releases something new</string>
     <string name="settings_clear_streaming_cache">Clear streaming cache</string>
     <string name="settings_connect_directly_paste_links_from">Connect directly or paste links from Spotify, Deezer, YouTube Music, Apple Music, and text files to select and import playlists.</string>
     <string name="settings_contribute_u201cpopular_agro_u201d">Contribute to \u201cPopular on Agro\u201d</string>
@@ -338,12 +338,14 @@
     <string name="settings_section_storage">Storage</string>
     <string name="settings_section_credits">Credits</string>
     <string name="settings_section_visibility">What friends can see</string>
+    <string name="settings_section_backup">Backup</string>
+    <string name="settings_section_notifications">Notifications</string>
     <string name="settings_see_which_songs_wanda_can">See which songs Wanda can recognise and hum-search, and which are still waiting.</string>
     <string name="settings_sends_acoustic_fingerprints_lyrics_tracks">Sends the acoustic fingerprints and lyrics of your tracks and takes everyone else\'s, so badly tagged music inherits good tags and lyrics. Other people on this server can see which recordings and lyrics you hold, not your listening. Recognition works either way.</string>
     <string name="settings_server">Server</string>
     <string name="settings_server_address_username_password_erased">The server address, username and password are erased from this device, and your library stops syncing. Anything already downloaded stays playable.</string>
     <string name="settings_server_holds_new_accounts_until">This server holds new accounts until its admin lets them in, so you cannot sign in yet. Come back and pair once you have been approved.</string>
-    <string name="settings_settings_customization_sign_ins_one">Settings, customization and sign-ins, in one encrypted file you keep. Protected by a passphrase you choose.</string>
+    <string name="settings_settings_customization_sign_ins_one">Save your settings and sign-ins to a file</string>
     <string name="settings_share_example_com">share.example.com</string>
     <string name="settings_share_links">Share links</string>
     <string name="settings_share_my_listening_stats">Share my listening stats</string>
