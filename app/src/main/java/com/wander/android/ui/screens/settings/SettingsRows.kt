@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -13,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.wander.android.ui.components.rememberHaptics
 
@@ -43,10 +46,13 @@ fun SettingsRow(
     /** A second, less common action on the same row. Requires [onClick] to be set. */
     onLongClick: (() -> Unit)? = null,
     /**
-     * A badge for a row that names something — a server, an account, a device. See [SourceBadge]
-     * for why most rows deliberately have none.
+     * A badge for a row that names something — a server, an account, a device. See [AgroBadge]
+     * for why most rows deliberately have none. Mutually exclusive with [icon] in practice — a row
+     * names one thing, not two.
      */
     leading: (@Composable () -> Unit)? = null,
+    /** A plain, backgroundless glyph for a row that doesn't name a thing — most rows. */
+    icon: ImageVector? = null,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -63,8 +69,19 @@ fun SettingsRow(
             .padding(horizontal = 20.dp, vertical = 14.dp)
     ) {
         leading?.invoke()
+        if (leading == null && icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    .copy(alpha = if (enabled) 1f else DisabledAlpha),
+                modifier = Modifier.size(24.dp)
+            )
+        }
 
-        Column(modifier = if (leading != null) Modifier.padding(start = 16.dp) else Modifier) {
+        Column(
+            modifier = if (leading != null || icon != null) Modifier.padding(start = 16.dp) else Modifier
+        ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
@@ -94,6 +111,8 @@ fun SettingsToggle(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     enabled: Boolean = true,
+    /** A plain, backgroundless glyph — see [SettingsRow]'s equivalent parameter. */
+    icon: ImageVector? = null,
     modifier: Modifier = Modifier
 ) {
     val haptics = rememberHaptics()
@@ -116,6 +135,16 @@ fun SettingsToggle(
             )
             .padding(horizontal = 20.dp, vertical = 10.dp)
     ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    .copy(alpha = if (enabled) 1f else DisabledAlpha),
+                modifier = Modifier.padding(end = 16.dp).size(24.dp)
+            )
+        }
+
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,

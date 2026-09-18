@@ -6,20 +6,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
+import com.wander.android.ui.components.CollapsingTitle
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.rememberCollapseFraction
 
 /**
  * One page of settings — the rows that used to be one tab of the pager.
@@ -51,25 +53,29 @@ internal fun SettingsCategoryScreen(
         onOpenFingerprints = onOpenFingerprints
     )
 
+    val listState = rememberLazyListState()
+    val collapseFraction by rememberCollapseFraction(listState)
+
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding.headerInset())) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 4.dp, end = 20.dp, top = 8.dp, bottom = 8.dp)
-        ) {
-            IconButton(onClick = onBack) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 8.dp)
+            ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                     contentDescription = stringResource(R.string.settings_back_settings)
                 )
             }
-            Text(
+            CollapsingTitle(
                 text = stringResource(category.label),
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(start = 4.dp)
+                collapseFraction = collapseFraction,
+                startPadding = 4.dp
             )
         }
 
         LazyColumn(
+            state = listState,
             contentPadding = contentPadding.listInset(),
             modifier = Modifier.fillMaxSize()
         ) {

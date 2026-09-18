@@ -7,16 +7,15 @@ import kotlinx.serialization.Serializable
  * collide in Room or in the playback queue.
  *
  * `priority` orders sources when the same recording is available from several of them — lower
- * wins. Local is instant, free and works offline; Navidrome is your own server at full quality;
- * Archive ranks last because its holdings are mostly live sets and transfers of variable fidelity.
+ * wins. Local is instant, free and works offline; Navidrome is your own server at full quality.
  *
  * `shortName` is for places that are tight for room — the Home filter row, where four chips have
  * to fit on one line. It falls back to `displayName`, so a source only overrides it when the full
  * name genuinely does not fit.
  *
  * `isPersonalLibrary` says whether this backend's catalogue *is* the user's own collection.
- * Browsing Navidrome albums shows music you own; browsing Archive does not. It decides whether a
- * fetched track counts towards the Library screen — see `TrackDao.getAllTracksFlow`.
+ * Browsing Navidrome albums shows music you own. It decides whether a fetched track counts
+ * towards the Library screen — see `TrackDao.getAllTracksFlow`.
  */
 @Serializable
 enum class SourceType(

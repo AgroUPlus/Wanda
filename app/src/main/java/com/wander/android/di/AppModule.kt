@@ -38,15 +38,6 @@ object AppModule {
             // a version bump would silently re-upload everything. A missing migration is now a
             // crash on the next build, which is the right time to find out.
             .addMigrations(*WANDER_MIGRATIONS)
-            .addCallback(object : androidx.room.RoomDatabase.Callback() {
-                override fun onOpen(db: androidx.sqlite.db.SupportSQLiteDatabase) {
-                    super.onOpen(db)
-                    runCatching {
-                        db.execSQL("DELETE FROM tracks WHERE source = 'INTERNET_ARCHIVE'")
-                        db.execSQL("DELETE FROM albums WHERE source = 'INTERNET_ARCHIVE'")
-                    }
-                }
-            })
             .build()
 
     @Provides fun provideEpisodeProgressDao(db: WanderDatabase): com.wander.android.core.database.dao.EpisodeProgressDao =

@@ -1,10 +1,13 @@
 package com.wander.android.ui.components.player
 
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
@@ -29,6 +32,9 @@ import kotlin.math.roundToInt
  */
 /** Clear of the rounded corner at full size, and off the artwork's busiest region. */
 private val BadgeInset = 14.dp
+
+/** A subtle "settle," not a dramatic shrink — the cover barely moves, it just stops breathing. */
+private const val PausedScale = 0.96f
 
 /** Shared with [PeekArtwork], which decodes neighbour covers at the same size. */
 internal val MorphArtworkSize = 360.dp
@@ -78,9 +84,18 @@ internal fun MorphingArtwork(
     alpha: () -> Float = { 1f },
     fingerprintStatus: com.wander.android.data.repository.FingerprintStatus =
         com.wander.android.data.repository.FingerprintStatus.MISSING,
-    carouselEnabled: Boolean = true
+    carouselEnabled: Boolean = true,
+    isPlaying: Boolean = true
 ) {
     if (!visible) return
+
+    // A small settle on pause, springing back on resume — the same "breathing" idiom as the
+    // player's own transport buttons, just on the thing those buttons control.
+    val pauseScale by animateFloatAsState(
+        targetValue = if (isPlaying) 1f else PausedScale,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        label = "coverPauseScale"
+    )
 
     // Checked here rather than inside the layout block below: the docked strip reports its bounds
     // one pass after the sheet first appears, and a `layout` lambda **must** measure its
@@ -124,13 +139,15 @@ internal fun MorphingArtwork(
             }
             .graphicsLayer {
                 this.alpha = alpha()
+                scaleX = pauseScale
+                scaleY = pauseScale
                 if (carouselEnabled && progress() > 0.8f) {
                     val step = swipe.stepPx.takeIf { it > 0f } ?: FullExitDistance
                     val offset = swipe.offsetX.value
                     val progressAway = (abs(offset) / step).coerceIn(0f, 1f)
-                    val scale = lerpFloat(1f, 0.85f, progressAway)
-                    scaleX = scale
-                    scaleY = scale
+                    val swipeScale = lerpFloat(1f, 0.85f, progressAway)
+                    scaleX *= swipeScale
+                    scaleY *= swipeScale
                     rotationY = (-offset / step * 12f).coerceIn(-14f, 14f)
                     cameraDistance = 12f * density
                 }

@@ -20,8 +20,8 @@ private const val CONFLICT_ROW_ID = -1L
 interface TrackDao {
 
     /**
-     * The Library screen. Restricted to `isLibrary` rows so that searching, radio and Archive
-     * browsing — all of which persist their results for offline use — do not grow the library.
+     * The Library screen. Restricted to `isLibrary` rows so that searching and radio — both of
+     * which persist their results for offline use — do not grow the library.
      */
     @Query("SELECT * FROM tracks WHERE isLibrary = 1 ORDER BY title ASC")
     fun getAllTracksFlow(): Flow<List<TrackEntity>>

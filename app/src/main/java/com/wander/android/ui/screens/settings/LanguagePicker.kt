@@ -42,7 +42,8 @@ import com.wander.android.core.i18n.supportedAppLocales
 internal fun LanguageSetting(
     currentTag: String,
     onLanguageChange: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null
 ) {
     val context = LocalContext.current
     val locales = remember(context) { supportedAppLocales(context) }
@@ -56,6 +57,7 @@ internal fun LanguageSetting(
         title = stringResource(R.string.language_title),
         subtitle = selected.displayName(),
         onClick = { showDialog = true },
+        icon = icon,
         modifier = modifier
     )
 

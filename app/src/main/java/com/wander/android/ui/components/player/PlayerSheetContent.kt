@@ -331,7 +331,8 @@ fun PlayerSheetContent(
             canPrevious = hasPreviousSong,
             canNext = hasNextSong,
             fingerprintStatus = fingerprintStatus,
-            carouselEnabled = coverCarousel
+            carouselEnabled = coverCarousel,
+            isPlaying = playback.isPlaying
         )
 
         // Composed as soon as the drag starts, so its artwork bounds are known and nothing

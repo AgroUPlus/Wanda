@@ -5,16 +5,17 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.wander.android.R
+import com.wander.android.ui.components.CollapsingTitle
+import com.wander.android.ui.components.GroupedCard
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.rememberCollapseFraction
 
 /**
  * The settings hub: one list of places to go.
@@ -34,27 +35,29 @@ internal fun SettingsScreen(
     contentPadding: PaddingValues,
     onOpenCategory: (SettingsCategory) -> Unit
 ) {
+    val listState = rememberLazyListState()
+    val collapseFraction by rememberCollapseFraction(listState)
+
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding.headerInset())) {
-        Text(
+        CollapsingTitle(
             text = stringResource(R.string.nav_settings),
-            style = MaterialTheme.typography.headlineLarge,
-            modifier = Modifier.padding(start = 20.dp, top = 16.dp, bottom = 12.dp)
+            collapseFraction = collapseFraction
         )
 
         LazyColumn(
+            state = listState,
             contentPadding = contentPadding.listInset(),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(
-                items = SettingsCategory.entries,
-                key = { it.name },
-                contentType = { "category" }
-            ) { category ->
-                SettingsCategoryRow(
-                    category = category,
-                    onClick = { onOpenCategory(category) },
-                    modifier = Modifier.animateItem()
-                )
+            item(key = "categories") {
+                GroupedCard {
+                    SettingsCategory.entries.forEach { category ->
+                        SettingsCategoryRow(
+                            category = category,
+                            onClick = { onOpenCategory(category) }
+                        )
+                    }
+                }
             }
         }
     }

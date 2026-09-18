@@ -40,7 +40,7 @@ Wanda operates under the following security guarantees:
 4. **Zero Telemetry and Zero Trackers**  
    Wanda includes no Google Play Services dependencies, no Firebase, no crash reporting SDKs, and no
    analytics services. Network requests are made solely to backends configured by the user (Navidrome,
-   Agro, YouTube, Internet Archive, LRCLIB).
+   Agro, YouTube, LRCLIB).
 
 5. **Incognito Mode**  
    Activating Incognito mode immediately stops scrobbling, play-count updates, and history persistence
