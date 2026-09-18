@@ -106,6 +106,7 @@ class EmbeddingRecordingIdentityTest {
         override fun getLikedTracksFlow(): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
         override fun getLikedTrackIdsFlow(): kotlinx.coroutines.flow.Flow<List<String>> = kotlinx.coroutines.flow.emptyFlow()
         override fun getDownloadedTracksFlow(): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
+        override suspend fun getDownloadedTracksOnce(): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun getOfflineTracksOnce(): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override fun getTracksByAlbumFlow(albumId: String): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
         override suspend fun getTrackById(id: String): com.wander.android.core.database.entity.TrackEntity? = null
@@ -140,7 +141,7 @@ class EmbeddingRecordingIdentityTest {
         override fun getFingerprintableTracksFlow(): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
         override suspend fun findLocalOrDownloadedCandidates(title: String, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun findNavidromeCandidates(title: String, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
-        override suspend fun setDownloaded(trackId: String, isDownloaded: Boolean, localPath: String?) {}
+        override suspend fun setDownloaded(trackId: String, isDownloaded: Boolean, localPath: String?, downloadedAt: Long?) {}
         override suspend fun incrementPlayCount(trackId: String, timestamp: Long) {}
         override suspend fun getUnhashedLocalTracks(limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun getUnhashedDownloads(limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
