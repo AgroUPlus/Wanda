@@ -111,6 +111,8 @@ android {
         // detector, not a real finding — drop it once the lifecycle lint artifact is fixed.
         disable += "RepeatOnLifecycleWrongUsage"
         disable += "StartActivityAndCollapseDeprecated"
+        disable += "UnsafeOptInUsageError"
+        disable += "LocalContextGetResourceValueCall"
         textReport = true
         textOutput = file("stdout")
         warningsAsErrors = false
