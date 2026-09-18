@@ -100,7 +100,7 @@ android {
         }?.flatMap { dir ->
             val qualifier = dir.name.removePrefix("values-")
             val baseLang = qualifier.substringBefore('-').substringBefore('+')
-            listOf(qualifier.replace("-r", "-"), baseLang)
+            listOf(qualifier, baseLang)
         } ?: emptyList()
         localeFilters += (setOf("en") + translatedLocales)
     }
