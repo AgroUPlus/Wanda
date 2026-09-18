@@ -33,6 +33,7 @@ private val NEARBY_PERMISSIONS: List<String> = buildList {
         // manifest declares for those releases is install-time and needs no asking. Without this
         // branch the list was empty below 31 and the gate asked for nothing at all.
         add(Manifest.permission.ACCESS_FINE_LOCATION)
+        add(Manifest.permission.ACCESS_COARSE_LOCATION)
     }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         add(Manifest.permission.NEARBY_WIFI_DEVICES)
@@ -40,6 +41,7 @@ private val NEARBY_PERMISSIONS: List<String> = buildList {
         // Wi-Fi Direct's own gate on 31..32, where `NEARBY_WIFI_DEVICES` does not yet exist:
         // `discoverPeers` and `requestPeers` return an empty peer list without it.
         add(Manifest.permission.ACCESS_FINE_LOCATION)
+        add(Manifest.permission.ACCESS_COARSE_LOCATION)
     }
 }
 

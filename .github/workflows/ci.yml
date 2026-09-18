@@ -36,7 +36,16 @@ jobs:
         run: ./gradlew :app:testDebugUnitTest
 
       - name: Run Android Lint
-        run: ./gradlew :app:lintDebug
+        run: |
+          ./gradlew :app:lintDebug || {
+            for report in app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt app/build/reports/lint-results-debug.txt app/stdout; do
+              if [ -f "$report" ]; then
+                echo "=== $report ==="
+                cat "$report"
+              fi
+            done
+            exit 1
+          }
 
       - name: Build Debug APK
         run: ./gradlew :app:assembleDebug
