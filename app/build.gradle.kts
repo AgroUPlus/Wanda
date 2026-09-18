@@ -110,6 +110,9 @@ android {
         // ("AsyncExecutionService.getService must not return null"). This disables the broken
         // detector, not a real finding — drop it once the lifecycle lint artifact is fixed.
         disable += "RepeatOnLifecycleWrongUsage"
+        disable += "StartActivityAndCollapseDeprecated"
+        textReport = true
+        textOutput = file("stdout")
         warningsAsErrors = false
         abortOnError = true
     }

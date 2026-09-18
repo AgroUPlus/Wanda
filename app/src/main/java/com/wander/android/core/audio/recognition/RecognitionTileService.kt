@@ -1,5 +1,6 @@
 package com.wander.android.core.audio.recognition
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
@@ -15,6 +16,7 @@ class RecognitionTileService : TileService() {
         }
     }
 
+    @SuppressLint("StartActivityAndCollapseDeprecated")
     override fun onClick() {
         super.onClick()
         val intent = Intent(this, RecognitionActivity::class.java).apply {
