@@ -1,7 +1,9 @@
 package com.wander.android.core.playback
 
 import android.os.Bundle
+import androidx.annotation.OptIn
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
 
 /**
  * What the decoder is *actually* producing, as opposed to [com.wander.android.data.model.UnifiedTrack.audioQualityLabel]
@@ -32,6 +34,7 @@ data class ActualAudioFormat(
         putBoolean(KEY_LOSSLESS, isLossless)
     }
 
+    @OptIn(UnstableApi::class)
     companion object {
         private const val KEY_SAMPLE_RATE = "wanda.audioFormat.sampleRateHz"
         private const val KEY_CHANNELS = "wanda.audioFormat.channelCount"

@@ -1,178 +1,41 @@
 # Wanda
 
-An all-in-one Android music player unifying **Navidrome/Subsonic**, **local files**, **YouTube Music**
-and **Internet Archive** behind one library, one queue and one player.
-Material 3 Expressive throughout. Battery-first, privacy-first, no telemetry, no accounts of our own.
+Android music player unifying **Navidrome/Subsonic**, **local files**, **YouTube Music**, and **Internet Archive**. Material 3 Expressive throughout. Battery-first, privacy-first, zero telemetry.
 
-Four screens: **Home · Library · Search · Settings**, plus a Now Playing destination.
+## 1. Non-Negotiable Hard Rules
 
-## Architecture
+| Rule | Why |
+| --- | --- |
+| **300 lines max per file** | Split when file reaches 250 lines; 1 concept per file. |
+| **Room is offline source of truth** | Network results are persisted, then read back as Flows. |
+| **Media3 owns playback state** | `PlaybackService` owns `ExoPlayer`; UI uses `MediaController`. |
+| **`IMusicSource` single abstraction** | Backends declare `SourceCapabilities`; UI checks flags, never fakes. |
+| **Explicit window insets** | Edge-to-edge layout requires manual container-edge padding. |
+| **Zero secrets in plaintext** | Store only in `SecureStorage`; never log URLs, tokens, or streams. |
+| **Strings in `strings.xml`** | Pass `@StringRes Int`, not `String`; never hardcode user text in UI. |
+| **No dead code & no fake fallbacks** | Surface explicit errors; never swallow exceptions with generic catch. |
+| **Research before implementation** | Follow mandatory 4-step research workflow before adding dependencies. |
+| **No AI attribution in git** | Comply with `CLA.md` Section 8; never add `Co-Authored-By` AI tags. |
 
-Single Gradle module `:app`, package root `com.wander.android`.
+## 2. Documentation Directory Map
 
-```
-core/       audio (Media3), cache, database (Room), network (Ktor/OkHttp), security, permissions
-data/       model · sources/<name> (one per backend) · repository
-di/         Hilt modules, one per concern
-ui/         theme · navigation · components · screens/<screen>
-```
+Detailed developer guides and architectural specifications in `docs/dev/`:
 
-Rules of the road:
+| Topic | Pointer / Specification |
+| --- | --- |
+| **Coding Style & Conventions** | [`docs/dev/process/coding-style.md`](docs/dev/process/coding-style.md) |
+| **Mandatory Research Workflow** | [`docs/dev/process/research-workflow.md`](docs/dev/process/research-workflow.md) |
+| **Git & Authorship Policy** | [`docs/dev/process/git-and-authorship.md`](docs/dev/process/git-and-authorship.md) |
+| **Window Insets & Safe Zones** | [`docs/dev/android/window-insets.md`](docs/dev/android/window-insets.md) |
+| **Material 3 Expressive & Motion** | [`docs/dev/android/motion-m3.md`](docs/dev/android/motion-m3.md) |
+| **Localization & Crowdin** | [`docs/dev/android/localization.md`](docs/dev/android/localization.md) |
+| **Architecture, Battery & Security** | [`docs/dev/architecture/overview.md`](docs/dev/architecture/overview.md) |
+| **Commands & Testing** | [`docs/dev/tools/commands-and-testing.md`](docs/dev/tools/commands-and-testing.md) |
 
-- `IMusicSource` is the **only** source abstraction. Adding a backend means adding one package
-  under `data/sources/` and one `@IntoSet` binding — nothing else changes.
-- Every source declares a `SourceCapabilities`. The UI reads capabilities to hide or disable
-  actions. A source never fakes a feature it lacks.
-- ViewModels talk to **repositories only**, never to sources or DAOs directly.
-- **Room is the offline source of truth.** Network results are persisted, then read back as Flows.
-- **Media3 owns playback state.** `PlaybackService` owns the `ExoPlayer`; the UI holds a
-  `MediaController`. Nothing else constructs a player.
-
-## Coding style
-
-- **Hard cap 300 lines per file.** Split when a file passes 250. One concept per file, named for it —
-  no `Components.kt` / `Entities.kt` / `Utils.kt` grab-bags.
-- **No speculative fallbacks.** If something is unsupported or fails, return empty/`Result.failure`
-  and surface it. Never invent placeholder data, never swallow with a blanket `catch (e: Exception)`
-  that hides the cause.
-- **No dead code.** If it has no caller, it does not get written.
-- UI = stateless composables driven by a `StateFlow<UiState>`. No side effects in composition.
-  Every `LazyColumn`/`LazyRow` item has a stable `key`.
-- Coroutines + Flow only. `Dispatchers.IO` is applied at the repository/source boundary,
-  never inside a composable or a ViewModel body.
-- Default to `internal`. `public` only for genuine cross-package API.
-- Prefer immutable `data class` state; `@Immutable`/`@Stable` where it helps recomposition.
-
-## Localization
-
-Every string a user can read lives in `res/values/strings.xml`. Crowdin translates that file and
-nothing else, so a literal left in Kotlin is a literal that ships in English forever.
-
-- **Never write a user-facing string literal in Kotlin.** In a composable use
-  `stringResource(R.string.key)`; in a worker or anywhere holding a `Context` use
-  `context.getString(...)`.
-- **A model or enum that carries display text carries `@StringRes Int`, not `String`** — see
-  `SettingsCategory`, `PlayerGesture`, `SmartMix`, `FingerprintSection`. The resource is resolved
-  at the composable that draws it. This is what lets a repository name something without a
-  `Context` and without freezing the language at construction time.
-- **Values go in the resource, not around it.** `stringResource(R.string.x, count)` against
-  `%1$s`, never `"$count " + stringResource(...)`. Word order differs between languages, and a
-  concatenation gives the translator no way to change it.
-- **Counted nouns use `<plurals>`**, not `if (n == 1)`. English has two forms; Polish and Arabic
-  do not.
-- **Some strings must stay hardcoded.** Anything persisted — a playlist name written to Room, a
-  stable identifier — must not change when the display language does. Animation and layout names
-  (`label = "trackRowBackground"`) are not user-facing and never get extracted.
-- **The language list is derived, never hand-kept.** `generateLocaleConfig = true` builds it from
-  the `values-xx` directories present, and `supportedAppLocales()` reads it back from
-  `assets.locales`. Adding a language means adding its translations; nothing else. The picker in
-  *Settings → Look and feel* hides itself while only one language ships, so it must never be given
-  a hardcoded list of languages the build cannot actually display.
-- Per-app language is applied by `AppLocaleStore`: `LocaleManager` on API 33+, and a
-  `attachBaseContext` config override below it. Do not add AppCompat for this — `MainActivity` is
-  a `ComponentActivity` and stays one.
-
-Translations arrive from Crowdin on the `l10n_translations` branch; merging that branch is what
-makes a new language appear.
-
-## Motion (Material 3 Expressive)
-
-- Use `MaterialExpressiveTheme` + `MotionScheme.expressive()`. Take spring specs from
-  `MaterialTheme.motionScheme` — do not hand-roll `spring()` values in screens.
-- Shared-element transitions for mini-player → Now Playing. Predictive back everywhere.
-- Prefer expressive components (`ShortNavigationBar`, wavy progress, `FloatingToolbar`,
-  `LoadingIndicator`, `MaterialShapes` morphs) over stable equivalents.
-
-## Window insets (safe zones)
-
-The app is edge-to-edge (`enableEdgeToEdge()` in `MainActivity`, no `WindowInsetsController` calls
-anywhere). Nothing is inset for you. Two bugs have shipped from forgetting this — a share button in
-the status bar, a back arrow behind the clock — so:
-
-- **Any composable aligned to a container edge must account for the insets itself**, unless a parent
-  demonstrably already has. `Modifier.align(...)` + `padding(n.dp)` inside a full-bleed `Box` is the
-  shape this bug takes every time.
-- **Put the inset in the shared component, not in each caller.** `ImmersiveHero` insets its own
-  `overlay` slot; `PlayerOverlayButtons` takes measured insets from its caller. A rule each new
-  caller has to remember is a rule that gets forgotten.
-- Prefer `windowInsetsPadding(WindowInsets.safeDrawing.only(...))` over `safeDrawingPadding()` when
-  only some edges matter. A hero at the top of a page has no business insetting its bottom.
-- **Never clear a sibling by a hard-coded height.** Two composables aligned to opposite edges of a
-  `Box` have no layout relationship, so a constant written from the paddings a layout is declared
-  with will be wrong — the real height includes the system bar inset too. Measure with
-  `onGloballyPositioned` at the *head* of the modifier chain (so the figure includes the padding
-  inside it) and pass that. This is exactly how the lyrics toggle landed on the like button.
-- When you add a control to a full-bleed layout, check it against a gesture-nav device *and* a
-  three-button one — the bottom inset differs by ~30dp and only one of them will look right by luck.
-
-## Battery
-
-- No polling loops. Position updates come from `Player.Listener` + a ticker that runs **only**
-  while playing **and** while the UI is `STARTED` (`repeatOnLifecycle`).
-- Audio offload enabled; `WAKE_MODE_NETWORK` only while streaming, `WAKE_MODE_NONE` for local.
-- Background work is WorkManager with `UNMETERED + charging + !battery-low` constraints.
-
-## Security
-
-- Secrets live only in `EncryptedSharedPreferences` (`SecureStorage`). Never in Room, logs or prefs.
-- **Never log** URLs, tokens, cookies, passwords or stream links — they carry credentials.
-- `allowBackup=false`, `usesCleartextTraffic=false` (per-domain opt-in for self-hosted Navidrome).
-- No analytics, no crash reporting, no third-party SDK that phones home.
-- Incognito mode suppresses scrobbles and play-count writes.
-
-## AI Tools, Authorship and Non-Appropriation
-
-- AI models and automated code agents are assistive utilities only. They are **not** authors or contributors.
-- **Do not add** `Co-Authored-By` trailers or metadata referencing AI models to git commit messages.
-- Any use of AI tools must strictly adhere to [`CLA.md`](CLA.md) Section 8. No AI vendor or automated system acquires ownership, copyright, or licensing claims over project code.
-
-## Commands
+## 3. Quick Commands
 
 ```bash
-./gradlew :app:assembleDebug          # build
-./gradlew :app:testDebugUnitTest      # unit tests
-./gradlew :app:lintDebug              # lint
-./gradlew :app:installDebug           # install on connected device
+./gradlew :app:assembleDebug          # Build debug APK
+./gradlew :app:testDebugUnitTest      # Run local unit tests
+./gradlew :app:lintDebug              # Run lint checks
 ```
-
-## Research Before Implementation (MANDATORY)
-
-Before implementing code, researching code, or answering technical questions, the AI agent MUST follow this research workflow:
-
-### Step 1: Look up official documentation
-- Use documentation tools or MCP servers to fetch up-to-date documentation for any library/framework about to be used.
-- Understand the latest API surface, breaking changes, and recommended usage patterns.
-
-### Step 2: Evaluate pros, cons, and alternatives
-- Use web search to research:
-  - Pros and cons of the library/approach
-  - Alternative libraries or approaches that solve the same problem
-  - Known issues, performance concerns, or deprecation notices
-- Compare and evaluate whether the chosen library/approach is the best fit for this project.
-
-### Step 3: Study OSS best practices
-- Search well-known open-source projects to see how they implement similar features.
-- Verify the approach follows established best practices before adopting it.
-- Pay attention to patterns used in projects with similar architecture (Clean Architecture, Compose Multiplatform, etc.).
-
-### Step 4: Make a decision and justify
-- Only proceed with implementation after completing steps 1-3.
-- If a library/approach has significant drawbacks or better alternatives exist, recommend the better option to the user before proceeding.
-- Document the rationale briefly when introducing new dependencies or patterns.
-
-This workflow applies to: Adding new libraries, choosing architectural patterns, implementing new features with unfamiliar APIs, answering "how should we do X?" questions, and evaluating technical approaches.
-
-This workflow does NOT apply to: Simple bug fixes in existing code, minor refactoring, or tasks using libraries already well-established in the project.
-
-## Verification After Code Changes
-
-- Do NOT build the app to verify simple code changes. Instead, use real-time IDE diagnostics or language server checks.
-- Only run Gradle build when explicitly requested by the user or for final release verification and never do so inside WSL.
-
-## Testing
-
-- Unit tests for Domain layer (Use cases)
-- Repository tests with fake data sources
-- UI tests with Compose Testing
-
-JDK 17 and Android SDK 36 are required (`org.gradle.java.home` is set in `gradle.properties`).

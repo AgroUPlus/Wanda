@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.queue
-
+ 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -55,6 +56,7 @@ import kotlinx.coroutines.launch
  * `PlayerSheetContent`.
  */
 
+@SuppressLint("LocalContextGetResourceValueCall")
 @Composable
 internal fun QueueDrawer(
     playerConnection: PlayerConnection,

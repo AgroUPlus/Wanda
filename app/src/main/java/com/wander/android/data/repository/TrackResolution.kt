@@ -23,12 +23,16 @@ internal object TrackResolution {
     fun bestMatch(link: UniversalTrackLink, candidates: List<UnifiedTrack>): UnifiedTrack? {
         val wantedTitle = normalise(link.title)
         val wantedArtist = normalise(link.artist)
+        val wantedVariants = TrackDeduplicator.variantsOf(link.title)
         if (wantedTitle.isEmpty() || wantedArtist.isEmpty()) return null
 
         val artistMatches = candidates.filter { normalise(it.artist) == wantedArtist }
         if (artistMatches.isEmpty()) return null
 
-        val exact = artistMatches.filter { normalise(it.title) == wantedTitle }
+        val exact = artistMatches.filter {
+            normalise(it.title) == wantedTitle &&
+                TrackDeduplicator.variantsOf(it.title) == wantedVariants
+        }
         if (exact.isEmpty()) return null
         if (exact.size == 1) return exact.first()
 
