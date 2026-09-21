@@ -235,7 +235,7 @@ class AgroUploader @Inject constructor(
                 val openRes = relayClient.newCall(openReq).execute()
                 android.util.Log.i("P2P", "Relay open answered HTTP ${openRes.code}")
                 if (openRes.isSuccessful) {
-                    val bodyStr = openRes.body?.string().orEmpty()
+                    val bodyStr = openRes.body.string()
                     openRes.close()
                     val jsonObj = kotlinx.serialization.json.Json.parseToJsonElement(bodyStr) as? JsonObject
                     val sessionId = jsonObj?.get("sessionId")?.jsonPrimitive?.contentOrNull

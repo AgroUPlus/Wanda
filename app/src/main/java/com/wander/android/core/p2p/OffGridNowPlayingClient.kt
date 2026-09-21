@@ -43,7 +43,7 @@ internal class OffGridNowPlayingClient @Inject constructor() {
                     .build()
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@use null
-                    val body = response.body?.string() ?: return@use null
+                    val body = response.body.string()
                     json.decodeFromString(OffGridNowPlaying.serializer(), body)
                 }
             }.getOrNull()
