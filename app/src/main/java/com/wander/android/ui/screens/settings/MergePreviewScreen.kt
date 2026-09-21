@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -15,16 +16,21 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.CallSplit
 import androidx.compose.material.icons.rounded.Undo
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,7 +56,12 @@ import com.wander.android.ui.components.listInset
  * Flagging a wrong merge without offering anything to do about it would leave the matcher's
  * judgement unappealable, so each rendition can be pinned apart from its group here. That write is
  * the one thing on this screen that touches the database, and it only ever keeps rows *separate*.
+ *
+ * Header matches [SettingsCategoryScreen]'s own: a pinned, always-small [TopAppBar] with the title
+ * next to the back arrow, rather than this screen's previous hand-rolled `Row` that never reacted
+ * to scrolling either way.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun MergePreviewScreen(
     contentPadding: PaddingValues,
@@ -58,17 +69,34 @@ internal fun MergePreviewScreen(
     viewModel: MergePreviewViewModel = hiltViewModel()
 ) {
     val report by viewModel.report.collectAsStateWithLifecycle()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     Column(modifier = Modifier
         .fillMaxSize()
         .padding(contentPadding.headerInset())
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack, modifier = Modifier.padding(start = 4.dp)) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
-            }
-            Text(stringResource(R.string.common_duplicate_recordings), style = MaterialTheme.typography.headlineLarge)
-        }
+        TopAppBar(
+            title = {
+                Text(
+                    text = stringResource(R.string.common_duplicate_recordings),
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = stringResource(R.string.common_back)
+                    )
+                }
+            },
+            windowInsets = WindowInsets(0, 0, 0, 0),
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+                scrolledContainerColor = Color.Transparent
+            ),
+            scrollBehavior = scrollBehavior
+        )
 
         val current = report
         if (current == null) {
@@ -81,7 +109,7 @@ internal fun MergePreviewScreen(
         LazyColumn(
             contentPadding = contentPadding.listInset(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection)
         ) {
             item(key = "summary") {
                 Surface(

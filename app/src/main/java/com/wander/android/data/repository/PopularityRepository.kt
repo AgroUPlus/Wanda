@@ -18,10 +18,10 @@ import kotlinx.coroutines.withContext
  *
  * Both halves here because they are one feature seen from two ends, and because the asymmetry
  * between them is the thing worth keeping in one place: reading the totals is free and needs no
- * permission, while contributing to them is off until the user says otherwise. Reporting scrobbles
- * already tells *their own* server what they played; contributing counts makes it part of a total
- * other accounts on that server can see, and that is a disclosure to other people rather than to
- * the server.
+ * permission, while contributing to them is on by default and can be turned off in Settings → Sync.
+ * Reporting scrobbles already tells *their own* server what they played; contributing counts makes
+ * it part of a total other accounts on that server can see, and that is a disclosure to other
+ * people rather than to the server.
  */
 @Singleton
 class PopularityRepository @Inject constructor(
@@ -89,18 +89,7 @@ class PopularityRepository @Inject constructor(
     suspend fun contribute(plays: List<PendingScrobble>) {
         if (!secureStorage.agroPopularityContribution || plays.isEmpty()) return
 
-        val counts = plays
-            .groupBy { TrackDeduplicator.normalizeArtist(it.artist) to TrackDeduplicator.normalizeTitle(it.title) }
-            .mapNotNull { (_, group) ->
-                val first = group.first()
-                if (first.title.isBlank() || first.artist.isBlank()) return@mapNotNull null
-                AgroPlayCount(
-                    title = first.title,
-                    artist = first.artist,
-                    album = first.album,
-                    count = group.size
-                )
-            }
+        val counts = aggregatePlayCounts(plays)
         if (counts.isEmpty()) return
 
         popularityApi.submitPlayCounts(counts).onFailure { error ->
@@ -122,3 +111,40 @@ class PopularityRepository @Inject constructor(
         const val OVERFETCH = 3
     }
 }
+
+/**
+ * Aggregates plays into one entry per recording, keyed the same way the server buckets
+ * `popularity_counters` — artist, title *and* variant markers, not just artist/title — so a live
+ * or remix take is never folded into its studio cut's submission and displayed under the wrong
+ * title. Pulled out of [PopularityRepository.contribute] because it's the one part of that method
+ * with no server or Android dependency, and so the one part a plain unit test can exercise.
+ */
+internal fun aggregatePlayCounts(plays: List<PendingScrobble>): List<AgroPlayCount> =
+    plays
+        .groupBy { it.recordingKey() }
+        .mapNotNull { (_, group) ->
+            val first = group.first()
+            if (first.title.isBlank() || first.artist.isBlank()) return@mapNotNull null
+            AgroPlayCount(
+                title = first.title,
+                artist = first.artist,
+                album = first.album,
+                count = group.size
+            )
+        }
+
+/**
+ * The same recording key [TrackDeduplicator.recordingKey] would give this play if it were a
+ * [UnifiedTrack] — built the same way [PopularityRepository.popularTracks] builds one for an
+ * incoming entry, so a batch of plays groups exactly the way the server does.
+ */
+private fun PendingScrobble.recordingKey(): String = TrackDeduplicator.recordingKey(
+    UnifiedTrack(
+        id = "",
+        source = com.wander.android.data.model.SourceType.LOCAL,
+        title = title,
+        artist = artist,
+        album = album,
+        durationMs = durationMs
+    )
+)

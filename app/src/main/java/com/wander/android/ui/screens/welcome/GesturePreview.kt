@@ -7,18 +7,13 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,10 +22,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.wander.android.ui.theme.LocalReducedMotion
 import kotlin.math.abs
@@ -39,9 +32,16 @@ import kotlin.math.abs
  * A small, obviously-fake player with a fingertip demonstrating one gesture on a loop.
  *
  * It is a drawing, not a live player: no artwork, no state, nothing wired up. That is deliberate —
- * a real player here would need a track to show, and setup happens before there is one. The shapes
- * only have to be recognisable enough that the gesture lands on the same place it will land on the
- * real screen, which is what the cover square and the control row are for.
+ * a real player here would need a track to show, and setup happens before there is one. But the
+ * skeleton it draws is the *real* player's own skeleton — cover at the same width fraction and
+ * corner shape as [com.wander.android.ui.screens.player.NowPlayingScreen], title/artist rows, a
+ * seek bar, a prev/play/next row — not an arbitrary set of bars, so the gesture demonstrated here
+ * visibly lands on the part of the real screen it actually belongs to.
+ *
+ * Height-capped rather than let its `aspectRatio` grow with the page's width: uncapped, a
+ * near-full-width square-ish mock plus the headline, subtitle, chip row and caption around it can
+ * run past a single viewport on a compact phone, so this step would need to be scrolled through
+ * instead of watched.
  *
  * Honours reduced motion by holding the cursor still at the gesture's end position with its trail
  * drawn, rather than looping. An animation that exists to be watched is exactly the kind the
@@ -74,6 +74,7 @@ internal fun GesturePreview(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(PhoneAspect)
+            .heightIn(max = MaxPreviewHeight)
     ) {
         PhoneMock(highlight = gesture.motion, modifier = Modifier.fillMaxSize())
         Cursor(cursor, showTrail = reduced, modifier = Modifier.fillMaxSize())
@@ -199,67 +200,9 @@ private fun Modifier.fractionOffset(x: Float, y: Float): Modifier = layout { mea
     }
 }
 
-/** The player, reduced to the parts a gesture lands on. */
-@Composable
-private fun PhoneMock(highlight: GestureMotion, modifier: Modifier = Modifier) {
-    val scheme = MaterialTheme.colorScheme
-    // The cover is the target of three of the five gestures, so it brightens for those — the
-    // difference between "swipe the cover" and "swipe the player" is the whole distinction.
-    val coverIsTarget = highlight != GestureMotion.SWIPE_UP && highlight != GestureMotion.SWIPE_DOWN
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = modifier
-            .clip(RoundedCornerShape(PhoneCorner))
-            .background(scheme.surfaceContainerHighest)
-            .padding(horizontal = 28.dp, vertical = 18.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(CoverWidthFraction)
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(CoverCorner))
-                .background(
-                    if (coverIsTarget) scheme.primaryContainer else scheme.surfaceContainerLow
-                )
-        )
-        Bar(widthFraction = 0.62f, height = 8.dp, color = scheme.onSurface.copy(alpha = 0.55f))
-        Bar(widthFraction = 0.40f, height = 6.dp, color = scheme.onSurface.copy(alpha = 0.28f))
-        Bar(widthFraction = 0.86f, height = 4.dp, color = scheme.onSurface.copy(alpha = 0.18f))
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            repeat(3) { i ->
-                Box(
-                    modifier = Modifier
-                        .size(if (i == 1) 20.dp else 14.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (i == 1) scheme.primary else scheme.onSurface.copy(alpha = 0.35f)
-                        )
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun Bar(
-    widthFraction: Float,
-    height: Dp,
-    color: Color
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth(widthFraction)
-            .height(height)
-            .clip(CircleShape)
-            .background(color)
-    )
-}
-
 private const val LoopMillis = 2400
 private const val PhoneAspect = 0.72f
-private const val CoverWidthFraction = 0.68f
+private val MaxPreviewHeight = 260.dp
 private const val FadeAtEnds = 0.85f
 
 // Where in the loop a drag runs, leaving a beat of stillness either side of it.
@@ -278,5 +221,3 @@ private const val HoldRampSpan = 0.35f
 private const val PressSquash = 0.22f
 
 private val CursorSize = 26.dp
-private val PhoneCorner = 28.dp
-private val CoverCorner = 14.dp

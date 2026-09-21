@@ -2,7 +2,7 @@ package com.wander.android.ui.screens.settings
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -19,10 +20,13 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -41,7 +45,12 @@ import com.wander.android.ui.components.listInset
  * The screen exists to answer one question — "why can't Wanda find this song when I hum it?" — so
  * it leads with what is *unmeasured* and what is being worked on, and leaves the finished majority
  * at the bottom where it is available but not in the way.
+ *
+ * Header matches [SettingsCategoryScreen]'s own: a pinned, always-small [TopAppBar] with the title
+ * next to the back arrow, rather than this screen's previous hand-rolled `Row` that never reacted
+ * to scrolling either way.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun FingerprintsScreen(
     contentPadding: PaddingValues,
@@ -49,23 +58,31 @@ internal fun FingerprintsScreen(
     viewModel: FingerprintsViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .padding(contentPadding.headerInset())
-                .padding(start = 8.dp, end = 24.dp, top = 8.dp, bottom = 8.dp)
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
-            }
-            Text(
-                text = stringResource(R.string.settings_fingerprints),
-                style = MaterialTheme.typography.headlineLarge,
-                modifier = Modifier.padding(start = 4.dp)
-            )
-        }
+    Column(modifier = Modifier.fillMaxSize().padding(contentPadding.headerInset())) {
+        TopAppBar(
+            title = {
+                Text(
+                    text = stringResource(R.string.settings_fingerprints),
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = stringResource(R.string.common_back)
+                    )
+                }
+            },
+            windowInsets = WindowInsets(0, 0, 0, 0),
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+                scrolledContainerColor = Color.Transparent
+            ),
+            scrollBehavior = scrollBehavior
+        )
 
         if (state.isLoading) {
             LoadingIndicator(modifier = Modifier.padding(24.dp))
@@ -74,7 +91,7 @@ internal fun FingerprintsScreen(
 
         LazyColumn(
             contentPadding = contentPadding.listInset(),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection)
         ) {
             item(key = "summary") { Summary(state, viewModel::setPaused) }
             item(key = "model") {

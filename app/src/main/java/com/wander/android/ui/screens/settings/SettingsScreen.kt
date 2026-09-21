@@ -12,6 +12,7 @@ import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -41,6 +42,13 @@ import com.wander.android.ui.components.rememberShelfEntranceScale
  * than [LargeTopAppBar]'s own smaller default title style and opaque container: this *is* the
  * screen's greeting, not a bar sitting over it. It still collapses on scroll, because the row of
  * seven categories genuinely can run past the fold on a compact phone.
+ *
+ * Starts already collapsed — title small, same row it would share with a back arrow on any other
+ * screen — rather than expanded like a fresh [LargeTopAppBar] normally would. `initialHeightOffset`
+ * is clamped to the real (negative) height-offset limit once the bar measures itself, so this reads
+ * as "already scrolled up" from the first frame while the scroll-driven expand/collapse this screen
+ * needs still works exactly as before — the same large-title behaviour Android's own Settings app
+ * has, just not defaulting to its expanded state.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,7 +57,8 @@ internal fun SettingsScreen(
     onOpenCategory: (SettingsCategory) -> Unit
 ) {
     val listState = rememberLazyListState()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val topBarState = rememberTopAppBarState(initialHeightOffset = -Float.MAX_VALUE)
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topBarState)
 
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding.headerInset())) {
         LargeTopAppBar(
