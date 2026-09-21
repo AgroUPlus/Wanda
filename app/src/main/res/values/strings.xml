@@ -539,6 +539,15 @@
     <string name="welcome_gesture_detail_tap_again_bring_artwork_back">Tap again to bring the artwork back.</string>
     <string name="welcome_gesture_detail_left_next_track_right_previous">Left for the next track, right for the previous one.</string>
     <string name="welcome_gesture_detail_player_shrinks_strip_above_tabs">The player shrinks to the strip above the tabs and keeps playing.</string>
+
+    <!-- Fake track/lyrics content for the gestures step's illustration — never real user data -->
+    <string name="welcome_gesture_mock_track_title">Golden Hour</string>
+    <string name="welcome_gesture_mock_track_artist">Reverie</string>
+    <string name="welcome_gesture_mock_track_title_alt">Night Drive</string>
+    <string name="welcome_gesture_mock_track_artist_alt">Faye Lin</string>
+    <string name="welcome_gesture_mock_lyric_line_1">Chasing shadows down the coast</string>
+    <string name="welcome_gesture_mock_lyric_line_2">Every mile a little slower</string>
+    <string name="welcome_gesture_mock_lyric_line_3">Golden hour, hold it close</string>
     <string name="settings_category_connections">Connections</string>
     <string name="settings_category_sync">Sync</string>
     <string name="settings_category_look_feel">Look and feel</string>
