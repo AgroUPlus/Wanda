@@ -442,13 +442,14 @@
     <string name="stats_top_song">Musiques favorites</string>
     <string name="stats_vs_previous_period">vs période précédente</string>
     <!-- Welcome / onboarding -->
+    <string name="welcome_already_have_backup">Already have a backup? Import it.</string>
     <string name="welcome_can_skip_download_later_from">Vous pouvez ignorer ceci est télécharger plus tard dans Paramètres > empreintes.</string>
     <string name="welcome_download_model">Télécharger le modèle</string>
     <string name="welcome_gestures">Gestes</string>
-    <string name="welcome_hold_phone_speaker_wanda_names">Mettez votre téléphone à proximité d\'un haut-parleur et Wanda cherchera le nom de la musique localement.</string>
-    <string name="welcome_one_library_one_queue_one">Une bibliothèque, une file, un lecteur — à travers tout votre serveur, cet appareil et YouTube Music. Aucun compte, aucune télémétrie.</string>
+    <string name="welcome_hold_phone_speaker_wanda_names">Hold your phone to a speaker and Wanda names what\'s playing.</string>
+    <string name="welcome_one_library_one_queue_one">One library, one queue, one player.</string>
     <string name="welcome_own_subsonic_compatible_server_full">Votre propre serveur compatible avec Subsonic à qualité maximale.</string>
-    <string name="welcome_player_mostly_gestures_fewer_buttons">Le lecteur se base sur des gestes — moins de boutons. Voici la liste.</string>
+    <string name="welcome_player_mostly_gestures_fewer_buttons">The player is mostly gestures. These are all of them.</string>
     <string name="welcome_plays_offline_costs_nothing_needs">Joue hors ligne, ne coûte rien, aucun compte.</string>
     <string name="welcome_signs_through_own_session_cookie">Connexion via votre propre session; le cookie ne quitte jamais votre appareil.</string>
     <string name="welcome_song_recognition">Reconnaissance de musique</string>
@@ -505,7 +506,7 @@
     <string name="welcome_gesture_tap_cover_lyrics">Toucher la pochette pour ouvrir les paroles</string>
     <string name="welcome_gesture_swipe_cover_skip">Glisser sur la pochette pour passer à la prochaine musique</string>
     <string name="welcome_gesture_swipe_down_tuck_away">Glisser vers le bas pour minimiser l\'écran</string>
-    <string name="welcome_gesture_detail_from_anywhere_player_no_handle">Depuis n\'importe où sur cet écran; pas de poignée.</string>
+    <string name="welcome_gesture_detail_from_anywhere_player_no_handle">From anywhere on the player.</string>
     <string name="welcome_gesture_detail_press_hold_artwork_slow_track">Cliquer et maintenir la pochette pour ralentir ou paramétrer la hauteur.</string>
     <string name="welcome_gesture_detail_tap_again_bring_artwork_back">Cliquer à nouveau pour rafficher la pochette.</string>
     <string name="welcome_gesture_detail_left_next_track_right_previous">Gauche pour la prochaine piste, droite pour la précédente.</string>
