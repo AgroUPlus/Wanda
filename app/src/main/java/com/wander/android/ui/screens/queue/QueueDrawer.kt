@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SnackbarHost
@@ -146,7 +147,7 @@ internal fun QueueDrawer(
                         }
                     }
                     if (state.queue.isNotEmpty() && !state.orderLocked) {
-                        IconButton(onClick = playerConnection::clearQueue) {
+                        IconButton(onClick = playerConnection::clearQueue, shapes = IconButtonDefaults.shapes()) {
                             Icon(
                                 imageVector = Icons.Rounded.DeleteSweep,
                                 contentDescription = stringResource(R.string.action_clear_queue),

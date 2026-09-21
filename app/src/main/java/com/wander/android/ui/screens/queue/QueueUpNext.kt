@@ -16,6 +16,7 @@ import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
@@ -124,6 +125,7 @@ internal fun QueueUpNext(
                             if (canReorder) {
                                 IconButton(
                                     onClick = {},
+                                    shapes = IconButtonDefaults.shapes(),
                                     modifier = Modifier
                                         .padding(start = 4.dp)
                                         .draggableHandle(

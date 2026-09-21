@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -405,6 +406,7 @@ internal fun NowPlayingScreen(
             if (state.audioTracks.size > 1) {
                 FilledTonalIconButton(
                     onClick = { showAudioTrackPicker = true },
+                    shapes = IconButtonDefaults.shapes(),
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .windowInsetsPadding(
@@ -703,6 +705,7 @@ internal fun NowPlayingScreen(
                 if (state.audioTracks.size > 1) {
                     FilledTonalIconButton(
                         onClick = { showAudioTrackPicker = true },
+                        shapes = IconButtonDefaults.shapes(),
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .padding(12.dp)
