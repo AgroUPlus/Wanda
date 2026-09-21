@@ -29,23 +29,26 @@ import com.wander.android.ui.theme.LocalReducedMotion
 import kotlin.math.abs
 
 /**
- * A small, obviously-fake player with a fingertip demonstrating one gesture on a loop.
+ * A small, obviously-fake player with a fingertip demonstrating one gesture on a loop, *and* the
+ * result that gesture actually has — the queue drawer rising, the frame settling into the mini
+ * player, lyrics fading in, the cover swapping, the speed/pitch popup scaling up — layered over the
+ * same [PhoneMock] the finger is dragging across.
+ *
+ * Everything reads one looping `progress: Float` (0→1): the fingertip's own path (`cursorAt`,
+ * unchanged) *and* every gesture's UI reaction share the same drag/tap/hold timing windows defined
+ * at the bottom of this file, so the result appears exactly in sync with the finger performing it
+ * rather than running on a second, independent clock.
  *
  * It is a drawing, not a live player: no artwork, no state, nothing wired up. That is deliberate —
- * a real player here would need a track to show, and setup happens before there is one. But the
- * skeleton it draws is the *real* player's own skeleton — cover at the same width fraction and
- * corner shape as [com.wander.android.ui.screens.player.NowPlayingScreen], title/artist rows, a
- * seek bar, a prev/play/next row — not an arbitrary set of bars, so the gesture demonstrated here
- * visibly lands on the part of the real screen it actually belongs to.
+ * a real player here would need a track to show, and setup happens before there is one.
  *
  * Height-capped rather than let its `aspectRatio` grow with the page's width: uncapped, a
- * near-full-width square-ish mock plus the headline, subtitle, chip row and caption around it can
- * run past a single viewport on a compact phone, so this step would need to be scrolled through
- * instead of watched.
+ * near-full-width square-ish mock plus the headline, subtitle and caption around it can run past a
+ * single viewport on a compact phone.
  *
  * Honours reduced motion by holding the cursor still at the gesture's end position with its trail
- * drawn, rather than looping. An animation that exists to be watched is exactly the kind the
- * setting is asking not to be shown.
+ * drawn, and every overlay at its settled (fully shown) state, rather than looping. An animation
+ * that exists to be watched is exactly the kind the setting is asking not to be shown.
  */
 @Composable
 internal fun GesturePreview(
@@ -68,6 +71,9 @@ internal fun GesturePreview(
     }
 
     val cursor = cursorAt(gesture.motion, progress)
+    val travelFraction = dragEase(progress)
+    val holdFraction = (progress / HoldRampSpan).coerceIn(0f, 1f)
+    val tapFraction = ((progress - TapStart) / TapFadeSpan).coerceIn(0f, 1f)
 
     Box(
         contentAlignment = Alignment.Center,
@@ -76,7 +82,43 @@ internal fun GesturePreview(
             .aspectRatio(PhoneAspect)
             .heightIn(max = MaxPreviewHeight)
     ) {
-        PhoneMock(highlight = gesture.motion, modifier = Modifier.fillMaxSize())
+        when (gesture.motion) {
+            GestureMotion.SWIPE_SIDEWAYS -> PhoneMock(
+                highlight = gesture.motion,
+                coverOverlay = { SkipCoverSwap(travelFraction) },
+                modifier = Modifier.fillMaxSize()
+            )
+            GestureMotion.SWIPE_DOWN -> {
+                PhoneMock(
+                    highlight = gesture.motion,
+                    modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 1f - travelFraction }
+                )
+                MiniPlayerMock(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .fillMaxWidth()
+                        .graphicsLayer { alpha = travelFraction }
+                )
+            }
+            else -> PhoneMock(highlight = gesture.motion, modifier = Modifier.fillMaxSize())
+        }
+
+        if (gesture.motion == GestureMotion.SWIPE_UP) {
+            // Wrap-content, not a fixed height fraction: it needs to travel exactly its own
+            // height to hide fully below the frame, and a taller-than-content box would leave
+            // visible empty space under the two mock rows.
+            QueueOverlay(
+                liftFraction = travelFraction,
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+            )
+        }
+        if (gesture.motion == GestureMotion.TAP) {
+            LyricsOverlay(alpha = tapFraction, modifier = Modifier.fillMaxSize())
+        }
+        if (gesture.motion == GestureMotion.HOLD) {
+            SpeedPitchOverlay(progress = holdFraction, modifier = Modifier.align(Alignment.Center))
+        }
+
         Cursor(cursor, showTrail = reduced, modifier = Modifier.fillMaxSize())
     }
 }
@@ -131,10 +173,7 @@ private fun travel(
     toY: Float = 0f,
     y: Float? = null
 ): CursorState {
-    // Eased so the drag accelerates and settles rather than sliding at a constant rate, and held
-    // at each end for a beat so the loop reads as repetitions rather than one continuous circle.
-    val t = ((progress - TravelStart) / TravelSpan).coerceIn(0f, 1f)
-    val eased = t * t * (3f - 2f * t)
+    val eased = dragEase(progress)
     return CursorState(
         xFraction = fromX + (toX - fromX) * eased,
         yFraction = y ?: (fromY + (toY - fromY) * eased),
@@ -142,6 +181,18 @@ private fun travel(
         ripple = 0f,
         alpha = 1f - (abs(progress - 0.5f) / 0.5f).coerceIn(0f, 1f) * FadeAtEnds
     )
+}
+
+/**
+ * How far through a drag gesture [progress] is, 0 before it starts and settling at 1 once the
+ * finger has landed — eased so the motion accelerates and settles rather than moving at a constant
+ * rate. Shared by the fingertip's own path and every drag gesture's UI reaction (the queue lifting,
+ * the frame collapsing, the cover swapping), so the result never drifts out of step with the finger
+ * performing it.
+ */
+private fun dragEase(progress: Float): Float {
+    val t = ((progress - TravelStart) / TravelSpan).coerceIn(0f, 1f)
+    return t * t * (3f - 2f * t)
 }
 
 /** The fingertip itself: a soft disc, a press ring, and a tap ripple. */
@@ -209,9 +260,10 @@ private const val FadeAtEnds = 0.85f
 private const val TravelStart = 0.18f
 private const val TravelSpan = 0.52f
 
-// A tap: down briefly, with the ripple outlasting it.
+// A tap: down briefly, with the ripple outlasting it; the lyrics overlay fades in quickly after.
 private const val TapStart = 0.30f
 private const val TapEnd = 0.42f
+private const val TapFadeSpan = 0.12f
 private const val RippleSpan = 0.40f
 private const val RippleGrowth = 2.2f
 private const val RippleAlpha = 0.45f
