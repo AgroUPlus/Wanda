@@ -311,6 +311,15 @@
     <string name="settings_route_metadata_lyric_requests_through">Router les requêtes de métadonnées et les paroles via Agro pour masquer votre adresse IP.</string>
     <string name="settings_save">Sauvegarder</string>
     <string name="settings_scan_pairing_qr_code">Scanner le QR code d\'appareillage</string>
+    <string name="settings_section_playback">Lecture</string>
+    <string name="settings_section_measuring">Mesure</string>
+    <string name="settings_section_storage">Stockage</string>
+    <string name="settings_section_credits">Crédits</string>
+    <string name="settings_section_visibility">Ce que les amis peuvent voir</string>
+    <string name="settings_section_backup">Sauvegarde</string>
+    <string name="settings_section_notifications">Notifications</string>
+    <string name="settings_section_devices">Appareils</string>
+    <string name="settings_section_device_library_sync">Appareils et synchronisation</string>
     <string name="settings_see_which_songs_wanda_can">Voir quelles musiques Wanda peut reconnaître et lesquelles sont en attente.</string>
     <string name="settings_sends_acoustic_fingerprints_lyrics_tracks">Envoyer les empreintes acoustiques et les paroles de vos musiques en prenant celles des autres, permet d\'améliorer la qualité des paroles. Les autres utilisateurs ne peuvent pas voir ce que vous écoutez. La reconnaissance marche même désactivé.</string>
     <string name="settings_server">Serveur</string>

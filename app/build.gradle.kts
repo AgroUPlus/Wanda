@@ -113,6 +113,8 @@ android {
         disable += "StartActivityAndCollapseDeprecated"
         disable += "UnsafeOptInUsageError"
         disable += "LocalContextGetResourceValueCall"
+        // Crowdin syncs translations asynchronously on the l10n_translations branch
+        disable += "MissingTranslation"
         textReport = true
         textOutput = file("stdout")
         warningsAsErrors = false
