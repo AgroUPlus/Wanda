@@ -34,7 +34,7 @@ internal fun LazyListScope.librarySyncSection(
     val librarySyncSectionIndex = i++
     item(key = "library_sync_section") {
         SettingsSection(
-            "Device & library sync",
+            stringResource(R.string.settings_section_device_library_sync),
             modifier = Modifier.scale(rememberShelfEntranceScale(librarySyncSectionIndex))
         )
     }

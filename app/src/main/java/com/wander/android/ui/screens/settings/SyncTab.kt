@@ -1,10 +1,12 @@
 package com.wander.android.ui.screens.settings
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.ui.components.GroupedCard
 import com.wander.android.ui.components.rememberShelfEntranceScale
@@ -96,7 +98,10 @@ internal fun LazyListScope.syncTab(
                 }
             }
         }
-        GroupedCard(items = toggleItems)
+        GroupedCard(
+            modifier = Modifier.padding(top = 16.dp),
+            items = toggleItems
+        )
     }
 
     agroDevicesSection(state = devices, onResume = actions.onResumeHandoff)

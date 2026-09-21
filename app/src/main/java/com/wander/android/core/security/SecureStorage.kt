@@ -564,7 +564,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
      * them is a supported and slightly rude way to run.
      */
     private val _agroPopularityContribution =
-        MutableStateFlow(prefs.getBoolean(KEY_AGRO_POPULARITY, false))
+        MutableStateFlow(prefs.getBoolean(KEY_AGRO_POPULARITY, true))
     val agroPopularityContributionFlow: StateFlow<Boolean> = _agroPopularityContribution.asStateFlow()
     val agroPopularityContribution: Boolean get() = _agroPopularityContribution.value
 

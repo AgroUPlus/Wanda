@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.settings
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DeleteForever
@@ -8,11 +9,11 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.QueryStats
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Speaker
-import androidx.compose.material.icons.rounded.Whatshot
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.ui.components.GroupedCard
 import com.wander.android.ui.components.rememberShelfEntranceScale
@@ -24,9 +25,8 @@ import com.wander.android.ui.components.rememberShelfEntranceScale
  * could reveal anything to, and a switch that cannot do anything is worse than no switch.
  *
  * The visibility switches default off, on the server as well as here — a privacy setting that
- * defaults open has already leaked by the time the user finds it. Popular on Agro is the one
- * exception, defaulting on: it never carries an account id, so there is no identity in it for a
- * default to leak.
+ * defaults open has already leaked by the time the user finds it. Popular on Agro is managed in
+ * Sync, defaulting on.
  */
 internal fun LazyListScope.privacyTab(
     state: SettingsUiState,
@@ -102,19 +102,6 @@ internal fun LazyListScope.privacyTab(
                         icon = Icons.Rounded.Person
                     )
                 }
-                add {
-                    SettingsToggle(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(5)),
-                        title = stringResource(R.string.settings_popular_on_agro),
-                        subtitle = stringResource(R.string.settings_include_plays_in_the_servers_shared_chart),
-                        checked = state.agroVisibility.popularOptIn && !state.incognito,
-                        onCheckedChange = {
-                            actions.onVisibilityChange(state.agroVisibility.copy(popularOptIn = it))
-                        },
-                        enabled = !state.incognito,
-                        icon = Icons.Rounded.Whatshot
-                    )
-                }
             }
             GroupedCard(items = visibilityItems)
         }
@@ -123,9 +110,10 @@ internal fun LazyListScope.privacyTab(
     if (state.agroPaired) {
         item(key = "proxy_relay") {
             GroupedCard(
+                modifier = Modifier.padding(top = 16.dp),
                 items = listOf<@Composable () -> Unit>({
                     SettingsToggle(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(6)),
+                        modifier = Modifier.scale(rememberShelfEntranceScale(5)),
                         title = stringResource(R.string.settings_agro_privacy_relay),
                         subtitle = stringResource(R.string.settings_route_metadata_lyric_requests_through),
                         checked = state.agroProxyEnabled,
@@ -139,9 +127,10 @@ internal fun LazyListScope.privacyTab(
 
     item(key = "forget") {
         GroupedCard(
+            modifier = Modifier.padding(top = 16.dp),
             items = listOf<@Composable () -> Unit>({
                 SettingsRow(
-                    modifier = Modifier.scale(rememberShelfEntranceScale(7)),
+                    modifier = Modifier.scale(rememberShelfEntranceScale(6)),
                     title = stringResource(R.string.settings_forget_all_credentials),
                     subtitle = stringResource(R.string.settings_signs_out_every_source_erases),
                     onClick = actions.onForgetEverything,
