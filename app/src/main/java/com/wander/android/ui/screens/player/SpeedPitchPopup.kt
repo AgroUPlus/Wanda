@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.player
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,13 +22,17 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.wander.android.R
 import com.wander.android.core.playback.SpeedAndPitch
+import com.wander.android.ui.components.rememberPressScale
 import java.util.Locale
 
 /**
@@ -112,7 +117,7 @@ internal fun SpeedPitchPopup(
                     ) {
                         Text(stringResource(R.string.action_reset))
                     }
-                    FilledTonalButton(onClick = onDismiss) {
+                    FilledTonalButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
                         Text(stringResource(R.string.action_done))
                     }
                 }
@@ -166,13 +171,17 @@ private fun ExpressiveRateSlider(
         ) {
             presets.forEach { preset ->
                 val isSelected = kotlin.math.abs(rate - preset) < 0.02f
+                val interaction = remember { MutableInteractionSource() }
+                val scale by rememberPressScale(interaction)
                 Surface(
                     shape = MaterialTheme.shapes.small,
                     color = if (isSelected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.surfaceContainerHighest,
                     contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary
                     else MaterialTheme.colorScheme.onSurfaceVariant,
-                    onClick = { onRate(preset) }
+                    onClick = { onRate(preset) },
+                    interactionSource = interaction,
+                    modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale }
                 ) {
                     Text(
                         text = String.format(Locale.US, "%.2f×", preset),

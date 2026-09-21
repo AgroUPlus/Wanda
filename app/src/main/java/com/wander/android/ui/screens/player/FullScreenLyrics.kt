@@ -151,6 +151,7 @@ private fun LyricsScaffold(
             ) {
                 FilledIconButton(
                     onClick = onDismiss,
+                    shapes = IconButtonDefaults.shapes(),
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                         contentColor = MaterialTheme.colorScheme.onSurface
