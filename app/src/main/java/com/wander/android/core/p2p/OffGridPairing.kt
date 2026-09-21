@@ -71,7 +71,7 @@ internal class OffGridPairing @Inject constructor(
 
         val body = runCatching {
             client.newCall(Request.Builder().url(url).build()).execute().use { response ->
-                if (!response.isSuccessful) null else response.body?.string()
+                if (!response.isSuccessful) null else response.body.string()
             }
         }.getOrNull() ?: return@withContext Result.failure(PairingException(Failure.Unreachable))
 

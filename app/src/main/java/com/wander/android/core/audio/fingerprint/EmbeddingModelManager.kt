@@ -87,7 +87,7 @@ class EmbeddingModelManager @Inject constructor(
         val tmp = File(modelFile.parentFile, "$FILE_NAME.part")
         try {
             httpClient.newCall(Request.Builder().url(MODEL_URL).build()).execute().use { r ->
-                val body = r.body ?: error("empty response")
+                val body = r.body
                 if (!r.isSuccessful) error("HTTP ${r.code}")
                 streamToFileWithDigest(body, tmp) { fraction ->
                     _state.value = State.Downloading(fraction)
