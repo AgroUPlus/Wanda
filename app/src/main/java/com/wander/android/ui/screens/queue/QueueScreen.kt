@@ -444,23 +444,33 @@ private fun LocalQueueContent(
         return
     }
 
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
-        itemsIndexed(
-            items = state.queue,
-            key = { index, track -> "$index-${track.id}" },
-            contentType = { _, _ -> "track" }
-        ) { index, track ->
-            TrackRow(
-                track = track,
-                isPlaying = index == state.currentIndex,
-                onPlay = { playerConnection.seekToIndex(index) },
-                onToggleLike = { onToggleLike(track) },
-                // No remove button. Swiping a row away removes it, with an undo — a second control
-                // for the same action costs a slot on every row to say what the gesture already
-                // does, and it was the one thing between the row and its like button.
-                onLongPress = { onTrackLongPress(track) },
-                modifier = Modifier.animateItem()
-            )
+    // A tonal backdrop behind the whole list, not a card per row — grouping the *unit* the queue
+    // is (everything coming up) without un-lazifying it or turning every track into its own card,
+    // which is exactly what a `GroupedCard` per row would have done to a list this long.
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp)
+    ) {
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            itemsIndexed(
+                items = state.queue,
+                key = { index, track -> "$index-${track.id}" },
+                contentType = { _, _ -> "track" }
+            ) { index, track ->
+                TrackRow(
+                    track = track,
+                    isPlaying = index == state.currentIndex,
+                    onPlay = { playerConnection.seekToIndex(index) },
+                    onToggleLike = { onToggleLike(track) },
+                    // No remove button. Swiping a row away removes it, with an undo — a second
+                    // control for the same action costs a slot on every row to say what the
+                    // gesture already does, and it was the one thing between the row and its like
+                    // button.
+                    onLongPress = { onTrackLongPress(track) },
+                    modifier = Modifier.animateItem()
+                )
+            }
         }
     }
 }

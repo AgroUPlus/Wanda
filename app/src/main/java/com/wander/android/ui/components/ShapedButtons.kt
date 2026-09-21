@@ -122,8 +122,18 @@ fun rememberPlayPauseMorphShape(
 private val ActionResting = MaterialShapes.Square
 private val ActionPressed = MaterialShapes.Circle
 
-val ShapedPlaySize: Dp = 64.dp
-val ShapedActionSize: Dp = 44.dp
+/**
+ * M3 Expressive's own Large icon-button token (96dp container / 32dp icon) — not an arbitrary
+ * number. Detail pages exist to be played from; the control that does it should read as the
+ * biggest, most confident thing on the screen, which a size that sits between two real tokens
+ * (the previous 64dp) never quite managed.
+ */
+val ShapedPlaySize: Dp = 96.dp
+private val ShapedPlayIconSize: Dp = 32.dp
+
+/** M3 Expressive's Medium icon-button token (56dp container / 24dp icon). */
+val ShapedActionSize: Dp = 56.dp
+private val ShapedActionIconSize: Dp = 24.dp
 
 /**
  * The one control a detail page exists for.
@@ -152,7 +162,7 @@ fun ShapedPlayButton(
         interactionSource = interaction,
         modifier = modifier.size(size)
     ) {
-        Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(28.dp))
+        Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(ShapedPlayIconSize))
     }
 }
 
@@ -181,6 +191,6 @@ fun ShapedActionButton(
         colors = IconButtonDefaults.filledTonalIconButtonColors(),
         modifier = modifier.size(size)
     ) {
-        Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(20.dp))
+        Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(ShapedActionIconSize))
     }
 }

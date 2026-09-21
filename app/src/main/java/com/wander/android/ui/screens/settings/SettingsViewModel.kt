@@ -378,7 +378,7 @@ internal class SettingsViewModel @Inject constructor(
 
     fun setP2pSync(enabled: Boolean) {
         secureStorage.setAgroP2pSync(enabled)
-        if (enabled || secureStorage.agroServerArchive) {
+        if (enabled || secureStorage.agroServerArchive || secureStorage.agroCatalogTrade) {
             librarySyncScheduler.enablePeriodicSync()
             librarySyncScheduler.syncNow()
         } else {
@@ -388,15 +388,26 @@ internal class SettingsViewModel @Inject constructor(
 
     fun setPopularityContribution(enabled: Boolean) {
         secureStorage.setAgroPopularityContribution(enabled)
+        _agroVisibility.value?.let { current ->
+            if (current.popularOptIn != enabled) {
+                setAgroVisibility(current.copy(popularOptIn = enabled))
+            }
+        }
     }
 
     fun setCatalogTrade(enabled: Boolean) {
         secureStorage.setAgroCatalogTrade(enabled)
+        if (enabled || secureStorage.agroP2pSync || secureStorage.agroServerArchive) {
+            librarySyncScheduler.enablePeriodicSync()
+            librarySyncScheduler.syncNow()
+        } else {
+            librarySyncScheduler.disablePeriodicSync()
+        }
     }
 
     fun setServerArchive(enabled: Boolean) {
         secureStorage.setAgroServerArchive(enabled)
-        if (enabled || secureStorage.agroP2pSync) {
+        if (enabled || secureStorage.agroP2pSync || secureStorage.agroCatalogTrade) {
             librarySyncScheduler.enablePeriodicSync()
             librarySyncScheduler.syncNow()
         } else {

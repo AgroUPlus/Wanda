@@ -2,9 +2,10 @@ package com.wander.android.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.sp
@@ -25,11 +26,44 @@ private val fontProvider = GoogleFont.Provider(
 private val PlayfulFont = GoogleFont("Google Sans Flex")
 
 val WandaFontFamily = FontFamily(
-    Font(googleFont = PlayfulFont, fontProvider = fontProvider, weight = FontWeight.Normal),
-    Font(googleFont = PlayfulFont, fontProvider = fontProvider, weight = FontWeight.Medium),
-    Font(googleFont = PlayfulFont, fontProvider = fontProvider, weight = FontWeight.SemiBold),
-    Font(googleFont = PlayfulFont, fontProvider = fontProvider, weight = FontWeight.Bold),
-    Font(googleFont = PlayfulFont, fontProvider = fontProvider, weight = FontWeight.ExtraBold)
+    androidx.compose.ui.text.googlefonts.Font(googleFont = PlayfulFont, fontProvider = fontProvider, weight = FontWeight.Normal),
+    androidx.compose.ui.text.googlefonts.Font(googleFont = PlayfulFont, fontProvider = fontProvider, weight = FontWeight.Medium),
+    androidx.compose.ui.text.googlefonts.Font(googleFont = PlayfulFont, fontProvider = fontProvider, weight = FontWeight.SemiBold),
+    androidx.compose.ui.text.googlefonts.Font(googleFont = PlayfulFont, fontProvider = fontProvider, weight = FontWeight.Bold),
+    androidx.compose.ui.text.googlefonts.Font(googleFont = PlayfulFont, fontProvider = fontProvider, weight = FontWeight.ExtraBold)
+)
+
+/**
+ * Titles get their roundness from a *bundled* copy of the same font instead: the downloadable
+ * provider above serves only the family's default instance on its variation axes, with no way for
+ * Compose to dial `ROND` in per style, so the axis this app actually wants is unreachable through
+ * it. `res/font/google_sans_flex.ttf` is the family's Latin static+variable subset (OFL-licensed,
+ * same as the downloadable copy), which `FontVariation.Settings` can push on `ROND` directly.
+ *
+ * Only the weights the title/headline styles below actually use — dialing in every weight the
+ * downloadable family carries was never needed for a handful of styles.
+ */
+private fun roundedFont(weight: FontWeight) = Font(
+    resId = R.font.google_sans_flex,
+    weight = weight,
+    variationSettings = FontVariation.Settings(
+        FontVariation.weight(weight.weight),
+        FontVariation.Setting("ROND", TitleRoundness)
+    )
+)
+
+/**
+ * How far up the family's 0–100 `ROND` axis titles sit. Short of the maximum: full roundness on a
+ * *bold* weight starts eating into letterform distinctiveness at these sizes, and the brief asked
+ * for noticeably rounder, not cartoonish. Worth a visual pass in a running build before shipping.
+ */
+private const val TitleRoundness = 65f
+
+private val WandaRoundedFontFamily = FontFamily(
+    roundedFont(FontWeight.Medium),
+    roundedFont(FontWeight.SemiBold),
+    roundedFont(FontWeight.Bold),
+    roundedFont(FontWeight.ExtraBold)
 )
 
 /**
@@ -45,7 +79,7 @@ private val FullLineHeight = LineHeightStyle(
 
 internal val WandaTypography = Typography(
     displayLarge = TextStyle(
-        fontFamily = WandaFontFamily,
+        fontFamily = WandaRoundedFontFamily,
         lineHeightStyle = FullLineHeight,
         fontWeight = FontWeight.ExtraBold,
         fontSize = 54.sp,
@@ -53,7 +87,7 @@ internal val WandaTypography = Typography(
         letterSpacing = (-1).sp
     ),
     headlineLarge = TextStyle(
-        fontFamily = WandaFontFamily,
+        fontFamily = WandaRoundedFontFamily,
         lineHeightStyle = FullLineHeight,
         fontWeight = FontWeight.Bold,
         fontSize = 32.sp,
@@ -61,7 +95,7 @@ internal val WandaTypography = Typography(
         letterSpacing = (-0.5).sp
     ),
     headlineMedium = TextStyle(
-        fontFamily = WandaFontFamily,
+        fontFamily = WandaRoundedFontFamily,
         lineHeightStyle = FullLineHeight,
         fontWeight = FontWeight.Bold,
         fontSize = 26.sp,
@@ -69,21 +103,21 @@ internal val WandaTypography = Typography(
         letterSpacing = (-0.2).sp
     ),
     headlineSmall = TextStyle(
-        fontFamily = WandaFontFamily,
+        fontFamily = WandaRoundedFontFamily,
         lineHeightStyle = FullLineHeight,
         fontWeight = FontWeight.Bold,
         fontSize = 22.sp,
         lineHeight = 28.sp
     ),
     titleLarge = TextStyle(
-        fontFamily = WandaFontFamily,
+        fontFamily = WandaRoundedFontFamily,
         lineHeightStyle = FullLineHeight,
         fontWeight = FontWeight.SemiBold,
         fontSize = 20.sp,
         lineHeight = 26.sp
     ),
     titleMedium = TextStyle(
-        fontFamily = WandaFontFamily,
+        fontFamily = WandaRoundedFontFamily,
         lineHeightStyle = FullLineHeight,
         fontWeight = FontWeight.SemiBold,
         fontSize = 16.sp,
@@ -91,7 +125,7 @@ internal val WandaTypography = Typography(
         letterSpacing = 0.1.sp
     ),
     titleSmall = TextStyle(
-        fontFamily = WandaFontFamily,
+        fontFamily = WandaRoundedFontFamily,
         lineHeightStyle = FullLineHeight,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,

@@ -28,6 +28,8 @@ import com.wander.android.data.model.SourceType
 /** Stable key for "All" — a fresh object every recomposition would break bounds tracking. */
 private const val AllSourcesKey = "__all_sources__"
 
+private val ChipIconSize = 18.dp
+
 /** "All" plus one chip per connected backend, with a highlight that glides between them. */
 @Composable
 fun SourceFilterChips(
@@ -66,7 +68,8 @@ fun SourceFilterChips(
                     onClick = { onSelect(if (selected == source) null else source) },
                     highlightState = highlightState,
                     key = source,
-                    enabled = enabled
+                    enabled = enabled,
+                    leadingIcon = { SourceIcon(source, size = ChipIconSize) }
                 )
             }
         }
@@ -82,7 +85,8 @@ internal fun SelectableChip(
     highlightState: TravelingHighlightState,
     key: Any,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    leadingIcon: (@Composable () -> Unit)? = null
 ) {
     val haptics = rememberHaptics()
     val contentColor by animateColorAsState(
@@ -101,8 +105,13 @@ internal fun SelectableChip(
     val interactionSource = remember { MutableInteractionSource() }
     val pressScale by rememberPressScale(interactionSource, label = "chipPress")
 
-    Box(
-        contentAlignment = Alignment.Center,
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        // `Center`, not the plain even-spacing overload: a plain `SelectableChip` (no width
+        // constraint from its caller) never has leftover space so this is a no-op there, but
+        // `SearchKindToggle` gives each chip `Modifier.weight(1f)` to split the row evenly, and
+        // without centering the label sat flush left in the extra width that left.
+        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
         modifier = modifier
             .scale(pressScale)
             .recordHighlightBounds(highlightState, key)
@@ -113,6 +122,7 @@ internal fun SelectableChip(
             }
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
+        leadingIcon?.invoke()
         Text(
             text = label,
             style = MaterialTheme.typography.labelLarge,

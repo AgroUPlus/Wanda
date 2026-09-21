@@ -25,7 +25,7 @@
 
 ---
 
-Wanda unifies **Navidrome**, **local files**, **YouTube Music**, and the **Internet Archive** behind a single library, queue, and player. Material 3 Expressive throughout. Battery-first, privacy-first, no telemetry. Seamlessly pairs with [Agro](https://github.com/AgroUPlus/Agro) for playback handoff, listen-along, and cross-device sync with [Wander](https://github.com/AgroUPlus/Wander) (desktop TUI).
+Wanda unifies **Navidrome**, **local files**, and **YouTube Music** behind a single library, queue, and player. Material 3 Expressive throughout. Battery-first, privacy-first, no telemetry. Seamlessly pairs with [Agro](https://github.com/AgroUPlus/Agro) for playback handoff, listen-along, and cross-device sync with [Wander](https://github.com/AgroUPlus/Wander) (desktop TUI).
 
 <p align="center">
   <img width="1600" height="1000" alt="image" src="https://github.com/user-attachments/assets/9f226e44-bf8b-4800-a497-593527fc0ade" />
@@ -42,12 +42,10 @@ Each backend implements one interface (`IMusicSource`) and declares what it supp
 | Navidrome / Subsonic | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | On this device | ✅ | ✅ | — | — | — | ✅ | — |
 | YouTube Music | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
-| Internet Archive | ✅ | ✅ | ✅ | — | — | ✅ | — |
 
 - **Navidrome** — Subsonic 1.16, salted-token auth (password never crosses the wire), starring, scrobbling, similar-songs radio, server-synced lyrics.
 - **Local files** — MediaStore scan persisted in Room, incremental via `DATE_MODIFIED` watermark.
 - **YouTube Music** — InnerTube. Sign in via in-app WebView or cookie paste; search and playback work signed out. Direct Opus (itag 251) streams.
-- **Internet Archive** — anonymous. Prefers lossless (FLAC → m4a → ogg → opus → mp3). Collections: All Audio, Live Music, Netlabels, 78rpm.
 
 ---
 
@@ -55,7 +53,7 @@ Each backend implements one interface (`IMusicSource`) and declares what it supp
 
 **Lyrics** — source-native first (Navidrome structured lyrics), then LRCLIB. Synced lines highlight as you listen and are tappable to seek.
 
-**Smart mixes** — Endless Radio, Forgotten Favourites, Never Played, and Internet Archive Gems, built from your own listening history. A mix with no tracks isn't shown.
+**Smart mixes** — Endless Radio, Forgotten Favourites, and Never Played, built from your own listening history. A mix with no tracks isn't shown.
 
 **Incognito mode** — stops play counts and scrobbles at the source level.
 
@@ -97,7 +95,7 @@ core/
   permissions/
 data/
   model/      UnifiedTrack, UnifiedAlbum, SmartMix, LyricsData
-  sources/    navidrome · local · ytmusic · archive
+  sources/    navidrome · local · ytmusic
   repository/ MusicRepository, LyricsRepository, SmartMixRepository
 di/           One Hilt module per concern
 ui/

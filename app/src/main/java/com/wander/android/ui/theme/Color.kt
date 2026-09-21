@@ -35,6 +35,20 @@ internal val LiveIndicator = Color(0xFFEF4444)
  */
 internal val OnCoverArt = Color.White
 
+/**
+ * One vivid, distinct colour per music source, used for [com.wander.android.ui.components.SourceIcon]
+ * everywhere a source needs to be told apart at a glance (filter chips, the source picker, the
+ * Connections rows). Deliberately outside `colorScheme` for the same reason [LiveIndicator] is — a
+ * source's identity should not shift with the theme.
+ *
+ * Navidrome/Subsonic gets blue rather than its own logo's green: this source speaks the general
+ * Subsonic protocol, not Navidrome exclusively, so its badge colour stands for "a self-hosted
+ * server" rather than one specific project's branding.
+ */
+internal val NavidromeBlue = Color(0xFF0EA5E9)
+internal val YtMusicCoral = Color(0xFFF43F5E)
+internal val LocalDeviceAmber = Color(0xFFFB923C)
+
 internal val WandaLightScheme = lightColorScheme(
     primary = Violet,
     onPrimary = Color.White,

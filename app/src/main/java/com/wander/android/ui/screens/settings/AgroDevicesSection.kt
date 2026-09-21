@@ -48,7 +48,10 @@ internal fun LazyListScope.agroDevicesSection(
     onResume: (AgroHandoffState) -> Unit
 ) {
     item(key = "agro_devices_header") {
-        SettingsSection("Devices", modifier = Modifier.scale(rememberShelfEntranceScale(0)))
+        SettingsSection(
+            stringResource(R.string.settings_section_devices),
+            modifier = Modifier.scale(rememberShelfEntranceScale(0))
+        )
     }
 
     if (state.devices.isEmpty()) {

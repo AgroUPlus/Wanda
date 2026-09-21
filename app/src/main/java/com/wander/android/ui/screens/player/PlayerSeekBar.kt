@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -125,10 +126,15 @@ private fun PlayerSeekBarInternal(
         return
     }
 
-    val waving = isPlaying && durationMs > 0L
-    val amplitude = remember { Animatable(if (waving) 1f else 0f) }
+    // Keyed on `isPlaying` alone, not `isPlaying && durationMs > 0L`. `durationMs` can glitch to 0
+    // transiently around track transitions, and a compound key flips on that glitch too — cancelling
+    // and restarting this animation independently of any real pause, which could strand `amplitude`
+    // partway to its target. See MiniPlayer.kt's PlaybackProgressBar for the same pattern and the
+    // fuller rationale for deriving mount state from the animated value rather than a separate flag.
+    val amplitude = remember { Animatable(if (isPlaying) 1f else 0f) }
     val amplitudeSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
-    LaunchedEffect(waving) { amplitude.animateTo(if (waving) 1f else 0f, amplitudeSpec) }
+    LaunchedEffect(isPlaying) { amplitude.animateTo(if (isPlaying) 1f else 0f, amplitudeSpec) }
+    val showWavy = isPlaying || amplitude.value > 0f
 
     val isScrubbing = scrubbing >= 0f
     // A dot, not a bar. One diameter rather than a width and a height: a tall thin thumb read as a
@@ -193,11 +199,18 @@ private fun PlayerSeekBarInternal(
                 }
             },
             track = { sliderState ->
-                LinearWavyProgressIndicator(
-                    progress = { sliderState.value },
-                    amplitude = { amplitude.value },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                if (showWavy) {
+                    LinearWavyProgressIndicator(
+                        progress = { sliderState.value },
+                        amplitude = { amplitude.value },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    LinearProgressIndicator(
+                        progress = { sliderState.value },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         )
     }

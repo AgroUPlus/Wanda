@@ -28,6 +28,7 @@ import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.model.isPlayableOffline
 import com.wander.android.ui.components.AudioQualityBadge
+import com.wander.android.ui.components.SourceIcon
 
 /**
  * Where this song is playing from, and everywhere else it could.
@@ -132,6 +133,7 @@ private fun RenditionRow(
             .clickable(enabled = !isCurrent, onClick = onClick)
             .padding(horizontal = 24.dp, vertical = 12.dp)
     ) {
+        SourceIcon(rendition.source, size = 28.dp, modifier = Modifier.padding(end = 12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = rendition.source.displayName,

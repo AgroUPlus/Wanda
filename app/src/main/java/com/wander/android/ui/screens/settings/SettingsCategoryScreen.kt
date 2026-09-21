@@ -2,21 +2,25 @@ package com.wander.android.ui.screens.settings
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
@@ -31,7 +35,12 @@ import com.wander.android.ui.components.listInset
  * fixed header over a scroll — see `ScreenInsets`. Doing it here rather than in each page body is
  * the point: a rule each new page had to remember is a rule that gets forgotten, and this app has
  * shipped a back arrow behind the clock before.
+ *
+ * The title lives in a [TopAppBar] next to the back arrow on the top left.
+ * [TopAppBarDefaults.windowInsets] is overridden to empty because this app's Scaffold already
+ * accounts for the status bar via [headerInset] — letting the bar apply its own would double it.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SettingsCategoryScreen(
     category: SettingsCategory,
@@ -51,27 +60,37 @@ internal fun SettingsCategoryScreen(
         onOpenFingerprints = onOpenFingerprints
     )
 
+    val listState = rememberLazyListState()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding.headerInset())) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 4.dp, end = 20.dp, top = 8.dp, bottom = 8.dp)
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = stringResource(R.string.settings_back_settings)
+        TopAppBar(
+            title = {
+                Text(
+                    text = stringResource(category.label),
+                    style = MaterialTheme.typography.titleLarge
                 )
-            }
-            Text(
-                text = stringResource(category.label),
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(start = 4.dp)
-            )
-        }
+            },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = stringResource(R.string.settings_back_settings)
+                    )
+                }
+            },
+            windowInsets = WindowInsets(0, 0, 0, 0),
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+                scrolledContainerColor = Color.Transparent
+            ),
+            scrollBehavior = scrollBehavior
+        )
 
         LazyColumn(
+            state = listState,
             contentPadding = contentPadding.listInset(),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection)
         ) {
             when (category) {
                 SettingsCategory.CONNECTIONS -> connectionsTab(host.state, host.actions)

@@ -29,6 +29,7 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var downloadScheduler: DownloadScheduler
     @Inject lateinit var scrobbleSyncScheduler: ScrobbleSyncScheduler
+    @Inject lateinit var librarySyncScheduler: com.wander.android.core.sync.LibrarySyncScheduler
     @Inject lateinit var p2pServer: com.wander.android.core.sync.P2PServer
     @Inject lateinit var secureStorage: com.wander.android.core.security.SecureStorage
 
@@ -76,6 +77,9 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
         )
         // Cheap and self-gating: the worker does nothing until an Agro server is paired.
         scrobbleSyncScheduler.schedule()
+        if (secureStorage.agroCatalogTrade || secureStorage.agroP2pSync || secureStorage.agroServerArchive) {
+            librarySyncScheduler.enablePeriodicSync()
+        }
         // Embedded P2P server for direct high-speed LAN audio transfers.
         //
         // Launched rather than awaited: `onCreate` must not block on a bind, and nothing on this
