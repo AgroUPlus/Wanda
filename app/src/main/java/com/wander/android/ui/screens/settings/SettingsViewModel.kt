@@ -300,10 +300,10 @@ internal class SettingsViewModel @Inject constructor(
     val p2pSyncEnabled: StateFlow<Boolean> = secureStorage.agroP2pSyncFlow
     val serverArchiveEnabled: StateFlow<Boolean> = secureStorage.agroServerArchiveFlow
 
-    /** Off until asked for, like everything else that sends something outward. */
+    /** On by default; see [SecureStorage]'s doc comment on the flag for why. */
     val popularityEnabled: StateFlow<Boolean> = secureStorage.agroPopularityContributionFlow
 
-    /** Same reason, and the same default. */
+    /** Same disclosure reasoning, but off by default — a fingerprint list names exact recordings. */
     val catalogTradeEnabled: StateFlow<Boolean> = secureStorage.agroCatalogTradeFlow
 
     /**

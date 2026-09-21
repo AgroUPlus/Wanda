@@ -554,11 +554,12 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     /**
      * Contribute anonymous play counts to the server's shared "Popular on Agro" totals.
      *
-     * **Opt-in, default false**, like every other switch that sends something outward. Reporting
-     * scrobbles already tells *your* server what you played, so this adds nothing that server does
-     * not have — what it adds is that your listening becomes part of a total other accounts on the
-     * same server can see. That is a disclosure to other people, not to the server, and it is not
-     * one to make on a user's behalf.
+     * **On by default.** Reporting scrobbles already tells *your* server what you played, so this
+     * adds nothing that server does not have — what it adds is that your listening becomes part of
+     * a total other accounts on the same server can see. That is a disclosure to other people, not
+     * to the server, but the shared total's exposure floor (`MIN_EXPOSURE_COUNT` server-side) is
+     * what keeps any one household's habits from being readable through it, so this is left on
+     * unless a user turns it off in Settings → Sync.
      *
      * The shelf itself works either way: a device that reads the totals without contributing to
      * them is a supported and slightly rude way to run.
@@ -576,10 +577,12 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     /**
      * Whether this device trades recording fingerprints with the server's catalogue.
      *
-     * One switch for both directions, and off by default. Publishing tells other accounts on the
-     * server which recordings this device holds — the catalogue has no account column, so what is
-     * published is shared with everyone on it. That is a disclosure to other people rather than to
-     * the server, which is the same reason the popularity switch exists and is also off.
+     * One switch for both directions, and off by default — unlike the popularity switch, which is
+     * on by default. Publishing tells other accounts on the server which recordings this device
+     * holds — the catalogue has no account column, so what is published is shared with everyone on
+     * it. That is a disclosure to other people rather than to the server, and a heavier one than the
+     * popularity total: play counts are blinded behind an exposure floor, while a fingerprint list
+     * names exact recordings, so this one starts off.
      *
      * Both directions, because a device that pulls without ever publishing is taking the benefit of
      * everyone else's disclosure while making none of its own. The catalogue only has anything in

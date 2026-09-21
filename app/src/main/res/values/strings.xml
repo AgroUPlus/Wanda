@@ -467,13 +467,14 @@
     <string name="stats_vs_previous_period">vs previous period</string>
 
     <!-- Welcome / onboarding -->
+    <string name="welcome_already_have_backup">Already have a backup? Import it.</string>
     <string name="welcome_can_skip_download_later_from">You can skip this and download it later from Settings › Fingerprints.</string>
     <string name="welcome_download_model">Download model</string>
     <string name="welcome_gestures">Gestures</string>
-    <string name="welcome_hold_phone_speaker_wanda_names">Hold your phone to a speaker and Wanda names what\'s playing — matched against your own library, on the device, with nothing sent anywhere.</string>
-    <string name="welcome_one_library_one_queue_one">One library, one queue, one player — across your own server, this device and YouTube Music. No accounts, no telemetry.</string>
+    <string name="welcome_hold_phone_speaker_wanda_names">Hold your phone to a speaker and Wanda names what\'s playing.</string>
+    <string name="welcome_one_library_one_queue_one">One library, one queue, one player.</string>
     <string name="welcome_own_subsonic_compatible_server_full">Your own Subsonic-compatible server, at full quality.</string>
-    <string name="welcome_player_mostly_gestures_fewer_buttons">The player is mostly gestures — fewer buttons in the way of the artwork. These are all of them.</string>
+    <string name="welcome_player_mostly_gestures_fewer_buttons">The player is mostly gestures. These are all of them.</string>
     <string name="welcome_plays_offline_costs_nothing_needs">Plays offline, costs nothing, needs no account.</string>
     <string name="welcome_signs_through_own_session_cookie">Signs in through your own session; the cookie never leaves the device.</string>
     <string name="welcome_song_recognition">Song recognition</string>
@@ -533,7 +534,7 @@
     <string name="welcome_gesture_tap_cover_lyrics">Tap the cover for lyrics</string>
     <string name="welcome_gesture_swipe_cover_skip">Swipe the cover to skip</string>
     <string name="welcome_gesture_swipe_down_tuck_away">Swipe down to tuck it away</string>
-    <string name="welcome_gesture_detail_from_anywhere_player_no_handle">From anywhere on the player — no handle to aim for.</string>
+    <string name="welcome_gesture_detail_from_anywhere_player_no_handle">From anywhere on the player.</string>
     <string name="welcome_gesture_detail_press_hold_artwork_slow_track">Press and hold the artwork to slow a track down or tune it.</string>
     <string name="welcome_gesture_detail_tap_again_bring_artwork_back">Tap again to bring the artwork back.</string>
     <string name="welcome_gesture_detail_left_next_track_right_previous">Left for the next track, right for the previous one.</string>
