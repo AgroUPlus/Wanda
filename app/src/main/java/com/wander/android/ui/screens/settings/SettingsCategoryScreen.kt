@@ -12,8 +12,9 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -35,9 +36,7 @@ import com.wander.android.ui.components.listInset
  * the point: a rule each new page had to remember is a rule that gets forgotten, and this app has
  * shipped a back arrow behind the clock before.
  *
- * The title lives in a real [LargeTopAppBar], not a hand-rolled shrinking `Text` — M3's own
- * component already gets the behaviour right: the title sits on its own row *under* the back
- * arrow while expanded, and only folds up onto the arrow's row once the list has scrolled past it.
+ * The title lives in a [TopAppBar] next to the back arrow on the top left.
  * [TopAppBarDefaults.windowInsets] is overridden to empty because this app's Scaffold already
  * accounts for the status bar via [headerInset] — letting the bar apply its own would double it.
  */
@@ -62,11 +61,16 @@ internal fun SettingsCategoryScreen(
     )
 
     val listState = rememberLazyListState()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding.headerInset())) {
-        LargeTopAppBar(
-            title = { Text(stringResource(category.label)) },
+        TopAppBar(
+            title = {
+                Text(
+                    text = stringResource(category.label),
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
             navigationIcon = {
                 IconButton(onClick = onBack) {
                     Icon(
