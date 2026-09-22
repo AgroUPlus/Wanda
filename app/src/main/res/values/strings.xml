@@ -591,4 +591,140 @@
     <string name="transport_spoken_offgrid">Streamed phone to phone over a direct radio link, with no network involved, encrypted.</string>
     <string name="transport_spoken_relay">Streamed through your Agro server, encrypted end to end. The server cannot hear it.</string>
     <string name="transport_spoken_finding">Looking for a way to play this.</string>
+    <!-- Agro Replay -->
+    <string name="replay_title">Agro Replay</string>
+    <string name="replay_settings_subtitle">Your listening year, one card at a time</string>
+
+    <plurals name="backup_restored_settings">
+        <item quantity="one">%1$d setting restored. Close and reopen Wanda to apply it.</item>
+        <item quantity="other">%1$d settings restored. Close and reopen Wanda to apply them.</item>
+    </plurals>
+    <plurals name="backup_restored_history">
+        <item quantity="one">%1$d play and %2$d saved Replay came back too.</item>
+        <item quantity="other">%1$d plays and %2$d saved Replays came back too.</item>
+    </plurals>
+
+    <string name="replay_offer_title">Your %1$d is ready</string>
+    <string name="replay_offer_subtitle">A year of listening, one card at a time</string>
+    <string name="replay_offer_open">Open</string>
+    <string name="replay_offer_later">Not now</string>
+
+    <string name="replay_intro_kicker">Agro Replay</string>
+    <string name="replay_intro_headline">Your %1$d</string>
+    <string name="replay_intro_scope_fleet">Everything you played, across every device on your Agro account.</string>
+    <string name="replay_intro_scope_device">Everything you played on this device.</string>
+
+    <string name="replay_silence_headline">Nothing played in %1$d</string>
+    <string name="replay_silence_body">Nothing was played that year. Come back next December.</string>
+
+    <string name="replay_minutes_kicker">Time spent listening</string>
+    <string name="replay_minutes_headline">Minutes of music</string>
+    <plurals name="replay_minutes_detail">
+        <item quantity="one">across %1$d play</item>
+        <item quantity="other">across %1$d plays</item>
+    </plurals>
+
+    <string name="replay_shape_kicker">The shape of your year</string>
+    <string name="replay_shape_headline">Month by month</string>
+    <string name="replay_shape_peak">%1$s was your loudest month</string>
+
+    <string name="replay_hours_kicker">Your listening hour</string>
+    <string name="replay_hours_headline">Mostly around %1$s</string>
+
+    <string name="replay_artists_kicker">On repeat all year</string>
+    <string name="replay_artists_headline">Your top artists</string>
+    <plurals name="replay_artists_detail">
+        <item quantity="one">out of %1$d artist you played</item>
+        <item quantity="other">out of %1$d artists you played</item>
+    </plurals>
+
+    <string name="replay_song_kicker">Your song of the year</string>
+    <plurals name="replay_song_detail">
+        <item quantity="one">played %1$d time</item>
+        <item quantity="other">played %1$d times</item>
+    </plurals>
+
+    <string name="replay_genres_kicker">Your sound</string>
+
+    <string name="replay_discovery_kicker">New to you</string>
+    <plurals name="replay_discovery_headline">
+        <item quantity="one">%1$d artist you had never played</item>
+        <item quantity="other">%1$d artists you had never played</item>
+    </plurals>
+
+    <string name="replay_streak_kicker">Day after day</string>
+    <plurals name="replay_streak_headline">
+        <item quantity="one">A %1$d-day streak</item>
+        <item quantity="other">A %1$d-day streak</item>
+    </plurals>
+    <plurals name="replay_streak_detail">
+        <item quantity="one">You listened on %1$d day this year</item>
+        <item quantity="other">You listened on %1$d days this year</item>
+    </plurals>
+
+    <string name="replay_devices_kicker">Where you listened</string>
+    <plurals name="replay_devices_headline">
+        <item quantity="one">%1$d device</item>
+        <item quantity="other">%1$d devices</item>
+    </plurals>
+
+    <string name="replay_charts_kicker">You and this server</string>
+    <string name="replay_charts_headline">Top %1$d%%</string>
+    <plurals name="replay_charts_detail">
+        <item quantity="one">measured against %1$d listener here</item>
+        <item quantity="other">measured against %1$d listeners here</item>
+    </plurals>
+
+    <string name="replay_circle_kicker">Your circle</string>
+    <plurals name="replay_circle_headline">
+        <item quantity="one">Just you this year</item>
+        <item quantity="other">%1$d of you this year</item>
+    </plurals>
+    <string name="replay_circle_anthem">Your anthem</string>
+    <string name="replay_circle_anthem_value">%1$s — %2$s</string>
+    <string name="replay_circle_trendsetter">Got there first</string>
+    <plurals name="replay_circle_trendsetter_value">
+        <item quantity="one">%1$s, on %2$d track</item>
+        <item quantity="other">%1$s, on %2$d tracks</item>
+    </plurals>
+    <string name="replay_circle_closest">Closest taste</string>
+    <string name="replay_circle_closest_value">%1$s, %2$d%% overlap</string>
+
+    <plurals name="replay_play_count">
+        <item quantity="one">%1$d play</item>
+        <item quantity="other">%1$d plays</item>
+    </plurals>
+
+    <string name="replay_outro_kicker">That was your year</string>
+    <string name="replay_outro_headline">Keep %1$d</string>
+    <string name="replay_outro_body">Save this recap and it stays, whatever happens to the plays behind it.</string>
+    <string name="replay_outro_saved">Saved. You can open this year again any time from Settings.</string>
+    <plurals name="replay_outro_purged">
+        <item quantity="one">Saved, and %1$d older play was forgotten.</item>
+        <item quantity="other">Saved, and %1$d older plays were forgotten.</item>
+    </plurals>
+    <string name="replay_outro_save">Save this recap</string>
+    <string name="replay_outro_save_and_tidy">Save and tidy up</string>
+    <string name="replay_outro_close">Close</string>
+
+    <plurals name="replay_purge_label">
+        <item quantity="one">Also forget %1$d play from before %2$d</item>
+        <item quantity="other">Also forget %1$d plays from before %2$d</item>
+    </plurals>
+    <string name="replay_purge_explainer">Your saved recaps, your lifetime totals and each track\'s own play count all stay. What goes is the record of which song you played at which minute. One side effect: with those plays gone, more artists will look new to you next year.</string>
+    <string name="replay_purge_confirm_question">Forget those plays? This cannot be undone.</string>
+    <string name="replay_purge_confirm_action">Yes, forget them</string>
+
+    <string name="replay_month_january">January</string>
+    <string name="replay_month_february">February</string>
+    <string name="replay_month_march">March</string>
+    <string name="replay_month_april">April</string>
+    <string name="replay_month_may">May</string>
+    <string name="replay_month_june">June</string>
+    <string name="replay_month_july">July</string>
+    <string name="replay_month_august">August</string>
+    <string name="replay_month_september">September</string>
+    <string name="replay_month_october">October</string>
+    <string name="replay_month_november">November</string>
+    <string name="replay_month_december">December</string>
 </resources>

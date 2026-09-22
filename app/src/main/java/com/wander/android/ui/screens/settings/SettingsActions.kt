@@ -69,5 +69,7 @@ internal data class SettingsActions(
      * separate callbacks that were the same `uriHandler::openUri` at the only call site.
      */
     val onOpenUrl: (String) -> Unit,
-    val onOpenMergePreview: () -> Unit
+    val onOpenMergePreview: () -> Unit,
+    /** Opens Agro Replay for the most recent year worth recapping. */
+    val onOpenReplay: () -> Unit
 )

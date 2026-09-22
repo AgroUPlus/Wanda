@@ -35,6 +35,15 @@ object Routes {
      * that has not happened yet, not something the app needs the user to look at.
      */
     const val MERGE_PREVIEW = "merge-preview"
+
+    /**
+     * Agro Replay: a year's listening as a story.
+     *
+     * A destination rather than a sheet. It owns the whole window, has to survive a rotation
+     * mid-story, and is reached from two places — the seasonal offer and Settings — which one
+     * route serves and two copies of the screen would not.
+     */
+    const val REPLAY = "replay/{year}"
     /**
      * The queue as a screen.
      *
@@ -54,6 +63,8 @@ object Routes {
     const val SETTINGS_CATEGORY = "settings/{category}"
 
     fun settingsCategory(category: String): String = "settings/${category.encodeForRoute()}"
+
+    fun replay(year: Int): String = "replay/$year"
 
     const val NAVIDROME_LOGIN = "login/navidrome"
     const val YTMUSIC_LOGIN = "login/ytmusic"

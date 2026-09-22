@@ -39,6 +39,7 @@ internal fun rememberSettingsHost(
     onYouTubeLogin: () -> Unit,
     onOpenImport: () -> Unit,
     onOpenMergePreview: () -> Unit,
+    onOpenReplay: () -> Unit,
     onOpenFingerprints: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ): SettingsHost {
@@ -132,7 +133,8 @@ internal fun rememberSettingsHost(
             onAutoUpdateCheckChange = viewModel::setAutoUpdateCheckEnabled,
             onCheckForUpdate = viewModel::checkForUpdate,
             onOpenUrl = uriHandler::openUri,
-            onOpenMergePreview = onOpenMergePreview
+            onOpenMergePreview = onOpenMergePreview,
+            onOpenReplay = onOpenReplay
         )
     }
 

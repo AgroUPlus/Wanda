@@ -50,6 +50,7 @@ internal fun SettingsCategoryScreen(
     onYouTubeLogin: () -> Unit,
     onOpenImport: () -> Unit,
     onOpenMergePreview: () -> Unit,
+    onOpenReplay: () -> Unit,
     onOpenFingerprints: () -> Unit
 ) {
     val host = rememberSettingsHost(
@@ -57,6 +58,7 @@ internal fun SettingsCategoryScreen(
         onYouTubeLogin = onYouTubeLogin,
         onOpenImport = onOpenImport,
         onOpenMergePreview = onOpenMergePreview,
+        onOpenReplay = onOpenReplay,
         onOpenFingerprints = onOpenFingerprints
     )
 

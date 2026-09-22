@@ -114,6 +114,21 @@ fun NavGraphBuilder.wanderNavGraph(
         )
     }
 
+    detailDestination(
+        motion,
+        Routes.REPLAY,
+        arguments = listOf(navArgument("year") { type = NavType.IntType })
+    ) { entry ->
+        com.wander.android.ui.screens.replay.ReplayStoryScreen(
+            // Defaulted rather than asserted: a malformed deep link should open last year's recap
+            // rather than crash on the way into a celebration.
+            year = entry.arguments?.getInt("year")?.takeIf { it > 0 }
+                ?: com.wander.android.data.replay.ReplayAvailability
+                    .yearOnDemand(java.time.LocalDate.now()),
+            onDismiss = navController::popBackStack
+        )
+    }
+
     tabDestination(motion, Routes.STATS) {
         StatsScreen(contentPadding = contentPadding)
     }
@@ -145,6 +160,14 @@ fun NavGraphBuilder.wanderNavGraph(
                 onYouTubeLogin = { navController.navigateSettled(Routes.YTMUSIC_LOGIN) },
                 onOpenImport = { navController.navigateSettled(Routes.IMPORT_PLAYLIST) },
                 onOpenMergePreview = { navController.navigateSettled(Routes.MERGE_PREVIEW) },
+                onOpenReplay = {
+                    navController.navigateSettled(
+                        Routes.replay(
+                            com.wander.android.data.replay.ReplayAvailability
+                                .yearOnDemand(java.time.LocalDate.now())
+                        )
+                    )
+                },
                 onOpenFingerprints = { navController.navigateSettled(Routes.FINGERPRINTS) }
             )
         }

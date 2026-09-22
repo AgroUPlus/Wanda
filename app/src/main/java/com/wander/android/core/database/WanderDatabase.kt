@@ -3,6 +3,7 @@ package com.wander.android.core.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.wander.android.core.database.dao.AlbumDao
+import com.wander.android.core.database.dao.ReplayRecapDao
 import com.wander.android.core.database.dao.AnnouncedReleaseDao
 import com.wander.android.core.database.dao.ArtistDao
 import com.wander.android.core.database.dao.CanonicalMetadataDao
@@ -56,9 +57,10 @@ import com.wander.android.core.database.converter.SourceTypeConverter
         com.wander.android.core.database.entity.TrackLyricsEntity::class,
         com.wander.android.core.database.entity.LyricsFtsEntity::class,
         AnnouncedReleaseEntity::class,
-        com.wander.android.core.database.entity.EpisodeProgressEntity::class
+        com.wander.android.core.database.entity.EpisodeProgressEntity::class,
+        com.wander.android.core.database.entity.ReplayRecapEntity::class
     ],
-    version = 34,
+    version = 35,
     exportSchema = true
 )
 @TypeConverters(SourceTypeConverter::class)
@@ -67,6 +69,7 @@ abstract class WanderDatabase : RoomDatabase() {
     abstract fun albumDao(): AlbumDao
     abstract fun artistDao(): ArtistDao
     abstract fun historyDao(): HistoryDao
+    abstract fun replayRecapDao(): ReplayRecapDao
     abstract fun shelfDao(): ShelfDao
     abstract fun friendDao(): FriendDao
     abstract fun dropDao(): DropDao

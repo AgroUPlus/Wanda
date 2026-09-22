@@ -79,7 +79,8 @@ interface HistoryDao {
     @Query(
         """
         SELECT h.playedAt AS playedAt, t.id AS trackId, t.title AS title, t.artist AS artist,
-               t.album AS album, t.artworkUrl AS artworkUrl, t.durationMs AS durationMs
+               t.album AS album, t.artworkUrl AS artworkUrl, t.durationMs AS durationMs,
+               t.genre AS genre
         FROM history h
         INNER JOIN tracks t ON t.id = h.trackId
         WHERE h.playedAt >= :since AND h.playedAt < :until
@@ -88,10 +89,68 @@ interface HistoryDao {
     )
     suspend fun getPlaysBetween(since: Long, until: Long): List<PlayedTrack>
 
+    /**
+     * The artists played before [before], and nothing else about them.
+     *
+     * Agro Replay needs to know which artists in the recap year were *new*, which is a question
+     * about everything that came before it. Reading whole plays to answer it would mean loading a
+     * lifetime of history to build one number; the distinct names are a few hundred rows at most.
+     */
+    @Query(
+        """
+        SELECT DISTINCT t.artist FROM history h
+        INNER JOIN tracks t ON t.id = h.trackId
+        WHERE h.playedAt < :before AND t.artist != ''
+        """
+    )
+    suspend fun artistsPlayedBefore(before: Long): List<String>
+
+    /** How many plays sit before [before] — what a purge would remove, counted before it runs. */
+    @Query("SELECT COUNT(*) FROM history WHERE playedAt < :before AND agroSynced = 1")
+    suspend fun countPurgeableBefore(before: Long): Int
+
+    /**
+     * Forgets the individual plays older than [before].
+     *
+     * `agroSynced = 1` is not an optimisation, it is the safety guard: a play still waiting in the
+     * outbox ([getPendingAgroScrobbles]) has not been counted anywhere else yet, and deleting it
+     * because it is old would lose it outright rather than merely forget when it happened.
+     *
+     * Deliberately bounded rather than a blanket delete: a recap offers to tidy the years it has
+     * already summarised, never everything. (The unbounded `clearHistory` that used to sit here had
+     * no caller and no guard, so it went rather than gaining one.)
+     */
+    @Query("DELETE FROM history WHERE playedAt < :before AND agroSynced = 1")
+    suspend fun deleteSyncedBefore(before: Long): Int
+
     @Insert
     suspend fun recordHistory(entry: HistoryEntity): Long
 
-    @Query("DELETE FROM history")
-    suspend fun clearHistory()
+    /**
+     * Every play, as the two columns a backup carries.
+     *
+     * The projection rather than whole rows: `historyId` is this database's own numbering and means
+     * nothing on another device, and the scrobble flags are decided by the restore, not copied.
+     */
+    @Query("SELECT trackId, playedAt FROM history ORDER BY playedAt ASC")
+    suspend fun allPlays(): List<PlayIdentity>
+
+    /**
+     * Inserts restored plays.
+     *
+     * Deduplication happens in Kotlin against [allPlays] rather than with `OnConflictStrategy
+     * .IGNORE`: the primary key is auto-generated, so every restored row is "new" as far as SQLite
+     * is concerned and a conflict strategy would never fire. Adding a unique index on
+     * `(trackId, playedAt)` would be the other way, but that is a migration that fails on any
+     * database already holding a duplicate.
+     */
+    @Insert
+    suspend fun insertPlays(entries: List<HistoryEntity>)
 }
+
+/** A play's identity across devices: which track, and when. */
+data class PlayIdentity(
+    val trackId: String,
+    val playedAt: Long
+)
 

@@ -32,16 +32,26 @@ internal class BackupViewModel @Inject constructor(
     private val _isBusy = MutableStateFlow(false)
     val isBusy: StateFlow<Boolean> = _isBusy.asStateFlow()
 
-    fun export(target: Uri, passphrase: String) {
+    /**
+     * [includeHistory] carries the listening history and the saved recaps as well as the settings.
+     *
+     * On by default, because a restore that silently loses a lifetime of listening is the bug this
+     * was added to fix. It is still a switch: the history is the bulk of the file and the most
+     * personal thing in it, so somebody handing a backup to a new phone in a shop can leave it out.
+     */
+    fun export(target: Uri, passphrase: String, includeHistory: Boolean = true) {
         run(
-            work = { store.export(target, passphrase); BackupStatus.Exported },
+            work = { store.export(target, passphrase, includeHistory); BackupStatus.Exported },
             failure = { "Export failed: ${it.readableMessage()}" }
         )
     }
 
     fun import(source: Uri, passphrase: String) {
         run(
-            work = { BackupStatus.Imported(store.import(source, passphrase)) },
+            work = {
+                val contents = store.import(source, passphrase)
+                BackupStatus.Imported(contents.settings, contents.plays, contents.recaps)
+            },
             failure = { "Import failed: ${it.readableMessage()}" }
         )
     }
@@ -94,8 +104,12 @@ internal sealed interface BackupStatus {
     /**
      * [settings] is what was actually written, not what the file held: entries this build does not
      * understand are skipped, and reporting the file's own count would overstate the restore.
+     *
+     * [plays] is likewise what the file carried, which is not the same as what was inserted — a
+     * play this device already had is not added twice. Both numbers are zero for a backup written
+     * before listening history travelled, which is a true statement about that file.
      */
-    data class Imported(val settings: Int) : BackupStatus
+    data class Imported(val settings: Int, val plays: Int = 0, val recaps: Int = 0) : BackupStatus
 
     data class Failed(val message: String) : BackupStatus
 }
