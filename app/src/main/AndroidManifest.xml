@@ -89,6 +89,15 @@
         android:maxSdkVersion="32" />
 
     <!--
+      Gates the widget receiver below. Signature-level: automatically granted to this app (and only
+      an app signed with the same key) and never to anyone else — see the receiver's own comment for
+      why this doesn't block the system's real widget-update broadcast.
+    -->
+    <permission
+        android:name="com.wander.android.permission.RECEIVE_WIDGET_UPDATE"
+        android:protectionLevel="signature" />
+
+    <!--
       No usesCleartextTraffic here: with a networkSecurityConfig declared it is ignored from API 24
       on (minSdk is 26), and leaving it set only advertised a blanket plain-HTTP policy the app
       does not actually run under. @xml/network_security_config is the single source of truth.
@@ -227,15 +236,21 @@
           The home-screen Now Playing widget. Exported: home-screen widgets are always launched by
           the launcher app, on the OS's own behalf, not by anything of this app's choosing.
 
-          No android:permission, deliberately: android.appwidget.action.APPWIDGET_UPDATE is one of
-          the platform's own <protected-broadcast> actions (declared in AOSP's own manifest), so no
-          third-party app can send it regardless of what permission this receiver names. Adding one
-          would not add protection here — it would just be a permission the system never holds when
-          it delivers this broadcast, which breaks the widget rather than securing it.
+          android.appwidget.action.APPWIDGET_UPDATE is one of the platform's own
+          <protected-broadcast> actions, so no third-party app can spoof *that* action — but
+          `exported` on its own still lets any app reach `onReceive` with an explicit intent naming
+          this component directly, any action (or none) and any extras, since explicit delivery
+          skips intent-filter matching entirely. `android:permission` closes that gap: it gates
+          delivery to this receiver regardless of how the intent is addressed. It's safe to add
+          here specifically because the *system* is what actually sends the real widget-update
+          broadcast (AppWidgetService, not the launcher app), and system-origin delivery bypasses
+          this permission check the way it bypasses every other one — so the real update still
+          reaches this receiver; only another app's spoofed intent is what gets rejected.
         -->
         <receiver
             android:name=".ui.widget.NowPlayingWidgetReceiver"
             android:exported="true"
+            android:permission="com.wander.android.permission.RECEIVE_WIDGET_UPDATE"
             android:label="@string/widget_now_playing_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
