@@ -122,6 +122,20 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         get() = prefs.getString(KEY_LAST_NOTIFIED_RELEASE, "").orEmpty()
         set(value) = prefs.edit { putString(KEY_LAST_NOTIFIED_RELEASE, value) }
 
+    /**
+     * The most recent year whose Agro Replay this device has already put in front of the user.
+     *
+     * A year rather than a flag, so next December offers itself without anything having to clear
+     * it. Written when the story is *opened*, not when it is finished: a recap somebody dismissed
+     * on the second card should not be waiting for them again at the next launch.
+     *
+     * Living here means it travels in a settings backup like every other preference, so a restored
+     * device does not re-show a recap that was already seen.
+     */
+    var lastSeenReplayYear: Int
+        get() = prefs.getInt(KEY_REPLAY_SEEN_YEAR, 0)
+        set(value) = prefs.edit { putInt(KEY_REPLAY_SEEN_YEAR, value) }
+
     private val _navidromeConfigured = MutableStateFlow(hasNavidromeCredentials())
     val navidromeConfigured: StateFlow<Boolean> = _navidromeConfigured.asStateFlow()
 
@@ -717,6 +731,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_RELEASE_NOTIFICATIONS = "key_release_notifications"
         private const val KEY_RELEASE_WATERMARK = "key_release_watermark"
         private const val KEY_LAST_NOTIFIED_RELEASE = "key_last_notified_release"
+        private const val KEY_REPLAY_SEEN_YEAR = "key_replay_seen_year"
         private const val KEY_DUPLICATE_SCAN_CURSOR = "duplicate_scan_cursor"
         private const val KEY_INCOGNITO = "key_incognito"
         private const val KEY_PENDING_FORGET = "key_pending_forget"

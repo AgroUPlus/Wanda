@@ -33,10 +33,23 @@ internal class AgroFeedApi @Inject constructor(
             (data["friendActivity"] as? JsonArray).orEmpty().map { it.jsonObject.toFeedItem() }
         }
 
-    suspend fun recap(period: String = "MONTH"): Result<AgroRecap> = graphQl.execute(
+    /**
+     * The circle's recap.
+     *
+     * [year] overrides [period] with a calendar year, which is what Agro Replay asks for. The
+     * rolling `"YEAR"` period cannot serve it: that means the last 365 days, so a recap of last
+     * year opened in February would be half about this one.
+     */
+    suspend fun recap(
+        period: String = "MONTH",
+        year: Int? = null,
+        utcOffsetMinutes: Int? = null
+    ): Result<AgroRecap> = graphQl.execute(
         """
-        query Recap(${'$'}period: String) {
-            circleRecap(period: ${'$'}period) {
+        query Recap(${'$'}period: String, ${'$'}year: Int, ${'$'}utcOffsetMinutes: Int) {
+            circleRecap(
+                period: ${'$'}period, year: ${'$'}year, utcOffsetMinutes: ${'$'}utcOffsetMinutes
+            ) {
                 period
                 members
                 anthem { title artist plays byMember { name value } }
@@ -47,7 +60,11 @@ internal class AgroFeedApi @Inject constructor(
             }
         }
         """.trimIndent(),
-        buildJsonObject { put("period", period) }
+        buildJsonObject {
+            put("period", period)
+            year?.let { put("year", it) }
+            utcOffsetMinutes?.let { put("utcOffsetMinutes", it) }
+        }
     ).mapCatching { data ->
         data["circleRecap"]?.jsonObject?.toRecap()
             ?: error("the server returned no recap")

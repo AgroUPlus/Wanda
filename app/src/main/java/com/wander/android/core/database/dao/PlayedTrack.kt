@@ -3,10 +3,13 @@ package com.wander.android.core.database.dao
 /**
  * One play, joined to the track it was.
  *
- * The statistics screen's row shape. Separate from [PendingScrobble], which is the *outbox* row:
- * that one carries the genre a scrobble has to report and no artwork, this one carries the artwork
- * a screen has to draw and no genre. Merging them would mean every scrobble upload also read a
- * column it has no use for.
+ * The screen's row shape. Still separate from [PendingScrobble], which is the *outbox* row: this
+ * one carries the artwork and the track id a screen needs to *show* a play rather than name it,
+ * and the outbox has no use for either. Merging them would mean every scrobble upload also read
+ * columns it never sends.
+ *
+ * [genre] is in both because both need it — the outbox reports it, and Agro Replay counts it for
+ * the genres card on a device with no server paired.
  */
 data class PlayedTrack(
     val playedAt: Long,
@@ -15,5 +18,6 @@ data class PlayedTrack(
     val artist: String,
     val album: String?,
     val artworkUrl: String?,
-    val durationMs: Long
+    val durationMs: Long,
+    val genre: String?
 )

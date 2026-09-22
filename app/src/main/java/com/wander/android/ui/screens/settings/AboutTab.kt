@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.settings
 
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Celebration
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Update
@@ -33,6 +34,15 @@ internal fun LazyListScope.aboutTab(
                 {
                     SettingsRow(
                         modifier = Modifier.scale(rememberShelfEntranceScale(0)),
+                        title = stringResource(R.string.replay_title),
+                        subtitle = stringResource(R.string.replay_settings_subtitle),
+                        onClick = actions.onOpenReplay,
+                        icon = Icons.Rounded.Celebration
+                    )
+                },
+                {
+                    SettingsRow(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(1)),
                         title = stringResource(R.string.common_duplicate_recordings),
                         subtitle = stringResource(R.string.settings_review_which_tracks_same_recording),
                         onClick = actions.onOpenMergePreview,
@@ -44,7 +54,7 @@ internal fun LazyListScope.aboutTab(
                     // I current?" and the check is the answer, so splitting them made the user
                     // tap two rows to learn one thing.
                     SettingsRow(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(1)),
+                        modifier = Modifier.scale(rememberShelfEntranceScale(2)),
                         title = stringResource(R.string.settings_version),
                         subtitle = when {
                             state.updateCheck is UpdateCheckResult.UpdateAvailable ->

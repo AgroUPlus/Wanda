@@ -46,6 +46,8 @@ object AppModule {
     @Provides fun provideAlbumDao(db: WanderDatabase): AlbumDao = db.albumDao()
     @Provides fun provideArtistDao(db: WanderDatabase): ArtistDao = db.artistDao()
     @Provides fun provideHistoryDao(db: WanderDatabase): HistoryDao = db.historyDao()
+    @Provides fun provideReplayRecapDao(db: WanderDatabase): com.wander.android.core.database.dao.ReplayRecapDao =
+        db.replayRecapDao()
     @Provides fun provideShelfDao(db: WanderDatabase): ShelfDao = db.shelfDao()
     @Provides fun provideFriendDao(db: WanderDatabase): FriendDao = db.friendDao()
     @Provides fun provideDropDao(db: WanderDatabase): DropDao = db.dropDao()

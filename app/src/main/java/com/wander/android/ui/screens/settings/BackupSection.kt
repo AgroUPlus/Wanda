@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -111,11 +112,29 @@ private fun Outcome(status: BackupStatus) {
         is BackupStatus.Exported ->
             "Backup written. Keep it somewhere you trust — it contains your sign-ins." to false
 
-        is BackupStatus.Imported ->
+        is BackupStatus.Imported -> {
             // Restarting is not advice, it is required: every setting is read into a `StateFlow`
             // when `SecureStorage` is constructed, and those were built before this file was
             // written. The app is showing the old values until the process restarts.
-            "${status.settings} settings restored. Close and reopen Wanda to apply them." to false
+            val settings = pluralStringResource(
+                R.plurals.backup_restored_settings,
+                status.settings,
+                status.settings
+            )
+            // Only mentioned when the file actually carried listening history. A backup written
+            // before it travelled says nothing about it rather than claiming zero plays.
+            val restored = if (status.plays > 0 || status.recaps > 0) {
+                settings + " " + pluralStringResource(
+                    R.plurals.backup_restored_history,
+                    status.plays,
+                    status.plays,
+                    status.recaps
+                )
+            } else {
+                settings
+            }
+            restored to false
+        }
 
         is BackupStatus.Failed -> status.message to true
     }

@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.wander.android.data.sources.agro.AgroHandoffState
 import com.wander.android.data.sources.agro.AgroNode
 import com.wander.android.data.sources.agro.MissingTrack
+import com.wander.android.ui.components.ReplayOfferCard
 import com.wander.android.ui.components.ResumeHandoffCard
 import com.wander.android.ui.components.SyncOfferCard
 import com.wander.android.data.repository.FetchProgress
@@ -47,6 +48,10 @@ internal fun BoxScope.BottomOffers(
     offerRoute: SyncRoute?,
     onDismissSync: () -> Unit,
     handoff: AgroHandoffState?,
+    /** The year whose recap is waiting, or null when it is not the season or it was dismissed. */
+    replayYear: Int?,
+    onOpenReplay: (Int) -> Unit,
+    onDismissReplay: () -> Unit,
     agroDevices: List<AgroNode>,
     isResuming: Boolean,
     sessionArtwork: String?,
@@ -92,6 +97,17 @@ internal fun BoxScope.BottomOffers(
             onAccept = onAcceptSync,
             onOpenDetails = onOpenSyncDetails,
             onDismiss = onDismissSync
+        )
+    }
+
+    AnimatedVisibility(visible = replayYear != null, enter = enter, exit = exit, modifier = slot) {
+        // Held across the exit animation so the card does not blank out as it leaves, the same way
+        // the handoff card below does.
+        val year = remember(replayYear) { replayYear } ?: return@AnimatedVisibility
+        ReplayOfferCard(
+            year = year,
+            onOpen = { onOpenReplay(year) },
+            onDismiss = onDismissReplay
         )
     }
 

@@ -17,7 +17,16 @@ import kotlinx.serialization.Serializable
 @Serializable
 internal data class BackupDocument(
     val version: Int = CURRENT_VERSION,
-    val entries: Map<String, BackupEntry>
+    val entries: Map<String, BackupEntry>,
+    /**
+     * Every play this device remembers, if the user asked for them.
+     *
+     * Defaulted, which is what lets a version 1 file — written before listening history was
+     * carried at all — decode into this class untouched and restore exactly as it used to.
+     */
+    val history: List<BackupPlay> = emptyList(),
+    /** Saved Agro Replay recaps, which may outlive the plays in [history]. */
+    val recaps: List<BackupRecap> = emptyList()
 ) {
     companion object {
         /**
@@ -25,8 +34,13 @@ internal data class BackupDocument(
          *
          * Keys are data, so a backup from an older build simply carries fewer of them, and one from
          * a newer build carries some this version will ignore. Neither is a version change.
+         *
+         * Version 2 added [history] and [recaps]. Both are optional in both directions: an older
+         * build reads a version 2 file as settings-only (its `Json` ignores unknown keys), and this
+         * build reads a version 1 file with both lists empty. So the number records what happened
+         * rather than gating anything.
          */
-        const val CURRENT_VERSION = 1
+        const val CURRENT_VERSION = 2
     }
 }
 

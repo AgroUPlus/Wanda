@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.security.SecureStorage
+import com.wander.android.data.replay.ReplayAvailability
+import java.time.LocalDate
 import com.wander.android.core.update.UpdateCheckResult
 import com.wander.android.core.update.UpdateChecker
 import com.wander.android.data.repository.InstantRadioRepository
@@ -369,6 +371,36 @@ class WanderAppViewModel @Inject constructor(
 
     fun dismissLaunchUpdate() {
         _launchUpdateAvailable.value = null
+    }
+
+    // ── Agro Replay ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * The year whose recap should be offered right now, or null.
+     *
+     * Read once per process rather than observed: the season is a date range, and a device that
+     * happens to be open at midnight on New Year's Eve does not need the card to appear under the
+     * user's thumb. Whether it has already been shown is the watermark in `SecureStorage`, which a
+     * settings backup carries — so a restored device does not re-offer a recap already seen.
+     */
+    private val _replayOffer = MutableStateFlow(
+        ReplayAvailability.shouldOffer(LocalDate.now(), secureStorage.lastSeenReplayYear)
+    )
+    val replayOffer: StateFlow<Int?> = _replayOffer.asStateFlow()
+
+    /**
+     * Stops offering this year, here and on the next launch.
+     *
+     * The watermark moves on dismissal as well as on opening, because "not now" about a recap in
+     * December means this year, not this minute.
+     */
+    fun dismissReplayOffer() {
+        _replayOffer.value?.let { year ->
+            if (year > secureStorage.lastSeenReplayYear) {
+                secureStorage.lastSeenReplayYear = year
+            }
+        }
+        _replayOffer.value = null
     }
 
     /**

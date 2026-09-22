@@ -65,6 +65,7 @@ import com.wander.android.ui.components.player.PlayerSheetContent
 import com.wander.android.ui.components.player.PlayerSheetValue
 import com.wander.android.ui.components.player.rememberPlayerSheetState
 import com.wander.android.ui.navigation.Routes
+import com.wander.android.ui.navigation.navigateSettled
 import com.wander.android.ui.navigation.TopLevelDestination
 import com.wander.android.ui.navigation.DockRowHeight
 import com.wander.android.core.permissions.hasPermission
@@ -152,6 +153,7 @@ fun WanderApp(
 
     // Agro live session updates, held only while the app is on screen — see AgroSessionRepository.
     val agroViewModel: AgroSessionViewModel = hiltViewModel()
+    val replayOffer by viewModel.replayOffer.collectAsStateWithLifecycle()
     val incomingHandoff by agroViewModel.incomingHandoff.collectAsStateWithLifecycle()
     val isResuming by agroViewModel.isResuming.collectAsStateWithLifecycle()
     val agroDevices by agroViewModel.devices.collectAsStateWithLifecycle()
@@ -450,6 +452,14 @@ fun WanderApp(
                 offerRoute = offerRoute,
                 onDismissSync = viewModel::dismissSyncOffer,
                 handoff = incomingHandoff?.takeIf { !isPlayingHere && showChrome && sheetCollapsed },
+                // Gated on the same chrome and sheet state as the other two: a recap invitation
+                // floating over a full-screen Now Playing reads as a stray dialog.
+                replayYear = replayOffer.takeIf { showChrome && sheetCollapsed },
+                onOpenReplay = { year ->
+                    viewModel.dismissReplayOffer()
+                    navController.navigateSettled(Routes.replay(year))
+                },
+                onDismissReplay = viewModel::dismissReplayOffer,
                 agroDevices = agroDevices,
                 isResuming = isResuming,
                 sessionArtwork = sessionArtwork,
