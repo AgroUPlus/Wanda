@@ -7,6 +7,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -36,11 +37,12 @@ val GroupedItemGap = 2.dp
  * One row of a lazy list drawn as part of a group, Settings-style: inset from the screen edges, its
  * own tonal frame rounded by [groupedItemShape], and a [GroupedItemGap] above every row but the
  * first. Lazy lists can't use [GroupedCard] itself, so every track, playlist and library list
- * applies this to its row instead and reads as one grouped surface.
+ * applies this to its row instead and reads as one grouped surface. [horizontalInset] is 0 where the
+ * container already insets its content, as the Home pager does through its content padding.
  */
 @Composable
-fun Modifier.groupedListItem(index: Int, count: Int): Modifier = this
-    .padding(horizontal = 16.dp)
+fun Modifier.groupedListItem(index: Int, count: Int, horizontalInset: Dp = 16.dp): Modifier = this
+    .padding(horizontal = horizontalInset)
     .padding(top = if (index == 0) 0.dp else GroupedItemGap)
     .clip(groupedItemShape(index, count))
     .background(MaterialTheme.colorScheme.surfaceContainer)
