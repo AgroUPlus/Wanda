@@ -116,7 +116,8 @@ internal fun LazyListScope.homeSection(
                         track = track,
                         index = index,
                         onPlay = { viewModel.play(section.tracks, index) },
-                        onLongPress = { onLongPress(track) }
+                        onLongPress = { onLongPress(track) },
+                        progress = section.progress[track.id]
                     )
                 }
             }

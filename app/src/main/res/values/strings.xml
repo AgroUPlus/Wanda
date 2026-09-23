@@ -751,6 +751,7 @@
 
     <!-- Podcasts -->
     <string name="continue_listening">Continue listening</string>
+    <string name="home_your_episodes">Your episodes</string>
     <string name="podcasts_filter_in_progress">In progress</string>
     <string name="podcasts_filter_unplayed">Unplayed</string>
     <string name="podcasts_filter_finished">Finished</string>
