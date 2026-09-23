@@ -727,4 +727,10 @@
     <string name="replay_month_october">October</string>
     <string name="replay_month_november">November</string>
     <string name="replay_month_december">December</string>
+
+    <!-- Digital Sovereignty & About -->
+    <string name="settings_made_in_france_title">Made with ❤️ in France</string>
+    <string name="settings_made_in_france_subtitle">Digital sovereignty &amp; EUPL-1.2</string>
+    <string name="settings_sovereignty_dialog_title">Digital Sovereignty</string>
+    <string name="settings_sovereignty_dialog_body">Wanda is designed and built in France with privacy, battery-efficiency, and user autonomy as core principles.\n\nDigital sovereignty means retaining full control over your personal data, music library, and listening habits — without telemetry, tracking, or vendor lock-in.\n\nWanda\'s source code is licensed under the European Union Public Licence (EUPL-1.2), a reciprocal copyleft licence native to European civil law. The EUPL guarantees software freedom, covers both distribution and network services (closing cloud loopholes), and ensures Wanda remains sovereign, transparent, and community-owned forever.</string>
 </resources>

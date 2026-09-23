@@ -550,4 +550,10 @@
     <string name="transport_spoken_offgrid">Streamé de téléphone à téléphone via un lien radio direct, aucun réseau impliqué, chiffré.</string>
     <string name="transport_spoken_relay">Streamé depuis votre serveur Agro, chiffré de bout en bout. Le serveur n\'y voit rien.</string>
     <string name="transport_spoken_finding">Recherche de la source optimale.</string>
+
+    <!-- Digital Sovereignty & About -->
+    <string name="settings_made_in_france_title">Fait avec ❤️ en France</string>
+    <string name="settings_made_in_france_subtitle">Souveraineté numérique &amp; EUPL-1.2</string>
+    <string name="settings_sovereignty_dialog_title">Souveraineté numérique</string>
+    <string name="settings_sovereignty_dialog_body">Wanda est conçu et développé en France avec comme principes fondamentaux le respect de la vie privée, l\'efficacité énergétique et l\'autonomie de l\'utilisateur.\n\nLa souveraineté numérique signifie conserver le contrôle total de vos données personnelles, de votre bibliothèque musicale et de vos habitudes d\'écoute — sans télémétrie, sans pistage commercial et sans enfermement propriétaire.\n\nLe code source de Wanda est publié sous Licence Publique de l\'Union Européenne (EUPL-1.2), une licence libre avec réciprocité (copyleft) ancrée dans le droit européen. L\'EUPL protège vos libertés logicielles, couvre aussi bien la distribution que les services réseau (fermant les échappatoires du cloud), et garantit que Wanda reste souverain, transparent et au service de la communauté pour toujours.</string>
 </resources>

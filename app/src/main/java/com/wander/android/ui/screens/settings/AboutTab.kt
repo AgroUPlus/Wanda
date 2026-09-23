@@ -4,9 +4,14 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Celebration
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Update
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
@@ -79,6 +84,8 @@ internal fun LazyListScope.aboutTab(
 
     item(key = "credits_header") { SettingsSection(stringResource(R.string.settings_section_credits)) }
     item(key = "credits") {
+        var showSovereigntyDialog by rememberSaveable { mutableStateOf(false) }
+
         GroupedCard(
             items = listOf<@Composable () -> Unit>(
                 {
@@ -90,8 +97,17 @@ internal fun LazyListScope.aboutTab(
                     )
                 },
                 {
-                    SettingsToggle(
+                    SettingsRow(
                         modifier = Modifier.scale(rememberShelfEntranceScale(3)),
+                        title = stringResource(R.string.settings_made_in_france_title),
+                        subtitle = stringResource(R.string.settings_made_in_france_subtitle),
+                        onClick = { showSovereigntyDialog = true },
+                        icon = Icons.Rounded.Favorite
+                    )
+                },
+                {
+                    SettingsToggle(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(4)),
                         title = stringResource(R.string.settings_check_updates_launch),
                         subtitle = stringResource(R.string.settings_finds_latest_release_automatically_tells),
                         checked = state.autoUpdateCheckEnabled,
@@ -101,5 +117,9 @@ internal fun LazyListScope.aboutTab(
                 }
             )
         )
+
+        if (showSovereigntyDialog) {
+            SovereigntyDialog(onDismiss = { showSovereigntyDialog = false })
+        }
     }
 }
