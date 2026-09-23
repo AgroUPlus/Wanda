@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.album
 
+import com.wander.android.ui.components.groupedListItem
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -8,15 +9,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -29,7 +29,8 @@ import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.listInset
-import com.wander.android.ui.components.rememberCollapsingHeaderFraction
+import com.wander.android.ui.components.collapsingTitleSource
+import com.wander.android.ui.components.rememberCollapsingTitleState
 
 /**
  * One record, with its actual tracklist — reached by tapping the album name in the player, which
@@ -48,8 +49,7 @@ fun AlbumScreen(
     var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
 
     val listState = rememberLazyListState()
-    var heroHeightPx by remember { mutableFloatStateOf(0f) }
-    val headerFraction by rememberCollapsingHeaderFraction(listState, heroHeightPx)
+    val titleState = rememberCollapsingTitleState(listState)
 
     val addToPlaylist = AddToPlaylistHost()
 
@@ -120,8 +120,8 @@ fun AlbumScreen(
                             onShuffle = viewModel::shuffle,
                             onShare = viewModel::shareAlbum.takeIf { viewModel.canShareAlbum() },
                             modifier = Modifier
-                                .padding(bottom = 16.dp)
-                                .onGloballyPositioned { heroHeightPx = it.size.height.toFloat() }
+                                .padding(bottom = 16.dp),
+                            titleModifier = Modifier.collapsingTitleSource(titleState)
                         )
                     }
 
@@ -144,7 +144,8 @@ fun AlbumScreen(
                         TrackRow(
                             track = track,
                             onPlay = { viewModel.play(index) },
-                            onLongPress = { actionsFor = track }
+                            onLongPress = { actionsFor = track },
+                            modifier = Modifier.groupedListItem(index, tracks.size)
                         )
                     }
                 }
@@ -152,11 +153,12 @@ fun AlbumScreen(
         }
 
         CompactHeroTopBar(
-            visibleFraction = { headerFraction },
+            titleState = titleState,
             onBack = onBack,
             title = album?.title ?: tracks.firstOrNull()?.album.orEmpty(),
-            artworkUrl = album?.coverArtUrl ?: tracks.firstNotNullOfOrNull { it.artworkUrl },
             onPlay = viewModel::playAll,
+            heroTitleStyle = MaterialTheme.typography.headlineMedium,
+            heroTitleMaxLines = 3,
             topInset = contentPadding.calculateTopPadding(),
             modifier = Modifier.align(Alignment.TopStart)
         )

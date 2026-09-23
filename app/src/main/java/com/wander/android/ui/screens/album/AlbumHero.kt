@@ -45,7 +45,9 @@ internal fun AlbumHero(
     onShuffle: () -> Unit,
     modifier: Modifier = Modifier,
     /** Null when this record's backend cannot publish a link for it. */
-    onShare: (() -> Unit)? = null
+    onShare: (() -> Unit)? = null,
+    /** On the title alone — how the page's collapsing bar tracks it. */
+    titleModifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         ImmersiveHero(
@@ -59,7 +61,8 @@ internal fun AlbumHero(
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center,
                 maxLines = 3,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = titleModifier
             )
             if (subtitle.isNotBlank()) {
                 Text(

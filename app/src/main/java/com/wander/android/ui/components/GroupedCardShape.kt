@@ -1,5 +1,11 @@
 package com.wander.android.ui.components
 
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.Modifier
+import androidx.compose.runtime.Composable
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 
@@ -25,3 +31,16 @@ val GroupedInnerRadius = 8.dp
 
 /** The physical gap between rows, not just a divider — small enough to read as one group. */
 val GroupedItemGap = 2.dp
+
+/**
+ * One row of a lazy list drawn as part of a group, Settings-style: inset from the screen edges, its
+ * own tonal frame rounded by [groupedItemShape], and a [GroupedItemGap] above every row but the
+ * first. Lazy lists can't use [GroupedCard] itself, so every track, playlist and library list
+ * applies this to its row instead and reads as one grouped surface.
+ */
+@Composable
+fun Modifier.groupedListItem(index: Int, count: Int): Modifier = this
+    .padding(horizontal = 16.dp)
+    .padding(top = if (index == 0) 0.dp else GroupedItemGap)
+    .clip(groupedItemShape(index, count))
+    .background(MaterialTheme.colorScheme.surfaceContainer)

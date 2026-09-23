@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.playlist
 
+import com.wander.android.ui.components.groupedListItem
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -8,15 +9,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -29,7 +29,8 @@ import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.listInset
-import com.wander.android.ui.components.rememberCollapsingHeaderFraction
+import com.wander.android.ui.components.collapsingTitleSource
+import com.wander.android.ui.components.rememberCollapsingTitleState
 import com.wander.android.ui.screens.album.AlbumHero
 import com.wander.android.ui.screens.album.AlbumSkeleton
 
@@ -46,8 +47,7 @@ fun PlaylistScreen(
     var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
 
     val listState = rememberLazyListState()
-    var heroHeightPx by remember { mutableFloatStateOf(0f) }
-    val headerFraction by rememberCollapsingHeaderFraction(listState, heroHeightPx)
+    val titleState = rememberCollapsingTitleState(listState)
 
     val addToPlaylist = AddToPlaylistHost()
 
@@ -120,8 +120,8 @@ fun PlaylistScreen(
                             onShuffle = viewModel::shuffle,
                             onShare = viewModel::sharePlaylist.takeIf { viewModel.canSharePlaylist() },
                             modifier = Modifier
-                                .padding(bottom = 16.dp)
-                                .onGloballyPositioned { heroHeightPx = it.size.height.toFloat() }
+                                .padding(bottom = 16.dp),
+                            titleModifier = Modifier.collapsingTitleSource(titleState)
                         )
                     }
 
@@ -133,7 +133,8 @@ fun PlaylistScreen(
                         TrackRow(
                             track = track,
                             onPlay = { viewModel.play(index) },
-                            onLongPress = { actionsFor = track }
+                            onLongPress = { actionsFor = track },
+                            modifier = Modifier.groupedListItem(index, tracks.size)
                         )
                     }
                 }
@@ -141,11 +142,12 @@ fun PlaylistScreen(
         }
 
         CompactHeroTopBar(
-            visibleFraction = { headerFraction },
+            titleState = titleState,
             onBack = onBack,
             title = playlist?.name ?: "Playlist",
-            artworkUrl = playlist?.coverArtUrl ?: tracks.firstNotNullOfOrNull { it.artworkUrl },
             onPlay = viewModel::playAll,
+            heroTitleStyle = MaterialTheme.typography.headlineMedium,
+            heroTitleMaxLines = 3,
             topInset = contentPadding.calculateTopPadding(),
             modifier = Modifier.align(Alignment.TopStart)
         )
