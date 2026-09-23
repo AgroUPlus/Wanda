@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.library
 
+import com.wander.android.ui.components.groupedListItem
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -176,7 +177,8 @@ internal fun PlaylistList(
                 playlist = playlist,
                 index = index,
                 onClick = { onOpenPlaylist(playlist.id) },
-                onLongPress = { actionsForPlaylist = playlist }
+                onLongPress = { actionsForPlaylist = playlist },
+                modifier = Modifier.groupedListItem(index, visiblePlaylists.size)
             )
         }
         if (hasMorePlaylists) {

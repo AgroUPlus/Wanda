@@ -48,6 +48,7 @@ import com.wander.android.data.importer.PlatformType
 import com.wander.android.data.importer.RawUserPlaylistSummary
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.rememberPressScale
+import com.wander.android.ui.components.rememberShelfArtworkShape
 import com.wander.android.ui.components.scrollingTitle
 
 @Composable
@@ -185,7 +186,9 @@ private fun DiscoveredPlaylistCard(
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
     val scale by rememberPressScale(interactionSource, label = "discoveredPlaylistPress")
+    val artworkShape = rememberShelfArtworkShape(isPressed)
 
     Card(
         shape = MaterialTheme.shapes.large,
@@ -207,7 +210,7 @@ private fun DiscoveredPlaylistCard(
                 url = summary.coverUrl,
                 contentDescription = summary.name,
                 sizeDp = 136.dp,
-                shape = MaterialTheme.shapes.medium,
+                shape = artworkShape,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(136.dp)
