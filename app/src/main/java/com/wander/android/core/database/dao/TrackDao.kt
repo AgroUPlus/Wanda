@@ -270,8 +270,14 @@ interface TrackDao {
         val existing = storable.filterIndexed { index, _ -> rowIds[index] == CONFLICT_ROW_ID }
         if (existing.isNotEmpty()) {
             updateSourceFields(existing.map { it.toSourceFields() })
+            // Not a source field: a later music search returning the same id must not demote an
+            // episode, so the flag only ever gets set here, never cleared.
+            existing.filter { it.isEpisode }.map { it.id }.takeIf { it.isNotEmpty() }?.let { markAsEpisodes(it) }
         }
     }
+
+    @Query("UPDATE tracks SET isEpisode = 1 WHERE id IN (:trackIds)")
+    suspend fun markAsEpisodes(trackIds: List<String>)
 
     /**
      * Deletes rows that should never have been written — see [upsertTracks].

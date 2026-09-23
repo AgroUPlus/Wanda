@@ -28,6 +28,7 @@ import com.wander.android.data.sources.local.EXTRA_SIZE_BYTES
         Index(value = ["isLiked"]),
         Index(value = ["isDownloaded"]),
         Index(value = ["isLibrary"]),
+        Index(value = ["isEpisode"]),
         Index(value = ["contentHash"])
     ]
 )
@@ -50,6 +51,12 @@ data class TrackEntity(
     val bitRateKbps: Int?,
     val format: String?,
     val isLive: Boolean = false,
+    /**
+     * A spoken-word episode rather than a song. Set only from an episode search and one-way from
+     * then on — see [com.wander.android.core.database.dao.TrackDao.upsertTracks] — because YouTube
+     * serves an episode in a song's shape and nothing else can tell them apart.
+     */
+    val isEpisode: Boolean = false,
     val isLiked: Boolean = false,
     val isCached: Boolean = false,
     val isDownloaded: Boolean = false,
@@ -119,6 +126,7 @@ data class TrackEntity(
         bitRateKbps = bitRateKbps,
         format = format,
         isLive = isLive,
+        isEpisode = isEpisode,
         isLiked = isLiked,
         isCached = isCached,
         isDownloaded = isDownloaded,
@@ -178,6 +186,7 @@ data class TrackEntity(
             bitRateKbps = track.bitRateKbps,
             format = track.format,
             isLive = track.isLive,
+            isEpisode = track.isEpisode,
             isLiked = track.isLiked,
             isCached = track.isCached,
             isDownloaded = track.isDownloaded,
