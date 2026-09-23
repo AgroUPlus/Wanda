@@ -24,7 +24,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
@@ -45,8 +44,7 @@ internal fun LanguageSetting(
     modifier: Modifier = Modifier,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null
 ) {
-    val context = LocalContext.current
-    val locales = remember(context) { supportedAppLocales(context) }
+    val locales = remember { supportedAppLocales() }
     if (locales.isEmpty()) return
 
     var showDialog by rememberSaveable { mutableStateOf(false) }
