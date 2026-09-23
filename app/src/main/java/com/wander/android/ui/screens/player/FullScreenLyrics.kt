@@ -172,14 +172,6 @@ private fun LyricsScaffold(
                 Box(modifier = Modifier.size(BackButtonSlot))
             }
 
-            if (hasSynced) {
-                SyncedStaticToggle(
-                    showStatic = showStatic,
-                    onSelect = { showStatic = it },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                )
-            }
-
             // Runs all the way to the bottom of the screen, *behind* the transport below, and is
             // faded out down there rather than stopping short of it. Ending the list above the bar
             // left a band of dead background between the last visible line and the controls, and
@@ -219,13 +211,23 @@ private fun LyricsScaffold(
             )
         }
 
-        LyricsTransport(
-            state = state,
-            playerConnection = playerConnection,
+        // The sync toggle moved down here from under the header — one-hand reach matters more for
+        // a control reached for mid-read than a fixed sense of "settings live at the top."
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(horizontal = 16.dp, vertical = 12.dp)
-        )
+        ) {
+            if (hasSynced) {
+                SyncedStaticToggle(
+                    showStatic = showStatic,
+                    onSelect = { showStatic = it },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                )
+            }
+            LyricsTransport(state = state, playerConnection = playerConnection)
+        }
     }
 }
 
@@ -279,8 +281,14 @@ private fun Modifier.fadeVerticalEdges(
 /** Matches `FilledIconButton`'s default footprint, so the title centres against the real gap. */
 private val BackButtonSlot = 40.dp
 
-/** What the floating transport occupies, reserved inside the lyrics' own scroll. */
-private val TransportReserve = 190.dp
+/**
+ * What the floating transport occupies, reserved inside the lyrics' own scroll.
+ *
+ * Taller than the transport alone now that the sync toggle sits above it in the same bottom
+ * block — approximate pending an on-device check, but erring tall is the safe direction: a few
+ * extra dp of scrollable padding is invisible, a verse hidden behind the bar is not.
+ */
+private val TransportReserve = 240.dp
 
 /** How far the screen shrinks and dims at a fully-dragged predictive back. */
 private const val BackScaleFloor = 0.88f
