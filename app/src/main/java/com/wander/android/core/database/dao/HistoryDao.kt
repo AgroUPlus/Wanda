@@ -135,6 +135,10 @@ interface HistoryDao {
     @Query("SELECT trackId, playedAt FROM history ORDER BY playedAt ASC")
     suspend fun allPlays(): List<PlayIdentity>
 
+    /** When the oldest remembered play happened, or null with no history at all. */
+    @Query("SELECT MIN(playedAt) FROM history")
+    suspend fun earliestPlayAt(): Long?
+
     /**
      * Inserts restored plays.
      *

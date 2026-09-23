@@ -10,7 +10,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,13 +28,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.wander.android.R
 import com.wander.android.ui.theme.LocalReducedMotion
 
 /**
- * The cards that are mostly one big number: minutes, the shape of the year, hours, streaks,
- * discoveries and where the year stood against everyone else's.
+ * The cards that are mostly one big number: minutes, the shape of the year, hours, streaks and
+ * where the year stood against everyone else's.
  *
  * Grouped by what they *are* rather than one file each — they share the counter and the bar, and
  * splitting them further would mean six files of twenty lines and two shared helpers somewhere
@@ -53,17 +58,20 @@ private fun CountUpNumber(target: Long, modifier: Modifier = Modifier) {
 
     Text(
         text = "%,d".format(if (reduced) target else shown.toLong()),
-        style = MaterialTheme.typography.displayLarge,
-        color = MaterialTheme.colorScheme.onSurface,
+        style = MaterialTheme.typography.displayLargeEmphasized.copy(fontWeight = FontWeight.Black),
+        color = LocalContentColor.current,
         textAlign = TextAlign.Center,
-        modifier = modifier
+        maxLines = 1,
+        // Poster-sized for a four-digit year of listening, stepping down so a six-digit one still
+        // fits on one line.
+        autoSize = TextAutoSize.StepBased(minFontSize = MinNumberSize, maxFontSize = MaxNumberSize),
+        modifier = modifier.fillMaxWidth()
     )
 }
 
 @Composable
 internal fun ReplayMinutesCard(card: ReplayCard.Minutes) {
     ReplayCardFrame(
-        accent = MaterialTheme.colorScheme.primaryContainer,
         kicker = stringResource(R.string.replay_minutes_kicker),
         headline = stringResource(R.string.replay_minutes_headline)
     ) {
@@ -76,7 +84,7 @@ internal fun ReplayMinutesCard(card: ReplayCard.Minutes) {
                     card.plays
                 ),
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = replayMuted,
                 textAlign = TextAlign.Center
             )
         }
@@ -89,7 +97,6 @@ internal fun ReplayShapeCard(card: ReplayCard.Shape) {
     val peak = card.byMonth.maxOrNull()?.coerceAtLeast(1L) ?: 1L
 
     ReplayCardFrame(
-        accent = MaterialTheme.colorScheme.tertiaryContainer,
         kicker = stringResource(R.string.replay_shape_kicker),
         headline = stringResource(R.string.replay_shape_headline)
     ) {
@@ -117,7 +124,7 @@ internal fun ReplayShapeCard(card: ReplayCard.Shape) {
                     stringResource(MonthNames[card.peakMonth])
                 ),
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = replayMuted
             )
         }
     }
@@ -129,7 +136,6 @@ internal fun ReplayHoursCard(card: ReplayCard.Hours) {
     val peak = card.byHour.maxOrNull()?.coerceAtLeast(1L) ?: 1L
 
     ReplayCardFrame(
-        accent = MaterialTheme.colorScheme.secondaryContainer,
         kicker = stringResource(R.string.replay_hours_kicker),
         headline = stringResource(R.string.replay_hours_headline, formatHour(card.peakHour))
     ) {
@@ -153,7 +159,6 @@ internal fun ReplayHoursCard(card: ReplayCard.Hours) {
 @Composable
 internal fun ReplayStreakCard(card: ReplayCard.Streak) {
     ReplayCardFrame(
-        accent = MaterialTheme.colorScheme.errorContainer,
         kicker = stringResource(R.string.replay_streak_kicker),
         headline = pluralStringResource(
             R.plurals.replay_streak_headline,
@@ -161,42 +166,21 @@ internal fun ReplayStreakCard(card: ReplayCard.Streak) {
             card.longestStreakDays
         )
     ) {
-        Text(
-            text = pluralStringResource(
-                R.plurals.replay_streak_detail,
-                card.activeDays,
-                card.activeDays
-            ),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-@Composable
-internal fun ReplayDiscoveryCard(card: ReplayCard.Discovery) {
-    ReplayCardFrame(
-        accent = MaterialTheme.colorScheme.tertiaryContainer,
-        kicker = stringResource(R.string.replay_discovery_kicker),
-        headline = pluralStringResource(
-            R.plurals.replay_discovery_headline,
-            card.newArtists,
-            card.newArtists
-        )
-    ) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(ListGap),
+            verticalArrangement = Arrangement.spacedBy(BarLabelGap),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            card.names.forEach { name ->
-                Text(
-                    text = name,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center
-                )
-            }
+            ReplayBadge(text = "%,d".format(card.longestStreakDays), shape = MaterialShapes.Burst)
+            Text(
+                text = pluralStringResource(
+                    R.plurals.replay_streak_detail,
+                    card.activeDays,
+                    card.activeDays
+                ),
+                style = MaterialTheme.typography.titleMedium,
+                color = replayMuted,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
@@ -210,20 +194,25 @@ internal fun ReplayDiscoveryCard(card: ReplayCard.Discovery) {
 @Composable
 internal fun ReplayChartsCard(card: ReplayCard.Charts) {
     ReplayCardFrame(
-        accent = MaterialTheme.colorScheme.primaryContainer,
         kicker = stringResource(R.string.replay_charts_kicker),
         headline = stringResource(R.string.replay_charts_headline, card.percentile)
     ) {
-        Text(
-            text = pluralStringResource(
-                R.plurals.replay_charts_detail,
-                card.cohortSize,
-                card.cohortSize
-            ),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
+        Column(
+            verticalArrangement = Arrangement.spacedBy(BarLabelGap),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            ReplayBadge(text = "${card.percentile}%", shape = MaterialShapes.SoftBoom)
+            Text(
+                text = pluralStringResource(
+                    R.plurals.replay_charts_detail,
+                    card.cohortSize,
+                    card.cohortSize
+                ),
+                style = MaterialTheme.typography.titleMedium,
+                color = replayMuted,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
 
@@ -236,17 +225,14 @@ private fun GrowingBar(
     modifier: Modifier = Modifier
 ) {
     val scale = rememberBarGrowth(index)
-    val colour = if (highlighted) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.onSurface.copy(alpha = QuietBarAlpha)
-    }
+    val content = LocalContentColor.current
+    val colour = if (highlighted) content else content.copy(alpha = QuietBarAlpha)
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(ChartHeight * fraction.coerceIn(MinBarFraction, 1f) * scale)
-            .clip(RoundedCornerShape(BarCorner))
+            .clip(CircleShape)
             .background(colour)
     )
 }
@@ -261,9 +247,9 @@ private val MonthNames = listOf(
 private val ChartHeight = 180.dp
 private val BarGap = 6.dp
 private val HourBarGap = 2.dp
-private val BarCorner = 4.dp
 private val BarLabelGap = 16.dp
-private val ListGap = 8.dp
+private val MinNumberSize = 40.sp
+private val MaxNumberSize = 120.sp
 private const val QuietBarAlpha = 0.32f
 
 /** A bar with nothing in it is still drawn, so the shape of the year has twelve months in it. */

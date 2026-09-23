@@ -1,6 +1,7 @@
 package com.wander.android.data.replay
 
 import com.wander.android.core.database.dao.HistoryDao
+import com.wander.android.core.database.dao.ReplayRecapDao
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.sources.agro.AgroFeedApi
 import com.wander.android.data.sources.agro.AgroRecap
@@ -9,6 +10,7 @@ import com.wander.android.data.sources.agro.AgroWrapped
 import com.wander.android.data.sources.agro.StatEntry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -30,10 +32,25 @@ internal class ReplayRepository @Inject constructor(
     private val replayApi: AgroReplayApi,
     private val feedApi: AgroFeedApi,
     private val historyDao: HistoryDao,
+    private val recapDao: ReplayRecapDao,
     private val secureStorage: SecureStorage
 ) {
     /** Whether the recap can cover more than this device. */
     val isFleetWide: Boolean get() = secureStorage.agroConfigured.value
+
+    /**
+     * Every year a recap can be asked for, newest first: from the oldest play or saved recap this
+     * device knows of up to the year in progress. The year in progress is included on purpose — it
+     * is not a finished recap, but it is the one worth checking while the year is still running.
+     */
+    suspend fun availableYears(
+        today: LocalDate = LocalDate.now(),
+        zone: ZoneId = ZoneId.systemDefault()
+    ): List<Int> = withContext(Dispatchers.IO) {
+        val oldestPlay = historyDao.earliestPlayAt()?.let { Instant.ofEpochMilli(it).atZone(zone).year }
+        val oldest = listOfNotNull(oldestPlay, recapDao.savedYears().minOrNull(), today.year - 1).min()
+        (today.year downTo oldest).toList()
+    }
 
     suspend fun report(
         year: Int,

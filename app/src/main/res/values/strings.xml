@@ -600,6 +600,18 @@
     <string name="transport_spoken_finding">Looking for a way to play this.</string>
     <!-- Agro Replay -->
     <string name="replay_title">Agro Replay</string>
+    <string name="replay_choose_year">Choose year</string>
+    <string name="replay_pause">Pause story</string>
+    <string name="replay_resume">Resume story</string>
+    <string name="replay_close">Close Replay</string>
+    <string name="replay_share">Share this card</string>
+    <string name="replay_share_chooser">Share your Replay card</string>
+    <string name="replay_share_failed">Could not create the image to share</string>
+    <!-- Printed at the bottom of a shared Replay card. %1$d is the year, %2$s the app name. -->
+    <string name="replay_share_footer">Agro Replay %1$d · %2$s</string>
+    <string name="replay_error_load">That year could not be read</string>
+    <string name="replay_error_save">The recap could not be saved</string>
+    <string name="replay_error_tidy">The tidy-up failed. Nothing was deleted.</string>
     <string name="replay_settings_subtitle">Your listening year, one card at a time</string>
 
     <plurals name="backup_restored_settings">

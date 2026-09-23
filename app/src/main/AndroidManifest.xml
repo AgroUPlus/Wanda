@@ -221,6 +221,20 @@
             tools:node="merge" />
 
         <!-- WorkManager is initialised by WanderApplication so Hilt can inject the worker. -->
+        <!--
+          Hands one Replay card picture to the share sheet. Not exported: access is granted per
+          URI, only to the app the user picks.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.replayshare"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/replay_share_paths" />
+        </provider>
+
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
