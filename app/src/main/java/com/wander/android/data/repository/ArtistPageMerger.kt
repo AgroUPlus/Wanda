@@ -68,7 +68,7 @@ internal object ArtistPageMerger {
         // with no known year sinks to the bottom rather than breaking the sort.
         val mergedAlbums = (albums?.albums.orEmpty() + libraryAlbums)
             .distinctBy { it.id }
-            .sortedByDescending { it.year ?: Int.MIN_VALUE }
+            .newestFirst()
         val albumBucket = when {
             mergedAlbums.isEmpty() -> null
             else -> ArtistAlbumSection(
@@ -79,7 +79,7 @@ internal object ArtistPageMerger {
             )
         }
         val singleBucket = singles?.copy(
-            albums = singles.albums.sortedByDescending { it.year ?: Int.MIN_VALUE }
+            albums = singles.albums.newestFirst()
         )
 
         return ArtistPage(
@@ -108,3 +108,11 @@ internal object ArtistPageMerger {
 
     private fun String.normalised(): String = trim().lowercase()
 }
+
+/**
+ * A discography's order: newest first, the way every streaming app lists one, with records of no
+ * known year at the end rather than breaking the sort. Shared with the artist page's expanded
+ * "See all" shelves, which arrive in whatever order the backend chose.
+ */
+internal fun List<UnifiedAlbum>.newestFirst(): List<UnifiedAlbum> =
+    sortedByDescending { it.year ?: Int.MIN_VALUE }

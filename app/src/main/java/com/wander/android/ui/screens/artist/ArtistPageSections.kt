@@ -1,5 +1,7 @@
 package com.wander.android.ui.screens.artist
 
+import com.wander.android.ui.components.groupedListItem
+import com.wander.android.data.repository.newestFirst
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,11 +12,8 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,6 +26,7 @@ import com.wander.android.data.model.ArtistTrackSection
 import com.wander.android.data.model.RelatedArtist
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.ui.components.SkeletonCard
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.screens.library.AlbumCard
 
@@ -67,6 +67,7 @@ internal fun LazyListScope.artistPageSections(
                 } else {
                     null
                 },
+                actionSelected = showAllSongs,
                 onAction = onToggleShowAllSongs
             )
         }
@@ -83,7 +84,7 @@ internal fun LazyListScope.artistPageSections(
                 track = track,
                 onPlay = { onPlaySong(index) },
                 onLongPress = { onLongPressTrack(track) },
-                modifier = Modifier.animateItem()
+                modifier = Modifier.animateItem().groupedListItem(index, shown.size)
             )
         }
     }
@@ -93,12 +94,12 @@ internal fun LazyListScope.artistPageSections(
 
     if (page.videos.isNotEmpty()) {
         item(key = "videos-title", contentType = SECTION_TITLE) { ArtistSectionTitle("Videos") }
-        items(page.videos, key = { "video-${it.id}" }, contentType = { "track" }) { track ->
+        itemsIndexed(page.videos, key = { _, it -> "video-${it.id}" }, contentType = { _, _ -> "track" }) { index, track ->
             TrackRow(
                 track = track,
                 onPlay = { onPlayTrack(track) },
                 onLongPress = { onLongPressTrack(track) },
-                modifier = Modifier.animateItem()
+                modifier = Modifier.animateItem().groupedListItem(index, page.videos.size)
             )
         }
     }
@@ -115,16 +116,16 @@ internal fun LazyListScope.artistPageSections(
                 AlbumRow(section.albums, onOpenAlbum, onLongPressAlbum)
             }
 
-            is ArtistTrackSection -> items(
+            is ArtistTrackSection -> itemsIndexed(
                 items = section.tracks,
-                key = { "other-${section.title}-${it.id}" },
-                contentType = { "track" }
-            ) { track ->
+                key = { _, it -> "other-${section.title}-${it.id}" },
+                contentType = { _, _ -> "track" }
+            ) { index, track ->
                 TrackRow(
                     track = track,
                     onPlay = { onPlayTrack(track) },
                     onLongPress = { onLongPressTrack(track) },
-                    modifier = Modifier.animateItem()
+                    modifier = Modifier.animateItem().groupedListItem(index, section.tracks.size)
                 )
             }
         }
@@ -163,7 +164,7 @@ private fun LazyListScope.albumShelf(
     onLongPressAlbum: (UnifiedAlbum) -> Unit
 ) {
     if (section == null) return
-    val albums = expandedShelves[section.title] ?: section.albums
+    val albums = expandedShelves[section.title]?.newestFirst() ?: section.albums
     val canExpand = section.moreBrowseId != null && section.title !in expandedShelves
 
     item(key = "$keyPrefix-title", contentType = SECTION_TITLE) {
@@ -175,7 +176,7 @@ private fun LazyListScope.albumShelf(
         )
     }
     item(key = "$keyPrefix-row", contentType = "album-row") {
-        AlbumRow(albums, onOpenAlbum, onLongPressAlbum)
+        AlbumRow(albums, onOpenAlbum, onLongPressAlbum, loadingMore = loadingShelf == section.title)
     }
 }
 
@@ -183,7 +184,9 @@ private fun LazyListScope.albumShelf(
 private fun AlbumRow(
     albums: List<UnifiedAlbum>,
     onOpenAlbum: (String) -> Unit,
-    onLongPressAlbum: (UnifiedAlbum) -> Unit
+    onLongPressAlbum: (UnifiedAlbum) -> Unit,
+    /** The rest of the shelf is on its way: placeholders hold its place at the end of the row. */
+    loadingMore: Boolean = false
 ) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -195,35 +198,17 @@ private fun AlbumRow(
                 index = index,
                 onClick = { onOpenAlbum(album.id) },
                 onLongClick = { onLongPressAlbum(album) },
+                // The artist is the page itself, so the line under each record says when it came
+                // out instead — which is also the order the shelf is in.
+                subtitle = album.year?.toString().orEmpty(),
                 artworkSize = 132.dp,
-                modifier = Modifier.width(148.dp)
+                modifier = Modifier.width(148.dp).animateItem()
             )
         }
-    }
-}
-
-@Composable
-internal fun ArtistSectionTitle(
-    text: String,
-    modifier: Modifier = Modifier,
-    action: String? = null,
-    isBusy: Boolean = false,
-    onAction: () -> Unit = {}
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 2.dp)
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.weight(1f)
-        )
-        when {
-            isBusy -> LoadingIndicator(modifier = Modifier.padding(horizontal = 12.dp))
-            action != null -> TextButton(onClick = onAction, shapes = ButtonDefaults.shapes()) { Text(action) }
+        if (loadingMore) {
+            items(count = 3, key = { "album-skeleton-$it" }, contentType = { "skeleton" }) {
+                SkeletonCard(modifier = Modifier.width(148.dp).animateItem())
+            }
         }
     }
 }
