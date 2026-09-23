@@ -94,7 +94,7 @@
       why this doesn't block the system's real widget-update broadcast.
     -->
     <permission
-        android:name="com.wander.android.permission.RECEIVE_WIDGET_UPDATE"
+        android:name="${applicationId}.permission.RECEIVE_WIDGET_UPDATE"
         android:protectionLevel="signature" />
 
     <!--
@@ -250,7 +250,7 @@
         <receiver
             android:name=".ui.widget.NowPlayingWidgetReceiver"
             android:exported="true"
-            android:permission="com.wander.android.permission.RECEIVE_WIDGET_UPDATE"
+            android:permission="${applicationId}.permission.RECEIVE_WIDGET_UPDATE"
             android:label="@string/widget_now_playing_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
