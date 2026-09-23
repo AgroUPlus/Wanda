@@ -46,17 +46,22 @@ internal fun Modifier.replayCapture(
     background: () -> Color,
     content: () -> Color
 ): Modifier = drawWithContent {
+    // Both resolved out here, against this scope, and not inside `record`. While a layer is
+    // recording, the scope handed to the block reports its density by asking the scope that
+    // started the recording, which asks it back: a `Dp` converted in there recurses until the
+    // stack is gone. Everything below is either already in pixels or does not need a density.
+    val footerBottom = FooterBottom.toPx()
+    val text = measurer.measure(footer, style.copy(color = content().copy(alpha = FooterAlpha)))
     layer.record {
         // The flat colour belongs to the scaffold, not the card, so it is painted in here or
         // the picture would come out with a transparent background.
         drawRect(background())
         this@drawWithContent.drawContent()
-        val text = measurer.measure(footer, style.copy(color = content().copy(alpha = FooterAlpha)))
         drawText(
             textLayoutResult = text,
             topLeft = Offset(
                 x = (size.width - text.size.width) / 2f,
-                y = size.height - text.size.height - FooterBottom.toPx()
+                y = size.height - text.size.height - footerBottom
             )
         )
     }
