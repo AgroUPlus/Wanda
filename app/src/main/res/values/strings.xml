@@ -156,6 +156,7 @@
     <string name="artist_none_connected_sources_has_anything">None of your connected sources has anything by this artist.</string>
     <string name="artist_start_radio">Start radio</string>
     <string name="artist_top_songs">Top songs</string>
+    <string name="artist_episodes">Episodes</string>
 
     <!-- Home -->
     <string name="home_connect_navidrome_youtube_music_settings">Connect Navidrome or YouTube Music in Settings, or grant access to music stored on this device.</string>

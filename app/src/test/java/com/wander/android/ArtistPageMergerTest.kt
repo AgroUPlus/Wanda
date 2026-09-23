@@ -17,14 +17,43 @@ class ArtistPageMergerTest {
     private fun track(
         source: SourceType,
         title: String,
-        durationMs: Long = 200_000L
+        durationMs: Long = 200_000L,
+        isEpisode: Boolean = false
     ) = UnifiedTrack(
         id = "${source.idPrefix}${title.hashCode()}",
         source = source,
         title = title,
         artist = "Mahito Yokota",
-        durationMs = durationMs
+        durationMs = durationMs,
+        isEpisode = isEpisode
     )
+
+    @Test
+    fun `episodes get their own bucket and never count as top songs`() {
+        val page = ArtistPageMerger.merge(
+            details = null,
+            libraryAlbums = emptyList(),
+            libraryTracks = listOf(
+                track(SourceType.YTMUSIC, "Episode 12", durationMs = 3_600_000L, isEpisode = true),
+                track(SourceType.YTMUSIC, "Gusty Garden")
+            )
+        )
+
+        assertEquals(listOf("Gusty Garden"), page.topSongs.map { it.title })
+        assertEquals(listOf("Episode 12"), page.episodes.map { it.title })
+    }
+
+    @Test
+    fun `a podcast-only creator still has a page`() {
+        val page = ArtistPageMerger.merge(
+            details = null,
+            libraryAlbums = emptyList(),
+            libraryTracks = listOf(track(SourceType.YTMUSIC, "Episode 1", isEpisode = true))
+        )
+
+        assertTrue(page.topSongs.isEmpty())
+        assertTrue(!page.isEmpty)
+    }
 
     private fun album(id: String, title: String, year: Int? = null) = UnifiedAlbum(
         id = id,

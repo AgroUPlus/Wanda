@@ -20,6 +20,12 @@ data class ArtistPage(
     val imageUrl: String? = null,
     /** The songs shelf merged with everything the library knows by this artist, deduplicated. */
     val topSongs: List<UnifiedTrack> = emptyList(),
+    /**
+     * Podcast episodes by this name, kept out of [topSongs]: a creator who makes both should not
+     * have their episodes played as the artist's "top songs", and one who only makes podcasts
+     * still gets a page.
+     */
+    val episodes: List<UnifiedTrack> = emptyList(),
     val albums: ArtistAlbumSection? = null,
     val singles: ArtistAlbumSection? = null,
     val videos: List<UnifiedTrack> = emptyList(),
@@ -28,7 +34,7 @@ data class ArtistPage(
     val otherShelves: List<ArtistSection> = emptyList()
 ) {
     val isEmpty: Boolean
-        get() = topSongs.isEmpty() && albums == null && singles == null &&
+        get() = topSongs.isEmpty() && episodes.isEmpty() && albums == null && singles == null &&
             videos.isEmpty() && related.isEmpty() && otherShelves.isEmpty()
 }
 
