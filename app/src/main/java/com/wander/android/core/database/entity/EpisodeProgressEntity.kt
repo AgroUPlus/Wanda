@@ -12,7 +12,7 @@ import androidx.room.PrimaryKey
  * unusable for spoken audio.
  *
  * [durationMs] is kept alongside the position so "how near the end is this" can be answered
- * without the track being to hand, which is what [EpisodeProgress.isFinished] needs.
+ * without the track being to hand, which is what [com.wander.android.data.repository.EpisodeProgressRepository.stateOf] needs.
  */
 @Entity(tableName = "episode_progress")
 data class EpisodeProgressEntity(

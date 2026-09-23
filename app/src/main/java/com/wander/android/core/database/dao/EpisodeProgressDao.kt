@@ -5,9 +5,36 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.wander.android.core.database.entity.EpisodeProgressEntity
+import com.wander.android.core.database.entity.TrackEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface EpisodeProgressDao {
+
+    @Query("SELECT * FROM episode_progress")
+    suspend fun getAll(): List<EpisodeProgressEntity>
+
+    @Query("SELECT * FROM episode_progress")
+    fun observeAll(): Flow<List<EpisodeProgressEntity>>
+
+    /**
+     * Episodes the listener actually engaged with — liked, saved, played, or partly heard — most
+     * recent first.
+     *
+     * Every episode search hit is persisted too, so filtering on `isEpisode` alone would fill the
+     * Podcasts tab with things merely scrolled past.
+     */
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE isEpisode = 1 AND (
+            isLiked = 1 OR isLibrary = 1 OR playCount > 0
+            OR id IN (SELECT trackId FROM episode_progress)
+        )
+        ORDER BY COALESCE(lastPlayedTimestamp, addedTimestamp) DESC
+        """
+    )
+    fun observeEngagedEpisodes(): Flow<List<TrackEntity>>
 
     @Query("SELECT * FROM episode_progress WHERE trackId = :trackId")
     suspend fun get(trackId: String): EpisodeProgressEntity?

@@ -7,6 +7,8 @@ import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.SmartMix
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.R
+import com.wander.android.data.repository.EpisodeProgressRepository
 import com.wander.android.data.repository.HomeShelfRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.ShareRepository
@@ -21,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -35,7 +38,9 @@ class HomeViewModel @Inject constructor(
     private val shareRepository: ShareRepository,
     private val smartMixRepository: SmartMixRepository,
     private val playerConnection: PlayerConnection,
-    private val playbackCoordinator: PlaybackCoordinator
+    private val playbackCoordinator: PlaybackCoordinator,
+    episodeProgress: EpisodeProgressRepository,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -47,6 +52,18 @@ class HomeViewModel @Inject constructor(
      */
     private val likedTrackIds: StateFlow<Set<String>> = musicRepository.getLikedTrackIdsFlow()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+
+    /**
+     * Episodes started and not finished. Held eagerly so [refresh], which rebuilds Home from
+     * scratch, can put the shelf straight back instead of waiting for Room to change again.
+     */
+    private val continueListening: StateFlow<HomeSection> = combine(
+        episodeProgress.inProgress,
+        episodeProgress.fractions
+    ) { tracks, fractions ->
+        shelf(SectionContinueListening, context.getString(R.string.home_your_episodes), HomeSectionStyle.TRACK_CAROUSEL, tracks.take(CarouselSize))
+            .copy(progress = fractions)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, HomeSection(SectionContinueListening, "", HomeSectionStyle.TRACK_CAROUSEL))
 
     init {
         refresh()
@@ -72,6 +89,11 @@ class HomeViewModel @Inject constructor(
      * rather than waiting for the next [refresh] — previously a like never showed up on Home.
      */
     private fun observeLibrary() {
+        viewModelScope.launch {
+            continueListening.collect { shelf ->
+                _uiState.update { it.copy(allSections = it.allSections.withSection(shelf)) }
+            }
+        }
         viewModelScope.launch {
             musicRepository.getLikedTracksFlow().collect { liked ->
                 _uiState.update { state ->
@@ -114,6 +136,7 @@ class HomeViewModel @Inject constructor(
                     // The lead shelf earns legible full-width rows; the second earns big
                     // artwork. The rest stay carousels, so the top of Home has a shape to it.
                     add(shelf(SectionOnRepeat, "Quick picks", HomeSectionStyle.TRACK_PAGER, onRepeat.await()))
+                    add(continueListening.value)
                     add(shelf(SectionJumpBackIn, "Keep listening", HomeSectionStyle.LARGE_GRID, jumpBackIn.await()))
                     add(carousel(SectionRecentlyPlayed, "Recently Played", recentlyPlayed.await()))
                     add(shelf(SectionLiked, "Your Favourites", HomeSectionStyle.OVERLAPPING_STACK, liked.await()))
@@ -260,30 +283,5 @@ class HomeViewModel @Inject constructor(
         in 5..11 -> "Good morning"
         in 12..17 -> "Good afternoon"
         else -> "Good evening"
-    }
-
-    private companion object {
-        const val CarouselSize = 12
-        const val ListSize = 20
-
-        const val SectionOnRepeat = "on_repeat"
-        const val SectionMixes = "mixes"
-        const val SectionJumpBackIn = "jump_back_in"
-        const val SectionRecentlyPlayed = "recently_played"
-        const val SectionLiked = "liked"
-        const val SectionDiscover = "discover"
-        const val SectionBecause = "because_you_listened"
-        const val SectionRecentAdded = "recent_added"
-
-        /** Per-source shelves are unlisted, so they sort after these and before the closing list. */
-        val SectionOrder = listOf(
-            SectionOnRepeat,
-            SectionMixes,
-            SectionJumpBackIn,
-            SectionRecentlyPlayed,
-            SectionLiked,
-            SectionBecause,
-            SectionDiscover
-        )
     }
 }

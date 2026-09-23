@@ -6,10 +6,12 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,7 +46,9 @@ fun HorizontalTrackCard(
     /** Long press, for the track actions sheet. Matches [com.wander.android.ui.components.TrackRow]. */
     onLongPress: (() -> Unit)? = null,
     /** Whether tapping would play anything. Defaults to the offline rule, as `TrackRow` does. */
-    enabled: Boolean = track.isPlayableNow()
+    enabled: Boolean = track.isPlayableNow(),
+    /** How much of an episode has been heard, 0..1. Null for anything that is not resumable. */
+    progress: Float? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -73,6 +77,13 @@ fun HorizontalTrackCard(
             shape = artworkShape,
             modifier = Modifier.size(140.dp)
         )
+
+        if (progress != null) {
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+            )
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 

@@ -31,21 +31,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/**
- * The library's tabs.
- *
- * History is deliberately not among them. It is not a *collection* — it is a log, it is never
- * curated, and it was costing a sixth of a tab row that was already clipping its labels. It lives
- * behind an icon in the header instead, the way Settings does on Home.
- */
-enum class LibraryTab(val label: String) {
-    TRACKS("Tracks"),
-    LIKED("Liked"),
-    ALBUMS("Albums"),
-    PLAYLISTS("Playlists"),
-    DOWNLOADS("Offline")
-}
-
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class LibraryViewModel @Inject constructor(

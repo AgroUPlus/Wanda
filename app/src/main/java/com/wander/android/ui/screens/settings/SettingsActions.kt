@@ -46,6 +46,7 @@ internal data class SettingsActions(
     // Playback and storage
     val onOfflineChange: (Boolean) -> Unit,
     val onPreloadNextChange: (Boolean) -> Unit,
+    val onSkipSilenceChange: (Boolean) -> Unit,
     val onIndexOnMobileDataChange: (Boolean) -> Unit,
     val onMeasuringPausedChange: (Boolean) -> Unit,
     val onDownloadingPausedChange: (Boolean) -> Unit,

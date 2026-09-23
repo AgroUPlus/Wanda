@@ -59,7 +59,9 @@ internal object ArtistPageMerger {
         // from the lowest-priority source — your own files and your own server before anything
         // streamed — so ordering the inputs this way sets the *sequence* while leaving the choice
         // of which copy survives to the same rule the rest of the app uses.
-        val topSongs = TrackDeduplicator.deduplicate(shelfSongs + libraryTracks)
+        // Episodes never count as songs, wherever they came from: they get their own bucket.
+        val (episodes, topSongs) = TrackDeduplicator.deduplicate(shelfSongs + libraryTracks)
+            .partition(UnifiedTrack::isEpisode)
 
         // Library records join the Albums bucket, since there is nothing on them saying whether
         // they are an album or a single. When the backend gave no albums shelf at all, they become
@@ -86,6 +88,7 @@ internal object ArtistPageMerger {
             bio = details?.bio,
             imageUrl = details?.imageUrl,
             topSongs = topSongs,
+            episodes = episodes,
             albums = albumBucket,
             singles = singleBucket,
             videos = videos.distinctBy { it.id },

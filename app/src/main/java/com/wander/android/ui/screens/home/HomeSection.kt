@@ -36,7 +36,9 @@ data class HomeSection(
     val title: String,
     val style: HomeSectionStyle,
     val tracks: List<UnifiedTrack> = emptyList(),
-    val mixes: List<SmartMix> = emptyList()
+    val mixes: List<SmartMix> = emptyList(),
+    /** How far into each track the listener got, 0..1, by track id. Only episodes ever have one. */
+    val progress: Map<String, Float> = emptyMap()
 ) {
     val isEmpty: Boolean get() = tracks.isEmpty() && mixes.isEmpty()
 }

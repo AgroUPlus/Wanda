@@ -52,6 +52,7 @@ class PlaybackService : MediaSessionService() {
         player.addListener(PlayCountRecorder(player))
         player.addListener(AgroHandoffReporter(player))
         player.addListener(NextTrackPreloader(player))
+        EpisodeSkipSilence(player, secureStorage.isSkipSilenceEnabled, scope)
         player.addAnalyticsListener(AudioFormatReporter())
         player.addListener(com.wander.android.ui.widget.PlaybackWidgetUpdater(applicationContext, scope))
 

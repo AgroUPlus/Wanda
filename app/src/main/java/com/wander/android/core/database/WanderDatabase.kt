@@ -60,7 +60,7 @@ import com.wander.android.core.database.converter.SourceTypeConverter
         com.wander.android.core.database.entity.EpisodeProgressEntity::class,
         com.wander.android.core.database.entity.ReplayRecapEntity::class
     ],
-    version = 35,
+    version = 36,
     exportSchema = true
 )
 @TypeConverters(SourceTypeConverter::class)

@@ -8,6 +8,7 @@ import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.MobiledataOff
 import androidx.compose.material.icons.rounded.Radar
+import androidx.compose.material.icons.rounded.Podcasts
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -46,6 +47,16 @@ internal fun LazyListScope.playbackStorageTab(
                         checked = state.preloadNext,
                         onCheckedChange = actions.onPreloadNextChange,
                         icon = Icons.Rounded.Speed
+                    )
+                },
+                {
+                    SettingsToggle(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(2)),
+                        title = stringResource(R.string.settings_skip_silence),
+                        subtitle = stringResource(R.string.settings_skip_silence_summary),
+                        checked = state.skipSilence,
+                        onCheckedChange = actions.onSkipSilenceChange,
+                        icon = Icons.Rounded.Podcasts
                     )
                 }
             )

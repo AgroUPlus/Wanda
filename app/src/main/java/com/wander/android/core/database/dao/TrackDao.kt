@@ -33,11 +33,14 @@ interface TrackDao {
      * play count ticking over no longer costs a full re-read and a full re-map of the library. The
      * flow above did exactly that on every single write to `tracks` — likes, play counts, a sync —
      * and at a thousand rows it is what made scrolling stutter.
+     *
+     * `isEpisode = 0` here and on every query that feeds a music shelf, mix or radio pool: podcast
+     * episodes live only in their own tab and shelf (see `EpisodeProgressDao`), never among songs.
      */
-    @Query("SELECT * FROM tracks WHERE isLibrary = 1 ORDER BY title ASC")
+    @Query("SELECT * FROM tracks WHERE isLibrary = 1 AND isEpisode = 0 ORDER BY title ASC")
     fun pagedTracks(): PagingSource<Int, TrackEntity>
 
-    @Query("SELECT * FROM tracks WHERE isLibrary = 1 AND source = :source ORDER BY title ASC")
+    @Query("SELECT * FROM tracks WHERE isLibrary = 1 AND isEpisode = 0 AND source = :source ORDER BY title ASC")
     fun pagedTracksBySource(source: SourceType): PagingSource<Int, TrackEntity>
 
     /**
@@ -48,10 +51,10 @@ interface TrackDao {
      * the queue is built from ids and loading a thousand full rows to find a position would put
      * back the cost paging just removed.
      */
-    @Query("SELECT id FROM tracks WHERE isLibrary = 1 ORDER BY title ASC")
+    @Query("SELECT id FROM tracks WHERE isLibrary = 1 AND isEpisode = 0 ORDER BY title ASC")
     suspend fun libraryTrackIds(): List<String>
 
-    @Query("SELECT id FROM tracks WHERE isLibrary = 1 AND source = :source ORDER BY title ASC")
+    @Query("SELECT id FROM tracks WHERE isLibrary = 1 AND isEpisode = 0 AND source = :source ORDER BY title ASC")
     suspend fun libraryTrackIdsBySource(source: SourceType): List<String>
 
     /**
@@ -67,7 +70,7 @@ interface TrackDao {
     @Query("SELECT * FROM tracks WHERE isLibrary = 1 AND source = :source ORDER BY title ASC")
     fun getTracksBySourceFlow(source: SourceType): Flow<List<TrackEntity>>
 
-    @Query("SELECT * FROM tracks WHERE isLiked = 1 ORDER BY lastPlayedTimestamp DESC")
+    @Query("SELECT * FROM tracks WHERE isLiked = 1 AND isEpisode = 0 ORDER BY lastPlayedTimestamp DESC")
     fun getLikedTracksFlow(): Flow<List<TrackEntity>>
 
     /**
@@ -78,7 +81,7 @@ interface TrackDao {
     @Query("SELECT id FROM tracks WHERE isLiked = 1")
     fun getLikedTrackIdsFlow(): Flow<List<String>>
 
-    @Query("SELECT * FROM tracks WHERE isDownloaded = 1 AND source != 'LOCAL' ORDER BY title ASC")
+    @Query("SELECT * FROM tracks WHERE isDownloaded = 1 AND isEpisode = 0 AND source != 'LOCAL' ORDER BY title ASC")
     fun getDownloadedTracksFlow(): Flow<List<TrackEntity>>
 
     /** One-shot version of [getDownloadedTracksFlow], for a report that runs once rather than watches. */
@@ -174,10 +177,10 @@ interface TrackDao {
     )
     suspend fun searchTracksInSource(source: SourceType, query: String, limit: Int = 50): List<TrackEntity>
 
-    @Query("SELECT * FROM tracks WHERE source = :source ORDER BY RANDOM() LIMIT :limit")
+    @Query("SELECT * FROM tracks WHERE source = :source AND isEpisode = 0 ORDER BY RANDOM() LIMIT :limit")
     suspend fun getRandomTracksInSource(source: SourceType, limit: Int): List<TrackEntity>
 
-    @Query("SELECT * FROM tracks WHERE source = :source ORDER BY addedTimestamp DESC LIMIT :limit")
+    @Query("SELECT * FROM tracks WHERE source = :source AND isEpisode = 0 ORDER BY addedTimestamp DESC LIMIT :limit")
     suspend fun getRecentlyAddedInSource(source: SourceType, limit: Int): List<TrackEntity>
 
     @Query("SELECT * FROM tracks ORDER BY addedTimestamp DESC LIMIT :limit")
@@ -213,13 +216,13 @@ interface TrackDao {
     )
     fun observeRecentlyAddedAlbumIds(limit: Int = 12): Flow<List<String>>
 
-    @Query("SELECT * FROM tracks WHERE lastPlayedTimestamp IS NOT NULL ORDER BY lastPlayedTimestamp DESC LIMIT :limit")
+    @Query("SELECT * FROM tracks WHERE lastPlayedTimestamp IS NOT NULL AND isEpisode = 0 ORDER BY lastPlayedTimestamp DESC LIMIT :limit")
     suspend fun getRecentlyPlayedTracks(limit: Int = 30): List<TrackEntity>
 
-    @Query("SELECT * FROM tracks WHERE isLiked = 1 ORDER BY lastPlayedTimestamp DESC, addedTimestamp DESC LIMIT :limit")
+    @Query("SELECT * FROM tracks WHERE isLiked = 1 AND isEpisode = 0 ORDER BY lastPlayedTimestamp DESC, addedTimestamp DESC LIMIT :limit")
     suspend fun getLikedTracksList(limit: Int = 30): List<TrackEntity>
 
-    @Query("SELECT * FROM tracks WHERE playCount > 0 ORDER BY playCount DESC LIMIT :limit")
+    @Query("SELECT * FROM tracks WHERE playCount > 0 AND isEpisode = 0 ORDER BY playCount DESC LIMIT :limit")
     suspend fun getTopPlayedTracks(limit: Int = 30): List<TrackEntity>
 
     /**
@@ -229,7 +232,7 @@ interface TrackDao {
      * twice can sit far down a list ordered by row — taking the top N rows first and grouping
      * afterwards would drop exactly the small contributions that make a total large.
      */
-    @Query("SELECT * FROM tracks WHERE playCount > 0")
+    @Query("SELECT * FROM tracks WHERE playCount > 0 AND isEpisode = 0")
     suspend fun getPlayedTracksOnce(): List<TrackEntity>
 
     /** Well-loved tracks the user has not returned to lately — the "forgotten favourites" mix. */
@@ -244,7 +247,7 @@ interface TrackDao {
     )
     suspend fun getForgottenFavorites(thresholdTimestamp: Long, limit: Int = 30): List<TrackEntity>
 
-    @Query("SELECT * FROM tracks WHERE playCount = 0 ORDER BY addedTimestamp DESC LIMIT :limit")
+    @Query("SELECT * FROM tracks WHERE playCount = 0 AND isEpisode = 0 ORDER BY addedTimestamp DESC LIMIT :limit")
     suspend fun getNeverPlayedTracks(limit: Int = 30): List<TrackEntity>
 
     @Query("SELECT * FROM tracks WHERE isLiked = 1 AND isDownloaded = 0 AND source != 'LOCAL' LIMIT :limit")
@@ -270,8 +273,14 @@ interface TrackDao {
         val existing = storable.filterIndexed { index, _ -> rowIds[index] == CONFLICT_ROW_ID }
         if (existing.isNotEmpty()) {
             updateSourceFields(existing.map { it.toSourceFields() })
+            // Not a source field: a later music search returning the same id must not demote an
+            // episode, so the flag only ever gets set here, never cleared.
+            existing.filter { it.isEpisode }.map { it.id }.takeIf { it.isNotEmpty() }?.let { markAsEpisodes(it) }
         }
     }
+
+    @Query("UPDATE tracks SET isEpisode = 1 WHERE id IN (:trackIds)")
+    suspend fun markAsEpisodes(trackIds: List<String>)
 
     /**
      * Deletes rows that should never have been written — see [upsertTracks].

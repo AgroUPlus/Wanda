@@ -117,6 +117,7 @@ internal fun rememberSettingsHost(
             },
             onOfflineChange = viewModel::setOfflineMode,
             onPreloadNextChange = viewModel::setPreloadNextEnabled,
+            onSkipSilenceChange = viewModel::setSkipSilenceEnabled,
             onIndexOnMobileDataChange = viewModel::setIndexOnMobileDataEnabled,
             onMeasuringPausedChange = viewModel::setMeasuringPaused,
             onDownloadingPausedChange = viewModel::setDownloadingPaused,

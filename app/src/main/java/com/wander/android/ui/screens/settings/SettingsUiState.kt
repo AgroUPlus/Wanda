@@ -36,6 +36,7 @@ internal data class SettingsUiState(
     val languageTag: String,
     val offline: Boolean,
     val preloadNext: Boolean,
+    val skipSilence: Boolean,
     val indexOnMobileData: Boolean,
     val measuringPaused: Boolean,
     val downloadingPaused: Boolean,
@@ -104,6 +105,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val languageTag = viewModel.languageTag
     val offline by viewModel.isOfflineMode.collectAsStateWithLifecycle()
     val preloadNext by viewModel.isPreloadNextEnabled.collectAsStateWithLifecycle()
+    val skipSilence by viewModel.isSkipSilenceEnabled.collectAsStateWithLifecycle()
     val indexOnMobileData by viewModel.isIndexOnMobileDataEnabled.collectAsStateWithLifecycle()
     val measuringPaused by viewModel.isMeasuringPaused.collectAsStateWithLifecycle()
     val downloadingPaused by viewModel.isDownloadingPaused.collectAsStateWithLifecycle()
@@ -154,6 +156,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         languageTag = languageTag,
         offline = offline,
         preloadNext = preloadNext,
+        skipSilence = skipSilence,
         indexOnMobileData = indexOnMobileData,
         measuringPaused = measuringPaused,
         downloadingPaused = downloadingPaused,
