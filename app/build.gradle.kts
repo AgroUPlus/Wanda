@@ -90,7 +90,22 @@ android {
             applicationIdSuffix = ".debug"
             isDebuggable = true
         }
+        // Release's speed on the debug app's identity. A debuggable build runs with ART's
+        // optimisations off and without R8, which is most of why Compose animations stutter
+        // there; this one is optimised like release but signed with the debug key and installed
+        // as `.debug`, so it updates the debug app in place and keeps its data. It is not
+        // debuggable and `BuildConfig.DEBUG` is false, so breakpoints and debug-only dumps are
+        // off — switch back to `debug` for those.
+        create("fastDebug") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
+
+    // The debug icon, ribbon and app name, so the two debug-identity builds look alike.
+    sourceSets.getByName("fastDebug").res.srcDir("src/debug/res")
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
