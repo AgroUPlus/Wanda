@@ -11,7 +11,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.ui.components.GroupedItemGap
 import com.wander.android.ui.components.TrackRow
+import com.wander.android.ui.components.groupedListItem
 
 /** How many rows one page of a [HomeSectionStyle.TRACK_PAGER] shelf holds. */
 const val RowsPerPage = 4
@@ -36,12 +38,14 @@ internal fun TrackPagerShelf(
         state = pagerState,
         // The peek is the whole point of paging rather than listing: a hard edge at the screen
         // boundary reads as the end of the shelf.
-        contentPadding = PaddingValues(horizontal = 12.dp),
+        // 16.dp matches the inset every other grouped list sits at.
+        contentPadding = PaddingValues(horizontal = 16.dp),
         pageSpacing = 8.dp,
         modifier = modifier.fillMaxWidth()
     ) { page ->
         val first = page * RowsPerPage
         val last = minOf(first + RowsPerPage, tracks.size)
+        val count = last - first
 
         Column(modifier = Modifier.fillMaxWidth()) {
             for (index in first until last) {
@@ -49,13 +53,15 @@ internal fun TrackPagerShelf(
                 TrackRow(
                     track = track,
                     onPlay = { onPlay(index) },
-                    onLongPress = { onLongPress(track) }
+                    onLongPress = { onLongPress(track) },
+                    // Each page is its own group; the pager already supplies the side inset.
+                    modifier = Modifier.groupedListItem(index - first, count, horizontalInset = 0.dp)
                 )
             }
             // A short final page would otherwise shrink the pager's height as you reach it,
             // dragging the rest of Home up under your thumb mid-swipe.
-            repeat(RowsPerPage - (last - first)) {
-                Spacer(modifier = Modifier.height(TrackRowHeight))
+            repeat(RowsPerPage - count) {
+                Spacer(modifier = Modifier.height(TrackRowHeight + GroupedItemGap))
             }
         }
     }
