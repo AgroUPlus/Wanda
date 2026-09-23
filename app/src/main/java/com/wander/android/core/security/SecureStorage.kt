@@ -31,6 +31,10 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     private val _isPreloadNextEnabled = MutableStateFlow(prefs.getBoolean(KEY_PRELOAD_NEXT, true))
     val isPreloadNextEnabled: StateFlow<Boolean> = _isPreloadNextEnabled.asStateFlow()
 
+    /** Whether pauses are trimmed out of podcast episodes. Never applied to music — see `PlaybackService`. */
+    private val _isSkipSilenceEnabled = MutableStateFlow(prefs.getBoolean(KEY_SKIP_SILENCE, false))
+    val isSkipSilenceEnabled: StateFlow<Boolean> = _isSkipSilenceEnabled.asStateFlow()
+
     /**
      * Whether the fingerprint indexer may work over mobile data.
      *
@@ -271,6 +275,11 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _isPreloadNextEnabled.value = enabled
     }
 
+    fun setSkipSilenceEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_SKIP_SILENCE, enabled) }
+        _isSkipSilenceEnabled.value = enabled
+    }
+
     /**
      * Whether a long-running job is suspended, keyed by `WorkProgressNotification.Kind.name`.
      *
@@ -461,6 +470,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         }
         _isOfflineMode.value = false
         _isPreloadNextEnabled.value = true
+        _isSkipSilenceEnabled.value = false
         _isIndexOnMobileDataEnabled.value = false
         _isRadioMode.value = true
         _navidromeConfigured.value = false
@@ -727,6 +737,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_AGRO_PROXY_ENABLED = "key_agro_proxy_enabled"
         private const val KEY_OFFLINE_MODE = "key_offline_mode"
         private const val KEY_PRELOAD_NEXT = "key_preload_next"
+        private const val KEY_SKIP_SILENCE = "key_skip_silence"
         private const val KEY_INDEX_ON_MOBILE_DATA = "key_index_on_mobile_data"
         private const val KEY_RADIO_MODE = "key_radio_mode"
         private const val KEY_AMOLED_BLACK = "key_amoled_black"

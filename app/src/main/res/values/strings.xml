@@ -760,4 +760,8 @@
     <string name="podcasts_empty_message">Search with the Podcasts filter and play an episode to keep it here.</string>
     <string name="podcasts_filter_empty">No episodes match this filter.</string>
     <string name="podcasts_unplayed">Unplayed</string>
+
+    <!-- Episode playback -->
+    <string name="settings_skip_silence">Skip silence in podcasts</string>
+    <string name="settings_skip_silence_summary">Trims pauses between speakers. Music is never affected.</string>
 </resources>

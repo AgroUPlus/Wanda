@@ -132,6 +132,8 @@ internal class SettingsViewModel @Inject constructor(
 
     val isPreloadNextEnabled: StateFlow<Boolean> = secureStorage.isPreloadNextEnabled
 
+    val isSkipSilenceEnabled: StateFlow<Boolean> = secureStorage.isSkipSilenceEnabled
+
     val isIndexOnMobileDataEnabled: StateFlow<Boolean> = secureStorage.isIndexOnMobileDataEnabled
 
     val isMeasuringPaused: StateFlow<Boolean> =
@@ -488,6 +490,8 @@ internal class SettingsViewModel @Inject constructor(
     fun setOfflineMode(enabled: Boolean) = secureStorage.setOfflineMode(enabled)
 
     fun setPreloadNextEnabled(enabled: Boolean) = secureStorage.setPreloadNextEnabled(enabled)
+
+    fun setSkipSilenceEnabled(enabled: Boolean) = secureStorage.setSkipSilenceEnabled(enabled)
 
     /**
      * Turning this on re-enqueues, so the change takes effect now rather than at the next launch.
