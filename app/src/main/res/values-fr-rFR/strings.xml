@@ -19,12 +19,12 @@
     <string name="action_queue">Queue</string>
     <string name="action_clear_queue">Vider la file</string>
     <string name="action_play_next">Jouer après</string>
-    <string name="action_add_to_queue">Ajouter à la file</string>
+    <string name="action_add_to_queue">Add to queue</string>
     <string name="action_remove_from_queue">Retirer de la file</string>
     <string name="action_add_to_playlist">Ajouter à une playlist</string>
     <string name="action_radio_mode">Mode radio</string>
     <string name="action_radio_mode_active">Mode radio (actif)</string>
-    <string name="menu_like">J\'aime</string>
+    <string name="menu_like">Like</string>
     <string name="menu_radio">Radio</string>
     <string name="action_start_radio">Démarrer le mode radio</string>
     <string name="action_speed_and_pitch">Vitesse &amp; hauteur</string>
@@ -147,6 +147,7 @@
     <!-- Home -->
     <string name="home_connect_navidrome_youtube_music_settings">Connecter Navidrome ou YouTube Music dans les paramètres, ou donner l\'accès aux musiques sur cet appareil.</string>
     <string name="home_nothing_here_yet">Rien ici pour l\'instant</string>
+    <string name="home_quick_picks_subtitle">For you, today</string>
     <string name="home_nothing_play_yet">Rien à jouer pour l\'instant</string>
     <string name="home_sessions_other_devices">Sessions sur d\'autres appareils</string>
     <!-- Importer -->
@@ -205,10 +206,12 @@
     <string name="player_device">Sur cet appareil</string>
     <string name="player_looking_other_sources">Recherche dans vos autres sources...</string>
     <string name="player_lyrics">Paroles</string>
+    <string name="player_minimize">Minimize player</string>
     <string name="player_more_options">Plus d\'options</string>
     <string name="player_only_copy_sources_have">Ceci est l\'unique copie que vos sources détiennent.</string>
     <string name="player_play_from">Jouer depuis</string>
     <string name="player_playing_from_here">Jouer depuis ici</string>
+    <string name="player_queue">Queue</string>
     <string name="player_static">Statique</string>
     <string name="player_synced">Synchronisé</string>
     <!-- Playlists -->
@@ -347,8 +350,8 @@
     <string name="settings_true_black">Noir OLED</string>
     <string name="settings_two_do_not_match">Les deux ne correspondent pas</string>
     <string name="settings_unlit_pixels_oled_screens_use">Éteint les pixels noirs pour économiser de la batterie</string>
-    <string name="settings_back_blur">Flou derrière le geste retour</string>
-    <string name="settings_back_blur_subtitle">Adoucit ce que révèle le geste retour, de plus en plus net à mesure que vous tirez</string>
+    <string name="settings_back_blur">Blur behind back gestures</string>
+    <string name="settings_back_blur_subtitle">Soften what a back swipe reveals, sharpening as you pull</string>
     <string name="settings_unpair">Désappareiller</string>
     <string name="settings_unpair_from_agro">Désappareiller d\'Agro ?</string>
     <string name="settings_use_default">Utiliser les valeurs par défaut</string>
@@ -515,6 +518,14 @@
     <string name="welcome_gesture_detail_tap_again_bring_artwork_back">Cliquer à nouveau pour rafficher la pochette.</string>
     <string name="welcome_gesture_detail_left_next_track_right_previous">Gauche pour la prochaine piste, droite pour la précédente.</string>
     <string name="welcome_gesture_detail_player_shrinks_strip_above_tabs">Le lecteur se réduit à la bande située au-dessus des onglets et continue la lecture.</string>
+    <!-- Fake track/lyrics content for the gestures step's illustration — never real user data -->
+    <string name="welcome_gesture_mock_track_title">Golden Hour</string>
+    <string name="welcome_gesture_mock_track_artist">Reverie</string>
+    <string name="welcome_gesture_mock_track_title_alt">Night Drive</string>
+    <string name="welcome_gesture_mock_track_artist_alt">Faye Lin</string>
+    <string name="welcome_gesture_mock_lyric_line_1">Chasing shadows down the coast</string>
+    <string name="welcome_gesture_mock_lyric_line_2">Every mile a little slower</string>
+    <string name="welcome_gesture_mock_lyric_line_3">Golden hour, hold it close</string>
     <string name="settings_category_connections">Connexions</string>
     <string name="settings_category_sync">Synchronisation</string>
     <string name="settings_category_look_feel">Visuels et ressenti</string>
@@ -555,10 +566,126 @@
     <string name="transport_spoken_offgrid">Streamé de téléphone à téléphone via un lien radio direct, aucun réseau impliqué, chiffré.</string>
     <string name="transport_spoken_relay">Streamé depuis votre serveur Agro, chiffré de bout en bout. Le serveur n\'y voit rien.</string>
     <string name="transport_spoken_finding">Recherche de la source optimale.</string>
-
+    <!-- Agro Replay -->
+    <string name="replay_title">Agro Replay</string>
+    <string name="replay_settings_subtitle">Your listening year, one card at a time</string>
+    <plurals name="backup_restored_settings">
+        <item quantity="one">%1$d setting restored. Close and reopen Wanda to apply it.</item>
+        <item quantity="other">%1$d settings restored. Close and reopen Wanda to apply them.</item>
+    </plurals>
+    <plurals name="backup_restored_history">
+        <item quantity="one">%1$d play and %2$d saved Replay came back too.</item>
+        <item quantity="other">%1$d plays and %2$d saved Replays came back too.</item>
+    </plurals>
+    <string name="replay_offer_title">Your %1$d is ready</string>
+    <string name="replay_offer_subtitle">A year of listening, one card at a time</string>
+    <string name="replay_offer_open">Open</string>
+    <string name="replay_offer_later">Not now</string>
+    <string name="replay_intro_kicker">Agro Replay</string>
+    <string name="replay_intro_headline">Your %1$d</string>
+    <string name="replay_intro_scope_fleet">Everything you played, across every device on your Agro account.</string>
+    <string name="replay_intro_scope_device">Everything you played on this device.</string>
+    <string name="replay_silence_headline">Nothing played in %1$d</string>
+    <string name="replay_silence_body">Nothing was played that year. Come back next December.</string>
+    <string name="replay_minutes_kicker">Time spent listening</string>
+    <string name="replay_minutes_headline">Minutes of music</string>
+    <plurals name="replay_minutes_detail">
+        <item quantity="one">across %1$d play</item>
+        <item quantity="other">across %1$d plays</item>
+    </plurals>
+    <string name="replay_shape_kicker">The shape of your year</string>
+    <string name="replay_shape_headline">Month by month</string>
+    <string name="replay_shape_peak">%1$s was your loudest month</string>
+    <string name="replay_hours_kicker">Your listening hour</string>
+    <string name="replay_hours_headline">Mostly around %1$s</string>
+    <string name="replay_artists_kicker">On repeat all year</string>
+    <string name="replay_artists_headline">Your top artists</string>
+    <plurals name="replay_artists_detail">
+        <item quantity="one">out of %1$d artist you played</item>
+        <item quantity="other">out of %1$d artists you played</item>
+    </plurals>
+    <string name="replay_song_kicker">Your song of the year</string>
+    <plurals name="replay_song_detail">
+        <item quantity="one">played %1$d time</item>
+        <item quantity="other">played %1$d times</item>
+    </plurals>
+    <string name="replay_genres_kicker">Your sound</string>
+    <string name="replay_discovery_kicker">New to you</string>
+    <plurals name="replay_discovery_headline">
+        <item quantity="one">%1$d artist you had never played</item>
+        <item quantity="other">%1$d artists you had never played</item>
+    </plurals>
+    <string name="replay_streak_kicker">Day after day</string>
+    <plurals name="replay_streak_headline">
+        <item quantity="one">A %1$d-day streak</item>
+        <item quantity="other">A %1$d-day streak</item>
+    </plurals>
+    <plurals name="replay_streak_detail">
+        <item quantity="one">You listened on %1$d day this year</item>
+        <item quantity="other">You listened on %1$d days this year</item>
+    </plurals>
+    <string name="replay_devices_kicker">Where you listened</string>
+    <plurals name="replay_devices_headline">
+        <item quantity="one">%1$d device</item>
+        <item quantity="other">%1$d devices</item>
+    </plurals>
+    <string name="replay_charts_kicker">You and this server</string>
+    <string name="replay_charts_headline">Top %1$d%%</string>
+    <plurals name="replay_charts_detail">
+        <item quantity="one">measured against %1$d listener here</item>
+        <item quantity="other">measured against %1$d listeners here</item>
+    </plurals>
+    <string name="replay_circle_kicker">Your circle</string>
+    <plurals name="replay_circle_headline">
+        <item quantity="one">Just you this year</item>
+        <item quantity="other">%1$d of you this year</item>
+    </plurals>
+    <string name="replay_circle_anthem">Your anthem</string>
+    <string name="replay_circle_anthem_value">%1$s — %2$s</string>
+    <string name="replay_circle_trendsetter">Got there first</string>
+    <plurals name="replay_circle_trendsetter_value">
+        <item quantity="one">%1$s, on %2$d track</item>
+        <item quantity="other">%1$s, on %2$d tracks</item>
+    </plurals>
+    <string name="replay_circle_closest">Closest taste</string>
+    <string name="replay_circle_closest_value">%1$s, %2$d%% overlap</string>
+    <plurals name="replay_play_count">
+        <item quantity="one">%1$d play</item>
+        <item quantity="other">%1$d plays</item>
+    </plurals>
+    <string name="replay_outro_kicker">That was your year</string>
+    <string name="replay_outro_headline">Keep %1$d</string>
+    <string name="replay_outro_body">Save this recap and it stays, whatever happens to the plays behind it.</string>
+    <string name="replay_outro_saved">Saved. You can open this year again any time from Settings.</string>
+    <plurals name="replay_outro_purged">
+        <item quantity="one">Saved, and %1$d older play was forgotten.</item>
+        <item quantity="other">Saved, and %1$d older plays were forgotten.</item>
+    </plurals>
+    <string name="replay_outro_save">Save this recap</string>
+    <string name="replay_outro_save_and_tidy">Save and tidy up</string>
+    <string name="replay_outro_close">Close</string>
+    <plurals name="replay_purge_label">
+        <item quantity="one">Also forget %1$d play from before %2$d</item>
+        <item quantity="other">Also forget %1$d plays from before %2$d</item>
+    </plurals>
+    <string name="replay_purge_explainer">Your saved recaps, your lifetime totals and each track\'s own play count all stay. What goes is the record of which song you played at which minute. One side effect: with those plays gone, more artists will look new to you next year.</string>
+    <string name="replay_purge_confirm_question">Forget those plays? This cannot be undone.</string>
+    <string name="replay_purge_confirm_action">Yes, forget them</string>
+    <string name="replay_month_january">January</string>
+    <string name="replay_month_february">February</string>
+    <string name="replay_month_march">March</string>
+    <string name="replay_month_april">April</string>
+    <string name="replay_month_may">May</string>
+    <string name="replay_month_june">June</string>
+    <string name="replay_month_july">July</string>
+    <string name="replay_month_august">August</string>
+    <string name="replay_month_september">September</string>
+    <string name="replay_month_october">October</string>
+    <string name="replay_month_november">November</string>
+    <string name="replay_month_december">December</string>
     <!-- Digital Sovereignty & About -->
-    <string name="settings_made_in_france_title">Fait avec ❤️ en France</string>
-    <string name="settings_made_in_france_subtitle">Souveraineté numérique &amp; EUPL-1.2</string>
-    <string name="settings_sovereignty_dialog_title">Souveraineté numérique</string>
-    <string name="settings_sovereignty_dialog_body">Wanda est conçu et développé en France avec comme principes fondamentaux le respect de la vie privée, l\'efficacité énergétique et l\'autonomie de l\'utilisateur.\n\nLa souveraineté numérique signifie conserver le contrôle total de vos données personnelles, de votre bibliothèque musicale et de vos habitudes d\'écoute — sans télémétrie, sans pistage commercial et sans enfermement propriétaire.\n\nLe code source de Wanda est publié sous Licence Publique de l\'Union Européenne (EUPL-1.2), une licence libre avec réciprocité (copyleft) ancrée dans le droit européen. L\'EUPL protège vos libertés logicielles, couvre aussi bien la distribution que les services réseau (fermant les échappatoires du cloud), et garantit que Wanda reste souverain, transparent et au service de la communauté pour toujours.</string>
+    <string name="settings_made_in_france_title">Made with ❤️ in France</string>
+    <string name="settings_made_in_france_subtitle">Digital sovereignty &amp; EUPL-1.2</string>
+    <string name="settings_sovereignty_dialog_title">Digital Sovereignty</string>
+    <string name="settings_sovereignty_dialog_body">Wanda is designed and built in France with privacy, battery-efficiency, and user autonomy as core principles.\n\nDigital sovereignty means retaining full control over your personal data, music library, and listening habits — without telemetry, tracking, or vendor lock-in.\n\nWanda\'s source code is licensed under the European Union Public Licence (EUPL-1.2), a reciprocal copyleft licence native to European civil law. The EUPL guarantees software freedom, covers both distribution and network services (closing cloud loopholes), and ensures Wanda remains sovereign, transparent, and community-owned forever.</string>
 </resources>
