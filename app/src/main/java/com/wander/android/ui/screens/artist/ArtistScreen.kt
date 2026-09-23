@@ -6,20 +6,17 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -29,10 +26,11 @@ import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.AlbumActionsSheet
+import com.wander.android.ui.components.CompactHeroTopBar
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.TrackActionsSheet
-import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.rememberCollapsingHeaderFraction
 
 /**
  * An artist: what they are known for, what they released, and who they sound like — gathered
@@ -54,6 +52,10 @@ internal fun ArtistScreen(
     // Survives rotation but not the back stack: "show all" is a decision about this visit to this
     // page, not a preference.
     var showAllSongs by rememberSaveable { mutableStateOf(false) }
+
+    val listState = rememberLazyListState()
+    var heroHeightPx by remember { mutableFloatStateOf(0f) }
+    val headerFraction by rememberCollapsingHeaderFraction(listState, heroHeightPx)
 
     val addToPlaylist = AddToPlaylistHost()
 
@@ -131,6 +133,7 @@ internal fun ArtistScreen(
             }
 
             else -> LazyColumn(
+                state = listState,
                 contentPadding = contentPadding.listInset(),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxSize()
@@ -146,7 +149,9 @@ internal fun ArtistScreen(
                         onShare = viewModel::shareArtist.takeIf { state.canShare },
                         isFollowing = state.isFollowing,
                         onToggleFollow = viewModel::toggleFollow,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        modifier = Modifier
+                            .padding(bottom = 8.dp)
+                            .onGloballyPositioned { heroHeightPx = it.size.height.toFloat() }
                     )
                 }
 
@@ -171,20 +176,17 @@ internal fun ArtistScreen(
             }
         }
 
-        // Tinted rather than plain: a bare icon lands on whatever the portrait happens to be, and
-        // a back arrow that disappears into a light photo is a page with no way out of it.
-        FilledTonalIconButton(
-            onClick = onBack,
-            colors = IconButtonDefaults.filledTonalIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
-            ),
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(contentPadding.headerInset())
-                .padding(start = 12.dp, top = 8.dp)
-        ) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
-        }
+        // The floating back button becomes a compact header (thumbnail + name + play) once the
+        // portrait scrolls out of view, so the page stays anchored without scrolling back up.
+        CompactHeroTopBar(
+            visibleFraction = { headerFraction },
+            onBack = onBack,
+            title = state.artist,
+            artworkUrl = state.heroImage,
+            onPlay = viewModel::playTop,
+            topInset = contentPadding.calculateTopPadding(),
+            modifier = Modifier.align(Alignment.TopStart)
+        )
     }
 }
 

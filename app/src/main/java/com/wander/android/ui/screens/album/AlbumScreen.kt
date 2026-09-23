@@ -7,19 +7,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -27,11 +24,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistHost
+import com.wander.android.ui.components.CompactHeroTopBar
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.TrackRow
-import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.rememberCollapsingHeaderFraction
 
 /**
  * One record, with its actual tracklist — reached by tapping the album name in the player, which
@@ -48,6 +46,10 @@ fun AlbumScreen(
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
+
+    val listState = rememberLazyListState()
+    var heroHeightPx by remember { mutableFloatStateOf(0f) }
+    val headerFraction by rememberCollapsingHeaderFraction(listState, heroHeightPx)
 
     val addToPlaylist = AddToPlaylistHost()
 
@@ -99,6 +101,7 @@ fun AlbumScreen(
 
             else -> {
                 LazyColumn(
+                    state = listState,
                     contentPadding = contentPadding.listInset(),
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -116,7 +119,9 @@ fun AlbumScreen(
                             onPlay = viewModel::playAll,
                             onShuffle = viewModel::shuffle,
                             onShare = viewModel::shareAlbum.takeIf { viewModel.canShareAlbum() },
-                            modifier = Modifier.padding(bottom = 16.dp)
+                            modifier = Modifier
+                                .padding(bottom = 16.dp)
+                                .onGloballyPositioned { heroHeightPx = it.size.height.toFloat() }
                         )
                     }
 
@@ -146,18 +151,15 @@ fun AlbumScreen(
             }
         }
 
-        FilledTonalIconButton(
-            onClick = onBack,
-            colors = IconButtonDefaults.filledTonalIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
-            ),
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(contentPadding.headerInset())
-                .padding(start = 12.dp, top = 8.dp)
-        ) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
-        }
+        CompactHeroTopBar(
+            visibleFraction = { headerFraction },
+            onBack = onBack,
+            title = album?.title ?: tracks.firstOrNull()?.album.orEmpty(),
+            artworkUrl = album?.coverArtUrl ?: tracks.firstNotNullOfOrNull { it.artworkUrl },
+            onPlay = viewModel::playAll,
+            topInset = contentPadding.calculateTopPadding(),
+            modifier = Modifier.align(Alignment.TopStart)
+        )
     }
 }
 

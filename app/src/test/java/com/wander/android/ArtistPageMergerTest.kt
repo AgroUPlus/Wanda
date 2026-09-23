@@ -26,11 +26,12 @@ class ArtistPageMergerTest {
         durationMs = durationMs
     )
 
-    private fun album(id: String, title: String) = UnifiedAlbum(
+    private fun album(id: String, title: String, year: Int? = null) = UnifiedAlbum(
         id = id,
         source = SourceType.YTMUSIC,
         title = title,
-        artist = "Mahito Yokota"
+        artist = "Mahito Yokota",
+        year = year
     )
 
     @Test
@@ -67,6 +68,41 @@ class ArtistPageMergerTest {
         )
 
         assertEquals(listOf("ytmusic:A", "navidrome:B"), page.albums?.albums?.map { it.id })
+    }
+
+    @Test
+    fun `albums and singles sort newest first, unknown years last`() {
+        val page = ArtistPageMerger.merge(
+            details = ArtistDetails(
+                id = "ytmusic:X",
+                name = "Mahito Yokota",
+                sections = listOf(
+                    ArtistAlbumSection(
+                        "Albums",
+                        listOf(
+                            album("ytmusic:A", "Odyssey", year = 2017),
+                            album("ytmusic:B", "Galaxy", year = 2007),
+                            album("ytmusic:C", "Unknown Year")
+                        )
+                    ),
+                    ArtistAlbumSection(
+                        "Singles",
+                        listOf(
+                            album("ytmusic:D", "New Single", year = 2023),
+                            album("ytmusic:E", "Old Single", year = 1996)
+                        )
+                    )
+                )
+            ),
+            libraryAlbums = listOf(album("local:F", "3D Land", year = 2011)),
+            libraryTracks = emptyList()
+        )
+
+        assertEquals(
+            listOf("ytmusic:A", "local:F", "ytmusic:B", "ytmusic:C"),
+            page.albums?.albums?.map { it.id }
+        )
+        assertEquals(listOf("ytmusic:D", "ytmusic:E"), page.singles?.albums?.map { it.id })
     }
 
     @Test
