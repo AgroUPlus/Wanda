@@ -740,4 +740,22 @@
     <string name="settings_made_in_france_subtitle">Digital sovereignty &amp; EUPL-1.2</string>
     <string name="settings_sovereignty_dialog_title">Digital Sovereignty</string>
     <string name="settings_sovereignty_dialog_body">Wanda is designed and built in France with privacy, battery-efficiency, and user autonomy as core principles.\n\nDigital sovereignty means retaining full control over your personal data, music library, and listening habits — without telemetry, tracking, or vendor lock-in.\n\nWanda\'s source code is licensed under the European Union Public Licence (EUPL-1.2), a reciprocal copyleft licence native to European civil law. The EUPL guarantees software freedom, covers both distribution and network services (closing cloud loopholes), and ensures Wanda remains sovereign, transparent, and community-owned forever.</string>
+
+    <!-- Library tabs -->
+    <string name="library_tab_tracks">Tracks</string>
+    <string name="library_tab_liked">Liked</string>
+    <string name="library_tab_albums">Albums</string>
+    <string name="library_tab_playlists">Playlists</string>
+    <string name="library_tab_podcasts">Podcasts</string>
+    <string name="library_tab_offline">Offline</string>
+
+    <!-- Podcasts -->
+    <string name="continue_listening">Continue listening</string>
+    <string name="podcasts_filter_in_progress">In progress</string>
+    <string name="podcasts_filter_unplayed">Unplayed</string>
+    <string name="podcasts_filter_finished">Finished</string>
+    <string name="podcasts_empty_title">No podcasts yet</string>
+    <string name="podcasts_empty_message">Search with the Podcasts filter and play an episode to keep it here.</string>
+    <string name="podcasts_filter_empty">No episodes match this filter.</string>
+    <string name="podcasts_unplayed">Unplayed</string>
 </resources>

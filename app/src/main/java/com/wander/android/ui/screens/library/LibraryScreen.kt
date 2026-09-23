@@ -14,7 +14,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
@@ -165,8 +165,11 @@ fun LibraryScreen(
         // column rather than as a marker under a word. `matchContentSize` shrinks it to the label
         // it belongs to, and a rounded shape makes it a pill instead of a rule — so the selected
         // tab is legible from its silhouette before any text is read.
-        PrimaryTabRow(
+        // Scrollable since Podcasts made it six: a fixed row split the width six ways and clipped
+        // every label. Scrolling keeps each one whole and lets the selected tab stay in view.
+        PrimaryScrollableTabRow(
             selectedTabIndex = selectedPage,
+            edgePadding = 12.dp,
             divider = {},
             indicator = {
                 TabRowDefaults.PrimaryIndicator(
@@ -186,7 +189,7 @@ fun LibraryScreen(
                     unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     text = {
                         Text(
-                            text = entry.label,
+                            text = stringResource(entry.label),
                             style = if (isSelected) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyMedium,
                             maxLines = 1,
                             softWrap = false
@@ -234,6 +237,8 @@ fun LibraryScreen(
                         TrackList(likedTracks, pageTab, isRefreshing, contentPadding, viewModel) { actionsFor = it }
                     LibraryTab.DOWNLOADS ->
                         TrackList(downloadedTracks, pageTab, isRefreshing, contentPadding, viewModel) { actionsFor = it }
+                    LibraryTab.PODCASTS ->
+                        LibraryPodcastsPage(contentPadding, viewModel::toggleLike, onLongPress = { actionsFor = it })
                     LibraryTab.TRACKS -> Column(modifier = Modifier.fillMaxSize()) {
                         if (viewModel.availableSources.size > 1) {
                             SourceFilterChips(
