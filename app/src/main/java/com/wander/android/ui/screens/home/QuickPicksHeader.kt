@@ -1,14 +1,5 @@
 package com.wander.android.ui.screens.home
 
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.runtime.remember
-import androidx.compose.material3.Surface
-import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -31,11 +22,20 @@ import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlin.math.roundToInt
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 import androidx.graphics.shapes.RoundedPolygon
 import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
@@ -43,10 +43,9 @@ import com.wander.android.ui.components.Artwork
 
 /**
  * The one shelf on Home that gets a fully expressive treatment instead of [SectionTitle] — the
- * lead shelf, so it reads as a small poster rather than a list label: a gradient display title
+ * lead shelf, so it reads as a small poster rather than a list label: a heavy display title
  * (see [QuickPicksTitle]), a large round play button beside it, and the first few covers underneath
- * cut into Material shapes and scattered at different sizes, each one a way straight into that
- * track.
+ * cut into Material shapes at different sizes, each one a way straight into that track.
  */
 @Composable
 internal fun QuickPicksHeader(
@@ -88,8 +87,9 @@ internal fun QuickPicksHeader(
 }
 
 /**
- * Up to three covers, one large in the middle and two small ones tucked against its corners —
- * placed as fractions of the available width so the cluster keeps its composition on any phone.
+ * Up to three covers in a row — a small one, a large one, a small one — staggered up and down so
+ * they still read as scattered. Sizes come from the available width, with [ClusterGap] reserved
+ * between neighbours, so the covers never touch on any phone.
  */
 @Composable
 private fun CoverCluster(
@@ -97,26 +97,31 @@ private fun CoverCluster(
     onPlay: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(ClusterHeight)
-    ) {
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        // Read here: the inner Box's scope cannot reach `maxWidth` implicitly.
         val width = maxWidth
-        ClusterSlots.take(tracks.size).forEachIndexed { index, slot ->
-            val track = tracks[index]
-            val size = ClusterHeight * slot.sizeFraction
-            ClusterCover(
-                track = track,
-                shape = slot.shape.toShape(),
-                size = size,
-                modifier = Modifier
-                    .offset(
-                        x = (width - size) * slot.x,
-                        y = (ClusterHeight - size) * slot.y
-                    )
-                    .clickable { onPlay(index) }
-            )
+        val large = width * LargeCoverFraction
+        val small = (width - large - ClusterGap * 2) / 2
+        Box(modifier = Modifier.fillMaxWidth().height(large)) {
+            ClusterSlots.take(tracks.size).forEachIndexed { index, slot ->
+                val size = if (slot.column == 1) large else small
+                val x = when (slot.column) {
+                    0 -> 0.dp
+                    1 -> small + ClusterGap
+                    else -> width - small
+                }
+                ClusterCover(
+                    track = tracks[index],
+                    shape = slot.shape.toShape(),
+                    size = size,
+                    modifier = Modifier
+                        .offset(
+                            x = x,
+                            y = (large - size) * slot.y
+                        )
+                        .clickable { onPlay(index) }
+                )
+            }
         }
     }
 }
@@ -136,93 +141,101 @@ private fun ClusterCover(track: UnifiedTrack, shape: Shape, size: Dp, modifier: 
 }
 
 /**
- * The shelf's name as a small poster: a tonal kicker chip ("✦ For you, today") over the title in
- * display type, one word per line with the second stepped in, both filled with one gradient from
- * the theme's primary into its tertiary, and a hand-drawn wave under the last word. Static — no
- * running animation — so the flourish costs nothing once drawn.
+ * The shelf's name set like a poster headline: [PosterFontFamily] at 64sp, one word per line,
+ * leading and tracking pulled in until the lines nearly touch, in plain `onSurface` so it reads on
+ * any wallpaper-derived scheme. Size and weight do the work.
  */
 @Composable
 private fun QuickPicksTitle(title: String, modifier: Modifier = Modifier) {
-    val scheme = MaterialTheme.colorScheme
-    val gradient = remember(scheme.primary, scheme.tertiary) {
-        Brush.linearGradient(listOf(scheme.primary, scheme.tertiary))
-    }
-    val style = MaterialTheme.typography.displayLargeEmphasized.copy(
-        brush = gradient,
-        lineHeight = 0.92.em,
-        letterSpacing = (-0.03).em
+    val style = MaterialTheme.typography.displayLarge.copy(
+        fontFamily = PosterFontFamily,
+        fontWeight = FontWeight.Black,
+        fontSize = 64.sp,
+        lineHeight = 0.86.em,
+        letterSpacing = (-0.02).em
     )
-    val words = title.split(" ", limit = 2)
 
-    Column(modifier = modifier) {
-        Surface(
-            color = scheme.secondaryContainer,
-            contentColor = scheme.onSecondaryContainer,
-            shape = CircleShape,
-            modifier = Modifier.padding(bottom = 10.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Icon(Icons.Rounded.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text(
-                    text = stringResource(R.string.home_quick_picks_subtitle),
-                    style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.padding(start = 6.dp)
-                )
-            }
-        }
-        words.forEachIndexed { index, word ->
-            val last = index == words.lastIndex
-            Text(
-                text = word,
-                style = style,
-                modifier = Modifier
-                    // Each word steps in from the last — a poster's staggered set, not a list.
-                    .padding(start = SecondWordIndent * index)
-                    .then(if (last) Modifier.wavyUnderline(gradient) else Modifier)
-            )
-        }
+    Box(modifier = modifier) {
+        Text(
+            text = title.replaceFirst(" ", "\n"),
+            style = style,
+            color = MaterialTheme.colorScheme.onSurface,
+            softWrap = false,
+            modifier = Modifier.stretchX(TitleStretch)
+        )
     }
 }
 
-/** A short hand-drawn wave under the text, in [brush] — the flourish that makes it a title. */
-private fun Modifier.wavyUnderline(brush: Brush): Modifier = drawBehind {
-    val stroke = 4.dp.toPx()
-    val wavelength = 18.dp.toPx()
-    val amplitude = 3.dp.toPx()
-    val y = size.height + 2.dp.toPx()
-    val path = Path().apply {
-        moveTo(0f, y)
-        var x = 0f
-        while (x < size.width) {
-            val half = wavelength / 2f
-            quadraticTo(x + half / 2f, y - amplitude, x + half, y)
-            quadraticTo(x + half * 1.5f, y + amplitude, x + wavelength, y)
-            x += wavelength
-        }
-    }
-    drawPath(path, brush, style = Stroke(width = stroke, cap = StrokeCap.Round))
-}
-
-/** Where a cover sits in the cluster: a shape, a size relative to the cluster, and a position. */
+/** Where a cover sits in the cluster: a shape, a column (0 left, 1 centre, 2 right), a height. */
 private class ClusterSlot(
     val shape: RoundedPolygon,
-    val sizeFraction: Float,
-    /** 0 = left edge, 1 = right edge. */
-    val x: Float,
+    val column: Int,
     /** 0 = top edge, 1 = bottom edge. */
     val y: Float
 )
 
-/** Drawn in this order, so the large one comes first and the small ones overlap its corners. */
+/** The first track takes the large centre slot; the next two flank it, one high and one low. */
 private val ClusterSlots = listOf(
-    ClusterSlot(MaterialShapes.Cookie9Sided, sizeFraction = 1f, x = 0.5f, y = 0f),
-    ClusterSlot(MaterialShapes.Circle, sizeFraction = 0.42f, x = 0.02f, y = 0.12f),
-    ClusterSlot(MaterialShapes.Clover4Leaf, sizeFraction = 0.46f, x = 0.98f, y = 0.92f)
+    ClusterSlot(MaterialShapes.Cookie9Sided, column = 1, y = 0f),
+    ClusterSlot(MaterialShapes.Circle, column = 0, y = 0.1f),
+    ClusterSlot(MaterialShapes.Clover4Leaf, column = 2, y = 0.9f)
 )
 
-private val ClusterHeight = 220.dp
+/**
+ * The bundled Google Sans Flex pushed to a poster setting: high on its `wght` axis and with
+ * `ROND` at 0. The app's rounded title face is right for labels, but a headline this size reads as
+ * a poster only when the corners are sharp and the strokes nearly fill the counters.
+ */
+private val PosterFontFamily = FontFamily(
+    Font(
+        resId = R.font.google_sans_flex,
+        weight = FontWeight.Black,
+        variationSettings = FontVariation.Settings(
+            FontVariation.weight(PosterWeight),
+            FontVariation.Setting("ROND", 0f)
+        )
+    )
+)
+
+/**
+ * Between `Bold` and `ExtraBold`: heavy enough to carry the poster, short of the dense end of the
+ * axis where the counters close up and the word reads as a block.
+ */
+private const val PosterWeight = 750
+
+/**
+ * How much wider the title is drawn than set. The bundled Google Sans Flex carries only the `wght`
+ * and `ROND` axes — no `wdth` — so the extended look comes from scaling, pushed to a wide poster
+ * stance (1.30x) that fits the shelf header beside the play button across standard screen widths.
+ */
+private const val TitleStretch = 1.30f
+
+/**
+ * Draws the content [factor] times wider from its leading edge, and *measures* it that wide too —
+ * a bare `graphicsLayer` scale would leave the layout at the unscaled width and let the title run
+ * under the play button beside it.
+ */
+private fun Modifier.stretchX(factor: Float): Modifier = this
+    .layout { measurable, constraints ->
+        val narrowed = constraints.copy(
+            minWidth = (constraints.minWidth / factor).toInt(),
+            maxWidth = if (constraints.hasBoundedWidth) {
+                (constraints.maxWidth / factor).toInt()
+            } else {
+                constraints.maxWidth
+            }
+        )
+        val placeable = measurable.measure(narrowed)
+        layout((placeable.width * factor).roundToInt(), placeable.height) { placeable.place(0, 0) }
+    }
+    .graphicsLayer {
+        scaleX = factor
+        transformOrigin = TransformOrigin(0f, 0.5f)
+    }
+
+/** Share of the width the centre cover takes; the two flanking covers split what is left. */
+private const val LargeCoverFraction = 0.5f
+
+/** Clear space kept between neighbouring covers. */
+private val ClusterGap = 12.dp
 private val PlayButtonSize = 96.dp
-private val SecondWordIndent = 36.dp
