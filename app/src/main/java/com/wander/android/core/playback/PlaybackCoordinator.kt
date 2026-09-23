@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -43,16 +44,17 @@ class PlaybackCoordinator @Inject internal constructor(
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     /**
-     * Episodes already resumed this session.
+     * The episode already resumed during its current stay as the playing item, if any.
      *
-     * Declared before `init`, which collects flows that read it the moment they emit.
+     * Declared before `init`, which collects flows that read it the moment they emit. Only
+     * touched from that one collector, so a plain field is enough.
      *
      * Without it, pausing a resumed episode and playing it again would seek back to the saved
-     * position and undo whatever the listener had just scrubbed to.
+     * position and undo whatever the listener had just scrubbed to. It is cleared as soon as
+     * something else plays: it used to be a session-long set, so an episode left for a song and
+     * then reopened started from zero — and the next pause saved that zero over the real position.
      */
-    private val resumed = java.util.Collections.newSetFromMap(
-        java.util.concurrent.ConcurrentHashMap<String, Boolean>()
-    )
+    private var resumedTrackId: String? = null
 
     private val _lyrics = MutableStateFlow<LyricsState>(LyricsState.Loading)
     val lyrics: StateFlow<LyricsState> = _lyrics.asStateFlow()
@@ -111,14 +113,18 @@ class PlaybackCoordinator @Inject internal constructor(
             .map { EpisodeArrival(it.currentTrack?.id, it.currentTrack?.isEpisode == true, it.isPlaying) }
             .distinctUntilChanged()
             .onEach { (trackId, isEpisode, playing) ->
+                if (trackId == resumedTrackId) return@onEach
+                resumedTrackId = null
                 if (trackId == null || !isEpisode || !playing) return@onEach
-                if (!resumed.add(trackId)) return@onEach
+                resumedTrackId = trackId
                 val position = episodeProgress.resumePosition(trackId) ?: return@onEach
                 // Only when the player is still at the top of the episode. If the listener has
                 // already scrubbed somewhere, that is a deliberate choice and outranks the record.
-                val now = connection.currentPositionMs() ?: return@onEach
-                if (now > RESUME_GRACE_MS) return@onEach
-                scope.launch(Dispatchers.Main) { connection.seekTo(position) }
+                // Read and seek on Main: a MediaController throws if touched from any other thread.
+                withContext(Dispatchers.Main) {
+                    val now = connection.currentPositionMs() ?: return@withContext
+                    if (now <= RESUME_GRACE_MS) connection.seekTo(position)
+                }
             }
             .launchIn(scope)
 

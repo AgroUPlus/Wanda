@@ -111,14 +111,32 @@ class PlayerConnection @Inject constructor(
     /** One reading of how far into [trackId] the listener had got. */
     data class EpisodeCheckpoint(val trackId: String, val positionMs: Long, val durationMs: Long)
 
+    /**
+     * The last real duration the player reported, and for which track.
+     *
+     * Needed because the checkpoint that matters most — leaving an episode — is taken *after* the
+     * player has moved on, when `duration` already describes the next item (or is unset while it
+     * prepares). Falling back to the track's own length then recorded 0 for YouTube episodes, and
+     * every in-progress episode showed an empty bar on Home until it was playing again.
+     */
+    private var lastKnownDuration: Pair<String, Long>? = null
+
+    private fun rememberDuration(track: UnifiedTrack?, durationMs: Long) {
+        if (track == null || durationMs == C.TIME_UNSET || durationMs <= 0L) return
+        lastKnownDuration = track.id to durationMs
+    }
+
     private fun checkpoint(track: UnifiedTrack?, positionMs: Long, durationMs: Long) {
         if (track?.isEpisode != true || positionMs <= 0L) return
+        val remembered = lastKnownDuration?.takeIf { it.first == track.id }?.second
         _episodeCheckpoints.tryEmit(
             EpisodeCheckpoint(
                 trackId = track.id,
                 positionMs = positionMs,
                 // The player knows the real duration; the track's own is what a search claimed.
-                durationMs = durationMs.takeIf { it > 0L } ?: track.durationMs
+                durationMs = remembered
+                    ?: durationMs.takeIf { it > 0L && it != C.TIME_UNSET }
+                    ?: track.durationMs
             )
         )
     }
@@ -145,6 +163,10 @@ class PlayerConnection @Inject constructor(
                             _actualAudioFormat.value = null
                         }
                         if (events.contains(Player.EVENT_POSITION_DISCONTINUITY)) seekEpoch++
+                        rememberDuration(
+                            lastQueue.getOrNull(player.currentMediaItemIndex),
+                            player.duration
+                        )
                         // Pausing on an episode is the commonest way to leave one for the day.
                         if (events.contains(Player.EVENT_IS_PLAYING_CHANGED) && !player.isPlaying) {
                             checkpoint(
@@ -179,10 +201,12 @@ class PlayerConnection @Inject constructor(
                         ) {
                             return
                         }
+                        // `ctrl.duration` already belongs to the new item here; only the remembered
+                        // duration of the old one is trusted (see `lastKnownDuration`).
                         checkpoint(
                             lastQueue.getOrNull(oldPosition.mediaItemIndex),
                             oldPosition.positionMs,
-                            ctrl.duration
+                            C.TIME_UNSET
                         )
                     }
 
