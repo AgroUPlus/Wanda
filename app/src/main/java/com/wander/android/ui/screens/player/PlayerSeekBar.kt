@@ -2,7 +2,6 @@ package com.wander.android.ui.screens.player
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,10 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -54,7 +50,8 @@ fun PlayerSeekBar(
     isLive: Boolean = false,
     isPlaying: Boolean = true,
     isSeekable: Boolean = true,
-    inlineLabels: Boolean = false
+    inlineLabels: Boolean = false,
+    showScrubTooltip: Boolean = true
 ) {
     val position by rememberPlaybackPosition(playerConnection, intervalMs = 250L)
     PlayerSeekBarInternal(
@@ -65,7 +62,8 @@ fun PlayerSeekBar(
         isLive = isLive,
         isPlaying = isPlaying,
         isSeekable = isSeekable,
-        inlineLabels = inlineLabels
+        inlineLabels = inlineLabels,
+        showScrubTooltip = showScrubTooltip
     )
 }
 
@@ -78,10 +76,11 @@ fun PlayerSeekBar(
     isLive: Boolean = false,
     isPlaying: Boolean = true,
     isSeekable: Boolean = true,
-    inlineLabels: Boolean = false
+    inlineLabels: Boolean = false,
+    showScrubTooltip: Boolean = true
 ) {
     PlayerSeekBarInternal(
-        positionMs, durationMs, onSeek, modifier, isLive, isPlaying, isSeekable, inlineLabels
+        positionMs, durationMs, onSeek, modifier, isLive, isPlaying, isSeekable, inlineLabels, showScrubTooltip
     )
 }
 
@@ -101,7 +100,8 @@ private fun PlayerSeekBarInternal(
      * What the lyrics screen's pill wants: one short row rather than a two-line block, which keeps
      * the bar clear of the words behind it. The track gives up the width the labels take.
      */
-    inlineLabels: Boolean = false
+    inlineLabels: Boolean = false,
+    showScrubTooltip: Boolean = true
 ) {
     var scrubbing by remember { mutableFloatStateOf(-1f) }
     var lastTickInterval by remember { mutableIntStateOf(-1) }
@@ -137,13 +137,19 @@ private fun PlayerSeekBarInternal(
     val showWavy = isPlaying || amplitude.value > 0f
 
     val isScrubbing = scrubbing >= 0f
-    // A dot, not a bar. One diameter rather than a width and a height: a tall thin thumb read as a
-    // divider cutting the track in two, and the wave it sits on is already the thing with a shape.
-    // It still grows under a finger — that is what says the drag has been taken.
-    val thumbSize by animateDpAsState(
-        targetValue = if (isScrubbing) ScrubbingThumbSize else RestingThumbSize,
+    // A dot at rest; while a finger holds it, it morphs into a short vertical bar — the same
+    // `RoundedCornerShape(50)` in both states (a square with fully-rounded corners already reads
+    // as a circle), so only the width and height need to animate, independently, to trace the
+    // morph rather than just growing in place.
+    val thumbWidth by animateDpAsState(
+        targetValue = if (isScrubbing) ScrubbingThumbWidth else RestingThumbSize,
         animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
-        label = "thumbSize"
+        label = "thumbWidth"
+    )
+    val thumbHeight by animateDpAsState(
+        targetValue = if (isScrubbing) ScrubbingThumbHeight else RestingThumbSize,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        label = "thumbHeight"
     )
 
     // The position, not the fraction multiplied back out by the duration.
@@ -186,31 +192,22 @@ private fun PlayerSeekBarInternal(
                     modifier = Modifier.size(ThumbSlotSize),
                     contentAlignment = Alignment.Center
                 ) {
-                    ScrubTooltip(
-                        visible = isScrubbing,
-                        text = formatTime((fraction * durationMs).toLong())
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .size(thumbSize)
-                            .background(MaterialTheme.colorScheme.primary, CircleShape)
-                    )
+                    if (showScrubTooltip) {
+                        ScrubTooltip(
+                            visible = isScrubbing,
+                            text = formatTime((fraction * durationMs).toLong())
+                        )
+                    }
+                    SeekBarThumb(width = thumbWidth, height = thumbHeight)
                 }
             },
             track = { sliderState ->
-                if (showWavy) {
-                    LinearWavyProgressIndicator(
-                        progress = { sliderState.value },
-                        amplitude = { amplitude.value },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                } else {
-                    LinearProgressIndicator(
-                        progress = { sliderState.value },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                SeekBarTrack(
+                    fraction = sliderState.value,
+                    showWavy = showWavy,
+                    amplitude = amplitude,
+                    thumbWidth = thumbWidth
+                )
             }
         )
     }
@@ -248,14 +245,13 @@ private fun PlayerSeekBarInternal(
 private val LiveRowHeight = 68.dp
 
 /**
- * The box the thumb is laid out in, and the dot drawn inside it.
+ * The box the thumb is laid out in, and the dot (or bar, while scrubbing) drawn inside it.
  *
  * The slot is sized for the *largest* the dot ever gets, so growing it under a finger does not
  * change the slider's own measurement and shift the track beneath it.
  */
 private val ThumbSlotSize = 24.dp
 private val RestingThumbSize = 14.dp
-private val ScrubbingThumbSize = 20.dp
 
 /** Half the thumb slot — the padding the slider keeps clear at each end of the track. */
 private val TrackInset = ThumbSlotSize / 2

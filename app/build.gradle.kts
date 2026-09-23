@@ -16,6 +16,11 @@ val keystoreProps = Properties().apply {
 }
 val hasReleaseKeystore = keystoreProps.getProperty("releaseStoreFile") != null
 
+/** `values-xx` qualifiers that carry a translated strings.xml — what Crowdin delivers. */
+val translatedLocaleQualifiers: List<String> = file("src/main/res").listFiles { f ->
+    f.isDirectory && f.name.startsWith("values-") && f.resolve("strings.xml").exists()
+}?.map { it.name.removePrefix("values-") }.orEmpty()
+
 android {
     namespace = "com.wander.android"
     compileSdk = 37
@@ -33,6 +38,18 @@ android {
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
+
+        // The languages the in-app picker offers: English (the source) plus every language with a
+        // translated `values-xx/strings.xml`. `assets.locales` can't answer this — it reports
+        // every locale any dependency ships a resource for.
+        val pickerLanguages = (listOf("en") + translatedLocaleQualifiers.map {
+            it.substringBefore('-').substringBefore('+')
+        }).distinct()
+        buildConfigField(
+            "String[]",
+            "TRANSLATED_LANGUAGES",
+            pickerLanguages.joinToString(prefix = "{", postfix = "}") { "\"$it\"" }
+        )
     }
 
     signingConfigs {
@@ -94,15 +111,9 @@ android {
         // Without `localeFilters`, AGP and `assets.locales` include all 80+ locales from AndroidX
         // and other dependencies that Wanda does not translate.
         // Dynamically restrict packaging to only locales Crowdin delivers (plus base English).
-        val resDir = file("src/main/res")
-        val translatedLocales = resDir.listFiles { f ->
-            f.isDirectory && f.name.startsWith("values-") && f.resolve("strings.xml").exists()
-        }?.flatMap { dir ->
-            val qualifier = dir.name.removePrefix("values-")
-            val baseLang = qualifier.substringBefore('-').substringBefore('+')
-            listOf(qualifier, baseLang)
-        } ?: emptyList()
-        localeFilters += (setOf("en") + translatedLocales)
+        localeFilters += (setOf("en") + translatedLocaleQualifiers.flatMap { qualifier ->
+            listOf(qualifier, qualifier.substringBefore('-').substringBefore('+'))
+        })
     }
 
     lint {

@@ -109,12 +109,6 @@ class HomeViewModel @Inject constructor(
                 val recentlyPlayed = async { homeShelfRepository.getRecentlyPlayed(CarouselSize) }
                 val liked = async { homeShelfRepository.getLikedTracks(CarouselSize) }
                 val discover = async { homeShelfRepository.getNeverPlayed(CarouselSize) }
-                val perSource = sources
-                    .map { source ->
-                        source to async {
-                            homeShelfRepository.getRecentBySource(source, CarouselSize)
-                        }
-                    }
 
                 buildList {
                     // The lead shelf earns legible full-width rows; the second earns big
@@ -124,15 +118,6 @@ class HomeViewModel @Inject constructor(
                     add(carousel(SectionRecentlyPlayed, "Recently Played", recentlyPlayed.await()))
                     add(shelf(SectionLiked, "Your Favourites", HomeSectionStyle.OVERLAPPING_STACK, liked.await()))
                     add(shelf(SectionDiscover, "Discover", HomeSectionStyle.DISCOVER_MASONRY, discover.await()))
-                    perSource.forEach { (source, deferred) ->
-                        add(
-                            carousel(
-                                id = "$SourceSectionPrefix${source.name}",
-                                title = "From ${source.displayName}",
-                                tracks = deferred.await()
-                            )
-                        )
-                    }
                 }.filterNot(HomeSection::isEmpty)
             }
 

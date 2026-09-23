@@ -1,5 +1,6 @@
 package com.wander.android.ui.components.player
 
+import androidx.activity.BackEventCompat
 import androidx.activity.compose.PredictiveBackHandler
 import kotlin.coroutines.cancellation.CancellationException
 import androidx.compose.animation.core.animateDpAsState
@@ -20,6 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
@@ -27,7 +29,6 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.lerp as lerpColor
 import androidx.compose.ui.util.lerp
 import com.wander.android.ui.components.MiniArtworkSize
 import com.wander.android.ui.components.MiniProgressBarHeight
@@ -83,6 +84,15 @@ internal val DockedSideInset: Dp = 12.dp
 /** Corner radius while docked; interpolated to square as the sheet fills the screen. */
 private val DockedCorner: Dp = 28.dp
 
+/** How much the sheet shrinks at the very end of a predictive-back gesture. */
+private const val PredictiveBackMinScale = 0.9f
+
+/** How far the sheet shifts toward the swipe's opposite edge at the end of the gesture. */
+private val PredictiveBackMaxShift: Dp = 8.dp
+
+/** The corner radius the card takes on at the far end of a back swipe. */
+private val PredictiveBackCorner: Dp = 28.dp
+
 /**
  * The player as one continuously draggable surface.
  *
@@ -113,6 +123,12 @@ fun PlayerSheet(
      * dock row lower than it measures leaves a strip-sized hole above the navigation bar.
      */
     dockedHeight: Dp = MiniPlayerHeight,
+    /**
+     * The current track's cover-derived seed colour, null when cover-art theming is off. Darkened
+     * and blended in as the sheet expands, so the full player reads as a deeper, cover-tinted
+     * surface instead of the flat [expandedColor] — the docked strip is untouched by it.
+     */
+    coverSeed: Color? = null,
     content: @Composable (progress: () -> Float, rawProgress: () -> Float, expandedHeight: Dp) -> Unit
 ) {
     if (!isVisible) return
@@ -152,10 +168,10 @@ fun PlayerSheet(
                 }
         }
 
-        PredictiveBackHandler(enabled = sheetState.isExpanded) { progressFlow ->
+        PredictiveBackHandler(enabled = sheetState.isBackHandlerEnabled) { progressFlow ->
             try {
                 progressFlow.collect { backEvent ->
-                    sheetState.updatePredictiveBackProgress(backEvent.progress)
+                    sheetState.updatePredictiveBackProgress(backEvent.progress, backEvent.swipeEdge)
                 }
                 sheetState.collapse()
             } catch (e: CancellationException) {
@@ -187,21 +203,36 @@ fun PlayerSheet(
                     } else {
                         (sheetHeight - dockedHeightState.value - bottomInset - MiniPlayerGap).toPx()
                     }
-                    val radius = DockedCorner.toPx() * (1f - progress)
+                    val backVisual = sheetState.predictiveBackVisual
+                    val backRadius = PredictiveBackCorner.toPx() * backVisual
+                    val radius = maxOf(DockedCorner.toPx() * (1f - progress), backRadius)
                     shape = RoundedCornerShape(
                         topStart = radius,
                         topEnd = radius,
-                        // Square against the screen edge only at the very end of the travel.
-                        bottomStart = radius * (1f - progress),
-                        bottomEnd = radius * (1f - progress)
+                        // Square against the screen edge only at the very end of the travel —
+                        // unless a back swipe has lifted the whole card off the edges.
+                        bottomStart = maxOf(radius * (1f - progress), backRadius),
+                        bottomEnd = maxOf(radius * (1f - progress), backRadius)
                     )
                     clip = true
                     shadowElevation = (6.dp + 2.dp * progress).toPx()
+
+                    // A predictive-back swipe shrinks the whole card toward its centre, rounds its
+                    // corners and nudges it away from the edge being swiped from — the system's
+                    // own full-screen back pose. Purely visual: `offset`/`progress` above still own
+                    // the collapse, which starts only once the gesture commits.
+                    if (backVisual > 0f) {
+                        val scale = lerp(1f, PredictiveBackMinScale, backVisual)
+                        scaleX = scale
+                        scaleY = scale
+                        val direction = if (sheetState.predictiveBackSwipeEdge == BackEventCompat.EDGE_LEFT) 1f else -1f
+                        translationX += direction * PredictiveBackMaxShift.toPx() * backVisual
+                    }
                 }
                 // Drawn rather than composed: the colour changes every frame of a drag, and a
                 // `background(...)` argument would recompose the sheet along with it.
                 .drawBehind {
-                    drawRect(lerpColor(dockedColor, expandedColor, sheetState.progress))
+                    drawPlayerSheetBackground(sheetState.progress, dockedColor, expandedColor, coverSeed)
                 }
                 .layout { measurable, constraints ->
                     val fullWidth = constraints.maxWidth

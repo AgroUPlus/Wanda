@@ -1,5 +1,15 @@
 package com.wander.android.ui.components.player
 
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.SideEffect
+import com.wander.android.ui.components.backdropBlur
+import com.wander.android.ui.components.LocalBackBlurEnabled
+import com.wander.android.ui.screens.queue.rememberQueueDrawerState
+import com.wander.android.ui.screens.queue.QueueDrawerHeightFraction
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
@@ -61,6 +71,8 @@ fun PlayerSheetContent(
     playback: PlaybackState,
     playerConnection: PlayerConnection,
     onExpand: () -> Unit,
+    /** Collapses the sheet back to the docked strip — the top bar's own minimize button. */
+    onMinimize: () -> Unit,
     onOpenQueue: () -> Unit,
     onOpenArtist: (String, String?) -> Unit = { _, _ -> },
     onOpenAlbum: (String) -> Unit = {},
@@ -98,9 +110,17 @@ fun PlayerSheetContent(
     var lyricsVisible by rememberSaveable { mutableStateOf(false) }
 
     // Owned here for the same reason as the lyrics flag: the drawer is opened from a button inside
-    // `NowPlayingScreen`, which is disposed the moment the sheet leaves the top, and a sheet that
-    // disposes its own dismissal state cannot be closed.
-    var queueDrawerOpen by rememberSaveable { mutableStateOf(false) }
+    // `NowPlayingScreen`, which is disposed the moment the sheet leaves the top, and a drawer that
+    // disposes its own state cannot be closed.
+    val queueDrawer = rememberQueueDrawerState()
+    val drawerSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+    val drawerScope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    SideEffect { queueDrawer.heightPx = with(density) { (expandedHeight * QueueDrawerHeightFraction).toPx() } }
+    // A jam's queue is a screen, not a drawer — see `onOpenQueue` below — so an upward drag there
+    // still counts to a threshold and opens it once.
+    var lockedDrag by remember { mutableFloatStateOf(0f) }
+    val jamOpenDistancePx = with(density) { JamQueueOpenDistance.toPx() }
 
     // Opacity only, and read in a `graphicsLayer` rather than here — see the note on this
     // composable. The cover is drawn outside `NowPlayingScreen`'s `AnimatedContent`, so it has no
@@ -132,6 +152,8 @@ fun PlayerSheetContent(
     // of zero. The queue lives *inside* the full player, so it is reachable only once the player
     // actually is: not merely present, but open.
     val playerFullyOpen by remember { derivedStateOf { progress() >= QueueGestureArmed } }
+    // The drawer can't outlive the full player it sits over.
+    LaunchedEffect(playerFullyOpen) { if (!playerFullyOpen) queueDrawer.snapTo(0f) }
 
     // Collapsing puts the cover back. The docked strip is a cover and two lines of text — there is
     // nowhere for lyrics to be, so carrying the toggle down into it only ever means a missing
@@ -224,172 +246,201 @@ fun PlayerSheetContent(
             .onGloballyPositioned(anchors::onRootPositioned)
             // Only while the full player is up: on the docked strip an upward drag is how the
             // player itself is opened, and stealing it would make the strip unopenable by gesture.
-            .swipeUpToOpenQueue(enabled = playerFullyOpen) {
-                if (playback.orderLocked) onOpenQueue() else queueDrawerOpen = true
-            }
-    ) {
-        // Draw order matters and is the whole point of this Box:
-        //   mini strip → travelling artwork → full player.
-        // The artwork sits above the strip (which reserves a hole for it) and below the full
-        // player, or it paints over the full player's own controls — that is what put the lyrics
-        // button behind the cover.
-        MiniPlayer(
-            track = playback.currentTrack,
-            isPlaying = playback.isPlaying,
-            durationMs = playback.durationMs,
-            isBuffering = playback.isBuffering,
-            playerConnection = playerConnection,
-            contentAlpha = { 1f - smoothStep(progress(), 0f, 0.30f) },
-            // Only the title and artist slide; see MiniPlayer.
-            swipeOffset = { swipe.offsetX.value },
-            // The sheet already paints this colour; an opaque strip here would hide the artwork
-            // drawn after it.
-            containerColor = Color.Transparent,
-            artworkSlot = {
-                Box(
-                    modifier = Modifier
-                        .size(MiniArtworkSize)
-                        .onGloballyPositioned(anchors::onMiniPositioned)
-                )
-            },
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                // The sheet measures its content at the full screen width and clips this much off
-                // each side while docked, so the strip holds itself in by the same amount. Constant
-                // rather than progress-driven: the strip has faded out well before the sheet is
-                // open, so there is nothing to see it once it stops being the right inset.
-                .padding(horizontal = DockedSideInset)
-                .height(MiniStripHeight)
-                .then(if (docked) miniSwipe else Modifier)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    enabled = docked,
-                    onClick = onExpand
-                )
-        )
-
-        // Directly under the strip, inside the same surface, so the two read as one block. It
-        // fades on the same curve the strip's own contents do.
-        //
-        // Always composed, and that is the fix: this used to be `if (docked) dockRow()`, and
-        // `docked` flips at the *first pixel* of the drag — so the search field and the Friends
-        // button were cut out of the tree instantly while the alpha they were supposed to fade on
-        // never got to run. They vanished rather than left. Now only input is withdrawn on that
-        // first pixel, which is the part that has to be immediate: a search field that still
-        // worked while sliding out from under the full player would take focus and raise the
-        // keyboard mid-gesture. The pixels fade out over the first third of the drag.
-        //
-        // The visibility above it is the *other* axis: dragging the player open fades this row on
-        // `progress`, while navigating to a screen that has no dock row takes it away entirely.
-        // The two compose — a row can be halfway faded by a drag and on its way out at once —
-        // which is why one is an alpha and the other a transition rather than both being either.
-        AnimatedVisibility(
-            visible = showDockRow,
-            // Drops away under the strip and shrinks slightly as it goes, so the row reads as
-            // being tucked back into the player rather than blinking out. Coming back it springs
-            // up into place; the sheet is growing to meet it on the same spatial spec.
-            enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()) +
-                slideInVertically(MaterialTheme.motionScheme.slowSpatialSpec()) { it / 2 } +
-                scaleIn(MaterialTheme.motionScheme.slowSpatialSpec(), initialScale = 0.92f),
-            // The fade rides the *same* spec as the slide, and as the sheet's own resting height
-            // (`PlayerSheet`'s `docked-height` spring). It used to fade on `fastEffectsSpec` while
-            // the sheet shrank on `slowSpatialSpec`, so navigating to a page with no dock row made
-            // the search field disappear well before the player finished collapsing around it —
-            // leaving a reserved, empty band under the strip for the difference between the two.
-            exit = fadeOut(MaterialTheme.motionScheme.slowSpatialSpec()) +
-                slideOutVertically(MaterialTheme.motionScheme.slowSpatialSpec()) { it / 2 } +
-                scaleOut(MaterialTheme.motionScheme.slowSpatialSpec(), targetScale = 0.92f),
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                // Same inset as the strip above it, for the same reason.
-                .padding(horizontal = DockedSideInset)
-                .offset(y = MiniStripHeight)
-                .height(DockRowHeight)
-                .graphicsLayer { alpha = 1f - smoothStep(progress(), 0f, 0.30f) }
-                .then(if (docked) Modifier else Modifier.swallowPointerInput())
-        ) {
-            dockRow()
-        }
-
-        MorphingArtwork(
-            url = currentArtwork,
-            contentDescription = playback.currentTrack?.title,
-            anchors = anchors,
-            progress = progress,
-            rawProgress = rawProgress,
-            // Cross-fades with the lyrics rather than cutting. The cover is drawn here, outside
-            // `NowPlayingScreen`'s `AnimatedContent`, so it had no transition of its own — the
-            // lyrics faded in over a cover that had already vanished.
-            visible = artworkPresent,
-            alpha = { artworkAlphaState.value },
-            swipe = swipe,
-            previousUrl = previousArtwork,
-            nextUrl = nextArtwork,
-            canPrevious = hasPreviousSong,
-            canNext = hasNextSong,
-            fingerprintStatus = fingerprintStatus,
-            carouselEnabled = coverCarousel,
-            isPlaying = playback.isPlaying
-        )
-
-        // Composed as soon as the drag starts, so its artwork bounds are known and nothing
-        // pops in partway through the gesture.
-        if (fullPlayerPresent) {
-            NowPlayingScreen(
-                playerConnection = playerConnection,
-                // A local queue opens as a drawer over the player; a jam's does not.
-                //
-                // The drawer exists to reorder what is coming next, and in a jam the running order
-                // is voted on rather than dragged — plus that screen carries the proposals and the
-                // vote counts, which are not a sheet's worth of content. `orderLocked` is exactly
-                // the "something else owns the order" flag, so it is what decides.
-                onOpenQueue = { if (playback.orderLocked) onOpenQueue() else queueDrawerOpen = true },
-                onOpenArtist = onOpenArtist,
-                onOpenAlbum = onOpenAlbum,
-                onOpenJam = onOpenJam,
-                contentAlpha = { smoothStep(progress(), 0.20f, 0.55f) },
-                // Gone almost as soon as the sheet leaves the top. The cover starts travelling at
-                // the first pixel of the drag, and these have to leave with it rather than
-                // linger over the space it used to fill.
-                //
-                // The same is true sideways, and for the same reason: swiping to the next track
-                // slides the cover out from under two buttons that are not drawn with it, so
-                // share and lyrics sat over the incoming song's artwork still labelled for the
-                // outgoing one. They fade with the drag and come back as it settles.
-                //
-                // Both read at draw time — `offsetX` changes every frame, and `overlayAlpha` is
-                // only ever called inside a `graphicsLayer`.
-                overlayAlpha = {
-                    smoothStep(progress(), 0.85f, 1f) * swipeFade(swipe.offsetX.value)
+            .swipeUpToOpenQueue(
+                enabled = playerFullyOpen,
+                canStart = { !queueDrawer.isVisible },
+                onDrag = { dy ->
+                    if (playback.orderLocked) {
+                        val before = lockedDrag
+                        lockedDrag += dy
+                        if (before > -jamOpenDistancePx && lockedDrag <= -jamOpenDistancePx) onOpenQueue()
+                    } else {
+                        queueDrawer.dragBy(dy)
+                    }
                 },
-                showLyrics = lyricsVisible,
-                onToggleLyrics = { lyricsVisible = !lyricsVisible },
-                // The gesture only; the cover that visibly follows it is drawn above, so the
-                // reported artwork bounds stay still and the peek covers have a fixed frame.
-                artworkModifier = fullSwipe,
-                artworkSlot = { _, _ ->
+                onRelease = { velocity ->
+                    lockedDrag = 0f
+                    if (!playback.orderLocked) drawerScope.launch { queueDrawer.settle(velocity, drawerSpec) }
+                }
+            )
+    ) {
+        // The player blurs behind the queue drawer as it comes up. Its own box, so the drawer —
+        // a sibling below — stays sharp.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .backdropBlur(LocalBackBlurEnabled.current) { queueDrawer.progress }
+        ) {
+            // Draw order matters and is the whole point of this Box:
+            //   mini strip → travelling artwork → full player.
+            // The artwork sits above the strip (which reserves a hole for it) and below the full
+            // player, or it paints over the full player's own controls — that is what put the lyrics
+            // button behind the cover.
+            MiniPlayer(
+                track = playback.currentTrack,
+                isPlaying = playback.isPlaying,
+                durationMs = playback.durationMs,
+                isBuffering = playback.isBuffering,
+                playerConnection = playerConnection,
+                contentAlpha = { 1f - smoothStep(progress(), 0f, 0.30f) },
+                // Only the title and artist slide; see MiniPlayer.
+                swipeOffset = { swipe.offsetX.value },
+                // The sheet already paints this colour; an opaque strip here would hide the artwork
+                // drawn after it.
+                containerColor = Color.Transparent,
+                artworkSlot = {
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .onGloballyPositioned(anchors::onFullPositioned)
+                            .size(MiniArtworkSize)
+                            .onGloballyPositioned(anchors::onMiniPositioned)
                     )
                 },
-                immersivePlayer = immersivePlayer,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    // The sheet measures its content at the full screen width and clips this much off
+                    // each side while docked, so the strip holds itself in by the same amount. Constant
+                    // rather than progress-driven: the strip has faded out well before the sheet is
+                    // open, so there is nothing to see it once it stops being the right inset.
+                    .padding(horizontal = DockedSideInset)
+                    .height(MiniStripHeight)
+                    .then(if (docked) miniSwipe else Modifier)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        enabled = docked,
+                        onClick = onExpand
+                    )
             )
+
+            // Directly under the strip, inside the same surface, so the two read as one block. It
+            // fades on the same curve the strip's own contents do.
+            //
+            // Always composed, and that is the fix: this used to be `if (docked) dockRow()`, and
+            // `docked` flips at the *first pixel* of the drag — so the search field and the Friends
+            // button were cut out of the tree instantly while the alpha they were supposed to fade on
+            // never got to run. They vanished rather than left. Now only input is withdrawn on that
+            // first pixel, which is the part that has to be immediate: a search field that still
+            // worked while sliding out from under the full player would take focus and raise the
+            // keyboard mid-gesture. The pixels fade out over the first third of the drag.
+            //
+            // The visibility above it is the *other* axis: dragging the player open fades this row on
+            // `progress`, while navigating to a screen that has no dock row takes it away entirely.
+            // The two compose — a row can be halfway faded by a drag and on its way out at once —
+            // which is why one is an alpha and the other a transition rather than both being either.
+            AnimatedVisibility(
+                visible = showDockRow,
+                // Drops away under the strip and shrinks slightly as it goes, so the row reads as
+                // being tucked back into the player rather than blinking out. Coming back it springs
+                // up into place; the sheet is growing to meet it on the same spatial spec.
+                enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()) +
+                    slideInVertically(MaterialTheme.motionScheme.slowSpatialSpec()) { it / 2 } +
+                    scaleIn(MaterialTheme.motionScheme.slowSpatialSpec(), initialScale = 0.92f),
+                // The fade rides the *same* spec as the slide, and as the sheet's own resting height
+                // (`PlayerSheet`'s `docked-height` spring). It used to fade on `fastEffectsSpec` while
+                // the sheet shrank on `slowSpatialSpec`, so navigating to a page with no dock row made
+                // the search field disappear well before the player finished collapsing around it —
+                // leaving a reserved, empty band under the strip for the difference between the two.
+                exit = fadeOut(MaterialTheme.motionScheme.slowSpatialSpec()) +
+                    slideOutVertically(MaterialTheme.motionScheme.slowSpatialSpec()) { it / 2 } +
+                    scaleOut(MaterialTheme.motionScheme.slowSpatialSpec(), targetScale = 0.92f),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    // Same inset as the strip above it, for the same reason.
+                    .padding(horizontal = DockedSideInset)
+                    .offset(y = MiniStripHeight)
+                    .height(DockRowHeight)
+                    .graphicsLayer { alpha = 1f - smoothStep(progress(), 0f, 0.30f) }
+                    .then(if (docked) Modifier else Modifier.swallowPointerInput())
+            ) {
+                dockRow()
+            }
+
+            MorphingArtwork(
+                url = currentArtwork,
+                contentDescription = playback.currentTrack?.title,
+                anchors = anchors,
+                progress = progress,
+                rawProgress = rawProgress,
+                // Cross-fades with the lyrics rather than cutting. The cover is drawn here, outside
+                // `NowPlayingScreen`'s `AnimatedContent`, so it had no transition of its own — the
+                // lyrics faded in over a cover that had already vanished.
+                visible = artworkPresent,
+                alpha = { artworkAlphaState.value },
+                swipe = swipe,
+                previousUrl = previousArtwork,
+                nextUrl = nextArtwork,
+                canPrevious = hasPreviousSong,
+                canNext = hasNextSong,
+                fingerprintStatus = fingerprintStatus,
+                carouselEnabled = coverCarousel,
+                isPlaying = playback.isPlaying
+            )
+
+            // Composed as soon as the drag starts, so its artwork bounds are known and nothing
+            // pops in partway through the gesture.
+            if (fullPlayerPresent) {
+                NowPlayingScreen(
+                    playerConnection = playerConnection,
+                    // A local queue opens as a drawer over the player; a jam's does not.
+                    //
+                    // The drawer exists to reorder what is coming next, and in a jam the running order
+                    // is voted on rather than dragged — plus that screen carries the proposals and the
+                    // vote counts, which are not a sheet's worth of content. `orderLocked` is exactly
+                    // the "something else owns the order" flag, so it is what decides.
+                    onOpenQueue = {
+                        if (playback.orderLocked) {
+                            onOpenQueue()
+                        } else {
+                            drawerScope.launch { queueDrawer.open(drawerSpec) }
+                        }
+                    },
+                    onMinimize = onMinimize,
+                    onOpenArtist = onOpenArtist,
+                    onOpenAlbum = onOpenAlbum,
+                    onOpenJam = onOpenJam,
+                    contentAlpha = { smoothStep(progress(), 0.20f, 0.55f) },
+                    // Gone almost as soon as the sheet leaves the top. The cover starts travelling at
+                    // the first pixel of the drag, and these have to leave with it rather than
+                    // linger over the space it used to fill.
+                    //
+                    // The same is true sideways, and for the same reason: swiping to the next track
+                    // slides the cover out from under two buttons that are not drawn with it, so
+                    // share and lyrics sat over the incoming song's artwork still labelled for the
+                    // outgoing one. They fade with the drag and come back as it settles.
+                    //
+                    // Both read at draw time — `offsetX` changes every frame, and `overlayAlpha` is
+                    // only ever called inside a `graphicsLayer`.
+                    overlayAlpha = {
+                        smoothStep(progress(), 0.85f, 1f) * swipeFade(swipe.offsetX.value)
+                    },
+                    showLyrics = lyricsVisible,
+                    onToggleLyrics = { lyricsVisible = !lyricsVisible },
+                    // The gesture only; the cover that visibly follows it is drawn above, so the
+                    // reported artwork bounds stay still and the peek covers have a fixed frame.
+                    artworkModifier = fullSwipe,
+                    artworkSlot = { _, _ ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .onGloballyPositioned(anchors::onFullPositioned)
+                        )
+                    },
+                    immersivePlayer = immersivePlayer,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
         }
 
-        // Outside the `fullPlayerPresent` branch: a sheet is its own window, and tying it to the
-        // composable that opened it would dismiss it the instant the player was dragged down.
-        if (queueDrawerOpen) {
+        // Composed only while some of it is showing: the queue list is not free to build.
+        if (queueDrawer.isVisible) {
             QueueDrawer(
+                drawer = queueDrawer,
                 playerConnection = playerConnection,
-                onDismiss = { queueDrawerOpen = false },
                 onOpenArtist = { artist, artistId ->
-                    queueDrawerOpen = false
+                    queueDrawer.snapTo(0f)
                     onOpenArtist(artist, artistId)
                 }
             )
@@ -422,6 +473,9 @@ private fun swipeFade(offsetX: Float): Float =
 private const val QueueGestureArmed = 0.98f
 
 private const val SwipeFadeStart = 12f
+
+/** How far up a drag has to go to open a jam's queue screen. */
+private val JamQueueOpenDistance = 56.dp
 
 
 /**

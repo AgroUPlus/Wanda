@@ -156,6 +156,7 @@ internal fun LyricsTransport(
                 // Times either side of the track rather than under it: one short row, so the pill
                 // stays a pill instead of a two-line block over the lyrics.
                 inlineLabels = true,
+                showScrubTooltip = false,
                 modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp)
             )
         }

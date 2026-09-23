@@ -1,6 +1,6 @@
 package com.wander.android.core.i18n
 
-import android.content.Context
+import com.wander.android.BuildConfig
 import java.util.Locale
 
 /**
@@ -22,23 +22,18 @@ data class AppLocale(
 /**
  * The languages this build actually ships.
  *
- * Read from the APK rather than from a hand-kept list: `assets.locales` reports exactly the
- * locales that have a `values-xx` directory, so a language appears in the picker the moment
- * Crowdin's translations land and never before. A hand-kept list would let someone add a
- * language here that has no strings behind it, and the picker would then offer a choice that
- * silently does nothing but fall back to English.
+ * Read from [BuildConfig.TRANSLATED_LANGUAGES], which the build derives from the `values-xx`
+ * directories holding a translated `strings.xml` — so a language appears here the moment Crowdin's
+ * translations land and never before. Not `assets.locales`: that lists every locale any dependency
+ * ships a resource for, and filled the picker with languages Wanda has no strings in.
  */
-fun supportedAppLocales(context: Context): List<AppLocale> {
-    val shipped = context.resources.assets.locales
-        .asSequence()
-        .filter { it.isNotBlank() }
-        .map { Locale.forLanguageTag(it.replace('_', '-')) }
+fun supportedAppLocales(): List<AppLocale> {
+    val shipped = BuildConfig.TRANSLATED_LANGUAGES
+        .map { Locale.forLanguageTag(it) }
         .filter { it.language.isNotBlank() }
-        // "fr" and "fr-CA" are one entry in the picker; the region only narrows the same choice.
         .distinctBy { it.language }
         .map { it.toAppLocale() }
         .sortedBy { it.endonym.lowercase(Locale.ROOT) }
-        .toList()
 
     // English is always present — it is the untranslated source — so it cannot be what decides
     // whether the picker is worth showing. It still belongs *in* the list once the picker shows,

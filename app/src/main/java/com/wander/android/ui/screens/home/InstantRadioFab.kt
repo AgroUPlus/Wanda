@@ -14,12 +14,10 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.MediumFloatingActionButton
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,11 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
-import com.wander.android.ui.components.rememberPressMorphShape
-
-/** Resting and pressed shapes. Cookie-4-sided at rest, a circle while held. */
-private val FabResting = MaterialShapes.Cookie4Sided
-private val FabPressed = MaterialShapes.Circle
 
 /** Where the button actually sits, on bottom-right corner. */
 private val CornerOrigin = TransformOrigin(1f, 1f)
@@ -47,13 +40,11 @@ private const val ExitSpin = 45f
  * Everything else on Home asks the user to choose something first: a shelf, a mix, a track. This
  * is for the times when choosing is itself the friction, which for a music player is most times.
  *
- * Bottom-left rather than the usual bottom-right: the right-hand side of the bottom edge is where
- * the thumb rests over the navigation bar and the mini player's controls, and a button that
- * starts playing something over the top of them is a button that gets pressed by accident.
+ * Bottom-right, 16 dp in, clear of the docked strip — the same corner and inset as Library's FABs.
  *
- * Icon only, and small. It started as an extended FAB with a label and it dominated the corner of
- * a screen whose whole job is showing artwork — the icon says it on its own, and a pill that size
- * competes with the content rather than sitting beside it.
+ * Icon only. It started as an extended FAB with a label and it dominated the corner of a screen
+ * whose whole job is showing artwork — the icon says it on its own. A medium FAB, matching
+ * Library's play button, so each tab's one floating action is the same control.
  *
  * Hidden while the player is anywhere but docked, and while you are anywhere but Home. A button
  * pinned over a full-screen player is in the way of the player's controls, and one pinned over the
@@ -78,11 +69,6 @@ internal fun InstantRadioFab(
     modifier: Modifier = Modifier
 ) {
     val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    // The same morph every other primary control in the app wears. A stock rounded-corner FAB was
-    // the one shape on Home that did not belong to the same family as the buttons on the album and
-    // artist pages — and a dial is exactly the thing that should look like it can be turned.
-    val shape = rememberPressMorphShape(FabResting, FabPressed, pressed)
     val pulseTransition = rememberInfiniteTransition(label = "radio-fab")
     val pulse by pulseTransition.animateFloat(
         initialValue = 1f,
@@ -114,18 +100,14 @@ internal fun InstantRadioFab(
             }
         }
 
-        FloatingActionButton(
+        // The same medium FAB as Library's play button — same size, colour, shape and lift — so
+        // the one floating action on each tab reads as the same kind of control.
+        MediumFloatingActionButton(
             onClick = onClick,
-            shape = shape,
             interactionSource = interaction,
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            elevation = FloatingActionButtonDefaults.elevation(
-                defaultElevation = 0.dp,
-                pressedElevation = 0.dp,
-                focusedElevation = 0.dp,
-                hoveredElevation = 0.dp
-            ),
+            elevation = FloatingActionButtonDefaults.elevation(),
             modifier = Modifier.graphicsLayer {
                 rotationZ = spin
                 transformOrigin = CornerOrigin
@@ -135,7 +117,7 @@ internal fun InstantRadioFab(
                 imageVector = Icons.Rounded.Radio,
                 contentDescription = if (isStarting) "Starting radio" else "Start radio",
                 modifier = Modifier
-                    .size(28.dp)
+                    .size(FloatingActionButtonDefaults.MediumIconSize)
                     .graphicsLayer { alpha = if (isStarting) pulse else 1f }
             )
         }

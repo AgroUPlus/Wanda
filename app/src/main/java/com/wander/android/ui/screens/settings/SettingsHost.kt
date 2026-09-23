@@ -104,6 +104,7 @@ internal fun rememberSettingsHost(
             },
             onMonetChange = viewModel::setMonetDynamic,
             onAmoledChange = viewModel::setAmoledBlack,
+            onBackBlurChange = viewModel::setBackBlurEnabled,
             onImmersivePlayerChange = viewModel::setImmersivePlayer,
             onCoverArtThemeChange = viewModel::setCoverArtThemeEnabled,
             onReduceMotionChange = viewModel::setReduceMotion,

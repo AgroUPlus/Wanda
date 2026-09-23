@@ -37,6 +37,8 @@ fun AlbumCard(
      * the gesture does nothing rather than half-working.
      */
     onLongClick: (() -> Unit)? = null,
+    /** The line under the title — the artist by default; an artist's own page shows the year. */
+    subtitle: String = album.artist,
     /** Nominal cell width. The grid is `Adaptive(156.dp)`, so cells never fall below this. */
     artworkSize: Dp = 160.dp
 ) {
@@ -74,7 +76,7 @@ fun AlbumCard(
             modifier = Modifier.padding(top = 8.dp).scrollingTitle()
         )
         Text(
-            text = album.artist,
+            text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,

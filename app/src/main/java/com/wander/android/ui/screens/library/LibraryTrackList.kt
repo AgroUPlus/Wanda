@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.library
 
+import com.wander.android.ui.components.groupedListItem
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -81,7 +82,10 @@ internal fun TrackList(
                 onPlay = { viewModel.play(tracks, index) },
                 onToggleLike = { viewModel.toggleLike(track) },
                 onLongPress = { onLongPress(track) },
-                modifier = Modifier.animateItem().scale(entranceScale)
+                modifier = Modifier
+                    .animateItem()
+                    .scale(entranceScale)
+                    .groupedListItem(index, visibleTracks.size)
             )
         }
         if (hasMore) {
@@ -148,7 +152,7 @@ internal fun PagedTrackList(
                 onPlay = { viewModel.playFromLibrary(track) },
                 onToggleLike = { viewModel.toggleLike(track) },
                 onLongPress = { onLongPress(track) },
-                modifier = Modifier.scale(entranceScale)
+                modifier = Modifier.scale(entranceScale).groupedListItem(index, tracks.itemCount)
             )
         }
         if (tracks.loadState.append is LoadState.Loading) {

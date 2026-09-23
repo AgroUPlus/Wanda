@@ -1,16 +1,11 @@
 package com.wander.android.ui.screens.artist
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,10 +24,12 @@ import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.AlbumActionsSheet
+import com.wander.android.ui.components.CompactHeroTopBar
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.TrackActionsSheet
-import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.collapsingTitleSource
+import com.wander.android.ui.components.rememberCollapsingTitleState
 
 /**
  * An artist: what they are known for, what they released, and who they sound like — gathered
@@ -54,6 +51,9 @@ internal fun ArtistScreen(
     // Survives rotation but not the back stack: "show all" is a decision about this visit to this
     // page, not a preference.
     var showAllSongs by rememberSaveable { mutableStateOf(false) }
+
+    val listState = rememberLazyListState()
+    val titleState = rememberCollapsingTitleState(listState)
 
     val addToPlaylist = AddToPlaylistHost()
 
@@ -131,8 +131,10 @@ internal fun ArtistScreen(
             }
 
             else -> LazyColumn(
+                state = listState,
                 contentPadding = contentPadding.listInset(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                // No blanket item spacing: it also landed between the grouped song rows, which
+                // are meant to sit 2 dp apart as one group. Section titles carry the room instead.
                 modifier = Modifier.fillMaxSize()
             ) {
                 item(key = "header", contentType = "header") {
@@ -146,12 +148,16 @@ internal fun ArtistScreen(
                         onShare = viewModel::shareArtist.takeIf { state.canShare },
                         isFollowing = state.isFollowing,
                         onToggleFollow = viewModel::toggleFollow,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        modifier = Modifier
+                            .padding(bottom = 8.dp),
+                        titleModifier = Modifier.collapsingTitleSource(titleState)
                     )
                 }
 
                 state.page.bio?.let { bio ->
-                    item(key = "bio", contentType = "bio") { ArtistBio(bio) }
+                    item(key = "bio", contentType = "bio") {
+                        Box(modifier = Modifier.padding(bottom = 8.dp)) { ArtistBio(bio) }
+                    }
                 }
 
                 artistPageSections(
@@ -171,20 +177,18 @@ internal fun ArtistScreen(
             }
         }
 
-        // Tinted rather than plain: a bare icon lands on whatever the portrait happens to be, and
-        // a back arrow that disappears into a light photo is a page with no way out of it.
-        FilledTonalIconButton(
-            onClick = onBack,
-            colors = IconButtonDefaults.filledTonalIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
-            ),
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(contentPadding.headerInset())
-                .padding(start = 12.dp, top = 8.dp)
-        ) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
-        }
+        // The name slides and shrinks up into a compact bar (name + play) as the portrait scrolls
+        // away, so the page stays anchored without scrolling back up.
+        CompactHeroTopBar(
+            titleState = titleState,
+            onBack = onBack,
+            title = state.artist,
+            onPlay = viewModel::playTop,
+            heroTitleStyle = MaterialTheme.typography.displaySmall,
+            heroTitleMaxLines = 2,
+            topInset = contentPadding.calculateTopPadding(),
+            modifier = Modifier.align(Alignment.TopStart)
+        )
     }
 }
 

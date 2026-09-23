@@ -20,11 +20,13 @@
     <string name="action_queue">Queue</string>
     <string name="action_clear_queue">Clear queue</string>
     <string name="action_play_next">Play next</string>
-    <string name="action_add_to_queue">Add to end of queue</string>
+    <string name="action_add_to_queue">Add to queue</string>
     <string name="action_remove_from_queue">Remove from queue</string>
     <string name="action_add_to_playlist">Add to playlist</string>
     <string name="action_radio_mode">Radio mode</string>
     <string name="action_radio_mode_active">Radio mode (active)</string>
+    <string name="menu_like">Like</string>
+    <string name="menu_radio">Radio</string>
     <string name="action_start_radio">Start radio mode</string>
     <string name="action_speed_and_pitch">Speed &amp; Pitch</string>
     <string name="action_audio_language">Audio language</string>
@@ -158,6 +160,7 @@
     <!-- Home -->
     <string name="home_connect_navidrome_youtube_music_settings">Connect Navidrome or YouTube Music in Settings, or grant access to music stored on this device.</string>
     <string name="home_nothing_here_yet">Nothing here yet</string>
+    <string name="home_quick_picks_subtitle">For you, today</string>
     <string name="home_nothing_play_yet">Nothing to play yet</string>
     <string name="home_sessions_other_devices">Sessions on other devices</string>
 
@@ -221,10 +224,12 @@
     <string name="player_device">On this device</string>
     <string name="player_looking_other_sources">Looking on your other sources…</string>
     <string name="player_lyrics">Lyrics</string>
+    <string name="player_minimize">Minimize player</string>
     <string name="player_more_options">More options</string>
     <string name="player_only_copy_sources_have">This is the only copy your sources have.</string>
     <string name="player_play_from">Play from</string>
     <string name="player_playing_from_here">Playing from here</string>
+    <string name="player_queue">Queue</string>
     <string name="player_static">Static</string>
     <string name="player_synced">Synced</string>
 
@@ -367,6 +372,8 @@
     <string name="settings_true_black">True black</string>
     <string name="settings_two_do_not_match">The two do not match</string>
     <string name="settings_unlit_pixels_oled_screens_use">Unlit pixels on OLED screens use no power</string>
+    <string name="settings_back_blur">Blur behind back gestures</string>
+    <string name="settings_back_blur_subtitle">Soften what a back swipe reveals, sharpening as you pull</string>
     <string name="settings_unpair">Unpair</string>
     <string name="settings_unpair_from_agro">Unpair from Agro?</string>
     <string name="settings_use_default">Use default</string>

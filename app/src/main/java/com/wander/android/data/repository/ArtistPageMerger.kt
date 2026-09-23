@@ -64,7 +64,11 @@ internal object ArtistPageMerger {
         // Library records join the Albums bucket, since there is nothing on them saying whether
         // they are an album or a single. When the backend gave no albums shelf at all, they become
         // the bucket — this is the whole of an artist page for local files and Subsonic.
-        val mergedAlbums = (albums?.albums.orEmpty() + libraryAlbums).distinctBy { it.id }
+        // Newest first, matching how a discography reads on every other streaming app — a record
+        // with no known year sinks to the bottom rather than breaking the sort.
+        val mergedAlbums = (albums?.albums.orEmpty() + libraryAlbums)
+            .distinctBy { it.id }
+            .newestFirst()
         val albumBucket = when {
             mergedAlbums.isEmpty() -> null
             else -> ArtistAlbumSection(
@@ -74,13 +78,16 @@ internal object ArtistPageMerger {
                 moreParams = albums?.moreParams
             )
         }
+        val singleBucket = singles?.copy(
+            albums = singles.albums.newestFirst()
+        )
 
         return ArtistPage(
             bio = details?.bio,
             imageUrl = details?.imageUrl,
             topSongs = topSongs,
             albums = albumBucket,
-            singles = singles,
+            singles = singleBucket,
             videos = videos.distinctBy { it.id },
             related = details?.related.orEmpty(),
             otherShelves = unplaced
@@ -101,3 +108,11 @@ internal object ArtistPageMerger {
 
     private fun String.normalised(): String = trim().lowercase()
 }
+
+/**
+ * A discography's order: newest first, the way every streaming app lists one, with records of no
+ * known year at the end rather than breaking the sort. Shared with the artist page's expanded
+ * "See all" shelves, which arrive in whatever order the backend chose.
+ */
+internal fun List<UnifiedAlbum>.newestFirst(): List<UnifiedAlbum> =
+    sortedByDescending { it.year ?: Int.MIN_VALUE }

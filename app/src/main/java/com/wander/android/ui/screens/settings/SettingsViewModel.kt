@@ -123,6 +123,7 @@ internal class SettingsViewModel @Inject constructor(
 
     val isMonetDynamic: StateFlow<Boolean> = secureStorage.isMonetDynamic
     val isAmoledBlack: StateFlow<Boolean> = secureStorage.isAmoledBlack
+    val isBackBlurEnabled: StateFlow<Boolean> = secureStorage.isBackBlurEnabled
     val isImmersivePlayer: StateFlow<Boolean> = secureStorage.isImmersivePlayer
     val isCoverArtThemeEnabled: StateFlow<Boolean> = secureStorage.isCoverArtThemeEnabled
     val isReduceMotion: StateFlow<Boolean> = secureStorage.isReduceMotion
@@ -470,6 +471,7 @@ internal class SettingsViewModel @Inject constructor(
 
     fun setMonetDynamic(enabled: Boolean) = secureStorage.setMonetDynamic(enabled)
     fun setAmoledBlack(enabled: Boolean) = secureStorage.setAmoledBlack(enabled)
+    fun setBackBlurEnabled(enabled: Boolean) = secureStorage.setBackBlurEnabled(enabled)
     fun setImmersivePlayer(enabled: Boolean) = secureStorage.setImmersivePlayer(enabled)
     fun setCoverArtThemeEnabled(enabled: Boolean) = secureStorage.setCoverArtThemeEnabled(enabled)
     fun setReduceMotion(enabled: Boolean) = secureStorage.setReduceMotion(enabled)

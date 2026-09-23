@@ -1,14 +1,9 @@
 package com.wander.android.ui.screens.player
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -26,29 +21,18 @@ import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.wander.android.ui.components.WandaSheet
 import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
-import com.wander.android.ui.components.Artwork
+import com.wander.android.ui.components.ActionButtonGroup
+import com.wander.android.ui.components.ActionEmphasis
+import com.wander.android.ui.components.MenuAction
 import com.wander.android.ui.components.TrackSheetHeader
-import com.wander.android.ui.components.rememberPressScale
-import com.wander.android.ui.components.scrollingTitle
 
 /**
  * Contextual menu drawer for the Now Playing screen, replacing the former top-right queue button.
@@ -80,7 +64,7 @@ internal fun NowPlayingMenuDrawer(
     onJamAction: (() -> Unit)?,
     onDismiss: () -> Unit
 ) {
-    ModalBottomSheet(
+    WandaSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
@@ -93,137 +77,75 @@ internal fun NowPlayingMenuDrawer(
         ) {
             TrackSheetHeader(track)
 
-            // Primary Queue & Radio Actions
-            MenuDrawerAction(
-                icon = Icons.AutoMirrored.Rounded.QueueMusic,
-                label = if (queueSize > 0) "${stringResource(R.string.action_queue)} ($queueSize)" else stringResource(R.string.action_queue),
-                onClick = { onOpenQueue(); onDismiss() }
+            val queueLabel = if (queueSize > 0) {
+                "${stringResource(R.string.action_queue)} ($queueSize)"
+            } else {
+                stringResource(R.string.action_queue)
+            }
+            val radioLabel = stringResource(R.string.menu_radio)
+            val strings = MenuStrings(
+                playNext = stringResource(R.string.action_play_next),
+                addToQueue = stringResource(R.string.action_add_to_queue),
+                addToPlaylist = stringResource(R.string.action_add_to_playlist),
+                speed = stringResource(R.string.action_speed_and_pitch),
+                source = stringResource(R.string.action_switch_source),
+                audioLanguage = stringResource(R.string.action_audio_language),
+                jam = stringResource(R.string.action_add_to_jam),
+                share = stringResource(R.string.action_share),
+                like = stringResource(R.string.menu_like)
             )
-
-            if (canAddToPlaylist) {
-                MenuDrawerAction(
-                    icon = Icons.Rounded.LibraryAdd,
-                    label = stringResource(R.string.action_add_to_playlist),
-                    onClick = { onAddToPlaylist(); onDismiss() }
-                )
-            }
-
-            MenuDrawerAction(
-                icon = Icons.Rounded.Radio,
-                label = if (isRadioMode) stringResource(R.string.action_radio_mode_active) else stringResource(R.string.action_start_radio),
-                tint = if (isRadioMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                onClick = { onToggleRadio(); onDismiss() }
-            )
-
-            MenuDrawerAction(
-                icon = Icons.Rounded.Speed,
-                label = stringResource(R.string.action_speed_and_pitch),
-                onClick = { onOpenSpeedPitch(); onDismiss() }
-            )
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-            // Secondary playback actions
-            MenuDrawerAction(
-                icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
-                label = stringResource(R.string.action_play_next),
-                onClick = { onPlayNext(); onDismiss() }
-            )
-            MenuDrawerAction(
-                icon = Icons.AutoMirrored.Rounded.QueueMusic,
-                label = stringResource(R.string.action_add_to_queue),
-                onClick = { onAddToQueue(); onDismiss() }
-            )
-
-            if (canSwitchSource && onOpenSourcePicker != null) {
-                MenuDrawerAction(
-                    icon = Icons.Rounded.SwapHoriz,
-                    label = "${stringResource(R.string.action_switch_source)} (${track.source.displayName})",
-                    onClick = { onOpenSourcePicker(); onDismiss() }
-                )
-            }
-
-            if (hasMultipleAudioTracks && onOpenAudioTrackPicker != null) {
-                MenuDrawerAction(
-                    icon = Icons.Rounded.Translate,
-                    label = stringResource(R.string.action_audio_language),
-                    onClick = { onOpenAudioTrackPicker(); onDismiss() }
-                )
-            }
-
-            onOpenArtist?.let { openArtist ->
-                MenuDrawerAction(
-                    icon = Icons.Rounded.Person,
-                    label = "${stringResource(R.string.action_go_to_artist)} (${track.artist})",
-                    onClick = { openArtist(); onDismiss() }
-                )
-            }
-
-            onOpenAlbum?.let { openAlbum ->
-                MenuDrawerAction(
-                    icon = Icons.Rounded.Album,
-                    label = "${stringResource(R.string.action_go_to_album)} (${track.album})",
-                    onClick = { openAlbum(); onDismiss() }
-                )
-            }
-
-            onJamAction?.let { jamAction ->
-                MenuDrawerAction(
-                    icon = Icons.Rounded.Groups,
-                    label = stringResource(R.string.action_add_to_jam),
-                    onClick = { jamAction(); onDismiss() }
-                )
-            }
-
-            if (canShare && onShare != null) {
-                MenuDrawerAction(
-                    icon = Icons.Rounded.Share,
-                    label = stringResource(R.string.action_share),
-                    onClick = { onShare(); onDismiss() }
-                )
-            }
-
-            MenuDrawerAction(
-                icon = if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                label = stringResource(if (isLiked) R.string.action_unlike else R.string.action_like),
-                tint = if (isLiked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                onClick = { onToggleLike(); onDismiss() }
+            ActionButtonGroup(
+                modifier = Modifier.padding(top = 8.dp),
+                actions = buildList {
+                    add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, queueLabel, ActionEmphasis.PRIMARY) { onOpenQueue(); onDismiss() })
+                    // Settings, not errands: toggling one keeps the menu open, and the button's own colour
+                    // and shape say whether it is on.
+                    add(MenuAction(Icons.Rounded.Radio, radioLabel, ActionEmphasis.SECONDARY, selected = isRadioMode) { onToggleRadio() })
+                    add(
+                        MenuAction(
+                            if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                            strings.like,
+                            ActionEmphasis.ICON,
+                            selected = isLiked
+                        ) { onToggleLike() }
+                    )
+                    if (canShare && onShare != null) {
+                        add(MenuAction(Icons.Rounded.Share, strings.share, ActionEmphasis.ICON) { onShare(); onDismiss() })
+                    }
+                    if (canAddToPlaylist) {
+                        add(MenuAction(Icons.Rounded.LibraryAdd, strings.addToPlaylist, ActionEmphasis.ICON) { onAddToPlaylist(); onDismiss() })
+                    }
+                    add(MenuAction(Icons.Rounded.Speed, strings.speed, ActionEmphasis.ICON) { onOpenSpeedPitch(); onDismiss() })
+                    add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, strings.playNext) { onPlayNext(); onDismiss() })
+                    add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, strings.addToQueue) { onAddToQueue(); onDismiss() })
+                    onOpenArtist?.let { add(MenuAction(Icons.Rounded.Person, track.artist) { it(); onDismiss() }) }
+                    onOpenAlbum?.let { open ->
+                        track.album?.takeIf { it.isNotBlank() }?.let { album ->
+                            add(MenuAction(Icons.Rounded.Album, album) { open(); onDismiss() })
+                        }
+                    }
+                    if (canSwitchSource && onOpenSourcePicker != null) {
+                        add(MenuAction(Icons.Rounded.SwapHoriz, strings.source) { onOpenSourcePicker(); onDismiss() })
+                    }
+                    if (hasMultipleAudioTracks && onOpenAudioTrackPicker != null) {
+                        add(MenuAction(Icons.Rounded.Translate, strings.audioLanguage) { onOpenAudioTrackPicker(); onDismiss() })
+                    }
+                    onJamAction?.let { add(MenuAction(Icons.Rounded.Groups, strings.jam) { it(); onDismiss() }) }
+                }
             )
         }
     }
 }
 
-@Composable
-private fun MenuDrawerAction(
-    icon: ImageVector,
-    label: String,
-    tint: Color = MaterialTheme.colorScheme.onSurface,
-    onClick: () -> Unit
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val scale by rememberPressScale(interactionSource, label = "menuActionPress")
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .scale(scale)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 14.dp)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = tint,
-            modifier = Modifier.size(24.dp)
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            color = tint,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
+/** Resolved once in composition, since the action list is built in a plain lambda. */
+private class MenuStrings(
+    val playNext: String,
+    val addToQueue: String,
+    val addToPlaylist: String,
+    val speed: String,
+    val source: String,
+    val audioLanguage: String,
+    val jam: String,
+    val share: String,
+    val like: String
+)

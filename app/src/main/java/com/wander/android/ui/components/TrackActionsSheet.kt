@@ -1,19 +1,14 @@
 package com.wander.android.ui.components
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
-import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
@@ -23,23 +18,14 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -93,6 +79,12 @@ fun TrackActionsSheet(
     onOpenArtist: (() -> Unit)? = null
 ) {
     val playable = track.isPlayableNow()
+    // Held here and flipped optimistically: callers pass the track as it was when the menu opened,
+    // so their `isLiked` would never reflect a toggle made from inside it.
+    var liked by remember(track.id) { mutableStateOf(isLiked) }
+    val likeLabel = stringResource(R.string.menu_like)
+    val removeFromQueue = stringResource(R.string.action_remove_from_queue)
+    val deleteOffline = stringResource(R.string.common_delete_offline_file)
 
     // Resolved here rather than passed in by each caller. This sheet is opened from a dozen
     // screens, and threading a jam callback through all of them would mean the action quietly
@@ -140,7 +132,7 @@ fun TrackActionsSheet(
         return
     }
 
-    ModalBottomSheet(
+    WandaSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
@@ -156,82 +148,58 @@ fun TrackActionsSheet(
             // Queueing a track the player would refuse to load only moves the failure later, so
             // offline these are omitted the same way an unsupported capability is. Liking,
             // sharing and removing still work — none of them need to play anything.
-            if (playable) {
-                SheetAction(Icons.AutoMirrored.Rounded.PlaylistAdd, "Play next") { onPlayNext(); onDismiss() }
-                SheetAction(Icons.AutoMirrored.Rounded.QueueMusic, "Add to queue") { onAddToQueue(); onDismiss() }
-
-                onOpenArtist?.let {
-                    SheetAction(Icons.Rounded.Person, "Go to artist") { it(); onDismiss() }
+            val actions = buildList {
+                if (playable) {
+                    add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, "Play next", ActionEmphasis.PRIMARY) { onPlayNext(); onDismiss() })
+                    add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, "Queue", ActionEmphasis.SECONDARY) { onAddToQueue(); onDismiss() })
                 }
-                onStartRadio?.let {
-                    SheetAction(Icons.Rounded.Radio, "Start radio from this") { it(); onDismiss() }
+                onToggleLike?.let {
+                    // A setting, not an errand: it flips in place and the menu stays up.
+                    add(
+                        MenuAction(
+                            icon = if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                            label = likeLabel,
+                            emphasis = ActionEmphasis.ICON,
+                            selected = liked
+                        ) {
+                            liked = !liked
+                            it()
+                        }
+                    )
+                }
+                // One verb, then a question — rather than two buttons that ask the user to know
+                // Wanda's internal distinction between a public URL and a drop before they have
+                // decided who they are sharing with. Shown when either half is available.
+                if (onShare != null || dropFriends.isNotEmpty()) {
+                    add(MenuAction(Icons.Rounded.Share, "Share", ActionEmphasis.ICON) {
+                        if (onShare == null) pickingFriend = true else choosingShare = true
+                    })
+                }
+                onAddToPlaylist?.let {
+                    add(MenuAction(Icons.Rounded.LibraryAdd, "Add to playlist", ActionEmphasis.ICON) { it(); onDismiss() })
+                }
+                if (playable) {
+                    onStartRadio?.let { add(MenuAction(Icons.Rounded.Radio, "Radio") { it(); onDismiss() }) }
+                    onOpenArtist?.let { add(MenuAction(Icons.Rounded.Person, "Artist") { it(); onDismiss() }) }
+                }
+                jamState.jam?.let { jam ->
+                    // Named for what it does. In democracy mode this does not add anything — it
+                    // asks the room, and saying "add" would promise something the server won't do.
+                    val label = if (jam.mode == com.wander.android.data.sources.agro.JamMode.DEMOCRACY) {
+                        "Suggest"
+                    } else {
+                        "Jam"
+                    }
+                    add(MenuAction(Icons.Rounded.Groups, label) { jamViewModel.suggest(track); onDismiss() })
+                }
+                onRemove?.let {
+                    add(MenuAction(Icons.Rounded.Delete, removeFromQueue, ActionEmphasis.DANGER) { it(); onDismiss() })
+                }
+                onDeleteDownload?.let {
+                    add(MenuAction(Icons.Rounded.Delete, deleteOffline, ActionEmphasis.DANGER) { it(); onDismiss() })
                 }
             }
-            jamState.jam?.let { jam ->
-                // Named for what it does. In democracy mode this does not add anything — it asks
-                // the room, and saying "add" would promise something the server will not do.
-                val label = if (jam.mode == com.wander.android.data.sources.agro.JamMode.DEMOCRACY) {
-                    "Suggest to jam"
-                } else {
-                    "Add to jam"
-                }
-                SheetAction(Icons.Rounded.Groups, label) {
-                    jamViewModel.suggest(track)
-                    onDismiss()
-                }
-            }
-            onAddToPlaylist?.let {
-                SheetAction(Icons.Rounded.LibraryAdd, "Add to playlist") { it(); onDismiss() }
-            }
-            // One verb, then a question — rather than two rows that ask the user to know
-            // Wanda's internal distinction between a public URL and a drop before they have
-            // decided who they are sharing with. Shown when either half is available; with no
-            // friends and no shareable source there is nothing behind it at all.
-            if (onShare != null || dropFriends.isNotEmpty()) {
-                SheetAction(Icons.Rounded.Share, "Share") {
-                    if (onShare == null) pickingFriend = true else choosingShare = true
-                }
-            }
-            onToggleLike?.let {
-                SheetAction(
-                    icon = if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                    label = if (isLiked) "Remove from liked" else "Add to liked"
-                ) { it(); onDismiss() }
-            }
-            onRemove?.let {
-                SheetAction(
-                    icon = Icons.Rounded.Delete,
-                    label = stringResource(R.string.action_remove_from_queue),
-                    tint = MaterialTheme.colorScheme.error
-                ) { it(); onDismiss() }
-            }
-            onDeleteDownload?.let {
-                SheetAction(
-                    icon = Icons.Rounded.Delete,
-                    label = stringResource(R.string.common_delete_offline_file),
-                    tint = MaterialTheme.colorScheme.error
-                ) { it(); onDismiss() }
-            }
+            ActionButtonGroup(actions, modifier = Modifier.padding(top = 8.dp))
         }
-    }
-}
-
-@Composable
-private fun SheetAction(
-    icon: ImageVector,
-    label: String,
-    tint: Color = MaterialTheme.colorScheme.onSurface,
-    onClick: () -> Unit
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 14.dp)
-    ) {
-        Icon(icon, contentDescription = null, tint = tint)
-        Text(text = label, style = MaterialTheme.typography.bodyLarge, color = tint)
     }
 }

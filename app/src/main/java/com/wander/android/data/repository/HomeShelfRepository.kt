@@ -57,12 +57,6 @@ class HomeShelfRepository @Inject constructor(
         trackDao.getNeverPlayedTracks(limit).map(TrackEntity::toUnifiedTrack)
     }
 
-    /** Recently added, restricted to one backend, for Home's per-source shelves. */
-    suspend fun getRecentBySource(source: SourceType, limit: Int = 12): List<UnifiedTrack> =
-        withContext(Dispatchers.IO) {
-            trackDao.getRecentlyAddedInSource(source, limit).map(TrackEntity::toUnifiedTrack)
-        }
-
     /**
      * Home's lead shelf: what gets played most, with every configured backend represented.
      *

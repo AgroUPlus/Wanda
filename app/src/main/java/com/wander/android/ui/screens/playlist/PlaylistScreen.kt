@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.playlist
 
+import com.wander.android.ui.components.groupedListItem
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -7,11 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,11 +24,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistHost
+import com.wander.android.ui.components.CompactHeroTopBar
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.TrackRow
-import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.collapsingTitleSource
+import com.wander.android.ui.components.rememberCollapsingTitleState
 import com.wander.android.ui.screens.album.AlbumHero
 import com.wander.android.ui.screens.album.AlbumSkeleton
 
@@ -46,6 +45,9 @@ fun PlaylistScreen(
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
+
+    val listState = rememberLazyListState()
+    val titleState = rememberCollapsingTitleState(listState)
 
     val addToPlaylist = AddToPlaylistHost()
 
@@ -97,6 +99,7 @@ fun PlaylistScreen(
 
             else -> {
                 LazyColumn(
+                    state = listState,
                     contentPadding = contentPadding.listInset(),
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -116,7 +119,9 @@ fun PlaylistScreen(
                             onPlay = viewModel::playAll,
                             onShuffle = viewModel::shuffle,
                             onShare = viewModel::sharePlaylist.takeIf { viewModel.canSharePlaylist() },
-                            modifier = Modifier.padding(bottom = 16.dp)
+                            modifier = Modifier
+                                .padding(bottom = 16.dp),
+                            titleModifier = Modifier.collapsingTitleSource(titleState)
                         )
                     }
 
@@ -128,24 +133,23 @@ fun PlaylistScreen(
                         TrackRow(
                             track = track,
                             onPlay = { viewModel.play(index) },
-                            onLongPress = { actionsFor = track }
+                            onLongPress = { actionsFor = track },
+                            modifier = Modifier.groupedListItem(index, tracks.size)
                         )
                     }
                 }
             }
         }
 
-        FilledTonalIconButton(
-            onClick = onBack,
-            colors = IconButtonDefaults.filledTonalIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
-            ),
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(contentPadding.headerInset())
-                .padding(start = 12.dp, top = 8.dp)
-        ) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
-        }
+        CompactHeroTopBar(
+            titleState = titleState,
+            onBack = onBack,
+            title = playlist?.name ?: "Playlist",
+            onPlay = viewModel::playAll,
+            heroTitleStyle = MaterialTheme.typography.headlineMedium,
+            heroTitleMaxLines = 3,
+            topInset = contentPadding.calculateTopPadding(),
+            modifier = Modifier.align(Alignment.TopStart)
+        )
     }
 }

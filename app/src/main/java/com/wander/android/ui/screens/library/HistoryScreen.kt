@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.library
 
+import com.wander.android.ui.components.groupedListItem
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -109,7 +110,8 @@ internal fun HistoryScreen(
                     track = track,
                     onPlay = { viewModel.play(tracks, index) },
                     onToggleLike = { viewModel.toggleLike(track) },
-                    onLongPress = { actionsFor = track }
+                    onLongPress = { actionsFor = track },
+                    modifier = Modifier.groupedListItem(index, tracks.size)
                 )
             }
         }

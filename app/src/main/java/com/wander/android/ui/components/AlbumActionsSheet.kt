@@ -1,6 +1,5 @@
 package com.wander.android.ui.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,21 +13,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.LibraryAdd
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.UnifiedAlbum
@@ -56,7 +51,7 @@ fun AlbumActionsSheet(
     onGoToArtist: (() -> Unit)? = null,
     onShare: (() -> Unit)? = null
 ) {
-    ModalBottomSheet(
+    WandaSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
@@ -97,32 +92,21 @@ fun AlbumActionsSheet(
                 }
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-            AlbumSheetAction(Icons.Rounded.PlayArrow, "Play") { onPlay(); onDismiss() }
-            AlbumSheetAction(Icons.AutoMirrored.Rounded.PlaylistAdd, "Play next") {
-                onPlayNext(); onDismiss()
-            }
-            AlbumSheetAction(Icons.AutoMirrored.Rounded.QueueMusic, "Add to queue") {
-                onAddToQueue(); onDismiss()
-            }
-            onAddToPlaylist?.let {
-                AlbumSheetAction(Icons.AutoMirrored.Rounded.PlaylistAdd, "Add to playlist") {
-                    it(); onDismiss()
+            ActionButtonGroup(
+                modifier = Modifier.padding(top = 8.dp),
+                actions = buildList {
+                    add(MenuAction(Icons.Rounded.PlayArrow, "Play", ActionEmphasis.PRIMARY) { onPlay(); onDismiss() })
+                    add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, "Play next", ActionEmphasis.SECONDARY) { onPlayNext(); onDismiss() })
+                    // Always offered when present, unlike a track's share. An album link describes
+                    // the record rather than naming a server, so it works from a source that cannot
+                    // mint links at all — the local library included. See `ShareRepository.shareAlbum`.
+                    onShare?.let { add(MenuAction(Icons.Rounded.Share, "Share", ActionEmphasis.ICON) { it(); onDismiss() }) }
+                    onDownload?.let { add(MenuAction(Icons.Rounded.Download, "Download", ActionEmphasis.ICON) { it(); onDismiss() }) }
+                    onAddToPlaylist?.let { add(MenuAction(Icons.Rounded.LibraryAdd, "Add to playlist", ActionEmphasis.ICON) { it(); onDismiss() }) }
+                    add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, "Queue") { onAddToQueue(); onDismiss() })
+                    onGoToArtist?.let { add(MenuAction(Icons.Rounded.Person, album.artist) { it(); onDismiss() }) }
                 }
-            }
-            onDownload?.let {
-                AlbumSheetAction(Icons.Rounded.Download, "Download album") { it(); onDismiss() }
-            }
-            onGoToArtist?.let {
-                AlbumSheetAction(Icons.Rounded.Person, "Go to ${album.artist}") { it(); onDismiss() }
-            }
-            onShare?.let {
-                // Always offered, unlike a track's share. An album link describes the record rather
-                // than naming a server, so it works from a source that cannot mint links at all —
-                // the local library included. See `ShareRepository.shareAlbum`.
-                AlbumSheetAction(Icons.Rounded.Share, "Share album") { it(); onDismiss() }
-            }
+            )
         }
     }
 }
@@ -133,23 +117,3 @@ private fun UnifiedAlbum.subtitleLine(): String = listOfNotNull(
     year?.takeIf { it > 0 }?.toString(),
     songCount.takeIf { it > 0 }?.let { "$it tracks" }
 ).joinToString(" • ")
-
-@Composable
-private fun AlbumSheetAction(
-    icon: ImageVector,
-    label: String,
-    tint: Color = MaterialTheme.colorScheme.onSurface,
-    onClick: () -> Unit
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 14.dp)
-    ) {
-        Icon(icon, contentDescription = null, tint = tint)
-        Text(text = label, style = MaterialTheme.typography.bodyLarge, color = tint)
-    }
-}

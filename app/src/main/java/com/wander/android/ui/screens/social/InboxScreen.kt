@@ -36,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.ui.components.enteringBlur
 import com.wander.android.R
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.headerInset
@@ -159,28 +160,30 @@ internal fun InboxScreen(
                         }
                     }
             ) { openWith ->
-                when {
-                    openWith != null -> InboxConversation(
-                        state = state,
-                        contentPadding = contentPadding,
-                        onPlay = viewModel::play,
-                        onReact = viewModel::react,
-                        onRemove = viewModel::remove
-                    )
+                Box(modifier = Modifier.fillMaxSize().enteringBlur(this)) {
+                    when {
+                        openWith != null -> InboxConversation(
+                            state = state,
+                            contentPadding = contentPadding,
+                            onPlay = viewModel::play,
+                            onReact = viewModel::react,
+                            onRemove = viewModel::remove
+                        )
 
-                    state.loading && state.threads.isEmpty() ->
-                        InboxThreadListSkeleton(contentPadding = contentPadding)
+                        state.loading && state.threads.isEmpty() ->
+                            InboxThreadListSkeleton(contentPadding = contentPadding)
 
-                    state.threads.isEmpty() -> EmptyState(
-                        title = stringResource(R.string.social_no_conversations_yet),
-                        message = stringResource(R.string.social_press_hold_any_track_send)
-                    )
+                        state.threads.isEmpty() -> EmptyState(
+                            title = stringResource(R.string.social_no_conversations_yet),
+                            message = stringResource(R.string.social_press_hold_any_track_send)
+                        )
 
-                    else -> InboxThreadList(
-                        state = state,
-                        contentPadding = contentPadding,
-                        onOpenThread = viewModel::openThread
-                    )
+                        else -> InboxThreadList(
+                            state = state,
+                            contentPadding = contentPadding,
+                            onOpenThread = viewModel::openThread
+                        )
+                    }
                 }
             }
         }

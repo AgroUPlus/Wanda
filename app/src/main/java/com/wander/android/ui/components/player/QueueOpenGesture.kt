@@ -2,15 +2,18 @@ package com.wander.android.ui.components.player
 
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import kotlin.math.abs
 
 /**
- * Opens the queue on an upward drag, from anywhere on the player.
+ * Pulls the queue up on an upward drag, from anywhere on the player — the drawer follows the finger.
  *
  * The queue used to have a handle at the foot of the player to pull on. A handle is one small
  * target for a gesture the whole surface can afford, so the surface affords it instead: anywhere
@@ -30,42 +33,70 @@ import kotlin.math.abs
  * Horizontal gestures are likewise released: the cover's swipe-to-skip lives on the same pixels,
  * and a drag that is mostly sideways belongs to it.
  */
+@Composable
 internal fun Modifier.swipeUpToOpenQueue(
     enabled: Boolean,
-    onOpen: () -> Unit
-): Modifier = if (!enabled) this else pointerInput(onOpen) {
-    val threshold = QueueOpenDistance.toPx()
+    /**
+     * Checked at touch-down. False once the drawer is up: from then on the drawer's own drag and
+     * its list's nested scroll own the gesture, and claiming it here too would move it twice.
+     */
+    canStart: () -> Boolean,
+    /** Each movement once the gesture is claimed, in px, screen direction (negative is up). */
+    onDrag: (dy: Float) -> Unit,
+    /** The finger lifted (or the gesture was cancelled), with its vertical velocity in px/s. */
+    onRelease: (velocityY: Float) -> Unit
+): Modifier {
+    // Keyed on nothing that changes per frame: the caller's lambdas are new on every
+    // recomposition, and the drawer appearing recomposes the caller at the very start of this
+    // drag — a pointerInput keyed on them restarted mid-gesture and left the drawer stranded.
+    val currentCanStart by rememberUpdatedState(canStart)
+    val currentDrag by rememberUpdatedState(onDrag)
+    val currentRelease by rememberUpdatedState(onRelease)
+    return if (!enabled) this else pointerInput(Unit) {
+        val slop = viewConfiguration.touchSlop
 
-    awaitEachGesture {
-        awaitFirstDown(requireUnconsumed = false)
-        var travelY = 0f
-        var travelX = 0f
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false)
+            if (!currentCanStart()) return@awaitEachGesture
+            val tracker = VelocityTracker()
+            tracker.addPosition(down.uptimeMillis, down.position)
+            var travelY = 0f
+            var travelX = 0f
+            var claimed = false
 
-        while (true) {
-            val event = awaitPointerEvent()
-            val change: PointerInputChange = event.changes.firstOrNull() ?: break
-            if (!change.pressed) break
+            while (true) {
+                val event = awaitPointerEvent()
+                val change: PointerInputChange = event.changes.firstOrNull { it.id == down.id }
+                    ?: break.also { if (claimed) currentRelease(0f) }
+                tracker.addPosition(change.uptimeMillis, change.position)
+                if (!change.pressed) {
+                    if (claimed) currentRelease(tracker.calculateVelocity().y)
+                    break
+                }
 
-            val delta = change.positionChange()
-            travelY += delta.y
-            travelX += delta.x
+                val delta = change.positionChange()
+                if (claimed) {
+                    change.consume()
+                    currentDrag(delta.y)
+                    continue
+                }
 
-            // Sideways gestures belong to the artwork's skip swipe, downward ones to the sheet's
-            // collapse. Either way this gesture is over — and nothing has been consumed, so
-            // whichever of them owns it has seen the whole thing.
-            if (abs(travelX) > abs(travelY)) break
-            if (travelY > 0f) break
+                travelY += delta.y
+                travelX += delta.x
+                // Sideways gestures belong to the artwork's skip swipe, downward ones to the sheet's
+                // collapse. Either way this gesture is over — and nothing has been consumed, so
+                // whichever of them owns it has seen the whole thing.
+                if (abs(travelX) > abs(travelY)) break
+                if (travelY > 0f) break
 
-            // Consumed only once the drag is unambiguously this gesture, so a tap or a short
-            // upward wobble still reaches the controls underneath.
-            if (-travelY >= threshold) {
-                change.consume()
-                onOpen()
-                break
+                // Claimed at touch slop, so a tap still reaches the controls underneath — and from
+                // then on every pixel of movement goes to the drawer, which follows the finger.
+                if (-travelY >= slop) {
+                    claimed = true
+                    change.consume()
+                    currentDrag(travelY)
+                }
             }
         }
     }
 }
-
-/** Far enough not to fire on a stray upward wobble while tapping a control. */
-private val QueueOpenDistance = 56.dp

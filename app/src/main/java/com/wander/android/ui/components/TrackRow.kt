@@ -5,6 +5,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -42,9 +43,8 @@ fun TrackRow(
     isPlaying: Boolean = false,
     onToggleLike: (() -> Unit)? = null,
     /**
-     * Whether this row paints its own "now playing" background. False in the queue, which draws
-     * one animated highlight that travels between rows instead of each row snapping its own on
-     * and off — see `QueueUpNext`.
+     * Whether this row paints its own "now playing" background. False in the queue, where the
+     * whole grouped cell changes colour instead — see `QueueUpNext`.
      */
     showBackground: Boolean = true,
     /** Long press. Null leaves the row without a context menu, as in the queue's reorder mode. */
@@ -74,7 +74,9 @@ fun TrackRow(
     // [rememberPressScale]; this is the same answer in the row-shaped places — the artist page's
     // song lists among them, which had no press feedback at all.
     val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
     val artworkScale by rememberPressScale(interactionSource, label = "trackRowPress")
+    val artworkShape = rememberShelfArtworkShape(isPressed)
     val rowBackground by animateColorAsState(
         targetValue = if (isPlaying && showBackground) {
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.30f)
@@ -105,7 +107,7 @@ fun TrackRow(
             url = track.artworkUrl,
             contentDescription = null,
             sizeDp = 52.dp,
-            shape = MaterialTheme.shapes.small,
+            shape = artworkShape,
             modifier = Modifier
                 .size(52.dp)
                 .scale(artworkScale)

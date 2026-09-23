@@ -145,6 +145,15 @@ fun SyncedLyricsView(
     // turns into a fling should not fight the sync a beat later than the touch that started it.
     var autoScrollEnabled by remember { mutableStateOf(true) }
 
+    // Tapping a line to seek is itself a touch, so the pointer-down handler below has already
+    // turned auto-scroll off by the time this fires — leaving the view stuck out of sync after
+    // exactly the gesture that was supposed to jump back into it. Re-arming it here is what makes
+    // "tap a line" mean "follow from here," not "follow until I next touch the screen."
+    val onSeekAndResync: (Long) -> Unit = { positionMs ->
+        autoScrollEnabled = true
+        onSeek(positionMs)
+    }
+
     val offsetPx = with(LocalDensity.current) { -ACTIVE_LINE_OFFSET.roundToPx() }
     LaunchedEffect(activeIndex, offsetPx, autoScrollEnabled) {
         if (autoScrollEnabled) {
@@ -184,7 +193,7 @@ fun SyncedLyricsView(
                         nextLineTimestampMs = nextLineTs,
                         isActive = isActive,
                         currentPositionMs = if (isActive) positionState.value.positionMs else 0L,
-                        onSeek = onSeek,
+                        onSeek = onSeekAndResync,
                         letterByLetterEnabled = letterByLetterEnabled,
                         textAlign = textAlign
                     )

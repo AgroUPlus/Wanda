@@ -1,6 +1,5 @@
 package com.wander.android.ui.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,20 +13,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.LibraryAdd
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,7 +41,7 @@ fun PlaylistActionsSheet(
     onShare: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null
 ) {
-    ModalBottomSheet(
+    WandaSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
@@ -87,82 +82,23 @@ fun PlaylistActionsSheet(
                 }
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-            PlaylistSheetAction(
-                icon = Icons.Rounded.PlayArrow,
-                label = stringResource(R.string.action_play)
-            ) {
-                onPlay()
-                onDismiss()
-            }
-
-            PlaylistSheetAction(
-                icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
-                label = stringResource(R.string.action_play_next)
-            ) {
-                onPlayNext()
-                onDismiss()
-            }
-
-            PlaylistSheetAction(
-                icon = Icons.AutoMirrored.Rounded.QueueMusic,
-                label = stringResource(R.string.common_add_queue)
-            ) {
-                onAddToQueue()
-                onDismiss()
-            }
-
-            if (onAddToPlaylist != null) {
-                PlaylistSheetAction(
-                    icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
-                    label = stringResource(R.string.action_add_to_playlist)
-                ) {
-                    onAddToPlaylist()
-                    onDismiss()
+            val play = stringResource(R.string.action_play)
+            val playNext = stringResource(R.string.action_play_next)
+            val addQueue = stringResource(R.string.common_add_queue)
+            val addToPlaylist = stringResource(R.string.action_add_to_playlist)
+            val share = stringResource(R.string.action_share)
+            val delete = stringResource(R.string.common_delete_playlist)
+            ActionButtonGroup(
+                modifier = Modifier.padding(top = 8.dp),
+                actions = buildList {
+                    add(MenuAction(Icons.Rounded.PlayArrow, play, ActionEmphasis.PRIMARY) { onPlay(); onDismiss() })
+                    add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, playNext, ActionEmphasis.SECONDARY) { onPlayNext(); onDismiss() })
+                    onShare?.let { add(MenuAction(Icons.Rounded.Share, share, ActionEmphasis.ICON) { it(); onDismiss() }) }
+                    onAddToPlaylist?.let { add(MenuAction(Icons.Rounded.LibraryAdd, addToPlaylist, ActionEmphasis.ICON) { it(); onDismiss() }) }
+                    add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, addQueue) { onAddToQueue(); onDismiss() })
+                    onDelete?.let { add(MenuAction(Icons.Rounded.Delete, delete, ActionEmphasis.DANGER) { it(); onDismiss() }) }
                 }
-            }
-
-            if (onShare != null) {
-                PlaylistSheetAction(
-                    icon = Icons.Rounded.Share,
-                    label = stringResource(R.string.action_share)
-                ) {
-                    onShare()
-                    onDismiss()
-                }
-            }
-
-            if (onDelete != null) {
-                PlaylistSheetAction(
-                    icon = Icons.Rounded.Delete,
-                    label = stringResource(R.string.common_delete_playlist),
-                    tint = MaterialTheme.colorScheme.error
-                ) {
-                    onDelete()
-                    onDismiss()
-                }
-            }
+            )
         }
-    }
-}
-
-@Composable
-private fun PlaylistSheetAction(
-    icon: ImageVector,
-    label: String,
-    tint: Color = MaterialTheme.colorScheme.onSurface,
-    onClick: () -> Unit
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 14.dp)
-    ) {
-        Icon(icon, contentDescription = null, tint = tint)
-        Text(text = label, style = MaterialTheme.typography.bodyLarge, color = tint)
     }
 }

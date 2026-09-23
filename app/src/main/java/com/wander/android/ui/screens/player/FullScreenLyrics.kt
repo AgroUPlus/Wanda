@@ -31,11 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +38,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.wander.android.ui.components.BackdropBlurSource
+import com.wander.android.ui.components.backResistance
 import com.wander.android.R
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
@@ -133,6 +130,11 @@ private fun LyricsScaffold(
         }
     }
 
+    // Everything behind the lyrics blurs only while a back swipe is pulling them away — fully at
+    // the first pixel, clearing as the swipe goes. The rest of the time the lyrics cover the
+    // screen and a blur behind them would cost the GPU for nothing.
+    BackdropBlurSource { if (backProgress > 0f) 1f - backResistance(backProgress) else 0f }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -170,14 +172,6 @@ private fun LyricsScaffold(
                 // Balances the back button so the title sits on the screen's centre rather than the
                 // centre of what is left over beside it.
                 Box(modifier = Modifier.size(BackButtonSlot))
-            }
-
-            if (hasSynced) {
-                SyncedStaticToggle(
-                    showStatic = showStatic,
-                    onSelect = { showStatic = it },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                )
             }
 
             // Runs all the way to the bottom of the screen, *behind* the transport below, and is
@@ -219,72 +213,37 @@ private fun LyricsScaffold(
             )
         }
 
-        LyricsTransport(
-            state = state,
-            playerConnection = playerConnection,
+        // The sync toggle sits at the very foot, under the time bar — one-hand reach matters more
+        // for a control reached for mid-read than a fixed sense of "settings live at the top."
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(horizontal = 16.dp, vertical = 12.dp)
-        )
+        ) {
+            LyricsTransport(state = state, playerConnection = playerConnection)
+            if (hasSynced) {
+                SyncedStaticToggle(
+                    showStatic = showStatic,
+                    onSelect = { showStatic = it },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                )
+            }
+        }
     }
 }
-
-/**
- * Fades the content out at the top and bottom edges instead of cutting it.
- *
- * Drawn as a mask rather than a gradient laid over the top: an overlay would have to be painted in
- * the background's own colour to hide anything, and there is no one such colour here — the
- * background is whatever the cover tinted it to this track. Masking the content's own alpha works
- * against any background because it never paints anything.
- *
- * `CompositingStrategy.Offscreen` is what makes that possible: `BlendMode.DstIn` needs a layer to
- * blend against, and without it the blend has nothing to erase from.
- */
-private fun Modifier.fadeVerticalEdges(
-    top: () -> Float,
-    bottom: () -> Float
-): Modifier = this
-    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-    .drawWithContent {
-        drawContent()
-        val topFactor = top()
-        val bottomFactor = bottom()
-        val topHeight = TopFadeHeight.toPx().coerceAtMost(size.height / 3f) * topFactor
-        // Deeper at the foot, and measured from *below* the bar: the lines should still be
-        // legible as they pass behind the transport and be gone by the time they reach the
-        // screen's edge, rather than dissolving before they get there.
-        val bottomHeight = BottomFadeHeight.toPx().coerceAtMost(size.height / 2f) * bottomFactor
-        if (topHeight > 0f) {
-            drawRect(
-                brush = Brush.verticalGradient(
-                    colors = listOf(Color.Transparent, Color.Black),
-                    startY = 0f,
-                    endY = topHeight
-                ),
-                blendMode = BlendMode.DstIn
-            )
-        }
-        if (bottomHeight > 0f) {
-            drawRect(
-                brush = Brush.verticalGradient(
-                    colors = listOf(Color.Black, Color.Transparent),
-                    startY = size.height - bottomHeight,
-                    endY = size.height
-                ),
-                blendMode = BlendMode.DstIn
-            )
-        }
-    }
-
 /** Matches `FilledIconButton`'s default footprint, so the title centres against the real gap. */
 private val BackButtonSlot = 40.dp
 
-/** What the floating transport occupies, reserved inside the lyrics' own scroll. */
-private val TransportReserve = 190.dp
+/**
+ * What the floating transport occupies, reserved inside the lyrics' own scroll.
+ *
+ * Taller than the transport alone now that the sync toggle sits below it in the same bottom
+ * block — approximate pending an on-device check, but erring tall is the safe direction: a few
+ * extra dp of scrollable padding is invisible, a verse hidden behind the bar is not.
+ */
+private val TransportReserve = 240.dp
 
 /** How far the screen shrinks and dims at a fully-dragged predictive back. */
 private const val BackScaleFloor = 0.88f
 private const val BackFadeDepth = 0.35f
-
-private val TopFadeHeight = 56.dp
-private val BottomFadeHeight = 220.dp

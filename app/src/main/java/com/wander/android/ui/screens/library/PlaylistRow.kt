@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.library
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.rememberPressScale
+import com.wander.android.ui.components.rememberShelfArtworkShape
 import com.wander.android.ui.components.rememberShelfEntranceScale
 import com.wander.android.ui.components.scrollingTitle
 
@@ -35,8 +37,10 @@ fun PlaylistRow(
     onLongPress: (() -> Unit)? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale by rememberPressScale(interactionSource, label = "playlistRowPress")
     val entranceScale = rememberShelfEntranceScale(index)
+    val artworkShape = rememberShelfArtworkShape(isPressed)
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -55,7 +59,7 @@ fun PlaylistRow(
             url = playlist.coverArtUrl,
             contentDescription = null,
             sizeDp = 52.dp,
-            shape = MaterialTheme.shapes.small,
+            shape = artworkShape,
             modifier = Modifier.size(52.dp)
         )
         Column(

@@ -60,7 +60,9 @@ internal fun ArtistHero(
      * as the tap having failed, so the control waits until there is an answer to show.
      */
     isFollowing: Boolean? = null,
-    onToggleFollow: () -> Unit = {}
+    onToggleFollow: () -> Unit = {},
+    /** On the name alone — how the page's collapsing bar tracks it. */
+    titleModifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         ImmersiveHero(
@@ -93,7 +95,8 @@ internal fun ArtistHero(
                 style = MaterialTheme.typography.displaySmall,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = titleModifier
             )
             if (subtitle.isNotBlank()) {
                 Text(
