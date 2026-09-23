@@ -666,6 +666,13 @@ class PlayerConnection @Inject constructor(
         _controller.value?.seekTo(positionMs)
     }
 
+    /** Jumps [deltaMs] from the playhead, within the current item. See [EpisodeJumps]. */
+    fun seekBy(deltaMs: Long) {
+        if (isFollowing) return
+        val ctrl = _controller.value ?: return
+        ctrl.seekTo(EpisodeJumps.target(ctrl.currentPosition, deltaMs, ctrl.duration.coerceAtLeast(0L)))
+    }
+
     fun seekToIndex(index: Int) {
         if (isFollowing) return
         val ctrl = _controller.value ?: return

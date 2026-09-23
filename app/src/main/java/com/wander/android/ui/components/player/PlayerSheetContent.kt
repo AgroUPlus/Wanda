@@ -233,6 +233,16 @@ fun PlayerSheetContent(
     // so `NowPlayingScreen`'s own call to it, moments later, never flashes the default theme
     // waiting on a palette decode this one already paid for.
     com.wander.android.ui.theme.rememberCoverSeedColor(currentArtwork)
+    // A change the swipe did not make — a skip button, a song ending — slides the filmstrip the
+    // same way a swipe would, so every track change moves alike. Only a step of one either way
+    // and only in the full player: a jump across the queue has no neighbour cover to slide from,
+    // and the docked strip shows no filmstrip at all.
+    swipe.rememberTrackArrival(
+        trackId = playback.currentTrack?.id,
+        index = playback.currentIndex,
+        enabled = !docked,
+        spec = MaterialTheme.motionScheme.defaultSpatialSpec()
+    )
     LaunchedEffect(playback.currentTrack?.id) {
         swipe.clearPending()
     }
@@ -413,7 +423,7 @@ fun PlayerSheetContent(
                     // Both read at draw time — `offsetX` changes every frame, and `overlayAlpha` is
                     // only ever called inside a `graphicsLayer`.
                     overlayAlpha = {
-                        smoothStep(progress(), 0.85f, 1f) * swipeFade(swipe.offsetX.value)
+                        smoothStep(progress(), 0.85f, 1f) * swipeFade(swipe.shift)
                     },
                     showLyrics = lyricsVisible,
                     onToggleLyrics = { lyricsVisible = !lyricsVisible },

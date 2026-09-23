@@ -28,8 +28,8 @@ import kotlin.math.sign
 /** Which way a row is being swiped, in reading order. */
 enum class SwipeSide { START, END }
 
-/** How far the rubber band lets a row travel by default, as a fraction of its width. */
-const val DefaultStretchLimit = 0.55f
+/** How far the rubber band lets a row travel, as a fraction of its width. */
+private const val StretchLimit = 0.55f
 
 /** How far (of the width) the row has to be pulled before letting go triggers the action. */
 private const val TriggerFraction = 0.3f
@@ -43,18 +43,12 @@ private val ReturnSpring = spring<Float>(
     stiffness = Spring.StiffnessMediumLow
 )
 
-/** A removed row leaves in one clean move — no bounce, it is not coming back. */
-private val ExitSpring = spring<Float>(
-    dampingRatio = Spring.DampingRatioNoBouncy,
-    stiffness = Spring.StiffnessMedium
-)
-
 /**
  * A row that can be swiped sideways with rubber-band resistance: it tracks the finger closely at
  * first and stiffens the further it is pulled ([rubberBand]), ticks once when the pull passes
  * the point of no return, and on release either fires the action or springs back with a small
- * bounce. [dismissOnStart] slides the row out instead of back when the START action fires — for
- * swipe-to-remove, where the row is about to leave anyway.
+ * bounce. Both actions are shortcuts that leave the row in place; removing a row is
+ * [androidx.compose.material3.SwipeToDismissBox]'s job.
  *
  * [background] is drawn behind the row and told which side is showing and how far toward the
  * trigger point the pull has got (0..1), so it can grow into the action rather than just appear.
@@ -65,12 +59,6 @@ fun ElasticSwipeBox(
     onSwipeEnd: (() -> Unit)?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    dismissOnStart: Boolean = false,
-    /**
-     * The rubber band's reach, as a fraction of the width. Larger is looser: the row keeps closer
-     * to the finger and reaches the trigger point sooner.
-     */
-    stretchLimit: Float = DefaultStretchLimit,
     background: @Composable BoxScope.(side: SwipeSide?, progress: Float) -> Unit = { _, _ -> },
     content: @Composable BoxScope.() -> Unit
 ) {
@@ -96,7 +84,7 @@ fun ElasticSwipeBox(
     }
 
     val dragState = rememberDraggableState { delta ->
-        val limit = width * stretchLimit
+        val limit = width * StretchLimit
         val next = raw + delta
         // A side with no action does not move at all, rather than stretching toward nothing.
         if (actionFor(sideOf(next)) == null) {
@@ -127,25 +115,18 @@ fun ElasticSwipeBox(
                         // snapped in launched coroutines and trails a fast swipe, so a flick that
                         // had already ticked past the trigger was read as short of it and bounced
                         // back instead of firing.
-                        val released = rubberBand(raw, width * stretchLimit)
+                        val released = rubberBand(raw, width * StretchLimit)
                         raw = 0f
                         offset.snapTo(released)
                         val action = actionFor(sideOf(released))
                         val flung = abs(velocity) > FlingVelocity && sign(velocity) == sign(released)
                         val triggered = action != null &&
                             (abs(released) >= width * TriggerFraction || flung)
-                        if (triggered && dismissOnStart && sideOf(released) == SwipeSide.START) {
-                            haptics.settled()
-                            offset.animateTo(width * sign(released), ExitSpring, velocity)
+                        if (triggered) {
+                            haptics.confirmed()
                             action?.invoke()
-                            offset.snapTo(0f)
-                        } else {
-                            if (triggered) {
-                                haptics.confirmed()
-                                action?.invoke()
-                            }
-                            offset.animateTo(0f, ReturnSpring, velocity)
                         }
+                        offset.animateTo(0f, ReturnSpring, velocity)
                     }
                 ),
             content = content

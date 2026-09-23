@@ -40,14 +40,14 @@ internal fun PeekArtwork(
                 val step = rect.width + PeekGap.toPx()
                 layout(width, height) {
                     placeable.place(
-                        x = (rect.left + swipe.offsetX.value + side * step).roundToInt(),
+                        x = (rect.left + swipe.shift + side * step).roundToInt(),
                         y = rect.top.roundToInt()
                     )
                 }
             }
             .graphicsLayer {
                 val step = swipe.stepPx.takeIf { it > 0f } ?: FullExitDistance
-                val offset = swipe.offsetX.value
+                val offset = swipe.shift
                 val reach = abs(offset) / DistanceThreshold
 
                 if (carouselEnabled) {

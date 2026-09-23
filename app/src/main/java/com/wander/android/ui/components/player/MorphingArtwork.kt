@@ -132,7 +132,7 @@ internal fun MorphingArtwork(
                 swipe.stepPx = rect.width + PeekGap.toPx()
                 layout(width, height) {
                     placeable.place(
-                        x = (rect.left + swipe.offsetX.value).roundToInt(),
+                        x = (rect.left + swipe.shift).roundToInt(),
                         y = rect.top.roundToInt()
                     )
                 }
@@ -143,7 +143,7 @@ internal fun MorphingArtwork(
                 scaleY = pauseScale
                 if (carouselEnabled && progress() > 0.8f) {
                     val step = swipe.stepPx.takeIf { it > 0f } ?: FullExitDistance
-                    val offset = swipe.offsetX.value
+                    val offset = swipe.shift
                     val progressAway = (abs(offset) / step).coerceIn(0f, 1f)
                     val swipeScale = lerpFloat(1f, 0.85f, progressAway)
                     scaleX *= swipeScale
