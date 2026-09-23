@@ -21,6 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
@@ -28,7 +29,6 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.lerp as lerpColor
 import androidx.compose.ui.util.lerp
 import com.wander.android.ui.components.MiniArtworkSize
 import com.wander.android.ui.components.MiniProgressBarHeight
@@ -120,6 +120,12 @@ fun PlayerSheet(
      * dock row lower than it measures leaves a strip-sized hole above the navigation bar.
      */
     dockedHeight: Dp = MiniPlayerHeight,
+    /**
+     * The current track's cover-derived seed colour, null when cover-art theming is off. Darkened
+     * and blended in as the sheet expands, so the full player reads as a deeper, cover-tinted
+     * surface instead of the flat [expandedColor] — the docked strip is untouched by it.
+     */
+    coverSeed: Color? = null,
     content: @Composable (progress: () -> Float, rawProgress: () -> Float, expandedHeight: Dp) -> Unit
 ) {
     if (!isVisible) return
@@ -222,7 +228,7 @@ fun PlayerSheet(
                 // Drawn rather than composed: the colour changes every frame of a drag, and a
                 // `background(...)` argument would recompose the sheet along with it.
                 .drawBehind {
-                    drawRect(lerpColor(dockedColor, expandedColor, sheetState.progress))
+                    drawPlayerSheetBackground(sheetState.progress, dockedColor, expandedColor, coverSeed)
                 }
                 .layout { measurable, constraints ->
                     val fullWidth = constraints.maxWidth

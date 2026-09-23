@@ -61,6 +61,8 @@ fun PlayerSheetContent(
     playback: PlaybackState,
     playerConnection: PlayerConnection,
     onExpand: () -> Unit,
+    /** Collapses the sheet back to the docked strip — the top bar's own minimize button. */
+    onMinimize: () -> Unit,
     onOpenQueue: () -> Unit,
     onOpenArtist: (String, String?) -> Unit = { _, _ -> },
     onOpenAlbum: (String) -> Unit = {},
@@ -347,6 +349,7 @@ fun PlayerSheetContent(
                 // vote counts, which are not a sheet's worth of content. `orderLocked` is exactly
                 // the "something else owns the order" flag, so it is what decides.
                 onOpenQueue = { if (playback.orderLocked) onOpenQueue() else queueDrawerOpen = true },
+                onMinimize = onMinimize,
                 onOpenArtist = onOpenArtist,
                 onOpenAlbum = onOpenAlbum,
                 onOpenJam = onOpenJam,

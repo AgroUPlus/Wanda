@@ -376,7 +376,8 @@ fun WanderApp(
                 sheetState = sheetState,
                 bottomInset = if (showChrome) dockInset else 0.dp,
                 isVisible = hasTrack && showChrome,
-                dockedHeight = dockedPlayerHeight
+                dockedHeight = dockedPlayerHeight,
+                coverSeed = shellCoverSeed
             ) { progress, rawProgress, expandedHeight ->
                 PlayerSheetContent(
                     fingerprintStatus = playingFingerprintStatus,
@@ -386,6 +387,7 @@ fun WanderApp(
                     playback = playback,
                     playerConnection = playerConnection,
                     onExpand = { scope.launch { sheetState.expand() } },
+                    onMinimize = { scope.launch { sheetState.collapse() } },
                     onOpenQueue = { navController.navigate(Routes.QUEUE) },
                     // The sheet collapses first: the destination sits underneath it, and navigating
                     // while the player is still expanded left the user staring at the player.
