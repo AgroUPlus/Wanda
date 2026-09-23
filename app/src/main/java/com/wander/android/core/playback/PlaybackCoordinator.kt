@@ -92,6 +92,8 @@ class PlaybackCoordinator @Inject internal constructor(
                 if (jamRepository.jam.value != null) return@onEach
                 if (trigger.size - trigger.index > RADIO_LOOKAHEAD) return@onEach
                 val seed = connection.state.value.currentTrack ?: return@onEach
+                // An episode is no seed for a music station: it would queue songs "like" a podcast.
+                if (seed.isEpisode) return@onEach
                 val more = musicRepository.generateRadio(seed, RADIO_BATCH)
                 if (more.isNotEmpty()) scope.launch(Dispatchers.Main) { connection.addToQueue(more) }
             }
