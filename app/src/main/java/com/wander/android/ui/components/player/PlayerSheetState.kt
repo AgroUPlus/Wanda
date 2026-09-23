@@ -1,5 +1,6 @@
 package com.wander.android.ui.components.player
 
+import androidx.activity.BackEventCompat
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.material3.MotionScheme
@@ -70,6 +71,18 @@ class PlayerSheetState(
 
     val isExpanded: Boolean get() = progress > 0.5f
 
+    /**
+     * How far into a predictive-back gesture we are, 0..1 — purely visual, read only by
+     * [PlayerSheet]'s shrink/shift/blur treatment. Kept separate from [offset]/[progress], which
+     * still drive the actual collapse (corner radius, height lerp) exactly as a manual drag does.
+     */
+    var predictiveBackProgress by mutableFloatStateOf(0f)
+        internal set
+
+    /** Which edge the predictive-back gesture started from — decides which way the sheet shifts. */
+    var predictiveBackSwipeEdge by mutableStateOf(BackEventCompat.EDGE_LEFT)
+        internal set
+
     internal suspend fun updateMaxOffset(newMaxOffset: Float, scope: CoroutineScope) {
         if (newMaxOffset <= 0f) return
         val isFirstMeasure = maxOffsetPx <= 0f
@@ -112,12 +125,14 @@ class PlayerSheetState(
 
     suspend fun expand() {
         targetValue = PlayerSheetValue.EXPANDED
+        predictiveBackProgress = 0f
         if (offset.value == 0f) return
         offset.animateTo(0f, animationSpec)
     }
 
     suspend fun collapse() {
         targetValue = PlayerSheetValue.COLLAPSED
+        predictiveBackProgress = 0f
         if (maxOffsetPx > 0f) {
             offset.animateTo(maxOffsetPx, animationSpec)
         }
@@ -136,7 +151,9 @@ class PlayerSheetState(
         offset.snapTo(newOffset)
     }
 
-    internal suspend fun updatePredictiveBackProgress(backProgress: Float) {
+    internal suspend fun updatePredictiveBackProgress(backProgress: Float, swipeEdge: Int) {
+        predictiveBackProgress = backProgress.coerceIn(0f, 1f)
+        predictiveBackSwipeEdge = swipeEdge
         if (maxOffsetPx <= 0f) return
         val target = (backProgress.coerceIn(0f, 1f) * maxOffsetPx)
         offset.snapTo(target)

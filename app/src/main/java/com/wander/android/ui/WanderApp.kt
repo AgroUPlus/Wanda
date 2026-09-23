@@ -56,6 +56,7 @@ import com.wander.android.ui.components.ListenAlongBar
 import com.wander.android.ui.components.ListenAlongBarHeight
 import com.wander.android.ui.components.LocalOfflinePlayback
 import com.wander.android.ui.components.UpdateAvailableDialog
+import com.wander.android.ui.components.predictiveBackBlur
 import com.wander.android.ui.components.player.MiniPlayerGap
 import com.wander.android.ui.components.player.MiniPlayerHeight
 import com.wander.android.ui.components.player.MiniPlayerShadowInset
@@ -247,6 +248,10 @@ fun WanderApp(
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 containerColor = MaterialTheme.colorScheme.background,
+                // Blurred (or, pre-API 31, dimmed) in step with a predictive-back gesture on the
+                // expanded player, which sits above this as a sibling in the Box below — see
+                // `PlayerSheetState.predictiveBackProgress`.
+                modifier = Modifier.predictiveBackBlur { sheetState.predictiveBackProgress }
             ) { padding ->
                 // Remembered because `NavHost` keys its `remember(builder)` on the graph-building
                 // lambda, which captures this. A fresh PaddingValues on every recomposition meant the
