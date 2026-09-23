@@ -11,11 +11,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
+import com.wander.android.ui.components.rubberBand
 import com.wander.android.ui.components.rememberHaptics
 import kotlinx.coroutines.launch
 
@@ -25,6 +29,9 @@ private const val VelocityThreshold = 800f
 
 /** Drags track at 70% of the finger so the gesture feels weighted rather than loose. */
 private const val DragResistance = 0.7f
+
+/** How far the cover can be pulled toward a side that has no track to skip to. */
+private val EdgeStretch = 40.dp
 
 /** Far enough that the full player's cover is clear of any realistic screen width. */
 internal const val FullExitDistance = 1200f
@@ -140,25 +147,27 @@ internal fun Modifier.swipeToChangeTrack(
     val handoffSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
     val settleSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
 
+    // The finger's own travel, separate from what is drawn: toward a side with no track the cover
+    // follows it on a rubber band ([rubberBand]) instead of stopping dead, then bounces back.
+    var fingerX by remember { mutableFloatStateOf(0f) }
+    val edgeStretchPx = with(LocalDensity.current) { EdgeStretch.toPx() }
+
     return draggable(
         orientation = Orientation.Horizontal,
         enabled = canNext || canPrevious,
+        onDragStarted = { fingerX = state.offsetX.value },
         state = rememberDraggableState { delta ->
             val current = state.offsetX.value
-            val raw = current + delta * DragResistance
-            val clamped = when {
-                !canPrevious && !canNext -> 0f
-                !canPrevious -> raw.coerceAtMost(0f)
-                !canNext -> raw.coerceAtLeast(0f)
-                else -> raw
-            }
+            fingerX += delta * DragResistance
+            val blocked = (fingerX > 0f && !canPrevious) || (fingerX < 0f && !canNext)
+            val clamped = if (blocked) rubberBand(fingerX, edgeStretchPx) else fingerX
             if (clamped != current) {
                 state.isSwiping = true
                 scope.launch { state.offsetX.snapTo(clamped) }
             }
             // A tick right as the drag crosses into "this would skip if you let go" — the same
             // boundary `onDragStopped` commits on — so releasing carries no surprise.
-            val crossed = kotlin.math.abs(clamped) >= DistanceThreshold
+            val crossed = !blocked && kotlin.math.abs(clamped) >= DistanceThreshold
             if (crossed != state.thresholdCrossed) {
                 state.thresholdCrossed = crossed
                 if (crossed) haptics.tick()
