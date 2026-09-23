@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.settings
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.backup.BackupSection
 import com.wander.android.core.backup.SettingsBackupStore
 import com.wander.android.core.security.AgroVault
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -32,16 +33,10 @@ internal class BackupViewModel @Inject constructor(
     private val _isBusy = MutableStateFlow(false)
     val isBusy: StateFlow<Boolean> = _isBusy.asStateFlow()
 
-    /**
-     * [includeHistory] carries the listening history and the saved recaps as well as the settings.
-     *
-     * On by default, because a restore that silently loses a lifetime of listening is the bug this
-     * was added to fix. It is still a switch: the history is the bulk of the file and the most
-     * personal thing in it, so somebody handing a backup to a new phone in a shop can leave it out.
-     */
-    fun export(target: Uri, passphrase: String, includeHistory: Boolean = true) {
+    /** Writes the chosen [sections], then reads the file back to prove it restores. */
+    fun export(target: Uri, passphrase: String, sections: Set<BackupSection>) {
         run(
-            work = { store.export(target, passphrase, includeHistory); BackupStatus.Exported },
+            work = { store.export(target, passphrase, sections); BackupStatus.Exported },
             failure = { "Export failed: ${it.readableMessage()}" }
         )
     }
@@ -50,7 +45,9 @@ internal class BackupViewModel @Inject constructor(
         run(
             work = {
                 val contents = store.import(source, passphrase)
-                BackupStatus.Imported(contents.settings, contents.plays, contents.recaps)
+                BackupStatus.Imported(
+                    contents.settings, contents.plays, contents.recaps, contents.tracks, contents.playlists
+                )
             },
             failure = { "Import failed: ${it.readableMessage()}" }
         )
@@ -109,7 +106,13 @@ internal sealed interface BackupStatus {
      * play this device already had is not added twice. Both numbers are zero for a backup written
      * before listening history travelled, which is a true statement about that file.
      */
-    data class Imported(val settings: Int, val plays: Int = 0, val recaps: Int = 0) : BackupStatus
+    data class Imported(
+        val settings: Int,
+        val plays: Int = 0,
+        val recaps: Int = 0,
+        val tracks: Int = 0,
+        val playlists: Int = 0
+    ) : BackupStatus
 
     data class Failed(val message: String) : BackupStatus
 }
