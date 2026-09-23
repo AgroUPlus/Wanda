@@ -3,11 +3,13 @@ package com.wander.android.ui.screens.replay
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,12 +38,31 @@ internal fun ReplayStoryScreen(
 
     LaunchedEffect(year) { viewModel.load(year) }
 
-    when {
-        state.isLoading -> Centred(modifier) { CircularProgressIndicator() }
+    Box(modifier = modifier.fillMaxSize()) {
+        // Keyed on the year so switching years starts the new story from its first card.
+        key(state.year) { ReplayStoryBody(state, viewModel, onDismiss) }
 
-        state.failure != null -> Centred(modifier) {
+        // Over every state, not only the story: a year that fails to load is exactly when another
+        // year is worth picking. Sits just under the rail.
+        ReplayYearPicker(
+            year = state.year,
+            years = state.years,
+            onSelect = viewModel::load,
+            modifier = Modifier
+                .safeDrawingPadding()
+                .padding(start = PickerGutter, top = PickerTop)
+        )
+    }
+}
+
+@Composable
+private fun ReplayStoryBody(state: ReplayUiState, viewModel: ReplayViewModel, onDismiss: () -> Unit) {
+    when {
+        state.isLoading -> Centred(Modifier) { CircularProgressIndicator() }
+
+        state.failure != null -> Centred(Modifier) {
             Text(
-                text = state.failure.orEmpty(),
+                text = stringResource(state.failure),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -52,15 +73,22 @@ internal fun ReplayStoryScreen(
         else -> ReplayStoryScaffold(
             deck = state.deck,
             onDismiss = onDismiss,
-            modifier = modifier
-        ) { card ->
-            ReplayCardContent(
-                card = card,
-                state = state,
-                onSave = viewModel::save,
-                onSaveAndPurge = viewModel::saveAndPurge,
-                onDone = onDismiss
+            shareFooter = stringResource(
+                R.string.replay_share_footer,
+                state.year,
+                stringResource(R.string.app_name)
             )
+        ) { card ->
+            Box(modifier = Modifier.fillMaxSize()) {
+                ReplayBackdrop(shape = replayPaletteFor(card).shape)
+                ReplayCardContent(
+                    card = card,
+                    state = state,
+                    onSave = viewModel::save,
+                    onSaveAndPurge = viewModel::saveAndPurge,
+                    onDone = onDismiss
+                )
+            }
         }
     }
 }
@@ -84,14 +112,14 @@ private fun ReplayCardContent(
         is ReplayCard.Minutes -> ReplayMinutesCard(card)
         is ReplayCard.Shape -> ReplayShapeCard(card)
         is ReplayCard.Hours -> ReplayHoursCard(card)
-        is ReplayCard.TopArtists -> ReplayTopArtistsCard(card)
-        is ReplayCard.TopSong -> ReplayTopSongCard(card)
+        is ReplayCard.TopArtists -> ReplayTopArtistsCard(card, state.artwork)
+        is ReplayCard.TopSong -> ReplayTopSongCard(card, state.artwork)
         is ReplayCard.Genres -> ReplayGenresCard(card)
-        is ReplayCard.Discovery -> ReplayDiscoveryCard(card)
+        is ReplayCard.Discovery -> ReplayDiscoveryCard(card, state.artwork)
         is ReplayCard.Streak -> ReplayStreakCard(card)
         is ReplayCard.Devices -> ReplayDevicesCard(card)
         is ReplayCard.Charts -> ReplayChartsCard(card)
-        is ReplayCard.Circle -> ReplayCircleCard(card)
+        is ReplayCard.Circle -> ReplayCircleCard(card, state.artwork)
         is ReplayCard.Silence -> ReplaySilenceCard(card)
         is ReplayCard.Outro -> ReplayOutroCard(
             card = card,
@@ -106,7 +134,6 @@ private fun ReplayCardContent(
 @Composable
 private fun ReplayIntroCard(card: ReplayCard.Intro) {
     ReplayCardFrame(
-        accent = MaterialTheme.colorScheme.primaryContainer,
         kicker = stringResource(R.string.replay_intro_kicker),
         headline = stringResource(R.string.replay_intro_headline, card.year)
     ) {
@@ -120,8 +147,8 @@ private fun ReplayIntroCard(card: ReplayCard.Intro) {
                     R.string.replay_intro_scope_device
                 }
             ),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.titleMedium,
+            color = replayMuted,
             textAlign = TextAlign.Center
         )
     }
@@ -131,14 +158,13 @@ private fun ReplayIntroCard(card: ReplayCard.Intro) {
 @Composable
 private fun ReplaySilenceCard(card: ReplayCard.Silence) {
     ReplayCardFrame(
-        accent = MaterialTheme.colorScheme.surfaceVariant,
         kicker = stringResource(R.string.replay_intro_kicker),
         headline = stringResource(R.string.replay_silence_headline, card.year)
     ) {
         Text(
             text = stringResource(R.string.replay_silence_body),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.titleMedium,
+            color = replayMuted,
             textAlign = TextAlign.Center
         )
     }
@@ -155,3 +181,6 @@ private fun Centred(modifier: Modifier, content: @Composable () -> Unit) {
 }
 
 private val FailureGutter = 32.dp
+private val PickerGutter = 16.dp
+/** Rail's top padding, its height, and a gap. */
+private val PickerTop = 24.dp

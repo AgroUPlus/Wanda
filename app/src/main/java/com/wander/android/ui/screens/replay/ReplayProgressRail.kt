@@ -1,72 +1,74 @@
 package com.wander.android.ui.screens.replay
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.layout
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.dp
 
 /**
- * One segment per card, filling as the story moves.
+ * One segment per card: the ones already seen full, the upcoming ones empty, and the current one
+ * filling with the auto-advance clock — so it stops under a held finger exactly when the story
+ * does.
  *
- * Built from the deck that will actually be shown, so somebody with a short year sees three full
+ * Built from the deck that will actually be shown, so somebody with a short year sees three
  * segments rather than eleven with eight that never fill — the bar is a promise about how long
  * this takes, and it should not lie.
+ *
+ * Drawn rather than laid out: the fill is a width, and a layout-truncated child still paints at
+ * full width, which is how every segment used to look complete from the first card.
  */
 @Composable
 internal fun ReplayProgressRail(
     cardCount: Int,
     currentIndex: Int,
+    /** How far through the current card the clock is, 0..1. */
+    currentProgress: () -> Float,
     modifier: Modifier = Modifier
 ) {
+    // The card's own content colour, so the rail reads on every flat background the story paints.
+    val fill = LocalContentColor.current
+    val track = fill.copy(alpha = TrackAlpha)
+
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(SegmentGap)
     ) {
         repeat(cardCount) { index ->
-            // Whole segments only. A partially-filled segment would be tracking the auto-advance
-            // clock, and the clock pauses under a finger and stops entirely under reduced motion —
-            // so it would sometimes be a progress bar that does not progress.
-            val target = if (index <= currentIndex) 1f else 0f
-            val fill by animateFloatAsState(target, label = "replaySegment$index")
-
-            Box(
+            Spacer(
                 modifier = Modifier
                     .weight(1f)
                     .height(SegmentHeight)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = TrackAlpha))
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth()
-                        .layout { measurable, constraints ->
-                            // Measured at full width and then truncated, so the fill grows from the
-                            // leading edge instead of the segment itself changing size.
-                            val placeable = measurable.measure(constraints)
-                            val width = (placeable.width * fill).toInt()
-                            layout(width, placeable.height) { placeable.place(0, 0) }
+                    .drawBehind {
+                        val radius = CornerRadius(size.height / 2f)
+                        drawRoundRect(track, cornerRadius = radius)
+                        // Read inside the draw phase, so the clock ticking redraws the rail
+                        // without recomposing it.
+                        val progress = when {
+                            index < currentIndex -> 1f
+                            index > currentIndex -> 0f
+                            else -> currentProgress().coerceIn(0f, 1f)
                         }
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.onSurface)
-                )
-            }
+                        if (progress > 0f) {
+                            drawRoundRect(
+                                fill,
+                                size = Size(size.width * progress, size.height),
+                                cornerRadius = radius
+                            )
+                        }
+                    }
+            )
         }
     }
 }
 
-private val SegmentHeight = 3.dp
+private val SegmentHeight = 4.dp
 private val SegmentGap = 4.dp
-private const val TrackAlpha = 0.24f
+private const val TrackAlpha = 0.28f

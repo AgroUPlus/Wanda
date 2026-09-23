@@ -1,10 +1,15 @@
 package com.wander.android.ui.screens.replay
 
+import androidx.annotation.StringRes
+import com.wander.android.R
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.replay.ReplayArchivist
+import com.wander.android.data.replay.ReplayArtwork
+import com.wander.android.data.replay.ReplayArtworkResolver
+import com.wander.android.data.replay.ReplayAvailability
 import com.wander.android.data.replay.ReplayRepository
 import com.wander.android.data.replay.ReplayReport
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -12,17 +17,22 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 
 /** What the story is doing right now. */
 @Immutable
 data class ReplayUiState(
     val year: Int = 0,
+    /** The years the picker offers, newest first. */
+    val years: List<Int> = emptyList(),
     val isLoading: Boolean = true,
     val deck: List<ReplayCard> = emptyList(),
     val report: ReplayReport? = null,
+    /** Covers and faces for the names on the cards; filled in just after the deck appears. */
+    val artwork: ReplayArtwork = ReplayArtwork(),
     /** Non-null when the recap could not be built at all. Nothing is drawn behind it. */
-    val failure: String? = null,
+    @StringRes val failure: Int? = null,
     val isSaved: Boolean = false,
     /** How many plays the tidy-up would forget, so the confirmation names a real number. */
     val purgeableCount: Int = 0,
@@ -30,18 +40,28 @@ data class ReplayUiState(
     /** Set once the tidy-up has run, with how many plays it forgot. */
     val purgedCount: Int? = null,
     /** A server or database failure the user has to be told about, rather than a silent no-op. */
-    val actionFailure: String? = null
+    @StringRes val actionFailure: Int? = null
 )
 
 @HiltViewModel
 internal class ReplayViewModel @Inject constructor(
     private val repository: ReplayRepository,
     private val archivist: ReplayArchivist,
+    private val artworkResolver: ReplayArtworkResolver,
     private val secureStorage: SecureStorage
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ReplayUiState())
     val state: StateFlow<ReplayUiState> = _state.asStateFlow()
+
+    private var years: List<Int> = emptyList()
+
+    init {
+        viewModelScope.launch {
+            years = repository.availableYears()
+            _state.value = _state.value.copy(years = years)
+        }
+    }
 
     /**
      * Builds the story for [year].
@@ -52,11 +72,14 @@ internal class ReplayViewModel @Inject constructor(
      */
     fun load(year: Int) {
         if (_state.value.year == year && !_state.value.isLoading) return
-        _state.value = ReplayUiState(year = year, isLoading = true)
+        _state.value = ReplayUiState(year = year, years = years, isLoading = true)
 
         // Written on open rather than on finish: a recap dismissed on the second card should not
-        // be waiting again at the next launch.
-        if (year > secureStorage.lastSeenReplayYear) {
+        // be waiting again at the next launch. Only for a year whose recap is due, though — peeking
+        // at the year in progress from the picker must not use up this December's offer.
+        val today = LocalDate.now()
+        val isDue = year < today.year || ReplayAvailability.offeredYear(today) == year
+        if (isDue && year > secureStorage.lastSeenReplayYear) {
             secureStorage.lastSeenReplayYear = year
         }
 
@@ -65,7 +88,7 @@ internal class ReplayViewModel @Inject constructor(
             val report = saved ?: repository.report(year).getOrElse { cause ->
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    failure = cause.message ?: "That year could not be read"
+                    failure = R.string.replay_error_load
                 )
                 return@launch
             }
@@ -77,6 +100,9 @@ internal class ReplayViewModel @Inject constructor(
                 isSaved = saved != null,
                 purgeableCount = archivist.purgeableCount(year)
             )
+            // After the deck is up, so the story never waits on a picture.
+            val artwork = artworkResolver.resolve(report)
+            if (_state.value.year == year) _state.value = _state.value.copy(artwork = artwork)
         }
     }
 
@@ -87,10 +113,10 @@ internal class ReplayViewModel @Inject constructor(
         viewModelScope.launch {
             archivist.save(report)
                 .onSuccess { _state.value = _state.value.copy(isWorking = false, isSaved = true) }
-                .onFailure { cause ->
+                .onFailure {
                     _state.value = _state.value.copy(
                         isWorking = false,
-                        actionFailure = cause.message ?: "The recap could not be saved"
+                        actionFailure = R.string.replay_error_save
                     )
                 }
         }
@@ -123,7 +149,7 @@ internal class ReplayViewModel @Inject constructor(
                         // Saving may still have succeeded; only the tidy-up is reported as failed,
                         // and nothing was deleted.
                         isSaved = archivist.saved(report.year) != null,
-                        actionFailure = cause.message ?: "Nothing was deleted"
+                        actionFailure = R.string.replay_error_tidy
                     )
                 }
         }

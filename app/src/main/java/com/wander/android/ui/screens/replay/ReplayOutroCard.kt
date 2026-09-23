@@ -4,10 +4,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -16,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -42,7 +53,6 @@ internal fun ReplayOutroCard(
     var confirming by remember { mutableStateOf(false) }
 
     ReplayCardFrame(
-        accent = MaterialTheme.colorScheme.primaryContainer,
         kicker = stringResource(R.string.replay_outro_kicker),
         headline = stringResource(R.string.replay_outro_headline, card.report.year)
     ) {
@@ -59,28 +69,28 @@ internal fun ReplayOutroCard(
                         state.purgedCount
                     ),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = replayMuted,
                     textAlign = TextAlign.Center
                 )
 
                 state.isSaved -> Text(
                     text = stringResource(R.string.replay_outro_saved),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = replayMuted,
                     textAlign = TextAlign.Center
                 )
 
                 else -> Text(
                     text = stringResource(R.string.replay_outro_body),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = replayMuted,
                     textAlign = TextAlign.Center
                 )
             }
 
             state.actionFailure?.let { failure ->
                 Text(
-                    text = failure,
+                    text = stringResource(failure),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center
@@ -131,12 +141,12 @@ private fun PurgeOffer(
             Text(
                 text = pluralStringResource(R.plurals.replay_purge_label, count, count, year),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = LocalContentColor.current
             )
             Text(
                 text = stringResource(R.string.replay_purge_explainer),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = replayMuted
             )
         }
     }
@@ -161,7 +171,7 @@ private fun Actions(
             Text(
                 text = stringResource(R.string.replay_purge_confirm_question),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = LocalContentColor.current,
                 textAlign = TextAlign.Center
             )
         }
@@ -176,9 +186,12 @@ private fun Actions(
                 }
             },
             enabled = !state.isWorking,
-            modifier = Modifier.fillMaxWidth()
+            shapes = ButtonDefaults.shapesFor(ActionHeight),
+            contentPadding = ButtonDefaults.contentPaddingFor(ActionHeight),
+            modifier = Modifier.fillMaxWidth().heightIn(min = ActionHeight)
         ) {
-            Text(
+            ActionLabel(
+                icon = Icons.Rounded.Bookmark,
                 text = when {
                     confirming -> stringResource(R.string.replay_purge_confirm_action)
                     purgeChecked -> stringResource(R.string.replay_outro_save_and_tidy)
@@ -187,16 +200,33 @@ private fun Actions(
             )
         }
 
-        OutlinedButton(
+        FilledTonalButton(
             onClick = onDone,
             enabled = !state.isWorking,
-            modifier = Modifier.fillMaxWidth()
+            shapes = ButtonDefaults.shapesFor(ActionHeight),
+            contentPadding = ButtonDefaults.contentPaddingFor(ActionHeight),
+            modifier = Modifier.fillMaxWidth().heightIn(min = ActionHeight)
         ) {
-            Text(stringResource(R.string.replay_outro_close))
+            ActionLabel(icon = Icons.Rounded.Close, text = stringResource(R.string.replay_outro_close))
         }
     }
 }
 
+/** Icon and label at the sizes M3 Expressive specifies for [ActionHeight]. */
+@Composable
+private fun ActionLabel(icon: ImageVector, text: String) {
+    Icon(icon, contentDescription = null, modifier = Modifier.size(ButtonDefaults.iconSizeFor(ActionHeight)))
+    Spacer(Modifier.width(ButtonDefaults.iconSpacingFor(ActionHeight)))
+    Text(text = text, style = ButtonDefaults.textStyleFor(ActionHeight))
+}
+
+/**
+ * M3 Expressive's Medium button: the last card's two actions end the story, so they get more than
+ * the default 40dp — and the shape springs square-ish under the finger, as every Expressive button
+ * does.
+ */
+private val ActionHeight = ButtonDefaults.MediumContainerHeight
+
 private val BlockGap = 20.dp
-private val ButtonGap = 8.dp
+private val ButtonGap = 12.dp
 private val CheckboxGap = 8.dp
