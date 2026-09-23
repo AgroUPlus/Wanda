@@ -148,7 +148,6 @@
     <!-- Home -->
     <string name="home_connect_navidrome_youtube_music_settings">Connecter Navidrome ou YouTube Music dans les paramètres, ou donner l\'accès aux musiques sur cet appareil.</string>
     <string name="home_nothing_here_yet">Rien ici pour l\'instant</string>
-    <string name="home_quick_picks_subtitle">For you, today</string>
     <string name="home_nothing_play_yet">Rien à jouer pour l\'instant</string>
     <string name="home_sessions_other_devices">Sessions sur d\'autres appareils</string>
     <!-- Importer -->
