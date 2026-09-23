@@ -76,7 +76,6 @@ internal fun ImmersivePlayerLayout(
     overlayAlpha: () -> Float,
     artworkModifier: Modifier,
     artworkSlot: @Composable (url: String?, contentDescription: String) -> Unit,
-    onOpenSourcePicker: () -> Unit,
     onOpenAudioTrackPicker: () -> Unit,
     showSpeedPitch: Boolean,
     onOpenSpeedPitch: () -> Unit,
@@ -129,12 +128,9 @@ internal fun ImmersivePlayerLayout(
         PlayerTopBar(
             jam = jam,
             sourceLabel = track.source.displayName,
-            canSwitchSource = viewModel.canSwitchSource(track, state.durationMs),
-            onOpenSourcePicker = onOpenSourcePicker,
             onOpenJam = onOpenJam,
             onMinimize = onMinimize,
             onOpenQueue = onOpenQueue,
-            sourceLabelColor = OnCoverArt,
             sourceLabelColorMuted = OnCoverArt.copy(alpha = 0.75f),
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -218,6 +214,8 @@ internal fun ImmersivePlayerLayout(
                         maxLines = 1,
                         overflow = TextOverflow.Clip,
                         modifier = Modifier.scrollingTitle()
+                            // The name is the way to the artist's page, from the one screen
+                            // that is always about the track playing.
                             .clip(MaterialTheme.shapes.extraSmall)
                             .clickable(
                                 enabled = onOpenArtist != null && track.artist.isNotBlank()

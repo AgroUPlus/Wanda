@@ -1,5 +1,7 @@
 package com.wander.android.ui.components.player
 
+import kotlinx.coroutines.coroutineScope
+import androidx.compose.animation.core.animate
 import androidx.activity.BackEventCompat
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
@@ -16,6 +18,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import com.wander.android.ui.components.backResistance
 import kotlin.math.abs
 
 enum class PlayerSheetValue {
@@ -73,10 +76,18 @@ class PlayerSheetState(
 
     /**
      * How far into a predictive-back gesture we are, 0..1 — purely visual, read only by
-     * [PlayerSheet]'s shrink/shift/blur treatment. Kept separate from [offset]/[progress], which
+     * [PlayerSheet]'s shrink/shift treatment. Kept separate from [offset]/[progress], which
      * still drive the actual collapse (corner radius, height lerp) exactly as a manual drag does.
      */
     var predictiveBackProgress by mutableFloatStateOf(0f)
+        internal set
+
+    /**
+     * The shrink/round/shift the back gesture draws on the sheet. Tracks [predictiveBackProgress]
+     * during the gesture, then eases to 0 *with* the collapse or the cancel, so the sheet never
+     * snaps from its shrunken pose back to full size in one frame.
+     */
+    var predictiveBackVisual by mutableFloatStateOf(0f)
         internal set
 
     /** Which edge the predictive-back gesture started from — decides which way the sheet shifts. */
@@ -125,16 +136,31 @@ class PlayerSheetState(
 
     suspend fun expand() {
         targetValue = PlayerSheetValue.EXPANDED
-        predictiveBackProgress = 0f
-        if (offset.value == 0f) return
-        offset.animateTo(0f, animationSpec)
+        coroutineScope {
+            // A cancelled back swipe: the sheet grows back and the blur behind it returns together.
+            launch { easeBackOut(clearBlur = true) }
+            if (offset.value != 0f) offset.animateTo(0f, animationSpec)
+        }
     }
 
     suspend fun collapse() {
         targetValue = PlayerSheetValue.COLLAPSED
+        coroutineScope {
+            // The blur keeps the value the gesture let go at — it is already mostly clear, and
+            // it fades the rest of the way with the collapse's own progress.
+            launch { easeBackOut(clearBlur = false) }
+            if (maxOffsetPx > 0f) offset.animateTo(maxOffsetPx, animationSpec)
+        }
         predictiveBackProgress = 0f
-        if (maxOffsetPx > 0f) {
-            offset.animateTo(maxOffsetPx, animationSpec)
+    }
+
+    private suspend fun easeBackOut(clearBlur: Boolean) {
+        val from = predictiveBackVisual
+        val blurFrom = predictiveBackProgress
+        if (from == 0f && (!clearBlur || blurFrom == 0f)) return
+        animate(1f, 0f, animationSpec = animationSpec) { value, _ ->
+            predictiveBackVisual = from * value
+            if (clearBlur) predictiveBackProgress = blurFrom * value
         }
     }
 
@@ -151,13 +177,27 @@ class PlayerSheetState(
         offset.snapTo(newOffset)
     }
 
-    internal suspend fun updatePredictiveBackProgress(backProgress: Float, swipeEdge: Int) {
-        predictiveBackProgress = backProgress.coerceIn(0f, 1f)
+    /**
+     * A back swipe on the full player, drawn the way the system draws one on a full-screen
+     * surface: the sheet stays where it is and shrinks toward its centre with growing resistance
+     * ([backResistance]), while the app behind comes into view. It used to also slide the sheet
+     * down its travel at the same time, and the two movements together read as the player
+     * falling apart. The collapse itself is the spring in [collapse] once the gesture commits.
+     */
+    internal fun updatePredictiveBackProgress(backProgress: Float, swipeEdge: Int) {
+        val eased = backResistance(backProgress)
+        predictiveBackProgress = eased
+        predictiveBackVisual = eased
         predictiveBackSwipeEdge = swipeEdge
-        if (maxOffsetPx <= 0f) return
-        val target = (backProgress.coerceIn(0f, 1f) * maxOffsetPx)
-        offset.snapTo(target)
     }
+
+    /**
+     * Whether the player's back handler should be registered. Keyed on where the sheet is
+     * *headed*, not on [progress]: the handler was keyed on [isExpanded], so a gesture that moved
+     * the sheet past halfway disabled its own handler mid-swipe — on Home, with nothing else to
+     * take the gesture, the sheet was left frozen there.
+     */
+    val isBackHandlerEnabled: Boolean get() = targetValue == PlayerSheetValue.EXPANDED
 
     internal suspend fun settle(velocity: Float) {
         if (maxOffsetPx <= 0f) return
@@ -179,6 +219,7 @@ class PlayerSheetState(
 
     companion object {
         const val FLING_VELOCITY = 1000f
+
 
         val Saver: Saver<PlayerSheetState, PlayerSheetValue> = Saver(
             save = { it.targetValue },

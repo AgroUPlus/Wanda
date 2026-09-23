@@ -50,7 +50,8 @@ fun PlayerSeekBar(
     isLive: Boolean = false,
     isPlaying: Boolean = true,
     isSeekable: Boolean = true,
-    inlineLabels: Boolean = false
+    inlineLabels: Boolean = false,
+    showScrubTooltip: Boolean = true
 ) {
     val position by rememberPlaybackPosition(playerConnection, intervalMs = 250L)
     PlayerSeekBarInternal(
@@ -61,7 +62,8 @@ fun PlayerSeekBar(
         isLive = isLive,
         isPlaying = isPlaying,
         isSeekable = isSeekable,
-        inlineLabels = inlineLabels
+        inlineLabels = inlineLabels,
+        showScrubTooltip = showScrubTooltip
     )
 }
 
@@ -74,10 +76,11 @@ fun PlayerSeekBar(
     isLive: Boolean = false,
     isPlaying: Boolean = true,
     isSeekable: Boolean = true,
-    inlineLabels: Boolean = false
+    inlineLabels: Boolean = false,
+    showScrubTooltip: Boolean = true
 ) {
     PlayerSeekBarInternal(
-        positionMs, durationMs, onSeek, modifier, isLive, isPlaying, isSeekable, inlineLabels
+        positionMs, durationMs, onSeek, modifier, isLive, isPlaying, isSeekable, inlineLabels, showScrubTooltip
     )
 }
 
@@ -97,7 +100,8 @@ private fun PlayerSeekBarInternal(
      * What the lyrics screen's pill wants: one short row rather than a two-line block, which keeps
      * the bar clear of the words behind it. The track gives up the width the labels take.
      */
-    inlineLabels: Boolean = false
+    inlineLabels: Boolean = false,
+    showScrubTooltip: Boolean = true
 ) {
     var scrubbing by remember { mutableFloatStateOf(-1f) }
     var lastTickInterval by remember { mutableIntStateOf(-1) }
@@ -188,15 +192,22 @@ private fun PlayerSeekBarInternal(
                     modifier = Modifier.size(ThumbSlotSize),
                     contentAlignment = Alignment.Center
                 ) {
-                    ScrubTooltip(
-                        visible = isScrubbing,
-                        text = formatTime((fraction * durationMs).toLong())
-                    )
+                    if (showScrubTooltip) {
+                        ScrubTooltip(
+                            visible = isScrubbing,
+                            text = formatTime((fraction * durationMs).toLong())
+                        )
+                    }
                     SeekBarThumb(width = thumbWidth, height = thumbHeight)
                 }
             },
             track = { sliderState ->
-                SeekBarTrack(fraction = sliderState.value, showWavy = showWavy, amplitude = amplitude)
+                SeekBarTrack(
+                    fraction = sliderState.value,
+                    showWavy = showWavy,
+                    amplitude = amplitude,
+                    thumbWidth = thumbWidth
+                )
             }
         )
     }

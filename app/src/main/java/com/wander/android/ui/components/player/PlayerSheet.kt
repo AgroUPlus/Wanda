@@ -85,10 +85,13 @@ internal val DockedSideInset: Dp = 12.dp
 private val DockedCorner: Dp = 28.dp
 
 /** How much the sheet shrinks at the very end of a predictive-back gesture. */
-private const val PredictiveBackMinScale = 0.92f
+private const val PredictiveBackMinScale = 0.9f
 
 /** How far the sheet shifts toward the swipe's opposite edge at the end of the gesture. */
-private val PredictiveBackMaxShift: Dp = 24.dp
+private val PredictiveBackMaxShift: Dp = 8.dp
+
+/** The corner radius the card takes on at the far end of a back swipe. */
+private val PredictiveBackCorner: Dp = 28.dp
 
 /**
  * The player as one continuously draggable surface.
@@ -165,7 +168,7 @@ fun PlayerSheet(
                 }
         }
 
-        PredictiveBackHandler(enabled = sheetState.isExpanded) { progressFlow ->
+        PredictiveBackHandler(enabled = sheetState.isBackHandlerEnabled) { progressFlow ->
             try {
                 progressFlow.collect { backEvent ->
                     sheetState.updatePredictiveBackProgress(backEvent.progress, backEvent.swipeEdge)
@@ -200,29 +203,30 @@ fun PlayerSheet(
                     } else {
                         (sheetHeight - dockedHeightState.value - bottomInset - MiniPlayerGap).toPx()
                     }
-                    val radius = DockedCorner.toPx() * (1f - progress)
+                    val backVisual = sheetState.predictiveBackVisual
+                    val backRadius = PredictiveBackCorner.toPx() * backVisual
+                    val radius = maxOf(DockedCorner.toPx() * (1f - progress), backRadius)
                     shape = RoundedCornerShape(
                         topStart = radius,
                         topEnd = radius,
-                        // Square against the screen edge only at the very end of the travel.
-                        bottomStart = radius * (1f - progress),
-                        bottomEnd = radius * (1f - progress)
+                        // Square against the screen edge only at the very end of the travel —
+                        // unless a back swipe has lifted the whole card off the edges.
+                        bottomStart = maxOf(radius * (1f - progress), backRadius),
+                        bottomEnd = maxOf(radius * (1f - progress), backRadius)
                     )
                     clip = true
                     shadowElevation = (6.dp + 2.dp * progress).toPx()
 
-                    // A predictive-back gesture shrinks the sheet slightly and shifts it toward
-                    // the edge opposite the one being swiped from, mirroring the system's own
-                    // predictive-back peek — purely visual, on top of the collapse driven by
-                    // `offset`/`progress` above, which a plain drag or a completed back gesture
-                    // still owns.
-                    val backProgress = sheetState.predictiveBackProgress
-                    if (backProgress > 0f) {
-                        val scale = lerp(1f, PredictiveBackMinScale, backProgress)
+                    // A predictive-back swipe shrinks the whole card toward its centre, rounds its
+                    // corners and nudges it away from the edge being swiped from — the system's
+                    // own full-screen back pose. Purely visual: `offset`/`progress` above still own
+                    // the collapse, which starts only once the gesture commits.
+                    if (backVisual > 0f) {
+                        val scale = lerp(1f, PredictiveBackMinScale, backVisual)
                         scaleX = scale
                         scaleY = scale
                         val direction = if (sheetState.predictiveBackSwipeEdge == BackEventCompat.EDGE_LEFT) 1f else -1f
-                        translationX += direction * PredictiveBackMaxShift.toPx() * backProgress
+                        translationX += direction * PredictiveBackMaxShift.toPx() * backVisual
                     }
                 }
                 // Drawn rather than composed: the colour changes every frame of a drag, and a

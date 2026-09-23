@@ -74,7 +74,6 @@ internal fun StandardPlayerLayout(
     overlayAlpha: () -> Float,
     artworkModifier: Modifier,
     artworkSlot: (@Composable (url: String?, contentDescription: String) -> Unit)?,
-    onOpenSourcePicker: () -> Unit,
     onOpenAudioTrackPicker: () -> Unit,
     showSpeedPitch: Boolean,
     onOpenSpeedPitch: () -> Unit,
@@ -92,18 +91,12 @@ internal fun StandardPlayerLayout(
             .safeDrawingPadding()
             .padding(horizontal = 24.dp, vertical = 12.dp)
     ) {
-        // The source name is a control, not a caption: the same recording usually exists in more
-        // than one place, and which one plays used to depend entirely on the list you happened to
-        // tap it in.
         PlayerTopBar(
             jam = jam,
             sourceLabel = track.source.displayName,
-            canSwitchSource = viewModel.canSwitchSource(track, state.durationMs),
-            onOpenSourcePicker = onOpenSourcePicker,
             onOpenJam = onOpenJam,
             onMinimize = onMinimize,
             onOpenQueue = onOpenQueue,
-            sourceLabelColor = MaterialTheme.colorScheme.primary,
             sourceLabelColorMuted = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.graphicsLayer { alpha = contentAlpha() }
         )
@@ -211,6 +204,8 @@ internal fun StandardPlayerLayout(
                         maxLines = 1,
                         overflow = TextOverflow.Clip,
                         modifier = Modifier.scrollingTitle()
+                            // The name is the way to the artist's page, from the one screen
+                            // that is always about the track playing.
                             .clip(MaterialTheme.shapes.extraSmall)
                             .clickable(
                                 enabled = onOpenArtist != null && track.artist.isNotBlank()

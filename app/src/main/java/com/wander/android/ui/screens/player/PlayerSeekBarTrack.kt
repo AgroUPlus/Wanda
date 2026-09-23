@@ -4,9 +4,9 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
@@ -24,7 +24,7 @@ internal val ScrubbingThumbWidth = 6.dp
 /** The dot's height while a finger holds it — taller than at rest, for the same reason. */
 internal val ScrubbingThumbHeight = 24.dp
 
-/** The empty space between the played segment and the unplayed one, either side of the thumb. */
+/** The empty space between the thumb and each segment of the track. */
 private val ThumbGap = 6.dp
 
 /** The unplayed segment's own thickness — the wavy/linear indicator sets the played side's. */
@@ -49,16 +49,30 @@ internal fun SeekBarThumb(width: Dp, height: Dp, modifier: Modifier = Modifier) 
 }
 
 /**
- * The seek bar's track: a visible break at the thumb rather than one continuous bar — the played
- * side touches the dot, the unplayed side starts clear of it. The wave (the playing state, not
- * decoration) runs only on the played segment, which is fully "there" for the width it's given, so
- * it's drawn at a fixed `progress = 1f` rather than re-deriving the fraction the row's weights
- * already spent.
+ * The seek bar's track: a visible break either side of the thumb rather than one continuous bar.
+ * The row splits at [fraction] — where the slider centres the thumb — and each segment keeps half
+ * of [thumbWidth] plus [ThumbGap] clear of that point, so the gap follows the thumb as it morphs.
+ * The wave (the playing state, not decoration) runs only on the played segment, which is fully
+ * "there" for the width it's given, so it's drawn at a fixed `progress = 1f`.
+ *
+ * Nothing in here may fill the available height: the slider measures its track slot with whatever
+ * height the parent column has left, and a single `fillMaxHeight` turned the seek bar into the
+ * tallest thing on the player, squeezing the cover out of its own area.
  */
 @Composable
-internal fun SeekBarTrack(fraction: Float, showWavy: Boolean, amplitude: Animatable<Float, *>) {
+internal fun SeekBarTrack(
+    fraction: Float,
+    showWavy: Boolean,
+    amplitude: Animatable<Float, *>,
+    thumbWidth: Dp
+) {
+    val clearance = thumbWidth / 2 + ThumbGap
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Box(modifier = Modifier.weight(fraction.coerceAtLeast(MinTrackWeight))) {
+        Box(
+            modifier = Modifier
+                .weight(fraction.coerceAtLeast(MinTrackWeight))
+                .padding(end = clearance)
+        ) {
             if (showWavy) {
                 LinearWavyProgressIndicator(
                     progress = { 1f },
@@ -69,10 +83,10 @@ internal fun SeekBarTrack(fraction: Float, showWavy: Boolean, amplitude: Animata
                 LinearProgressIndicator(progress = { 1f }, modifier = Modifier.fillMaxWidth())
             }
         }
-        Box(modifier = Modifier.width(ThumbGap).fillMaxHeight())
         Box(
             modifier = Modifier
                 .weight((1f - fraction).coerceAtLeast(MinTrackWeight))
+                .padding(start = clearance)
                 .height(UnplayedTrackHeight)
                 .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(50))
         )

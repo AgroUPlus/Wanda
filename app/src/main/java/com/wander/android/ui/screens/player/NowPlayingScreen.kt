@@ -188,10 +188,6 @@ internal fun NowPlayingScreen(
         )
     }
 
-    val onOpenSourcePicker: () -> Unit = {
-        showSourcePicker = true
-        viewModel.findRenditions(track, state.durationMs)
-    }
     val onOpenAudioTrackPicker: () -> Unit = { showAudioTrackPicker = true }
     val onOpenSpeedPitch: () -> Unit = { showSpeedPitch = true }
     val onDismissSpeedPitch: () -> Unit = { showSpeedPitch = false }
@@ -216,7 +212,6 @@ internal fun NowPlayingScreen(
             overlayAlpha = overlayAlpha,
             artworkModifier = artworkModifier,
             artworkSlot = artworkSlot,
-            onOpenSourcePicker = onOpenSourcePicker,
             onOpenAudioTrackPicker = onOpenAudioTrackPicker,
             showSpeedPitch = showSpeedPitch,
             onOpenSpeedPitch = onOpenSpeedPitch,
@@ -244,7 +239,6 @@ internal fun NowPlayingScreen(
             overlayAlpha = overlayAlpha,
             artworkModifier = artworkModifier,
             artworkSlot = artworkSlot,
-            onOpenSourcePicker = onOpenSourcePicker,
             onOpenAudioTrackPicker = onOpenAudioTrackPicker,
             showSpeedPitch = showSpeedPitch,
             onOpenSpeedPitch = onOpenSpeedPitch,

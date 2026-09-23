@@ -22,7 +22,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -46,12 +45,9 @@ import com.wander.android.ui.theme.LiveIndicator
 internal fun PlayerTopBar(
     jam: Jam?,
     sourceLabel: String,
-    canSwitchSource: Boolean,
-    onOpenSourcePicker: () -> Unit,
     onOpenJam: () -> Unit,
     onMinimize: () -> Unit,
     onOpenQueue: () -> Unit,
-    sourceLabelColor: Color,
     sourceLabelColorMuted: Color,
     modifier: Modifier = Modifier
 ) {
@@ -94,16 +90,8 @@ internal fun PlayerTopBar(
                 Text(
                     text = sourceLabel,
                     style = MaterialTheme.typography.labelLarge,
-                    color = if (canSwitchSource) sourceLabelColor else sourceLabelColorMuted,
-                    textAlign = TextAlign.Center,
-                    modifier = if (canSwitchSource) {
-                        Modifier
-                            .clip(MaterialTheme.shapes.small)
-                            .clickable(onClick = onOpenSourcePicker)
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                    } else {
-                        Modifier
-                    }
+                    color = sourceLabelColorMuted,
+                    textAlign = TextAlign.Center
                 )
             }
         }
