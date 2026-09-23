@@ -158,6 +158,7 @@
     <!-- Home -->
     <string name="home_connect_navidrome_youtube_music_settings">Connect Navidrome or YouTube Music in Settings, or grant access to music stored on this device.</string>
     <string name="home_nothing_here_yet">Nothing here yet</string>
+    <string name="home_quick_picks_subtitle">For you, today</string>
     <string name="home_nothing_play_yet">Nothing to play yet</string>
     <string name="home_sessions_other_devices">Sessions on other devices</string>
 

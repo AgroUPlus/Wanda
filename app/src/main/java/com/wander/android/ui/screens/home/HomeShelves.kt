@@ -12,18 +12,14 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.TrackRow
 
@@ -68,18 +64,11 @@ internal fun LazyListScope.homeSection(
 ) {
     item(key = "${section.id}-title", contentType = "section-title") {
         if (section.style == HomeSectionStyle.TRACK_PAGER) {
-            // The lead shelf is the one worth starting from a tap, so it carries the affordance.
-            SectionTitle(
-                text = section.title,
-                action = {
-                    OutlinedButton(
-                        onClick = { viewModel.play(section.tracks, 0) },
-                        // Squares off under the finger, like every other control in the app.
-                        shapes = ButtonDefaults.shapes()
-                    ) {
-                        Text(stringResource(R.string.common_play_all))
-                    }
-                }
+            // The lead shelf is the one worth starting from a tap, and the one worth a header
+            // that reads as more than a list label — see `QuickPicksHeader`.
+            QuickPicksHeader(
+                title = section.title,
+                onPlayAll = { viewModel.play(section.tracks, 0) }
             )
         } else {
             SectionTitle(section.title)
