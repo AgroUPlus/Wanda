@@ -189,52 +189,54 @@ internal fun ImmersivePlayerLayout(
                 .padding(horizontal = 24.dp, vertical = 12.dp)
                 .graphicsLayer { alpha = contentAlpha() }
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = track.title,
-                    style = MaterialTheme.typography.headlineSmallEmphasized,
-                    color = OnCoverArt,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Clip,
-                    modifier = Modifier.scrollingTitle()
-                )
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
+            TrackTextTransition(track = track, queueIndex = state.currentIndex) { shown ->
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = track.artist,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = OnCoverArt.copy(alpha = 0.8f),
+                        text = shown.title,
+                        style = MaterialTheme.typography.headlineSmallEmphasized,
+                        color = OnCoverArt,
+                        textAlign = TextAlign.Center,
                         maxLines = 1,
                         overflow = TextOverflow.Clip,
                         modifier = Modifier.scrollingTitle()
-                            // The name is the way to the artist's page, from the one screen
-                            // that is always about the track playing.
-                            .clip(MaterialTheme.shapes.extraSmall)
-                            .clickable(
-                                enabled = onOpenArtist != null && track.artist.isNotBlank()
-                            ) { onOpenArtist?.invoke(track.artist, track.artistId) }
                     )
-                    val albumId = track.albumId
-                    if (!track.album.isNullOrBlank()) {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
+                    ) {
                         Text(
-                            text = " · ${track.album}",
+                            text = shown.artist,
                             style = MaterialTheme.typography.titleMedium,
                             color = OnCoverArt.copy(alpha = 0.8f),
                             maxLines = 1,
                             overflow = TextOverflow.Clip,
                             modifier = Modifier.scrollingTitle()
+                                // The name is the way to the artist's page, from the one screen
+                                // that is always about the track playing.
                                 .clip(MaterialTheme.shapes.extraSmall)
-                                .clickable(enabled = albumId != null && onOpenAlbum != null) {
-                                    albumId?.let { onOpenAlbum?.invoke(it) }
-                                }
+                                .clickable(
+                                    enabled = onOpenArtist != null && shown.artist.isNotBlank()
+                                ) { onOpenArtist?.invoke(shown.artist, shown.artistId) }
                         )
+                        val albumId = shown.albumId
+                        if (!shown.album.isNullOrBlank()) {
+                            Text(
+                                text = " · ${shown.album}",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = OnCoverArt.copy(alpha = 0.8f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Clip,
+                                modifier = Modifier.scrollingTitle()
+                                    .clip(MaterialTheme.shapes.extraSmall)
+                                    .clickable(enabled = albumId != null && onOpenAlbum != null) {
+                                        albumId?.let { onOpenAlbum?.invoke(it) }
+                                    }
+                            )
+                        }
                     }
                 }
             }
