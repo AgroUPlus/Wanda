@@ -782,6 +782,8 @@
     <string name="podcasts_unplayed">Unplayed</string>
 
     <!-- Episode playback -->
+    <string name="player_rewind_10">Back 10 seconds</string>
+    <string name="player_forward_30">Forward 30 seconds</string>
     <string name="settings_skip_silence">Skip silence in podcasts</string>
     <string name="settings_skip_silence_summary">Trims pauses between speakers. Music is never affected.</string>
     <string name="sleep_timer">Sleep timer</string>

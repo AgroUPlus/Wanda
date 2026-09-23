@@ -15,7 +15,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.toPath
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.Matrix
@@ -95,28 +97,47 @@ internal val PlayResting = MaterialShapes.Cookie12Sided
 internal val PlayPressed = MaterialShapes.Circle
 
 /**
- * Shape for the main playback toggle: resting as a clean Circle when paused and morphing into a
- * Cookie12Sided when playing, while also reacting to finger presses.
+ * Shape for every play/pause toggle: a circle while paused, a rounded rectangle while playing —
+ * the M3 Expressive "selected" shape — and a little squarer under the finger either way.
+ *
+ * Corners, not a polygon morph: the player's toggle is wider than it is tall, and a morph is
+ * stretched to fit its bounds, which turns round corners into ellipses. The corner here is a share
+ * of the button's short side, so it reads the same on a 40dp icon button and a full-width pill.
  */
 @Composable
 fun rememberPlayPauseMorphShape(
     isPlaying: Boolean,
     isPressed: Boolean
 ): Shape {
-    val targetProgress = when {
-        isPlaying && isPressed -> 0.4f
-        isPlaying -> 1f
-        isPressed -> 0.6f
-        else -> 0f
+    val targetCorner = when {
+        isPlaying && isPressed -> PlayingPressedCorner
+        isPlaying -> PlayingCorner
+        isPressed -> PausedPressedCorner
+        else -> PausedCorner
     }
-    val progress by animateFloatAsState(
-        targetValue = targetProgress,
+    val corner by animateFloatAsState(
+        targetValue = targetCorner,
         animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
-        label = "playPauseMorph"
+        label = "playPauseCorner"
     )
-    val morph = remember { Morph(PlayPressed, PlayResting) }
-    return remember(morph) { MorphShape(morph) { progress } }
+    return remember { ShortSideCornerShape { corner } }
 }
+
+/** Rounded corners at [fraction] of the short side, read at draw time so a spring never recomposes. */
+private class ShortSideCornerShape(private val fraction: () -> Float) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val radius = size.minDimension * fraction().coerceIn(0f, 0.5f)
+        return Outline.Rounded(RoundRect(size.toRect(), CornerRadius(radius)))
+    }
+}
+
+/** Half the short side: a circle, or a pill on a wide button. */
+private const val PausedCorner = 0.5f
+private const val PausedPressedCorner = 0.4f
+
+/** The reference's rounded rectangle: roughly 28dp on the player's 92dp toggle. */
+private const val PlayingCorner = 0.3f
+private const val PlayingPressedCorner = 0.22f
 
 /** Resting and pressed shapes of the satellites beside it. */
 private val ActionResting = MaterialShapes.Square
