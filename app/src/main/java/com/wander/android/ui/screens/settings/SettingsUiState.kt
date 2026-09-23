@@ -25,6 +25,7 @@ internal data class SettingsUiState(
     val syncedNavidrome: AgroSyncedSettings?,
     val monet: Boolean,
     val amoled: Boolean,
+    val backBlur: Boolean,
     val immersivePlayer: Boolean,
     val coverArtTheme: Boolean,
     val reduceMotion: Boolean,
@@ -92,6 +93,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val syncedNavidrome by viewModel.syncedNavidrome.collectAsStateWithLifecycle()
     val monet by viewModel.isMonetDynamic.collectAsStateWithLifecycle()
     val amoled by viewModel.isAmoledBlack.collectAsStateWithLifecycle()
+    val backBlur by viewModel.isBackBlurEnabled.collectAsStateWithLifecycle()
     val immersivePlayer by viewModel.isImmersivePlayer.collectAsStateWithLifecycle()
     val coverArtTheme by viewModel.isCoverArtThemeEnabled.collectAsStateWithLifecycle()
     val reduceMotion by viewModel.isReduceMotion.collectAsStateWithLifecycle()
@@ -143,6 +145,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         syncedNavidrome = syncedNavidrome,
         monet = monet,
         amoled = amoled,
+        backBlur = backBlur,
         immersivePlayer = immersivePlayer,
         coverArtTheme = coverArtTheme,
         reduceMotion = reduceMotion,

@@ -70,6 +70,9 @@ class WanderAppViewModel @Inject constructor(
     /** True black pins the darkest surfaces regardless — see `CoverTintedTheme`'s `amoled` param. */
     val isAmoledBlack: StateFlow<Boolean> = secureStorage.isAmoledBlack
 
+    /** Whether back gestures blur what they reveal — see `LocalBackBlurEnabled`. */
+    val isBackBlurEnabled: StateFlow<Boolean> = secureStorage.isBackBlurEnabled
+
     /**
      * Whether the track on the player's cover has been measured.
      *

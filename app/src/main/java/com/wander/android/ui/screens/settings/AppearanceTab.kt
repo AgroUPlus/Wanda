@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.settings
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.BlurOn
 import androidx.compose.material.icons.rounded.Contrast
 import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material.icons.rounded.Language
@@ -65,6 +66,16 @@ internal fun LazyListScope.appearanceTab(
                 {
                     SettingsToggle(
                         modifier = Modifier.scale(rememberShelfEntranceScale(4)),
+                        title = stringResource(R.string.settings_back_blur),
+                        subtitle = stringResource(R.string.settings_back_blur_subtitle),
+                        checked = state.backBlur,
+                        onCheckedChange = actions.onBackBlurChange,
+                        icon = Icons.Rounded.BlurOn
+                    )
+                },
+                {
+                    SettingsToggle(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(5)),
                         title = stringResource(R.string.settings_immersive_player),
                         subtitle = stringResource(R.string.settings_cover_art_fills_screen_edge),
                         checked = state.immersivePlayer,
@@ -74,7 +85,7 @@ internal fun LazyListScope.appearanceTab(
                 },
                 {
                     SettingsToggle(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(5)),
+                        modifier = Modifier.scale(rememberShelfEntranceScale(6)),
                         title = stringResource(R.string.settings_reduce_motion),
                         subtitle = if (state.systemReduceMotion) {
                             "Already off"
@@ -89,7 +100,7 @@ internal fun LazyListScope.appearanceTab(
                 },
                 {
                     SettingsToggle(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(6)),
+                        modifier = Modifier.scale(rememberShelfEntranceScale(7)),
                         title = stringResource(R.string.settings_letter_letter_lyrics),
                         subtitle = stringResource(R.string.settings_sweep_active_word_one_letter),
                         checked = state.letterByLetterLyrics,

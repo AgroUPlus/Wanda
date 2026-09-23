@@ -1,5 +1,9 @@
 package com.wander.android.ui.navigation
 
+import com.wander.android.ui.components.enteringBlur
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
@@ -355,7 +359,7 @@ private fun NavGraphBuilder.tabDestination(
     exitTransition = { tabExit(initialState.route(), targetState.route(), motion) },
     popEnterTransition = { tabEnter(initialState.route(), targetState.route(), motion) },
     popExitTransition = { tabExit(initialState.route(), targetState.route(), motion) },
-    content = content
+    content = { entry -> BlurredWhileEntering { content(entry) } }
 )
 
 private fun NavBackStackEntry.route(): String? = destination.route
@@ -376,5 +380,14 @@ private fun NavGraphBuilder.detailDestination(
     exitTransition = { detailExit(motion) },
     popEnterTransition = { detailPopEnter(motion) },
     popExitTransition = { detailPopExit(motion) },
-    content = content
+    content = { entry -> BlurredWhileEntering { content(entry) } }
 )
+
+/**
+ * The screen a back swipe reveals starts blurred and sharpens with the swipe — see
+ * [enteringBlur]. Wraps every destination, so it covers every back in the graph.
+ */
+@Composable
+private fun AnimatedContentScope.BlurredWhileEntering(content: @Composable () -> Unit) {
+    Box(modifier = Modifier.fillMaxSize().enteringBlur(this)) { content() }
+}

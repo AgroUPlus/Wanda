@@ -19,11 +19,13 @@
     <string name="action_queue">Queue</string>
     <string name="action_clear_queue">Vider la file</string>
     <string name="action_play_next">Jouer après</string>
-    <string name="action_add_to_queue">Ajouter à la fin de la file</string>
+    <string name="action_add_to_queue">Ajouter à la file</string>
     <string name="action_remove_from_queue">Retirer de la file</string>
     <string name="action_add_to_playlist">Ajouter à une playlist</string>
     <string name="action_radio_mode">Mode radio</string>
     <string name="action_radio_mode_active">Mode radio (actif)</string>
+    <string name="menu_like">J\'aime</string>
+    <string name="menu_radio">Radio</string>
     <string name="action_start_radio">Démarrer le mode radio</string>
     <string name="action_speed_and_pitch">Vitesse &amp; hauteur</string>
     <string name="action_audio_language">Langue de l\'audio</string>
@@ -345,6 +347,8 @@
     <string name="settings_true_black">Noir OLED</string>
     <string name="settings_two_do_not_match">Les deux ne correspondent pas</string>
     <string name="settings_unlit_pixels_oled_screens_use">Éteint les pixels noirs pour économiser de la batterie</string>
+    <string name="settings_back_blur">Flou derrière le geste retour</string>
+    <string name="settings_back_blur_subtitle">Adoucit ce que révèle le geste retour, de plus en plus net à mesure que vous tirez</string>
     <string name="settings_unpair">Désappareiller</string>
     <string name="settings_unpair_from_agro">Désappareiller d\'Agro ?</string>
     <string name="settings_use_default">Utiliser les valeurs par défaut</string>

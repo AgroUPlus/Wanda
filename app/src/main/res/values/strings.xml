@@ -20,11 +20,13 @@
     <string name="action_queue">Queue</string>
     <string name="action_clear_queue">Clear queue</string>
     <string name="action_play_next">Play next</string>
-    <string name="action_add_to_queue">Add to end of queue</string>
+    <string name="action_add_to_queue">Add to queue</string>
     <string name="action_remove_from_queue">Remove from queue</string>
     <string name="action_add_to_playlist">Add to playlist</string>
     <string name="action_radio_mode">Radio mode</string>
     <string name="action_radio_mode_active">Radio mode (active)</string>
+    <string name="menu_like">Like</string>
+    <string name="menu_radio">Radio</string>
     <string name="action_start_radio">Start radio mode</string>
     <string name="action_speed_and_pitch">Speed &amp; Pitch</string>
     <string name="action_audio_language">Audio language</string>
@@ -370,6 +372,8 @@
     <string name="settings_true_black">True black</string>
     <string name="settings_two_do_not_match">The two do not match</string>
     <string name="settings_unlit_pixels_oled_screens_use">Unlit pixels on OLED screens use no power</string>
+    <string name="settings_back_blur">Blur behind back gestures</string>
+    <string name="settings_back_blur_subtitle">Soften what a back swipe reveals, sharpening as you pull</string>
     <string name="settings_unpair">Unpair</string>
     <string name="settings_unpair_from_agro">Unpair from Agro?</string>
     <string name="settings_use_default">Use default</string>

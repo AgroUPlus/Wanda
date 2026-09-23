@@ -36,6 +36,7 @@ internal data class SettingsActions(
     // Appearance
     val onMonetChange: (Boolean) -> Unit,
     val onAmoledChange: (Boolean) -> Unit,
+    val onBackBlurChange: (Boolean) -> Unit,
     val onImmersivePlayerChange: (Boolean) -> Unit,
     val onCoverArtThemeChange: (Boolean) -> Unit,
     val onReduceMotionChange: (Boolean) -> Unit,

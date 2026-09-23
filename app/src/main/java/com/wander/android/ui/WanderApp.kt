@@ -56,7 +56,10 @@ import com.wander.android.ui.components.ListenAlongBar
 import com.wander.android.ui.components.ListenAlongBarHeight
 import com.wander.android.ui.components.LocalOfflinePlayback
 import com.wander.android.ui.components.UpdateAvailableDialog
-import com.wander.android.ui.components.predictiveBackBlur
+import com.wander.android.ui.components.BackdropBlurController
+import com.wander.android.ui.components.LocalBackBlurEnabled
+import com.wander.android.ui.components.LocalBackdropBlur
+import com.wander.android.ui.components.backdropBlur
 import com.wander.android.ui.components.player.MiniPlayerGap
 import com.wander.android.ui.components.player.MiniPlayerHeight
 import com.wander.android.ui.components.player.MiniPlayerShadowInset
@@ -232,6 +235,8 @@ fun WanderApp(
     // surfaces an OLED user is looking at far more of the time, so True black has to win here.
     val isCoverArtThemeEnabled by viewModel.isCoverArtThemeEnabled.collectAsStateWithLifecycle()
     val isAmoledBlack by viewModel.isAmoledBlack.collectAsStateWithLifecycle()
+    val isBackBlurEnabled by viewModel.isBackBlurEnabled.collectAsStateWithLifecycle()
+    val backdropBlur = remember { BackdropBlurController() }
     val shellCoverSeed = if (isCoverArtThemeEnabled) {
         rememberCoverSeedColor(playback.currentTrack?.artworkUrl)
     } else {
@@ -244,14 +249,34 @@ fun WanderApp(
         dark = isSystemInDarkTheme(),
         amoled = isAmoledBlack
     ) {
-    CompositionLocalProvider(LocalOfflinePlayback provides offlinePlayback) {
-        Box(modifier = Modifier.fillMaxSize()) {
+    CompositionLocalProvider(
+        LocalOfflinePlayback provides offlinePlayback,
+        LocalBackBlurEnabled provides isBackBlurEnabled,
+        LocalBackdropBlur provides backdropBlur
+    ) {
+        // Blurred by whatever overlay is open — sheets and the lyrics are their own windows, so
+        // this reaches everything behind them, player included. See `BackdropBlurController`.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .backdropBlur(isBackBlurEnabled) { backdropBlur.amount() }
+        ) {
             Scaffold(
                 containerColor = MaterialTheme.colorScheme.background,
-                // Blurred (or, pre-API 31, dimmed) in step with a predictive-back gesture on the
-                // expanded player, which sits above this as a sibling in the Box below — see
-                // `PlayerSheetState.predictiveBackProgress`.
-                modifier = Modifier.predictiveBackBlur { sheetState.predictiveBackProgress }
+                // Blurred (or, pre-API 31, dimmed) by however much of it the player sheet — a
+                // sibling in the Box below — covers, so closing the player clears it smoothly.
+                // Dropped at full coverage: the sheet hides this entirely, so a blur there would
+                // be pure GPU cost.
+                modifier = Modifier.backdropBlur(isBackBlurEnabled) {
+                    val back = sheetState.predictiveBackProgress
+                    val covered = sheetState.progress
+                    when {
+                        covered >= 1f && back == 0f -> 0f
+                        // A back swipe reveals this from the first pixel: fully blurred at the
+                        // start, clearing as the swipe goes, and on down with the collapse.
+                        else -> covered * (1f - back)
+                    }
+                }
             ) { padding ->
                 // Remembered because `NavHost` keys its `remember(builder)` on the graph-building
                 // lambda, which captures this. A fresh PaddingValues on every recomposition meant the
@@ -388,9 +413,12 @@ fun WanderApp(
                     playerConnection = playerConnection,
                     onExpand = { scope.launch { sheetState.expand() } },
                     onMinimize = { scope.launch { sheetState.collapse() } },
-                    onOpenQueue = { navController.navigate(Routes.QUEUE) },
                     // The sheet collapses first: the destination sits underneath it, and navigating
                     // while the player is still expanded left the user staring at the player.
+                    onOpenQueue = {
+                        scope.launch { sheetState.collapse() }
+                        navController.navigate(Routes.QUEUE)
+                    },
                     onOpenArtist = { artist, artistId ->
                         scope.launch { sheetState.collapse() }
                         navController.navigate(Routes.artist(artist, artistId))
@@ -443,7 +471,7 @@ fun WanderApp(
                     // always, and the docked strip when there is a track. Both are measured
                     // rather than assumed, so the button sits the same distance clear of the
                     // strip as it does of the bar on its own.
-                    .padding(end = 20.dp, bottom = dockBottom + RadioFabClearance)
+                    .padding(end = 16.dp, bottom = dockBottom + RadioFabClearance)
             )
 
             // Offered whenever this device is idle — not merely when it has never played anything.

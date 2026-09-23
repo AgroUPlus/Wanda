@@ -53,6 +53,9 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     private val _isAmoledBlack = MutableStateFlow(prefs.getBoolean(KEY_AMOLED_BLACK, false))
     val isAmoledBlack: StateFlow<Boolean> = _isAmoledBlack.asStateFlow()
 
+    private val _isBackBlurEnabled = MutableStateFlow(prefs.getBoolean(KEY_BACK_BLUR, true))
+    val isBackBlurEnabled: StateFlow<Boolean> = _isBackBlurEnabled.asStateFlow()
+
     private val _isMonetDynamic = MutableStateFlow(prefs.getBoolean(KEY_MONET_DYNAMIC, true))
     val isMonetDynamic: StateFlow<Boolean> = _isMonetDynamic.asStateFlow()
 
@@ -312,6 +315,11 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _isAmoledBlack.value = enabled
     }
 
+    fun setBackBlurEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_BACK_BLUR, enabled) }
+        _isBackBlurEnabled.value = enabled
+    }
+
     fun setMonetDynamic(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_MONET_DYNAMIC, enabled) }
         _isMonetDynamic.value = enabled
@@ -459,6 +467,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         _ytMusicConfigured.value = false
         _hasCompletedSetup.value = false
         _isAmoledBlack.value = false
+        _isBackBlurEnabled.value = true
         _isMonetDynamic.value = true
         _isCoverArtThemeEnabled.value = true
         _isReduceMotion.value = false
@@ -721,6 +730,7 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_INDEX_ON_MOBILE_DATA = "key_index_on_mobile_data"
         private const val KEY_RADIO_MODE = "key_radio_mode"
         private const val KEY_AMOLED_BLACK = "key_amoled_black"
+        private const val KEY_BACK_BLUR = "key_back_blur"
         private const val KEY_MONET_DYNAMIC = "key_monet_dynamic"
         private const val KEY_REDUCE_MOTION = "key_reduce_motion"
         private const val KEY_LETTER_BY_LETTER_LYRICS = "key_letter_by_letter_lyrics"
