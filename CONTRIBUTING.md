@@ -2,13 +2,13 @@
 
 ## Licence
 
-Wanda is licensed **AGPL-3.0** (see `LICENSE`). That applies to the whole work, including any
+Wanda is licensed **EUPL-1.2** (see `LICENSE`). That applies to the whole work, including any
 contribution merged into it.
 
-The AGPL's section 13 is the one worth reading before you build anything on top: if you run a
-modified Wanda where other people can reach it over a network, those people must be offered its
-source. This is deliberate, and it is why the project can be given away without also giving away
-the ability to run it as a service.
+The EUPL's copyleft and communication clauses are the ones worth reading before you build anything on top:
+if you run a modified Wanda where other people can reach it over a network (Distribution and/or Communication),
+those people must be offered its source. This is deliberate, and it is why the project can be given away
+without also giving away the ability to run it as a closed service.
 
 ## Contributor License Agreement
 

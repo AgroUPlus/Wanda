@@ -5,13 +5,14 @@
 <h1 align="center">Wanda</h1>
 
 <p align="center">
-  A clean, open-source Android music client — built by the community under AGPL-3.0
+  A clean, open-source Android music client — built by the community under EUPL-1.2
 </p>
 
 <p align="center">
   <a href="https://github.com/AgroUPlus/Wanda/actions/workflows/ci.yml"><img src="https://github.com/AgroUPlus/Wanda/actions/workflows/ci.yml/badge.svg" alt="CI Status"/></a>
   <a href="https://github.com/AgroUPlus/Wanda/releases"><img src="https://img.shields.io/github/v/release/AgroUPlus/Wanda?include_prereleases&label=release" alt="Latest Release"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="License"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-EUPL--1.2-blue" alt="License"/></a>
+  <img src="https://img.shields.io/badge/made%20in-%F0%9F%87%AB%F0%9F%87%B7%20France-002395" alt="Made in France"/>
   <a href="https://sonarcloud.io/summary/new_code?id=AgroUPlus_Wanda"><img src="https://sonarcloud.io/api/project_badges/measure?project=AgroUPlus_Wanda&metric=alert_status" alt="Quality Gate"/></a>
 </p>
 
@@ -127,6 +128,7 @@ Set `org.gradle.java.home` in `gradle.properties` if your JDK isn't on `PATH`.
 
 ## License
 
-**AGPL-3.0.** This project links `zemer-cipher` (GPL-3.0); GPLv3 §13 explicitly permits combining GPLv3 with an AGPLv3 work, which is why Wanda can be licensed AGPL-3.0 rather than GPL-3.0.
+- **Source Code:** Licensed under the **EUPL-1.2 (European Union Public Licence v1.2)**, protecting digital sovereignty and reciprocal software freedom under European civil law.
+- **Compiled Binaries (APK):** Because the app links `zemer-cipher` (GPL-3.0) for YouTube cipher deobfuscation, the compiled binary is conveyed under the terms of the **GNU General Public License v3.0 (GPL-3.0)**, as explicitly authorized by EUPL-1.2 Article 5 (Compatibility Clause).
 
 Contributions require agreement to [`CLA.md`](CLA.md) — see [`CONTRIBUTING.md`](CONTRIBUTING.md).
