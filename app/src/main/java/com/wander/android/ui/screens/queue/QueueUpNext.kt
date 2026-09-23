@@ -9,11 +9,11 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DeleteSweep
-import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material.icons.rounded.DragIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.TrackRow
+import com.wander.android.ui.components.GroupedItemGap
+import com.wander.android.ui.components.groupedItemShape
 import com.wander.android.ui.components.rememberHaptics
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -71,10 +73,10 @@ internal fun QueueUpNext(
 
     LazyColumn(
         state = listState,
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(GroupedItemGap),
         modifier = modifier.fillMaxWidth()
     ) {
-        items(entries, key = { it.key }, contentType = { "queue-track" }) { entry ->
+        itemsIndexed(entries, key = { _, entry -> entry.key }, contentType = { _, _ -> "queue-track" }) { index, entry ->
             ReorderableItem(reorderState, key = entry.key, enabled = canReorder) { isDragging ->
                 val dismissState = rememberSwipeToDismissBoxState()
 
@@ -100,6 +102,11 @@ internal fun QueueUpNext(
                     Surface(
                         tonalElevation = if (isDragging) DraggingElevation else 0.dp,
                         shadowElevation = if (isDragging) DraggingElevation else 0.dp,
+                        // Rounded per its position in the list — tight on the edge shared with a
+                        // neighbour, full on the edge it isn't — the same grouped-card look
+                        // Settings uses, so each track reads as its own row rather than one
+                        // unbroken list.
+                        shape = groupedItemShape(index, entries.size),
                         // Opaque even at rest, matching the sheet's own container colour —
                         // `SwipeToDismissBox` keeps `RemoveBackdrop` composed and stacked
                         // directly behind this at full size the whole time, only sliding this
@@ -134,7 +141,7 @@ internal fun QueueUpNext(
                                         )
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Rounded.DragHandle,
+                                        imageVector = Icons.Rounded.DragIndicator,
                                         contentDescription = stringResource(R.string.queue_reorder, entry.track.title),
                                         tint = if (isCurrent) {
                                             MaterialTheme.colorScheme.primary

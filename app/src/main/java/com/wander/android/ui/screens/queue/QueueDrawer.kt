@@ -1,6 +1,7 @@
 package com.wander.android.ui.screens.queue
  
 import android.annotation.SuppressLint
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +30,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -80,6 +84,14 @@ internal fun QueueDrawer(
     val snackbarHostState = remember { SnackbarHostState() }
     var itemGenerations by remember { mutableStateOf(mapOf<String, Int>()) }
 
+    // A small bounce on top of `ModalBottomSheet`'s own slide-up, so the drawer settles rather
+    // than just arriving — `ModalBottomSheet` doesn't expose its internal sheet motion spec to
+    // override, so this layers a second, genuinely spring-driven entrance onto the content instead
+    // of fighting the sheet's own drag/dismiss physics.
+    val entrance = remember { Animatable(0.9f) }
+    val entranceSpec = MaterialTheme.motionScheme.slowSpatialSpec<Float>()
+    LaunchedEffect(Unit) { entrance.animateTo(1f, entranceSpec) }
+
     actionsFor?.let { track ->
         TrackActionsSheet(
             track = track,
@@ -124,6 +136,12 @@ internal fun QueueDrawer(
                 .fillMaxWidth()
                 .fillMaxHeight(SheetHeightFraction)
                 .navigationBarsPadding()
+                .graphicsLayer {
+                    scaleX = entrance.value
+                    scaleY = entrance.value
+                    alpha = entrance.value.coerceIn(0f, 1f)
+                    transformOrigin = TransformOrigin(0.5f, 0f)
+                }
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
