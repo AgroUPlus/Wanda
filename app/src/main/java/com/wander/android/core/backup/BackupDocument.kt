@@ -17,7 +17,15 @@ import kotlinx.serialization.Serializable
 @Serializable
 internal data class BackupDocument(
     val version: Int = CURRENT_VERSION,
+    /**
+     * Preferences. Up to version 2 this also held the sign-ins, which were not separable then;
+     * from version 3 they travel in [accounts] so either can be left out.
+     *
+     * Required, not defaulted: a defaulted empty map is omitted when written, and builds up to
+     * version 2 refuse a payload without this key — which would lock them out of the whole file.
+     */
     val entries: Map<String, BackupEntry>,
+    val accounts: Map<String, BackupEntry> = emptyMap(),
     /**
      * Every play this device remembers, if the user asked for them.
      *
@@ -26,7 +34,17 @@ internal data class BackupDocument(
      */
     val history: List<BackupPlay> = emptyList(),
     /** Saved Agro Replay recaps, which may outlive the plays in [history]. */
-    val recaps: List<BackupRecap> = emptyList()
+    val recaps: List<BackupRecap> = emptyList(),
+    val tracks: List<BackupTrack> = emptyList(),
+    val playlists: List<BackupPlaylist> = emptyList(),
+    val splits: List<BackupRecordingPair> = emptyList(),
+    val links: List<BackupRecordingPair> = emptyList(),
+    val episodes: List<BackupEpisode> = emptyList(),
+    /**
+     * One digest per section the file carries, keyed by [BackupSection.name] — which sections
+     * were chosen, and proof each arrived whole. Empty before version 3; see [verifyIntegrity].
+     */
+    val manifest: Map<String, SectionDigest> = emptyMap()
 ) {
     companion object {
         /**
@@ -35,12 +53,12 @@ internal data class BackupDocument(
          * Keys are data, so a backup from an older build simply carries fewer of them, and one from
          * a newer build carries some this version will ignore. Neither is a version change.
          *
-         * Version 2 added [history] and [recaps]. Both are optional in both directions: an older
-         * build reads a version 2 file as settings-only (its `Json` ignores unknown keys), and this
-         * build reads a version 1 file with both lists empty. So the number records what happened
-         * rather than gating anything.
+         * Version 2 added [history] and [recaps]. Version 3 split [accounts] out of [entries],
+         * added the library sections and the [manifest]. Every addition is optional in both
+         * directions: an older build ignores unknown keys, and this build reads older files with
+         * the new parts empty.
          */
-        const val CURRENT_VERSION = 2
+        const val CURRENT_VERSION = 3
     }
 }
 

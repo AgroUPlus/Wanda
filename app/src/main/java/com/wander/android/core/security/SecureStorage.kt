@@ -428,23 +428,29 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
     fun exportAll(): Map<String, Any?> = prefs.all.filterKeys { it != KEY_AGRO_DEVICE_ID }
 
     /**
-     * Replaces every stored preference with [values].
+     * Whether [key] is a sign-in — a server address, account name, token, cookie or identity key —
+     * rather than a preference. What lets a backup carry settings without accounts, or the reverse.
+     */
+    fun isAccountKey(key: String): Boolean = key in ACCOUNT_KEYS
+
+    /**
+     * Replaces every stored value that [replaces] claims with the matching ones from [values].
      *
-     * Replaces rather than merges: a backup is a picture of a device, and merging would leave
-     * whatever this device happened to hold for a key the backup does not carry — a half-restored
-     * state belonging to neither.
+     * Replaces rather than merges within that part: a backup is a picture of a device, and merging
+     * would leave whatever this device happened to hold for a key the backup does not carry — a
+     * half-restored state belonging to neither. Keys outside [replaces] are left untouched, so a
+     * backup made without sign-ins restores the settings and keeps this device signed in.
      *
      * The in-memory `StateFlow`s above are *not* refreshed, and cannot usefully be: they were read
      * at construction and the app is full of collectors holding the old values. The caller tells
      * the user to restart, which is the only honest way to apply this.
      */
-    fun importAll(values: Map<String, Any>) {
-        val deviceId = prefs.getString(KEY_AGRO_DEVICE_ID, null)
+    fun importAll(values: Map<String, Any>, replaces: (String) -> Boolean) {
+        val claimed = { key: String -> key != KEY_AGRO_DEVICE_ID && replaces(key) }
         prefs.edit {
-            clear()
-            deviceId?.let { putString(KEY_AGRO_DEVICE_ID, it) }
+            prefs.all.keys.filter(claimed).forEach { remove(it) }
             values.forEach { (key, value) ->
-                if (key == KEY_AGRO_DEVICE_ID) return@forEach
+                if (!claimed(key)) return@forEach
                 when (value) {
                     is Boolean -> putBoolean(key, value)
                     is Int -> putInt(key, value)
@@ -726,6 +732,13 @@ class SecureStorage private constructor(private val prefs: SharedPreferences) {
         private const val KEY_AGRO_IDENTITY_PUB = "key_agro_identity_pub"
         private const val KEY_AGRO_SYNC_SETTINGS = "key_agro_sync_settings"
         private const val KEY_AGRO_DEVICE_ID = "key_agro_device_id"
+
+/** Sign-ins, as opposed to preferences — see [SecureStorage.isAccountKey]. */
+private val ACCOUNT_KEYS = setOf(
+    KEY_NAVIDROME_URL, KEY_NAVIDROME_USER, KEY_NAVIDROME_TOKEN, KEY_YTM_COOKIE,
+    KEY_AGRO_URL, KEY_AGRO_USER, KEY_AGRO_KEY, KEY_AGRO_PETNAME, KEY_AGRO_VAULT_KEY,
+    KEY_AGRO_IDENTITY_PRIV, KEY_AGRO_IDENTITY_PUB
+)
         private const val KEY_AGRO_CATALOG_TRADE = "key_agro_catalog_trade"
         const val KEY_CATALOG_CURSOR = "catalog_cursor"
         const val KEY_CATALOG_PUBLISHED_AT = "catalog_published_at"

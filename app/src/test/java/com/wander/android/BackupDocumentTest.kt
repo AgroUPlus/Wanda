@@ -1,12 +1,19 @@
 package com.wander.android
 
 import com.wander.android.core.backup.BackupDocument
+import com.wander.android.core.backup.BackupEntry
+import com.wander.android.core.backup.BackupJson
+import com.wander.android.core.backup.BackupSection
+import com.wander.android.core.backup.includedSections
+import com.wander.android.core.backup.sectionDigests
+import com.wander.android.core.backup.verifyIntegrity
 import com.wander.android.core.backup.BackupPlay
 import com.wander.android.core.backup.BackupRecap
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.IOException
 
 /**
  * The backup file's compatibility contract, in both directions.
@@ -64,7 +71,7 @@ class BackupDocumentTest {
 
         val restored = json.decodeFromString<BackupDocument>(json.encodeToString(original))
 
-        assertEquals(2, restored.version)
+        assertEquals(BackupDocument.CURRENT_VERSION, restored.version)
         assertEquals(2, restored.history.size)
         assertEquals("track-a", restored.history.first().trackId)
         assertEquals(1_700_000_060_000L, restored.history[1].playedAt)
@@ -85,6 +92,46 @@ class BackupDocumentTest {
         assertTrue(encoded.trimStart().startsWith("{"))
         assertTrue(encoded.contains("\"entries\""))
         assertTrue("and the new fields are simply extra keys", encoded.contains("\"history\""))
+    }
+
+    @Test
+    fun `a sealed manifest verifies after a round trip`() {
+        val restored = BackupJson.decodeFromString<BackupDocument>(BackupJson.encodeToString(sealed()))
+
+        restored.verifyIntegrity(BackupJson)
+        assertEquals(setOf(BackupSection.SETTINGS, BackupSection.HISTORY), restored.includedSections)
+    }
+
+    /** A section that came back short must stop the restore before anything is written. */
+    @Test(expected = IOException::class)
+    fun `a section missing a record fails verification`() {
+        val document = sealed()
+        document.copy(history = document.history.drop(1)).verifyIntegrity(BackupJson)
+    }
+
+    @Test(expected = IOException::class)
+    fun `a changed setting fails verification`() {
+        val document = sealed()
+        document.copy(entries = mapOf("key_amoled_black" to BackupEntry("bool", "false")))
+            .verifyIntegrity(BackupJson)
+    }
+
+    @Test
+    fun `a file without a manifest counts as carrying every section`() {
+        val document = json.decodeFromString<BackupDocument>(version1)
+
+        document.verifyIntegrity(json)
+        assertEquals(BackupSection.entries.toSet(), document.includedSections)
+    }
+
+    private fun sealed(): BackupDocument {
+        val document = BackupDocument(
+            entries = mapOf("key_amoled_black" to BackupEntry("bool", "true")),
+            history = listOf(BackupPlay("a", 1L), BackupPlay("b", 2L))
+        )
+        return document.copy(
+            manifest = document.sectionDigests(BackupJson, setOf(BackupSection.SETTINGS, BackupSection.HISTORY))
+        )
     }
 
     private fun recap(year: Int) = BackupRecap(

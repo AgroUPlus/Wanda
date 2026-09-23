@@ -514,6 +514,30 @@ interface TrackDao {
     @Query("SELECT * FROM tracks WHERE id IN (:ids)")
     suspend fun getTracksByIds(ids: List<String>): List<TrackEntity>
 
+    /** Every track carrying something the user did to it — a like, a library add, a play. */
+    @Query("SELECT * FROM tracks WHERE isLiked = 1 OR isLibrary = 1 OR playCount > 0")
+    suspend fun tracksWithUserState(): List<TrackEntity>
+
+    /**
+     * Folds a restored track's user state into the row this device already has, never taking
+     * anything away: a like or library add from either side stays, and the counts keep the larger.
+     */
+    @Query(
+        """
+        UPDATE tracks SET
+            isLiked = (isLiked OR :liked),
+            isLibrary = (isLibrary OR :library),
+            playCount = MAX(playCount, :playCount),
+            lastPlayedTimestamp = CASE
+                WHEN :lastPlayed IS NULL THEN lastPlayedTimestamp
+                WHEN lastPlayedTimestamp IS NULL OR lastPlayedTimestamp < :lastPlayed THEN :lastPlayed
+                ELSE lastPlayedTimestamp
+            END
+        WHERE id = :id
+        """
+    )
+    suspend fun mergeRestoredState(id: String, liked: Boolean, library: Boolean, playCount: Int, lastPlayed: Long?)
+
     /** Resolves a local track entity by its content SHA-256 hash. */
     @Query("SELECT * FROM tracks WHERE contentHash = :hash LIMIT 1")
     suspend fun findByContentHash(hash: String): TrackEntity?

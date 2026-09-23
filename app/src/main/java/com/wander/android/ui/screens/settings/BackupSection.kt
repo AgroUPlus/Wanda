@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
+import com.wander.android.core.backup.BackupSection
 import com.wander.android.ui.components.GroupedCard
 import com.wander.android.ui.components.rememberShelfEntranceScale
 
@@ -42,10 +43,24 @@ internal fun BackupSection(viewModel: BackupViewModel = hiltViewModel()) {
     // The passphrase is asked for *after* the file is chosen, so cancelling the picker never
     // prompts for a secret that is not going to be used.
     var pending by remember { mutableStateOf<PendingBackup?>(null) }
+    // Chosen before the file picker, so the file is only created once there is something to put in it.
+    var choosingSections by remember { mutableStateOf(false) }
+    var sections by remember { mutableStateOf(BackupSection.entries.toSet()) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument(BACKUP_MIME)
     ) { uri -> uri?.let { pending = PendingBackup(it, BackupPassphraseMode.EXPORT) } }
+
+    if (choosingSections) {
+        BackupSectionsDialog(
+            onConfirm = {
+                sections = it
+                choosingSections = false
+                exportLauncher.launch(DEFAULT_FILE_NAME)
+            },
+            onDismiss = { choosingSections = false }
+        )
+    }
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -56,7 +71,7 @@ internal fun BackupSection(viewModel: BackupViewModel = hiltViewModel()) {
             mode = request.mode,
             onConfirm = { passphrase ->
                 when (request.mode) {
-                    BackupPassphraseMode.EXPORT -> viewModel.export(request.uri, passphrase)
+                    BackupPassphraseMode.EXPORT -> viewModel.export(request.uri, passphrase, sections)
                     BackupPassphraseMode.IMPORT -> viewModel.import(request.uri, passphrase)
                 }
                 pending = null
@@ -76,7 +91,7 @@ internal fun BackupSection(viewModel: BackupViewModel = hiltViewModel()) {
                         subtitle = stringResource(R.string.settings_settings_customization_sign_ins_one),
                         onClick = {
                             viewModel.clearStatus()
-                            exportLauncher.launch(DEFAULT_FILE_NAME)
+                            choosingSections = true
                         },
                         enabled = !busy,
                         icon = Icons.Rounded.Upload
@@ -109,8 +124,7 @@ internal fun BackupSection(viewModel: BackupViewModel = hiltViewModel()) {
 @Composable
 private fun Outcome(status: BackupStatus) {
     val (text, error) = when (status) {
-        is BackupStatus.Exported ->
-            "Backup written. Keep it somewhere you trust — it contains your sign-ins." to false
+        is BackupStatus.Exported -> stringResource(R.string.backup_exported_verified) to false
 
         is BackupStatus.Imported -> {
             // Restarting is not advice, it is required: every setting is read into a `StateFlow`
@@ -123,17 +137,27 @@ private fun Outcome(status: BackupStatus) {
             )
             // Only mentioned when the file actually carried listening history. A backup written
             // before it travelled says nothing about it rather than claiming zero plays.
-            val restored = if (status.plays > 0 || status.recaps > 0) {
-                settings + " " + pluralStringResource(
+            val history = if (status.plays > 0 || status.recaps > 0) {
+                " " + pluralStringResource(
                     R.plurals.backup_restored_history,
                     status.plays,
                     status.plays,
                     status.recaps
                 )
             } else {
-                settings
+                ""
             }
-            restored to false
+            val library = if (status.tracks > 0 || status.playlists > 0) {
+                " " + pluralStringResource(
+                    R.plurals.backup_restored_library,
+                    status.tracks,
+                    status.tracks,
+                    status.playlists
+                )
+            } else {
+                ""
+            }
+            (settings + history + library) to false
         }
 
         is BackupStatus.Failed -> status.message to true
