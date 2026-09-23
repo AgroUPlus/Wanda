@@ -28,15 +28,7 @@ data class HomeUiState(
         when (selectedSource) {
             null -> allSections
             else -> allSections
-                // Keep the per-source shelf for the selected source itself, dropping shelves for other sources.
-                .filterNot { it.id.startsWith(SourceSectionPrefix) && it.id != "$SourceSectionPrefix${selectedSource.name}" }
-                .map { section ->
-                    if (section.id == "$SourceSectionPrefix${selectedSource.name}") {
-                        section
-                    } else {
-                        section.copy(tracks = section.tracks.filter { it.source == selectedSource })
-                    }
-                }
+                .map { section -> section.copy(tracks = section.tracks.filter { it.source == selectedSource }) }
                 .filterNot(HomeSection::isEmpty)
         }
     }
@@ -52,6 +44,3 @@ data class HomeUiState(
      */
     val isGloballyEmpty: Boolean get() = !isLoading && allSections.isEmpty()
 }
-
-/** Per-source shelves are id'd with this, so the filter can recognise and drop them. */
-internal const val SourceSectionPrefix = "source_"

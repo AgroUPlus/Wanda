@@ -68,7 +68,8 @@ internal fun LazyListScope.homeSection(
             // that reads as more than a list label — see `QuickPicksHeader`.
             QuickPicksHeader(
                 title = section.title,
-                onPlayAll = { viewModel.play(section.tracks, 0) }
+                tracks = section.tracks,
+                onPlay = { index -> viewModel.play(section.tracks, index) }
             )
         } else {
             SectionTitle(section.title)
