@@ -4,9 +4,9 @@ import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.os.Build
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.asComposeRenderEffect
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 
 /** How much the content behind the player sheet blurs at the peak of a predictive-back gesture. */
