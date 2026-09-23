@@ -42,6 +42,7 @@ class PlaybackService : MediaSessionService() {
     @Inject lateinit var musicRepository: MusicRepository
     @Inject internal lateinit var agroHandoffPublisher: AgroHandoffPublisher
     @Inject lateinit var secureStorage: com.wander.android.core.security.SecureStorage
+    @Inject lateinit var sleepTimer: SleepTimer
 
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private var mediaSession: MediaSession? = null
@@ -53,6 +54,7 @@ class PlaybackService : MediaSessionService() {
         player.addListener(AgroHandoffReporter(player))
         player.addListener(NextTrackPreloader(player))
         EpisodeSkipSilence(player, secureStorage.isSkipSilenceEnabled, scope)
+        SleepTimerEnforcer(player, sleepTimer, scope)
         player.addAnalyticsListener(AudioFormatReporter())
         player.addListener(com.wander.android.ui.widget.PlaybackWidgetUpdater(applicationContext, scope))
 
@@ -171,6 +173,9 @@ class PlaybackService : MediaSessionService() {
         }
         mediaSession = null
         scope.cancel()
+        // The timer outlives the service as a singleton; left set, the next session would be
+        // paused by a countdown that belonged to this one.
+        sleepTimer.cancel()
         super.onDestroy()
     }
 

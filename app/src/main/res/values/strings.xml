@@ -764,4 +764,13 @@
     <!-- Episode playback -->
     <string name="settings_skip_silence">Skip silence in podcasts</string>
     <string name="settings_skip_silence_summary">Trims pauses between speakers. Music is never affected.</string>
+    <string name="sleep_timer">Sleep timer</string>
+    <plurals name="sleep_timer_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <string name="sleep_timer_end_of_episode">End of episode</string>
+    <string name="sleep_timer_end_of_track">End of track</string>
+    <string name="sleep_timer_off">Turn off timer</string>
+    <string name="sleep_timer_remaining">%1$s left</string>
 </resources>

@@ -34,8 +34,14 @@ internal class NowPlayingViewModel @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     fingerprintStatuses: FingerprintStatusRepository,
     jamRepository: JamRepository,
-    private val secureStorage: com.wander.android.core.security.SecureStorage
+    private val secureStorage: com.wander.android.core.security.SecureStorage,
+    private val sleepTimer: com.wander.android.core.playback.SleepTimer
 ) : ViewModel() {
+
+    val sleepTimerState = sleepTimer.state
+    fun startSleepCountdown(minutes: Int) = sleepTimer.startCountdown(minutes)
+    fun sleepAtEndOfItem() = sleepTimer.stopAtEndOfItem()
+    fun cancelSleepTimer() = sleepTimer.cancel()
 
     val isCoverArtThemeEnabled: StateFlow<Boolean> = secureStorage.isCoverArtThemeEnabled
     val isLetterByLetterLyricsEnabled: StateFlow<Boolean> = secureStorage.isLetterByLetterLyricsEnabled

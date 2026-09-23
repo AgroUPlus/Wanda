@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.core.playback.SleepTimerState
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.KeepScreenOn
 import com.wander.android.ui.screens.social.JamViewModel
@@ -154,6 +155,8 @@ internal fun NowPlayingScreen(
 
     var showSpeedPitch by remember { mutableStateOf(false) }
     var showMenuDrawer by remember { mutableStateOf(false) }
+    var showSleepTimer by remember { mutableStateOf(false) }
+    val sleepTimerState by viewModel.sleepTimerState.collectAsStateWithLifecycle()
     val addToPlaylist = AddToPlaylistHost()
     val jamViewModel: JamViewModel = hiltViewModel()
     val speedAndPitch by playerConnection.speedAndPitch.collectAsStateWithLifecycle()
@@ -168,6 +171,8 @@ internal fun NowPlayingScreen(
             canShare = viewModel.canShare(track),
             canAddToPlaylist = addToPlaylist.canAdd(track),
             hasMultipleAudioTracks = state.audioTracks.size > 1,
+            isSleepTimerOn = sleepTimerState != SleepTimerState.Off,
+            onOpenSleepTimer = { showSleepTimer = true },
             onOpenQueue = onOpenQueue,
             onAddToPlaylist = { addToPlaylist.open(track) },
             onToggleRadio = playerConnection::toggleRadio,
@@ -185,6 +190,17 @@ internal fun NowPlayingScreen(
             onOpenAlbum = track.albumId?.let { albumId -> onOpenAlbum?.let { open -> { open(albumId) } } },
             onJamAction = jam?.let { { jamViewModel.suggest(track) } },
             onDismiss = { showMenuDrawer = false }
+        )
+    }
+
+    if (showSleepTimer) {
+        SleepTimerSheet(
+            state = sleepTimerState,
+            isEpisode = track.isEpisode,
+            onCountdown = viewModel::startSleepCountdown,
+            onEndOfItem = viewModel::sleepAtEndOfItem,
+            onCancel = viewModel::cancelSleepTimer,
+            onDismiss = { showSleepTimer = false }
         )
     }
 
