@@ -141,6 +141,10 @@ android {
         disable += "LocalContextGetResourceValueCall"
         // Crowdin syncs translations asynchronously on the l10n_translations branch
         disable += "MissingTranslation"
+        // Crowdin owns the translated strings.xml files, so a tools:ignore there would be
+        // overwritten on the next sync. French treats 0 as quantity "one"; the counts we
+        // format (circle size, listener totals) are never 0, so this fires as a false positive.
+        disable += "ImpliedQuantity"
         textReport = true
         textOutput = file("stdout")
         warningsAsErrors = false
