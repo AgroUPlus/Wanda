@@ -1,11 +1,12 @@
 package com.wander.android.ui.screens.queue
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,19 +20,19 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.ui.components.ElasticSwipeBox
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.GroupedItemGap
 import com.wander.android.ui.components.groupedItemShape
@@ -74,30 +75,26 @@ internal fun QueueUpNext(
     LazyColumn(
         state = listState,
         verticalArrangement = Arrangement.spacedBy(GroupedItemGap),
+        // Inset from the sheet's edges like a Settings group, so every row's rounded frame is
+        // visible on all four sides instead of bleeding into the sheet.
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         modifier = modifier.fillMaxWidth()
     ) {
         itemsIndexed(entries, key = { _, entry -> entry.key }, contentType = { _, _ -> "queue-track" }) { index, entry ->
             ReorderableItem(reorderState, key = entry.key, enabled = canReorder) { isDragging ->
-                val dismissState = rememberSwipeToDismissBoxState()
-
-                LaunchedEffect(entry.key) {
-                    if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
-                        dismissState.snapTo(SwipeToDismissBoxValue.Settled)
-                    }
-                }
-
-                SwipeToDismissBox(
-                    state = dismissState,
-                    enableDismissFromStartToEnd = true,
-                    enableDismissFromEndToStart = false,
-                    gesturesEnabled = !isDragging,
-                    onDismiss = { value ->
-                        if (value == SwipeToDismissBoxValue.StartToEnd) {
-                            haptics.settled()
-                            onRemove(entry)
-                        }
-                    },
-                    backgroundContent = { RemoveBackdrop() }
+                val rowShape = groupedItemShape(index, entries.size)
+                ElasticSwipeBox(
+                    onSwipeStart = { onRemove(entry) },
+                    onSwipeEnd = null,
+                    enabled = !isDragging,
+                    dismissOnStart = true,
+                    // Looser than the default: removing is what this swipe is for, so it should
+                    // take a comfortable pull rather than a fight.
+                    stretchLimit = QueueRemoveStretch,
+                    background = { side, progress -> if (side != null) RemoveBackdrop(progress) },
+                    // Clipped to the row's own frame so a swipe reveals "Remove" inside that frame
+                    // rather than as a full-width strip across the group.
+                    modifier = Modifier.clip(rowShape)
                 ) {
                     Surface(
                         tonalElevation = if (isDragging) DraggingElevation else 0.dp,
@@ -106,19 +103,24 @@ internal fun QueueUpNext(
                         // neighbour, full on the edge it isn't — the same grouped-card look
                         // Settings uses, so each track reads as its own row rather than one
                         // unbroken list.
-                        shape = groupedItemShape(index, entries.size),
-                        // Opaque even at rest, matching the sheet's own container colour —
-                        // `SwipeToDismissBox` keeps `RemoveBackdrop` composed and stacked
-                        // directly behind this at full size the whole time, only sliding this
-                        // foreground aside to reveal it. A transparent resting colour let it
-                        // bleed through every gap the row itself didn't paint over (the drag
-                        // handle's margin, the space right of the title) — the "Remove" icon
-                        // and label peeking out behind every track, not just a swiped one.
-                        color = if (isDragging) {
-                            MaterialTheme.colorScheme.surfaceContainerHigh
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainerLow
-                        }
+                        shape = rowShape,
+                        // Opaque, and one step above the sheet's own `surfaceContainerLow` —
+                        // matching it made every frame invisible. Opaque because
+                        // `ElasticSwipeBox` keeps `RemoveBackdrop` stacked directly behind this
+                        // at full size the whole time; a transparent row let the "Remove" label
+                        // peek through behind every track, not just a swiped one.
+                        // The playing track is marked by its whole cell changing colour, not by
+                        // a second highlight painted inside the cell.
+                        color = animateColorAsState(
+                            targetValue = when {
+                                isDragging -> MaterialTheme.colorScheme.surfaceContainerHighest
+                                entry.role == QueueItemRole.CURRENT ->
+                                    MaterialTheme.colorScheme.primaryContainer
+                                else -> MaterialTheme.colorScheme.surfaceContainerHigh
+                            },
+                            animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+                            label = "queueCellColor"
+                        ).value
                     ) {
                         val isCurrent = entry.role == QueueItemRole.CURRENT
                         val isPrevious = entry.role == QueueItemRole.PREVIOUS
@@ -155,17 +157,7 @@ internal fun QueueUpNext(
                             TrackRow(
                                 track = entry.track,
                                 isPlaying = isCurrent,
-                                // The row paints its own highlight, cross-fading like every
-                                // other list in the app. This used to be a single overlay
-                                // positioned over the list from `LazyListState.layoutInfo` so
-                                // it could *travel* between rows — but an overlay outside the
-                                // list has none of the list's geometry: it drew over the header
-                                // whenever the current row's offset went negative (scrolled
-                                // half out of the viewport), and it chased the scroll through a
-                                // coroutine, so a fling left it visibly adrift from its row.
-                                // A background inside the item is positioned and clipped by the
-                                // list itself, which is what makes both of those unrepresentable.
-                                showBackground = true,
+                                showBackground = false,
                                 onPlay = { onPlay(entry.queueIndex) },
                                 onLongPress = { onLongPress(entry.track) },
                                 modifier = Modifier.weight(1f)
@@ -180,7 +172,7 @@ internal fun QueueUpNext(
 
 /** What the swipe reveals underneath: the consequence, named, in the colour of consequences. */
 @Composable
-private fun RemoveBackdrop() {
+private fun RemoveBackdrop(progress: Float) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -193,7 +185,12 @@ private fun RemoveBackdrop() {
             Icon(
                 imageVector = Icons.Rounded.DeleteSweep,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.error
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.graphicsLayer {
+                    val scale = 0.6f + 0.4f * progress
+                    scaleX = scale
+                    scaleY = scale
+                }
             )
             Text(
                 text = stringResource(R.string.common_remove),
@@ -206,3 +203,6 @@ private fun RemoveBackdrop() {
 }
 
 private val DraggingElevation = 6.dp
+
+/** Reach of the remove swipe's rubber band — see `ElasticSwipeBox`. */
+private const val QueueRemoveStretch = 1.2f

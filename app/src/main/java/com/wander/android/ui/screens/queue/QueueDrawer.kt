@@ -1,11 +1,25 @@
 package com.wander.android.ui.screens.queue
  
+import kotlin.coroutines.cancellation.CancellationException
+import com.wander.android.ui.components.backResistance
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.material3.Surface
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.background
+import androidx.activity.compose.PredictiveBackHandler
 import android.annotation.SuppressLint
-import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -15,22 +29,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -49,7 +60,8 @@ import com.wander.android.ui.components.scrollingTitle
 import kotlinx.coroutines.launch
 
 /**
- * The queue, as a drawer over the player rather than a screen on top of it.
+ * The queue, as a drawer over the player rather than a screen on top of it — a panel that follows
+ * the finger ([QueueDrawerState]) rather than a sheet that can only be shown or hidden.
  *
  * It used to be a full navigation destination, which meant looking at what was coming next replaced
  * the thing you were listening to. A sheet keeps the player behind it and puts the running order in
@@ -64,8 +76,8 @@ import kotlinx.coroutines.launch
 @SuppressLint("LocalContextGetResourceValueCall")
 @Composable
 internal fun QueueDrawer(
+    drawer: QueueDrawerState,
     playerConnection: PlayerConnection,
-    onDismiss: () -> Unit,
     onOpenArtist: ((String, String?) -> Unit)? = null,
     queueViewModel: QueueViewModel = hiltViewModel()
 ) {
@@ -84,13 +96,24 @@ internal fun QueueDrawer(
     val snackbarHostState = remember { SnackbarHostState() }
     var itemGenerations by remember { mutableStateOf(mapOf<String, Int>()) }
 
-    // A small bounce on top of `ModalBottomSheet`'s own slide-up, so the drawer settles rather
-    // than just arriving — `ModalBottomSheet` doesn't expose its internal sheet motion spec to
-    // override, so this layers a second, genuinely spring-driven entrance onto the content instead
-    // of fighting the sheet's own drag/dismiss physics.
-    val entrance = remember { Animatable(0.9f) }
-    val entranceSpec = MaterialTheme.motionScheme.slowSpatialSpec<Float>()
-    LaunchedEffect(Unit) { entrance.animateTo(1f, entranceSpec) }
+    val spec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+    val closeDrawer: () -> Unit = { scope.launch { drawer.close(spec) } }
+
+    // A back swipe pulls the drawer down with the finger, with growing resistance, and lets it
+    // spring back up if the swipe is abandoned.
+    PredictiveBackHandler(enabled = true) { events ->
+        try {
+            events.collect { drawer.snapTo(1f - backResistance(it.progress) * BackPeek) }
+            drawer.close(spec)
+        } catch (_: CancellationException) {
+            drawer.open(spec)
+        }
+    }
+
+    // Keyed on the drawer alone: a connection swapped out mid-drag (the spec is a fresh object on
+    // every recomposition) drops the gesture it was carrying.
+    val currentSpec by rememberUpdatedState(spec)
+    val nestedScroll = remember(drawer) { drawerNestedScroll(drawer) { currentSpec } }
 
     actionsFor?.let { track ->
         TrackActionsSheet(
@@ -127,90 +150,112 @@ internal fun QueueDrawer(
         )
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Tapping what is left of the player puts the drawer away; it also stops those taps from
+        // reaching the player's controls while the drawer is over them.
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(SheetHeightFraction)
-                .navigationBarsPadding()
-                .graphicsLayer {
-                    scaleX = entrance.value
-                    scaleY = entrance.value
-                    alpha = entrance.value.coerceIn(0f, 1f)
-                    transformOrigin = TransformOrigin(0.5f, 0f)
-                }
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 6.dp)
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.action_queue),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        if (state.queue.isNotEmpty()) {
-                            Text(
-                                text = stringResource(R.string.queue_tracks, state.currentIndex + 1, state.queue.size),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    if (state.queue.isNotEmpty() && !state.orderLocked) {
-                        IconButton(onClick = playerConnection::clearQueue, shapes = IconButtonDefaults.shapes()) {
-                            Icon(
-                                imageVector = Icons.Rounded.DeleteSweep,
-                                contentDescription = stringResource(R.string.action_clear_queue),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
+                .fillMaxSize()
+                .graphicsLayer { alpha = drawer.progress.coerceIn(0f, 1f) }
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = ScrimAlpha))
+                .pointerInput(Unit) { detectTapGestures { closeDrawer() } }
+        )
 
-                QueueUpNext(
-                    entries = rememberQueueEntries(state.queue, state.currentIndex, itemGenerations),
-                    canReorder = !state.orderLocked,
-                    onPlay = { playerConnection.seekToIndex(it) },
-                    onMove = { from, to ->
-                        playerConnection.moveInQueue(from, to)
-                        haptics.settled()
-                    },
-                    onLongPress = { actionsFor = it },
-                    onRemove = { entry ->
-                        queueViewModel.removeFromQueue(entry.queueIndex)
-                        scope.launch {
-                            val result = snackbarHostState.showSnackbar(
-                                message = context.getString(
-                                    R.string.queue_removed,
-                                    entry.track.title
-                                ),
-                                actionLabel = context.getString(R.string.common_undo),
-                                withDismissAction = true
+        Surface(
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            shadowElevation = 8.dp,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(with(LocalDensity.current) { drawer.heightPx.toDp() })
+                .graphicsLayer {
+                    translationY = (1f - drawer.progress.coerceIn(0f, 1f)) * size.height
+                }
+                .nestedScroll(nestedScroll)
+                .draggable(
+                    orientation = Orientation.Vertical,
+                    state = rememberDraggableState { dy -> drawer.dragBy(dy) },
+                    onDragStopped = { velocity -> drawer.settle(velocity, spec) }
+                )
+        ) {
+            Box(modifier = Modifier.fillMaxSize().navigationBarsPadding()) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    BottomSheetDefaults.DragHandle(modifier = Modifier.align(Alignment.CenterHorizontally))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 6.dp)
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.action_queue),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
                             )
-                            if (result == SnackbarResult.ActionPerformed) {
-                                itemGenerations = itemGenerations + (entry.track.id to (itemGenerations[entry.track.id] ?: 0) + 1)
-                                queueViewModel.insertInQueue(entry.queueIndex, entry.track)
+                            if (state.queue.isNotEmpty()) {
+                                Text(
+                                    text = stringResource(R.string.queue_tracks, state.currentIndex + 1, state.queue.size),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        if (state.queue.isNotEmpty() && !state.orderLocked) {
+                            IconButton(onClick = playerConnection::clearQueue, shapes = IconButtonDefaults.shapes()) {
+                                Icon(
+                                    imageVector = Icons.Rounded.DeleteSweep,
+                                    contentDescription = stringResource(R.string.action_clear_queue),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }
+
+                    QueueUpNext(
+                        entries = rememberQueueEntries(state.queue, state.currentIndex, itemGenerations),
+                        canReorder = !state.orderLocked,
+                        onPlay = { playerConnection.seekToIndex(it) },
+                        onMove = { from, to ->
+                            playerConnection.moveInQueue(from, to)
+                            haptics.settled()
+                        },
+                        onLongPress = { actionsFor = it },
+                        onRemove = { entry ->
+                            queueViewModel.removeFromQueue(entry.queueIndex)
+                            scope.launch {
+                                val result = snackbarHostState.showSnackbar(
+                                    message = context.getString(
+                                        R.string.queue_removed,
+                                        entry.track.title
+                                    ),
+                                    actionLabel = context.getString(R.string.common_undo),
+                                    withDismissAction = true
+                                )
+                                if (result == SnackbarResult.ActionPerformed) {
+                                    itemGenerations = itemGenerations + (entry.track.id to (itemGenerations[entry.track.id] ?: 0) + 1)
+                                    queueViewModel.insertInQueue(entry.queueIndex, entry.track)
+                                }
+                            }
+                        }
+                    )
+                }
+
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier.align(Alignment.BottomCenter)
                 )
             }
-
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
         }
     }
 }
 
+/** How far down a full back swipe pulls the drawer before it commits. */
+private const val BackPeek = 0.35f
+
+/** How dark the player gets behind a fully open drawer. */
+private const val ScrimAlpha = 0.4f
+
 /** Tall enough to be the queue, short enough that the player is still visibly behind it. */
-private const val SheetHeightFraction = 0.82f
+internal const val QueueDrawerHeightFraction = 0.82f
