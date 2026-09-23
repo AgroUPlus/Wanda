@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Groups
@@ -49,6 +50,8 @@ internal fun NowPlayingMenuDrawer(
     canShare: Boolean,
     canAddToPlaylist: Boolean,
     hasMultipleAudioTracks: Boolean,
+    isSleepTimerOn: Boolean,
+    onOpenSleepTimer: () -> Unit,
     onOpenQueue: () -> Unit,
     onAddToPlaylist: () -> Unit,
     onToggleRadio: () -> Unit,
@@ -92,7 +95,8 @@ internal fun NowPlayingMenuDrawer(
                 audioLanguage = stringResource(R.string.action_audio_language),
                 jam = stringResource(R.string.action_add_to_jam),
                 share = stringResource(R.string.action_share),
-                like = stringResource(R.string.menu_like)
+                like = stringResource(R.string.menu_like),
+                sleepTimer = stringResource(R.string.sleep_timer)
             )
             ActionButtonGroup(
                 modifier = Modifier.padding(top = 8.dp),
@@ -116,6 +120,11 @@ internal fun NowPlayingMenuDrawer(
                         add(MenuAction(Icons.Rounded.LibraryAdd, strings.addToPlaylist, ActionEmphasis.ICON) { onAddToPlaylist(); onDismiss() })
                     }
                     add(MenuAction(Icons.Rounded.Speed, strings.speed, ActionEmphasis.ICON) { onOpenSpeedPitch(); onDismiss() })
+                    add(
+                        MenuAction(Icons.Rounded.Bedtime, strings.sleepTimer, ActionEmphasis.ICON, selected = isSleepTimerOn) {
+                            onOpenSleepTimer(); onDismiss()
+                        }
+                    )
                     add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, strings.playNext) { onPlayNext(); onDismiss() })
                     add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, strings.addToQueue) { onAddToQueue(); onDismiss() })
                     onOpenArtist?.let { add(MenuAction(Icons.Rounded.Person, track.artist) { it(); onDismiss() }) }
@@ -147,5 +156,6 @@ private class MenuStrings(
     val audioLanguage: String,
     val jam: String,
     val share: String,
-    val like: String
+    val like: String,
+    val sleepTimer: String
 )
