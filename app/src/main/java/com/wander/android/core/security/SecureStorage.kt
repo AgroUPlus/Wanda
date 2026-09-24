@@ -5,781 +5,231 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * The only place credentials live. Backed by the Android Keystore via
  * [EncryptedSharedPreferences] — nothing here is ever written to Room, to logs, or to backups.
- *
- * Construct through Hilt ([com.wander.android.di.AppModule]); [create] exists for that binding
- * and for tests.
  */
-class SecureStorage private constructor(private val prefs: SharedPreferences) {
+class SecureStorage internal constructor(private val prefs: SharedPreferences) {
 
-    private val _isOfflineMode = MutableStateFlow(prefs.getBoolean(KEY_OFFLINE_MODE, false))
-    val isOfflineMode: StateFlow<Boolean> = _isOfflineMode.asStateFlow()
+    private val displayPrefs = SecureDisplayPreferences(prefs)
+    private val playbackPrefs = SecurePlaybackPreferences(prefs)
+    private val accountPrefs = SecureAccountPreferences(prefs)
+    private val agroPrefs = SecureAgroPreferences(prefs)
+    private val appPrefs = SecureAppPreferences(prefs)
 
-    /**
-     * Whether the start of the next track is fetched before it is reached.
-     *
-     * On by default: two seconds is a small enough download that the cost is hard to notice, and
-     * the benefit lands on every change of track. Off is for someone counting megabytes, which is
-     * why the switch exists at all — preloading spends data on audio that may never be played.
-     */
-    private val _isPreloadNextEnabled = MutableStateFlow(prefs.getBoolean(KEY_PRELOAD_NEXT, true))
-    val isPreloadNextEnabled: StateFlow<Boolean> = _isPreloadNextEnabled.asStateFlow()
+    // ── Display Preferences ─────────────────────────────────────────────────────────────────
+    val isAmoledBlack: StateFlow<Boolean> = displayPrefs.isAmoledBlack
+    fun setAmoledBlack(enabled: Boolean) = displayPrefs.setAmoledBlack(enabled)
 
-    /** Whether pauses are trimmed out of podcast episodes. Never applied to music — see `PlaybackService`. */
-    private val _isSkipSilenceEnabled = MutableStateFlow(prefs.getBoolean(KEY_SKIP_SILENCE, false))
-    val isSkipSilenceEnabled: StateFlow<Boolean> = _isSkipSilenceEnabled.asStateFlow()
+    val isBackBlurEnabled: StateFlow<Boolean> = displayPrefs.isBackBlurEnabled
+    fun setBackBlurEnabled(enabled: Boolean) = displayPrefs.setBackBlurEnabled(enabled)
 
-    /**
-     * Whether the fingerprint indexer may work over mobile data.
-     *
-     * Off by default, and the default is the whole point. Measuring a streamed library reads about
-     * a minute of audio per track, so a few thousand tracks is a real amount of data — not
-     * something to spend on somebody's plan without asking. On Wi-Fi it costs nothing and runs
-     * whenever the phone is not on its last few percent.
-     */
-    private val _isIndexOnMobileDataEnabled =
-        MutableStateFlow(prefs.getBoolean(KEY_INDEX_ON_MOBILE_DATA, false))
-    val isIndexOnMobileDataEnabled: StateFlow<Boolean> = _isIndexOnMobileDataEnabled.asStateFlow()
+    val isMonetDynamic: StateFlow<Boolean> = displayPrefs.isMonetDynamic
+    fun setMonetDynamic(enabled: Boolean) = displayPrefs.setMonetDynamic(enabled)
 
-    /**
-     * Endless-radio queue top-up. Persisted because it was an in-memory flag on `PlayerConnection`,
-     * so a mode the user had deliberately turned on silently reset on every launch.
-     */
-    private val _isRadioMode = MutableStateFlow(prefs.getBoolean(KEY_RADIO_MODE, true))
-    val isRadioMode: StateFlow<Boolean> = _isRadioMode.asStateFlow()
+    val isImmersivePlayer: StateFlow<Boolean> = displayPrefs.isImmersivePlayer
+    fun setImmersivePlayer(enabled: Boolean) = displayPrefs.setImmersivePlayer(enabled)
 
-    private val _isAmoledBlack = MutableStateFlow(prefs.getBoolean(KEY_AMOLED_BLACK, false))
-    val isAmoledBlack: StateFlow<Boolean> = _isAmoledBlack.asStateFlow()
+    val isCoverArtThemeEnabled: StateFlow<Boolean> = displayPrefs.isCoverArtThemeEnabled
+    fun setCoverArtThemeEnabled(enabled: Boolean) = displayPrefs.setCoverArtThemeEnabled(enabled)
 
-    private val _isBackBlurEnabled = MutableStateFlow(prefs.getBoolean(KEY_BACK_BLUR, true))
-    val isBackBlurEnabled: StateFlow<Boolean> = _isBackBlurEnabled.asStateFlow()
+    val isReduceMotion: StateFlow<Boolean> = displayPrefs.isReduceMotion
+    fun setReduceMotion(enabled: Boolean) = displayPrefs.setReduceMotion(enabled)
 
-    private val _isMonetDynamic = MutableStateFlow(prefs.getBoolean(KEY_MONET_DYNAMIC, true))
-    val isMonetDynamic: StateFlow<Boolean> = _isMonetDynamic.asStateFlow()
+    val isLetterByLetterLyricsEnabled: StateFlow<Boolean> = displayPrefs.isLetterByLetterLyricsEnabled
+    fun setLetterByLetterLyricsEnabled(enabled: Boolean) = displayPrefs.setLetterByLetterLyricsEnabled(enabled)
 
-    private val _isImmersivePlayer = MutableStateFlow(prefs.getBoolean(KEY_IMMERSIVE_PLAYER, false))
-    val isImmersivePlayer: StateFlow<Boolean> = _isImmersivePlayer.asStateFlow()
+    val isCoverCarouselEnabled: StateFlow<Boolean> = displayPrefs.isCoverCarouselEnabled
+    fun setCoverCarouselEnabled(enabled: Boolean) = displayPrefs.setCoverCarouselEnabled(enabled)
 
-    private val _isCoverArtThemeEnabled = MutableStateFlow(prefs.getBoolean(KEY_COVER_ART_THEME, true))
-    val isCoverArtThemeEnabled: StateFlow<Boolean> = _isCoverArtThemeEnabled.asStateFlow()
+    // ── Playback Preferences ────────────────────────────────────────────────────────────────
+    val isOfflineMode: StateFlow<Boolean> = playbackPrefs.isOfflineMode
+    fun setOfflineMode(enabled: Boolean) = playbackPrefs.setOfflineMode(enabled)
 
-    private val _isReduceMotion = MutableStateFlow(prefs.getBoolean(KEY_REDUCE_MOTION, false))
-    val isReduceMotion: StateFlow<Boolean> = _isReduceMotion.asStateFlow()
+    val isPreloadNextEnabled: StateFlow<Boolean> = playbackPrefs.isPreloadNextEnabled
+    fun setPreloadNextEnabled(enabled: Boolean) = playbackPrefs.setPreloadNextEnabled(enabled)
 
-    /** On by default: this is the karaoke sweep the lyrics view already shipped with. */
-    private val _isLetterByLetterLyricsEnabled =
-        MutableStateFlow(prefs.getBoolean(KEY_LETTER_BY_LETTER_LYRICS, true))
-    val isLetterByLetterLyricsEnabled: StateFlow<Boolean> = _isLetterByLetterLyricsEnabled.asStateFlow()
+    val isSkipSilenceEnabled: StateFlow<Boolean> = playbackPrefs.isSkipSilenceEnabled
+    fun setSkipSilenceEnabled(enabled: Boolean) = playbackPrefs.setSkipSilenceEnabled(enabled)
 
-    private val _isCoverCarouselEnabled = MutableStateFlow(prefs.getBoolean(KEY_COVER_CAROUSEL, true))
-    val isCoverCarouselEnabled: StateFlow<Boolean> = _isCoverCarouselEnabled.asStateFlow()
+    val isIndexOnMobileDataEnabled: StateFlow<Boolean> = playbackPrefs.isIndexOnMobileDataEnabled
+    fun setIndexOnMobileDataEnabled(enabled: Boolean) = playbackPrefs.setIndexOnMobileDataEnabled(enabled)
 
-    /** Off by default: a version check on every launch is a network call the user did not ask for. */
-    private val _isAutoUpdateCheckEnabled =
-        MutableStateFlow(prefs.getBoolean(KEY_AUTO_UPDATE_CHECK, false))
-    val isAutoUpdateCheckEnabled: StateFlow<Boolean> = _isAutoUpdateCheckEnabled.asStateFlow()
+    val isRadioMode: StateFlow<Boolean> = playbackPrefs.isRadioMode
+    fun setRadioMode(enabled: Boolean) = playbackPrefs.setRadioMode(enabled)
 
-    /**
-     * Whether a new release should raise a notification.
-     *
-     * Separate from [isAutoUpdateCheckEnabled], which only decides whether the app looks while it
-     * happens to be open. This one puts something on the lock screen, so it is its own consent and
-     * defaults off like every other switch that reaches outside the app.
-     */
-    private val _isArtistReleaseNotificationEnabled =
-        MutableStateFlow(prefs.getBoolean(KEY_RELEASE_NOTIFICATIONS, false))
-    val isArtistReleaseNotificationEnabled: StateFlow<Boolean> =
-        _isArtistReleaseNotificationEnabled.asStateFlow()
+    val isExternalLyricsEnabled: StateFlow<Boolean> = playbackPrefs.isExternalLyricsEnabled
+    fun setExternalLyricsEnabled(enabled: Boolean) = playbackPrefs.setExternalLyricsEnabled(enabled)
 
-    fun setArtistReleaseNotificationEnabled(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_RELEASE_NOTIFICATIONS, enabled) }
-        _isArtistReleaseNotificationEnabled.value = enabled
-    }
+    val isAutoUpdateCheckEnabled: StateFlow<Boolean> = playbackPrefs.isAutoUpdateCheckEnabled
+    fun setAutoUpdateCheckEnabled(enabled: Boolean) = playbackPrefs.setAutoUpdateCheckEnabled(enabled)
 
-    /**
-     * The highest catalogue position this device has already been told about.
-     *
-     * Kept here rather than on the server, which is what lets Agro hold no per-device delivery
-     * state at all: the phone asks what has been published since its own watermark and moves it.
-     */
-    var lastSeenReleaseWatermark: Long
-        get() = prefs.getLong(KEY_RELEASE_WATERMARK, 0L)
-        set(value) = prefs.edit { putLong(KEY_RELEASE_WATERMARK, value) }
+    val isArtistReleaseNotificationEnabled: StateFlow<Boolean> = playbackPrefs.isArtistReleaseNotificationEnabled
+    fun setArtistReleaseNotificationEnabled(enabled: Boolean) = playbackPrefs.setArtistReleaseNotificationEnabled(enabled)
 
-    /**
-     * How far the duplicate-link sweep has read, as a track id.
-     *
-     * A cursor rather than a flag, because the sweep is bounded per run and has to resume rather
-     * than restart. Empty means "from the beginning", which is also what a completed sweep resets
-     * to — a library gains tracks, and two of them being the same recording is a question that
-     * comes back.
-     */
-    var duplicateScanCursor: String
-        get() = prefs.getString(KEY_DUPLICATE_SCAN_CURSOR, "").orEmpty()
-        set(value) = prefs.edit { putString(KEY_DUPLICATE_SCAN_CURSOR, value) }
+    var preferredAudioLanguage: String?
+        get() = playbackPrefs.preferredAudioLanguage
+        set(value) { playbackPrefs.preferredAudioLanguage = value }
 
-    /** The release already announced, so the same one is not announced again every day. */
-    var lastNotifiedRelease: String
-        get() = prefs.getString(KEY_LAST_NOTIFIED_RELEASE, "").orEmpty()
-        set(value) = prefs.edit { putString(KEY_LAST_NOTIFIED_RELEASE, value) }
+    // ── Account Credentials (Navidrome & YouTube Music) ──────────────────────────────────────
+    val navidromeConfigured: StateFlow<Boolean> = accountPrefs.navidromeConfigured
+    val navidromeServerUrl: String get() = accountPrefs.navidromeServerUrl
+    val navidromeUsername: String get() = accountPrefs.navidromeUsername
+    val navidromePassword: String get() = accountPrefs.navidromePassword
+    fun setNavidromeCredentials(u: String, user: String, pass: String) = accountPrefs.setNavidromeCredentials(u, user, pass)
+    fun clearNavidromeCredentials() = accountPrefs.clearNavidromeCredentials()
 
-    /**
-     * The most recent year whose Agro Replay this device has already put in front of the user.
-     *
-     * A year rather than a flag, so next December offers itself without anything having to clear
-     * it. Written when the story is *opened*, not when it is finished: a recap somebody dismissed
-     * on the second card should not be waiting for them again at the next launch.
-     *
-     * Living here means it travels in a settings backup like every other preference, so a restored
-     * device does not re-show a recap that was already seen.
-     */
-    var lastSeenReplayYear: Int
-        get() = prefs.getInt(KEY_REPLAY_SEEN_YEAR, 0)
-        set(value) = prefs.edit { putInt(KEY_REPLAY_SEEN_YEAR, value) }
-
-    private val _navidromeConfigured = MutableStateFlow(hasNavidromeCredentials())
-    val navidromeConfigured: StateFlow<Boolean> = _navidromeConfigured.asStateFlow()
-
-    private val _ytMusicConfigured = MutableStateFlow(ytMusicAuthCookie.isNotBlank())
-    val ytMusicConfigured: StateFlow<Boolean> = _ytMusicConfigured.asStateFlow()
-
-    // ── Navidrome / Subsonic ────────────────────────────────────────────────────────────────
-
-    val navidromeServerUrl: String get() = prefs.getString(KEY_NAVIDROME_URL, "").orEmpty()
-    val navidromeUsername: String get() = prefs.getString(KEY_NAVIDROME_USER, "").orEmpty()
-    val navidromePassword: String get() = prefs.getString(KEY_NAVIDROME_TOKEN, "").orEmpty()
-
-    fun setNavidromeCredentials(url: String, username: String, password: String) {
-        prefs.edit {
-            putString(KEY_NAVIDROME_URL, url.trim().trimEnd('/'))
-            putString(KEY_NAVIDROME_USER, username.trim())
-            putString(KEY_NAVIDROME_TOKEN, password)
-        }
-        _navidromeConfigured.value = hasNavidromeCredentials()
-    }
-
-    fun clearNavidromeCredentials() {
-        prefs.edit {
-            remove(KEY_NAVIDROME_URL); remove(KEY_NAVIDROME_USER); remove(KEY_NAVIDROME_TOKEN)
-        }
-        _navidromeConfigured.value = false
-    }
-
-    private fun hasNavidromeCredentials() =
-        navidromeServerUrl.isNotBlank() && navidromeUsername.isNotBlank() && navidromePassword.isNotBlank()
-
-    // ── YouTube Music ───────────────────────────────────────────────────────────────────────
-
-    val ytMusicAuthCookie: String get() = prefs.getString(KEY_YTM_COOKIE, "").orEmpty()
-    val ytMusicVisitorData: String get() = prefs.getString(KEY_YTM_VISITOR, "").orEmpty()
-
-    /**
-     * The signed-in YouTube Music account's display name, cached so Settings can say who you are
-     * without a network round trip every time the screen is opened.
-     *
-     * A name, never the address beside it in the same response — see `InnerTubeClient.accountName`.
-     */
+    val ytMusicConfigured: StateFlow<Boolean> = accountPrefs.ytMusicConfigured
+    val ytMusicAuthCookie: String get() = accountPrefs.ytMusicAuthCookie
+    val ytMusicVisitorData: String get() = accountPrefs.ytMusicVisitorData
     var ytMusicAccountName: String
-        get() = prefs.getString(KEY_YTM_ACCOUNT, "").orEmpty()
-        set(value) = prefs.edit { putString(KEY_YTM_ACCOUNT, value.trim()) }
+        get() = accountPrefs.ytMusicAccountName
+        set(value) { accountPrefs.ytMusicAccountName = value }
+    fun setYtMusicSession(cookie: String, visitor: String = ytMusicVisitorData) = accountPrefs.setYtMusicSession(cookie, visitor)
+    fun clearYtMusicSession() = accountPrefs.clearYtMusicSession()
 
-    fun setYtMusicSession(cookie: String, visitorData: String = ytMusicVisitorData) {
-        prefs.edit {
-            putString(KEY_YTM_COOKIE, cookie.trim())
-            putString(KEY_YTM_VISITOR, visitorData)
-        }
-        _ytMusicConfigured.value = cookie.isNotBlank()
-    }
+    // ── Agro Server Integration ─────────────────────────────────────────────────────────────
+    val agroConfigured: StateFlow<Boolean> = agroPrefs.agroConfigured
+    val agroServerUrl: String get() = agroPrefs.agroServerUrl
+    val agroApiKey: String get() = agroPrefs.agroApiKey
+    val agroUsername: String get() = agroPrefs.agroUsername
+    val agroDevicePetname: String get() = agroPrefs.agroDevicePetname
+    fun setAgroDevicePetname(petname: String) = agroPrefs.setAgroDevicePetname(petname)
 
-    fun clearYtMusicSession() {
-        prefs.edit { remove(KEY_YTM_COOKIE); remove(KEY_YTM_VISITOR); remove(KEY_YTM_ACCOUNT) }
-        _ytMusicConfigured.value = false
-    }
+    var catalogCursor: Long
+        get() = agroPrefs.catalogCursor
+        set(value) { agroPrefs.catalogCursor = value }
 
-    // ── Preferences ─────────────────────────────────────────────────────────────────────────
+    var catalogLastPublishedAt: Long
+        get() = agroPrefs.catalogLastPublishedAt
+        set(value) { agroPrefs.catalogLastPublishedAt = value }
+
+    var agroCapabilities: Set<String>
+        get() = agroPrefs.agroCapabilities
+        set(value) { agroPrefs.agroCapabilities = value }
+
+    fun serverSupports(capability: String): Boolean = agroPrefs.serverSupports(capability)
+    val agroDeviceId: String get() = agroPrefs.agroDeviceId
+    fun setAgroCredentials(u: String, user: String, key: String, devId: String = agroDeviceId) =
+        agroPrefs.setAgroCredentials(u, user, key, devId)
+
+    val agroP2pSyncFlow: StateFlow<Boolean> = agroPrefs.agroP2pSyncFlow
+    val agroP2pSync: Boolean get() = agroPrefs.agroP2pSync
+    fun setAgroP2pSync(enabled: Boolean) = agroPrefs.setAgroP2pSync(enabled)
+
+    val agroPopularityContributionFlow: StateFlow<Boolean> = agroPrefs.agroPopularityContributionFlow
+    val agroPopularityContribution: Boolean get() = agroPrefs.agroPopularityContribution
+    fun setAgroPopularityContribution(enabled: Boolean) = agroPrefs.setAgroPopularityContribution(enabled)
+
+    val agroCatalogTradeFlow: StateFlow<Boolean> = agroPrefs.agroCatalogTradeFlow
+    val agroCatalogTrade: Boolean get() = agroPrefs.agroCatalogTrade
+    fun setAgroCatalogTrade(enabled: Boolean) = agroPrefs.setAgroCatalogTrade(enabled)
+
+    val agroServerArchiveFlow: StateFlow<Boolean> = agroPrefs.agroServerArchiveFlow
+    val agroServerArchive: Boolean get() = agroPrefs.agroServerArchive
+    fun setAgroServerArchive(enabled: Boolean) = agroPrefs.setAgroServerArchive(enabled)
+
+    val agroLibrarySyncFlow: StateFlow<Boolean> = agroPrefs.agroLibrarySyncFlow
+    val agroLibrarySync: Boolean get() = agroPrefs.agroLibrarySync
+    fun setAgroLibrarySync(enabled: Boolean) = agroPrefs.setAgroLibrarySync(enabled)
+
+    val agroProxyEnabled: StateFlow<Boolean> = agroPrefs.agroProxyEnabled
+    fun setAgroProxyEnabled(enabled: Boolean) = agroPrefs.setAgroProxyEnabled(enabled)
+
+    var agroVaultKey: ByteArray?
+        get() = agroPrefs.agroVaultKey
+        set(value) { agroPrefs.agroVaultKey = value }
+
+    val agroSyncSettings: StateFlow<Boolean> = agroPrefs.agroSyncSettings
+    fun setAgroSyncSettings(enabled: Boolean) = agroPrefs.setAgroSyncSettings(enabled)
+
+    var agroIdentityPrivateKey: String?
+        get() = agroPrefs.agroIdentityPrivateKey
+        set(value) { agroPrefs.agroIdentityPrivateKey = value }
+
+    var agroIdentityPublicKey: String?
+        get() = agroPrefs.agroIdentityPublicKey
+        set(value) { agroPrefs.agroIdentityPublicKey = value }
+
+    fun clearAgroCredentials() = agroPrefs.clearAgroCredentials()
+
+    // ── App State, Scanning, Watermarks & Jobs ───────────────────────────────────────────────
+    var lastSeenReleaseWatermark: Long
+        get() = appPrefs.lastSeenReleaseWatermark
+        set(value) { appPrefs.lastSeenReleaseWatermark = value }
+
+    var duplicateScanCursor: String
+        get() = appPrefs.duplicateScanCursor
+        set(value) { appPrefs.duplicateScanCursor = value }
+
+    var lastNotifiedRelease: String
+        get() = appPrefs.lastNotifiedRelease
+        set(value) { appPrefs.lastNotifiedRelease = value }
+
+    var lastSeenReplayYear: Int
+        get() = appPrefs.lastSeenReplayYear
+        set(value) { appPrefs.lastSeenReplayYear = value }
 
     var isIncognitoMode: Boolean
-        get() = prefs.getBoolean(KEY_INCOGNITO, false)
-        set(value) = prefs.edit { putBoolean(KEY_INCOGNITO, value) }
+        get() = appPrefs.isIncognitoMode
+        set(value) { appPrefs.isIncognitoMode = value }
 
-    private val _hasCompletedSetup = MutableStateFlow(prefs.getBoolean(KEY_SETUP_DONE, false))
+    val hasCompletedSetup: StateFlow<Boolean> = appPrefs.hasCompletedSetup
+    fun markSetupComplete() = appPrefs.markSetupComplete()
 
-    /** False until the welcome flow has been seen, whether it was completed or skipped. */
-    val hasCompletedSetup: StateFlow<Boolean> = _hasCompletedSetup.asStateFlow()
-
-    fun markSetupComplete() {
-        prefs.edit { putBoolean(KEY_SETUP_DONE, true) }
-        _hasCompletedSetup.value = true
-    }
-
-    /** MediaStore `DATE_MODIFIED` watermark, so a rescan only reads what changed. */
     var localScanWatermark: Long
-        get() = prefs.getLong(KEY_LOCAL_WATERMARK, 0L)
-        set(value) = prefs.edit { putLong(KEY_LOCAL_WATERMARK, value) }
+        get() = appPrefs.localScanWatermark
+        set(value) { appPrefs.localScanWatermark = value }
 
-    /**
-     * The BCP-47 language tag the user has chosen for multi-track audio, or null to let the
-     * player pick by itself.
-     *
-     * Persisted here so that switching language in one podcast/video carries through to every
-     * subsequent source without repeating the choice each time.
-     */
-    var preferredAudioLanguage: String?
-        get() = prefs.getString(KEY_PREFERRED_AUDIO_LANGUAGE, null)
-        set(value) = prefs.edit { putString(KEY_PREFERRED_AUDIO_LANGUAGE, value) }
-
-    /**
-     * Content hashes of files that have left this device and that the server has not been told
-     * about yet.
-     *
-     * Persisted rather than signalled, because both plausible ways of signalling lose it. An
-     * unreplayed `SharedFlow` drops the value when the scan finishes before anything is
-     * collecting, which is exactly what happens during startup; and an in-memory queue loses it
-     * when the process dies, or when the deletion is noticed while offline. Either way the server
-     * goes on believing a copy exists here, and never offers the track back.
-     *
-     * Cleared only once the report succeeds, so a failed call is retried rather than forgotten.
-     */
     var pendingForget: Set<String>
-        get() = prefs.getStringSet(KEY_PENDING_FORGET, emptySet()).orEmpty()
-        set(value) = prefs.edit { putStringSet(KEY_PENDING_FORGET, value) }
+        get() = appPrefs.pendingForget
+        set(value) { appPrefs.pendingForget = value }
 
-    /**
-     * The one folder the on-device scan is allowed to look in, as a MediaStore `RELATIVE_PATH`
-     * prefix ending in `/` — for example `Music/Vinyl rips/`.
-     *
-     * Null means the whole volume, which stays the default. A phone's audio is not all music:
-     * ringtones, podcast downloads, voice memos and whatever a messaging app saved all satisfy
-     * `IS_MUSIC`, and on a full device the library is mostly things nobody wants to see.
-     *
-     * Stored as the relative path rather than the picked tree URI because that is what MediaStore
-     * can be queried against; the URI is kept alongside it only so the row can name the folder.
-     */
     var localScanFolder: String?
-        get() = prefs.getString(KEY_LOCAL_FOLDER, null)
-        set(value) = prefs.edit { putString(KEY_LOCAL_FOLDER, value) }
+        get() = appPrefs.localScanFolder
+        set(value) { appPrefs.localScanFolder = value }
 
-    /** The picked tree URI, shown in Settings. Not used for querying — see [localScanFolder]. */
     var localScanFolderLabel: String?
-        get() = prefs.getString(KEY_LOCAL_FOLDER_LABEL, null)
-        set(value) = prefs.edit { putString(KEY_LOCAL_FOLDER_LABEL, value) }
+        get() = appPrefs.localScanFolderLabel
+        set(value) { appPrefs.localScanFolderLabel = value }
 
-    fun setPreloadNextEnabled(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_PRELOAD_NEXT, enabled) }
-        _isPreloadNextEnabled.value = enabled
-    }
-
-    fun setSkipSilenceEnabled(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_SKIP_SILENCE, enabled) }
-        _isSkipSilenceEnabled.value = enabled
-    }
-
-    /**
-     * Whether a long-running job is suspended, keyed by `WorkProgressNotification.Kind.name`.
-     *
-     * A map of flows rather than a field per job, because the set of jobs is an enum that will grow
-     * and every addition would otherwise mean three more lines here. Created on demand and kept, so
-     * two callers asking about the same job observe the same flow — an important detail, since the
-     * notification action and the settings row both write to it and each must see the other's write.
-     */
-    private val workPausedFlows = mutableMapOf<String, MutableStateFlow<Boolean>>()
-
-    @Synchronized
-    fun workPaused(kindName: String): StateFlow<Boolean> =
-        workPausedFlows.getOrPut(kindName) {
-            MutableStateFlow(prefs.getBoolean(workPausedKey(kindName), false))
-        }.asStateFlow()
-
-    @Synchronized
-    fun setWorkPaused(kindName: String, paused: Boolean) {
-        prefs.edit { putBoolean(workPausedKey(kindName), paused) }
-        workPausedFlows.getOrPut(kindName) { MutableStateFlow(paused) }.value = paused
-    }
-
-    private fun workPausedKey(kindName: String) = "key_work_paused_$kindName"
-
-    fun setIndexOnMobileDataEnabled(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_INDEX_ON_MOBILE_DATA, enabled) }
-        _isIndexOnMobileDataEnabled.value = enabled
-    }
-
-    fun setOfflineMode(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_OFFLINE_MODE, enabled) }
-        _isOfflineMode.value = enabled
-    }
-
-    fun setRadioMode(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_RADIO_MODE, enabled) }
-        _isRadioMode.value = enabled
-    }
-
-    fun setAmoledBlack(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_AMOLED_BLACK, enabled) }
-        _isAmoledBlack.value = enabled
-    }
-
-    fun setBackBlurEnabled(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_BACK_BLUR, enabled) }
-        _isBackBlurEnabled.value = enabled
-    }
-
-    fun setMonetDynamic(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_MONET_DYNAMIC, enabled) }
-        _isMonetDynamic.value = enabled
-    }
-
-    fun setReduceMotion(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_REDUCE_MOTION, enabled) }
-        _isReduceMotion.value = enabled
-    }
-
-    fun setLetterByLetterLyricsEnabled(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_LETTER_BY_LETTER_LYRICS, enabled) }
-        _isLetterByLetterLyricsEnabled.value = enabled
-    }
-
-    fun setImmersivePlayer(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_IMMERSIVE_PLAYER, enabled) }
-        _isImmersivePlayer.value = enabled
-    }
-
-    fun setCoverArtThemeEnabled(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_COVER_ART_THEME, enabled) }
-        _isCoverArtThemeEnabled.value = enabled
-    }
-
-    fun setCoverCarouselEnabled(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_COVER_CAROUSEL, enabled) }
-        _isCoverCarouselEnabled.value = enabled
-    }
-
-    fun setAutoUpdateCheckEnabled(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_AUTO_UPDATE_CHECK, enabled) }
-        _isAutoUpdateCheckEnabled.value = enabled
-    }
+    fun workPaused(kindName: String): StateFlow<Boolean> = appPrefs.workPaused(kindName)
+    fun setWorkPaused(kindName: String, paused: Boolean) = appPrefs.setWorkPaused(kindName, paused)
 
     // ── Sharing ─────────────────────────────────────────────────────────────────────────────
+    val shareDomain: StateFlow<String> = appPrefs.shareDomain
+    val agroShareDomain: StateFlow<String> = appPrefs.agroShareDomain
+    val agroShareHosts: String get() = appPrefs.agroShareHosts
+    fun setAgroShareSettings(domain: String, hosts: String) = appPrefs.setAgroShareSettings(domain, hosts)
+    fun setShareDomain(domain: String) = appPrefs.setShareDomain(domain)
 
-    /**
-     * A domain of the user's own to send share links through — `frwd.top` — or blank to share each
-     * backend's own link untouched.
-     *
-     * Stored as a bare host: whatever is typed, scheme, path and case are stripped, so the value
-     * can only ever be used to build one shape of URL.
-     */
-    private val _shareDomain = MutableStateFlow(prefs.getString(KEY_SHARE_DOMAIN, "").orEmpty())
-    val shareDomain: StateFlow<String> = _shareDomain.asStateFlow()
+    private val backupManager = SecureStorageBackup(prefs)
 
-    /**
-     * The same setting as configured on a paired Agro server, cached here so it survives a restart
-     * and works with the server unreachable.
-     *
-     * Kept apart from [shareDomain] rather than overwriting it: Agro is optional, and unpairing
-     * must leave the user with the domain *they* typed, not with whatever the server last said.
-     * Blank whenever Agro is unpaired, has no domain, or has the feature switched off.
-     */
-    private val _agroShareDomain = MutableStateFlow(prefs.getString(KEY_AGRO_SHARE_DOMAIN, "").orEmpty())
-    val agroShareDomain: StateFlow<String> = _agroShareDomain.asStateFlow()
+    // ── Backup & Wipe ───────────────────────────────────────────────────────────────────────
+    fun exportAll(): Map<String, Any?> = backupManager.exportAll()
+    fun isAccountKey(key: String): Boolean = backupManager.isAccountKey(key)
+    fun importAll(values: Map<String, Any>, replaces: (String) -> Boolean) =
+        backupManager.importAll(values, replaces)
 
-    /** Extra hosts the server will forward to, comma separated, as it reported them. */
-    var agroShareHosts: String
-        get() = prefs.getString(KEY_AGRO_SHARE_HOSTS, "").orEmpty()
-        private set(value) = prefs.edit { putString(KEY_AGRO_SHARE_HOSTS, value) }
-
-    fun setAgroShareSettings(domain: String, hosts: String) {
-        prefs.edit { putString(KEY_AGRO_SHARE_DOMAIN, domain.trim().lowercase()) }
-        agroShareHosts = hosts
-        _agroShareDomain.value = domain.trim().lowercase()
-    }
-
-    fun setShareDomain(domain: String) {
-        val host = domain.trim()
-            .substringAfter("://")
-            .substringBefore('/')
-            .substringBefore('?')
-            .lowercase()
-            .takeIf { it.matches(HOST) }
-            .orEmpty()
-        prefs.edit { putString(KEY_SHARE_DOMAIN, host) }
-        _shareDomain.value = host
-    }
-
-    /**
-     * Every stored preference, for [com.wander.android.core.backup.SettingsBackupStore].
-     *
-     * The whole map rather than a listed subset: an enumerated list is a second place to remember
-     * every setting, and a preference added later would quietly stop being backed up with nothing
-     * failing to say so.
-     *
-     * This includes credentials, because this store is where credentials live — which is precisely
-     * why the only caller encrypts what it receives and there is no unencrypted export path.
-     *
-     * [KEY_AGRO_DEVICE_ID] is withheld. It names *this device* to the Agro server rather than
-     * describing a preference, so carrying it into a backup would let a restore onto a second
-     * phone claim the first one's identity — two devices answering to one registration. A device
-     * that restores a backup keeps its own, exactly as [clearAllCredentials] preserves it.
-     */
-    fun exportAll(): Map<String, Any?> = prefs.all.filterKeys { it != KEY_AGRO_DEVICE_ID }
-
-    /**
-     * Whether [key] is a sign-in — a server address, account name, token, cookie or identity key —
-     * rather than a preference. What lets a backup carry settings without accounts, or the reverse.
-     */
-    fun isAccountKey(key: String): Boolean = key in ACCOUNT_KEYS
-
-    /**
-     * Replaces every stored value that [replaces] claims with the matching ones from [values].
-     *
-     * Replaces rather than merges within that part: a backup is a picture of a device, and merging
-     * would leave whatever this device happened to hold for a key the backup does not carry — a
-     * half-restored state belonging to neither. Keys outside [replaces] are left untouched, so a
-     * backup made without sign-ins restores the settings and keeps this device signed in.
-     *
-     * The in-memory `StateFlow`s above are *not* refreshed, and cannot usefully be: they were read
-     * at construction and the app is full of collectors holding the old values. The caller tells
-     * the user to restart, which is the only honest way to apply this.
-     */
-    fun importAll(values: Map<String, Any>, replaces: (String) -> Boolean) {
-        val claimed = { key: String -> key != KEY_AGRO_DEVICE_ID && replaces(key) }
-        prefs.edit {
-            prefs.all.keys.filter(claimed).forEach { remove(it) }
-            values.forEach { (key, value) ->
-                if (!claimed(key)) return@forEach
-                when (value) {
-                    is Boolean -> putBoolean(key, value)
-                    is Int -> putInt(key, value)
-                    is Long -> putLong(key, value)
-                    is Float -> putFloat(key, value)
-                    is String -> putString(key, value)
-                    is Set<*> -> putStringSet(key, value.filterIsInstance<String>().toSet())
-                }
-            }
-        }
-    }
-
-    /**
-     * `clear()` wipes preferences as well as credentials, so **every** flow has to be reset to the
-     * value the store now actually holds. Leaving some of them stale meant a wipe left the app
-     * showing a paired Agro server and the previous theme until the next cold start.
-     */
     fun clearAllCredentials() {
         val deviceId = prefs.getString(KEY_AGRO_DEVICE_ID, null)
         prefs.edit {
             clear()
             deviceId?.let { putString(KEY_AGRO_DEVICE_ID, it) }
         }
-        _isOfflineMode.value = false
-        _isPreloadNextEnabled.value = true
-        _isSkipSilenceEnabled.value = false
-        _isIndexOnMobileDataEnabled.value = false
-        _isRadioMode.value = true
-        _navidromeConfigured.value = false
-        _ytMusicConfigured.value = false
-        _hasCompletedSetup.value = false
-        _isAmoledBlack.value = false
-        _isBackBlurEnabled.value = true
-        _isMonetDynamic.value = true
-        _isCoverArtThemeEnabled.value = true
-        _isReduceMotion.value = false
-        _isLetterByLetterLyricsEnabled.value = true
-        _isCoverCarouselEnabled.value = true
-        _agroConfigured.value = false
-        _agroSyncSettings.value = false
-        _shareDomain.value = ""
-        _agroShareDomain.value = ""
-        _isAutoUpdateCheckEnabled.value = false
-        _isArtistReleaseNotificationEnabled.value = false
+        displayPrefs.resetFlows()
+        playbackPrefs.resetFlows()
+        accountPrefs.resetFlows()
+        agroPrefs.resetFlows()
+        appPrefs.resetFlows()
     }
 
-    private val _agroConfigured = MutableStateFlow(hasAgroCredentials())
-    val agroConfigured: StateFlow<Boolean> = _agroConfigured.asStateFlow()
-
-    // ── Agro Server Integration ──────────────────────────────────────────────────────────────
-
-    val agroServerUrl: String get() = prefs.getString(KEY_AGRO_URL, "").orEmpty()
-    val agroApiKey: String get() = prefs.getString(KEY_AGRO_KEY, "").orEmpty()
-    val agroUsername: String get() = prefs.getString(KEY_AGRO_USER, "").orEmpty()
-    val agroDevicePetname: String get() = prefs.getString(KEY_AGRO_PETNAME, "").orEmpty()
-    /**
-     * This device's stable identity to Agro, generated once and kept forever.
-     *
-     * It used to be derived from the hardware — `"wanda-" + Build.MODEL` — which meant two of the
-     * same phone on one account were literally the same device to the server. Harmless enough for
-     * a single playback handoff; fatal for a per-device library index, where it would merge two
-     * collections into one and then offer each phone the other's missing tracks.
-     *
-     * Generated lazily rather than at construction so it costs nothing until Agro is used, and an
-     * id already stored — including an old model-derived one — is kept, so pairing survives the
-     * upgrade.
-     */
-    /**
-     * How far this device has read the shared fingerprint catalogue, and how much it has sent.
-     *
-     * Neither is a secret, and they are here only because this is the app's one device-scoped
-     * key-value store. They are device state rather than account state on purpose: two devices on
-     * one account read the catalogue at their own pace, and a cursor shared between them would
-     * make whichever synced last skip what the other had already taken.
-     */
-    var catalogCursor: Long
-        get() = prefs.getLong(KEY_CATALOG_CURSOR, 0L)
-        set(value) = prefs.edit { putLong(KEY_CATALOG_CURSOR, value) }
-
-    var catalogLastPublishedAt: Long
-        get() = prefs.getLong(KEY_CATALOG_PUBLISHED_AT, 0L)
-        set(value) = prefs.edit { putLong(KEY_CATALOG_PUBLISHED_AT, value) }
-
-    /**
-     * What the paired server said it can do, from the last registration.
-     *
-     * Learned once at pairing and refreshed on every registration, rather than probed per request:
-     * the alternative is what the catalogue client used to do, which was send every publish twice
-     * whenever the server turned out not to know a field.
-     *
-     * Empty means either "not asked yet" or "a server too old to answer", and both take the same
-     * path — the client uses what it knows works everywhere.
-     */
-    var agroCapabilities: Set<String>
-        get() = prefs.getStringSet(KEY_AGRO_CAPABILITIES, emptySet()).orEmpty()
-        set(value) = prefs.edit { putStringSet(KEY_AGRO_CAPABILITIES, value) }
-
-    fun serverSupports(capability: String): Boolean = capability in agroCapabilities
-
-    val agroDeviceId: String
-        get() = prefs.getString(KEY_AGRO_DEVICE_ID, null)?.takeIf { it.isNotBlank() }
-            ?: ("wanda-" + java.util.UUID.randomUUID().toString().take(12)).also { generated ->
-                prefs.edit { putString(KEY_AGRO_DEVICE_ID, generated) }
-            }
-
-    /**
-     * [deviceId] defaults to whatever this device already answers to, so pairing again — or
-     * re-pairing against a different server — does not mint a new identity and orphan everything
-     * the old one reported.
-     */
-    fun setAgroCredentials(
-        url: String,
-        username: String,
-        apiKey: String,
-        deviceId: String = agroDeviceId
-    ) {
-        prefs.edit {
-            putString(KEY_AGRO_URL, url.trim().trimEnd('/'))
-            putString(KEY_AGRO_USER, username.trim())
-            putString(KEY_AGRO_KEY, apiKey.trim())
-            putString(KEY_AGRO_DEVICE_ID, deviceId.trim())
-        }
-        _agroConfigured.value = hasAgroCredentials()
-    }
-
-    /**
-     * P2P device sync: hash and report local holdings for direct device-to-device transfers.
-     * Zero server storage used. Default: true.
-     */
-    private val _agroP2pSync = MutableStateFlow(prefs.getBoolean(KEY_AGRO_P2P_SYNC, true))
-    val agroP2pSyncFlow: StateFlow<Boolean> = _agroP2pSync.asStateFlow()
-    val agroP2pSync: Boolean get() = _agroP2pSync.value
-
-    fun setAgroP2pSync(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_AGRO_P2P_SYNC, enabled) }
-        _agroP2pSync.value = enabled
-        _agroLibrarySync.value = enabled || agroServerArchive
-    }
-
-    /**
-     * Contribute anonymous play counts to the server's shared "Popular on Agro" totals.
-     *
-     * **On by default.** Reporting scrobbles already tells *your* server what you played, so this
-     * adds nothing that server does not have — what it adds is that your listening becomes part of
-     * a total other accounts on the same server can see. That is a disclosure to other people, not
-     * to the server, but the shared total's exposure floor (`MIN_EXPOSURE_COUNT` server-side) is
-     * what keeps any one household's habits from being readable through it, so this is left on
-     * unless a user turns it off in Settings → Sync.
-     *
-     * The shelf itself works either way: a device that reads the totals without contributing to
-     * them is a supported and slightly rude way to run.
-     */
-    private val _agroPopularityContribution =
-        MutableStateFlow(prefs.getBoolean(KEY_AGRO_POPULARITY, true))
-    val agroPopularityContributionFlow: StateFlow<Boolean> = _agroPopularityContribution.asStateFlow()
-    val agroPopularityContribution: Boolean get() = _agroPopularityContribution.value
-
-    fun setAgroPopularityContribution(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_AGRO_POPULARITY, enabled) }
-        _agroPopularityContribution.value = enabled
-    }
-
-    /**
-     * Whether this device trades recording fingerprints with the server's catalogue.
-     *
-     * One switch for both directions, and off by default — unlike the popularity switch, which is
-     * on by default. Publishing tells other accounts on the server which recordings this device
-     * holds — the catalogue has no account column, so what is published is shared with everyone on
-     * it. That is a disclosure to other people rather than to the server, and a heavier one than the
-     * popularity total: play counts are blinded behind an exposure floor, while a fingerprint list
-     * names exact recordings, so this one starts off.
-     *
-     * Both directions, because a device that pulls without ever publishing is taking the benefit of
-     * everyone else's disclosure while making none of its own. The catalogue only has anything in
-     * it because people contribute to it.
-     */
-    private val _agroCatalogTrade = MutableStateFlow(prefs.getBoolean(KEY_AGRO_CATALOG_TRADE, false))
-    val agroCatalogTradeFlow: StateFlow<Boolean> = _agroCatalogTrade.asStateFlow()
-    val agroCatalogTrade: Boolean get() = _agroCatalogTrade.value
-
-    fun setAgroCatalogTrade(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_AGRO_CATALOG_TRADE, enabled) }
-        _agroCatalogTrade.value = enabled
-    }
-
-    /**
-     * Upload local audio files to the Agro / Navidrome server storage.
-     * Admin-only. Default: false.
-     */
-    private val _agroServerArchive = MutableStateFlow(prefs.getBoolean(KEY_AGRO_SERVER_ARCHIVE, false))
-    val agroServerArchiveFlow: StateFlow<Boolean> = _agroServerArchive.asStateFlow()
-    val agroServerArchive: Boolean get() = _agroServerArchive.value
-
-    fun setAgroServerArchive(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_AGRO_SERVER_ARCHIVE, enabled) }
-        _agroServerArchive.value = enabled
-        _agroLibrarySync.value = agroP2pSync || enabled
-    }
-
-    private val _agroLibrarySync = MutableStateFlow(prefs.getBoolean(KEY_AGRO_LIBRARY_SYNC, true))
-    val agroLibrarySyncFlow: StateFlow<Boolean> = _agroLibrarySync.asStateFlow()
-    val agroLibrarySync: Boolean get() = _agroLibrarySync.value
-
-    fun setAgroLibrarySync(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_AGRO_LIBRARY_SYNC, enabled) }
-        _agroLibrarySync.value = enabled
-    }
-    private val _agroProxyEnabled = MutableStateFlow(prefs.getBoolean(KEY_AGRO_PROXY_ENABLED, true))
-    val agroProxyEnabled: StateFlow<Boolean> = _agroProxyEnabled.asStateFlow()
-
-    fun setAgroProxyEnabled(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_AGRO_PROXY_ENABLED, enabled) }
-        _agroProxyEnabled.value = enabled
-    }
-
-
-    fun setAgroDevicePetname(petname: String) {
-        prefs.edit { putString(KEY_AGRO_PETNAME, petname.trim()) }
-    }
-
-    var agroVaultKey: ByteArray?
-        get() = prefs.getString(KEY_AGRO_VAULT_KEY, null)?.let {
-            runCatching { AgroVault.decodeBase64(it) }.getOrNull()
-        }
-        set(value) = prefs.edit {
-            if (value == null) remove(KEY_AGRO_VAULT_KEY)
-            else putString(KEY_AGRO_VAULT_KEY, AgroVault.encodeBase64(value))
-        }
-
-    private val _agroSyncSettings = MutableStateFlow(prefs.getBoolean(KEY_AGRO_SYNC_SETTINGS, false))
-    val agroSyncSettings: StateFlow<Boolean> = _agroSyncSettings.asStateFlow()
-
-    fun setAgroSyncSettings(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_AGRO_SYNC_SETTINGS, enabled) }
-        _agroSyncSettings.value = enabled
-    }
-
-    var agroIdentityPrivateKey: String?
-        get() = prefs.getString(KEY_AGRO_IDENTITY_PRIV, null)
-        set(value) = prefs.edit { putString(KEY_AGRO_IDENTITY_PRIV, value) }
-
-    var agroIdentityPublicKey: String?
-        get() = prefs.getString(KEY_AGRO_IDENTITY_PUB, null)
-        set(value) = prefs.edit { putString(KEY_AGRO_IDENTITY_PUB, value) }
-
-    fun clearAgroCredentials() {
-        prefs.edit {
-            remove(KEY_AGRO_URL); remove(KEY_AGRO_USER); remove(KEY_AGRO_KEY); remove(KEY_AGRO_PETNAME); remove(KEY_AGRO_VAULT_KEY)
-            remove(KEY_AGRO_IDENTITY_PRIV); remove(KEY_AGRO_IDENTITY_PUB)
-        }
-        _agroConfigured.value = false
-    }
-
-    /**
-     * The username is part of the credential, not decoration.
-     *
-     * Every account-scoped field in Agro's schema names a `userId`, and the server checks it against
-     * the identity the token resolved to. A stored server and token with no username reported this
-     * app as paired while every query it could send was refused, which looked like the server being
-     * broken rather than the pairing being incomplete.
-     */
-    private fun hasAgroCredentials() =
-        agroServerUrl.isNotBlank() && agroApiKey.isNotBlank() && agroUsername.isNotBlank()
 
     companion object {
-        private const val PREFS_NAME = "wanda_secure_vault"
-        private const val KEY_NAVIDROME_URL = "key_navidrome_url"
-        private const val KEY_NAVIDROME_USER = "key_navidrome_user"
-        private const val KEY_NAVIDROME_TOKEN = "key_navidrome_token"
-        private const val KEY_YTM_COOKIE = "key_ytm_cookie"
-        private const val KEY_YTM_VISITOR = "key_ytm_visitor"
-        private const val KEY_YTM_ACCOUNT = "key_ytm_account"
-        private const val KEY_AGRO_URL = "key_agro_url"
-        private const val KEY_AGRO_USER = "key_agro_user"
-        private const val KEY_AGRO_KEY = "key_agro_key"
-        private const val KEY_AGRO_PETNAME = "key_agro_petname"
-        private const val KEY_AGRO_VAULT_KEY = "key_agro_vault_key"
-        private const val KEY_AGRO_IDENTITY_PRIV = "key_agro_identity_priv"
-        private const val KEY_AGRO_IDENTITY_PUB = "key_agro_identity_pub"
-        private const val KEY_AGRO_SYNC_SETTINGS = "key_agro_sync_settings"
-        private const val KEY_AGRO_DEVICE_ID = "key_agro_device_id"
-
-/** Sign-ins, as opposed to preferences — see [SecureStorage.isAccountKey]. */
-private val ACCOUNT_KEYS = setOf(
-    KEY_NAVIDROME_URL, KEY_NAVIDROME_USER, KEY_NAVIDROME_TOKEN, KEY_YTM_COOKIE,
-    KEY_AGRO_URL, KEY_AGRO_USER, KEY_AGRO_KEY, KEY_AGRO_PETNAME, KEY_AGRO_VAULT_KEY,
-    KEY_AGRO_IDENTITY_PRIV, KEY_AGRO_IDENTITY_PUB
-)
-        private const val KEY_AGRO_CATALOG_TRADE = "key_agro_catalog_trade"
-        const val KEY_CATALOG_CURSOR = "catalog_cursor"
-        const val KEY_CATALOG_PUBLISHED_AT = "catalog_published_at"
-        private const val KEY_AGRO_CAPABILITIES = "key_agro_capabilities"
-        private const val KEY_AGRO_P2P_SYNC = "key_agro_p2p_sync"
-        private const val KEY_AGRO_SERVER_ARCHIVE = "key_agro_server_archive"
-        private const val KEY_AGRO_POPULARITY = "key_agro_popularity_contribution"
-        private const val KEY_AGRO_LIBRARY_SYNC = "key_agro_library_sync"
-        private const val KEY_AGRO_PROXY_ENABLED = "key_agro_proxy_enabled"
-        private const val KEY_OFFLINE_MODE = "key_offline_mode"
-        private const val KEY_PRELOAD_NEXT = "key_preload_next"
-        private const val KEY_SKIP_SILENCE = "key_skip_silence"
-        private const val KEY_INDEX_ON_MOBILE_DATA = "key_index_on_mobile_data"
-        private const val KEY_RADIO_MODE = "key_radio_mode"
-        private const val KEY_AMOLED_BLACK = "key_amoled_black"
-        private const val KEY_BACK_BLUR = "key_back_blur"
-        private const val KEY_MONET_DYNAMIC = "key_monet_dynamic"
-        private const val KEY_REDUCE_MOTION = "key_reduce_motion"
-        private const val KEY_LETTER_BY_LETTER_LYRICS = "key_letter_by_letter_lyrics"
-        private const val KEY_IMMERSIVE_PLAYER = "key_immersive_player"
-        private const val KEY_COVER_ART_THEME = "key_cover_art_theme"
-        private const val KEY_COVER_CAROUSEL = "key_cover_carousel"
-        private const val KEY_AUTO_UPDATE_CHECK = "key_auto_update_check"
-        private const val KEY_RELEASE_NOTIFICATIONS = "key_release_notifications"
-        private const val KEY_RELEASE_WATERMARK = "key_release_watermark"
-        private const val KEY_LAST_NOTIFIED_RELEASE = "key_last_notified_release"
-        private const val KEY_REPLAY_SEEN_YEAR = "key_replay_seen_year"
-        private const val KEY_DUPLICATE_SCAN_CURSOR = "duplicate_scan_cursor"
-        private const val KEY_INCOGNITO = "key_incognito"
-        private const val KEY_PENDING_FORGET = "key_pending_forget"
-        private const val KEY_LOCAL_WATERMARK = "key_local_scan_watermark"
-        private const val KEY_LOCAL_FOLDER = "key_local_scan_folder"
-        private const val KEY_LOCAL_FOLDER_LABEL = "key_local_scan_folder_label"
-        private const val KEY_SETUP_DONE = "key_setup_complete"
-        private const val KEY_SHARE_DOMAIN = "key_share_domain"
-        private const val KEY_AGRO_SHARE_DOMAIN = "key_agro_share_domain"
-        private const val KEY_AGRO_SHARE_HOSTS = "key_agro_share_hosts"
-        private const val KEY_PREFERRED_AUDIO_LANGUAGE = "key_preferred_audio_language"
-
-        /** A bare hostname: labels, dots, and a TLD. Anything else is not a domain to build on. */
-        private val HOST = Regex("""[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+""")
+        const val KEY_CATALOG_CURSOR = com.wander.android.core.security.KEY_CATALOG_CURSOR
+        const val KEY_CATALOG_PUBLISHED_AT = com.wander.android.core.security.KEY_CATALOG_PUBLISHED_AT
 
         fun create(context: Context): SecureStorage {
             val masterKey = MasterKey.Builder(context.applicationContext)

@@ -14,6 +14,7 @@ import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.sources.ShareKind
 import com.wander.android.data.sources.ShareTarget
 import com.wander.android.data.sources.local.LocalMusicSource
+import com.wander.android.ui.components.AddToPlaylistController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -37,10 +38,28 @@ class LibraryViewModel @Inject constructor(
     private val musicRepository: MusicRepository,
     private val localSource: LocalMusicSource,
     private val playerConnection: PlayerConnection,
-    private val playbackCoordinator: PlaybackCoordinator,
+    playbackCoordinator: PlaybackCoordinator,
     private val shareRepository: ShareRepository,
-    private val playlistWriter: PlaylistWriteRepository
+    private val playlistWriter: PlaylistWriteRepository,
+    private val libraryPlayback: LibraryPlaybackCoordinator
 ) : ViewModel() {
+
+    constructor(
+        musicRepository: MusicRepository,
+        localSource: LocalMusicSource,
+        playerConnection: PlayerConnection,
+        playbackCoordinator: PlaybackCoordinator,
+        shareRepository: ShareRepository,
+        playlistWriter: PlaylistWriteRepository
+    ) : this(
+        musicRepository = musicRepository,
+        localSource = localSource,
+        playerConnection = playerConnection,
+        playbackCoordinator = playbackCoordinator,
+        shareRepository = shareRepository,
+        playlistWriter = playlistWriter,
+        libraryPlayback = LibraryPlaybackCoordinator(playerConnection, playbackCoordinator, musicRepository)
+    )
 
     /** Whether any connected source can be written to. Drives the "New playlist" affordance. */
     val canCreatePlaylists: Boolean
@@ -64,43 +83,14 @@ class LibraryViewModel @Inject constructor(
     val availableSources: List<SourceType> = musicRepository.sources.map { it.sourceType }.sorted()
 
     /**
-     * One flow per tab rather than one flow keyed on the selected tab. The pager keeps the
-     * neighbouring pages composed, so a single tab-dependent flow would render the wrong list on
-     * the page sliding into view.
-     *
-     * All Room-backed, so the library is fully usable with no network.
+     * One flow per tab rather than one flow keyed on the selected tab.
      */
     val tracks: Flow<PagingData<UnifiedTrack>> = _sourceFilter
         .flatMapLatest { filter -> musicRepository.pagedLibraryTracks(filter) }
-        // Survives the tab pager recomposing and the screen being rotated, so scrolling back does
-        // not refetch pages already on screen.
         .cachedIn(viewModelScope)
 
-    /**
-     * Plays [track] with the rest of the library queued around it.
-     *
-     * The list is fetched here rather than held, because with paging the screen no longer has it —
-     * and that is the point: the position is needed once, on a tap, and keeping a thousand rows in
-     * memory to avoid one query is what paging was removing.
-     */
     fun playFromLibrary(track: UnifiedTrack) {
-        viewModelScope.launch {
-            val ids = musicRepository.libraryTrackIds(_sourceFilter.value)
-            val index = ids.indexOf(track.id)
-            // Not found is possible and ordinary: the row was queued from a page loaded before a
-            // sync removed it. Playing the one track alone is better than playing nothing.
-            if (index < 0) playerConnection.play(listOf(track), 0) else playQueue(ids, index)
-        }
-    }
-
-    private suspend fun playQueue(ids: List<String>, index: Int) {
-        // `getTracksByIds` answers in whatever order SQLite pleases, not in `ids` order, so the
-        // rows are put back in the list's order before being queued — otherwise "play from here"
-        // would start at the right song and then continue through a shuffled library.
-        val byId = musicRepository.tracksByIds(ids).associateBy { it.id }
-        val ordered = ids.mapNotNull(byId::get)
-        val position = ordered.indexOfFirst { it.id == ids[index] }.coerceAtLeast(0)
-        playerConnection.play(ordered, position)
+        libraryPlayback.playFromLibrary(viewModelScope, track, _sourceFilter.value)
     }
 
     val likedTracks: StateFlow<List<UnifiedTrack>> = musicRepository.getLikedTracksFlow()
@@ -109,12 +99,6 @@ class LibraryViewModel @Inject constructor(
     val downloadedTracks: StateFlow<List<UnifiedTrack>> = musicRepository.getDownloadedTracksFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /**
-     * The handful of records added most recently, for the row above the grid.
-     *
-     * Ordered by the id list rather than by the album list, because the id list *is* the
-     * ordering — a `mapNotNull` over the albums would silently hand back alphabetical order.
-     */
     val recentAlbums: StateFlow<List<UnifiedAlbum>> = combine(
         musicRepository.getAlbumsFlow(),
         musicRepository.getRecentlyAddedAlbumIdsFlow()
@@ -122,14 +106,7 @@ class LibraryViewModel @Inject constructor(
         val byId = albums.associateBy { it.id }
         recentIds.mapNotNull(byId::get)
     }
-        // `combine` transforms on the collector's dispatcher, and the collector is
-        // `stateIn(viewModelScope)` — the main thread. Indexing every album to pick twelve of them
-        // is not much, but it was being done on the UI thread every time either flow moved.
         .flowOn(kotlinx.coroutines.Dispatchers.Default)
-        // The two flows emit independently, so a scan that touches both produces an intermediate
-        // pairing — new ids against stale albums, or the reverse — that resolves to a list
-        // identical to the one already on screen. Without this the row rebuilds and its scroll
-        // position jumps for an update that changed nothing.
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -151,31 +128,13 @@ class LibraryViewModel @Inject constructor(
             _isRefreshing.value = true
             localSource.refresh()
             musicRepository.refreshAlbums()
-            // Without this the Tracks tab only ever held what some other screen happened to have
-            // persisted — browsing an album, or playing a search result. Pulling recent tracks is
-            // what actually fills the library from the connected servers.
             musicRepository.getRecentTracks(LIBRARY_TRACK_REFRESH)
             _playlists.value = musicRepository.getPlaylists()
             _isRefreshing.value = false
-            // And this fills in the rest, after the spinner has stopped. "Recent" is a handful of
-            // records; the albums the server lists are the whole library, and until their tracks
-            // are stored the songs on them cannot be searched, queued or recognised.
             backfillAlbumTracks()
         }
     }
 
-    /**
-     * Pulls in the tracks of every library album that has none, a slice at a time.
-     *
-     * Behind the spinner rather than under it: this is one request per album and a large server is
-     * hundreds of them, so holding the refresh indicator until it finished would make the Library
-     * tab appear to hang for a minute the first time somebody connects one.
-     *
-     * Bounded twice — each slice is bounded, and [BACKFILL_SLICES] caps how many slices one
-     * refresh will run — so a source that keeps reporting albums it will not return tracks for
-     * cannot turn this into an endless stream of requests at somebody's own server. It stops as
-     * soon as a slice fills nothing in, and the next refresh picks up whatever is left.
-     */
     private suspend fun backfillAlbumTracks() {
         repeat(BACKFILL_SLICES) {
             if (musicRepository.importMissingAlbumTracks() == 0) return
@@ -186,77 +145,26 @@ class LibraryViewModel @Inject constructor(
 
     fun selectSource(source: SourceType?) { _sourceFilter.value = source }
 
-    fun play(tracks: List<UnifiedTrack>, index: Int) = playerConnection.play(tracks, index)
+    fun play(tracks: List<UnifiedTrack>, index: Int) = libraryPlayback.play(tracks, index)
 
-    fun openPlaylist(playlist: UnifiedPlaylist) {
-        viewModelScope.launch {
-            val tracks = musicRepository.getPlaylistTracks(playlist)
-            if (tracks.isNotEmpty()) playerConnection.play(tracks)
-        }
-    }
+    fun openPlaylist(playlist: UnifiedPlaylist) = libraryPlayback.openPlaylist(viewModelScope, playlist)
 
-    fun playPlaylistNext(playlist: UnifiedPlaylist) {
-        viewModelScope.launch {
-            val tracks = musicRepository.getPlaylistTracks(playlist)
-            if (tracks.isNotEmpty()) playerConnection.playNext(tracks)
-        }
-    }
+    fun playPlaylistNext(playlist: UnifiedPlaylist) = libraryPlayback.playPlaylistNext(viewModelScope, playlist)
 
-    fun addPlaylistToQueue(playlist: UnifiedPlaylist) {
-        viewModelScope.launch {
-            val tracks = musicRepository.getPlaylistTracks(playlist)
-            if (tracks.isNotEmpty()) playerConnection.addToQueue(tracks)
-        }
-    }
+    fun addPlaylistToQueue(playlist: UnifiedPlaylist) = libraryPlayback.addPlaylistToQueue(viewModelScope, playlist)
 
-    fun addPlaylistToAnother(playlist: UnifiedPlaylist, controller: com.wander.android.ui.components.AddToPlaylistController) {
-        viewModelScope.launch {
-            val tracks = musicRepository.getPlaylistTracks(playlist)
-            if (tracks.isNotEmpty()) {
-                controller.openForTracks(tracks, playlist.source)
-            }
-        }
-    }
+    fun addPlaylistToAnother(playlist: UnifiedPlaylist, controller: AddToPlaylistController) =
+        libraryPlayback.addPlaylistToAnother(viewModelScope, playlist, controller)
 
-    // ── Albums ──────────────────────────────────────────────────────────────────────────────
-    //
-    // The same three verbs as playlists, against the same repository call. A record and a playlist
-    // are both "a list of tracks somebody assembled" as far as the queue is concerned.
+    fun playAlbum(album: UnifiedAlbum) = libraryPlayback.playAlbum(viewModelScope, album)
 
-    fun playAlbum(album: UnifiedAlbum) {
-        viewModelScope.launch {
-            val tracks = musicRepository.getAlbumTracks(album)
-            if (tracks.isNotEmpty()) playerConnection.play(tracks)
-        }
-    }
+    fun playAlbumNext(album: UnifiedAlbum) = libraryPlayback.playAlbumNext(viewModelScope, album)
 
-    fun playAlbumNext(album: UnifiedAlbum) {
-        viewModelScope.launch {
-            val tracks = musicRepository.getAlbumTracks(album)
-            if (tracks.isNotEmpty()) playerConnection.playNext(tracks)
-        }
-    }
+    fun addAlbumToQueue(album: UnifiedAlbum) = libraryPlayback.addAlbumToQueue(viewModelScope, album)
 
-    fun addAlbumToQueue(album: UnifiedAlbum) {
-        viewModelScope.launch {
-            val tracks = musicRepository.getAlbumTracks(album)
-            if (tracks.isNotEmpty()) playerConnection.addToQueue(tracks)
-        }
-    }
+    fun addAlbumToPlaylist(album: UnifiedAlbum, controller: AddToPlaylistController) =
+        libraryPlayback.addAlbumToPlaylist(viewModelScope, album, controller)
 
-    fun addAlbumToPlaylist(album: UnifiedAlbum, controller: com.wander.android.ui.components.AddToPlaylistController) {
-        viewModelScope.launch {
-            val tracks = musicRepository.getAlbumTracks(album)
-            if (tracks.isNotEmpty()) controller.openForTracks(tracks, album.source)
-        }
-    }
-
-    /**
-     * Shares the album as a link that names no backend.
-     *
-     * Unconditional, unlike [canShare] for a track: the link describes the record rather than
-     * pointing at a server, so it works from a source that cannot mint links at all.
-     */
     fun shareAlbum(album: UnifiedAlbum) = shareRepository.shareAlbum(album)
 
     fun deletePlaylist(playlist: UnifiedPlaylist) {
@@ -267,19 +175,14 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun playNext(track: UnifiedTrack) = playerConnection.playNext(listOf(track))
+    fun playNext(track: UnifiedTrack) = libraryPlayback.playNext(track)
 
-    fun addToQueue(track: UnifiedTrack) = playerConnection.addToQueue(listOf(track))
+    fun addToQueue(track: UnifiedTrack) = libraryPlayback.addToQueue(track)
 
-    /** Plays the track, then fills the queue behind it with its source's radio. */
-    fun startRadio(track: UnifiedTrack) {
-        viewModelScope.launch { playbackCoordinator.startRadio(track) }
-    }
+    fun startRadio(track: UnifiedTrack) = libraryPlayback.startRadio(viewModelScope, track)
 
-    /** Whether this track's backend can mint a public link at all. */
     fun canShare(track: UnifiedTrack) = shareRepository.canShare(track)
 
-    /** The same question for a playlist, which has no `UnifiedTrack` to ask about. */
     fun canShare(source: SourceType): Boolean = shareRepository.canShare(source)
 
     fun sharePlaylist(playlist: UnifiedPlaylist) {
@@ -295,7 +198,6 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    /** The link is published on a shared flow and raised as a share sheet by `WanderApp`. */
     fun share(track: UnifiedTrack) {
         viewModelScope.launch { shareRepository.share(track) }
     }
@@ -309,10 +211,7 @@ class LibraryViewModel @Inject constructor(
     }
 
     private companion object {
-        /** How many recently added tracks a refresh pulls into Room from every active source. */
         const val LIBRARY_TRACK_REFRESH = 200
-        
-        /** How many slices of album-track backfill one refresh will run. See [backfillAlbumTracks]. */
         private const val BACKFILL_SLICES = 12
     }
 }

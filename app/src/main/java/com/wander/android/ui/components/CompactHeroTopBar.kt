@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -112,16 +114,22 @@ fun CompactHeroTopBar(
                 colors = IconButtonDefaults.filledIconButtonColors(
                     containerColor = MaterialTheme.colorScheme.primary
                 ),
-                modifier = Modifier.graphicsLayer {
-                    val t = titleState.fraction
-                    alpha = t
-                    scaleX = lerp(0.6f, 1f, t)
-                    scaleY = lerp(0.6f, 1f, t)
-                }
+                // `requiredSize`, not `size`: the bar's own height is fixed at `BarHeight`, and the
+                // button reading as the biggest thing on the page matters more than staying inside
+                // it — it overflows top and bottom rather than getting squeezed down to fit.
+                modifier = Modifier
+                    .requiredSize(PlayButtonSize)
+                    .graphicsLayer {
+                        val t = titleState.fraction
+                        alpha = t
+                        scaleX = lerp(0.6f, 1f, t)
+                        scaleY = lerp(0.6f, 1f, t)
+                    }
             ) {
                 Icon(
                     Icons.Rounded.PlayArrow,
-                    contentDescription = stringResource(R.string.action_play)
+                    contentDescription = stringResource(R.string.action_play),
+                    modifier = Modifier.size(PlayIconSize)
                 )
             }
         }
@@ -213,6 +221,10 @@ private fun TravellingTitle(
 private fun crossFade(t: Float): Float = ((t - 0.3f) / 0.4f).coerceIn(0f, 1f)
 
 private val BarHeight = 56.dp
+
+/** Bigger than the bar itself on purpose — see the `requiredSize` note where it's used. */
+private val PlayButtonSize = 72.dp
+private val PlayIconSize = 32.dp
 
 /** How far above the bar the title starts sliding into it. */
 private val CollapseDistance = 120.dp

@@ -5,7 +5,7 @@
 <h1 align="center">Wanda</h1>
 
 <p align="center">
-  A clean, open-source Android music client — built by the community under EUPL-1.2
+  A clean, battery-first, sovereign Android music player built under EUPL-1.2.
 </p>
 
 <p align="center">
@@ -26,109 +26,137 @@
 
 ---
 
-Wanda unifies **Navidrome**, **local files**, and **YouTube Music** behind a single library, queue, and player. Material 3 Expressive throughout. Battery-first, privacy-first, no telemetry. Seamlessly pairs with [Agro](https://github.com/AgroUPlus/Agro) for playback handoff, listen-along, and cross-device sync with [Wander](https://github.com/AgroUPlus/Wander) (desktop TUI).
+Wanda unifies **Navidrome / Subsonic**, **local device files**, **YouTube Music**, and the **Internet Archive** into a single cohesive library, queue, and playback engine. 
+
+Designed for digital sovereignty and hardened operating systems like GrapheneOS: zero telemetry, zero analytics, Keystore-backed secrets, application-layer HTTPS enforcement, and battery-first background audio.
+
+Seamlessly pairs with [Agro](https://github.com/AgroUPlus/Agro) for E2EE listen-along sessions, Jam rooms, off-grid local mesh playback, and real-time handoff with [Wander](https://github.com/AgroUPlus/Wander) on desktop.
 
 <p align="center">
-  <img width="1600" height="1000" alt="image" src="https://github.com/user-attachments/assets/9f226e44-bf8b-4800-a497-593527fc0ade" />
+  <img width="1600" height="1000" alt="Wanda Interface" src="https://github.com/user-attachments/assets/9f226e44-bf8b-4800-a497-593527fc0ade" />
 </p>
 
 ---
 
-## Sources
+## Unified Sources
 
-Each backend implements one interface (`IMusicSource`) and declares what it supports (`SourceCapabilities`) — the UI hides actions a source doesn't offer rather than silently failing.
+Every backend implements a single interface (`IMusicSource`) declaring explicit capabilities (`SourceCapabilities`). The UI adapts dynamically to what each source supports instead of failing or faking missing endpoints:
 
-| Source | Search | Albums | Playlists | Likes | Scrobble | Radio | Lyrics |
-|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| Navidrome / Subsonic | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| On this device | ✅ | ✅ | — | — | — | ✅ | — |
-| YouTube Music | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
+| Source | Search | Albums | Artists | Playlists | Likes | Scrobble | Radio | Lossless |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Navidrome / Subsonic** | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| **On This Device** | Yes | Yes | Yes | Local | N/A | N/A | Yes | Yes |
+| **YouTube Music** | Yes | Yes | Yes | Yes | Yes | N/A | Yes | N/A |
+| **Internet Archive** | Yes | Yes | Yes | N/A | N/A | N/A | N/A | Yes |
 
-- **Navidrome** — Subsonic 1.16, salted-token auth (password never crosses the wire), starring, scrobbling, similar-songs radio, server-synced lyrics.
-- **Local files** — MediaStore scan persisted in Room, incremental via `DATE_MODIFIED` watermark.
-- **YouTube Music** — InnerTube. Sign in via in-app WebView or cookie paste; search and playback work signed out. Direct Opus (itag 251) streams.
-
----
-
-## Features
-
-**Lyrics** — source-native first (Navidrome structured lyrics), then LRCLIB. Synced lines highlight as you listen and are tappable to seek.
-
-**Smart mixes** — Endless Radio, Forgotten Favourites, and Never Played, built from your own listening history. A mix with no tracks isn't shown.
-
-**Incognito mode** — stops play counts and scrobbles at the source level.
-
-**Offline mode** — restricts playback to what's already on the device.
-
-**Auto-update check** — Settings → About → Check for update compares against the latest GitHub release. The app never downloads or installs anything on its own.
-
-<img width="1600" height="1000" alt="image" src="https://github.com/user-attachments/assets/9d40cd8e-4cb6-4e2a-a7ee-5ca7a8be6c39" />
+* **Navidrome / Subsonic**: Full Subsonic API support, salted token authentication (passwords never touch the network), remote playlists, star ratings, scrobbling, and similar-artist radio.
+* **Local Files**: MediaStore and SAF indexing persisted directly in Room with incremental `DATE_MODIFIED` watermarks.
+* **YouTube Music**: Direct InnerTube integration with Opus (itag 251) stream extraction, artist discovery, and personalized mixes. Works completely signed out or with optional in-app sign-in.
+* **Internet Archive**: Instant access to millions of live concert recordings, historical audio, and public-domain releases.
 
 ---
 
-## Battery & Privacy
+## Key Capabilities
 
-**Battery**
-- No polling — playback state arrives via `Player.Listener`; position ticks only while playing *and* the screen is visible.
-- Audio offload on by default — DSP plays while CPU sleeps.
-- Wake lock is `NETWORK` during streaming, unset for local files.
-- Downloads via WorkManager with unmetered + charging + battery-not-low constraints.
+* **Agro E2EE Listen-Along & Jam Rooms**: Host or join synchronized listening sessions with friends over local Wi-Fi or secure Agro relays. Encrypted end-to-end, with zero tracking of your listening history.
+* **Off-Grid Local Mesh**: Discover nearby listeners and trade audio fingerprints peer-to-peer over local network transports without Internet connectivity.
+* **Synced Lyrics**: Native source lyrics prioritized first (Navidrome structured formats), followed by optional, user-consented lookups via LRCLIB. Time-synced lines highlight smoothly and allow tap-to-seek.
+* **Acoustic Fingerprinting**: Embedded Chromaprint/fpcalc engine tracks audio signatures for cross-backend deduplication and seamless library matching.
+* **Smart Mixes & Infinite Radio**: Endless Radio, Forgotten Favorites, and Deep Cuts computed locally on-device from your listening graph.
+* **Incognito Mode**: Instantly halts play history logging, scrobbles, and cache retention at the source level.
+* **Material 3 Expressive UI**: Fluid spring animations, edge-to-edge window insets, predictive back gestures, cover-art dynamic color tinting, and pure OLED black theming.
 
-**Privacy**
-1. No trackers — no Firebase, no Play Services, no Crashlytics, no analytics.
-2. Keystore-backed secrets — every credential in `EncryptedSharedPreferences` (AES-256-GCM); never in Room, logs, or backups.
-3. No cleartext — `usesCleartextTraffic=false`; HTTP-only servers need an explicit per-domain exception.
-4. No backup — `allowBackup=false` plus explicit data-extraction rules.
+<p align="center">
+  <img width="1600" height="1000" alt="Wanda Details" src="https://github.com/user-attachments/assets/9d40cd8e-4cb6-4e2a-a7ee-5ca7a8be6c39" />
+</p>
 
 ---
 
-## Architecture
+## Battery & Privacy Discipline
 
-Single `:app` module, package root `com.wander.android`, Hilt for DI.
+### Battery First
+* **Zero Polling Loops**: Playback updates stream via native event callbacks; progress indicators tick only while audio is playing and the screen is actively visible.
+* **Direct Audio Offload**: Hardware DSP audio offload is enabled by default so the main application processor can sleep during playback.
+* **Smart Wake Locks**: Network wake locks are held exclusively during remote stream buffering, and completely released during local playback.
+* **Constrained Sync**: Background cache downloads run through WorkManager under strict unmetered network, battery-not-low, and charging conditions.
+
+### Hardened Privacy
+1. **Zero Telemetry**: No Firebase, no Google Play Services, no Crashlytics, no tracking SDKs, and no analytics of any kind.
+2. **Keystore-Backed Secrets**: Authentication tokens, vault encryption keys, and credentials live in encrypted storage backed by the hardware Android Keystore (AES-256-GCM). Nothing sensitive is stored in plain text, database rows, or logs.
+3. **Application-Layer HTTPS**: Network calls reject cleartext HTTP on wide-area networks; non-HTTPS connections are permitted only on private subnets, loopback, or `.local` domains.
+4. **Complete Session Purge**: Signing out clears all session cookies, WebStorage caches, and cryptographic tokens immediately.
+5. **Backup Resistant**: Data extraction and cloud backups are blocked (`allowBackup=false`).
+
+---
+
+## Architectural Principles
+
+The codebase enforces strict, automated engineering constraints documented in [AGENTS.md](AGENTS.md):
+
+* **300 Lines Max Per File**: Target under 250 lines per file with a single clear responsibility per component.
+* **Room as Single Source of Truth**: Remote API responses are stored in Room and observed as reactive Kotlin Flows.
+* **Media3 Playback Ownership**: `PlaybackService` exclusively controls `ExoPlayer`; UI components interact through `PlayerConnection` and `MediaController`.
+* **Explicit Window Insets**: Fully manual edge-to-edge container padding for safe navigation, IME keyboards, and system gestures.
 
 ```
-core/
-  playback/   PlaybackService owns the ExoPlayer; PlayerConnection is the UI's MediaController
-  cache/      SimpleCache + WorkManager downloader
-  database/   Room — the offline source of truth
-  network/    Ktor over a shared OkHttp client
-  security/   SecureStorage (Android Keystore)
-  permissions/
-data/
-  model/      UnifiedTrack, UnifiedAlbum, SmartMix, LyricsData
-  sources/    navidrome · local · ytmusic
-  repository/ MusicRepository, LyricsRepository, SmartMixRepository
-di/           One Hilt module per concern
-ui/
-  theme/      MaterialExpressiveTheme, Monet dynamic colour, true-black OLED
-  navigation/ Four tabs + Now Playing, Queue, login routes
-  components/ Artwork, TrackRow, MiniPlayer, EmptyState, SourceFilterChips
-  screens/    home · library · search · settings · player · queue · login
+app/src/main/java/com/wander/android/
+├── core/
+│   ├── audio/        Chromaprint acoustic fingerprinting
+│   ├── cache/        Media cache and WorkManager download engine
+│   ├── database/     Room entities, DAOs, and migrations
+│   ├── network/      Shared OkHttp and Ktor engines with HTTPS guards
+│   ├── p2p/          Off-grid local link management
+│   ├── playback/     Media3 PlaybackService, queue management, and audio offload
+│   └── security/     Android Keystore, AgroVault, and SecureStorage
+├── data/
+│   ├── model/        Unified audio domain models
+│   ├── repository/   Room-backed reactive repositories
+│   └── sources/      Navidrome, Local, YouTube Music, Internet Archive, Agro
+└── ui/
+    ├── components/   M3 Expressive player sheet, mini-player, and bars
+    ├── navigation/   Deep-link routing and Compose destination graphs
+    ├── screens/      Home, Library, Search, Social, Jam, Settings
+    └── theme/        Material 3 Expressive typography, tokens, and palettes
 ```
-
-Conventions are in [AGENTS.md](AGENTS.md): 300-line file cap, no speculative fallbacks, no dead code, Room as source of truth, Media3 as owner of playback state.
 
 ---
 
-## Building
+## Installation & Updates
 
-Requires **JDK 17** and **Android SDK 37** (compileSdk 37, minSdk 26, AGP 9, Gradle 9.5).
+* **Obtainium**: Add `AgroUPlus/Wanda` to [Obtainium](https://github.com/ImranR98/Obtainium) for direct, automated updates straight from GitHub releases.
+* **GitHub Releases**: Download pre-built, signed APKs from the [Releases](https://github.com/AgroUPlus/Wanda/releases) tab.
+* **In-App Update Check**: Navigate to Settings > About > Check for update to verify against GitHub release tags. Wanda never installs code silently in the background.
+
+---
+
+## Building from Source
+
+Requires **JDK 17** and **Android SDK 37** (compileSdk 37, minSdk 26).
 
 ```bash
-./gradlew :app:assembleDebug        # → app/build/outputs/apk/debug/app-debug.apk
-./gradlew :app:testDebugUnitTest    # unit tests
-./gradlew :app:installDebug         # install on connected device
+# Build debug APK
+./gradlew :app:assembleDebug
+
+# Run unit tests
+./gradlew :app:testDebugUnitTest
+
+# Install to connected device
+./gradlew :app:installDebug
 ```
 
-Set `org.gradle.java.home` in `gradle.properties` if your JDK isn't on `PATH`.
+Release builds are signed using properties specified in `local.properties` (`releaseStoreFile`, `releaseStorePassword`, `releaseKeyAlias`, `releaseKeyPassword`).
 
-**Release signing** — configured via `local.properties` (`releaseStoreFile`, `releaseStorePassword`, `releaseKeyAlias`, `releaseKeyPassword`). Without those keys the release build is left unsigned. A GitHub Actions workflow (`.github/workflows/release-apk.yml`) builds and attaches a signed APK on every GitHub Release using the same four values stored as repository secrets.
+---
+
+## Governance & Code of Conduct
+
+Participation and contributions are governed by our [Meritocratic Code of Conduct](CODE_OF_CONDUCT.md). Collaboration focuses purely on technical excellence, empirical quality, battery performance, and software maintainability.
+
+All contributions require agreement to our [Contributor License Agreement](CLA.md). Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting pull requests.
 
 ---
 
 ## License
 
-- **Source Code:** Licensed under the **EUPL-1.2 (European Union Public Licence v1.2)**, protecting digital sovereignty and reciprocal software freedom under European civil law.
-- **Compiled Binaries (APK):** Because the app links `zemer-cipher` (GPL-3.0) for YouTube cipher deobfuscation, the compiled binary is conveyed under the terms of the **GNU General Public License v3.0 (GPL-3.0)**, as explicitly authorized by EUPL-1.2 Article 5 (Compatibility Clause).
-
-Contributions require agreement to [`CLA.md`](CLA.md) — see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+* **Source Code**: Licensed under the **EUPL-1.2 (European Union Public Licence v1.2)**, ensuring reciprocal software freedom under European civil law.
+* **Compiled Binaries**: Because compiled binaries link `zemer-cipher` (GPL-3.0) for YouTube cipher deobfuscation, the binary distribution is conveyed under the **GNU General Public License v3.0 (GPL-3.0)**, as authorized by EUPL-1.2 Article 5.

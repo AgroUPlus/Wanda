@@ -4,7 +4,6 @@ import android.util.Log
 import com.wander.android.core.audio.fingerprint.AudioEmbedder
 import com.wander.android.core.database.dao.TrackEmbeddingDao
 import com.wander.android.core.database.dao.TrackLyricsDao
-import com.wander.android.core.database.entity.TrackEmbeddingEntity
 import com.wander.android.core.database.entity.TrackLyricsEntity
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.sources.agro.AgroCatalogApi
@@ -12,7 +11,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlin.math.roundToInt
 import kotlinx.coroutines.withContext
 
 /**
@@ -29,19 +27,36 @@ import kotlinx.coroutines.withContext
 @Singleton
 internal class CatalogSyncRepository @Inject constructor(
     private val catalogApi: AgroCatalogApi,
-    private val musicRepository: MusicRepository,
+    musicRepository: MusicRepository,
     private val canonicalMetadata: CanonicalMetadataRepository,
     private val recordingIdentity: RecordingIdentityRepository,
     private val embeddingDao: TrackEmbeddingDao,
     private val trackLyricsDao: TrackLyricsDao,
-    private val secureStorage: SecureStorage
+    private val secureStorage: SecureStorage,
+    private val publisher: CatalogPublisher
 ) {
+
+    constructor(
+        catalogApi: AgroCatalogApi,
+        musicRepository: MusicRepository,
+        canonicalMetadata: CanonicalMetadataRepository,
+        recordingIdentity: RecordingIdentityRepository,
+        embeddingDao: TrackEmbeddingDao,
+        trackLyricsDao: TrackLyricsDao,
+        secureStorage: SecureStorage
+    ) : this(
+        catalogApi = catalogApi,
+        musicRepository = musicRepository,
+        canonicalMetadata = canonicalMetadata,
+        recordingIdentity = recordingIdentity,
+        embeddingDao = embeddingDao,
+        trackLyricsDao = trackLyricsDao,
+        secureStorage = secureStorage,
+        publisher = CatalogPublisher(catalogApi, musicRepository, embeddingDao, trackLyricsDao, secureStorage)
+    )
 
     /**
      * How many fingerprints this device has contributed, and how many lyrics it has been given.
-     *
-     * Flows rather than a count taken on demand, so a settings screen left open while a sync runs
-     * shows what changed instead of what was true when it opened.
      */
     val fingerprintsShared: Flow<Int>
         get() = embeddingDao.publishedCountFlow(
@@ -54,145 +69,26 @@ internal class CatalogSyncRepository @Inject constructor(
 
     /**
      * Pushes what this device has fingerprinted, then pulls what it has not seen.
-     *
-     * Push first, so a device that has just indexed something contributes it before asking what
-     * everyone else knows — otherwise two devices indexing the same library both wait for the
-     * other to publish it.
      */
     suspend fun sync(): Result<SyncOutcome> = withContext(Dispatchers.IO) {
         if (secureStorage.agroServerUrl.isBlank()) {
             return@withContext Result.success(SyncOutcome.NOT_CONFIGURED)
         }
-        // One switch, both directions. Pulling without publishing would be taking the benefit of
-        // everyone else's disclosure while making none of your own, and the catalogue only holds
-        // anything because people contribute to it.
         if (!secureStorage.agroCatalogTrade) {
             return@withContext Result.success(SyncOutcome.NOT_TRADING)
         }
         runCatching {
-            val published = publishLocal()
+            val published = publisher.publishLocal()
             val received = pullCatalogue()
-            // Unconditional, and after the pull. A library refetch since the last run will have
-            // restored each source's own metadata over corrections applied then, so this is a
-            // repair pass as much as it is the delivery of what arrived just now.
             val corrected = canonicalMetadata.applyToLibrary()
             SyncOutcome(published = published, received = received, corrected = corrected)
         }.onFailure { error ->
-            // Never surfaced as a failure the user has to act on: the catalogue is an
-            // optimisation, and the app identifies music perfectly well without having reached it.
             Log.w(TAG, "Catalogue sync did not complete: ${error.message}")
         }
     }
 
     /**
-     * Sends every local embedding the server has not been told about.
-     *
-     * The cursor advances only past embeddings that actually landed, and a failure stops the batch
-     * rather than skipping it: the next run should retry what did not go, not step over it.
-     *
-     * A `local:` source id is never sent. It is a filesystem path from this device and the
-     * catalogue's source list is readable by every account on the server. The server drops them
-     * too — this is the half that means one was never transmitted in the first place.
-     */
-    private suspend fun publishLocal(): Int {
-        val lastPublished = secureStorage.catalogLastPublishedAt
-        val mine = embeddingDao.computedSince(
-            after = lastPublished,
-            model = AudioEmbedder.MODEL_NAME,
-            version = AudioEmbedder.EMBEDDER_VERSION,
-            limit = PUBLISH_BATCH
-        )
-        if (mine.isEmpty()) return 0
-
-        // Paired with the embedding it came from, so the cursor can advance past exactly what the
-        // server accepted whether these go one at a time or all at once.
-        val pending = mine.mapNotNull { embedding ->
-            val track = musicRepository.trackById(embedding.trackId) ?: return@mapNotNull null
-            if (track.durationMs <= 0L) return@mapNotNull null
-
-            val lyricsEntity = trackLyricsDao.findLyricsForTrackOrMetadata(track.id, track.title, track.artist)
-                ?: trackLyricsDao.getLyricsForTrack(embedding.trackId)
-            val lyricsPayload = lyricsEntity?.syncedLyrics
-                ?: lyricsEntity?.plainLyrics?.takeIf { it.isNotBlank() }
-
-            embedding to AgroCatalogApi.Publication(
-                embeddingHex = quantiseToHex(AudioEmbedder.unpack(embedding.vector)),
-                dim = embedding.dim,
-                model = embedding.model,
-                version = embedding.version,
-                durationMs = track.durationMs,
-                title = track.title,
-                artist = track.artist,
-                album = track.album,
-                sourceUri = embedding.trackId.takeUnless { it.startsWith(LOCAL_PREFIX) },
-                lyrics = lyricsPayload,
-                lyricsSource = lyricsEntity?.source?.takeIf { lyricsPayload != null }
-            )
-        }
-        if (pending.isEmpty()) return 0
-
-        val sent = if (catalogApi.supportsBatch) {
-            publishInBatches(pending)
-        } else {
-            publishOneAtATime(pending)
-        }
-        return sent
-    }
-
-    /**
-     * Sends the run as a handful of requests rather than one per recording.
-     *
-     * A chunk that fails outright stops the run and leaves the cursor where the last accepted
-     * entry put it, exactly as the single-shot path does — the next sync retries what did not go
-     * rather than stepping over it. An entry the server refused *individually* does not stop
-     * anything: it is one recording it will not take, and the rest of the chunk is good.
-     */
-    private suspend fun publishInBatches(pending: List<Pair<TrackEmbeddingEntity, AgroCatalogApi.Publication>>): Int {
-        var sent = 0
-        var newest = secureStorage.catalogLastPublishedAt
-        for (chunk in pending.chunked(AgroCatalogApi.MAX_BATCH)) {
-            val outcomes = catalogApi.publishAll(chunk.map { it.second }).getOrElse { break }
-            chunk.forEachIndexed { index, (embedding, _) ->
-                val outcome = outcomes.getOrNull(index)
-                if (outcome != null && outcome.error != null) {
-                    Log.w(TAG, "The catalogue would not take one recording: ${outcome.error}")
-                }
-                // Counted as dealt with either way: a recording the server refuses on its merits
-                // will be refused again next time, and holding the cursor back for it would stop
-                // everything behind it from ever being sent.
-                sent++
-                newest = maxOf(newest, embedding.computedAt)
-            }
-        }
-        secureStorage.catalogLastPublishedAt = newest
-        return sent
-    }
-
-    private suspend fun publishOneAtATime(pending: List<Pair<TrackEmbeddingEntity, AgroCatalogApi.Publication>>): Int {
-        var sent = 0
-        var newest = secureStorage.catalogLastPublishedAt
-        for ((embedding, publication) in pending) {
-            if (catalogApi.publish(publication).isFailure) break
-            sent++
-            newest = maxOf(newest, embedding.computedAt)
-        }
-        secureStorage.catalogLastPublishedAt = newest
-        return sent
-    }
-
-    /**
      * Reads what the fleet has learned and records whatever names a recording this device holds.
-     *
-     * "Records" rather than applies: [CanonicalMetadataRepository] decides which of the catalogue's
-     * values actually improve on what the source gave, and [sync] applies them afterwards.
-     *
-     * An entry is matched locally rather than trusted. The server says these vectors are one
-     * recording; whether they are *this device's* recording is a question only this device's own
-     * embeddings can answer, at the same thresholds the server used.
-     *
-     * Entries for audio this device has never heard are counted and dropped. Keeping the fleet's
-     * whole catalogue on every phone would make a shared server's size everyone's problem, and the
-     * entry is still there to be re-read on the day the audio arrives.
      */
     private suspend fun pullCatalogue(): Int {
         val cursor = secureStorage.catalogCursor
@@ -201,8 +97,6 @@ internal class CatalogSyncRepository @Inject constructor(
 
         var applied = 0
         for (entry in entries) {
-            // A vector from another embedder is a different alphabet. Comparing across them would
-            // produce a confident number that means nothing.
             if (entry.model != AudioEmbedder.MODEL_NAME ||
                 entry.version != AudioEmbedder.EMBEDDER_VERSION
             ) {
@@ -239,11 +133,6 @@ internal class CatalogSyncRepository @Inject constructor(
                                 trackId = match.trackId,
                                 plainLyrics = plain,
                                 syncedLyrics = if (isSynced) entry.lyrics else null,
-                                // Where the text actually came from, when the catalogue knows.
-                                // "Agro" is how it arrived, not what wrote it, and a lyric that
-                                // began at LRCLIB should still say so after a trip through the
-                                // fleet — otherwise every traded lyric loses its origin at the
-                                // first hop.
                                 source = entry.lyricsSource?.takeIf { it.isNotBlank() } ?: "Agro",
                                 viaCatalog = true
                             )
@@ -273,64 +162,13 @@ internal class CatalogSyncRepository @Inject constructor(
         }
     }
 
-    /**
-     * `internal` rather than private for the codec below: the claim that int8 does not cost a match
-     * is the one thing here that is not obvious by reading, and it is only checkable by round
-     * -tripping real vectors through it.
-     */
     internal companion object {
         const val TAG = "CatalogSync"
 
-        /**
-         * Recordings per run, so a first sync on a large library does not run for minutes.
-         *
-         * Deliberately smaller than the old fingerprint batch. An embedding is about a kilobyte per
-         * second of audio even at int8, so twenty tracks is already megabytes on the wire.
-         */
-        const val PUBLISH_BATCH = 20
+        fun quantiseToHex(vectors: Array<FloatArray>): String =
+            CatalogVectorCodec.quantiseToHex(vectors)
 
-        /** Source ids that name a file on this device rather than a thing others could hold. */
-        const val LOCAL_PREFIX = "local:"
-
-        /**
-         * The scale the wire format uses. `AudioEmbedder` L2-normalises every vector, so each value
-         * already lies in [-1, 1] and a fixed 127x scale is the whole quantisation.
-         */
-        const val INT8_SCALE = 127f
-
-        /**
-         * Packs vectors to hex int8 — a quarter of float32, for a change in cosine similarity that
-         * does not reach the second decimal place.
-         *
-         * Storage on the device stays float32. This is the wire only: at ~1 KB per second of audio,
-         * float32 puts a three-minute track past the server's request cap on its own.
-         */
-        fun quantiseToHex(vectors: Array<FloatArray>): String {
-            val out = StringBuilder(vectors.sumOf { it.size } * 2)
-            for (vector in vectors) {
-                for (value in vector) {
-                    val q = (value * INT8_SCALE).roundToInt().coerceIn(-127, 127)
-                    out.append(HEX[(q shr 4) and 0xF]).append(HEX[q and 0xF])
-                }
-            }
-            return out.toString()
-        }
-
-        /** Inverse of [quantiseToHex]. Null when the blob is not a whole number of vectors. */
-        fun unpackHex(hex: String, dim: Int): Array<FloatArray>? {
-            if (dim <= 0 || hex.length % 2 != 0) return null
-            val bytes = hex.length / 2
-            if (bytes == 0 || bytes % dim != 0) return null
-            return runCatching {
-                Array(bytes / dim) { segment ->
-                    FloatArray(dim) { d ->
-                        val at = (segment * dim + d) * 2
-                        hex.substring(at, at + 2).toInt(16).toByte() / INT8_SCALE
-                    }
-                }
-            }.getOrNull()
-        }
-
-        private const val HEX = "0123456789abcdef"
+        fun unpackHex(hex: String, dim: Int): Array<FloatArray>? =
+            CatalogVectorCodec.unpackHex(hex, dim)
     }
 }

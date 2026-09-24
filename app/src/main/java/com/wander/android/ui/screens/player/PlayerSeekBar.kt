@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -27,6 +28,10 @@ import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.rememberPlaybackPosition
 import com.wander.android.ui.components.LiveChip
 import com.wander.android.ui.components.rememberHaptics
+import kotlin.math.abs
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Expressive wavy slider. While the user drags, the local value wins so the thumb tracks the
@@ -105,13 +110,33 @@ private fun PlayerSeekBarInternal(
 ) {
     var scrubbing by remember { mutableFloatStateOf(-1f) }
     var lastTickInterval by remember { mutableIntStateOf(-1) }
+    // The fraction just released, held onto after the finger lifts so the thumb doesn't fall back
+    // to the pre-seek `positionMs` for the frame or two before the player reports the new one.
+    var pendingSeekFraction by remember { mutableFloatStateOf(-1f) }
     val haptics = rememberHaptics()
     val fraction = if (scrubbing >= 0f) {
         scrubbing
+    } else if (pendingSeekFraction >= 0f) {
+        pendingSeekFraction
     } else if (durationMs > 0L) {
         (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
     } else {
         0f
+    }
+
+    // Once `positionMs` actually reflects the seek (or it's been long enough that it evidently
+    // never will), stop overriding it — otherwise a seek the player ignores would strand the bar.
+    // Keyed on `pendingSeekFraction` alone: keying on `positionMs` too would restart this on every
+    // tick and cancel the timeout before it ever got to fire.
+    LaunchedEffect(pendingSeekFraction) {
+        if (pendingSeekFraction < 0f) return@LaunchedEffect
+        val targetMs = pendingSeekFraction * durationMs
+        withTimeoutOrNull(SeekSettleTimeoutMs) {
+            snapshotFlow { positionMs }
+                .filter { durationMs <= 0L || abs(it - targetMs) < SeekSettleToleranceMs }
+                .first()
+        }
+        pendingSeekFraction = -1f
     }
 
     if (isLive) {
@@ -159,7 +184,7 @@ private fun PlayerSeekBarInternal(
     // position the player was reporting correctly the entire time. While a finger is on the thumb
     // the fraction is what the user is choosing, and that is the one case where it leads.
     val positionLabel = formatTime(
-        if (scrubbing >= 0f) (scrubbing * durationMs).toLong() else positionMs
+        if (scrubbing >= 0f || pendingSeekFraction >= 0f) (fraction * durationMs).toLong() else positionMs
     )
     val durationLabel = if (durationMs > 0L) formatTime(durationMs) else "--:--"
 
@@ -181,6 +206,7 @@ private fun PlayerSeekBarInternal(
             onValueChangeFinished = {
                 if (durationMs > 0L) {
                     haptics.settled()
+                    pendingSeekFraction = scrubbing
                     onSeek((scrubbing * durationMs).toLong())
                 }
                 scrubbing = -1f
@@ -255,3 +281,9 @@ private val RestingThumbSize = 14.dp
 
 /** Half the thumb slot — the padding the slider keeps clear at each end of the track. */
 private val TrackInset = ThumbSlotSize / 2
+
+/** How close `positionMs` must land to the seek target to count as "caught up." */
+private const val SeekSettleToleranceMs = 400L
+
+/** How long to hold the released position before giving up on the player ever confirming it. */
+private const val SeekSettleTimeoutMs = 1500L

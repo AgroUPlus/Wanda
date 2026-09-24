@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.replay
 
+import android.util.Log
 import androidx.annotation.StringRes
 import com.wander.android.R
 import androidx.compose.runtime.Immutable
@@ -86,6 +87,11 @@ internal class ReplayViewModel @Inject constructor(
         viewModelScope.launch {
             val saved = archivist.saved(year)
             val report = saved ?: repository.report(year).getOrElse { cause ->
+                // The message alone, never the cause's stack: `AgroGraphQl` already strips the
+                // server URL and key out of every failure it raises, but a wrapped exception could
+                // in principle carry more than that, and this is what says *why* a year failed
+                // without waiting on a fresh `adb logcat` to catch it live.
+                Log.e(TAG, "Replay for $year could not be read: ${cause.message}")
                 _state.value = _state.value.copy(
                     isLoading = false,
                     failure = R.string.replay_error_load
@@ -113,7 +119,8 @@ internal class ReplayViewModel @Inject constructor(
         viewModelScope.launch {
             archivist.save(report)
                 .onSuccess { _state.value = _state.value.copy(isWorking = false, isSaved = true) }
-                .onFailure {
+                .onFailure { cause ->
+                    Log.e(TAG, "Replay for ${report.year} could not be saved: ${cause.message}")
                     _state.value = _state.value.copy(
                         isWorking = false,
                         actionFailure = R.string.replay_error_save
@@ -144,6 +151,7 @@ internal class ReplayViewModel @Inject constructor(
                     )
                 }
                 .onFailure { cause ->
+                    Log.e(TAG, "Replay tidy-up for ${report.year} failed: ${cause.message}")
                     _state.value = _state.value.copy(
                         isWorking = false,
                         // Saving may still have succeeded; only the tidy-up is reported as failed,
@@ -157,5 +165,9 @@ internal class ReplayViewModel @Inject constructor(
 
     fun dismissActionFailure() {
         _state.value = _state.value.copy(actionFailure = null)
+    }
+
+    private companion object {
+        const val TAG = "ReplayViewModel"
     }
 }

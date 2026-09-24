@@ -1,6 +1,7 @@
 package com.wander.android.ui.screens.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,10 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.data.sources.agro.AgroHandoffState
 import com.wander.android.data.sources.agro.AgroNode
+import com.wander.android.ui.components.GroupedCard
 import com.wander.android.ui.components.ListeningGreen
 import com.wander.android.ui.components.rememberShelfEntranceScale
 
@@ -66,12 +66,19 @@ internal fun LazyListScope.agroDevicesSection(
         return
     }
 
-    items(items = state.devices, key = { "agro_device_${it.deviceId}" }) { node ->
-        val resumable = state.handoff?.takeIf { it.deviceId == node.deviceId }
-        DeviceRow(
-            node = node,
-            isResuming = state.isResuming,
-            onResume = resumable?.let { { onResume(it) } }
+    item(key = "agro_devices_list") {
+        GroupedCard(
+            items = state.devices.map { node ->
+                val resumable = state.handoff?.takeIf { it.deviceId == node.deviceId }
+                val content: @Composable () -> Unit = {
+                    DeviceRow(
+                        node = node,
+                        isResuming = state.isResuming,
+                        onResume = resumable?.let { { onResume(it) } }
+                    )
+                }
+                content
+            }
         )
     }
 }
@@ -82,50 +89,47 @@ private fun DeviceRow(
     isResuming: Boolean,
     onResume: (() -> Unit)?
 ) {
-    val content: @Composable () -> Unit = {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onResume != null) Modifier.clickable(onClick = onResume) else Modifier)
+            .padding(horizontal = 20.dp, vertical = 12.dp)
+    ) {
+        androidx.compose.foundation.layout.Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp)
-        ) {
-            androidx.compose.foundation.layout.Box(
-                modifier = Modifier
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (node.isOnline) ListeningGreen
-                        else MaterialTheme.colorScheme.outlineVariant
-                    )
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(
+                    if (node.isOnline) ListeningGreen
+                    else MaterialTheme.colorScheme.outlineVariant
+                )
+        )
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = node.petname, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = buildString {
+                    append(if (node.isOnline) "Listening now" else "Away")
+                    append(" · ")
+                    append(node.clientType.replaceFirstChar(Char::uppercase))
+                    node.currentTrack?.let { append(" · $it") }
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = if (node.isOnline) ListeningGreen
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
+        }
 
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = node.petname, style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    text = buildString {
-                        append(if (node.isOnline) "Listening now" else "Away")
-                        append(" · ")
-                        append(node.clientType.replaceFirstChar(Char::uppercase))
-                        node.currentTrack?.let { append(" · $it") }
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (node.isOnline) ListeningGreen
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            if (onResume != null) {
-                Text(
-                    text = if (isResuming) "Resuming…" else "Continue here",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = ListeningGreen
-                )
-            }
+        if (onResume != null) {
+            Text(
+                text = if (isResuming) "Resuming…" else "Continue here",
+                style = MaterialTheme.typography.labelLarge,
+                color = ListeningGreen
+            )
         }
     }
-
-    if (onResume == null) content() else Surface(onClick = onResume, content = content)
 }

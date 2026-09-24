@@ -1,11 +1,9 @@
 package com.wander.android.data.repository
 
-import androidx.media3.common.MimeTypes
 import com.wander.android.core.database.dao.AlbumDao
 import com.wander.android.core.database.dao.HistoryDao
+import com.wander.android.core.database.dao.PlaylistDao
 import com.wander.android.core.database.dao.TrackDao
-import com.wander.android.core.database.entity.AlbumEntity
-import com.wander.android.core.database.entity.HistoryEntity
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.security.SecureStorage
@@ -14,38 +12,24 @@ import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
-import androidx.paging.PagingData
-import androidx.paging.map
 import com.wander.android.data.model.UnifiedTrack
-import com.wander.android.data.model.isOneShotTrackId
-import com.wander.android.data.model.isPlayableOffline
 import com.wander.android.data.sources.IMusicSource
 import com.wander.android.data.sources.StreamInfo
-import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * The only thing ViewModels talk to for music data. Room is the source of truth; sources fill it.
+ * The single facade ViewModels talk to for music data. Room is the source of truth; sources fill it.
  */
 @Singleton
 class MusicRepository @Inject constructor(
     private val trackDao: TrackDao,
     private val albumDao: AlbumDao,
-    private val playlistDao: com.wander.android.core.database.dao.PlaylistDao,
+    private val playlistDao: PlaylistDao,
     private val historyDao: HistoryDao,
     private val secureStorage: SecureStorage,
     private val connectivity: ConnectivityObserver,
@@ -55,17 +39,6 @@ class MusicRepository @Inject constructor(
     private val acousticFeatures: AcousticFeatureRepository,
     val sources: Set<@JvmSuppressWildcards IMusicSource>
 ) {
-    /**
-     * Sources that are configured *and* reachable.
-     *
-     * Two things mute a remote source: offline mode, and there being no network. The second used
-     * to be missing entirely — with the radio off, every remote source was still asked for data
-     * and every request sat there until it timed out.
-     *
-     * Internal rather than private so [RecommendationRepository] applies the same rule — a source
-     * the user signed out of, or that offline mode has muted, must not be asked for a Home shelf
-     * either.
-     */
     internal fun activeSources(): List<IMusicSource> {
         val offline = secureStorage.isOfflineMode.value || !connectivity.isOnline.value
         return sources.filter { source ->
@@ -73,12 +46,6 @@ class MusicRepository @Inject constructor(
         }
     }
 
-    /**
-     * The sources a search may ask, which is a wider set than [activeSources].
-     *
-     * Same offline rule — a search cannot reach a network that is not there — but keyed on
-     * [IMusicSource.isSearchable] rather than on being signed in.
-     */
     internal fun searchableSources(): List<IMusicSource> {
         val offline = secureStorage.isOfflineMode.value || !connectivity.isOnline.value
         return sources.filter { source ->
@@ -86,248 +53,6 @@ class MusicRepository @Inject constructor(
                 source.capabilities.search &&
                 (!offline || source.sourceType == SourceType.LOCAL)
         }
-    }
-
-    private fun sourceFor(type: SourceType) = sources.firstOrNull { it.sourceType == type }
-
-    // ── Library reads (always from Room, so they work offline) ──────────────────────────────
-
-
-    fun getLikedTracksFlow(): Flow<List<UnifiedTrack>> =
-        trackDao.getLikedTracksFlow().mapToTracks()
-
-    /**
-     * Everything played on this device, newest first.
-     *
-     * The history table has recorded every play since the app had a player, and until now the only
-     * things that read it were the scrobble outbox and the statistics screen — so the plainest
-     * question anybody asks a music player, "what was that song I had on yesterday", had no answer
-     * anywhere in the UI.
-     */
-    fun getRecentlyPlayedFlow(): Flow<List<UnifiedTrack>> =
-        historyDao.getRecentlyPlayedTracksFlow()
-            .mapToTracks()
-            // The SQL groups by row id, which is one entry per *copy*: a song played once on
-            // Navidrome and once on YouTube Music appeared twice, as if it were two songs. The
-            // collapse cannot be done in SQL because whether two rows are one recording depends on
-            // their durations and on what the user has pinned apart.
-            .map { tracks -> recordingRules.current().distinct(tracks) }
-
-    fun getDownloadedTracksFlow(): Flow<List<UnifiedTrack>> =
-        trackDao.getDownloadedTracksFlow().mapToTracks()
-
-    /** Everything that plays with no network, once. See `RenditionFinder`. */
-    suspend fun downloadedTracks(): List<UnifiedTrack> = withContext(Dispatchers.IO) {
-        trackDao.getOfflineTracksOnce().map(TrackEntity::toUnifiedTrack)
-    }
-
-
-    /**
-     * The library, a page at a time, optionally narrowed to one source.
-     *
-     * The mapping to [UnifiedTrack] happens per page rather than per emission, which is the whole
-     * saving: a write to `tracks` used to re-map every row in the library, and there are a thousand
-     * of them.
-     */
-    fun pagedLibraryTracks(source: SourceType?): Flow<PagingData<UnifiedTrack>> = Pager(
-        // A page comfortably larger than a screenful, so scrolling does not sit at the edge of a
-        // fetch; `enablePlaceholders = false` because the row heights are uniform and a placeholder
-        // buys nothing a skeleton does not already do better.
-        config = PagingConfig(pageSize = PAGE_SIZE, enablePlaceholders = false),
-        pagingSourceFactory = {
-            if (source == null) trackDao.pagedTracks() else trackDao.pagedTracksBySource(source)
-        }
-    ).flow.map { page -> page.map(TrackEntity::toUnifiedTrack) }
-
-    /**
-     * The ids the library list is showing, in its order, for building a queue from a tap.
-     *
-     * Suspending and fetched on demand rather than held: this is needed once per tap, and keeping
-     * it in memory to avoid a query would reintroduce the always-loaded list paging just removed.
-     */
-    /** The rows behind a set of ids, for turning a page's tap into a queue. */
-    suspend fun tracksByIds(ids: List<String>): List<UnifiedTrack> = withContext(Dispatchers.IO) {
-        trackDao.getTracksByIds(ids).map(TrackEntity::toUnifiedTrack)
-    }
-
-    suspend fun libraryTrackIds(source: SourceType?): List<String> = withContext(Dispatchers.IO) {
-        if (source == null) trackDao.libraryTrackIds() else trackDao.libraryTrackIdsBySource(source)
-    }
-
-    /** The Library tab's albums: records you have, not records you have looked at. */
-    fun getAlbumsFlow(): Flow<List<UnifiedAlbum>> =
-        albumDao.getLibraryAlbumsFlow()
-            .map { list -> list.map(AlbumEntity::toUnifiedAlbum) }
-            .flowOn(Dispatchers.Default)
-
-    /** Album ids in the order they were most recently added to. See [TrackDao.observeRecentlyAddedAlbumIds]. */
-    fun getRecentlyAddedAlbumIdsFlow(limit: Int = 12): Flow<List<String>> =
-        trackDao.observeRecentlyAddedAlbumIds(limit)
-
-    fun getAlbumTracksFlow(albumId: String): Flow<List<UnifiedTrack>> =
-        trackDao.getTracksByAlbumFlow(albumId).mapToTracks()
-
-    /**
-     * Entities to models, off the main thread.
-     *
-     * The `flowOn` is the whole point of this helper now. Every one of these flows is consumed by a
-     * `stateIn(viewModelScope)`, which collects on `Dispatchers.Main.immediate` — so without it the
-     * conversion ran on the UI thread, and the Library screen holds four of them at once (liked,
-     * offline, history, albums). Any write to `tracks` re-emitted all four and re-mapped every row
-     * of each, on the thread that was trying to draw the scroll.
-     *
-     * Paging fixed this for the Tracks tab and only for the Tracks tab. The other lists were never
-     * paged — they are tens of rows and do not need to be — but they were still being converted in
-     * the wrong place.
-     */
-    private fun Flow<List<TrackEntity>>.mapToTracks() =
-        map { list -> list.map(TrackEntity::toUnifiedTrack) }.flowOn(Dispatchers.Default)
-
-    // ── Playback ────────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Streams that exist only for as long as the session that produced them.
-     *
-     * A track fetched from a peer over the local network, or through Agro's relay, has no row in
-     * Room and no source that can be asked for it a second time: it is one URL, valid while the
-     * host is playing and while the grant behind it lasts. Persisting that would be wrong — the
-     * URL names a private address and carries a bearer token — and leaving it unregistered meant
-     * the placeholder resolved to nothing at all.
-     */
-    private val ephemeralStreams = java.util.concurrent.ConcurrentHashMap<String, StreamInfo>()
-
-    /** One track as Room holds it, for a caller that has an id and needs its tags. */
-    suspend fun trackById(trackId: String): UnifiedTrack? = withContext(Dispatchers.IO) {
-        trackDao.getTrackById(trackId)?.toUnifiedTrack()
-    }
-
-    /** Registers a stream that only [getStreamInfo] within this session should know about. */
-    fun registerEphemeralStream(trackId: String, info: StreamInfo) {
-        // A listening session produces one of these per track change; the cap is only here so a
-        // very long session cannot grow the map without bound.
-        if (ephemeralStreams.size > MAX_EPHEMERAL_STREAMS) ephemeralStreams.clear()
-        ephemeralStreams[trackId] = info
-    }
-
-    /** Forgets them. Called when a session ends, so a grant cannot outlive the thing it was for. */
-    fun clearEphemeralStreams() = ephemeralStreams.clear()
-
-    suspend fun getStreamInfo(trackId: String): Result<StreamInfo> = withContext(Dispatchers.IO) {
-        // Before Room: these ids are deliberately not in it.
-        ephemeralStreams[trackId]?.let { return@withContext Result.success(it) }
-
-        // A one-shot id that is no longer registered is a session that has ended. There is nothing
-        // to fall through to: the tiers below would answer with whatever Room happens to hold for
-        // it, and what Room held was the dead relay URL itself. Fail, and take the row with it —
-        // it is what shadowed the real file in every later search.
-        if (isOneShotTrackId(trackId)) {
-            trackDao.deleteOneShotTrackRows()
-            return@withContext Result.failure(
-                IllegalStateException("that transfer has ended; ask for the track again")
-            )
-        }
-
-        val cached = trackDao.getTrackById(trackId)
-        
-        // ── Tier 1: Internal / Downloaded local file ─────────────────────────────────────────
-        cached?.localFilePath?.takeIf { it.isNotBlank() }?.let { path ->
-            return@withContext Result.success(StreamInfo(uri = path, isDirectFile = true))
-        }
-        if (cached != null && cached.source != SourceType.LOCAL) {
-            val localMatch = sameRecordingAs(cached, trackDao.findLocalOrDownloadedCandidates(cached.title, TITLE_CANDIDATES))
-            val localPath = localMatch?.localFilePath?.takeIf { it.isNotBlank() } ?: localMatch?.streamUri
-            if (localPath != null && localPath.isNotBlank()) {
-                return@withContext Result.success(StreamInfo(uri = localPath, isDirectFile = true))
-            }
-        }
-
-        // ── Tier 2: Navidrome (Personal Server) ──────────────────────────────────────────────
-        if (cached != null && cached.source != SourceType.NAVIDROME && sourceFor(SourceType.NAVIDROME)?.isConfigured?.value == true) {
-            withTimeoutOrNull(SUBSTITUTION_BUDGET_MS) { navidromeSubstituteFor(cached) }
-                ?.let { return@withContext Result.success(it) }
-        }
-
-        // ── Tier 3: Original Source / YouTube Music ─────────────────────────────────────────
-        val type = cached?.source ?: SourceType.entries.firstOrNull {
-            trackId.startsWith(it.idPrefix)
-        } ?: return@withContext Result.failure(
-            IllegalArgumentException("Unrecognised track id: $trackId")
-        )
-
-        if (type != SourceType.LOCAL &&
-            (!connectivity.isOnline.value || secureStorage.isOfflineMode.value)
-        ) {
-            return@withContext Result.failure(
-                IOException(
-                    if (secureStorage.isOfflineMode.value) {
-                        "Offline mode — this track is not downloaded to this device"
-                    } else {
-                        "No network — this track is not available on this device"
-                    }
-                )
-            )
-        }
-        val source = sourceFor(type)
-            ?: return@withContext Result.failure(IllegalStateException("$type is unavailable"))
-        source.getStreamInfo(trackId).onSuccess { info ->
-            if (info.format == MimeTypes.APPLICATION_M3U8) trackDao.markLive(trackId)
-        }
-    }
-
-    /**
-     * Increments the play count and queues a scrobble.
-     *
-     * Neither happens in incognito mode, nor while listening along with a friend — in the second
-     * case because the track is their choice rather than this account's, and counting it would put
-     * their listening into your history. See [ScrobbleSuppression]. Nor for a livestream, which
-     * has no play to count.
-     */
-    suspend fun recordPlay(track: UnifiedTrack) = withContext(Dispatchers.IO) {
-        if (secureStorage.isIncognitoMode || scrobbleSuppression.isSuppressed) return@withContext
-        // A broadcast has no play to count. The threshold that decides when a play is worth
-        // recording is derived from the track's duration, and a livestream's is zero, so it fell
-        // to the fixed 30-second fallback — scrobbling a radio station as though it were a song,
-        // once for every half minute somebody left it on.
-        if (track.isLive) return@withContext
-        trackDao.incrementPlayCount(track.id, System.currentTimeMillis())
-        val entryId = historyDao.recordHistory(HistoryEntity(trackId = track.id))
-        val scrobbled = sourceFor(track.source)
-            ?.takeIf { it.capabilities.scrobble }
-            ?.scrobble(track.id)
-            ?.isSuccess == true
-        if (scrobbled) historyDao.markScrobbled(listOf(entryId))
-
-        // The row above is also the Agro outbox entry, so the nudge belongs here rather than at a
-        // caller that could forget it. Self-batching and delayed — see `syncSoon`.
-        scrobbleSyncScheduler.syncSoon()
-    }
-
-    // ── Persistence ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Persists fetched tracks so they are available offline next time.
-     *
-     * [asLibrary] separates "this is the user's collection" from "this is something they merely
-     * looked at". Browsing your own Navidrome albums is the former; a search hit or a radio pick
-     * is the latter. Only the former reaches the Library screen — which is what stops typing in
-     * Search from growing the library.
-     *
-     * Sources whose catalogue is not personal ([SourceType.isPersonalLibrary]) never count as
-     * library, whichever path fetched them.
-     */
-    /**
-     * Stores a track that arrived from a link rather than from a source listing.
-     *
-     * Not `asLibrary`: a link somebody sent you is not a record you own, which is the distinction
-     * `getAlbumTracks` makes when it claims the opposite for your own server.
-     *
-     * Worth storing all the same, because the row is what everything else is keyed on. Without it
-     * `markLive` updated nothing — so a broadcast opened from a link never learned it was one,
-     * even after its stream resolved to a manifest — `incrementPlayCount` counted nothing, and
-     * `recordHistory` wrote rows naming a `trackId` that appears in no `tracks` row.
-     */
-    suspend fun rememberSharedTrack(track: UnifiedTrack) = withContext(Dispatchers.IO) {
-        persist(listOf(track), asLibrary = false)
     }
 
     private suspend fun persist(tracks: List<UnifiedTrack>, asLibrary: Boolean) {
@@ -345,597 +70,106 @@ class MusicRepository @Inject constructor(
         if (libraryIds.isNotEmpty()) trackDao.markAsLibrary(libraryIds)
     }
 
-    /** Deletes an offline downloaded file from storage and clears its downloaded flag in Room. */
-    suspend fun deleteDownloadedTrack(trackId: String) = withContext(Dispatchers.IO) {
-        val entity = trackDao.getTrackById(trackId)
-        if (entity != null) {
-            entity.localFilePath?.takeIf { it.isNotBlank() }?.let { path ->
-                runCatching { java.io.File(path).delete() }
-            }
-            trackDao.setDownloaded(trackId, isDownloaded = false, localPath = null)
-        }
+    suspend fun rememberSharedTrack(track: UnifiedTrack) = withContext(Dispatchers.IO) {
+        persist(listOf(track), asLibrary = false)
     }
 
-    // ── Searching ───────────────────────────────────────────────────────────────────────────
+    private val streamResolver = PlaybackStreamResolver(
+        trackDao = trackDao,
+        sources = sources,
+        secureStorage = secureStorage,
+        connectivity = connectivity,
+        recordingRules = recordingRules
+    )
 
-    /**
-     * Room first so results appear instantly, then every active source in parallel. Results are
-     * cached but never enter the library, and duplicates of the same recording across backends
-     * collapse to the best-ranked source.
-     */
-    suspend fun searchAllSources(
-        query: String,
-        onlySources: Set<SourceType>? = null,
-        kind: SearchKind = SearchKind.TRACKS
-    ): List<UnifiedTrack> = coroutineScope {
-        if (query.isBlank()) return@coroutineScope emptyList()
+    private val libraryTracks = LibraryTrackRepository(
+        trackDao = trackDao,
+        historyDao = historyDao,
+        recordingRules = recordingRules
+    )
 
-        // `searchableSources()`, not `activeSources()`: a backend that serves search without an
-        // account belongs in a search even while signed out. See `IMusicSource.isSearchable`.
-        val allowed = searchableSources()
-            // Restricting *which sources are asked* rather than filtering their results is the
-            // point: a slow backend the user turned off must not hold the whole search up.
-            .filter { onlySources == null || it.sourceType in onlySources }
-        val allowedTypes = allowed.map(IMusicSource::sourceType).toSet()
+    private val catalogCollections = CatalogCollectionRepository(
+        albumDao = albumDao,
+        trackDao = trackDao,
+        playlistDao = playlistDao,
+        sources = sources,
+        activeSources = ::activeSources,
+        persist = ::persist,
+        recordingRules = recordingRules
+    )
 
-        // Room holds every result the app has ever shown, search hits included, so signing out of
-        // a backend used to leave its tracks turning up in Search for good — offered by a source
-        // that is no longer there to stream them. Downloads are the exception: the file is on this
-        // device and plays whatever the account does.
-        // Room is only consulted for music. It has no idea whether a row was once a podcast
-        // episode, so folding cached tracks into a Videos or Podcasts search would answer a
-        // question the user did not ask with songs they have already seen.
-        val cached = if (kind == SearchKind.TRACKS) {
-            trackDao.searchTracks(query)
-                .map(TrackEntity::toUnifiedTrack)
-                .filter { it.source in allowedTypes || it.isDownloaded }
-        } else {
-            emptyList()
-        }
-        val remote = allowed
-            .filter { it.capabilities.search }
-            .map { source -> async { source.search(query, kind).getOrDefault(emptyList()) } }
-            .flatMap { it.await() }
+    private val searchRepo = SearchAndDiscoveryRepository(
+        trackDao = trackDao,
+        albumDao = albumDao,
+        searchableSources = ::searchableSources,
+        activeSources = ::activeSources,
+        sources = sources,
+        persist = ::persist
+    )
 
-        persist(remote, asLibrary = false)
-        TrackDeduplicator.deduplicate((cached + remote).distinctBy { it.id })
-    }
+    private val likesAndHistory = LikesAndHistoryRepository(
+        trackDao = trackDao,
+        historyDao = historyDao,
+        sources = sources,
+        recordingRules = recordingRules,
+        secureStorage = secureStorage,
+        scrobbleSuppression = scrobbleSuppression,
+        scrobbleSyncScheduler = scrobbleSyncScheduler
+    )
 
-    /**
-     * Albums matching a query, from Room and from what the sources return.
-     *
-     * No source exposes an album search — `IMusicSource.search` answers with tracks — so the remote
-     * half is derived by grouping those tracks by the record they came from. That is less precise
-     * than a real album endpoint and it is enough for what it is used for: resolving a shared album
-     * link, where [AlbumResolution] then insists on an exact artist and title anyway.
-     *
-     * Room comes first in the list, so a record the user already has outranks a search hit. The
-     * caller's ordering is the tiebreak in [AlbumResolution], and this is where it is set.
-     */
-    suspend fun searchAlbums(query: String): List<UnifiedAlbum> = withContext(Dispatchers.IO) {
-        if (query.isBlank()) return@withContext emptyList()
+    private val radioGenerator = SmartRadioGenerator(
+        trackDao = trackDao,
+        activeSources = ::activeSources,
+        recordingRules = recordingRules,
+        acousticFeatures = acousticFeatures,
+        renditionsOf = { likesAndHistory.renditionsOf(it) },
+        persist = ::persist
+    )
 
-        val known = albumDao.getAllAlbumsOnce()
-            .map(AlbumEntity::toUnifiedAlbum)
-            .filter { it.title.contains(query, ignoreCase = true) || query.contains(it.title, ignoreCase = true) }
+    // ── Library ─────────────────────────────────────────────────────────────────────────────
+    fun getLikedTracksFlow() = libraryTracks.getLikedTracksFlow()
+    fun getRecentlyPlayedFlow() = libraryTracks.getRecentlyPlayedFlow()
+    fun getDownloadedTracksFlow() = libraryTracks.getDownloadedTracksFlow()
+    suspend fun downloadedTracks() = libraryTracks.downloadedTracks()
+    fun pagedLibraryTracks(source: SourceType?) = libraryTracks.pagedLibraryTracks(source)
+    suspend fun tracksByIds(ids: List<String>) = libraryTracks.tracksByIds(ids)
+    suspend fun libraryTrackIds(source: SourceType?) = libraryTracks.libraryTrackIds(source)
+    suspend fun trackById(trackId: String) = libraryTracks.trackById(trackId)
+    suspend fun deleteDownloadedTrack(trackId: String) = libraryTracks.deleteDownloadedTrack(trackId)
 
-        val fromTracks = searchAllSources(query)
-            .filter { !it.album.isNullOrBlank() }
-            .groupBy { (it.album.orEmpty()) to it.artist }
-            .map { (key, tracks) ->
-                val (album, artist) = key
-                UnifiedAlbum(
-                    // Not a real album id on any backend: nothing fetches by it. The screen that
-                    // opens a resolved album browses by title and artist, which is all the sources
-                    // agree on anyway.
-                    id = "derived:${album.lowercase()}:${artist.lowercase()}",
-                    source = tracks.first().source,
-                    title = album,
-                    artist = artist,
-                    songCount = tracks.size,
-                    year = tracks.firstNotNullOfOrNull { it.year }
-                )
-            }
+    // ── Albums & Playlists ──────────────────────────────────────────────────────────────────
+    fun getAlbumsFlow() = catalogCollections.getAlbumsFlow()
+    fun getRecentlyAddedAlbumIdsFlow(limit: Int = 12) = catalogCollections.getRecentlyAddedAlbumIdsFlow(limit)
+    fun getAlbumTracksFlow(albumId: String) = catalogCollections.getAlbumTracksFlow(albumId)
+    suspend fun refreshAlbums(pageSize: Int = CatalogCollectionRepository.ALBUM_PAGE_SIZE) = catalogCollections.refreshAlbums(pageSize)
+    suspend fun importMissingAlbumTracks(limit: Int = CatalogCollectionRepository.ALBUM_IMPORT_BATCH) = catalogCollections.importMissingAlbumTracks(limit)
+    suspend fun getAlbumTracks(album: UnifiedAlbum) = catalogCollections.getAlbumTracks(album)
+    suspend fun getAlbumTracksById(albumId: String) = catalogCollections.getAlbumTracksById(albumId)
+    suspend fun getPlaylists() = catalogCollections.getPlaylists()
+    suspend fun getPlaylistTracks(playlist: UnifiedPlaylist) = catalogCollections.getPlaylistTracks(playlist)
+    suspend fun getPlaylistById(playlistId: String) = catalogCollections.getPlaylistById(playlistId)
+    suspend fun getPlaylistTracksById(playlistId: String) = catalogCollections.getPlaylistTracksById(playlistId)
 
-        (known + fromTracks).distinctBy { it.title.lowercase() to it.artist.lowercase() }
-    }
+    // ── Playback & Streams ──────────────────────────────────────────────────────────────────
+    fun registerEphemeralStream(trackId: String, info: StreamInfo) = streamResolver.registerEphemeralStream(trackId, info)
+    fun clearEphemeralStreams() = streamResolver.clearEphemeralStreams()
+    suspend fun getStreamInfo(trackId: String) = streamResolver.getStreamInfo(trackId)
 
-    // ── Writes ──────────────────────────────────────────────────────────────────────────────
-
-    /**
-     * The set of liked track ids, so a screen holding its own list of tracks (search results, the
-     * queue, Now Playing) can render the heart from Room instead of from the snapshot it fetched.
-     * Without this a like wrote to Room correctly but the icon never changed.
-     */
-    fun getLikedTrackIdsFlow(): Flow<Set<String>> =
-        trackDao.getLikedTrackIdsFlow().map { it.toSet() }.flowOn(Dispatchers.Default)
-
-    /**
-     * [track] may be a search or radio result that Room has never seen, and the UPDATE behind
-     * `setLiked` silently does nothing for a row that does not exist — so persist it first.
-     */
-    suspend fun toggleLike(track: UnifiedTrack): Result<Unit> = withContext(Dispatchers.IO) {
-        val liked = !isLiked(track)
-        trackDao.upsertTracks(listOf(TrackEntity.fromUnifiedTrack(track)))
-        trackDao.setLiked(track.id, liked)
-        // A like is about the *recording*, not about the copy you happened to tap. Liking a song
-        // found on YouTube Music used to leave the Navidrome copy of it showing an empty heart —
-        // nine songs in one real library were split that way. Every rendition moves together.
-        renditionsOf(track).forEach { trackDao.setLiked(it.id, liked) }
-        val source = sourceFor(track.source)
-        if (source == null || !source.capabilities.likes) return@withContext Result.success(Unit)
-
-        // The local like stands even when the backend refuses it. Reverting looked exactly like a
-        // double tap — the heart filled, then emptied a moment later — and threw away a choice the
-        // user had made, for a backend they may not even be signed into. Room is the source of
-        // truth for the library; the failure is reported instead of undoing the write.
-        source.setLiked(track.id, liked).onFailure { cause ->
-            _writeErrors.tryEmit(
-                cause.message ?: "Couldn't sync that like to ${source.displayName}."
-            )
-        }
-        Result.success(Unit)
-    }
-
-    /**
-     * Failures from writes the user has already seen succeed locally — a like that could not be
-     * mirrored to its backend, say. Surfaced app-wide rather than swallowed.
-     */
-    private val _writeErrors = MutableSharedFlow<String>(extraBufferCapacity = 1)
-    val writeErrors: SharedFlow<String> = _writeErrors.asSharedFlow()
-
-    /** Room, not the passed-in copy: callers hold snapshots that go stale as soon as a like lands. */
-    private suspend fun isLiked(track: UnifiedTrack): Boolean =
-        trackDao.getTrackById(track.id)?.isLiked ?: track.isLiked
-
-    /**
-     * Finds a track this device can actually play from another device's description of it.
-     *
-     * Order matters, and it is deliberately **source-first**. A track handed over from Wander
-     * playing your own Navidrome carries a `navidrome:` id: that same file is what should play
-     * here, at your own server's quality — not a YouTube upload of the same song that happens to
-     * rank first in a cross-source search. So:
-     *
-     * 1. Room, by exact id — the track is already known, nothing to look up.
-     * 2. The backend the id belongs to, if this device has it configured. `navidrome:42` means
-     *    track 42 on the Navidrome both devices share, so it can be fetched directly.
-     * 3. Only then a cross-source search on title and artist, preferring a hit from the originating
-     *    source, then by source priority (local, then Navidrome, then the streaming backends).
-     *
-     * Step 3 is what keeps a handoff working when the other device played from a backend this one
-     * does not have at all.
-     */
-    suspend fun resolveTrack(
-        id: String,
-        title: String,
-        artist: String
-    ): UnifiedTrack? = withContext(Dispatchers.IO) {
-        trackDao.getTrackById(id)?.toUnifiedTrack()?.let { return@withContext it }
-
-        val originating = SourceType.entries.firstOrNull { id.startsWith(it.idPrefix) }
-
-        originating?.let(::sourceFor)
-            ?.takeIf { it.isConfigured.value }
-            ?.getTrack(id)
-            ?.getOrNull()
-            ?.let { return@withContext it }
-
-        val candidates = searchAllSources("$title $artist")
-            .filter { it.title.matches(title) }
-        candidates.firstOrNull { it.id == id }
-            ?: candidates
-                .filter { it.artist.matches(artist) }
-                .minByOrNull { candidate ->
-                    // Same backend the session came from wins outright; otherwise the usual
-                    // source ranking decides.
-                    if (candidate.source == originating) -1 else candidate.source.priority
-                }
-            ?: candidates.firstOrNull()
-    }
-
-    /** Titles differ by punctuation and remaster suffixes across backends more often than not. */
-    private fun String.matches(other: String): Boolean =
-        normalisedForMatch() == other.normalisedForMatch()
-
-    private fun String.normalisedForMatch(): String =
-        lowercase().filter { it.isLetterOrDigit() || it.isWhitespace() }.trim()
-
-    // ── Remote browsing ─────────────────────────────────────────────────────────────────────
-
-    /**
-     * Every album each source will admit to, not the first page of them.
-     *
-     * This asked once for [pageSize] albums and stopped. Against a Subsonic server that is the
-     * whole library sync — measured on a real one, it saw **50 of 203 albums**, and a record it
-     * never listed can never be browsed, imported, or recognised. `getAlbums` has always taken an
-     * offset; nothing advanced it.
-     *
-     * Bounded by [MAX_LIBRARY_ALBUMS] rather than trusting the server to end: a source that
-     * ignores the offset returns the same page for ever, and this would page it until the process
-     * died. A page shorter than asked for is the ordinary end.
-     */
-    suspend fun refreshAlbums(pageSize: Int = ALBUM_PAGE_SIZE): List<UnifiedAlbum> = coroutineScope {
-        val albums = activeSources()
-            .filter { it.capabilities.albums }
-            .map { source ->
-                async {
-                    val collected = ArrayList<UnifiedAlbum>()
-                    val seen = HashSet<String>()
-                    var offset = 0
-                    while (collected.size < MAX_LIBRARY_ALBUMS) {
-                        val page = source.getAlbums(pageSize, offset).getOrDefault(emptyList())
-                        if (page.isEmpty()) break
-                        // Ids, not counts, decide whether progress was made: a source that ignores
-                        // the offset hands back a full page every time and would otherwise loop.
-                        val fresh = page.filter { seen.add(it.id) }
-                        collected += fresh
-                        if (fresh.isEmpty() || page.size < pageSize) break
-                        offset += page.size
-                    }
-                    collected
-                }
-            }
-            .flatMap { it.await() }
-        if (albums.isNotEmpty()) {
-            // The only path that marks an album as the user's. These came from a source's own
-            // library listing, which is the one place "you have this record" is actually asserted.
-            albumDao.insertAlbums(albums.map { AlbumEntity.fromUnifiedAlbum(it, isLibrary = true) })
-        }
-        albums
-    }
-
-    /**
-     * Pulls tracks for library albums that have none yet, oldest gap first, [limit] at a time.
-     *
-     * A Subsonic album's tracks used to arrive only when somebody opened it, which is a reasonable
-     * rule for a catalogue you are browsing and the wrong one for a library you own: on a real
-     * server it left 330 of 3,014 tracks in the database, and recognition can only name a track it
-     * has a row for. So a song the user owns was unfindable until they had happened to look at the
-     * record it is on.
-     *
-     * Incremental on purpose. It is one request per album and a library is hundreds of them, so a
-     * run does a bounded slice and the next one continues — the same shape as the fingerprint
-     * indexer, and for the same reason. Albums that genuinely have no tracks are re-asked each
-     * run; that is a small, self-limiting waste against the alternative of remembering a negative.
-     *
-     * Returns how many albums stopped being empty — *measured*, by asking again, not counted from
-     * how many requests returned something. The difference decides whether the caller loops: an
-     * album whose tracks come back under an id that does not match the album's own would be
-     * fetched successfully and still be empty afterwards, and a count of successful fetches would
-     * report progress for ever while a caller re-requested the same forty albums at somebody's
-     * own server. Zero here means stop, whatever the reason.
-     */
-    suspend fun importMissingAlbumTracks(limit: Int = ALBUM_IMPORT_BATCH): Int =
-        withContext(Dispatchers.IO) {
-            val empty = albumDao.libraryAlbumsWithoutTracks(limit)
-            if (empty.isEmpty()) return@withContext 0
-            for (entity in empty) getAlbumTracks(entity.toUnifiedAlbum())
-
-            val stillEmpty = albumDao.libraryAlbumsWithoutTracks(limit).mapTo(HashSet()) { it.id }
-            val filled = empty.count { it.id !in stillEmpty }
-            android.util.Log.i(
-                TAG,
-                "Album track import: asked ${empty.size}, filled $filled"
-            )
-            filled
-        }
-
-    suspend fun getAlbumTracks(album: UnifiedAlbum): List<UnifiedTrack> = withContext(Dispatchers.IO) {
-        val tracks = sourceFor(album.source)?.getAlbumTracks(album.id)?.getOrDefault(emptyList())
-        if (tracks.isNullOrEmpty()) {
-            trackDao.getTracksInAlbum(album.id).map(TrackEntity::toUnifiedTrack)
-        } else {
-            // Browsing an album on your own server is browsing your own collection.
-            persist(tracks, asLibrary = true)
-            tracks
-        }
-    }
-
-    /**
-     * The tracks of an album Room has never seen, resolved from the id alone.
-     *
-     * [getAlbumTracks] needs a [UnifiedAlbum] to know which backend to ask, and there is no such
-     * row for an album opened straight out of an artist's shelf — the usual case for YouTube
-     * Music, whose album rows only ever arrive by browsing the library. The id prefix is the one
-     * thing that is always there, and it names the source; the same resolution [getStreamInfo]
-     * already does at playback time.
-     *
-     * Persisted as **non-library**: browsing a record on a streaming service is not the same as
-     * adding it to your collection, which is the rule [CatalogRepository.refreshArtist] already
-     * follows for the artist page.
-     */
-    suspend fun getAlbumTracksById(albumId: String): List<UnifiedTrack> = withContext(Dispatchers.IO) {
-        val type = SourceType.entries.firstOrNull { albumId.startsWith(it.idPrefix) }
-            ?: return@withContext emptyList()
-        val tracks = sourceFor(type)?.getAlbumTracks(albumId)?.getOrDefault(emptyList())
-        if (tracks.isNullOrEmpty()) {
-            trackDao.getTracksInAlbum(albumId).map(TrackEntity::toUnifiedTrack)
-        } else {
-            persist(tracks, asLibrary = false)
-            tracks
-        }
-    }
-
-    /**
-     * The other rows that are the same performance as [track].
-     *
-     * Name-matched in SQL to get a small candidate set, then judged by
-     * [RecordingRules.isSame] — the artist name alone cannot tell two same-named
-     * artists apart, and the title alone cannot tell a live take from a studio one.
-     *
-     * The user's pins are applied here rather than at the call sites, because this is the one
-     * place a like learns which other rows it belongs to. A pair kept apart stays apart for
-     * `toggleLike` and `unifySplitLikes` alike, without either having to remember to ask.
-     */
-    private suspend fun renditionsOf(track: UnifiedTrack): List<UnifiedTrack> {
-        val candidates = trackDao.getTracksByArtistOnce(track.artist).map(TrackEntity::toUnifiedTrack)
-        return recordingRules.current().renditionsAmong(track, candidates)
-    }
-
-    /**
-     * Brings existing likes onto every copy of the recording they belong to.
-     *
-     * A one-off repair for likes made before a like meant the recording rather than the row. Safe
-     * to run repeatedly: it only ever *adds* likes to copies of something already liked, so it
-     * converges and never takes a like away. Nothing is merged and nothing is deleted, which is
-     * what makes this the half of the recording model that can be shipped without a way back.
-     */
-    suspend fun unifySplitLikes(): Int = withContext(Dispatchers.IO) {
-        val liked = trackDao.getLikedTracksOnce().map(TrackEntity::toUnifiedTrack)
-        var repaired = 0
-        for (track in liked) {
-            for (other in renditionsOf(track)) {
-                if (!other.isLiked) {
-                    trackDao.setLiked(other.id, true)
-                    repaired++
-                }
-            }
-        }
-        repaired
-    }
-
-    suspend fun getPlaylists(): List<UnifiedPlaylist> = coroutineScope {
-        activeSources()
-            .filter { it.capabilities.playlists }
-            .map { source -> async { source.getPlaylists().getOrDefault(emptyList()) } }
-            .flatMap { it.await() }
-    }
-
-    suspend fun getPlaylistTracks(playlist: UnifiedPlaylist): List<UnifiedTrack> =
-        withContext(Dispatchers.IO) {
-            val tracks = sourceFor(playlist.source)
-                ?.getPlaylistTracks(playlist.id)
-                ?.getOrDefault(emptyList())
-                .orEmpty()
-            persist(tracks, asLibrary = true)
-            tracks
-        }
-
-    suspend fun getPlaylistById(playlistId: String): UnifiedPlaylist? = withContext(Dispatchers.IO) {
-        val type = SourceType.entries.firstOrNull { playlistId.startsWith(it.idPrefix) }
-        val remote = type?.let(::sourceFor)?.getPlaylists()?.getOrNull()?.firstOrNull { it.id == playlistId }
-        if (remote != null) return@withContext remote
-
-        val localEntity = playlistDao.getPlaylistById(playlistId)
-        if (localEntity != null) {
-            val firstTrackId = localEntity.trackIds.split(',').firstOrNull { it.isNotBlank() }
-            val fallbackCover = if (localEntity.coverArtUrl.isNullOrBlank() && firstTrackId != null) {
-                trackDao.getTrackById(firstTrackId)?.artworkUrl
-            } else {
-                localEntity.coverArtUrl
-            }
-            return@withContext localEntity.toUnifiedPlaylist().copy(coverArtUrl = fallbackCover)
-        }
-        getPlaylists().firstOrNull { it.id == playlistId }
-    }
-
-    suspend fun getPlaylistTracksById(playlistId: String): List<UnifiedTrack> = withContext(Dispatchers.IO) {
-        val type = SourceType.entries.firstOrNull { playlistId.startsWith(it.idPrefix) } ?: SourceType.LOCAL
-        val tracks = sourceFor(type)?.getPlaylistTracks(playlistId)?.getOrDefault(emptyList()).orEmpty()
-        if (tracks.isNotEmpty()) {
-            persist(tracks, asLibrary = true)
-            return@withContext tracks
-        }
-        val localEntity = playlistDao.getPlaylistById(playlistId)
-        if (localEntity != null) {
-            val ids = localEntity.trackIds.split(',').filter { it.isNotBlank() }
-            val tracksById = trackDao.getTracksByIds(ids).associateBy { it.id }
-            val baseTracks = ids.mapNotNull { id -> tracksById[id]?.toUnifiedTrack() }
-            val downloadedTracks = trackDao.getOfflineTracksOnce().map(TrackEntity::toUnifiedTrack)
-            // Judged with the same rules as everywhere else. This call used to pass neither the
-            // pins nor the links, so it fell back to the tags-and-duration defaults: a pair the
-            // user had explicitly pinned apart could still be substituted here, and a pair the
-            // fingerprinter had linked would not be. Taken once for the whole list rather than
-            // per track — it is a snapshot, and re-reading it per row could straddle a write.
-            val rules = recordingRules.current()
-            return@withContext baseTracks.map { track ->
-                if (track.isPlayableOffline()) return@map track
-                rules.substituteFor(track, downloadedTracks) ?: track
-            }
-        }
-        emptyList()
-    }
-
-    /**
-     * "Recently added" means added to *your* library, so a source whose catalogue is not yours is
-     * left out: this call marks what it fetches as library, and a public catalogue's recent
-     * uploads are not something the reader added. See [SourceType.isPersonalLibrary].
-     */
-    suspend fun getRecentTracks(limit: Int = 30): List<UnifiedTrack> = coroutineScope {
-        val remote = activeSources()
-            .map { source -> async { source.getRecentTracks(limit).getOrDefault(emptyList()) } }
-            .flatMap { it.await() }
-        persist(remote, asLibrary = true)
-        TrackDeduplicator
-            .deduplicate(
-                (remote + trackDao.getRecentlyAddedTracks(limit).map(TrackEntity::toUnifiedTrack))
-                    .distinctBy { it.id }
-            )
-            .take(limit)
-    }
-
-    /** The backends the user actually has set up, for building per-source Home shelves. */
+    // ── Search & Discovery ──────────────────────────────────────────────────────────────────
+    suspend fun searchAllSources(query: String, onlySources: Set<SourceType>? = null, kind: SearchKind = SearchKind.TRACKS) =
+        searchRepo.searchAllSources(query, onlySources, kind)
+    suspend fun searchAlbums(query: String) = searchRepo.searchAlbums(query)
+    suspend fun resolveTrack(id: String, title: String, artist: String) = searchRepo.resolveTrack(id, title, artist)
+    suspend fun getRecentTracks(limit: Int = 30) = searchRepo.getRecentTracks(limit)
     fun configuredSources(): List<SourceType> = activeSources().map { it.sourceType }
 
-    /**
-     * A queue that follows on from [seed].
-     *
-     * The candidates are what they have always been — the source's own radio where the backend has
-     * one, the library otherwise. What is new is that the acoustic vectors *order* them, so the
-     * queue moves by steps rather than jumping between whatever the backend returned first.
-     *
-     * The vectors are deliberately not allowed to choose the candidates. Only files stored on this
-     * device are ever measured, so a radio drawn from the acoustic index could only ever replay
-     * the library; see [SmartRadioBuilder]. Tracks with no vector keep a reserved share of every
-     * queue for the same reason — a song nobody has decoded is unknown, not unwanted.
-     */
-    suspend fun generateRadio(seed: UnifiedTrack, count: Int = 20): List<UnifiedTrack> =
-        withContext(Dispatchers.IO) {
-            val fromSource = radioAcrossSources(seed, count * 2)
-            if (fromSource.isNotEmpty()) persist(fromSource, asLibrary = false)
+    // ── Likes & History ─────────────────────────────────────────────────────────────────────
+    val writeErrors: SharedFlow<String> = likesAndHistory.writeErrors
+    fun getLikedTrackIdsFlow(): Flow<Set<String>> = likesAndHistory.getLikedTrackIdsFlow()
+    suspend fun toggleLike(track: UnifiedTrack) = likesAndHistory.toggleLike(track)
+    suspend fun unifySplitLikes() = likesAndHistory.unifySplitLikes()
+    suspend fun recordPlay(track: UnifiedTrack) = likesAndHistory.recordPlay(track)
 
-            // The library is added to the pool rather than used only when the source fails: a
-            // track the user owns and has not heard in a year is a better neighbour than a
-            // stranger, and until now it could never appear beside one.
-            val fromLibrary = trackDao.getTopPlayedTracks(count * 2)
-                .map(TrackEntity::toUnifiedTrack)
-
-            // Interleaved before the library is added, for the reason spelled out on
-            // [interleaveBySource]: the per-source answers arrive concatenated, and when the seed
-            // has no vector [SmartRadioBuilder] keeps the pool in arrival order — so without this
-            // a station could open with nothing but whichever backend replied with the most rows.
-            //
-            // Collapsed by recording afterwards, because asking several backends for the same seed
-            // is exactly how one song comes back three times under three different ids.
-            val pool = recordingRules.current()
-                .distinct(interleaveBySource(fromSource) + fromLibrary)
-                .filter { it.id != seed.id }
-            if (pool.isEmpty()) return@withContext emptyList()
-
-            val vectors = acousticFeatures.allFeatures()
-            SmartRadioBuilder.build(
-                seed = vectors[seed.id] ?: acousticFeatures.featuresFor(seed.id),
-                candidates = pool.map { SmartRadioBuilder.Candidate(it, vectors[it.id]) },
-                count = count
-            )
-        }
-
-    /**
-     * Every configured backend's own radio for [seed], asked in parallel.
-     *
-     * Asking only the seed's own source was the limit here: a Navidrome seed never reached YouTube
-     * Music's station even with the account signed in, so which backend a song happened to be
-     * tapped from decided how far the radio could see.
-     *
-     * A backend can only answer for an id it issued — [IMusicSource.getRadio] takes a seed id, and
-     * both Navidrome and YouTube Music strip their own prefix off it, so handing one a foreign id
-     * sends it a string it cannot resolve. The seed is therefore translated first: [renditionsOf]
-     * finds the copies of this recording the library already holds, which is a Room read and costs
-     * no network. A source with no known copy is not asked rather than asked with somebody else's
-     * id.
-     *
-     * Failures are dropped, not propagated. One backend being unreachable should narrow the
-     * station, not empty it.
-     */
-    private suspend fun radioAcrossSources(seed: UnifiedTrack, count: Int): List<UnifiedTrack> =
-        coroutineScope {
-            // Seed last: `associateBy` keeps the final entry, and for the seed's own source the
-            // id the caller actually tapped beats any other copy the library holds of it.
-            val seedPerSource = (renditionsOf(seed) + seed).associateBy { it.source }
-            activeSources()
-                .filter { it.capabilities.radio }
-                .mapNotNull { source ->
-                    val id = seedPerSource[source.sourceType]?.id ?: return@mapNotNull null
-                    async { source.getRadio(id, count).getOrNull().orEmpty() }
-                }
-                .flatMap { it.await() }
-        }
-
-    /**
-     * The row that may stand in for [wanted], as [RecordingRules.substituteFor] judges it, mapped back to
-     * the entity the caller needs a file path from.
-     *
-     * A candidate with no duration no longer substitutes unless a fingerprint link says it is the
-     * same audio. That is the intended loss: an untagged length used to be enough to hand back
-     * somebody else's song.
-     */
-    /**
-     * The user's own copy of a track they are about to play from somewhere else, if the server has
-     * one — the whole point of hosting your own music.
-     *
-     * Two ways to find it, cheapest first: the Navidrome rows already in Room, and failing that a
-     * search on the server itself, for a track Room has simply never seen.
-     *
-     * That second half is a network round trip, and the caller runs this on the critical path to
-     * the first byte of audio — [com.wander.android.core.playback.StreamResolver] resolves inside
-     * ExoPlayer's loader. So it is bounded by [SUBSTITUTION_BUDGET_MS], and null here means only
-     * "not found in time", never "not present". Unbounded, a slow or unreachable server spent the
-     * HTTP client's full 15s connect plus 30s read budget here *before* the source that was always
-     * going to serve the track was asked — a track that plays fine, half a minute late, for a
-     * substitution that is a preference rather than a requirement.
-     */
-    private suspend fun navidromeSubstituteFor(cached: TrackEntity): StreamInfo? {
-        val navidrome = sourceFor(SourceType.NAVIDROME) ?: return null
-        val known = sameRecordingAs(
-            cached,
-            trackDao.findNavidromeCandidates(cached.title, TITLE_CANDIDATES)
-        )
-        if (known != null) return navidrome.getStreamInfo(known.id).getOrNull()
-
-        val found = navidrome.search("${cached.title} ${cached.artist}").getOrNull().orEmpty()
-        val hit = recordingRules.current().substituteFor(cached.toUnifiedTrack(), found) ?: return null
-        return navidrome.getStreamInfo(hit.id).getOrNull()
-    }
-
-    private suspend fun sameRecordingAs(
-        wanted: TrackEntity,
-        candidates: List<TrackEntity>
-    ): TrackEntity? {
-        if (candidates.isEmpty()) return null
-        val chosen = recordingRules.current().substituteFor(
-            wanted = wanted.toUnifiedTrack(),
-            candidates = candidates.map(TrackEntity::toUnifiedTrack)
-        ) ?: return null
-        return candidates.first { it.id == chosen.id }
-    }
-
-    private companion object {
-        /** Comfortably more than a screenful, so scrolling never sits at the edge of a fetch. */
-        private const val TAG = "MusicRepository"
-
-        const val PAGE_SIZE = 60
-
-        /** Albums per request while paging a source's library. Subsonic caps `size` at 500. */
-        const val ALBUM_PAGE_SIZE = 200
-
-        /**
-         * A ceiling on paging, so a source that ignores the offset cannot loop for ever.
-         *
-         * High enough not to be reached by a real library; the id check in [refreshAlbums] is the
-         * real defence, and this is what catches a source that returns a *different* page every
-         * time without ever ending.
-         */
-        const val MAX_LIBRARY_ALBUMS = 5_000
-
-        /** Albums whose tracks are fetched per run. See [importMissingAlbumTracks]. */
-        const val ALBUM_IMPORT_BATCH = 40
-
-        /** Roughly a very long listening session's worth of track changes. */
-        const val MAX_EPHEMERAL_STREAMS = 256
-
-        /**
-         * How many same-title rows are worth judging. A title with more copies than this in one
-         * library is a tagging accident, not a track the extra reads would help find.
-         */
-        const val TITLE_CANDIDATES = 20
-
-        /**
-         * How long the search for a local substitute may hold up playback.
-         *
-         * Short on purpose. This is spent before any audio is fetched, so it is silence the user
-         * is listening to; a server that answers in time improves the track it serves, and one
-         * that does not costs a second rather than the HTTP client's 45-second worst case.
-         */
-        const val SUBSTITUTION_BUDGET_MS = 1_500L
-    }
+    // ── Radio ───────────────────────────────────────────────────────────────────────────────
+    suspend fun generateRadio(seed: UnifiedTrack, count: Int = 20) = radioGenerator.generateRadio(seed, count)
 }

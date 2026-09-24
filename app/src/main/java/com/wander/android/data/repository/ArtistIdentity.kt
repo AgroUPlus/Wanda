@@ -34,6 +34,21 @@ internal object ArtistIdentity {
         val aliases = mutableSetOf<String>()
         if (pageArtistId != null) {
             aliases.add(pageArtistId)
+            // Every id from the *same backend* as the trusted id is trusted too. `tracks` already
+            // came from Room keyed on this exact folded name, so a second id from that backend is
+            // not a stranger sharing the name — it is this artist, credited inconsistently across
+            // releases (a Navidrome/ID3-tagging reality: two albums can carry two different artist
+            // rows for the same person). Below, the loop only bridges ids *across* backends, through
+            // a literal same-recording match — nothing rescues a same-backend split, which is why
+            // one narrow id locked in by a cache hit or a tapped track used to make every other
+            // release by that artist vanish on the very next visit.
+            val seedSource = tracks.firstOrNull { it.artistId == pageArtistId }?.source
+            if (seedSource != null) {
+                tracks.asSequence()
+                    .filter { it.source == seedSource }
+                    .mapNotNull { it.artistId?.takeIf { id -> id.isNotBlank() } }
+                    .forEach(aliases::add)
+            }
         } else {
             val firstId = tracks.firstNotNullOfOrNull { it.artistId?.takeIf { id -> id.isNotBlank() } }
             if (firstId != null) aliases.add(firstId)

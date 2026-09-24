@@ -10,18 +10,15 @@ import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.palette.graphics.Palette
-import coil3.ImageLoader
+import coil3.SingletonImageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import coil3.request.allowHardware
@@ -63,12 +60,6 @@ private val seedColorCache = java.util.Collections.synchronizedMap(
 @Composable
 fun rememberCoverSeedColor(url: String?): Color? {
     val context = LocalContext.current
-    // Deliberately **not** `remember(url)`.
-    //
-    // Keying on the url threw the colour away the instant the track changed, so every skip went
-    // seed → null → seed: callers read the null, fell back to white or the base primary, and the
-    // player flashed pale for as long as the decode took. The old colour is the best answer
-    // available until the new one exists, so it stays until it is replaced.
     var seedColor by remember { mutableStateOf(url?.let { seedColorCache[it] }) }
 
     LaunchedEffect(url) {
@@ -81,36 +72,25 @@ fun rememberCoverSeedColor(url: String?): Color? {
             seedColor = cached
             return@LaunchedEffect
         }
-        val loader = ImageLoader(context)
+        val loader = SingletonImageLoader.get(context)
         val request = ImageRequest.Builder(context)
             .data(url)
-            .size(128)                             // palette accuracy is fine at 128 px
-            .allowHardware(false)                  // Palette requires software pixels
-            .allowRgb565(false)                    // palette needs full RGB
-            .bitmapConfig(Bitmap.Config.ARGB_8888) // explicit software config
+            .size(128)
+            .allowHardware(false)
+            .allowRgb565(false)
+            .bitmapConfig(Bitmap.Config.ARGB_8888)
             .build()
         val result = loader.execute(request)
         if (result is SuccessResult) {
             val bitmap = result.image.toBitmap()
             val extracted = extractSeedColor(bitmap)
-            // Only on success. A cover with no usable palette — a solid black sleeve, say — used to
-            // assign null here, which is the same pale flash by another route, and permanent rather
-            // than momentary. Keeping the previous track's colour is wrong in a way nobody can see;
-            // blanking it is wrong in a way everybody can.
             if (extracted != null) {
                 seedColorCache[url] = extracted
                 seedColor = extracted
             }
         }
-        loader.shutdown()
     }
 
-    // Crossfaded rather than cut, so a skip carries the tint and the backlight from one cover's
-    // colour to the next instead of stepping between them.
-    //
-    // The target is read unconditionally — never inside the null check — because a composable that
-    // is called on some compositions and not others loses its state to positional memoisation, and
-    // the animation would restart on every track that happens to have no palette.
     val animated by animateColorAsState(
         targetValue = seedColor ?: Color.Transparent,
         animationSpec = tween(SeedTweenMs),
@@ -154,132 +134,12 @@ fun extractSeedColor(bitmap: Bitmap): Color? {
 }
 
 // ---------------------------------------------------------------------------
-// Scheme derivation
-// ---------------------------------------------------------------------------
-
-/**
- * Returns [this] scheme re-coloured around [seed], by [strength] (0 = untouched, 1 = fully
- * applied), respecting [dark].
- *
- * Two intensities, on purpose:
- *
- * - **Accent roles** (primary/secondary/tertiary and their containers) are *derived* from the
- *   seed by tonal blending, so buttons, active states and highlights take the cover's colour.
- * - **Neutral roles** (surfaces, background, outlines, `onSurfaceVariant`) are only *washed*
- *   toward it by a few percent. That is what carries the tint across the rest of the interface —
- *   text, dividers, sheets, cards — without turning the chrome into a second album cover. The
- *   cover stays the focus.
- *
- * Tinting only the accents was the earlier behaviour, and it left everything drawn with a neutral
- * role — which is most of the player — visibly unaffected.
- */
-@Stable
-fun ColorScheme.tintedByCover(seed: Color, strength: Float, dark: Boolean): ColorScheme {
-    if (strength <= 0f) return this
-
-    // Blends toward the seed's tonal variant: an accent that reads as the cover's colour.
-    fun accent(from: Color, factor: Float) = lerp(from, seed.harmonise(factor, dark), strength)
-    // Barely moves: a wash of the seed over a neutral.
-    fun wash(from: Color, amount: Float) = lerp(from, seed, amount * strength)
-
-    // The resulting accent colours, computed once so their own "on" colour can be picked from
-    // what they actually turned out to be rather than assumed from the theme.
-    val newPrimary = accent(primary, if (dark) 0.60f else 0.50f)
-    val newSecondary = accent(secondary, 0.40f)
-    val newTertiary = accent(tertiary, if (dark) 0.50f else 0.60f)
-
-    return copy(
-        primary              = newPrimary,
-        onPrimary            = lerp(onPrimary, newPrimary.contrastingOnColor(), strength),
-        primaryContainer     = accent(primaryContainer,     if (dark) 0.25f else 0.90f),
-        onPrimaryContainer   = accent(onPrimaryContainer,   if (dark) 0.90f else 0.10f),
-        secondary            = newSecondary,
-        onSecondary          = lerp(onSecondary, newSecondary.contrastingOnColor(), strength),
-        secondaryContainer   = accent(secondaryContainer,   if (dark) 0.20f else 0.85f),
-        onSecondaryContainer = accent(onSecondaryContainer, if (dark) 0.85f else 0.15f),
-        tertiary             = newTertiary,
-        onTertiary           = lerp(onTertiary, newTertiary.contrastingOnColor(), strength),
-        tertiaryContainer    = accent(tertiaryContainer,    if (dark) 0.30f else 0.88f),
-        onTertiaryContainer  = accent(onTertiaryContainer,  if (dark) 0.88f else 0.12f),
-
-        background              = wash(background,              0.06f),
-        onBackground            = wash(onBackground,            0.05f),
-        surface                 = wash(surface,                 0.06f),
-        onSurface               = wash(onSurface,               0.05f),
-        surfaceVariant          = wash(surfaceVariant,          0.10f),
-        onSurfaceVariant        = wash(onSurfaceVariant,        0.12f),
-        surfaceDim              = wash(surfaceDim,              0.08f),
-        surfaceBright           = wash(surfaceBright,           0.08f),
-        surfaceContainerLowest  = wash(surfaceContainerLowest,  0.08f),
-        surfaceContainerLow     = wash(surfaceContainerLow,     0.08f),
-        surfaceContainer        = wash(surfaceContainer,        0.08f),
-        surfaceContainerHigh    = wash(surfaceContainerHigh,    0.08f),
-        surfaceContainerHighest = wash(surfaceContainerHighest, 0.08f),
-        outline                 = wash(outline,                 0.14f),
-        outlineVariant          = wash(outlineVariant,          0.12f),
-        surfaceTint             = accent(surfaceTint,           if (dark) 0.60f else 0.50f),
-    )
-}
-
-/**
- * Black or white text for [this] background, picked from what the colour actually turned out to
- * be rather than assumed from the theme's own dark/light mode.
- *
- * The bug this replaces: pairing an accent tinted toward the cover's own colour with a fixed
- * "dark theme → black text, light theme → white text" produced black-on-black or white-on-white
- * whenever the cover's colour pulled the accent's luminance the *other* way — a dark album sleeve
- * in light mode, or a pale one in dark mode. Every accent role now reads its own contrast from
- * where it actually landed.
- */
-private fun Color.contrastingOnColor(): Color =
-    if (luminance() > 0.5f) Color.Black else Color.White
-
-/**
- * Blends [this] colour toward white (light) or black (dark) by [factor] to produce a tonal
- * variant. Gives a convincing Material-ish result without the full MCU library.
- */
-private fun Color.harmonise(factor: Float, dark: Boolean): Color {
-    val target = if (dark) Color.White else Color.Black
-    return Color(
-        red   = red   + (target.red   - red)   * factor,
-        green = green + (target.green - green) * factor,
-        blue  = blue  + (target.blue  - blue)  * factor,
-        alpha = 1f
-    )
-}
-
-/**
- * Pins the darkest surfaces to true black for OLED panels.
- * Internal so [Theme.kt] can also call it from [WanderTheme].
- */
-internal fun ColorScheme.toAmoled(): ColorScheme = copy(
-    background              = Color.Black,
-    surface                 = Color.Black,
-    surfaceDim              = Color.Black,
-    surfaceContainerLowest  = Color.Black,
-    surfaceContainerLow     = Color(0xFF0C0B12),
-    surfaceContainer        = Color(0xFF14131C),
-    surfaceContainerHigh    = Color(0xFF1C1B26),
-    surfaceContainerHighest = Color(0xFF242330)
-)
-
-// ---------------------------------------------------------------------------
 // Animated scoped theme
 // ---------------------------------------------------------------------------
 
 /**
  * Wraps [content] in a [MaterialExpressiveTheme] whose colour scheme smoothly transitions to
  * one seeded from [seedColor] whenever the playing track changes.
- *
- * The seed itself is animated, and the scheme derived from the animated value, rather than each
- * role being animated separately — one 600 ms ease-out (matching the cover crossfade) then covers
- * every role [tintedByCover] touches, and adding a role later needs no second edit here.
- *
- * [strength] falls to 0 when [seedColor] is null, so turning the setting off or losing the art
- * fades back to [base] instead of cutting.
- *
- * When [amoled] and [dark], the darkest surfaces are pinned back to true black afterwards: the
- * wash must not lift an OLED panel off black.
  */
 @Composable
 fun CoverTintedTheme(
@@ -305,10 +165,6 @@ fun CoverTintedTheme(
 
     MaterialExpressiveTheme(
         colorScheme  = if (amoled && dark) scheme.toAmoled() else scheme,
-        // Reuses the `motion` already captured above rather than a fresh `MotionScheme.expressive()`
-        // — this used to hardcode one regardless of the ambient scheme, which was invisible while
-        // this only ever wrapped `NowPlayingScreen`, but silently overrode `WanderTheme`'s
-        // `NoMotionScheme` for "Reduce motion" once this started wrapping the whole app shell too.
         motionScheme = motion,
         shapes       = WandaShapes,
         typography   = WandaTypography,

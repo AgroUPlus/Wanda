@@ -72,7 +72,10 @@ class CollapsingTitleState internal constructor(private val listState: LazyListS
         val slot = slotBounds ?: return null
         val scrolled = listState.firstVisibleItemScrollOffset.toFloat()
         val toDock = hero.center.y - slot.center.y
-        if (scrolled <= 0f || toDock <= 0f) return null
+        // A list already resting at either end can still report a hair of `scrolled` or `toDock`
+        // left over from a fling's rounding, and animating that sliver back to zero is exactly the
+        // "title moves on its own" bug: nothing dragged it away from rest, so nothing should move it.
+        if (scrolled <= RestEpsilonPx || toDock <= RestEpsilonPx) return null
         return if (scrolled < (scrolled + toDock) / 2f) -scrolled else toDock
     }
 
@@ -112,6 +115,9 @@ fun rememberCollapsingTitleState(listState: LazyListState): CollapsingTitleState
     }
     return state
 }
+
+/** Below this, a scroll offset or docking distance reads as "already at rest," not mid-transition. */
+private const val RestEpsilonPx = 2f
 
 /**
  * Marks the hero's own title: reports its bounds to [state] and hides it once the bar has taken

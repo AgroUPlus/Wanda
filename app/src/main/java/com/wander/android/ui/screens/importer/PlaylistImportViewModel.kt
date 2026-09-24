@@ -1,95 +1,96 @@
 package com.wander.android.ui.screens.importer
 
-import android.webkit.CookieManager
+import android.webkit.WebView
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.data.importer.AppleMusicPlaylistParser
 import com.wander.android.data.importer.DeezerPlaylistParser
 import com.wander.android.data.importer.ImportProgress
 import com.wander.android.data.importer.PlatformType
-import com.wander.android.data.importer.RawImportPlaylist
-import com.wander.android.data.importer.RawUserPlaylistSummary
 import com.wander.android.data.importer.SpotifyPlaylistParser
 import com.wander.android.data.importer.TextPlaylistParser
 import com.wander.android.data.importer.YouTubePlaylistParser
 import com.wander.android.data.repository.PlaylistImportRepository
 import com.wander.android.data.sources.ytmusic.GoogleAccountManager
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-data class PlaylistImportUiState(
-    val platform: PlatformType = PlatformType.SPOTIFY,
-    val isWebMode: Boolean = true,
-    val webUrl: String = PlatformType.SPOTIFY.webUrl,
-    val reloadToken: Int = 0,
-    val pageError: String? = null,
-    val showWebBrowser: Boolean = false,
-    val detectedUrl: String? = null,
-    val isDiscovering: Boolean = false,
-    val discoveredPlaylists: List<RawUserPlaylistSummary> = emptyList(),
-    val isLoadingPlaylist: Boolean = false,
-    val loadedPlaylist: RawImportPlaylist? = null,
-    val selectedIndices: Set<Int> = emptySet(),
-    val manualInput: String = "",
-    val error: String? = null
-)
-
+/**
+ * Every source's parser reads a playlist by its share link with no session at all — Deezer and
+ * Apple Music always did this; Spotify's does too, via the web player's anonymous token (see
+ * [SpotifyPlaylistParser.parse]). A share link is exactly what "share this playlist" hands out, so
+ * this covers the playlists someone would actually paste in here. It does not cover a playlist that
+ * was never shared, or Liked Songs, which have no link at all — those need Spotify's real OAuth,
+ * deliberately left out for now (it needs a Developer Dashboard app of the user's own to add).
+ *
+ * YouTube is the one platform this app already holds an account for (see [GoogleAccountManager],
+ * signed in from Settings), so it alone gets a "browse my library" option — no separate sign-in
+ * step belongs in the importer for it.
+ */
 @HiltViewModel
 class PlaylistImportViewModel @Inject constructor(
-    private val spotifyParser: SpotifyPlaylistParser,
-    private val deezerParser: DeezerPlaylistParser,
-    private val youtubeParser: YouTubePlaylistParser,
-    private val appleMusicParser: AppleMusicPlaylistParser,
-    private val textParser: TextPlaylistParser,
     private val importRepository: PlaylistImportRepository,
-    private val googleAccountManager: GoogleAccountManager
+    private val googleAccountManager: GoogleAccountManager,
+    private val parserCoordinator: PlaylistParserCoordinator
 ) : ViewModel() {
+
+    constructor(
+        spotifyParser: SpotifyPlaylistParser,
+        deezerParser: DeezerPlaylistParser,
+        youtubeParser: YouTubePlaylistParser,
+        appleMusicParser: AppleMusicPlaylistParser,
+        textParser: TextPlaylistParser,
+        importRepository: PlaylistImportRepository,
+        googleAccountManager: GoogleAccountManager
+    ) : this(
+        importRepository = importRepository,
+        googleAccountManager = googleAccountManager,
+        parserCoordinator = PlaylistParserCoordinator(
+            spotifyParser,
+            deezerParser,
+            youtubeParser,
+            appleMusicParser,
+            textParser
+        )
+    )
 
     private val _state = MutableStateFlow(PlaylistImportUiState())
     val state: StateFlow<PlaylistImportUiState> = _state.asStateFlow()
 
     val progress: StateFlow<ImportProgress> = importRepository.progress
+    val isYouTubeLoggedIn: StateFlow<Boolean> = googleAccountManager.isLoggedIn
 
-    init {
-        checkCurrentPlatform(PlatformType.SPOTIFY)
+    /**
+     * The live WebView backing Spotify's browse step, once it exists — see [SpotifyBrowseWebView]
+     * and [SpotifyPlaylistParser]'s class doc for why Spotify alone needs one just to fetch a link.
+     * A plain field, not state: it is Android View plumbing the screen owns, not UI state to render.
+     */
+    private var spotifyWebView: WebView? = null
+
+    fun setSpotifyWebView(webView: WebView?) {
+        spotifyWebView = webView
     }
 
     fun selectPlatform(platform: PlatformType) {
         _state.value = _state.value.copy(
             platform = platform,
-            webUrl = platform.webUrl,
-            reloadToken = _state.value.reloadToken + 1,
-            pageError = null,
-            showWebBrowser = false,
-            detectedUrl = null,
             discoveredPlaylists = emptyList(),
             loadedPlaylist = null,
             selectedIndices = emptySet(),
+            manualInput = "",
             error = null
         )
-        checkCurrentPlatform(platform)
+        if (platform == PlatformType.YOUTUBE && googleAccountManager.isLoggedIn.value) {
+            checkYouTubePlaylists()
+        }
     }
 
-    fun openWebBrowser() {
-        _state.value = _state.value.copy(showWebBrowser = true)
-    }
-
-    fun onPageError(message: String) {
-        _state.value = _state.value.copy(pageError = message)
-    }
-
-    fun clearPageError() {
-        _state.value = _state.value.copy(pageError = null)
-    }
-
-    fun closeWebBrowser() {
-        _state.value = _state.value.copy(showWebBrowser = false)
+    fun backToPlatformPicker() {
+        _state.value = _state.value.copy(platform = null, error = null)
     }
 
     fun clearLoadedPlaylist() {
@@ -100,150 +101,47 @@ class PlaylistImportViewModel @Inject constructor(
         )
     }
 
-    fun logout() {
-        val platform = _state.value.platform
-        if (platform == PlatformType.SPOTIFY) {
-            CookieManager.getInstance().apply {
-                setCookie(SPOTIFY_ORIGIN, "sp_dc=; Max-Age=0")
-                setCookie("https://accounts.spotify.com", "sp_dc=; Max-Age=0")
-                flush()
-            }
-        }
-        _state.value = _state.value.copy(
-            discoveredPlaylists = emptyList(),
-            showWebBrowser = true,
-            webUrl = platform.webUrl,
-            reloadToken = _state.value.reloadToken + 1,
-            pageError = null
-        )
-    }
-
-    private fun checkCurrentPlatform(platform: PlatformType) {
-        when (platform) {
-            PlatformType.SPOTIFY -> {
-                val cookie = CookieManager.getInstance().getCookie(SPOTIFY_ORIGIN)
-                    ?: CookieManager.getInstance().getCookie("https://accounts.spotify.com")
-                if (!cookie.isNullOrBlank() && cookie.contains("sp_")) {
-                    checkSpotifyPlaylists(cookie)
-                }
-            }
-            PlatformType.YOUTUBE -> {
-                if (googleAccountManager.isLoggedIn.value) {
-                    checkYouTubePlaylists()
-                }
-            }
-            else -> {}
+    /** Called on returning from Settings' YouTube sign-in — picks the account state back up. */
+    fun recheckYouTubeSession() {
+        if (_state.value.platform == PlatformType.YOUTUBE &&
+            _state.value.discoveredPlaylists.isEmpty() &&
+            googleAccountManager.isLoggedIn.value
+        ) {
+            checkYouTubePlaylists()
         }
     }
 
-    fun onCookieCaptured(cookie: String?) {
-        if (cookie.isNullOrBlank()) return
-        val platform = _state.value.platform
-        if (platform == PlatformType.SPOTIFY && cookie.contains("sp_")) {
-            checkSpotifyPlaylists(cookie)
-        }
-    }
-
-    fun checkSpotifyPlaylists(cookie: String?) {
-        viewModelScope.launch {
-            _state.value = _state.value.copy(isDiscovering = true)
-            val result = withContext(Dispatchers.IO) {
-                spotifyParser.fetchUserPlaylists(cookie)
-            }
-            result.onSuccess { lists ->
-                if (lists.isNotEmpty()) {
-                    _state.value = _state.value.copy(
-                        isDiscovering = false,
-                        discoveredPlaylists = lists,
-                        showWebBrowser = false,
-                        error = null
-                    )
-                } else {
-                    _state.value = _state.value.copy(isDiscovering = false)
-                }
-            }.onFailure { err ->
-                // Not being signed in yet is the expected state while the browser is open,
-                // so only a real failure is worth putting in front of the user.
-                val message = err.message?.takeUnless { it.startsWith(SIGN_IN_PROMPT) }
-                _state.value = _state.value.copy(isDiscovering = false, error = message)
-            }
-        }
+    /** Drops the discovered library grid so the direct-link form shows instead. */
+    fun switchToDirectLink() {
+        _state.value = _state.value.copy(discoveredPlaylists = emptyList())
     }
 
     fun checkYouTubePlaylists() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isDiscovering = true)
-            val result = withContext(Dispatchers.IO) {
-                youtubeParser.fetchUserPlaylists()
-            }
-            result.onSuccess { lists ->
-                if (lists.isNotEmpty()) {
-                    _state.value = _state.value.copy(
-                        isDiscovering = false,
-                        discoveredPlaylists = lists,
-                        showWebBrowser = false,
-                        error = null
-                    )
-                } else {
-                    _state.value = _state.value.copy(isDiscovering = false)
-                }
+            parserCoordinator.fetchYouTubePlaylists().onSuccess { lists ->
+                _state.value = _state.value.copy(
+                    isDiscovering = false,
+                    discoveredPlaylists = lists,
+                    error = null
+                )
             }.onFailure {
                 _state.value = _state.value.copy(isDiscovering = false)
             }
         }
     }
 
-    fun setWebMode(isWeb: Boolean) {
-        _state.value = _state.value.copy(isWebMode = isWeb, error = null)
-    }
-
     fun setManualInput(input: String) {
-        val detected = PlatformType.detect(input)
-        _state.value = _state.value.copy(manualInput = input, platform = detected, error = null)
-    }
-
-    fun onWebPageUrlChanged(url: String) {
-        val detected = detectPlaylistUrl(url)
-        _state.value = _state.value.copy(detectedUrl = detected)
-    }
-
-    private fun detectPlaylistUrl(url: String): String? {
-        val trimmed = url.trim()
-        return when {
-            trimmed.contains("spotify.com/playlist/") || trimmed.contains("spotify.link/") -> trimmed
-            trimmed.contains("deezer.com") && trimmed.contains("/playlist/") -> trimmed
-            trimmed.contains("youtube.com") && trimmed.contains("list=") -> trimmed
-            trimmed.contains("music.apple.com") && trimmed.contains("/playlist/") -> trimmed
-            else -> null
-        }
+        _state.value = _state.value.copy(manualInput = input, error = null)
     }
 
     fun loadPlaylist(url: String, fallbackTitle: String? = null, fallbackCover: String? = null) {
+        val fetcher: (suspend (String, Map<String, String>) -> String)? = spotifyWebView?.let { webView ->
+            { fetchUrl: String, headers: Map<String, String> -> webView.fetchText(fetchUrl, headers) }
+        }
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoadingPlaylist = true, error = null)
-            val platform = PlatformType.detect(url)
-            val cookie = if (platform == PlatformType.SPOTIFY) {
-                CookieManager.getInstance().getCookie(SPOTIFY_ORIGIN)
-            } else null
-
-            val result: Result<RawImportPlaylist> = withContext(Dispatchers.IO) {
-                when (platform) {
-                    PlatformType.SPOTIFY -> spotifyParser.parse(url, cookie)
-                    PlatformType.DEEZER -> deezerParser.parse(url)
-                    PlatformType.YOUTUBE -> youtubeParser.parse(url)
-                    PlatformType.APPLE_MUSIC -> appleMusicParser.parse(url)
-                    PlatformType.PLAIN_TEXT -> textParser.parse(url)
-                }
-            }
-
-            result.onSuccess { playlist ->
-                val finalTitle = if (!fallbackTitle.isNullOrBlank() && (playlist.title.contains("Playlist", ignoreCase = true) || playlist.title.isBlank())) {
-                    fallbackTitle
-                } else {
-                    playlist.title
-                }
-                val finalCover = playlist.coverUrl ?: fallbackCover
-                val updated = playlist.copy(title = finalTitle, coverUrl = finalCover)
+            parserCoordinator.parsePlaylist(url, fallbackTitle, fallbackCover, fetcher).onSuccess { updated ->
                 _state.value = _state.value.copy(
                     isLoadingPlaylist = false,
                     loadedPlaylist = updated,
@@ -287,12 +185,6 @@ class PlaylistImportViewModel @Inject constructor(
                 tracksToImport = filteredTracks
             )
         }
-    }
-
-    private companion object {
-        /** Cookie-jar origin for the Spotify web session; not a request URL. */
-        const val SPOTIFY_ORIGIN = "https://open.spotify.com"
-        const val SIGN_IN_PROMPT = "Please sign in"
     }
 
     fun reset() {

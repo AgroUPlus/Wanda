@@ -1,21 +1,15 @@
 package com.wander.android.ui.screens.social
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.BluetoothSearching
-import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -23,8 +17,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,8 +30,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
-import com.wander.android.core.p2p.NearbyPeers
-import com.wander.android.core.p2p.OffGridLink
 import com.wander.android.core.permissions.rememberNearbyGate
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
@@ -48,12 +38,7 @@ import com.wander.android.ui.components.rememberHaptics
 /**
  * Handing music to the phone next to you, with no network of any kind.
  *
- * The one tier that works in a car, on a plane, at a festival. BLE says who is here — cheaply
- * enough to leave running while the screen is on — and Wi-Fi Direct carries the audio once somebody
- * has been chosen, because BLE at a few hundred kilobits would take a day to move an album.
- *
- * Everything stops when this screen goes away. Advertising is a broadcast to a room and a link is a
- * radio held open; neither is something to leave running behind a screen nobody is looking at.
+ * BLE says who is here and Wi-Fi Direct carries the audio once somebody has been chosen.
  */
 @Composable
 internal fun OffGridScreen(
@@ -65,9 +50,6 @@ internal fun OffGridScreen(
     val withNearby = rememberNearbyGate()
     val haptics = rememberHaptics()
 
-    // Only the scan is tied to the screen. Tearing the link down here is what made off-grid
-    // unusable: connecting and then walking to the player to play something killed the link on
-    // the way out. "Stop sharing" is the gesture that ends it, and it is the only one.
     DisposableEffect(Unit) { onDispose { viewModel.onScreenLeft() } }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -82,10 +64,6 @@ internal fun OffGridScreen(
             }
             Text(
                 text = stringResource(R.string.common_off_grid),
-                // Weighted explicitly, because `displaySmall` is W400 in Material 3. At this size
-                // a normal weight reads *lighter* than the W500 `titleLarge` headings elsewhere in
-                // the app despite being much bigger, which is why this title looked unemphasised
-                // next to its own siblings.
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = 4.dp)
@@ -133,12 +111,7 @@ internal fun OffGridScreen(
                         ) { Text(stringResource(R.string.social_stop_sharing)) }
                     } else {
                         Button(
-                            // The permissions are asked at this tap, where the screen above says
-                            // what they are for. Denied, the action still runs and reports honestly.
                             onClick = {
-                                // `confirmed`, not `toggled`: this does not flip a switch, it asks
-                                // two radios to start and may take seconds to show anything. The
-                                // tick acknowledges the tap while the screen still looks unchanged.
                                 haptics.confirmed()
                                 withNearby { viewModel.startSharing() }
                             },
@@ -148,9 +121,6 @@ internal fun OffGridScreen(
                 }
             }
 
-            // Above the room list and outside the `isAdvertising` guard, because being connected
-            // to is not conditional on still advertising — and the phone that was tapped may never
-            // have opened this screen before the link existed.
             if (state.links.isNotEmpty()) {
                 item(key = "links_header") { SectionHeader("Connected") }
                 items(state.links, key = { "link-${it.deviceId}" }) { link ->
@@ -182,197 +152,5 @@ internal fun OffGridScreen(
                 }
             }
         }
-    }
-}
-
-/** Why this screen exists, in the two sentences that decide whether anyone turns it on. */
-@Composable
-private fun OffGridExplainer() {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Rounded.Lock,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.social_encrypted_nothing_leaves_two_phones),
-                style = MaterialTheme.typography.titleSmall
-            )
-        }
-        Text(
-            text = stringResource(R.string.social_share_music_someone_beside_over),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun SearchingRow() {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)
-    ) {
-        LoadingIndicator(modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(12.dp))
-        Text(
-            text = stringResource(R.string.social_looking_phones_nearby),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-/**
- * One device in the room.
- *
- * Named by its identity fingerprint rather than by a device name: the beacon deliberately carries
- * no name, because a Bluetooth name is usually its owner's and it would be broadcast to everybody
- * — see `OffGridBeacon`. The fingerprint is also what the pairing check verifies, so showing it is
- * showing the thing that was actually confirmed.
- */
-@Composable
-private fun PeerRow(
-    peer: NearbyPeers.Peer,
-    isLinked: Boolean,
-    isBusy: Boolean,
-    onClick: () -> Unit
-) {
-    ListItem(
-        headlineContent = { Text(stringResource(R.string.common_device, peer.beacon.shortFingerprint())) },
-        supportingContent = {
-            Text(if (isLinked) "Connected, encrypted" else signalWord(peer.rssi))
-        },
-        leadingContent = {
-            Icon(Icons.Rounded.BluetoothSearching, contentDescription = null)
-        },
-        trailingContent = {
-            when {
-                isLinked -> Icon(Icons.Rounded.Lock, contentDescription = stringResource(R.string.social_linked))
-                isBusy -> LoadingIndicator(modifier = Modifier.size(20.dp))
-                else -> null
-            }
-        },
-        modifier = Modifier.fillMaxWidth()
-    )
-    if (!isLinked && !isBusy) {
-        Row(modifier = Modifier.padding(start = 56.dp, end = 20.dp, bottom = 8.dp)) {
-            FilledTonalButton(onClick = onClick, shapes = ButtonDefaults.shapes()) {
-                Text(stringResource(R.string.social_connect))
-            }
-        }
-    }
-}
-
-/**
- * Following what the linked peer plays, with no server in between.
- *
- * Its own row rather than a button on the link, because following is a separate decision from being
- * connected: a link is also what a peer uses to fetch tracks from *you*, and the two should not be
- * one switch.
- */
-@Composable
-private fun ListenAlongRow(
-    isFollowing: Boolean,
-    nowPlaying: String?,
-    unresolvable: String?,
-    onStart: () -> Unit,
-    onStop: () -> Unit
-) {
-    ListItem(
-        headlineContent = { Text(if (isFollowing) "Listening along" else "Listen along") },
-        supportingContent = {
-            Text(
-                when {
-                    // Named rather than hidden: the listener should know the peer moved on to
-                    // something this phone has no copy of, which off-grid it cannot go and fetch.
-                    unresolvable != null -> "Can't find \"$unresolvable\" on this phone"
-                    nowPlaying != null -> nowPlaying
-                    isFollowing -> "Waiting for them to play something"
-                    else -> "Play whatever the linked device plays"
-                }
-            )
-        },
-        leadingContent = { Icon(Icons.Rounded.BluetoothSearching, contentDescription = null) },
-        modifier = Modifier.fillMaxWidth()
-    )
-    Row(modifier = Modifier.padding(start = 56.dp, end = 20.dp, bottom = 8.dp)) {
-        FilledTonalButton(
-            onClick = if (isFollowing) onStop else onStart,
-            shapes = ButtonDefaults.shapes()
-        ) { Text(if (isFollowing) "Stop following" else "Listen along") }
-    }
-}
-
-/**
- * A live link, on whichever phone is reading it.
- *
- * Says which way it was made, because the two are not the same thing to the person holding the
- * phone: one of them chose this, the other was chosen. The device that was tapped previously had
- * no row at all — it served audio to a stranger with nothing on screen to say so, and no way to
- * stop it short of leaving the screen.
- */
-@Composable
-private fun ConnectedRow(
-    link: OffGridLink,
-    onDisconnect: (OffGridLink) -> Unit
-) {
-    ListItem(
-        headlineContent = { Text(stringResource(R.string.common_device, shortId(link.deviceId))) },
-        supportingContent = {
-            Text(
-                when (link.role) {
-                    OffGridLink.Role.INITIATED -> "Connected, encrypted"
-                    OffGridLink.Role.ACCEPTED -> "Connected to you, encrypted"
-                }
-            )
-        },
-        leadingContent = { Icon(Icons.Rounded.Lock, contentDescription = null) },
-        modifier = Modifier.fillMaxWidth()
-    )
-    Row(modifier = Modifier.padding(start = 56.dp, end = 20.dp, bottom = 8.dp)) {
-        FilledTonalButton(
-            onClick = { onDisconnect(link) },
-            shapes = ButtonDefaults.shapes()
-        ) { Text(stringResource(R.string.social_disconnect)) }
-    }
-}
-
-/** The beacon device id as the four hex bytes it is, matching what a peer row shows. */
-private fun shortId(deviceId: Int): String = "%08X".format(deviceId).chunked(4).joinToString(" ")
-
-/**
- * Signal as a word, not a number.
- *
- * dBm means nothing to anybody, and the only decision it informs is "is that the phone in my hand
- * or one two rooms away".
- */
-private fun signalWord(rssi: Int): String = when {
-    rssi > -55 -> "Right here"
-    rssi > -70 -> "Nearby"
-    else -> "Further away"
-}
-
-@Composable
-private fun UnsupportedNotice() {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = Modifier.padding(20.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.social_phone_cannot_found_off_grid),
-            style = MaterialTheme.typography.titleMedium
-        )
-        Text(
-            text = stringResource(R.string.social_being_findable_needs_bluetooth_peripheral),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }

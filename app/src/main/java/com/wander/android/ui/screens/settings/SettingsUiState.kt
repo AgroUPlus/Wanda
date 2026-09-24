@@ -48,6 +48,7 @@ internal data class SettingsUiState(
     val agroVisibility: com.wander.android.data.sources.agro.AgroVisibility?,
     val agroSyncSettings: Boolean,
     val agroProxyEnabled: Boolean,
+    val externalLyricsEnabled: Boolean,
     val librarySync: Boolean,
     val p2pSync: Boolean,
     val serverArchive: Boolean,
@@ -117,6 +118,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val agroVisibility by viewModel.agroVisibility.collectAsStateWithLifecycle()
     val agroSyncSettings by viewModel.agroSyncSettings.collectAsStateWithLifecycle()
     val agroProxyEnabled by viewModel.agroProxyEnabled.collectAsStateWithLifecycle()
+    val externalLyricsEnabled by viewModel.externalLyricsEnabled.collectAsStateWithLifecycle()
     val librarySync by viewModel.librarySyncEnabled.collectAsStateWithLifecycle()
     val p2pSync by viewModel.p2pSyncEnabled.collectAsStateWithLifecycle()
     val serverArchive by viewModel.serverArchiveEnabled.collectAsStateWithLifecycle()
@@ -168,6 +170,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         agroVisibility = agroVisibility,
         agroSyncSettings = agroSyncSettings,
         agroProxyEnabled = agroProxyEnabled,
+        externalLyricsEnabled = externalLyricsEnabled,
         librarySync = librarySync,
         p2pSync = p2pSync,
         serverArchive = serverArchive,

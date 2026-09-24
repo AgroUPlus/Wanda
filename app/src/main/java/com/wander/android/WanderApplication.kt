@@ -97,6 +97,10 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
         // Needed for YT Music's PO Token / signature-cipher deobfuscation (see InnerTubeClient).
         val isDebuggable = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         ZemerCipher.initialize(context = this, debugLogging = isDebuggable)
+        // Lets a debug build's importer WebView (Spotify/Deezer/YouTube sign-in) be inspected live
+        // from chrome://inspect on a connected machine — the only way to see a page that renders
+        // nothing and logs nothing itself, which `console.*`-only logging can't catch.
+        android.webkit.WebView.setWebContentsDebuggingEnabled(isDebuggable)
     }
 }
 

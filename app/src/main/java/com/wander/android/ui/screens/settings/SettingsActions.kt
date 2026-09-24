@@ -61,6 +61,7 @@ internal data class SettingsActions(
     val onIncognitoChange: (Boolean) -> Unit,
     val onVisibilityChange: (AgroVisibility) -> Unit,
     val onProxyChange: (Boolean) -> Unit,
+    val onExternalLyricsChange: (Boolean) -> Unit,
     val onForgetEverything: () -> Unit,
     // About
     val onArtistReleaseNotificationsChange: (Boolean) -> Unit,

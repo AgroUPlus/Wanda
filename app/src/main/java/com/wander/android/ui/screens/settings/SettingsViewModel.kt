@@ -1,69 +1,45 @@
 package com.wander.android.ui.screens.settings
 
-import com.wander.android.core.notification.WorkProgressNotification
+import android.content.Context
+import android.content.IntentSender
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.wander.android.core.cache.AudioCacheManager
+import com.wander.android.core.audio.fingerprint.FingerprintIndexing
+import com.wander.android.core.audio.fingerprint.FingerprintProgress
 import com.wander.android.core.cache.DownloadScheduler
 import com.wander.android.core.i18n.AppLocaleStore
+import com.wander.android.core.notification.WorkProgressNotification
 import com.wander.android.core.security.SecureStorage
-import com.wander.android.core.sync.LibrarySyncScheduler
-import com.wander.android.core.sync.LocalFileDeleter
 import com.wander.android.core.update.UpdateCheckResult
-import com.wander.android.core.work.ArtistReleaseScheduler
 import com.wander.android.core.update.UpdateChecker
+import com.wander.android.core.work.ArtistReleaseScheduler
+import com.wander.android.core.work.WorkControls
 import com.wander.android.data.repository.IncognitoRepository
-import com.wander.android.data.repository.LibrarySyncRepository
 import com.wander.android.data.repository.SyncProgress
-import com.wander.android.data.sources.agro.AgroClient
-import com.wander.android.data.sources.agro.AgroAccountApi
-import com.wander.android.data.sources.agro.AgroProfileApi
-import com.wander.android.data.sources.agro.AgroSessionApi
 import com.wander.android.data.sources.agro.AgroSyncedSettings
 import com.wander.android.data.sources.agro.AgroVisibility
-import com.wander.android.data.sources.agro.StorageUsage
-import com.wander.android.data.sources.local.LocalMusicSource
-import com.wander.android.data.sources.navidrome.NavidromeSource
-import com.wander.android.data.sources.ytmusic.GoogleAccountManager
-import com.wander.android.data.sources.ytmusic.YTMusicSource
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
-import kotlinx.coroutines.Dispatchers
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
 @HiltViewModel
 internal class SettingsViewModel @Inject constructor(
     private val secureStorage: SecureStorage,
     private val appLocaleStore: AppLocaleStore,
-    private val cacheManager: AudioCacheManager,
-    private val navidromeSource: NavidromeSource,
-    private val accountManager: GoogleAccountManager,
-    private val ytMusicSource: YTMusicSource,
-    private val localSource: LocalMusicSource,
     private val downloadScheduler: DownloadScheduler,
-    private val agroClient: AgroClient,
-    private val pairing: AgroPairingController,
-    private val profileApi: AgroProfileApi,
-    private val sessionApi: AgroSessionApi,
-    private val librarySync: LibrarySyncRepository,
-    private val librarySyncScheduler: LibrarySyncScheduler,
-    private val localFileDeleter: LocalFileDeleter,
     private val updateChecker: UpdateChecker,
     private val incognitoRepository: IncognitoRepository,
     private val artistReleaseScheduler: ArtistReleaseScheduler,
-    private val accountApi: AgroAccountApi,
-    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
-    private val workControls: com.wander.android.core.work.WorkControls,
-    private val fingerprintProgress: com.wander.android.core.audio.fingerprint.FingerprintProgress,
-    private val socialRepository: com.wander.android.data.repository.SocialRepository,
-    private val dropsRepository: com.wander.android.data.repository.DropsRepository,
-    private val catalogSync: com.wander.android.data.repository.CatalogSyncRepository
+    private val workControls: WorkControls,
+    private val fingerprintProgress: FingerprintProgress,
+    private val agroCoordinator: SettingsAgroCoordinator,
+    private val librarySyncCoordinator: SettingsLibrarySyncCoordinator,
+    private val accountCoordinator: SettingsAccountCoordinator,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     val appVersion: String get() = com.wander.android.BuildConfig.VERSION_NAME
@@ -80,11 +56,7 @@ internal class SettingsViewModel @Inject constructor(
             _isCheckingForUpdate.value = true
             _updateCheck.value = updateChecker.checkForUpdate()
             _isCheckingForUpdate.value = false
-        
-    fun setAgroProxyEnabled(enabled: Boolean) {
-        secureStorage.setAgroProxyEnabled(enabled)
-    }
-}
+        }
     }
 
     val isAutoUpdateCheckEnabled: StateFlow<Boolean> = secureStorage.isAutoUpdateCheckEnabled
@@ -92,34 +64,27 @@ internal class SettingsViewModel @Inject constructor(
     val isArtistReleaseNotificationEnabled: StateFlow<Boolean> =
         secureStorage.isArtistReleaseNotificationEnabled
 
-    /**
-     * Turning it on schedules the daily check; turning it off cancels it.
-     *
-     * The work is scheduled here rather than left to the next launch, so the switch takes effect
-     * when it is touched — a setting that only starts working after a restart reads as broken.
-     */
     fun setArtistReleaseNotificationEnabled(enabled: Boolean) {
         secureStorage.setArtistReleaseNotificationEnabled(enabled)
         if (enabled) artistReleaseScheduler.enable() else artistReleaseScheduler.disable()
     }
+
     fun setAutoUpdateCheckEnabled(enabled: Boolean) = secureStorage.setAutoUpdateCheckEnabled(enabled)
 
-    val navidromeConnected: StateFlow<Boolean> = secureStorage.navidromeConfigured
-    val youTubeConnected: StateFlow<Boolean> = accountManager.isLoggedIn
+    // ── Accounts (delegated to SettingsAccountCoordinator) ─────────────────────────────────
 
-    /**
-     * Who is signed in to YouTube Music.
-     *
-     * Empty until it is known, which the row renders as a plain "Signed in" — a name that has not
-     * arrived yet must not make the row read as though nobody is.
-     */
-    private val _youTubeAccount = MutableStateFlow(accountManager.accountName)
-    val youTubeAccount: StateFlow<String> = _youTubeAccount.asStateFlow()
+    val navidromeConnected: StateFlow<Boolean> = accountCoordinator.navidromeConnected
+    val youTubeConnected: StateFlow<Boolean> = accountCoordinator.youTubeConnected
+    val youTubeAccount: StateFlow<String> = accountCoordinator.youTubeAccount
+    val localAvailable: StateFlow<Boolean> = accountCoordinator.localAvailable
 
-    fun refreshYouTubeAccount() {
-        viewModelScope.launch { _youTubeAccount.value = ytMusicSource.accountName() }
-    }
-    val localAvailable: StateFlow<Boolean> = localSource.isConfigured
+    fun refreshYouTubeAccount() = accountCoordinator.refreshYouTubeAccount(viewModelScope)
+    fun disconnectNavidrome() = accountCoordinator.disconnectNavidrome()
+    fun disconnectYouTube() = accountCoordinator.disconnectYouTube()
+    fun rescanLocalLibrary() = accountCoordinator.rescanLocalLibrary(viewModelScope)
+    fun forgetEverything() = accountCoordinator.forgetEverything(viewModelScope) { resetAgroPairing() }
+
+    // ── Display & Playback Preferences ─────────────────────────────────────────────────────
 
     val isMonetDynamic: StateFlow<Boolean> = secureStorage.isMonetDynamic
     val isAmoledBlack: StateFlow<Boolean> = secureStorage.isAmoledBlack
@@ -129,347 +94,9 @@ internal class SettingsViewModel @Inject constructor(
     val isReduceMotion: StateFlow<Boolean> = secureStorage.isReduceMotion
     val isLetterByLetterLyricsEnabled: StateFlow<Boolean> = secureStorage.isLetterByLetterLyricsEnabled
     val isOfflineMode: StateFlow<Boolean> = secureStorage.isOfflineMode
-
     val isPreloadNextEnabled: StateFlow<Boolean> = secureStorage.isPreloadNextEnabled
-
     val isSkipSilenceEnabled: StateFlow<Boolean> = secureStorage.isSkipSilenceEnabled
-
     val isIndexOnMobileDataEnabled: StateFlow<Boolean> = secureStorage.isIndexOnMobileDataEnabled
-
-    val isMeasuringPaused: StateFlow<Boolean> =
-        workControls.isPaused(WorkProgressNotification.Kind.FINGERPRINT)
-
-    val isDownloadingPaused: StateFlow<Boolean> =
-        workControls.isPaused(WorkProgressNotification.Kind.DOWNLOAD)
-
-    /**
-     * Pause and resume, from the screen as well as from the notification.
-     *
-     * Both surfaces write through the same [WorkControls] and read the same flow, so a pause set on
-     * one is visible on the other. A notification that is dismissed or never seen — the user turned
-     * the channel off — would otherwise leave the pause unreachable.
-     */
-    fun setMeasuringPaused(paused: Boolean) = setPaused(WorkProgressNotification.Kind.FINGERPRINT, paused)
-
-    fun setDownloadingPaused(paused: Boolean) = setPaused(WorkProgressNotification.Kind.DOWNLOAD, paused)
-
-    private fun setPaused(kind: WorkProgressNotification.Kind, paused: Boolean) {
-        if (paused) {
-            workControls.pause(kind)
-        } else {
-            // Resuming is also the one gesture that means "try the ones that failed again".
-            if (kind == WorkProgressNotification.Kind.FINGERPRINT) fingerprintProgress.retryFailures()
-            workControls.resume(kind)
-        }
-    }
-    val agroConnected: StateFlow<Boolean> = secureStorage.agroConfigured
-
-    /** Blank until the user names one; see [SecureStorage.shareDomain]. */
-    val shareDomain: StateFlow<String> = secureStorage.shareDomain
-
-    /**
-     * The domain a paired Agro server publishes, blank if it has none or the feature is off.
-     * When it is set it takes precedence, and the settings row says so rather than showing a
-     * local value that is not the one being used.
-     */
-    val agroShareDomain: StateFlow<String> = secureStorage.agroShareDomain
-
-    fun setShareDomain(domain: String) = secureStorage.setShareDomain(domain)
-
-    /**
-     * Read from the repository, not from storage, so a switch flipped on another of this account's
-     * devices is reflected here rather than only after a restart.
-     */
-    val isIncognito: StateFlow<Boolean> = incognitoRepository.isIncognito
-
-    private val _cacheBytes = MutableStateFlow(0L)
-    val cacheBytes: StateFlow<Long> = _cacheBytes.asStateFlow()
-
-    val navidromeServer: String get() = secureStorage.navidromeServerUrl
-    val agroDevicePetname: String get() = secureStorage.agroDevicePetname.ifEmpty { "Wanda Android" }
-    val agroDeviceId: String get() = secureStorage.agroDeviceId
-    val agroServer: String get() = secureStorage.agroServerUrl
-
-    /**
-     * Manual pairing, for the case the QR cannot cover: the server behind a reverse proxy on a
-     * domain the QR was never told about, or a QR printed with a `localhost` address that means
-     * something else entirely on a phone.
-     */
-    internal val agroPairing: StateFlow<AgroPairingState> = pairing.state
-    internal val agroConnection: StateFlow<AgroConnectionState> = pairing.connection
-
-    /** The address a blank server field means, so the dialog and the client agree on one default. */
-    val agroDefaultServer: String get() = AgroClient.DEFAULT_SERVER_URL
-
-    fun pairAgro(server: String, username: String, passphrase: String) {
-        viewModelScope.launch { pairing.pair(server, username, passphrase) }
-    }
-
-    fun signUpAgro(server: String, username: String, inviteCode: String) {
-        viewModelScope.launch { pairing.signUp(server, username, inviteCode) }
-    }
-
-    fun resetAgroPairing() = pairing.reset()
-
-    private val _agroVisibility = MutableStateFlow<AgroVisibility?>(null)
-    internal val agroVisibility: StateFlow<AgroVisibility?> = _agroVisibility.asStateFlow()
-
-    /**
-     * Reads the switches back from the server rather than caching them here.
-     *
-     * They are the server's state, not this device's: another of your devices can change them, and
-     * a stale local copy would show the user a privacy setting that is not the one in force.
-     */
-    fun refreshAgroVisibility() {
-        if (!secureStorage.agroConfigured.value) {
-            _agroVisibility.value = null
-            return
-        }
-        viewModelScope.launch {
-            _agroVisibility.value = profileApi.profile(secureStorage.agroUsername)
-                .getOrNull()
-                ?.let {
-                    AgroVisibility(
-                        it.showNowPlaying, it.showStats, it.discoverable,
-                        popularOptIn = it.popularOptIn
-                    )
-                }
-        }
-    }
-
-    fun setAgroVisibility(visibility: AgroVisibility) {
-        // Shown immediately, then confirmed. A privacy switch that lags a round trip behind the
-        // finger invites a second tap that puts it back where it started.
-        _agroVisibility.value = visibility
-        viewModelScope.launch {
-            profileApi.setVisibility(visibility).onSuccess { profile ->
-                _agroVisibility.value = AgroVisibility(
-                    profile.showNowPlaying, profile.showStats, profile.discoverable,
-                    popularOptIn = profile.popularOptIn
-                )
-            }.onFailure { refreshAgroVisibility() }
-        }
-    }
-
-    fun refreshAgroConnection() {
-        viewModelScope.launch { pairing.refreshConnection() }
-    }
-
-    val agroSyncSettings: StateFlow<Boolean> = secureStorage.agroSyncSettings
-    val agroProxyEnabled: StateFlow<Boolean> = secureStorage.agroProxyEnabled
-
-    /**
-     * What Agro currently holds for Navidrome. Surfaced rather than silently applied: signing in
-     * needs the password, which Agro deliberately never carries, so the most this can do is tell
-     * the user which server to sign into and prefill it for them.
-     */
-    private val _syncedNavidrome = MutableStateFlow<AgroSyncedSettings?>(null)
-    val syncedNavidrome: StateFlow<AgroSyncedSettings?> = _syncedNavidrome.asStateFlow()
-
-    fun refreshSyncedSettings() {
-        if (!secureStorage.agroSyncSettings.value) {
-            _syncedNavidrome.value = null
-            return
-        }
-        viewModelScope.launch {
-            _syncedNavidrome.value = sessionApi.syncedSettings().getOrNull()
-        }
-    }
-
-    /**
-     * Turning sync on publishes what this device already knows, so the other clients pick it up
-     * without waiting for the next Navidrome reconnection.
-     */
-    fun setAgroSyncSettings(enabled: Boolean) {
-        secureStorage.setAgroSyncSettings(enabled)
-        if (!enabled) return
-        val server = secureStorage.navidromeServerUrl
-        val user = secureStorage.navidromeUsername
-        if (server.isBlank() || user.isBlank()) {
-            // Nothing of ours to publish yet, so pull instead: the other device may already have
-            // signed in somewhere this one has not.
-            refreshSyncedSettings()
-            return
-        }
-        viewModelScope.launch {
-            sessionApi.pushSyncedSettings(server, user)
-            refreshSyncedSettings()
-        }
-    }
-
-    // ── Library sync ────────────────────────────────────────────────────────────────────────
-
-    val librarySyncEnabled: StateFlow<Boolean> = secureStorage.agroLibrarySyncFlow
-    val p2pSyncEnabled: StateFlow<Boolean> = secureStorage.agroP2pSyncFlow
-    val serverArchiveEnabled: StateFlow<Boolean> = secureStorage.agroServerArchiveFlow
-
-    /** On by default; see [SecureStorage]'s doc comment on the flag for why. */
-    val popularityEnabled: StateFlow<Boolean> = secureStorage.agroPopularityContributionFlow
-
-    /** Same disclosure reasoning, but off by default — a fingerprint list names exact recordings. */
-    val catalogTradeEnabled: StateFlow<Boolean> = secureStorage.agroCatalogTradeFlow
-
-    /**
-     * What the trade has actually amounted to, in both directions.
-     *
-     * The toggle said what it would do and then never mentioned it again, so the one thing a user
-     * could not find out about a setting they had turned on was whether it was doing anything.
-     */
-    val fingerprintsShared: StateFlow<Int> = catalogSync.fingerprintsShared
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
-
-    val lyricsReceived: StateFlow<Int> = catalogSync.lyricsReceived
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
-
-    /**
-     * Whether the server lets this account archive.
-     *
-     * Starts false so the row is never briefly offered to an account that cannot use it: showing
-     * it enabled and then disabling it a moment later reads as the app changing its mind.
-     */
-    private val _canArchive = MutableStateFlow(false)
-    val canArchive: StateFlow<Boolean> = _canArchive.asStateFlow()
-    val librarySyncProgress: StateFlow<SyncProgress> = librarySync.progress
-
-    val pendingUploads: StateFlow<Int> = librarySync.pendingUploadCount
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
-    val syncedTracks: StateFlow<Int> = librarySync.syncedCount
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
-
-    /** How much local audio exists at all, so a zero can explain itself rather than just sit there. */
-    val localTracks: StateFlow<Int> = librarySync.localTrackCount
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
-
-    /**
-     * Storage used against the account's quota, or null when it could not be asked.
-     *
-     * Refreshed when Settings is opened rather than observed: nothing else on the device changes
-     * it, and a poll would be a network call per interval for a number that moves when a sync
-     * runs. Null is left null on failure — an unknown quota drawn as an empty bar would be a
-     * claim, and a wrong one.
-     */
-    private val _serverTotalTracks = MutableStateFlow(0)
-    val serverTotalTracks: StateFlow<Int> = _serverTotalTracks.asStateFlow()
-
-    fun refreshServerTotalTracks() {
-        if (!secureStorage.agroLibrarySync) return
-        viewModelScope.launch {
-            _serverTotalTracks.value = librarySync.stats().getOrNull()?.trackCount ?: 0
-        }
-    }
-
-    /**
-     * The one folder the on-device scan looks in, or null for the whole device.
-     *
-     * Setting it clears the incremental watermark: the previous scan only ever saw the old
-     * folder, so continuing from where it left off would leave the new folder's files missing
-     * until something in them happened to be modified.
-     */
-    private val _localScanFolder = MutableStateFlow(secureStorage.localScanFolderLabel)
-    val localScanFolder: StateFlow<String?> = _localScanFolder.asStateFlow()
-
-    fun setLocalScanFolder(path: String, label: String) {
-        secureStorage.localScanFolder = path
-        secureStorage.localScanFolderLabel = label
-        secureStorage.localScanWatermark = 0L
-        _localScanFolder.value = label
-        rescanLocalLibrary()
-    }
-
-    /** Whether this device can delete other apps' media at all — API 30+ only. */
-    val canDeleteLocalFiles: Boolean get() = localFileDeleter.isSupported
-
-    fun setP2pSync(enabled: Boolean) {
-        secureStorage.setAgroP2pSync(enabled)
-        if (enabled || secureStorage.agroServerArchive || secureStorage.agroCatalogTrade) {
-            librarySyncScheduler.enablePeriodicSync()
-            librarySyncScheduler.syncNow()
-        } else {
-            librarySyncScheduler.disablePeriodicSync()
-        }
-    }
-
-    fun setPopularityContribution(enabled: Boolean) {
-        secureStorage.setAgroPopularityContribution(enabled)
-        _agroVisibility.value?.let { current ->
-            if (current.popularOptIn != enabled) {
-                setAgroVisibility(current.copy(popularOptIn = enabled))
-            }
-        }
-    }
-
-    fun setCatalogTrade(enabled: Boolean) {
-        secureStorage.setAgroCatalogTrade(enabled)
-        if (enabled || secureStorage.agroP2pSync || secureStorage.agroServerArchive) {
-            librarySyncScheduler.enablePeriodicSync()
-            librarySyncScheduler.syncNow()
-        } else {
-            librarySyncScheduler.disablePeriodicSync()
-        }
-    }
-
-    fun setServerArchive(enabled: Boolean) {
-        secureStorage.setAgroServerArchive(enabled)
-        if (enabled || secureStorage.agroP2pSync || secureStorage.agroCatalogTrade) {
-            librarySyncScheduler.enablePeriodicSync()
-            librarySyncScheduler.syncNow()
-        } else {
-            librarySyncScheduler.disablePeriodicSync()
-        }
-    }
-
-    /**
-     * Turning it on schedules the background pass *and* kicks one off now, so the user sees
-     * something happen rather than waiting for the next time the phone is charging on Wi-Fi.
-     */
-    fun setLibrarySync(enabled: Boolean) {
-        secureStorage.setAgroLibrarySync(enabled)
-        if (enabled) {
-            librarySyncScheduler.enablePeriodicSync()
-            librarySyncScheduler.syncNow()
-        } else {
-            librarySyncScheduler.disablePeriodicSync()
-        }
-    }
-
-    fun syncLibraryNow() = librarySyncScheduler.syncNow()
-
-    /**
-     * Builds the system's delete prompt for every local file the server has confirmed.
-     *
-     * Returns the `IntentSender` for the Activity to launch — a ViewModel has no business holding
-     * one, and the system dialog cannot be raised from anywhere else.
-     */
-    fun buildDeleteRequest(onReady: (android.content.IntentSender?) -> Unit) {
-        viewModelScope.launch {
-            val uris = librarySync.deletableLocalTracks().mapNotNull { it.streamUri }
-            onReady(localFileDeleter.buildTrashRequest(uris))
-        }
-    }
-
-    fun disconnectAgro() {
-        viewModelScope.launch {
-            runCatching { sessionApi.unregisterNode() }
-            secureStorage.clearAgroCredentials()
-            resetAgroPairing()
-        }
-    }
-
-    init {
-        refreshCacheSize()
-        refreshSyncedSettings()
-        // The account may have been made quiet from another device since this one last looked.
-        viewModelScope.launch { incognitoRepository.refresh() }
-        refreshPermissions()
-    }
-
-    /** Asked once per screen. The permission changes on the server, not on this device. */
-    private fun refreshPermissions() {
-        if (!secureStorage.agroConfigured.value) return
-        viewModelScope.launch {
-            accountApi.permissions().onSuccess { _canArchive.value = it.canArchive }
-        }
-    }
 
     fun setMonetDynamic(enabled: Boolean) = secureStorage.setMonetDynamic(enabled)
     fun setAmoledBlack(enabled: Boolean) = secureStorage.setAmoledBlack(enabled)
@@ -479,117 +106,132 @@ internal class SettingsViewModel @Inject constructor(
     fun setReduceMotion(enabled: Boolean) = secureStorage.setReduceMotion(enabled)
     fun setLetterByLetterLyricsEnabled(enabled: Boolean) =
         secureStorage.setLetterByLetterLyricsEnabled(enabled)
-
-    /** The chosen display language, empty when the app follows the system. */
-    val languageTag: String get() = appLocaleStore.tag
-
-    /** See [AppLocaleStore.needsManualRecreate]. */
-    val languageNeedsRecreate: Boolean get() = appLocaleStore.needsManualRecreate
-
-    fun setLanguage(tag: String) { appLocaleStore.tag = tag }
     fun setOfflineMode(enabled: Boolean) = secureStorage.setOfflineMode(enabled)
-
     fun setPreloadNextEnabled(enabled: Boolean) = secureStorage.setPreloadNextEnabled(enabled)
-
     fun setSkipSilenceEnabled(enabled: Boolean) = secureStorage.setSkipSilenceEnabled(enabled)
 
-    /**
-     * Turning this on re-enqueues, so the change takes effect now rather than at the next launch.
-     *
-     * WorkManager fixes a request's constraints when it is enqueued, so the run already sitting
-     * there is still waiting for Wi-Fi. `enqueueNow` replaces it with one that is not.
-     */
     fun setIndexOnMobileDataEnabled(enabled: Boolean) {
         secureStorage.setIndexOnMobileDataEnabled(enabled)
-        com.wander.android.core.audio.fingerprint.FingerprintIndexing.schedulePeriodic(
-            context,
-            allowMobileData = enabled
-        )
+        FingerprintIndexing.schedulePeriodic(context, allowMobileData = enabled)
         if (enabled) indexFingerprintsNow()
     }
 
-    /**
-     * Goes quiet, or stops.
-     *
-     * Routed through [IncognitoRepository] rather than written straight to storage, because with
-     * an Agro server paired the setting belongs to the *account*: going quiet here while another
-     * signed-in device keeps announcing is not going quiet at all. With no server it still lands
-     * in local storage exactly as before.
-     */
-    fun setIncognito(enabled: Boolean) {
-        viewModelScope.launch { incognitoRepository.set(enabled) }
-    }
+    // ── Work Controls & Background Tasks ───────────────────────────────────────────────────
 
-    fun disconnectNavidrome() = navidromeSource.logout()
+    val isMeasuringPaused: StateFlow<Boolean> =
+        workControls.isPaused(WorkProgressNotification.Kind.FINGERPRINT)
+    val isDownloadingPaused: StateFlow<Boolean> =
+        workControls.isPaused(WorkProgressNotification.Kind.DOWNLOAD)
 
-    fun disconnectYouTube() {
-        accountManager.signOut()
-        _youTubeAccount.value = ""
-    }
+    fun setMeasuringPaused(paused: Boolean) = setPaused(WorkProgressNotification.Kind.FINGERPRINT, paused)
+    fun setDownloadingPaused(paused: Boolean) = setPaused(WorkProgressNotification.Kind.DOWNLOAD, paused)
 
-    fun rescanLocalLibrary() {
-        viewModelScope.launch { localSource.refresh(full = true) }
+    private fun setPaused(kind: WorkProgressNotification.Kind, paused: Boolean) {
+        if (paused) {
+            workControls.pause(kind)
+        } else {
+            if (kind == WorkProgressNotification.Kind.FINGERPRINT) fingerprintProgress.retryFailures()
+            workControls.resume(kind)
+        }
     }
 
     fun downloadLikedNow() = downloadScheduler.downloadNow()
-
-    /**
-     * Measures the library now, rather than waiting for a charger.
-     *
-     * `enqueueNow` was written for exactly this and had no caller, so nothing in the app could ask
-     * for indexing at all. It is worth distinguishing from "Sync now" beside it: this *computes*
-     * fingerprints, and the library sync *publishes* the ones that already exist. Both are needed,
-     * in that order.
-     */
-    /**
-     * Measures now, and forgets which tracks failed last time.
-     *
-     * Asking explicitly is the only way to say "try again" about a track the indexer could not
-     * reach — otherwise the skip list quietly outlasts whatever was actually wrong with it, which
-     * is usually a network that has since come back.
-     */
     fun indexFingerprintsNow() {
         fingerprintProgress.retryFailures()
-        com.wander.android.core.audio.fingerprint.FingerprintIndexing.enqueueNow(context)
+        FingerprintIndexing.enqueueNow(context)
     }
 
-    fun clearCache() {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) { cacheManager.clearCache() }
-            refreshCacheSize()
-        }
-    }
+    // ── Agro Profile & Pairing (delegated to SettingsAgroCoordinator) ──────────────────────
 
-    /** Wipes every stored credential. Deliberately destructive and irreversible. */
-    fun forgetEverything() {
-        viewModelScope.launch {
-            if (secureStorage.agroConfigured.value) {
-                runCatching { sessionApi.unregisterNode() }
-            }
-            if (secureStorage.navidromeConfigured.value) {
-                runCatching { navidromeSource.logout() }
-            }
-            if (accountManager.isLoggedIn.value) {
-                runCatching { accountManager.signOut() }
-            }
-            secureStorage.clearAllCredentials()
-            // The credentials go, and so does everything they were used to fetch. Both caches are
-            // documented as "cleared on unpair" and neither was being cleared by anything: the
-            // friend graph and the drop inbox — including the notes' ciphertexts and the friends'
-            // published keys — survived "forget all credentials" and would have been handed
-            // straight to whoever paired next.
-            runCatching { socialRepository.clear() }
-            runCatching { dropsRepository.clear() }
-            resetAgroPairing()
-        }
-    }
+    val agroConnected: StateFlow<Boolean> = secureStorage.agroConfigured
+    val shareDomain: StateFlow<String> = secureStorage.shareDomain
+    val agroShareDomain: StateFlow<String> = secureStorage.agroShareDomain
+    fun setShareDomain(domain: String) = secureStorage.setShareDomain(domain)
 
-    private fun refreshCacheSize() {
-        viewModelScope.launch {
-            _cacheBytes.value = withContext(Dispatchers.IO) { cacheManager.cacheSizeBytes() }
-        }
-    }
-    fun setAgroProxyEnabled(enabled: Boolean) {
-        secureStorage.setAgroProxyEnabled(enabled)
+    val isIncognito: StateFlow<Boolean> = incognitoRepository.isIncognito
+    fun setIncognito(enabled: Boolean) { viewModelScope.launch { incognitoRepository.set(enabled) } }
+
+    val navidromeServer: String get() = secureStorage.navidromeServerUrl
+    val agroDevicePetname: String get() = secureStorage.agroDevicePetname.ifEmpty { "Wanda Android" }
+    val agroDeviceId: String get() = secureStorage.agroDeviceId
+    val agroServer: String get() = secureStorage.agroServerUrl
+
+    internal val agroPairing: StateFlow<AgroPairingState> = agroCoordinator.agroPairing
+    internal val agroConnection: StateFlow<AgroConnectionState> = agroCoordinator.agroConnection
+    val agroDefaultServer: String get() = agroCoordinator.agroDefaultServer
+
+    fun pairAgro(server: String, username: String, passphrase: String) =
+        agroCoordinator.pairAgro(server, username, passphrase, viewModelScope)
+    fun signUpAgro(server: String, username: String, inviteCode: String) =
+        agroCoordinator.signUpAgro(server, username, inviteCode, viewModelScope)
+    fun resetAgroPairing() = agroCoordinator.resetAgroPairing()
+
+    internal val agroVisibility: StateFlow<AgroVisibility?> = agroCoordinator.agroVisibility
+    fun refreshAgroVisibility() = agroCoordinator.refreshAgroVisibility(viewModelScope)
+    fun setAgroVisibility(visibility: AgroVisibility) =
+        agroCoordinator.setAgroVisibility(visibility, viewModelScope)
+    fun refreshAgroConnection() = agroCoordinator.refreshAgroConnection(viewModelScope)
+
+    val agroSyncSettings: StateFlow<Boolean> = secureStorage.agroSyncSettings
+    val agroProxyEnabled: StateFlow<Boolean> = secureStorage.agroProxyEnabled
+    val externalLyricsEnabled: StateFlow<Boolean> = secureStorage.isExternalLyricsEnabled
+
+    val syncedNavidrome: StateFlow<AgroSyncedSettings?> = agroCoordinator.syncedNavidrome
+    fun refreshSyncedSettings() = agroCoordinator.refreshSyncedSettings(viewModelScope)
+    fun setAgroSyncSettings(enabled: Boolean) = agroCoordinator.setAgroSyncSettings(enabled, viewModelScope)
+    fun disconnectAgro() = agroCoordinator.disconnectAgro(viewModelScope)
+    val canArchive: StateFlow<Boolean> = agroCoordinator.canArchive
+
+    fun setAgroProxyEnabled(enabled: Boolean) = secureStorage.setAgroProxyEnabled(enabled)
+    fun setExternalLyricsEnabled(enabled: Boolean) = secureStorage.setExternalLyricsEnabled(enabled)
+
+    // ── Library Sync (delegated to SettingsLibrarySyncCoordinator) ─────────────────────────
+
+    val librarySyncEnabled: StateFlow<Boolean> = librarySyncCoordinator.librarySyncEnabled
+    val p2pSyncEnabled: StateFlow<Boolean> = librarySyncCoordinator.p2pSyncEnabled
+    val serverArchiveEnabled: StateFlow<Boolean> = librarySyncCoordinator.serverArchiveEnabled
+    val popularityEnabled: StateFlow<Boolean> = librarySyncCoordinator.popularityEnabled
+    val catalogTradeEnabled: StateFlow<Boolean> = librarySyncCoordinator.catalogTradeEnabled
+
+    val fingerprintsShared: StateFlow<Int> = librarySyncCoordinator.fingerprintsShared(viewModelScope)
+    val lyricsReceived: StateFlow<Int> = librarySyncCoordinator.lyricsReceived(viewModelScope)
+    val librarySyncProgress: StateFlow<SyncProgress> = librarySyncCoordinator.librarySyncProgress
+    val pendingUploads: StateFlow<Int> = librarySyncCoordinator.pendingUploads(viewModelScope)
+    val syncedTracks: StateFlow<Int> = librarySyncCoordinator.syncedTracks(viewModelScope)
+    val localTracks: StateFlow<Int> = librarySyncCoordinator.localTracks(viewModelScope)
+
+    val serverTotalTracks: StateFlow<Int> = librarySyncCoordinator.serverTotalTracks
+    fun refreshServerTotalTracks() = librarySyncCoordinator.refreshServerTotalTracks(viewModelScope)
+
+    val localScanFolder: StateFlow<String?> = librarySyncCoordinator.localScanFolder
+    fun setLocalScanFolder(path: String, label: String) =
+        librarySyncCoordinator.setLocalScanFolder(path, label) { rescanLocalLibrary() }
+
+    val canDeleteLocalFiles: Boolean get() = librarySyncCoordinator.canDeleteLocalFiles
+    fun setP2pSync(enabled: Boolean) = librarySyncCoordinator.setP2pSync(enabled)
+    fun setCatalogTrade(enabled: Boolean) = librarySyncCoordinator.setCatalogTrade(enabled)
+    fun setServerArchive(enabled: Boolean) = librarySyncCoordinator.setServerArchive(enabled)
+    fun setLibrarySync(enabled: Boolean) = librarySyncCoordinator.setLibrarySync(enabled)
+    fun syncLibraryNow() = librarySyncCoordinator.syncLibraryNow()
+    fun buildDeleteRequest(onReady: (IntentSender?) -> Unit) =
+        librarySyncCoordinator.buildDeleteRequest(viewModelScope, onReady)
+
+    fun setPopularityContribution(enabled: Boolean) =
+        agroCoordinator.setPopularityContribution(enabled, viewModelScope)
+
+    // ── Locale & Cache ─────────────────────────────────────────────────────────────────────
+
+    val languageTag: String get() = appLocaleStore.tag
+    val languageNeedsRecreate: Boolean get() = appLocaleStore.needsManualRecreate
+    fun setLanguage(tag: String) { appLocaleStore.tag = tag }
+
+    val cacheBytes: StateFlow<Long> = accountCoordinator.cacheBytes
+    fun clearCache() = accountCoordinator.clearCache(viewModelScope)
+
+    init {
+        accountCoordinator.refreshCacheSize(viewModelScope)
+        refreshSyncedSettings()
+        viewModelScope.launch { incognitoRepository.refresh() }
+        agroCoordinator.refreshPermissions(viewModelScope)
     }
 }

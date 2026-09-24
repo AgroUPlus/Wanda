@@ -130,6 +130,7 @@ internal fun rememberSettingsHost(
             onIncognitoChange = viewModel::setIncognito,
             onVisibilityChange = viewModel::setAgroVisibility,
             onProxyChange = viewModel::setAgroProxyEnabled,
+            onExternalLyricsChange = viewModel::setExternalLyricsEnabled,
             onForgetEverything = { dialogs.confirmForgetEverything = true },
             onArtistReleaseNotificationsChange = viewModel::setArtistReleaseNotificationEnabled,
             onAutoUpdateCheckChange = viewModel::setAutoUpdateCheckEnabled,

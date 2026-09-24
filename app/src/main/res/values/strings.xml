@@ -120,7 +120,7 @@
     <string name="common_listening_2">Listening…</string>
     <string name="common_live">LIVE</string>
     <string name="common_loading_playlists">Loading playlists…</string>
-    <string name="common_matched_melody_guess_from_tune">Matched by melody — this is a guess from the tune, not the recording.</string>
+    <string name="common_matched_melody_guess_from_tune">Matched by melody. This is a guess from the tune, not the recording.</string>
     <string name="common_music_device">Music on this device</string>
     <string name="common_my_profile">My profile</string>
     <string name="common_name">Name</string>
@@ -165,28 +165,30 @@
     <string name="home_sessions_other_devices">Sessions on other devices</string>
 
     <!-- Importer -->
-    <string name="importer_connect_auto_detect">Connect &amp; Auto-detect</string>
     <string name="importer_detecting_playlists">Detecting your playlists...</string>
-    <string name="importer_direct_link_text">Direct Link / Text</string>
     <string name="importer_edit_title">Edit Title</string>
     <string name="importer_import_playlist">Import Playlist</string>
     <string name="importer_listen_now">Listen now</string>
     <string name="importer_load_playlist">Load Playlist</string>
     <string name="importer_loading_playlist">Loading playlist...</string>
-    <string name="importer_logout_switch_account">Logout / Switch Account</string>
     <string name="importer_none">None</string>
     <string name="importer_paste">Paste</string>
     <string name="importer_paste_link_text_tracklist_inspect">Paste a link or text tracklist to inspect and choose tracks before importing.</string>
-    <string name="importer_playlist_detected">Playlist detected</string>
     <string name="importer_playlist_title">Playlist Title</string>
     <string name="importer_reading">Reading...</string>
     <string name="importer_reading_playlist_tracks">Reading playlist tracks...</string>
-    <string name="importer_reload">Reload</string>
-    <string name="importer_retry">Retry</string>
-    <string name="importer_sign_browse">Sign In &amp; Browse</string>
-    <string name="importer_switch_account">Switch account</string>
+    <string name="importer_step_x_of_y">Step %1$d of %2$d</string>
     <string name="importer_try_again">Try Again</string>
-    <string name="importer_web_view">Web view</string>
+    <string name="importer_step_platform_label">Choose a platform</string>
+    <string name="importer_step_connect_label">Connect</string>
+    <string name="importer_step_tracks_label">Select tracks</string>
+    <string name="importer_step_import_label">Import</string>
+    <string name="importer_youtube_signed_out_title">Not signed in to YouTube Music</string>
+    <string name="importer_youtube_signed_out_desc">Sign in to browse your own playlists, or paste a playlist link below.</string>
+    <string name="importer_sign_in">Sign in</string>
+    <string name="importer_or_paste_link">or paste a link</string>
+    <string name="importer_refresh_library">Refresh</string>
+    <string name="importer_paste_link_instead">Paste a link instead</string>
 
     <!-- Library -->
     <string name="library_albums_appear_once_connected_source">Albums appear once a connected source has been browsed at least once.</string>
@@ -259,6 +261,18 @@
     <string name="settings_account_passphrase_device_token_app">Account passphrase, or a Device Token / App Password from Agro Dashboard.</string>
     <string name="settings_adds_play_counts_server_s">Adds play counts to the server\'s shared totals, with no account or times attached. Other people on this server see the totals, not you. The shelf works either way.</string>
     <string name="settings_agro_device">Agro Device</string>
+    <string name="settings_agro_signed_out_tap_to_pair">Signed out. Tap to pair again.</string>
+    <string name="settings_agro_not_paired">Not paired</string>
+    <string name="settings_agro_checking">Checking…</string>
+    <string name="settings_agro_could_not_reach_server">Could not reach the server</string>
+    <string name="settings_share_songs_between_devices_index_server">Share songs between devices and index with the server</string>
+    <string name="settings_account_not_allowed_upload_files">Your account can\'t upload files to this server</string>
+    <string name="settings_upload_full_audio_files_server">Upload full audio files to server storage</string>
+    <string name="settings_delete_files_server_already_holds">Delete the %1$d files your server already holds</string>
+    <string name="settings_nothing_remove_server_confirmed_no_files">Nothing to remove. The server has confirmed no files yet.</string>
+    <string name="settings_running">Running…</string>
+    <string name="settings_send_files_to_server_now">Send files to the server now</string>
+    <string name="settings_update_other_devices_no_files_sent">Update what your other devices can see. No files are sent.</string>
     <string name="settings_agro_privacy_relay">Agro Privacy Relay</string>
     <string name="settings_agrouplus">AgroUPlus</string>
     <string name="settings_archive_server">Archive to server</string>
@@ -311,10 +325,11 @@
     <string name="settings_measuring_streamed_song_reads_about">Measuring a streamed song reads about a minute of it. On Wi-Fi that is free, which is why this is off by default.</string>
     <string name="settings_new_music_from_artists_follow">New music from artists you follow</string>
     <string name="settings_not_same_recording_rest_group">Not the same recording as the rest of this group</string>
-    <string name="settings_nothing_else_signed_other_devices">Nothing else is signed in. Other devices using this Agro account show up here — this one never does.</string>
+    <string name="settings_nothing_else_signed_other_devices">Nothing else is signed in. This is the device you\'re holding, and other devices on this Agro account show up here instead.</string>
     <string name="settings_nothing_has_been_written_what">Nothing has been written. This is what the migration would do.</string>
-    <string name="settings_nothing_send_no_music_files">Nothing to send — no music files stored on this device</string>
+    <string name="settings_nothing_send_no_music_files">Nothing to send. No music files are stored on this device.</string>
     <string name="settings_offline_mode">Offline mode</string>
+    <string name="settings_online_lyrics_lookup">Online lyrics lookup</string>
     <string name="settings_only_play_what_already_device">Only play what is already on this device. Wanda offers to turn this on and off as your connection changes.</string>
     <string name="settings_open">Open</string>
     <string name="settings_otherwise_happens_wi_fi_while">Otherwise this happens on Wi-Fi while charging</string>
@@ -327,7 +342,8 @@
     <string name="settings_paused_nothing_being_measured_until">Paused. Nothing is being measured until you resume.</string>
     <string name="settings_playlist_imported">Playlist imported! 🎉</string>
     <string name="settings_popular_on_agro">Popular on Agro</string>
-    <string name="settings_include_plays_in_the_servers_shared_chart">Include your plays in the server\'s shared chart of what everyone is listening to. Never tied to your name — only counted in bulk.</string>
+    <string name="settings_query_lrclib_when_no_local_or_server_lyrics">Query LRCLIB when no local or server lyrics are found</string>
+    <string name="settings_include_plays_in_the_servers_shared_chart">Add your plays to the server\'s shared chart of what everyone is listening to, counted in bulk and never tied to your name.</string>
     <string name="settings_re_check_model">Re-check model</string>
     <string name="settings_ready_next_track">Ready the next track</string>
     <string name="settings_recognition_model">Recognition model</string>
@@ -384,7 +400,7 @@
     <string name="settings_what_has_been_measured">What has been measured</string>
     <string name="settings_what_trade_has_done">What the trade has done</string>
     <string name="settings_will_sign_out_every_music">This will sign out of every music source and erase all stored passwords, API keys and login tokens from this device. Downloaded tracks remain on disk.</string>
-    <string name="settings_write_passphrase_down_server_stores">Write this passphrase down. The server stores only a hash of it and can never show it again — there is no reset.</string>
+    <string name="settings_write_passphrase_down_server_stores">Write this passphrase down. The server stores only a hash of it and can\'t show it again, and there\'s no reset.</string>
 
     <!-- Friends and activity -->
     <string name="social_add_friend">Add friend</string>
@@ -424,7 +440,7 @@
     <string name="social_new_from">New from %1$s</string>
     <string name="social_no_conversations_yet">No conversations yet</string>
     <string name="social_nobody_name_listed_people_only">Nobody by that name is listed. People only appear here if they have made themselves discoverable.</string>
-    <string name="social_nobody_yet_tap_add_button">Nobody yet. Tap the add button to find people by username — you will only turn up in their search if you have made yourself discoverable in Settings → Privacy.</string>
+    <string name="social_nobody_yet_tap_add_button">Nobody yet. Tap the add button to find people by username. You\'ll only turn up in their search if you\'ve made yourself discoverable in Settings, under Privacy.</string>
     <string name="social_not_enough_listening_between_yet">Not enough listening between you yet.</string>
     <string name="social_notes_conversation_end_end_encrypted">Notes in this conversation are end-to-end encrypted.</string>
     <string name="social_notes_from_here_sealed_device">Notes from here on are sealed on your device. The server stores them without being able to read them.</string>
@@ -436,7 +452,7 @@
     <string name="social_open_friends">Open to friends</string>
     <string name="social_open_settings">Open Settings</string>
     <string name="social_pair_agro_server_settings_have">Pair an Agro server in Settings to have a name, a bio and friends. Your listening statistics work without one.</string>
-    <string name="social_pair_one_create_account_one">Pair with one — or create an account on one — and you can see what the people you know are listening to, and listen along with them.</string>
+    <string name="social_pair_one_create_account_one">Pair with a server, or create an account on one, to see what the people you know are listening to and listen along with them.</string>
     <string name="social_phone_cannot_found_off_grid">This phone cannot be found off-grid.</string>
     <string name="social_plays">plays</string>
     <string name="social_press_hold_any_track_send">Press and hold any track to send it to a friend with a note.</string>
@@ -447,7 +463,7 @@
     <string name="social_share_music_someone_beside_over">Share music with someone beside you, over Bluetooth and Wi-Fi Direct. No router, no mobile data, no server. You are only findable while this screen is open.</string>
     <string name="social_share_off_grid">Share off-grid</string>
     <string name="social_start_jam">Start a jam</string>
-    <string name="social_starts_need_most_name_not">Starts with — you need most of the name, not a fragment.</string>
+    <string name="social_starts_need_most_name_not">Matches the start of a name, so type most of it, not just a fragment.</string>
     <string name="social_stop_listening_along">Stop listening along</string>
     <string name="social_stop_sharing">Stop sharing</string>
     <string name="social_taste_compatibility">Taste Compatibility</string>
@@ -515,7 +531,7 @@
     <string name="settings_matching_track">Matching track %1$s of %2$s</string>
     <string name="settings_measuring_now">Measuring \\"%1$s\\" now</string>
     <string name="settings_now_exists">“%1$s” now exists on %2$s.</string>
-    <string name="settings_of">%1$s — %2$s of %3$s</string>
+    <string name="settings_of">%1$s · %2$s of %3$s</string>
     <string name="settings_plays_would_combine">%1$s plays would combine</string>
     <string name="settings_reading_playlist_from">Reading playlist from %1$s...</string>
     <string name="settings_recognisable">%1$s of %2$s recognisable</string>
@@ -720,7 +736,7 @@
         <item quantity="other">%1$d of you this year</item>
     </plurals>
     <string name="replay_circle_anthem">Your anthem</string>
-    <string name="replay_circle_anthem_value">%1$s — %2$s</string>
+    <string name="replay_circle_anthem_value">%1$s · %2$s</string>
     <string name="replay_circle_trendsetter">Got there first</string>
     <plurals name="replay_circle_trendsetter_value">
         <item quantity="one">%1$s, on %2$d track</item>
@@ -771,7 +787,7 @@
     <string name="settings_made_in_france_title">Made with ❤️ in France</string>
     <string name="settings_made_in_france_subtitle">Digital sovereignty &amp; EUPL-1.2</string>
     <string name="settings_sovereignty_dialog_title">Digital Sovereignty</string>
-    <string name="settings_sovereignty_dialog_body">Wanda is designed and built in France with privacy, battery-efficiency, and user autonomy as core principles.\n\nDigital sovereignty means retaining full control over your personal data, music library, and listening habits — without telemetry, tracking, or vendor lock-in.\n\nWanda\'s source code is licensed under the European Union Public Licence (EUPL-1.2), a reciprocal copyleft licence native to European civil law. The EUPL guarantees software freedom, covers both distribution and network services (closing cloud loopholes), and ensures Wanda remains sovereign, transparent, and community-owned forever.</string>
+    <string name="settings_sovereignty_dialog_body">Wanda is designed and built in France, with privacy, battery efficiency, and user autonomy as core principles.\n\nDigital sovereignty means full control over your data, your music library, and your listening habits, with no telemetry, tracking, or vendor lock-in.\n\nWanda\'s source is licensed under the European Union Public Licence (EUPL-1.2), a copyleft licence built for European civil law. It covers network services as well as distribution, so there\'s no cloud loophole, keeping Wanda sovereign, transparent, and community-owned.</string>
 
     <!-- Library tabs -->
     <string name="library_tab_tracks">Tracks</string>

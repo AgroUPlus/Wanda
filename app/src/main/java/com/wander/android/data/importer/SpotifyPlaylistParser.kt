@@ -16,6 +16,16 @@ import javax.inject.Singleton
 
 import kotlinx.serialization.json.booleanOrNull
 
+/**
+ * A raw HTTP call — this app's own OkHttp client, or plain curl — to Spotify's unofficial web-player
+ * token endpoint now gets `400 "Unauthorized request... under the Spotify Developer Terms"`
+ * regardless of cookies or browser-realistic headers, which is TLS/client fingerprinting rather than
+ * a missing credential: nothing this parser can add to a request fixes it. [SpotifyWebFetch] runs
+ * the identical call through a live WebView's own `fetch()` instead, which carries a real browser's
+ * network stack and passes. The `...ViaFetcher` methods below share this class's parsing with that
+ * path; [fetchUserPlaylists] and [parse] are kept exactly as they were — still correct, still
+ * tested — for whichever day this endpoint stops requiring that.
+ */
 @Singleton
 class SpotifyPlaylistParser @Inject constructor(
     private val httpClient: HttpClient
@@ -31,47 +41,24 @@ class SpotifyPlaylistParser @Inject constructor(
     suspend fun fetchUserPlaylists(cookie: String? = null): Result<List<RawUserPlaylistSummary>> = runCatching {
         val session = fetchWebSession(cookie)
         check(!session.isAnonymous) { "Please sign in to Spotify in the browser above." }
-        val accessToken = session.accessToken
 
         val playlistsResponse: String = httpClient.get("https://api.spotify.com/v1/me/playlists?limit=50") {
-            header("Authorization", "Bearer $accessToken")
+            header("Authorization", "Bearer ${session.accessToken}")
             header(HEADER_USER_AGENT, IMPORT_WEB_USER_AGENT)
             if (!cookie.isNullOrBlank()) {
                 header("Cookie", cookie)
             }
         }.body()
 
-        val root = json.parseToJsonElement(playlistsResponse).jsonObject
-        val items = root["items"]?.jsonArray ?: kotlinx.serialization.json.JsonArray(emptyList())
-
-        items.mapNotNull { item ->
-            val obj = item.jsonObject
-            val id = obj["id"]?.jsonPrimitive?.content ?: return@mapNotNull null
-            val name = obj["name"]?.jsonPrimitive?.content ?: "Playlist"
-            val desc = obj["description"]?.jsonPrimitive?.content
-            val coverUrl = obj["images"]?.jsonArray?.firstOrNull()?.jsonObject?.get("url")?.jsonPrimitive?.content
-            val count = obj["tracks"]?.jsonObject?.get("total")?.jsonPrimitive?.longOrNull?.toInt() ?: 0
-
-            RawUserPlaylistSummary(
-                id = id,
-                name = name,
-                description = desc,
-                coverUrl = coverUrl,
-                trackCount = count,
-                platform = PlatformType.SPOTIFY,
-                url = "https://open.spotify.com/playlist/$id"
-            )
-        }
+        parsePlaylistsResponse(playlistsResponse)
     }
 
     suspend fun parse(url: String, cookie: String? = null): Result<RawImportPlaylist> = runCatching {
         val playlistId = extractPlaylistId(url)
             ?: throw IllegalArgumentException("Could not find a valid Spotify playlist ID in the link.")
 
-        // Step 1: Obtain web access token from Spotify
         val accessToken = fetchWebSession(cookie).accessToken
 
-        // Step 2: Fetch playlist details
         val playlistResponse: String = httpClient.get("https://api.spotify.com/v1/playlists/$playlistId") {
             header("Authorization", "Bearer $accessToken")
             header(HEADER_USER_AGENT, IMPORT_WEB_USER_AGENT)
@@ -80,6 +67,62 @@ class SpotifyPlaylistParser @Inject constructor(
             }
         }.body()
 
+        parsePlaylistResponse(playlistResponse)
+    }
+
+    /**
+     * Same call [parse] makes, sourced from a real browser's `fetch()` (see [SpotifyWebFetch])
+     * instead of this app's own HTTP client. [fetch] takes a URL and the headers to send, and
+     * returns the response body text.
+     */
+    suspend fun parseViaFetcher(
+        url: String,
+        fetch: suspend (String, Map<String, String>) -> String
+    ): Result<RawImportPlaylist> = runCatching {
+        val playlistId = extractPlaylistId(url)
+            ?: throw IllegalArgumentException("Could not find a valid Spotify playlist ID in the link.")
+
+        val accessToken = accessTokenViaFetcher(fetch)
+        val playlistResponse = fetch(
+            "https://api.spotify.com/v1/playlists/$playlistId",
+            mapOf("Authorization" to "Bearer $accessToken")
+        )
+        parsePlaylistResponse(playlistResponse)
+    }
+
+    /** Same call [fetchUserPlaylists] makes, sourced from [fetch]. See [parseViaFetcher]. */
+    suspend fun fetchUserPlaylistsViaFetcher(
+        fetch: suspend (String, Map<String, String>) -> String
+    ): Result<List<RawUserPlaylistSummary>> = runCatching {
+        val tokenJson = tokenJsonViaFetcher(fetch)
+        val isAnonymous = tokenJson["isAnonymous"]?.jsonPrimitive?.booleanOrNull
+            ?: (tokenJson["isAnonymous"]?.jsonPrimitive?.content == "true")
+        check(!isAnonymous) { "Please sign in to Spotify in the browser above." }
+        val accessToken = tokenJson["accessToken"]?.jsonPrimitive?.content
+            ?: throw IllegalStateException("Spotify did not provide an access token.")
+
+        val playlistsResponse = fetch(
+            "https://api.spotify.com/v1/me/playlists?limit=50",
+            mapOf("Authorization" to "Bearer $accessToken")
+        )
+        parsePlaylistsResponse(playlistsResponse)
+    }
+
+    private suspend fun accessTokenViaFetcher(fetch: suspend (String, Map<String, String>) -> String): String {
+        val tokenJson = tokenJsonViaFetcher(fetch)
+        return tokenJson["accessToken"]?.jsonPrimitive?.content
+            ?: throw IllegalStateException("Spotify did not provide an access token.")
+    }
+
+    private suspend fun tokenJsonViaFetcher(
+        fetch: suspend (String, Map<String, String>) -> String
+    ): kotlinx.serialization.json.JsonObject {
+        val body = fetch(TOKEN_URL, mapOf("Accept" to "application/json"))
+        return runCatching { json.parseToJsonElement(body).jsonObject }.getOrNull()
+            ?: throw IllegalStateException("Spotify returned an unexpected token response.")
+    }
+
+    private fun parsePlaylistResponse(playlistResponse: String): RawImportPlaylist {
         val root = json.parseToJsonElement(playlistResponse).jsonObject
         val title = root["name"]?.jsonPrimitive?.content ?: "Imported Spotify Playlist"
         val description = root["description"]?.jsonPrimitive?.content
@@ -111,13 +154,37 @@ class SpotifyPlaylistParser @Inject constructor(
 
         check(tracks.isNotEmpty()) { "No tracks could be found in this Spotify playlist." }
 
-        RawImportPlaylist(
+        return RawImportPlaylist(
             platform = PlatformType.SPOTIFY,
             title = title,
             description = description,
             coverUrl = coverUrl,
             tracks = tracks
         )
+    }
+
+    private fun parsePlaylistsResponse(playlistsResponse: String): List<RawUserPlaylistSummary> {
+        val root = json.parseToJsonElement(playlistsResponse).jsonObject
+        val items = root["items"]?.jsonArray ?: kotlinx.serialization.json.JsonArray(emptyList())
+
+        return items.mapNotNull { item ->
+            val obj = item.jsonObject
+            val id = obj["id"]?.jsonPrimitive?.content ?: return@mapNotNull null
+            val name = obj["name"]?.jsonPrimitive?.content ?: "Playlist"
+            val desc = obj["description"]?.jsonPrimitive?.content
+            val coverUrl = obj["images"]?.jsonArray?.firstOrNull()?.jsonObject?.get("url")?.jsonPrimitive?.content
+            val count = obj["tracks"]?.jsonObject?.get("total")?.jsonPrimitive?.longOrNull?.toInt() ?: 0
+
+            RawUserPlaylistSummary(
+                id = id,
+                name = name,
+                description = desc,
+                coverUrl = coverUrl,
+                trackCount = count,
+                platform = PlatformType.SPOTIFY,
+                url = "https://open.spotify.com/playlist/$id"
+            )
+        }
     }
 
     private data class WebSession(val accessToken: String, val isAnonymous: Boolean)

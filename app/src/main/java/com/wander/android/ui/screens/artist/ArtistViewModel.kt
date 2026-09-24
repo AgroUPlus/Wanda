@@ -3,42 +3,35 @@ package com.wander.android.ui.screens.artist
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.wander.android.core.playback.PlaybackCoordinator
-import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.ArtistAlbumSection
-import com.wander.android.core.database.entity.ArtistEntity
-import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
-import com.wander.android.data.repository.ArtistIdentity
 import com.wander.android.data.repository.ArtistPageMerger
-import com.wander.android.data.repository.CatalogRepository
-import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.ArtistSubscriptionRepository
+import com.wander.android.data.repository.CatalogRepository
 import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.sources.ShareKind
 import com.wander.android.data.sources.ShareTarget
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.net.URLDecoder
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.net.URLDecoder
+import javax.inject.Inject
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @HiltViewModel
 internal class ArtistViewModel @Inject constructor(
     private val catalogRepository: CatalogRepository,
-    private val musicRepository: MusicRepository,
     private val shareRepository: ShareRepository,
     private val subscriptions: ArtistSubscriptionRepository,
-    private val playerConnection: PlayerConnection,
-    private val playbackCoordinator: PlaybackCoordinator,
+    private val loader: ArtistCatalogLoader,
+    private val playback: ArtistPlaybackCoordinator,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -46,42 +39,11 @@ internal class ArtistViewModel @Inject constructor(
         .orEmpty()
         .let { runCatching { URLDecoder.decode(it, "UTF-8") }.getOrDefault(it) }
 
-    /**
-     * The id the caller pointed at, when they knew it.
-     *
-     * Believed over anything derived from the name. `artistId()` below picks the first id off
-     * whatever Room returned for this *name*, and Room folds case — so on a page for "yuri" it
-     * could return the other Yuri's id, fetch her discography, and then filter the page down to
-     * exactly the wrong artist's songs. A caller who tapped a track knows which of them they meant.
-     */
     private val routeArtistId: String? = savedStateHandle.get<String>("artistId")
         ?.let { runCatching { URLDecoder.decode(it, "UTF-8") }.getOrDefault(it) }
         ?.takeIf { it.isNotBlank() }
 
-    /**
-     * The best identity known right now, without consulting a flow.
-     *
-     * [artistId] below reads `state.value`, and `state` only holds anything once Room has emitted
-     * into it — which used to happen incidentally, during the seconds the cross-source search was
-     * running. Skipping that search for a cached artist removed the delay and with it the emission,
-     * so the id came back null, the page was never fetched, and a revisit showed top songs and no
-     * bio, albums or shelves at all. Held as a plain field so it is true immediately.
-     */
-    private var knownArtistId: String? = null
-
-    /** Whether a cached row already existed when this page opened. See the cache write below. */
-    private var cachedArtist: ArtistEntity? = null
-
-    private val details = MutableStateFlow<ArtistDetails?>(null)
-
-    /**
-     * Whoever's page this is, once a backend has said so.
-     *
-     * The route carries only a name, so identity is not known until the artist page loads — and
-     * two different artists can share a name. Room's flows are re-subscribed when it arrives so
-     * that somebody else's songs stop being listed under this one. See [ArtistIdentity].
-     */
-    private val pageArtistId: StateFlow<String?> = details
+    private val pageArtistId: StateFlow<String?> = loader.details
         .map { routeArtistId ?: it?.id }
         .stateIn(viewModelScope, SharingStarted.Eagerly, routeArtistId)
 
@@ -91,74 +53,33 @@ internal class ArtistViewModel @Inject constructor(
     private val tracks = pageArtistId.flatMapLatest { id ->
         catalogRepository.artistTracksFlow(artist, id)
     }
-    private val loading = MutableStateFlow(true)
-    private val refreshing = MutableStateFlow(false)
-    private val expanded = MutableStateFlow<Map<String, List<UnifiedAlbum>>>(emptyMap())
-    private val loadingShelf = MutableStateFlow<String?>(null)
 
-    /**
-     * True once we have shown this artist before.
-     *
-     * Drives the skeleton, and only the skeleton. A first visit has nothing trustworthy to draw —
-     * Room may hold another artist of the same name, and until the backend says who this is there
-     * is no way to tell — so it waits. A return visit already knows the identity, so the songs and
-     * records in Room are known to be theirs and go up immediately, with the refresh happening
-     * underneath rather than in front.
-     */
-    private val hasCache = MutableStateFlow(false)
-
-    /**
-     * Whether this account follows the artist. Null until Agro has answered.
-     *
-     * Its own flow rather than a field folded into the page: following is about this account, not
-     * about the artist, so it must survive the page being re-merged and must not wait on it.
-     */
     private val following = MutableStateFlow<Boolean?>(null)
 
     init {
-        // Asked once when the page opens. The answer is about this account and this name, so
-        // nothing on the page changing can invalidate it.
         viewModelScope.launch {
             following.value = subscriptions.isSubscribed(artist)
         }
+        loader.initLoader(artist, routeArtistId, viewModelScope)
     }
 
-
-    /**
-     * One state, assembled from Room and the backend page together.
-     *
-     * The merge runs here rather than in the repository because it is a *view* decision — which
-     * shelves this screen shows and in what order — and the repository has no business holding it.
-     */
     val state: StateFlow<ArtistUiState> = combine(
         albums,
         tracks,
-        details,
-        combine(loading, refreshing, expanded, loadingShelf, hasCache) { l, r, e, s, c ->
+        loader.details,
+        combine(loader.loading, loader.refreshing, loader.expanded, loader.loadingShelf, loader.hasCache) { l, r, e, s, c ->
             Progress(l as Boolean, r as Boolean, e as Map<String, List<UnifiedAlbum>>, s as String?, c as Boolean)
-        }
-        ,
+        },
         following
     ) { albums, tracks, details, progress, following ->
         val page = ArtistPageMerger.merge(details, albums, tracks)
         ArtistUiState(
             artist = artist,
             page = page,
-            // A published portrait or nothing. The fallback that used to sit here picked a cover
-            // off a record credited to this artist — their own sleeve at best, and a sleeve is not
-            // a face. `ArtistHero` has always documented the header as being "never a cover off one
-            // of their records"; this is the line that made that untrue.
             heroImage = page.imageUrl,
             albumCount = page.albums?.albums?.size ?: 0,
             trackCount = page.topSongs.size,
             isFollowing = following,
-            // The skeleton stays up until the backend has actually answered.
-            //
-            // This used to be `progress.loading && page.isEmpty` — content beat the flag — so the
-            // moment Room returned anything name-matched the page drew itself and then rearranged
-            // under the reader as the real shelves, portrait and song list landed. Worse, before
-            // the identity filter above had an id to work with, that first paint could be another
-            // artist's material entirely. One paint, once the answer is in.
             isLoading = progress.loading && !progress.cached,
             isRefreshing = progress.refreshing || (progress.loading && progress.cached),
             canShare = artistTarget(tracks)?.let { shareRepository.canShare(it.source) } == true,
@@ -179,97 +100,12 @@ internal class ArtistViewModel @Inject constructor(
         val cached: Boolean
     )
 
-
-    init {
-        knownArtistId = routeArtistId
-        viewModelScope.launch {
-            val cached = catalogRepository.cachedArtist(artist).also { cachedArtist = it }
-            if (cached != null) {
-                hasCache.value = true
-                // The cached id is what lets the page fetch below run at once, instead of waiting
-                // for Room to emit something to infer it from.
-                // Seeded as a page with no shelves: enough for the header to be right and for the
-                // identity filter to start working, while the shelves themselves arrive from the
-                // fetch below. The merger fills the rest from Room.
-                details.value = ArtistDetails(
-                    id = cached.artistId.orEmpty(),
-                    name = cached.name,
-                    imageUrl = cached.imageUrl,
-                    bio = cached.bio
-                )
-            }
-            refresh(skipSearchIfFresh = cached != null && catalogRepository.isFresh(cached))
-        }
-    }
-
     fun refresh(skipSearchIfFresh: Boolean = false) {
-        viewModelScope.launch {
-            loading.value = true
-            // `finally`, because the skeleton is driven by this flag alone on a first visit. It
-            // used to be `loading && page.isEmpty`, so a throw here merely left a stale flag
-            // behind whatever Room could show; now it would strand the screen on a skeleton.
-            try {
-                // The cross-source search is the expensive half of opening an artist — every
-                // configured backend, asked for one name. Skipped while the cached page is recent,
-                // because a discography does not change between two visits minutes apart.
-                if (!skipSearchIfFresh) catalogRepository.refreshArtist(artist)
-                // *After* the search, not before: the artist's backend id comes off a track, and
-                // until the search has persisted one there is nothing to ask the backend about.
-                //
-                // Whether the id is *trusted* decides whether the name is checked against the page
-                // that comes back. An id we already hold came from the caller — a tapped track, a
-                // tapped tile, a shared link — or from a page a backend already vouched for, and in
-                // both cases the id is the identity. Only an id inferred by [artistId], off a row
-                // Room matched by name, can be about the wrong person.
-                val idWasGiven = knownArtistId != null
-                val id = knownArtistId ?: artistId()?.also { knownArtistId = it }
-                // Checking a given id against the route's spelling rejects correct pages: an artist
-                // is credited on a track the way that release spelled them and titles their channel
-                // the way they spell themselves now, and the two are allowed to differ. That is why
-                // opening Kesha from a track showed a page with no portrait, bio or shelves.
-                val page = id?.let {
-                    catalogRepository.artistDetails(it, if (idWasGiven) null else artist)
-                }
-                if (page != null) {
-                    details.value = page
-                    knownArtistId = page.id
-                }
-                // Only overwrite the cache with a real answer. Writing a null over a good row would
-                // throw away the id that makes the *next* visit work, which is the point of caching.
-                if (page != null || cachedArtist == null) {
-                    catalogRepository.cacheArtist(artist, page)
-                }
-                hasCache.value = true
-                // Remember the records the shelves named, so tapping one opens a page with a real
-                // header instead of one reconstructed from whatever tracks happen to arrive.
-                page?.sections?.filterIsInstance<ArtistAlbumSection>()
-                    ?.flatMap { it.albums }
-                    ?.let { catalogRepository.rememberAlbums(it) }
-            } finally {
-                loading.value = false
-            }
-        }
+        loader.refresh(artist, topSongs(), skipSearchIfFresh, viewModelScope)
     }
 
-    /**
-     * Fetches the whole of one album shelf.
-     *
-     * Only offered for a shelf that told us where its remainder lives; see
-     * [ArtistAlbumSection.moreBrowseId]. A failure leaves the shelf as it was rather than emptying
-     * it — the tiles already on screen are still true.
-     */
     fun expandShelf(section: ArtistAlbumSection) {
-        val browseId = section.moreBrowseId ?: return
-        if (section.title in expanded.value || loadingShelf.value != null) return
-        viewModelScope.launch {
-            loadingShelf.value = section.title
-            val all = catalogRepository.artistAlbumPage(browseId, section.moreParams, artist)
-            if (all.isNotEmpty()) {
-                catalogRepository.rememberAlbums(all)
-                expanded.value = expanded.value + (section.title to all)
-            }
-            loadingShelf.value = null
-        }
+        loader.expandShelf(section, artist, viewModelScope)
     }
 
     private fun artistTarget(from: List<UnifiedTrack>): ShareTarget? {
@@ -282,32 +118,16 @@ internal class ArtistViewModel @Inject constructor(
         )
     }
 
-    /**
-     * A guess at who this page is about, from what Room holds under this name.
-     *
-     * Only consulted when the caller supplied no id — arriving from a deep link, or from a place
-     * that genuinely only knows a name. It cannot tell two same-named artists apart, which is
-     * exactly why [routeArtistId] wins whenever it exists.
-     */
-    private fun artistId(): String? = state.value.page.topSongs
-        .filter { ArtistIdentity.sameName(it.artist, artist) }
-        .firstNotNullOfOrNull { it.artistId?.takeIf(String::isNotBlank) }
-
-    /**
-     * Follows or unfollows, flipping the control before the request lands.
-     *
-     * Optimistic because the answer is already known — this is a toggle, not a query — and a
-     * button that waits a round trip to change reads as not having been pressed. A failure puts it
-     * back rather than leaving it lying about what the server holds.
-     */
     fun toggleFollow() {
         val wasFollowing = following.value ?: return
         following.value = !wasFollowing
         viewModelScope.launch {
             val ok = if (wasFollowing) {
                 subscriptions.subscribed()
-                    .firstOrNull { it.normName.equals(artist.trim(), ignoreCase = true) ||
-                        it.displayName.equals(artist.trim(), ignoreCase = true) }
+                    .firstOrNull {
+                        it.normName.equals(artist.trim(), ignoreCase = true) ||
+                            it.displayName.equals(artist.trim(), ignoreCase = true)
+                    }
                     ?.let { subscriptions.unsubscribe(it) } ?: false
             } else {
                 subscriptions.subscribe(artist, channelId = ytChannelId())
@@ -316,7 +136,6 @@ internal class ArtistViewModel @Inject constructor(
         }
     }
 
-    /** The YouTube Music channel behind this page, when it came from there. */
     private fun ytChannelId(): String? = pageArtistId.value
         ?.takeIf { it.startsWith("ytm:") }
         ?.removePrefix("ytm:")
@@ -328,91 +147,27 @@ internal class ArtistViewModel @Inject constructor(
 
     private fun topSongs() = state.value.page.topSongs
 
-    fun playTop() = topSongs().takeIf { it.isNotEmpty() }?.let { playerConnection.play(it) }
+    fun playTop() = playback.playTop(topSongs())
+    fun shuffle() = playback.shuffle(topSongs())
+    fun play(index: Int) = playback.play(topSongs(), index)
+    fun playOne(track: UnifiedTrack) = playback.playOne(track)
+    fun playNext(track: UnifiedTrack) = playback.playNext(track)
+    fun addToQueue(track: UnifiedTrack) = playback.addToQueue(track)
 
-    fun shuffle() = topSongs().takeIf { it.isNotEmpty() }
-        ?.let { playerConnection.play(it.shuffled()) }
-
-    fun play(index: Int) = playerConnection.play(topSongs(), index)
-
-    /**
-     * Plays one track on its own — for a song that only appears on a shelf, where an index into
-     * the merged song list means nothing.
-     */
-    fun playOne(track: UnifiedTrack) = playerConnection.play(listOf(track))
-
-    fun playNext(track: UnifiedTrack) = playerConnection.playNext(listOf(track))
-
-    fun addToQueue(track: UnifiedTrack) = playerConnection.addToQueue(listOf(track))
-
-    /** Radio for the artist as a whole, seeded from their most played. */
     fun startArtistRadio() {
         topSongs().firstOrNull()?.let(::startRadio)
     }
 
-    fun startRadio(track: UnifiedTrack) {
-        viewModelScope.launch { playbackCoordinator.startRadio(track) }
-    }
+    fun startRadio(track: UnifiedTrack) = playback.startRadio(track, viewModelScope)
+    fun toggleLike(track: UnifiedTrack) = playback.toggleLike(track, viewModelScope)
+    fun canShare(track: UnifiedTrack) = playback.canShare(track)
+    fun share(track: UnifiedTrack) = playback.share(track, viewModelScope)
 
-    fun toggleLike(track: UnifiedTrack) {
-        viewModelScope.launch { musicRepository.toggleLike(track) }
-    }
-
-    fun canShare(track: UnifiedTrack) = shareRepository.canShare(track)
-
-    fun share(track: UnifiedTrack) {
-        viewModelScope.launch { shareRepository.share(track) }
-    }
-
-    fun playAlbum(album: UnifiedAlbum) {
-        viewModelScope.launch {
-            val albumTracks = musicRepository.getAlbumTracks(album)
-            if (albumTracks.isNotEmpty()) {
-                playerConnection.play(albumTracks)
-            }
-        }
-    }
-
-    fun playAlbumNext(album: UnifiedAlbum) {
-        viewModelScope.launch {
-            val albumTracks = musicRepository.getAlbumTracks(album)
-            if (albumTracks.isNotEmpty()) {
-                playerConnection.playNext(albumTracks)
-            }
-        }
-    }
-
-    fun addAlbumToQueue(album: UnifiedAlbum) {
-        viewModelScope.launch {
-            val albumTracks = musicRepository.getAlbumTracks(album)
-            if (albumTracks.isNotEmpty()) {
-                playerConnection.addToQueue(albumTracks)
-            }
-        }
-    }
-
-    fun canShareAlbum(album: UnifiedAlbum): Boolean =
-        shareRepository.canShare(album.source)
-
-    fun shareAlbum(album: UnifiedAlbum) {
-        viewModelScope.launch {
-            shareRepository.share(
-                ShareTarget(
-                    kind = ShareKind.ALBUM,
-                    source = album.source,
-                    id = album.id,
-                    title = "${album.title} - ${album.artist}"
-                )
-            )
-        }
-    }
-
-    fun getAlbumTracks(album: UnifiedAlbum, onTracks: (List<UnifiedTrack>) -> Unit) {
-        viewModelScope.launch {
-            val albumTracks = musicRepository.getAlbumTracks(album)
-            if (albumTracks.isNotEmpty()) {
-                onTracks(albumTracks)
-            }
-        }
-    }
+    fun playAlbum(album: UnifiedAlbum) = playback.playAlbum(album, viewModelScope)
+    fun playAlbumNext(album: UnifiedAlbum) = playback.playAlbumNext(album, viewModelScope)
+    fun addAlbumToQueue(album: UnifiedAlbum) = playback.addAlbumToQueue(album, viewModelScope)
+    fun canShareAlbum(album: UnifiedAlbum): Boolean = playback.canShareAlbum(album)
+    fun shareAlbum(album: UnifiedAlbum) = playback.shareAlbum(album, viewModelScope)
+    fun getAlbumTracks(album: UnifiedAlbum, onTracks: (List<UnifiedTrack>) -> Unit) =
+        playback.getAlbumTracks(album, viewModelScope, onTracks)
 }

@@ -69,7 +69,8 @@ internal fun LazyListScope.homeSection(
             QuickPicksHeader(
                 title = section.title,
                 tracks = section.tracks,
-                onPlay = { index -> viewModel.play(section.tracks, index) }
+                onPlay = { index -> viewModel.play(section.tracks, index) },
+                onLongPress = onLongPress
             )
         } else {
             SectionTitle(section.title)

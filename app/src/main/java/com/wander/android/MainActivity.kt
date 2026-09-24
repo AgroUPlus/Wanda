@@ -2,9 +2,7 @@ package com.wander.android
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,45 +12,24 @@ import androidx.lifecycle.lifecycleScope
 import com.wander.android.core.i18n.AppLocaleStore
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.security.SecureStorage
-import com.wander.android.data.model.ArtistTrackSection
-import com.wander.android.data.model.SourceType
-import com.wander.android.data.repository.CatalogRepository
-import com.wander.android.data.repository.LinkRepository
-import com.wander.android.data.repository.ShareLinkRewriter
-import com.wander.android.data.sources.ytmusic.YouTubeEntity
-import com.wander.android.data.sources.ytmusic.YouTubeEntityKind
-import com.wander.android.data.repository.SocialRepository
-import com.wander.android.data.sources.agro.AgroAuthError
-import com.wander.android.data.sources.agro.AgroClient
 import com.wander.android.data.sources.agro.AgroHandoffPublisher
-import com.wander.android.data.sources.agro.explain
 import com.wander.android.ui.WanderApp
-import com.wander.android.ui.navigation.DeepLinkRouter
-import com.wander.android.ui.navigation.Routes
-import com.wander.android.ui.navigation.TopLevelDestination
 import com.wander.android.ui.theme.WanderTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
-import kotlinx.coroutines.launch
 
 /**
  * Holds no state of its own. It connects to [com.wander.android.core.playback.PlaybackService]
  * while visible and hands everything else to [WanderApp]; ViewModels come from Hilt, so they
- * survive configuration changes (the previous `remember {}` construction did not).
+ * survive configuration changes.
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     @Inject lateinit var playerConnection: PlayerConnection
     @Inject lateinit var secureStorage: SecureStorage
-    @Inject lateinit var agroClient: AgroClient
     @Inject internal lateinit var agroHandoffPublisher: AgroHandoffPublisher
-    @Inject lateinit var linkRepository: LinkRepository
-    @Inject lateinit var musicRepository: com.wander.android.data.repository.MusicRepository
-    @Inject lateinit var catalogRepository: CatalogRepository
-    @Inject lateinit var shareLinkRewriter: ShareLinkRewriter
-    @Inject lateinit var deepLinkRouter: DeepLinkRouter
-    @Inject internal lateinit var socialRepository: SocialRepository
+    @Inject internal lateinit var intentHandler: AppIntentHandler
 
     /**
      * Applies the chosen display language before a single resource is resolved.
@@ -67,7 +44,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        handleIntent(intent)
+        intentHandler.handleIntent(lifecycleScope, intent)
         // Announces the device once per launch. Without it the server only ever heard from Wanda
         // at pairing time, so a device that had been restarted looked gone.
         agroHandoffPublisher.register()
@@ -86,223 +63,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleIntent(intent)
-    }
-
-    /**
-     * Links arrive here: an `agro:` pairing QR, a YouTube/YouTube Music track
-     * someone shared, a `wanda://listen` handoff, a `wanda://inbox` notification,
-     * or a Jam invite link `https://frwd.top/jam?code=...` / `wanda://jam?code=...`.
-     */
-    private fun handleIntent(intent: Intent?) {
-        val uri = intent?.data ?: return
-        // Parsed once, before the branches, because two of them need the answer. It is string work
-        // over a URL that is already in hand — no network, no disk.
-        val entity = linkRepository.sharedEntity(uri)
-        when {
-            uri.scheme == "agro" -> handleAgroPairing(uri)
-            // A tapped drop notification.
-            uri.scheme == "wanda" && uri.host == "inbox" -> deepLinkRouter.request(Routes.ACTIVITY)
-            // A tapped "measuring your library" notification. The progress bar says how far along
-            // it is; this screen is where you find out what it is stuck on.
-            uri.scheme == "wanda" && uri.host == "fingerprints" ->
-                deepLinkRouter.request(Routes.FINGERPRINTS)
-            // A friend code held up on someone else's screen. Scanned with the system camera
-            // rather than one built into the app: the pairing QR already works this way, and an
-            // in-app scanner would mean a camera permission for a feature used once.
-            uri.scheme == "wanda" && uri.host == "friend" -> handleFriendCode(uri)
-            isJamLink(uri) -> handleJamLink(uri)
-            linkRepository.isAlbumLink(uri) -> openSharedAlbum(uri)
-            linkRepository.isTrackLink(uri) -> openSharedTrack(uri)
-            linkRepository.canOpen(uri) -> openSharedLink(uri)
-            // After the track branches, never before: a song shared from inside a record or a
-            // playlist carries both, and the song is the thing that was tapped.
-            entity != null -> openSharedEntity(entity)
-            uri.scheme == "https" || uri.scheme == "wanda" -> Toast.makeText(
-                this,
-                "That link isn't something Wanda can open.",
-                Toast.LENGTH_LONG
-            ).show()
-        }
-    }
-
-    /**
-     * Spends a scanned friend code.
-     *
-     * Reported either way. A code that has expired between being shown and being scanned is the
-     * common failure here, and one that silently does nothing is indistinguishable from a scan
-     * that missed.
-     */
-    private fun handleFriendCode(uri: Uri) {
-        val code = uri.lastPathSegment?.trim().orEmpty()
-        if (code.isEmpty()) return
-        lifecycleScope.launch {
-            val friend = socialRepository.redeemFriendCode(code).getOrNull()
-            val message = friend
-                ?.let { "You and @$it are now friends" }
-                ?: "That code has expired or has already been used."
-            Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
-            if (friend != null) deepLinkRouter.request(TopLevelDestination.FRIENDS.route)
-        }
-    }
-
-    private fun isJamLink(uri: Uri): Boolean {
-        val isScheme = uri.scheme in setOf("wanda", "https", "http")
-        val isJamHostOrPath = uri.host == "jam" || uri.pathSegments.contains("jam")
-        val hasCodeOrId = uri.getQueryParameter("code") != null || uri.getQueryParameter("id") != null
-        return isScheme && isJamHostOrPath && hasCodeOrId
-    }
-
-    private fun handleJamLink(uri: Uri) {
-        val code = uri.getQueryParameter("code")?.trim()?.uppercase()?.filter { it.isLetterOrDigit() }?.take(10)
-        if (!code.isNullOrEmpty()) {
-            Toast.makeText(this, "Opening Jam $code...", Toast.LENGTH_SHORT).show()
-            deepLinkRouter.request(Routes.jam(code))
-        } else {
-            deepLinkRouter.request(Routes.jam())
-        }
-    }
-
-    /**
-     * Resolves a shared album against this device's own sources and plays it.
-     *
-     * The link names no backend, so what plays is whatever *this* device has: the user's own copy
-     * if they have one, a stream otherwise. A miss is reported by name — "that record isn't in any
-     * of your sources" is something the recipient can act on, where silence is not.
-     */
-    private fun openSharedAlbum(uri: Uri) {
-        lifecycleScope.launch {
-            linkRepository.resolveAlbum(uri).fold(
-                onSuccess = { album ->
-                    val tracks = musicRepository.getAlbumTracks(album)
-                    if (tracks.isEmpty()) {
-                        Toast.makeText(
-                            this@MainActivity,
-                            "Found “${album.title}” but couldn't load its tracks.",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    } else {
-                        playerConnection.play(tracks)
-                    }
-                },
-                onFailure = { cause ->
-                    Toast.makeText(
-                        this@MainActivity,
-                        cause.message ?: "Couldn't open that album link.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            )
-        }
-    }
-
-    /**
-     * Resolves a universal track link against this device's own sources and plays it.
-     *
-     * The link names no backend, so what plays is whatever *this* device has. Mirrors
-     * [openSharedAlbum]: a miss is reported by name rather than silently doing nothing.
-     */
-    private fun openSharedTrack(uri: Uri) {
-        lifecycleScope.launch {
-            linkRepository.resolveTrack(uri).fold(
-                onSuccess = { track -> playerConnection.play(listOf(track)) },
-                onFailure = { cause ->
-                    Toast.makeText(
-                        this@MainActivity,
-                        cause.message ?: getString(R.string.link_track_open_failed),
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            )
-        }
-    }
-
-    /**
-     * Plays a shared record, playlist or artist.
-     *
-     * These all arrive as a YouTube id and all end as a list of tracks, so the only thing that
-     * differs is which lookup answers — each of which already existed for the screens that browse
-     * the same things. The link was never the problem; the dispatch simply had no branch for
-     * anything that was not a single track, and said so in those words.
-     *
-     * An artist plays their top songs, the same shelf their page's play button uses. Their page is
-     * a set of shelves rather than a queue, and picking the first one is what "play this artist"
-     * means everywhere else in the app.
-     */
-    private fun openSharedEntity(entity: YouTubeEntity) {
-        lifecycleScope.launch {
-            val id = SourceType.YTMUSIC.idPrefix + entity.id
-            val tracks = when (entity.kind) {
-                YouTubeEntityKind.ALBUM -> musicRepository.getAlbumTracksById(id)
-                YouTubeEntityKind.PLAYLIST -> musicRepository.getPlaylistTracksById(id)
-                YouTubeEntityKind.ARTIST -> catalogRepository.artistDetails(id)
-                    ?.sections
-                    ?.filterIsInstance<ArtistTrackSection>()
-                    ?.firstOrNull()
-                    ?.tracks
-                    .orEmpty()
-            }
-            if (tracks.isEmpty()) {
-                // Said as the miss it is. Reaching here means the link *was* understood — the
-                // source simply had nothing behind it, which is not the same as an unopenable link
-                // and should not be reported in the same words.
-                Toast.makeText(
-                    this@MainActivity,
-                    "Nothing playable behind that link.",
-                    Toast.LENGTH_LONG
-                ).show()
-            } else {
-                playerConnection.play(tracks)
-            }
-        }
-    }
-
-    /**
-     * Resolves the link and plays it. Failures are reported: a tapped link that silently does
-     * nothing is indistinguishable from the app having crashed on open.
-     */
-    private fun openSharedLink(uri: Uri) {
-        lifecycleScope.launch {
-            linkRepository.resolve(uri).fold(
-                onSuccess = { track ->
-                    // Stored before it plays, so everything keyed on a `tracks` row works for a
-                    // link the way it does for a search result — `markLive` above all, which is
-                    // how a stream that resolves to a manifest is remembered as a broadcast.
-                    musicRepository.rememberSharedTrack(track)
-                    playerConnection.play(listOf(track))
-                    // Applied after `play`, not before: `setSpeedAndPitch` needs a controller and
-                    // writes straight to it, so a rate set against the outgoing track would be
-                    // overwritten — or dropped entirely when nothing is playing yet.
-                    shareLinkRewriter.playbackOf(uri)?.let {
-                        playerConnection.setSpeedAndPitch(it.speed, it.pitch)
-                    }
-                },
-                onFailure = { cause ->
-                    Toast.makeText(
-                        this@MainActivity,
-                        cause.message ?: "Couldn't open that link.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            )
-        }
-    }
-
-    private fun handleAgroPairing(uri: Uri) {
-        lifecycleScope.launch {
-            val result = agroClient.parseQrCodePayload(uri.toString())
-            val message = result.fold(
-                onSuccess = { petname ->
-                    "Paired with Agro as ${petname ?: secureStorage.agroDevicePetname.ifEmpty { "wanda" }}"
-                },
-                onFailure = { error ->
-                    // The message only; the URL and token in this flow are credentials.
-                    android.util.Log.w("Wanda", "Agro pairing failed: ${error.message}")
-                    AgroAuthError.from(error).explain()
-                }
-            )
-            Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
-        }
+        intentHandler.handleIntent(lifecycleScope, intent)
     }
 
     override fun onStart() {

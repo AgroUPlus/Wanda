@@ -69,6 +69,7 @@ internal fun StandardPlayerLayout(
     onOpenQueue: () -> Unit,
     onMinimize: () -> Unit,
     onOpenMenu: () -> Unit,
+    onOpenSourcePicker: (() -> Unit)?,
     onToggleLyrics: () -> Unit,
     contentAlpha: () -> Float,
     overlayAlpha: () -> Float,
@@ -97,6 +98,7 @@ internal fun StandardPlayerLayout(
             onOpenJam = onOpenJam,
             onMinimize = onMinimize,
             onOpenQueue = onOpenQueue,
+            onOpenSourcePicker = onOpenSourcePicker,
             sourceLabelColorMuted = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.graphicsLayer { alpha = contentAlpha() }
         )

@@ -26,7 +26,20 @@ class GoogleAccountManager @Inject constructor(
         return true
     }
 
-    fun signOut() = secureStorage.clearYtMusicSession()
+    /**
+     * Clearing app-side credentials is not enough: the in-app sign-in runs through a WebView,
+     * whose cookies and storage live in Android's shared [android.webkit.CookieManager] outside
+     * [SecureStorage]. Left alone, music.youtube.com would still recognize the device on the next
+     * WebView load even after the user signed out here.
+     */
+    fun signOut() {
+        secureStorage.clearYtMusicSession()
+        android.webkit.CookieManager.getInstance().apply {
+            removeAllCookies(null)
+            flush()
+        }
+        android.webkit.WebStorage.getInstance().deleteAllData()
+    }
 
     /** The signed-in account's display name, or empty when it has not been looked up yet. */
     val accountName: String get() = secureStorage.ytMusicAccountName

@@ -18,6 +18,8 @@ internal const val SectionRecentAdded = "recent_added"
 /** Per-source shelves are unlisted, so they sort after these and before the closing list. */
 internal val SectionOrder = listOf(
     SectionOnRepeat,
+    // A podcast shelf, once one exists, belongs here: right below Quick Picks, above everything
+    // else. Recorded now so whoever adds it doesn't have to re-derive the placement.
     SectionContinueListening,
     SectionMixes,
     SectionJumpBackIn,

@@ -28,7 +28,13 @@ ui/         theme · navigation · components · screens/<screen>
 ## 4. Security & Privacy
 
 - Secrets (tokens, passwords, API keys) live exclusively in `EncryptedSharedPreferences` (`SecureStorage`). Never store secrets in Room, logs, or unencrypted preferences.
-- Never log URLs, auth tokens, session cookies, passwords, or stream URLs.
-- App flags: `allowBackup = false`, `usesCleartextTraffic = false` (domain opt-in for self-hosted Navidrome).
+- Never log URLs, auth tokens, session cookies, passwords, stream URLs, or a request's query string.
+- App flags: `allowBackup = false`. Network policy is hybrid, not a blanket `usesCleartextTraffic = false`:
+  `network_security_config.xml` permits cleartext at the manifest level (`base-config`) because P2P
+  peers and self-hosted LAN servers sit at dynamic IPs no static domain list can enumerate; the real
+  enforcement is application-layer, in `HttpClientFactory`'s shared `OkHttpClient` interceptor, which
+  rejects plain HTTP to any host that isn't private/loopback/`.local`. Public/WAN traffic is HTTPS-only.
 - Zero third-party telemetry, crash reporting, or analytics SDKs.
 - Incognito mode completely suppresses scrobbles and play-count increments.
+- Outbound third-party metadata lookups (LRCLIB) are gated behind an explicit, on-by-default consent
+  toggle in Settings → Privacy (`SecureStorage.isExternalLyricsEnabled`), independent of Agro pairing.

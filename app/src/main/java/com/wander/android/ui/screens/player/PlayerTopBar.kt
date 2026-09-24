@@ -48,6 +48,7 @@ internal fun PlayerTopBar(
     onOpenJam: () -> Unit,
     onMinimize: () -> Unit,
     onOpenQueue: () -> Unit,
+    onOpenSourcePicker: (() -> Unit)?,
     sourceLabelColorMuted: Color,
     modifier: Modifier = Modifier
 ) {
@@ -91,7 +92,8 @@ internal fun PlayerTopBar(
                     text = sourceLabel,
                     style = MaterialTheme.typography.labelLarge,
                     color = sourceLabelColorMuted,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = onOpenSourcePicker?.let { Modifier.clickable(onClick = it) } ?: Modifier
                 )
             }
         }

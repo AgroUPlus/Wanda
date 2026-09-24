@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DeleteForever
+import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.LockPerson
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.QueryStats
@@ -42,6 +43,22 @@ internal fun LazyListScope.privacyTab(
                     checked = state.incognito,
                     onCheckedChange = actions.onIncognitoChange,
                     icon = Icons.Rounded.LockPerson
+                )
+            })
+        )
+    }
+
+    item(key = "online_lyrics") {
+        GroupedCard(
+            modifier = Modifier.padding(top = 16.dp),
+            items = listOf<@Composable () -> Unit>({
+                SettingsToggle(
+                    modifier = Modifier.scale(rememberShelfEntranceScale(7)),
+                    title = stringResource(R.string.settings_online_lyrics_lookup),
+                    subtitle = stringResource(R.string.settings_query_lrclib_when_no_local_or_server_lyrics),
+                    checked = state.externalLyricsEnabled,
+                    onCheckedChange = actions.onExternalLyricsChange,
+                    icon = Icons.Rounded.Language
                 )
             })
         )

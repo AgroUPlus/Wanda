@@ -16,6 +16,11 @@ Android music player unifying **Navidrome/Subsonic**, **local files**, **YouTube
 | **No dead code & no fake fallbacks** | Surface explicit errors; never swallow exceptions with generic catch. |
 | **Research before implementation** | Follow mandatory 4-step research workflow before adding dependencies. |
 | **No AI attribution in git** | Comply with `CLA.md` Section 8; never add `Co-Authored-By` AI tags. |
+| **Application-layer HTTPS enforcement** | `HttpClientFactory`'s shared `OkHttpClient` rejects plain HTTP to any host that isn't private/loopback/`.local`. |
+| **Complete session purge on logout** | Web-backed sign-outs must clear `CookieManager` and `WebStorage`, not just app preferences. |
+| **Zero secrets in query-string logs** | Never log a request path's query string; strip it before any `Log.*` call. |
+| **Singleton `ImageLoader`** | All bitmap fetches use `coil3.SingletonImageLoader.get(context)`, never a throwaway `ImageLoader(context)`. |
+| **Explicit metadata consent** | Outbound metadata lookups to a third party (e.g. LRCLIB) require an explicit, user-visible consent toggle. |
 
 ## 2. Documentation Directory Map
 

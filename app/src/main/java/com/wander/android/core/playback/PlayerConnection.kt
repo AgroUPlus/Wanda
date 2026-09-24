@@ -2,46 +2,27 @@ package com.wander.android.core.playback
 
 import android.content.ComponentName
 import android.content.Context
-import android.net.Uri
-import androidx.media3.common.C
-import androidx.media3.common.MimeTypes
-import androidx.media3.common.PlaybackException
-import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.UnifiedTrack
-import com.wander.android.data.model.isOneShotTrackId
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 /**
  * The UI's handle on playback: a [MediaController] bound to [PlaybackService], exposed as flows.
- *
- * There is no polling loop here. State changes arrive as player callbacks; the playback position
- * is a separate flow that only ticks while something is actually playing and the screen is on
- * (see `rememberPlaybackPosition`).
  */
 @Singleton
 class PlayerConnection @Inject constructor(
@@ -50,300 +31,48 @@ class PlayerConnection @Inject constructor(
     private val streamResolver: StreamResolver
 ) {
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
+    private val queueManager = PlayerQueueManager()
+    private val retryHandler = LivePlaybackRetryHandler()
+    private val checkpointTracker = EpisodeCheckpointTracker()
+    private val skipManager = SkipGraceManager()
+    private val speedController = PlayerSpeedAndOffloadController()
 
-    /** Whether shuffle and repeat currently belong to somebody else. See [PlaybackState.orderLocked]. */
     private val _orderLocked = MutableStateFlow(false)
+    private val jamCoordinator = PlayerJamCoordinator(scope, _orderLocked, queueManager)
 
     private val _controller = MutableStateFlow<MediaController?>(null)
     val controller: StateFlow<MediaController?> = _controller.asStateFlow()
 
-    /**
-     * The actually-decoded format, reported by [PlaybackService] over session extras — see
-     * [ActualAudioFormat] for why `MediaController.Listener.onExtrasChanged` is the only channel
-     * for this rather than a plain `Player.Listener` callback.
-     */
     private val _actualAudioFormat = MutableStateFlow<ActualAudioFormat?>(null)
-
-    /** 2-second grace window to restore playback position when returning from an accidental skip. */
-    private var skipGraceWindow: SkipGraceWindow? = null
-
-    /**
-     * Endless-radio top-up. Owned by [SecureStorage] rather than held here, because a flag that
-     * only lived in this singleton was gone the moment the process was.
-     */
     val isRadioMode: StateFlow<Boolean> get() = secureStorage.isRadioMode
 
-    /**
-     * Playback failures, phrased for the user.
-     *
-     * Without this a failed stream resolve died inside ExoPlayer and the UI simply sat there: no
-     * message, no log, indistinguishable from a track that had not started yet. Anything that
-     * stops playback has to say so.
-     */
     private val _errors = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val errors: SharedFlow<String> = _errors.asSharedFlow()
 
-    /**
-     * Things worth telling the user that are not failures.
-     *
-     * Separate from [errors] so a confirmation is not dressed up as a problem. Used by the
-     * controls whose whole effect is invisible until the queue happens to run out — radio mode
-     * being the one that prompted it.
-     */
     private val _notices = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val notices: SharedFlow<String> = _notices.asSharedFlow()
 
-    // Fast track lookup cache to avoid repeatedly deserializing JSON on the UI thread
-    private val trackCache = java.util.concurrent.ConcurrentHashMap<String, UnifiedTrack>()
-    private var lastQueue: List<UnifiedTrack> = emptyList()
+    val episodeCheckpoints: SharedFlow<EpisodeCheckpoint> = checkpointTracker.episodeCheckpoints
+    val speedAndPitch: StateFlow<SpeedAndPitch> = speedController.speedAndPitch
 
-    /**
-     * Where an episode was left, emitted the moment it stops being the thing playing.
-     *
-     * Event-driven rather than sampled: a ticker writing the playhead to disk every few seconds
-     * would run with no UI on screen, which is exactly the kind of loop this app does not have.
-     * The two moments that matter are leaving an item and pausing on it, and the player reports
-     * both. `PlaybackCoordinator` is what persists these.
-     */
-    private val _episodeCheckpoints = MutableSharedFlow<EpisodeCheckpoint>(extraBufferCapacity = 8)
-    val episodeCheckpoints: SharedFlow<EpisodeCheckpoint> = _episodeCheckpoints.asSharedFlow()
+    data class QueueSnapshot(val tracks: List<UnifiedTrack>, val index: Int, val positionMs: Long)
 
-    /** One reading of how far into [trackId] the listener had got. */
-    data class EpisodeCheckpoint(val trackId: String, val positionMs: Long, val durationMs: Long)
-
-    /**
-     * The last real duration the player reported, and for which track.
-     *
-     * Needed because the checkpoint that matters most — leaving an episode — is taken *after* the
-     * player has moved on, when `duration` already describes the next item (or is unset while it
-     * prepares). Falling back to the track's own length then recorded 0 for YouTube episodes, and
-     * every in-progress episode showed an empty bar on Home until it was playing again.
-     */
-    private var lastKnownDuration: Pair<String, Long>? = null
-
-    private fun rememberDuration(track: UnifiedTrack?, durationMs: Long) {
-        if (track == null || durationMs == C.TIME_UNSET || durationMs <= 0L) return
-        lastKnownDuration = track.id to durationMs
-    }
-
-    private fun checkpoint(track: UnifiedTrack?, positionMs: Long, durationMs: Long) {
-        if (track?.isEpisode != true || positionMs <= 0L) return
-        val remembered = lastKnownDuration?.takeIf { it.first == track.id }?.second
-        _episodeCheckpoints.tryEmit(
-            EpisodeCheckpoint(
-                trackId = track.id,
-                positionMs = positionMs,
-                // The player knows the real duration; the track's own is what a search claimed.
-                durationMs = remembered
-                    ?: durationMs.takeIf { it > 0L && it != C.TIME_UNSET }
-                    ?: track.durationMs
-            )
-        )
-    }
-
-    val state: StateFlow<PlaybackState> = _controller
-        .flatMapLatest { ctrl ->
-            if (ctrl == null) flowOf(PlaybackState()) else callbackFlow {
-                // Counted here rather than read off the player: nothing on `Player` remembers that
-                // a seek happened, and the snapshot is otherwise identical to the one before it.
-                // See `PlaybackState.seekEpoch`.
-                var seekEpoch = 0L
-                val listener = object : Player.Listener {
-                    override fun onEvents(player: Player, events: Player.Events) {
-                        val timelineChanged = events.contains(Player.EVENT_TIMELINE_CHANGED) ||
-                            events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION) ||
-                            lastQueue.size != player.mediaItemCount
-                        if (timelineChanged) {
-                            lastQueue = player.queueTracks(trackCache)
-                        }
-                        // A format left over from the previous track is worse than none: it claims
-                        // a lossless stream is still playing for however long it takes the new
-                        // item's first frame to decode and correct it.
-                        if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)) {
-                            _actualAudioFormat.value = null
-                        }
-                        if (events.contains(Player.EVENT_POSITION_DISCONTINUITY)) seekEpoch++
-                        rememberDuration(
-                            lastQueue.getOrNull(player.currentMediaItemIndex),
-                            player.duration
-                        )
-                        // Pausing on an episode is the commonest way to leave one for the day.
-                        if (events.contains(Player.EVENT_IS_PLAYING_CHANGED) && !player.isPlaying) {
-                            checkpoint(
-                                lastQueue.getOrNull(player.currentMediaItemIndex),
-                                player.currentPosition,
-                                player.duration
-                            )
-                        }
-                        trySend(
-                            player.buildSnapshot(
-                                secureStorage.isRadioMode.value,
-                                lastQueue,
-                                trackCache,
-                                seekEpoch
-                            )
-                        )
-                    }
-
-                    /**
-                     * Records the outgoing item's playhead when the player leaves it.
-                     *
-                     * A plain seek is excluded: the listener has not left anything, and writing
-                     * every scrub to disk is the polling loop this avoids, spelled differently.
-                     */
-                    override fun onPositionDiscontinuity(
-                        oldPosition: Player.PositionInfo,
-                        newPosition: Player.PositionInfo,
-                        reason: Int
-                    ) {
-                        if (reason == Player.DISCONTINUITY_REASON_SEEK &&
-                            oldPosition.mediaItemIndex == newPosition.mediaItemIndex
-                        ) {
-                            return
-                        }
-                        // `ctrl.duration` already belongs to the new item here; only the remembered
-                        // duration of the old one is trusted (see `lastKnownDuration`).
-                        checkpoint(
-                            lastQueue.getOrNull(oldPosition.mediaItemIndex),
-                            oldPosition.positionMs,
-                            C.TIME_UNSET
-                        )
-                    }
-
-                    override fun onPlayerError(error: PlaybackException) {
-                        if (retryContainerMismatch(ctrl, error)) return
-                        if (rejoinLiveEdge(ctrl)) return
-                        _errors.tryEmit(error.userMessage())
-                    }
-                }
-                ctrl.addListener(listener)
-                lastQueue = ctrl.queueTracks(trackCache)
-                trySend(
-                    ctrl.buildSnapshot(
-                        secureStorage.isRadioMode.value,
-                        lastQueue,
-                        trackCache,
-                        seekEpoch
-                    )
-                )
-                awaitClose { ctrl.removeListener(listener) }
-            }
-        }
-        .combine(secureStorage.isRadioMode) { state, radio -> state.copy(isRadioMode = radio) }
-        // Combined rather than read inside the snapshot: joining a jam changes no player property
-        // on its own, so a snapshot built from the controller alone would keep saying the order is
-        // the user's until the next unrelated playback event happened to rebuild it.
-        .combine(_orderLocked) { state, locked -> state.copy(orderLocked = locked) }
-        // Combined for the same reason [_orderLocked] is: resolving a stream changes no player
-        // property, so a snapshot built from the controller alone goes on reporting whatever
-        // liveness the item was *queued* with. For a broadcast opened from a shared link that is
-        // whatever YouTube's badges said — usually nothing — and the sheet drew a scrub bar over
-        // a stream with no beginning until an unrelated error tripped `retryContainerMismatch`.
-        //
-        // Patched here rather than written into `trackCache`, because the cache is only read while
-        // a snapshot is being built and there is no event to build one on.
-        .combine(streamResolver.resolvedLive) { state, live -> state.withLiveIds(live) }
-        .combine(_actualAudioFormat) { state, format -> state.copy(actualAudioFormat = format) }
-        .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, PlaybackState())
-
-    /**
-     * Ids already retried as a livestream, so a genuinely unplayable file cannot loop forever.
-     */
-    private val retriedAsLive = java.util.Collections.newSetFromMap(
-        java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+    val state: StateFlow<PlaybackState> = PlaybackStateFlowBuilder.create(
+        controller = _controller,
+        queueManager = queueManager,
+        retryHandler = retryHandler,
+        checkpointTracker = checkpointTracker,
+        actualAudioFormat = _actualAudioFormat,
+        orderLocked = _orderLocked,
+        isRadioMode = secureStorage.isRadioMode,
+        resolvedLive = streamResolver.resolvedLive,
+        onError = { _errors.tryEmit(it) },
+        scope = scope
     )
 
-    /**
-     * Re-prepares the current item after it failed to parse as a media container (progressive vs HLS).
-     *
-     * The stream URL is hidden behind a `wanda://track/…` placeholder until load time, so the
-     * media-source factory has to choose progressive or HLS from a MIME hint set when the item was
-     * *queued* — before anything has fetched it. When YouTube hands back an HLS manifest for a track
-     * queued as progressive, or a direct audio format for a live stream marked as HLS, the extractors
-     * report that they cannot parse the container.
-     *
-     * In either case, the item is swapped to the opposite container hint and prepared again. Once
-     * per id, so a genuinely corrupt file still surfaces as an error instead of looping forever.
-     */
-    private fun retryContainerMismatch(ctrl: MediaController, error: PlaybackException): Boolean {
-        if (error.errorCode !in CONTAINER_PARSE_ERRORS) return false
-        val item = runCatching { ctrl.currentMediaItem }.getOrNull() ?: return false
-        val id = item.mediaId.takeIf { it.isNotBlank() } ?: return false
-
-        // Never for a stream that can only be fetched once. Re-preparing re-opens the URL, and a
-        // relay session refuses the second request with a 409 — so the retry replaced "this did
-        // not parse as a container" with a response code that describes the retry rather than the
-        // fault, and pointed the search at the wrong end of the transfer entirely.
-        if (isOneShotTrackId(id)) return false
-
-        val uri = item.localConfiguration?.uri
-        if (uri != null && uri.scheme != WANDA_SCHEME) return false
-
-        if (!retriedAsLive.add(id)) return false
-
-        val index = runCatching { ctrl.currentMediaItemIndex }.getOrNull() ?: return false
-        val isHls = uri?.toString()?.endsWith(LIVE_SUFFIX) == true ||
-            item.localConfiguration?.mimeType == MimeTypes.APPLICATION_M3U8
-
-        val newUri = if (isHls) {
-            Uri.parse("$WANDA_SCHEME://track/${Uri.encode(id)}")
-        } else {
-            Uri.parse("$WANDA_SCHEME://track/${Uri.encode(id)}$LIVE_SUFFIX")
-        }
-
-        val builder = item.buildUpon().setUri(newUri)
-        if (isHls) {
-            builder.setMimeType(null)
-        } else {
-            builder.setMimeType(MimeTypes.APPLICATION_M3U8)
-            // A YouTube item that turns out to be a manifest is a livestream — the badges just
-            // failed to say so. Without the live configuration the player reads the manifest's
-            // window as the item's duration, plays to the end of it and advances the queue, and
-            // the playlist tracker eventually gives up with PlaylistStuckException.
-            builder.setLiveConfiguration(liveConfiguration())
-        }
-
-        ctrl.replaceMediaItem(index, builder.build())
-        ctrl.prepare()
-        ctrl.play()
-        return true
-    }
-
-    /**
-     * Puts a livestream back on the air after a load error, instead of reporting one.
-     *
-     * For a broadcast, "the segment you asked for is gone" is not a failure worth telling the user
-     * about — it means the player fell behind the window, which a pause, a tunnel or a moment of
-     * bad signal is enough to do. The answer is the same one a radio gives: rejoin at whatever is
-     * playing now. Only an error the user can act on should reach them.
-     *
-     * Bounded per item, because a stream that has genuinely ended would otherwise be re-prepared
-     * forever, and "this station is off the air" is something they *do* need to be told.
-     */
-    private fun rejoinLiveEdge(ctrl: MediaController): Boolean {
-        if (state.value.currentTrack?.isLive != true) return false
-        val id = runCatching { ctrl.currentMediaItem?.mediaId }.getOrNull() ?: return false
-        if (!liveRejoins.allow(id)) return false
-
-        ctrl.seekToDefaultPosition()
-        ctrl.prepare()
-        ctrl.play()
-        return true
-    }
-
-    private val liveRejoins = LiveRejoinBudget()
-
-    /** A play request that arrived before the controller existed. See [play]. */
-    private data class PendingPlay(
-        val tracks: List<UnifiedTrack>,
-        val startIndex: Int,
-        val startPositionMs: Long
-    )
-
+    private data class PendingPlay(val tracks: List<UnifiedTrack>, val startIndex: Int, val startPositionMs: Long)
     private var pendingPlay: PendingPlay? = null
 
-    /** Connects to the service. Idempotent; safe to call from `Activity.onStart`. */
     fun connect() {
         if (_controller.value != null) return
         val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
@@ -357,8 +86,6 @@ class PlayerConnection @Inject constructor(
         future.addListener(
             {
                 val ctrl = runCatching { future.get() }.getOrNull()
-                // Restore the stored language preference immediately so the very first track
-                // the controller plays already obeys it without any further UI action.
                 ctrl?.let { c ->
                     val lang = secureStorage.preferredAudioLanguage
                     if (lang != null) {
@@ -381,265 +108,53 @@ class PlayerConnection @Inject constructor(
     fun release() {
         _controller.value?.release()
         _controller.value = null
-        trackCache.clear()
-        lastQueue = emptyList()
+        queueManager.clear()
     }
 
-    // ── Commands ────────────────────────────────────────────────────────────────────────────
-
-    /**
-     * [startPositionMs] is handed to Media3 with the queue rather than seeked to afterwards —
-     * a `seekTo` after `prepare()` races the initial buffer and can start the track from zero.
-     * Resuming another device's session (see `AgroSessionRepository`) is what needs it.
-     */
     fun play(tracks: List<UnifiedTrack>, startIndex: Int = 0, startPositionMs: Long = 0L) {
         if (tracks.isEmpty()) return
-        // In a jam, choosing a track proposes it to the room instead of playing it here. That is
-        // the whole point of a shared queue: one person deciding what plays by pressing play is
-        // the thing voting exists to replace.
-        onPlayInJam?.let { propose ->
-            // The *tapped* track, not the head of the list. Callers hand over the whole row and say
-            // which one was chosen — `play(section.tracks, index)` — so proposing `tracks.first()`
-            // silently suggested the row's opening track whatever you actually pressed.
+        jamCoordinator.onPlayInJam?.let { propose ->
             propose(tracks, startIndex.coerceIn(0, tracks.lastIndex))
             return
         }
-        // Deliberately *not* gated on `isFollowing`. Picking something else to play is an
-        // unambiguous decision, and answering it with a dialog every time — "leave the session?" —
-        // is worse than simply doing what was asked. `onLeaveFollowing` ends the session quietly;
-        // the banner disappearing is the confirmation.
-        if (isFollowing) onLeaveFollowing?.invoke()
+        jamCoordinator.onUserInitiatedPlay()
         val ctrl = _controller.value ?: run {
-            // Resuming a session can be the first thing that happens after a cold start, before
-            // the controller has finished binding. Dropping the request there is what made resume
-            // look like it did nothing at all; instead, connect and replay it once bound.
             pendingPlay = PendingPlay(tracks, startIndex, startPositionMs)
             connect()
             return
         }
-        tracks.forEach { trackCache[it.id] = it }
-        ctrl.setMediaItems(tracks.map(UnifiedTrack::toMediaItem), startIndex, startPositionMs)
-        ctrl.prepare()
-        ctrl.play()
+        queueManager.play(ctrl, tracks, startIndex, startPositionMs)
     }
 
-    fun addToQueue(tracks: List<UnifiedTrack>) {
-        val ctrl = _controller.value ?: return
-        tracks.forEach { trackCache[it.id] = it }
-        ctrl.addMediaItems(tracks.map(UnifiedTrack::toMediaItem))
-    }
+    fun addToQueue(tracks: List<UnifiedTrack>) = _controller.value?.let { queueManager.addToQueue(it, tracks) }
+    fun playNext(tracks: List<UnifiedTrack>) = _controller.value?.let { queueManager.playNext(it, tracks) }
+    fun removeFromQueue(index: Int) = _controller.value?.let { queueManager.removeFromQueue(it, index) }
+    fun insertInQueue(index: Int, track: UnifiedTrack) = _controller.value?.let { queueManager.insertInQueue(it, index, track) }
+    fun moveInQueue(from: Int, to: Int) = _controller.value?.let { queueManager.moveInQueue(it, from, to, state.value.orderLocked) }
+    fun clearQueue() = _controller.value?.let { queueManager.clearQueue(it) }
 
-    /** Inserts right after the current track, so it plays when this one ends. */
-    fun playNext(tracks: List<UnifiedTrack>) {
-        val ctrl = _controller.value ?: return
-        if (tracks.isEmpty()) return
-        tracks.forEach { trackCache[it.id] = it }
-        val items = tracks.map(UnifiedTrack::toMediaItem)
-        // With nothing queued there is no "next" to insert before, so this is just a play.
-        if (ctrl.mediaItemCount == 0) {
-            ctrl.setMediaItems(items)
-            ctrl.prepare()
-            ctrl.play()
-        } else {
-            ctrl.addMediaItems((ctrl.currentMediaItemIndex + 1).coerceAtMost(ctrl.mediaItemCount), items)
-        }
-    }
-
-    fun removeFromQueue(index: Int) {
-        _controller.value?.removeMediaItem(index)
-    }
-
-    /**
-     * Puts a track back where it was, for the queue drawer's undo.
-     *
-     * Removal in the drawer is a swipe, which is easy to do by accident and — without this — would
-     * be the one destructive edit in the app with no way back. The index is clamped rather than
-     * rejected: by the time undo is tapped the queue may have moved on, and landing the track
-     * nearby is a better answer than silently dropping it.
-     */
-    fun insertInQueue(index: Int, track: UnifiedTrack) {
-        val ctrl = _controller.value ?: return
-        trackCache[track.id] = track
-        ctrl.addMediaItems(index.coerceIn(0, ctrl.mediaItemCount), listOf(track.toMediaItem()))
-    }
-
-    /**
-     * Moves a queued track, for the queue drawer's drag handles.
-     *
-     * Refused while the order is locked: a jam or a listen-along decides what plays next, and a
-     * local drag would be overwritten by the next sync from whoever owns it — which reads as the
-     * gesture having failed rather than having been disallowed. The drawer hides the handles in
-     * that case, and this is the guard behind them; see [PlaybackState.orderLocked].
-     */
-    fun moveInQueue(from: Int, to: Int) {
-        if (state.value.orderLocked) return
-        val ctrl = _controller.value ?: return
-        if (from == to) return
-        val count = ctrl.mediaItemCount
-        if (from !in 0 until count || to !in 0 until count) return
-        ctrl.moveMediaItem(from, to)
-    }
-
-    fun clearQueue() {
-        _controller.value?.clearMediaItems()
-        lastQueue = emptyList()
-    }
-
-    /**
-     * Enough of the player's state to put it back exactly as it was.
-     *
-     * A jam borrows this device's queue rather than adding to it, so what was playing before has to
-     * be kept somewhere to give back. Nothing here is persisted: a jam lasts as long as the app is
-     * in it, and restoring yesterday's queue would be worse than restoring nothing.
-     */
-    data class QueueSnapshot(
-        val tracks: List<UnifiedTrack>,
-        val index: Int,
-        val positionMs: Long
-    )
-
-    /** What is loaded right now, or null when there is nothing worth putting back. */
     fun snapshotQueue(): QueueSnapshot? {
-        val ctrl = _controller.value ?: return null
-        val tracks = lastQueue.ifEmpty { return null }
-        return QueueSnapshot(
-            tracks = tracks,
-            index = ctrl.currentMediaItemIndex.coerceAtLeast(0),
-            positionMs = ctrl.currentPosition.coerceAtLeast(0L)
-        )
+        val s = queueManager.snapshotQueue(_controller.value) ?: return null
+        return QueueSnapshot(s.tracks, s.index, s.positionMs)
     }
 
-    /**
-     * Puts a snapshot back, at the track and position it was taken from.
-     *
-     * Goes through the private path rather than [play], which in a jam would propose the whole
-     * queue to the room instead of playing it.
-     */
-    fun restoreQueue(snapshot: QueueSnapshot) {
-        val ctrl = _controller.value ?: return
-        if (snapshot.tracks.isEmpty()) return
-        snapshot.tracks.forEach { trackCache[it.id] = it }
-        ctrl.setMediaItems(
-            snapshot.tracks.map(UnifiedTrack::toMediaItem),
-            snapshot.index.coerceIn(0, snapshot.tracks.lastIndex),
-            snapshot.positionMs
-        )
-        ctrl.prepare()
-        ctrl.play()
-    }
+    fun restoreQueue(snapshot: QueueSnapshot) = _controller.value?.let { queueManager.restoreQueue(it, snapshot) }
 
-    /**
-     * While following a friend, the transport belongs to them.
-     *
-     * Set by `ListenAlongController` for as long as a session lasts. The player stays fully
-     * visible and expandable — you should be able to see what you are hearing — but pause, skip
-     * and seek are inert, because acting on them would fight the host's next frame and leave the
-     * two devices quietly out of step with no indication why.
-     *
-     * Enforced here rather than by disabling controls in each composable: there are several, in
-     * the mini strip and the full screen, and one that forgot would silently break the session.
-     * Starting *different* music is not blocked — see [play] — because that is an unambiguous
-     * decision to stop following.
-     */
-    var isFollowing: Boolean = false
-        private set
+    val isFollowing: Boolean get() = jamCoordinator.isFollowing
+    fun setFollowing(following: Boolean, onLeave: (() -> Unit)? = null) = jamCoordinator.setFollowing(following, onLeave)
 
-    /**
-     * Called by the listen-along session as it starts and ends.
-     *
-     * [onLeave] is invoked when the user starts different music, so the session ends itself rather
-     * than lingering as a banner over playback it is no longer driving.
-     */
-    fun setFollowing(following: Boolean, onLeave: (() -> Unit)? = null) {
-        isFollowing = following
-        onLeaveFollowing = if (following) onLeave else null
-        _orderLocked.value = isFollowing || isInJam
-    }
+    val isInJam: Boolean get() = jamCoordinator.isInJam
+    fun setJamProposal(propose: ((List<UnifiedTrack>, Int) -> Unit)?) = jamCoordinator.setJamProposal(_controller.value, propose)
 
+    internal fun playForJam(tracks: List<UnifiedTrack>, startPositionMs: Long = 0L) =
+        jamCoordinator.playForJam(_controller.value, tracks, startPositionMs)
 
-    private var onLeaveFollowing: (() -> Unit)? = null
-
-    /**
-     * Set while in a jam: what to do when the user picks something to play.
-     *
-     * Null when not in one, so ordinary playback is untouched.
-     */
-    private var onPlayInJam: ((List<UnifiedTrack>, Int) -> Unit)? = null
-
-    /**
-     * [propose] is given the list and the index of the track the user actually chose. The index is
-     * part of the contract rather than left to the caller to infer: without it this proposed the
-     * first track of whatever row was tapped.
-     */
-    fun setJamProposal(propose: ((List<UnifiedTrack>, Int) -> Unit)?) {
-        onPlayInJam = propose
-        _orderLocked.value = isFollowing || isInJam
-        // Joining clears both, because a repeat switched on before the jam started fights the room
-        // exactly as one switched on during it. Leaving does not put them back: the room owned them
-        // for the duration, and silently reinstating a mode set an hour ago would be a surprise.
-        if (propose == null) return
-        // Hopped to the main thread rather than set here. This is called from `JamRepository` on
-        // `Dispatchers.IO` — every mutation answers with the whole jam and re-wires from there —
-        // and a `MediaController` may only be touched on the application thread.
-        scope.launch {
-            _controller.value?.let { ctrl ->
-                ctrl.repeatMode = Player.REPEAT_MODE_OFF
-                ctrl.shuffleModeEnabled = false
-            }
-        }
-    }
-
-    /** True while this device is in a jam, where the room decides what plays next. */
-    private val isInJam: Boolean
-        get() = onPlayInJam != null
-
-    /**
-     * The jam's own playback, which must not be re-proposed back into the jam it came from.
-     *
-     * [startPositionMs] is the room's position, not zero: joining a jam halfway through a song
-     * should drop you in where everyone else is.
-     */
-    internal fun playForJam(tracks: List<UnifiedTrack>, startPositionMs: Long = 0L) {
-        if (tracks.isEmpty()) return
-        val ctrl = _controller.value ?: return
-        tracks.forEach { trackCache[it.id] = it }
-        ctrl.setMediaItems(tracks.map(UnifiedTrack::toMediaItem), 0, startPositionMs)
-        ctrl.prepare()
-        ctrl.play()
-    }
-
-    /**
-     * Where the player actually is, for code that has to compare it against somebody else's clock.
-     *
-     * Read straight off the controller rather than from [state], which carries no position — the
-     * position flow is sampled for the UI and is deliberately coarse. Null when nothing is bound.
-     */
     internal fun currentPositionMs(): Long? = _controller.value?.currentPosition
-
-    /** Whether audio is actually coming out right now. */
     internal fun isPlayingNow(): Boolean = _controller.value?.isPlaying == true
+    internal fun followerSeek(positionMs: Long) = jamCoordinator.followerSeek(_controller.value, positionMs)
 
-    /** What the follower's own session is allowed to do, bypassing [isFollowing]. */
-    internal fun followerSeek(positionMs: Long) {
-        _controller.value?.seekTo(positionMs)
-    }
-
-    internal fun followerSetPlaying(shouldPlay: Boolean) {
-        val ctrl = _controller.value ?: return
-        // `playWhenReady`, not `isPlaying`. The two differ for the whole of a buffer, because
-        // `isPlaying` also requires the player to be READY — so while a freshly resolved track
-        // loads, a device that has already been told to play still reads as not playing. Compared
-        // against `isPlaying`, every frame from the host arriving during that window looked like a
-        // device that had failed to start, and re-issued the resume: on a livestream that also
-        // re-seeks to the edge, which restarts the buffer, which keeps `isPlaying` false. That is
-        // the stutter at the start of a listen-along, and it could not settle on its own.
-        if (ctrl.playWhenReady != shouldPlay) {
-            // Rejoins the edge on resume for the same reason [togglePlayPause] does, and it
-            // matters more here: the room carried on broadcasting while this device was paused,
-            // so resuming where it stopped is both a dead position and one nobody else is at.
-            if (shouldPlay) ctrl.resumeAtLiveEdge() else ctrl.pause()
-        }
-    }
+    internal fun followerSetPlaying(shouldPlay: Boolean) =
+        jamCoordinator.followerSetPlaying(_controller.value, shouldPlay, state.value.currentTrack?.isLive == true)
 
     fun togglePlayPause() {
         if (isFollowing) return
@@ -647,165 +162,24 @@ class PlayerConnection @Inject constructor(
         if (ctrl.isPlaying) ctrl.pause() else ctrl.resumeAtLiveEdge()
     }
 
-    /**
-     * Resumes, rejoining the live edge first when what is playing is a broadcast.
-     *
-     * A paused livestream does not wait. The player holds the position it was paused at, and the
-     * broadcaster keeps only a window — pause for longer than that window and resuming asks for
-     * segments that no longer exist, which surfaces as a source error a few seconds in. There is
-     * no "where I left off" for a broadcast anyway: leaving and coming back means hearing what is
-     * on air now, exactly as it does on a radio.
-     */
     private fun MediaController.resumeAtLiveEdge() {
         if (state.value.currentTrack?.isLive == true) seekToDefaultPosition()
         play()
     }
 
-    fun seekTo(positionMs: Long) {
-        if (isFollowing) return
-        _controller.value?.seekTo(positionMs)
-    }
+    fun seekTo(positionMs: Long) { if (!isFollowing) _controller.value?.seekTo(positionMs) }
 
-    /** Jumps [deltaMs] from the playhead, within the current item. See [EpisodeJumps]. */
     fun seekBy(deltaMs: Long) {
         if (isFollowing) return
         val ctrl = _controller.value ?: return
         ctrl.seekTo(EpisodeJumps.target(ctrl.currentPosition, deltaMs, ctrl.duration.coerceAtLeast(0L)))
     }
 
-    fun seekToIndex(index: Int) {
-        if (isFollowing) return
-        val ctrl = _controller.value ?: return
-        val grace = skipGraceWindow
-        if (grace != null && grace.fromIndex == index && System.currentTimeMillis() - grace.timestampSystemMs <= SKIP_GRACE_WINDOW_MS) {
-            skipGraceWindow = null
-            ctrl.seekTo(index, grace.fromPositionMs)
-        } else {
-            ctrl.seekToDefaultPosition(index)
-        }
-    }
-
-    fun next() {
-        if (isFollowing) return
-        val ctrl = _controller.value ?: return
-        val currentIndex = ctrl.currentMediaItemIndex
-        val currentPos = ctrl.currentPosition
-        val nextIndex = ctrl.nextMediaItemIndex
-        if (nextIndex == C.INDEX_UNSET) return
-
-        val grace = skipGraceWindow
-        if (grace != null && grace.fromIndex == nextIndex && System.currentTimeMillis() - grace.timestampSystemMs <= SKIP_GRACE_WINDOW_MS) {
-            skipGraceWindow = null
-            ctrl.seekTo(nextIndex, grace.fromPositionMs)
-            return
-        }
-
-        skipGraceWindow = if (currentPos > 1000L) {
-            SkipGraceWindow(
-                fromIndex = currentIndex,
-                fromPositionMs = currentPos,
-                toIndex = nextIndex,
-                timestampSystemMs = System.currentTimeMillis()
-            )
-        } else {
-            null
-        }
-
-        ctrl.seekToNextMediaItem()
-    }
-
-    /**
-     * Whether [previous] would restart the current track rather than step back to another one.
-     *
-     * Exposed because the swipe gesture has to show where it is about to land *before* the player
-     * has moved, and "previous" means two different things depending on the position. Read at the
-     * moment a gesture starts, never in composition — it changes with playback position.
-     */
-    val restartsOnPrevious: Boolean
-        get() {
-            val grace = skipGraceWindow
-            val prevIndex = _controller.value?.previousMediaItemIndex ?: C.INDEX_UNSET
-            if (grace != null &&
-                prevIndex != C.INDEX_UNSET &&
-                grace.fromIndex == prevIndex &&
-                System.currentTimeMillis() - grace.timestampSystemMs <= SKIP_GRACE_WINDOW_MS
-            ) {
-                return false
-            }
-            return (_controller.value?.currentPosition ?: 0L) > RESTART_THRESHOLD_MS
-        }
-
-    /** Restarts the track when we are past the intro, otherwise steps back — the usual convention. */
-    fun previous() {
-        if (isFollowing) return
-        val ctrl = _controller.value ?: return
-        val prevIndex = ctrl.previousMediaItemIndex
-
-        val grace = skipGraceWindow
-        if (grace != null &&
-            prevIndex != C.INDEX_UNSET &&
-            grace.fromIndex == prevIndex &&
-            System.currentTimeMillis() - grace.timestampSystemMs <= SKIP_GRACE_WINDOW_MS
-        ) {
-            skipGraceWindow = null
-            ctrl.seekTo(prevIndex, grace.fromPositionMs)
-            return
-        }
-
-        if (restartsOnPrevious) {
-            ctrl.seekTo(0L)
-        } else {
-            recordSkipAndStepBack(ctrl)
-        }
-    }
-
-    /**
-     * Always steps back a track, never restarts this one.
-     *
-     * For the full player's swipe, where the gesture has already slid the *previous cover* into
-     * place before this is called. The restart convention is right for a button, whose press says
-     * nothing about what should follow, and wrong for a filmstrip that has just shown the user
-     * which track they are moving to — obeying it there animated a handover and then stayed on the
-     * same song.
-     */
-    fun previousTrack() {
-        if (isFollowing) return
-        val ctrl = _controller.value ?: return
-        val prevIndex = ctrl.previousMediaItemIndex
-
-        val grace = skipGraceWindow
-        if (grace != null &&
-            prevIndex != C.INDEX_UNSET &&
-            grace.fromIndex == prevIndex &&
-            System.currentTimeMillis() - grace.timestampSystemMs <= SKIP_GRACE_WINDOW_MS
-        ) {
-            skipGraceWindow = null
-            ctrl.seekTo(prevIndex, grace.fromPositionMs)
-            return
-        }
-
-        recordSkipAndStepBack(ctrl)
-    }
-
-    private fun recordSkipAndStepBack(ctrl: MediaController) {
-        val currentIndex = ctrl.currentMediaItemIndex
-        val currentPos = ctrl.currentPosition
-        val prevIndex = ctrl.previousMediaItemIndex
-        if (prevIndex == C.INDEX_UNSET) return
-
-        skipGraceWindow = if (currentPos > 1000L) {
-            SkipGraceWindow(
-                fromIndex = currentIndex,
-                fromPositionMs = currentPos,
-                toIndex = prevIndex,
-                timestampSystemMs = System.currentTimeMillis()
-            )
-        } else {
-            null
-        }
-
-        ctrl.seekToPreviousMediaItem()
-    }
+    fun seekToIndex(index: Int) { if (!isFollowing) _controller.value?.let { skipManager.seekToIndex(it, index) } }
+    fun next() { if (!isFollowing) _controller.value?.let { skipManager.next(it) } }
+    val restartsOnPrevious: Boolean get() = skipManager.restartsOnPrevious(_controller.value)
+    fun previous() { if (!isFollowing) _controller.value?.let { skipManager.previous(it) } }
+    fun previousTrack() { if (!isFollowing) _controller.value?.let { skipManager.previousTrack(it) } }
 
     fun toggleShuffle() {
         if (isFollowing || isInJam) return
@@ -813,19 +187,6 @@ class PlayerConnection @Inject constructor(
         ctrl.shuffleModeEnabled = !ctrl.shuffleModeEnabled
     }
 
-    /**
-     * Repeat and shuffle belong to whoever is choosing the running order, and in a jam that is the
-     * room.
-     *
-     * Ungated, `REPEAT_MODE_ONE` in a jam meant the local player restarted the track at its end
-     * while the room moved on to the next one. The reconciler then measured the whole length of the
-     * song as drift and seeked, every pass, forever — audible as a stutter on each correction, with
-     * the device stuck on a track nobody else was still hearing. It could never converge, because
-     * the loop put the position back faster than the seek could take it forward.
-     *
-     * Gated here beside [isFollowing] rather than by hiding the buttons, for the reason given
-     * there: there are several call sites and one that forgot would break a room silently.
-     */
     fun toggleRepeat() {
         if (isFollowing || isInJam) return
         val ctrl = _controller.value ?: return
@@ -836,20 +197,8 @@ class PlayerConnection @Inject constructor(
         }
     }
 
-    fun setRadioMode(enabled: Boolean) {
-        secureStorage.setRadioMode(enabled)
-    }
+    fun setRadioMode(enabled: Boolean) = secureStorage.setRadioMode(enabled)
 
-    /**
-     * Stores the user's chosen audio language and applies it to the current player immediately.
-     *
-     * ExoPlayer's `setPreferredAudioLanguage` is a hint: it picks the closest matching track it has
-     * rather than failing if the language is absent, so setting it is always safe. Null clears the
-     * preference and lets the player decide on its own.
-     *
-     * Persisted through [SecureStorage] so the choice survives across sessions and across all
-     * sources — choosing French on a French-dubbed podcast should mean French on the next one too.
-     */
     fun setPreferredAudioLanguage(language: String?) {
         secureStorage.preferredAudioLanguage = language
         val ctrl = _controller.value ?: return
@@ -859,256 +208,17 @@ class PlayerConnection @Inject constructor(
             .build()
     }
 
-    /**
-     * Said by the instant-radio button when there is nothing to build a station out of.
-     *
-     * Lives here rather than in the calling ViewModel because [notices] is the shell's one
-     * subscription for this kind of message, and a second channel would mean a second collector
-     * for the same snackbar.
-     */
-    fun notifyNoStation() {
-        _notices.tryEmit("Not enough listening yet — play a few tracks and try again")
-    }
+    fun notifyNoStation() = _notices.tryEmit("Not enough listening yet — play a few tracks and try again")
 
     fun toggleRadio() {
         val enabled = !secureStorage.isRadioMode.value
         secureStorage.setRadioMode(enabled)
-        // The toggle lives on a long press and changes nothing you can see until the queue runs
-        // out, so without this it was impossible to tell whether the press had registered at all.
-        _notices.tryEmit(
-            if (enabled) "Radio mode on — the queue keeps going"
-            else "Radio mode off"
-        )
+        _notices.tryEmit(if (enabled) "Radio mode on — the queue keeps going" else "Radio mode off")
     }
 
-    /**
-     * Playback rate and pitch, as one pair.
-     *
-     * Media3 carries both in a single `PlaybackParameters`, so setting one has to restate the
-     * other or it snaps back to 1.0. Exposed as a StateFlow because the controls that set it are
-     * a transient popup — it has to survive being dismissed and reopened, and it is not part of
-     * the per-track snapshot in [PlaybackState].
-     *
-     * Offload is switched off for anything but 1.0×: the DSP plays the stream untouched, so a
-     * rate change silently does nothing while it is on.
-     */
-    private val _speedAndPitch = MutableStateFlow(SpeedAndPitch())
-    val speedAndPitch: StateFlow<SpeedAndPitch> = _speedAndPitch.asStateFlow()
+    fun setSpeedAndPitch(speed: Float, pitch: Float) =
+        speedController.setSpeedAndPitch(_controller.value, speed, pitch, state.value.currentTrack?.isLive == true)
 
-    fun setSpeedAndPitch(speed: Float, pitch: Float) {
-        val ctrl = _controller.value ?: return
-        val clamped = SpeedAndPitch(
-            speed = speed.coerceIn(SpeedAndPitch.RANGE),
-            pitch = pitch.coerceIn(SpeedAndPitch.RANGE)
-        )
-        setOffloadEnabled(clamped.isDefault)
-        ctrl.playbackParameters = PlaybackParameters(clamped.speed, clamped.pitch)
-        _speedAndPitch.value = clamped
-    }
-
-    /**
-     * Offload lets the DSP handle decoding to save power.
-     *
-     * A livestream vetoes it outright: offload expects a track that ends, and an
-     * HLS live window is not one.
-     */
-    fun setOffloadEnabled(enabled: Boolean) {
-        val ctrl = _controller.value ?: return
-        val live = state.value.currentTrack?.isLive == true
-        val allowed = enabled && !live
-        // Video is suppressed here rather than anywhere else because this is the single writer of
-        // `trackSelectionParameters` — two writers would each clobber the other's decision. See
-        // [PlayerFactory.withVideoSuppressed] for why a livestream needs it at all.
-        ctrl.trackSelectionParameters = PlayerFactory.withVideoSuppressed(
-            PlayerFactory.withOffload(ctrl.trackSelectionParameters, allowed),
-            live
-        )
-    }
-
-    private companion object {
-        const val RESTART_THRESHOLD_MS = 3_000L
-        const val SKIP_GRACE_WINDOW_MS = 2_000L
-
-        /**
-         * Both ways a container can fail to parse.
-         *
-         * A manifest handed to the progressive extractors reports "unsupported" on most builds and
-         * "malformed" on some, depending on how far the sniff gets before it gives up. Matching one
-         * of the two left the retry not firing at all on devices that reported the other.
-         */
-        val CONTAINER_PARSE_ERRORS = setOf(
-            PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
-            PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED
-        )
-    }
-}
-
-private data class SkipGraceWindow(
-    val fromIndex: Int,
-    val fromPositionMs: Long,
-    val toIndex: Int,
-    val timestampSystemMs: Long
-)
-
-/**
- * The most specific message available.
- *
- * Media3 wraps the real cause in a generic "Source error", so the useful text — the reason a
- * source refused to resolve a stream — is several levels down. Deliberately no URLs or headers:
- * those carry credentials.
- */
-private fun PlaybackException.userMessage(): String {
-    var cause: Throwable? = this
-    var best: String? = null
-    while (cause != null) {
-        cause.message?.takeIf { it.isNotBlank() }?.let { best = it }
-        cause = cause.cause
-    }
-    val raw = best ?: return "Playback failed ($errorCodeName)."
-    return raw.asActionableMessage()
-}
-
-/**
- * Turns the deepest cause into something the user can act on.
- *
- * The raw text is an ExoPlayer or OkHttp string written for a log, so surfacing it verbatim told
- * the user nothing — a signed-out YouTube Music session read as an unexplained HTTP number.
- * Anything unrecognised is still passed through rather than replaced by a vague catch-all.
- */
-private fun String.asActionableMessage(): String = when {
-    contains("YouTube Music refused", ignoreCase = true) &&
-        (contains("401") || contains("403")) ->
-        "Sign in to YouTube Music again — the session expired."
-
-    contains("no playable audio", ignoreCase = true) ->
-        "This track isn't playable from YouTube Music."
-
-    // A signature or throttling-nonce transform failing is transient — YouTube rotated its player
-    // JS — and retrying picks up the new one, which is very different advice from "unplayable".
-    contains("unscramble", ignoreCase = true) ||
-        contains("throttling parameter", ignoreCase = true) ->
-        "Couldn't prepare the YouTube stream. Try again in a moment."
-
-    contains("will not play this track", ignoreCase = true) ->
-        "YouTube Music won't play this track here."
-
-    contains("Response code: 403") || contains("Response code: 410") ->
-        "Stream expired. Play it again to refresh it."
-
-    contains("Unable to connect", ignoreCase = true) ||
-        contains("UnknownHost", ignoreCase = true) ->
-        "Can't reach the source. Check your connection."
-
-    else -> this
-}
-
-private fun Player.buildSnapshot(
-    radio: Boolean,
-    cachedQueue: List<UnifiedTrack>,
-    cache: java.util.concurrent.ConcurrentHashMap<String, UnifiedTrack>,
-    seekEpoch: Long
-): PlaybackState {
-    val activeItem = runCatching { currentMediaItem }.getOrNull()
-    val track = activeItem?.resolveTrack(cache)
-    val playing = runCatching { isPlaying }.getOrDefault(false)
-    val buffering = runCatching { playbackState == Player.STATE_BUFFERING }.getOrDefault(false)
-
-    // The player's own number first, the metadata's when the player has none.
-    //
-    // Both halves matter and each covers the other's blind spot. A YouTube Music row whose
-    // subtitle carried no `3:45` reaches Room with `durationMs = 0` while the player knows the
-    // length perfectly well — which is why the player is asked first. But a Navidrome stream is
-    // the mirror image: `stream.view` can be transcoded on the fly, and a chunked response with no
-    // `Content-Length` leaves Media3 reporting `TIME_UNSET` for the whole song, while `getSong`
-    // gave us the exact length in seconds before playback even started.
-    //
-    // `TIME_UNSET` used to be flattened to `0` here, which made "unknown" and "zero" the same
-    // number to everything downstream. Everything downstream gates on `durationMs > 0`, so the
-    // seek bar sat at zero, the slider was disabled and both clocks read `0:00` / `--:--` for the
-    // entire track.
-    val reported = runCatching { duration }.getOrDefault(C.TIME_UNSET)
-    val dur = if (reported == C.TIME_UNSET || reported <= 0L) {
-        track?.durationMs ?: 0L
-    } else {
-        reported
-    }
-    // "Not known yet" is not "not allowed": an empty timeline means the item has not been prepared,
-    // and reporting false there would leave the bar dead for the first frames of every track.
-    // Past that the player's own answer decides, and nothing overrides it.
-    //
-    // It briefly also accepted "the metadata knows a duration" as proof of seekability. That was a
-    // workaround for Navidrome tracks whose bar was dead, and it treated the symptom: the bar lit
-    // up and the seek was still refused underneath, because a duration off the track's metadata
-    // says nothing about whether the *stream* can be scrubbed. The cause was a discarded length in
-    // `RelayDecryptingDataSource` — see the note there — and with that fixed
-    // [Player.isCurrentMediaItemSeekable] is true whenever it should be. A grey bar has to stay
-    // possible: it is how a genuinely unscrubbable stream says so, instead of swallowing the drag.
-    val seekable = runCatching {
-        if (track?.isLive == true) {
-            false
-        } else {
-            currentTimeline.isEmpty || isCurrentMediaItemSeekable
-        }
-    }.getOrDefault(true)
-    val curIndex = runCatching { currentMediaItemIndex }.getOrDefault(0)
-    val shuffle = runCatching { shuffleModeEnabled }.getOrDefault(false)
-    val repMode = runCatching { repeatMode }.getOrDefault(Player.REPEAT_MODE_OFF)
-
-    // Extract the distinct audio-language tracks the player can see for this item.
-    //
-    // We read `currentTracks` rather than querying the format list directly: it carries
-    // the isTrackSelected flag per track inside each group, which is what the picker needs to
-    // mark the active row without any additional bookkeeping.
-    //
-    // Deduplication is by language tag. Multiple formats can share the same language
-    // (stereo vs 5.1, 128 kbps vs 320 kbps) and a picker with three identically-labelled
-    // "English" rows would be confusing; the listener cares about the language, not the
-    // bitrate, and ExoPlayer's language preference picks the best rendition automatically.
-    val audioTracks = runCatching {
-        val seen = mutableSetOf<String?>()
-        currentTracks.groups
-            .filter { it.type == C.TRACK_TYPE_AUDIO }
-            .flatMap { group ->
-                (0 until group.length).mapNotNull { i ->
-                    val fmt = group.getTrackFormat(i)
-                    if (!seen.add(fmt.language)) null
-                    else AudioTrackInfo(
-                        language = fmt.language,
-                        label = fmt.label,
-                        isSelected = group.isTrackSelected(i)
-                    )
-                }
-            }
-    }.getOrDefault(emptyList())
-
-    return PlaybackState(
-        currentTrack = track,
-        queue = cachedQueue,
-        currentIndex = curIndex,
-        isPlaying = playing,
-        isBuffering = buffering,
-        durationMs = dur,
-        isSeekable = seekable,
-        isShuffle = shuffle,
-        repeatMode = when (repMode) {
-            Player.REPEAT_MODE_ALL -> RepeatMode.ALL
-            Player.REPEAT_MODE_ONE -> RepeatMode.ONE
-            else -> RepeatMode.OFF
-        },
-        isRadioMode = radio,
-        seekEpoch = seekEpoch,
-        audioTracks = audioTracks
-    )
-}
-
-private fun Player.queueTracks(cache: java.util.concurrent.ConcurrentHashMap<String, UnifiedTrack>): List<UnifiedTrack> =
-    (0 until mediaItemCount).mapNotNull { getMediaItemAt(it).resolveTrack(cache) }
-
-private fun androidx.media3.common.MediaItem.resolveTrack(
-    cache: java.util.concurrent.ConcurrentHashMap<String, UnifiedTrack>
-): UnifiedTrack? {
-    cache[mediaId]?.let { return it }
-    val track = toUnifiedTrack() ?: return null
-    cache[mediaId] = track
-    return track
+    fun setOffloadEnabled(enabled: Boolean) =
+        speedController.setOffloadEnabled(_controller.value, enabled, state.value.currentTrack?.isLive == true)
 }

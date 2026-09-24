@@ -22,9 +22,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.OpenInBrowser
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -56,8 +56,8 @@ fun DiscoveredPlaylistsGrid(
     platform: PlatformType,
     playlists: List<RawUserPlaylistSummary>,
     onSelectPlaylist: (RawUserPlaylistSummary) -> Unit,
-    onRelog: () -> Unit,
-    onLogout: () -> Unit,
+    onRefresh: () -> Unit,
+    onPasteLinkInstead: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyVerticalGrid(
@@ -71,8 +71,8 @@ fun DiscoveredPlaylistsGrid(
             ExpressiveConnectedBanner(
                 platform = platform,
                 count = playlists.size,
-                onRelog = onRelog,
-                onLogout = onLogout
+                onRefresh = onRefresh,
+                onPasteLinkInstead = onPasteLinkInstead
             )
         }
 
@@ -89,8 +89,8 @@ fun DiscoveredPlaylistsGrid(
 private fun ExpressiveConnectedBanner(
     platform: PlatformType,
     count: Int,
-    onRelog: () -> Unit,
-    onLogout: () -> Unit
+    onRefresh: () -> Unit,
+    onPasteLinkInstead: () -> Unit
 ) {
     Surface(
         color = MaterialTheme.colorScheme.primaryContainer,
@@ -145,14 +145,14 @@ private fun ExpressiveConnectedBanner(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 M3MorphingButton(
-                    onClick = onRelog,
+                    onClick = onRefresh,
                     isSecondary = false,
                     modifier = Modifier.weight(1f).height(44.dp)
                 ) {
-                    Icon(Icons.Rounded.OpenInBrowser, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        text = stringResource(R.string.importer_web_view),
+                        text = stringResource(R.string.importer_refresh_library),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
@@ -161,14 +161,14 @@ private fun ExpressiveConnectedBanner(
                 }
 
                 M3MorphingButton(
-                    onClick = onLogout,
+                    onClick = onPasteLinkInstead,
                     isSecondary = true,
                     modifier = Modifier.weight(1f).height(44.dp)
                 ) {
-                    Icon(Icons.AutoMirrored.Rounded.Logout, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Rounded.Link, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        text = stringResource(R.string.importer_switch_account),
+                        text = stringResource(R.string.importer_paste_link_instead),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
