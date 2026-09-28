@@ -76,11 +76,15 @@ internal class SettingsViewModel @Inject constructor(
     val navidromeConnected: StateFlow<Boolean> = accountCoordinator.navidromeConnected
     val youTubeConnected: StateFlow<Boolean> = accountCoordinator.youTubeConnected
     val youTubeAccount: StateFlow<String> = accountCoordinator.youTubeAccount
+    val deezerConnected: StateFlow<Boolean> = accountCoordinator.deezerConnected
+    val deezerAccount: String get() = accountCoordinator.deezerAccount
+    val deezerTier: String get() = accountCoordinator.deezerTier
     val localAvailable: StateFlow<Boolean> = accountCoordinator.localAvailable
 
     fun refreshYouTubeAccount() = accountCoordinator.refreshYouTubeAccount(viewModelScope)
     fun disconnectNavidrome() = accountCoordinator.disconnectNavidrome()
     fun disconnectYouTube() = accountCoordinator.disconnectYouTube()
+    fun disconnectDeezer() = accountCoordinator.disconnectDeezer()
     fun rescanLocalLibrary() = accountCoordinator.rescanLocalLibrary(viewModelScope)
     fun forgetEverything() = accountCoordinator.forgetEverything(viewModelScope) { resetAgroPairing() }
 
@@ -175,6 +179,7 @@ internal class SettingsViewModel @Inject constructor(
     val agroSyncSettings: StateFlow<Boolean> = secureStorage.agroSyncSettings
     val agroProxyEnabled: StateFlow<Boolean> = secureStorage.agroProxyEnabled
     val externalLyricsEnabled: StateFlow<Boolean> = secureStorage.isExternalLyricsEnabled
+    val musicBrainzLookupEnabled: StateFlow<Boolean> = secureStorage.isMusicBrainzLookupEnabled
 
     val syncedNavidrome: StateFlow<AgroSyncedSettings?> = agroCoordinator.syncedNavidrome
     fun refreshSyncedSettings() = agroCoordinator.refreshSyncedSettings(viewModelScope)
@@ -184,6 +189,7 @@ internal class SettingsViewModel @Inject constructor(
 
     fun setAgroProxyEnabled(enabled: Boolean) = secureStorage.setAgroProxyEnabled(enabled)
     fun setExternalLyricsEnabled(enabled: Boolean) = secureStorage.setExternalLyricsEnabled(enabled)
+    fun setMusicBrainzLookupEnabled(enabled: Boolean) = secureStorage.setMusicBrainzLookupEnabled(enabled)
 
     // ── Library Sync (delegated to SettingsLibrarySyncCoordinator) ─────────────────────────
 

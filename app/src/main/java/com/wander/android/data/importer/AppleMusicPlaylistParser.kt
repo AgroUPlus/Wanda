@@ -18,10 +18,13 @@ class AppleMusicPlaylistParser @Inject constructor(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun parse(url: String): Result<RawImportPlaylist> = runCatching {
+    suspend fun parse(url: String, cookie: String? = null): Result<RawImportPlaylist> = runCatching {
         val trimmed = url.trim()
         val html: String = httpClient.get(trimmed) {
             header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+            if (!cookie.isNullOrBlank()) {
+                header("Cookie", cookie)
+            }
         }.body()
 
         // Extract title from og:title or <title>

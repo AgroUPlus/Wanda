@@ -1,11 +1,5 @@
 package com.wander.android.ui.components
 
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.filter
-import androidx.compose.runtime.snapshotFlow
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
@@ -14,7 +8,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
@@ -33,6 +26,14 @@ import androidx.compose.ui.unit.toSize
  * from the bar) in root coordinates, so only their difference matters and neither has to know
  * where the other sits in the tree. The hero's title is hidden the moment the hand-off starts; from
  * then on the bar draws the travelling copy.
+ *
+ * [fraction] purely follows the list's scroll offset — nothing here ever animates the scroll
+ * position itself. It used to also spring the list to whichever end of the hand-off was nearer
+ * the moment a drag or fling settled, so letting go a hair into the transition yanked the page the
+ * rest of the way there (or back) on its own. That reads as the title moving without being asked
+ * to; removing it means the title's frame changes *only* while [fraction] is strictly between 0
+ * and 1 — actually being dragged through the hand-off — and sits wherever the scroll left it the
+ * rest of the time, same as everything else on the page.
  */
 @Stable
 class CollapsingTitleState internal constructor(private val listState: LazyListState) {
@@ -60,26 +61,6 @@ class CollapsingTitleState internal constructor(private val listState: LazyListS
     }
 
     /**
-     * How far to scroll so the page rests at one end of the header's range — fully unscrolled, or
-     * scrolled exactly far enough that the title is docked in the bar — whichever is closer; null
-     * when it already rests at one. The whole stretch between the two is a transition, never a
-     * place to stop: that is what makes the header behave like one control rather than a picture
-     * the list happens to start with.
-     */
-    internal fun snapDelta(): Float? {
-        if (listState.firstVisibleItemIndex > 0) return null
-        val hero = heroTitleBounds ?: return null
-        val slot = slotBounds ?: return null
-        val scrolled = listState.firstVisibleItemScrollOffset.toFloat()
-        val toDock = hero.center.y - slot.center.y
-        // A list already resting at either end can still report a hair of `scrolled` or `toDock`
-        // left over from a fling's rounding, and animating that sliver back to zero is exactly the
-        // "title moves on its own" bug: nothing dragged it away from rest, so nothing should move it.
-        if (scrolled <= RestEpsilonPx || toDock <= RestEpsilonPx) return null
-        return if (scrolled < (scrolled + toDock) / 2f) -scrolled else toDock
-    }
-
-    /**
      * Where the travelling title's centre is on screen: following the hero's title while it
      * scrolls, pinned to the slot once it gets there.
      */
@@ -92,32 +73,8 @@ class CollapsingTitleState internal constructor(private val listState: LazyListS
 }
 
 @Composable
-fun rememberCollapsingTitleState(listState: LazyListState): CollapsingTitleState {
-    val state = remember(listState) { CollapsingTitleState(listState) }
-    // Read through updated state rather than keyed on: the motion scheme hands out a fresh spec
-    // object per call, and keying on it restarted this effect on every recomposition — which the
-    // scroll itself causes — cancelling the snap halfway and leaving the title exactly where it
-    // was not supposed to rest.
-    val spec by rememberUpdatedState(MaterialTheme.motionScheme.defaultSpatialSpec<Float>())
-    // Once the finger lets go and any fling has run out, a title caught mid-way springs to the
-    // nearer end. The snap is itself a scroll, and when it lands the title is at an end, so this
-    // never chases its own tail.
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.isScrollInProgress }
-            .filter { inProgress -> !inProgress }
-            .collect {
-                // Launched, not awaited: a finger landing mid-snap cancels the snap's scroll, and
-                // that cancellation thrown straight out of `collect` ended this whole effect —
-                // after the first interrupted snap, the title never snapped again. As a child
-                // job only that one snap dies.
-                state.snapDelta()?.let { delta -> launch { listState.animateScrollBy(delta, spec) } }
-            }
-    }
-    return state
-}
-
-/** Below this, a scroll offset or docking distance reads as "already at rest," not mid-transition. */
-private const val RestEpsilonPx = 2f
+fun rememberCollapsingTitleState(listState: LazyListState): CollapsingTitleState =
+    remember(listState) { CollapsingTitleState(listState) }
 
 /**
  * Marks the hero's own title: reports its bounds to [state] and hides it once the bar has taken

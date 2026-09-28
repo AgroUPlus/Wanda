@@ -68,6 +68,7 @@ object Routes {
 
     const val NAVIDROME_LOGIN = "login/navidrome"
     const val YTMUSIC_LOGIN = "login/ytmusic"
+    const val DEEZER_LOGIN = "login/deezer"
     const val IMPORT_PLAYLIST = "import/playlist"
 
     const val ALBUM = "album/{albumId}"

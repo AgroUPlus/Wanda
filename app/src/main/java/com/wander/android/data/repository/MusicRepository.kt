@@ -132,6 +132,7 @@ class MusicRepository @Inject constructor(
     fun getDownloadedTracksFlow() = libraryTracks.getDownloadedTracksFlow()
     suspend fun downloadedTracks() = libraryTracks.downloadedTracks()
     fun pagedLibraryTracks(source: SourceType?) = libraryTracks.pagedLibraryTracks(source)
+    fun pagedHistory() = libraryTracks.pagedHistory()
     suspend fun tracksByIds(ids: List<String>) = libraryTracks.tracksByIds(ids)
     suspend fun libraryTrackIds(source: SourceType?) = libraryTracks.libraryTrackIds(source)
     suspend fun trackById(trackId: String) = libraryTracks.trackById(trackId)

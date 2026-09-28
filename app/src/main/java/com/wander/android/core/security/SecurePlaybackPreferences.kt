@@ -30,6 +30,13 @@ internal class SecurePlaybackPreferences(private val prefs: SharedPreferences) {
     private val _isExternalLyricsEnabled = MutableStateFlow(prefs.getBoolean(KEY_EXTERNAL_LYRICS, true))
     val isExternalLyricsEnabled: StateFlow<Boolean> = _isExternalLyricsEnabled.asStateFlow()
 
+    /**
+     * Default `false`, unlike lyrics above: this is a brand-new outbound call to a third party
+     * (musicbrainz.org) that nothing in the app made before, so it starts off rather than on.
+     */
+    private val _isMusicBrainzLookupEnabled = MutableStateFlow(prefs.getBoolean(KEY_MUSICBRAINZ_LOOKUP, false))
+    val isMusicBrainzLookupEnabled: StateFlow<Boolean> = _isMusicBrainzLookupEnabled.asStateFlow()
+
     private val _isAutoUpdateCheckEnabled =
         MutableStateFlow(prefs.getBoolean(KEY_AUTO_UPDATE_CHECK, false))
     val isAutoUpdateCheckEnabled: StateFlow<Boolean> = _isAutoUpdateCheckEnabled.asStateFlow()
@@ -73,6 +80,11 @@ internal class SecurePlaybackPreferences(private val prefs: SharedPreferences) {
         _isExternalLyricsEnabled.value = enabled
     }
 
+    fun setMusicBrainzLookupEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_MUSICBRAINZ_LOOKUP, enabled) }
+        _isMusicBrainzLookupEnabled.value = enabled
+    }
+
     fun setAutoUpdateCheckEnabled(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_AUTO_UPDATE_CHECK, enabled) }
         _isAutoUpdateCheckEnabled.value = enabled
@@ -90,6 +102,7 @@ internal class SecurePlaybackPreferences(private val prefs: SharedPreferences) {
         _isIndexOnMobileDataEnabled.value = false
         _isRadioMode.value = true
         _isExternalLyricsEnabled.value = true
+        _isMusicBrainzLookupEnabled.value = false
         _isAutoUpdateCheckEnabled.value = false
         _isArtistReleaseNotificationEnabled.value = false
     }

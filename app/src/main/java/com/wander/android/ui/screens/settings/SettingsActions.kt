@@ -19,6 +19,8 @@ internal data class SettingsActions(
     val onNavidromeSignOut: () -> Unit,
     val onYouTubeLogin: () -> Unit,
     val onYouTubeSignOut: () -> Unit,
+    val onDeezerLogin: () -> Unit = {},
+    val onDeezerSignOut: () -> Unit = {},
     val onRescanLocal: () -> Unit,
     /** Null when this device is too old to narrow the scan — see `supportsFolderScan`. */
     val onPickLocalFolder: (() -> Unit)?,
@@ -62,6 +64,7 @@ internal data class SettingsActions(
     val onVisibilityChange: (AgroVisibility) -> Unit,
     val onProxyChange: (Boolean) -> Unit,
     val onExternalLyricsChange: (Boolean) -> Unit,
+    val onMusicBrainzLookupChange: (Boolean) -> Unit,
     val onForgetEverything: () -> Unit,
     // About
     val onArtistReleaseNotificationsChange: (Boolean) -> Unit,

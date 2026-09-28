@@ -5,8 +5,10 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
 import com.wander.android.core.database.dao.HistoryDao
+import com.wander.android.core.database.dao.HistoryTrackEntry
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.TrackEntity
+import com.wander.android.data.model.HistoryTrack
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import java.io.File
@@ -47,6 +49,15 @@ internal class LibraryTrackRepository(
         }
     ).flow.map { page -> page.map(TrackEntity::toUnifiedTrack) }
 
+    /**
+     * The full play log, paged. See [HistoryDao.pagedHistory] for why this cannot be the same
+     * dedup'd flow [getRecentlyPlayedFlow] uses.
+     */
+    fun pagedHistory(): Flow<PagingData<HistoryTrack>> = Pager(
+        config = PagingConfig(pageSize = HISTORY_PAGE_SIZE, enablePlaceholders = false),
+        pagingSourceFactory = { historyDao.pagedHistory() }
+    ).flow.map { page -> page.map { entry -> entry.toHistoryTrack() } }
+
     suspend fun tracksByIds(ids: List<String>): List<UnifiedTrack> = withContext(Dispatchers.IO) {
         trackDao.getTracksByIds(ids).map(TrackEntity::toUnifiedTrack)
     }
@@ -72,7 +83,14 @@ internal class LibraryTrackRepository(
     private fun Flow<List<TrackEntity>>.mapToTracks(): Flow<List<UnifiedTrack>> =
         map { list -> list.map(TrackEntity::toUnifiedTrack) }.flowOn(Dispatchers.Default)
 
+    private fun HistoryTrackEntry.toHistoryTrack() = HistoryTrack(
+        historyId = historyId,
+        playedAt = playedAt,
+        track = track.toUnifiedTrack()
+    )
+
     companion object {
         const val PAGE_SIZE = 60
+        const val HISTORY_PAGE_SIZE = 60
     }
 }

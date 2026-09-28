@@ -3,7 +3,7 @@ package com.wander.android.ui.screens.player
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -46,6 +46,7 @@ internal fun BoxScope.PlayerOverlayButtons(
     FilledTonalIconButton(
         onClick = share,
         shapes = IconButtonDefaults.shapes(),
+        colors = playerOverlayButtonColors(),
         modifier = Modifier
             .align(Alignment.TopEnd)
             .padding(top = topInset)
@@ -53,7 +54,7 @@ internal fun BoxScope.PlayerOverlayButtons(
             .graphicsLayer { alpha = contentAlpha() }
     ) {
         Icon(
-            imageVector = Icons.Rounded.Share,
+            imageVector = Icons.Outlined.Share,
             contentDescription = stringResource(R.string.action_share_track)
         )
     }

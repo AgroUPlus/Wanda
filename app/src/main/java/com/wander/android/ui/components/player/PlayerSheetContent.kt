@@ -49,8 +49,6 @@ fun PlayerSheetContent(
     onOpenArtist: (String, String?) -> Unit = { _, _ -> },
     onOpenAlbum: (String) -> Unit = {},
     onOpenJam: () -> Unit = {},
-    dockRow: @Composable () -> Unit = {},
-    showDockRow: Boolean = true,
     fingerprintStatus: FingerprintStatus = FingerprintStatus.MISSING,
     immersivePlayer: Boolean = false,
     coverCarousel: Boolean = true,
@@ -169,9 +167,7 @@ fun PlayerSheetContent(
                 miniSwipe = miniSwipe,
                 swipeOffsetX = { swipe.offsetX.value },
                 anchors = anchors,
-                onExpand = onExpand,
-                showDockRow = showDockRow,
-                dockRow = dockRow
+                onExpand = onExpand
             )
 
             MorphingArtwork(

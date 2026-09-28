@@ -1,5 +1,6 @@
 package com.wander.android.data.repository
 
+import com.wander.android.core.database.dao.HistoryDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.SourceType
@@ -19,12 +20,19 @@ import javax.inject.Singleton
 @Singleton
 class HomeShelfRepository @Inject constructor(
     private val trackDao: TrackDao,
+    private val historyDao: HistoryDao,
     private val recordingPlayCounts: RecordingPlayCounts,
     private val recordingRules: RecordingRulesRepository
 ) {
 
     /**
-     * "Recently played", one entry per recording.
+     * "Recently played", one entry per recording, newest play first.
+     *
+     * Backed by the `history` log ([HistoryDao]) rather than [TrackEntity.lastPlayedTimestamp]:
+     * the latter is overwritten on every play and only ever remembers the *one* most recent play
+     * per track, which is also what the old, since-removed "Keep listening" shelf read — the two
+     * shelves showed near-identical rankings from the same lossy number. The history log is the
+     * one place a play's real time survives, so it is also what [HistoryScreen] reads.
      *
      * Over-fetched and then collapsed: several copies of one song near the top of the list would
      * otherwise fill the carousel with the same track, and taking the limit first would leave
@@ -32,7 +40,7 @@ class HomeShelfRepository @Inject constructor(
      */
     suspend fun getRecentlyPlayed(limit: Int = 20): List<UnifiedTrack> {
         val tracks = withContext(Dispatchers.IO) {
-            trackDao.getRecentlyPlayedTracks(limit * OVERFETCH).map(TrackEntity::toUnifiedTrack)
+            historyDao.getRecentlyPlayedTracksOnce(limit * OVERFETCH).map(TrackEntity::toUnifiedTrack)
         }
         return recordingRules.current()
             .distinct(tracks)
@@ -92,18 +100,6 @@ class HomeShelfRepository @Inject constructor(
             .distinct(interleaveBySource(top + perSource))
             .take(limit)
     }
-
-    /**
-     * Recently played, one track per album, so the shelf reads as "records you were listening to"
-     * rather than repeating six tracks off the same one.
-     */
-    suspend fun getRecentAlbumStarters(limit: Int = 12): List<UnifiedTrack> =
-        withContext(Dispatchers.IO) {
-            trackDao.getRecentlyPlayedTracks(limit * 4)
-                .map(TrackEntity::toUnifiedTrack)
-                .distinctBy { it.album?.takeIf { name -> name.isNotBlank() } ?: it.id }
-                .take(limit)
-        }
 
     private companion object {
         /** How much wider to cast the net before collapsing copies down to recordings. */

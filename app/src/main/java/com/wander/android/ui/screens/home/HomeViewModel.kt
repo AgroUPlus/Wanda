@@ -99,7 +99,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(
                         allSections = state.allSections.withSection(
-                            shelf(SectionLiked, "Your Favourites", HomeSectionStyle.OVERLAPPING_STACK, liked.take(CarouselSize))
+                            shelf(SectionLiked, "Your Favourites", HomeSectionStyle.FAVORITES_CAROUSEL, liked.take(CarouselSize))
                         )
                     )
                 }
@@ -127,7 +127,6 @@ class HomeViewModel @Inject constructor(
                 // whichever backends are configured, so it cannot start until that is known.
                 sources = musicRepository.configuredSources()
                 val onRepeat = async { homeShelfRepository.getQuickPicks(CarouselSize, sources) }
-                val jumpBackIn = async { homeShelfRepository.getRecentAlbumStarters(CarouselSize) }
                 val recentlyPlayed = async { homeShelfRepository.getRecentlyPlayed(CarouselSize) }
                 val liked = async { homeShelfRepository.getLikedTracks(CarouselSize) }
                 val discover = async { homeShelfRepository.getNeverPlayed(CarouselSize) }
@@ -137,9 +136,8 @@ class HomeViewModel @Inject constructor(
                     // artwork. The rest stay carousels, so the top of Home has a shape to it.
                     add(shelf(SectionOnRepeat, "Quick picks", HomeSectionStyle.TRACK_PAGER, onRepeat.await()))
                     add(continueListening.value)
-                    add(shelf(SectionJumpBackIn, "Keep listening", HomeSectionStyle.LARGE_GRID, jumpBackIn.await()))
                     add(carousel(SectionRecentlyPlayed, "Recently Played", recentlyPlayed.await()))
-                    add(shelf(SectionLiked, "Your Favourites", HomeSectionStyle.OVERLAPPING_STACK, liked.await()))
+                    add(shelf(SectionLiked, "Your Favourites", HomeSectionStyle.FAVORITES_CAROUSEL, liked.await()))
                     add(shelf(SectionDiscover, "Discover", HomeSectionStyle.DISCOVER_MASONRY, discover.await()))
                 }.filterNot(HomeSection::isEmpty)
             }

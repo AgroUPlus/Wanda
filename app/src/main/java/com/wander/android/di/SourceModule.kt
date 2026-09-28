@@ -3,6 +3,7 @@ package com.wander.android.di
 import com.wander.android.data.sources.IMusicSource
 import com.wander.android.data.sources.local.LocalMusicSource
 import com.wander.android.data.sources.navidrome.NavidromeSource
+import com.wander.android.data.sources.deezer.DeezerSource
 import com.wander.android.data.sources.ytmusic.YTMusicSource
 import dagger.Binds
 import dagger.Module
@@ -23,4 +24,6 @@ interface SourceModule {
     @Binds @IntoSet fun bindLocal(source: LocalMusicSource): IMusicSource
 
     @Binds @IntoSet fun bindYtMusic(source: YTMusicSource): IMusicSource
+
+    @Binds @IntoSet fun bindDeezer(source: DeezerSource): IMusicSource
 }

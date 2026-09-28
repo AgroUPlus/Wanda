@@ -1,5 +1,6 @@
 package com.wander.android.core.database.dao
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
@@ -32,6 +33,36 @@ interface HistoryDao {
         """
     )
     fun getRecentlyPlayedTracksFlow(limit: Int = 200): Flow<List<TrackEntity>>
+
+    /** [getRecentlyPlayedTracksFlow], as a one-shot read for a screen that only ever reads once. */
+    @Query(
+        """
+        SELECT t.* FROM history h
+        INNER JOIN tracks t ON t.id = h.trackId
+        GROUP BY h.trackId
+        ORDER BY MAX(h.playedAt) DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun getRecentlyPlayedTracksOnce(limit: Int = 200): List<TrackEntity>
+
+    /**
+     * Every play, newest first, one row each — the History screen's source.
+     *
+     * See [HistoryTrackEntry] for why this is a log rather than the deduplicated collection
+     * [getRecentlyPlayedTracksFlow] returns. `Int` keys are page offsets: fine here since the log
+     * only ever grows at the front (new plays), so an offset a user has already scrolled past
+     * stays valid even as more history accumulates above it.
+     */
+    @Query(
+        """
+        SELECT h.historyId AS historyId, h.playedAt AS playedAt, t.*
+        FROM history h
+        INNER JOIN tracks t ON t.id = h.trackId
+        ORDER BY h.playedAt DESC
+        """
+    )
+    fun pagedHistory(): PagingSource<Int, HistoryTrackEntry>
 
     /** Plays that could not be scrobbled yet — retried when the source comes back online. */
     @Query("SELECT * FROM history WHERE scrobbled = 0 ORDER BY playedAt ASC LIMIT :limit")

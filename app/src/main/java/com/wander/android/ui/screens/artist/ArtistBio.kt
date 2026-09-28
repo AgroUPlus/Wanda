@@ -25,9 +25,13 @@ import androidx.compose.ui.unit.dp
  *
  * No "read more" affordance: the whole block is the target, and a link-shaped control under a
  * paragraph of prose reads like a link out to somewhere else, which this is not.
+ *
+ * [genres] is almost always empty — see `ArtistDetails.genres` for the one path that fills it in —
+ * and drawn above the bio rather than mixed into it, since it is tags from a different source
+ * (MusicBrainz) answering a different question (what kind) than the bio's own prose does (who).
  */
 @Composable
-internal fun ArtistBio(bio: String, modifier: Modifier = Modifier) {
+internal fun ArtistBio(bio: String?, genres: List<String> = emptyList(), modifier: Modifier = Modifier) {
     var expanded by remember(bio) { mutableStateOf(false) }
 
     Column(
@@ -37,13 +41,27 @@ internal fun ArtistBio(bio: String, modifier: Modifier = Modifier) {
             .padding(horizontal = 20.dp, vertical = 8.dp)
             .animateContentSize()
     ) {
-        Text(
-            text = bio,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = if (expanded) Int.MAX_VALUE else CollapsedLines,
-            overflow = TextOverflow.Ellipsis
-        )
+        if (genres.isNotEmpty()) {
+            Text(
+                text = genres.joinToString(" · "),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+        }
+        // Null when genres are the only thing this page has to say — a MusicBrainz fallback with
+        // no disambiguation text, still worth the genre line above, still with no prose to show.
+        bio?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = if (expanded) Int.MAX_VALUE else CollapsedLines,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 

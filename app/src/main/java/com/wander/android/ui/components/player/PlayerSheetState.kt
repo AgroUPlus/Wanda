@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import com.wander.android.ui.components.backResistance
+import com.wander.android.ui.components.rubberBand
 import kotlin.math.abs
 
 enum class PlayerSheetValue {
@@ -171,9 +172,24 @@ class PlayerSheetState(
         }
     }
 
-    internal suspend fun dragBy(delta: Float) {
+    /**
+     * [overdragLimitPx] is what lets a drag continue past the docked resting position instead of
+     * hitting a hard wall there — the same [rubberBand] the app's other custom drags already use,
+     * damped rather than clamped. Past `maxOffsetPx` the sheet keeps tracking the finger, just
+     * less and less, so the docked strip visibly slides a little further down — off the bottom of
+     * where it would normally rest — before [settle] springs it back. A drag that stops dead the
+     * moment it reaches rest reads as hitting something solid; one with a little more give reads
+     * as the surface itself responding to the finger, the same reason every other drag in this app
+     * already has one.
+     */
+    internal suspend fun dragBy(delta: Float, overdragLimitPx: Float = 0f) {
         if (maxOffsetPx <= 0f) return
-        val newOffset = (offset.value + delta).coerceIn(0f, maxOffsetPx)
+        val raw = offset.value + delta
+        val newOffset = when {
+            raw <= maxOffsetPx -> raw.coerceAtLeast(0f)
+            overdragLimitPx <= 0f -> maxOffsetPx
+            else -> maxOffsetPx + rubberBand(raw - maxOffsetPx, overdragLimitPx)
+        }
         offset.snapTo(newOffset)
     }
 

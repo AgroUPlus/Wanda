@@ -8,6 +8,7 @@ import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.ArtistTrackSection
 import com.wander.android.data.model.SourceType
+import com.wander.android.data.repository.ArtistFetch
 import com.wander.android.data.repository.CatalogRepository
 import com.wander.android.data.repository.LinkRepository
 import com.wander.android.data.repository.MusicRepository
@@ -147,7 +148,8 @@ internal class AppIntentHandler @Inject constructor(
             val tracks = when (entity.kind) {
                 YouTubeEntityKind.ALBUM -> musicRepository.getAlbumTracksById(id)
                 YouTubeEntityKind.PLAYLIST -> musicRepository.getPlaylistTracksById(id)
-                YouTubeEntityKind.ARTIST -> catalogRepository.artistDetails(id)
+                YouTubeEntityKind.ARTIST -> (catalogRepository.artistDetails(id) as? ArtistFetch.Found)
+                    ?.page
                     ?.sections
                     ?.filterIsInstance<ArtistTrackSection>()
                     ?.firstOrNull()

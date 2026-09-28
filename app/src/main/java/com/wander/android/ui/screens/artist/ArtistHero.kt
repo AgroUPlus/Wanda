@@ -1,11 +1,20 @@
 package com.wander.android.ui.screens.artist
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.NotificationAdd
 import androidx.compose.material.icons.rounded.NotificationsActive
@@ -13,22 +22,32 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Podcasts
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
+import com.wander.android.ui.components.ActionPressed
+import com.wander.android.ui.components.ActionResting
 import com.wander.android.ui.components.ArtistMonogram
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.ImmersiveHero
-import com.wander.android.ui.components.ShapedActionButton
-import com.wander.android.ui.components.ShapedPlayButton
+import com.wander.android.ui.components.PlayPressed
+import com.wander.android.ui.components.PlayResting
+import com.wander.android.ui.components.rememberPressMorphShape
 
 /**
  * The top of an artist page: their portrait edge to edge, their name over it, and the things you
@@ -109,53 +128,135 @@ internal fun ArtistHero(
             }
         }
 
+        // Two rows rather than one: transport (radio/play/shuffle) is what you reach for first,
+        // and shared its row with share/follow only because there had never been anywhere else to
+        // put them.
+        //
+        // Both rows now span exactly what the song list below them does — the same 16 dp inset
+        // `groupedListItem` uses — and each button is `Modifier.weight(...)` rather than a fixed
+        // size, the identical mechanism `ActionButtonGroup` already uses for every context menu in
+        // the app: a button's *own* press state animates *its own* weight up, and the Row's normal
+        // weighted layout does the "neighbours give way" part on its own — nothing here tracks
+        // sibling buttons the way an earlier, scale-based version of this did.
         Row(
-            horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(ButtonGap),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 14.dp, bottom = 4.dp)
+                .height(HeroRowHeight)
+                .padding(horizontal = RowInset, vertical = 0.dp)
+                .padding(top = 18.dp)
         ) {
-            ShapedActionButton(
+            ArtistActionButton(
                 onClick = onRadio,
                 contentDescription = stringResource(R.string.artist_start_radio),
-                icon = Icons.Rounded.Podcasts
+                icon = Icons.Rounded.Podcasts,
+                baseWeight = 1f,
+                iconSize = ActionIconSize
             )
-            // Centre, and larger than its neighbours: the one control the page exists for. It sat
-            // at the trailing edge while the header was a card, which is the right answer for a
-            // left-aligned row and the wrong one for a centred portrait.
-            ShapedPlayButton(
+            // Wider than its neighbours, not just present among them: the one control the page
+            // exists for still reads as the biggest thing in the row, the same way `WideWeight`
+            // gives a context menu's primary action more room than the buttons beside it.
+            ArtistActionButton(
                 onClick = onPlay,
                 contentDescription = stringResource(R.string.action_play),
-                icon = Icons.Rounded.PlayArrow
+                icon = Icons.Rounded.PlayArrow,
+                baseWeight = HeroWeight,
+                iconSize = HeroIconSize,
+                isHero = true
             )
-            ShapedActionButton(
+            ArtistActionButton(
                 onClick = onShuffle,
                 contentDescription = stringResource(R.string.action_shuffle),
-                icon = Icons.Rounded.Shuffle
+                icon = Icons.Rounded.Shuffle,
+                baseWeight = 1f,
+                iconSize = ActionIconSize
             )
-            onShare?.let { share ->
-                ShapedActionButton(
-                    onClick = share,
-                    contentDescription = stringResource(R.string.action_share),
-                    icon = Icons.Rounded.Share
-                )
+        }
+
+        if (onShare != null || isFollowing != null) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(ButtonGap),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(ActionRowHeight)
+                    .padding(horizontal = RowInset)
+                    .padding(top = 14.dp, bottom = 4.dp)
+            ) {
+                onShare?.let { share ->
+                    ArtistActionButton(
+                        onClick = share,
+                        contentDescription = stringResource(R.string.action_share),
+                        icon = Icons.Rounded.Share,
+                        baseWeight = 1f,
+                        iconSize = ActionIconSize
+                    )
+                }
+                if (isFollowing != null) {
+                    ArtistActionButton(
+                        onClick = onToggleFollow,
+                        contentDescription = if (isFollowing) {
+                            stringResource(R.string.artist_stop_following, name)
+                        } else {
+                            stringResource(R.string.artist_follow_for_new_releases, name)
+                        },
+                        icon = if (isFollowing) {
+                            Icons.Rounded.NotificationsActive
+                        } else {
+                            Icons.Rounded.NotificationAdd
+                        },
+                        baseWeight = 1f,
+                        iconSize = ActionIconSize
+                    )
+                }
             }
-            if (isFollowing != null) {
-                ShapedActionButton(
-                    onClick = onToggleFollow,
-                    contentDescription = if (isFollowing) {
-                        "Stop following ${'$'}name"
-                    } else {
-                        "Follow ${'$'}name for new releases"
-                    },
-                    icon = if (isFollowing) {
-                        Icons.Rounded.NotificationsActive
-                    } else {
-                        Icons.Rounded.NotificationAdd
-                    }
-                )
-            }
+        }
+    }
+}
+
+/**
+ * One button in either row — see the doc above the rows themselves for the weight mechanism.
+ * [isHero] picks both the bigger morph pair ([PlayResting]/[PlayPressed], the same cookie-to-circle
+ * the top bar's own play button uses) and the filled `primary` colour; every other button gets the
+ * quiet squircle-to-circle pair ([ActionResting]/[ActionPressed]) on a tonal container, matching
+ * `ShapedActionButton`'s own palette.
+ */
+@Composable
+private fun RowScope.ArtistActionButton(
+    onClick: () -> Unit,
+    contentDescription: String,
+    icon: ImageVector,
+    baseWeight: Float,
+    iconSize: Dp,
+    isHero: Boolean = false
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val shape: Shape = if (isHero) {
+        rememberPressMorphShape(PlayResting, PlayPressed, pressed)
+    } else {
+        rememberPressMorphShape(ActionResting, ActionPressed, pressed)
+    }
+    // The fast spatial spec, not the default: this sits directly under a finger, and anything
+    // leisurely reads as the tap not having registered — same reasoning `ShapedPlayButton` already
+    // documents for its own press morph.
+    val weight by animateFloatAsState(
+        targetValue = if (pressed) baseWeight * PressedGrowth else baseWeight,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        label = "artistActionWeight"
+    )
+
+    Surface(
+        onClick = onClick,
+        interactionSource = interaction,
+        shape = shape,
+        color = if (isHero) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
+        contentColor = if (isHero) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier
+            .weight(weight)
+            .fillMaxHeight()
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+            Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(iconSize))
         }
     }
 }
@@ -165,3 +266,22 @@ internal const val PortraitAspect = 0.86f
 
 /** Constant, not measured — see the note in [ImmersiveHero]'s own backdrop. */
 private val PortraitDecodeSize = 480.dp
+
+/**
+ * Matches `groupedListItem`'s own default inset — the song list below reads as the same width.
+ * Shared with [ArtistSkeleton], which mirrors this whole layout so nothing resizes when the real
+ * page lands.
+ */
+internal val RowInset = 16.dp
+internal val ButtonGap = 10.dp
+
+internal val HeroRowHeight = 80.dp
+internal val ActionRowHeight = 64.dp
+private val HeroIconSize = 32.dp
+private val ActionIconSize = 26.dp
+
+/** The play button's share of the top row before any press — see [ArtistActionButton]. */
+internal const val HeroWeight = 1.6f
+
+/** How much a pressed button takes from its row neighbours — the same figure `ActionButtonGroup` uses. */
+private const val PressedGrowth = 1.35f

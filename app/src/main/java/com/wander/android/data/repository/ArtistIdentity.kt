@@ -86,14 +86,31 @@ internal object ArtistIdentity {
      */
     fun sameName(a: String, b: String): Boolean = a.foldedName() == b.foldedName()
 
+    /**
+     * Case, accents, a leading article, a trailing "(feat. ...)" credit and punctuation all fold
+     * away. Every one of these is a real way the *same* artist reaches Room spelled differently:
+     * "The Beatles" vs. Navidrome's "Beatles, The"-style tagging is not covered (word order, not a
+     * strippable affix) but a leading article and a featured-artist credit tacked on by one backend
+     * and not the other were the two most common causes of the artist page silently coming up empty
+     * for a name that was, underneath, a match.
+     */
     private fun String.foldedName(): String =
         java.text.Normalizer.normalize(trim(), java.text.Normalizer.Form.NFKD)
             .replace(COMBINING_MARKS, "")
-            .replace(WHITESPACE_RUN, " ")
             .lowercase()
+            .replace(FEATURE_CREDIT, "")
+            .replace(LEADING_ARTICLE, "")
+            .replace(PUNCTUATION, "")
+            .replace(WHITESPACE_RUN, " ")
+            .trim()
 
     private val COMBINING_MARKS = Regex("\\p{Mn}+")
     private val WHITESPACE_RUN = Regex("\\s+")
+    private val LEADING_ARTICLE = Regex("^(the|an?)\\s+")
+    // `\b` before the alternation matters: without it, "ft" matched mid-word too, so "Soft Cell"
+    // (an "ft" sitting right before a space, same shape as a real "ft " credit) got chopped to "so".
+    private val FEATURE_CREDIT = Regex("""[(\[]?\s*\b(feat\.?|featuring|ft\.?)\s+.*$""")
+    private val PUNCTUATION = Regex("[.,'’\"!?&]")
 
     /**
      * Keeps items that could belong to this artist.

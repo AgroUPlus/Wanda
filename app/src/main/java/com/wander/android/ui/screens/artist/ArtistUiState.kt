@@ -41,7 +41,13 @@ internal data class ArtistUiState(
      * is still offered. Present means the whole shelf has been fetched and is rendered as a grid.
      */
     val expandedShelves: Map<String, List<UnifiedAlbum>> = emptyMap(),
-    val loadingShelf: String? = null
+    val loadingShelf: String? = null,
+    /**
+     * True when the backend page genuinely failed to fetch (network, parsing) rather than there
+     * being none — see [com.wander.android.data.repository.ArtistFetch]. The screen renders from
+     * the library either way; this only decides whether a retry affordance is worth offering.
+     */
+    val pageFetchFailed: Boolean = false
 ) {
     /** Nothing anywhere has anything by this artist, and we have finished looking. */
     val isEmpty: Boolean get() = !isLoading && page.isEmpty

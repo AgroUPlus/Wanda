@@ -151,28 +151,19 @@
     <string name="home_nothing_play_yet">Rien à jouer pour l\'instant</string>
     <string name="home_sessions_other_devices">Sessions sur d\'autres appareils</string>
     <!-- Importer -->
-    <string name="importer_connect_auto_detect">Connecter &amp; détection automatique</string>
     <string name="importer_detecting_playlists">Détection de vos playlists...</string>
-    <string name="importer_direct_link_text">Lien / Texte direct</string>
     <string name="importer_edit_title">Éditer le titre</string>
     <string name="importer_import_playlist">Importer une playlist</string>
     <string name="importer_listen_now">Écouter maintenant</string>
     <string name="importer_load_playlist">Charger une playlist</string>
     <string name="importer_loading_playlist">Chargement de la playlist...</string>
-    <string name="importer_logout_switch_account">Déconnexion / Changer de compte</string>
     <string name="importer_none">Aucun</string>
     <string name="importer_paste">Coller</string>
     <string name="importer_paste_link_text_tracklist_inspect">Coller un lien ou une liste de pistes pour l\'inspecter et choisir les pistes avant l\'importation.</string>
-    <string name="importer_playlist_detected">Playlist détectée</string>
     <string name="importer_playlist_title">Titre de la playlsit</string>
     <string name="importer_reading">Lecture...</string>
     <string name="importer_reading_playlist_tracks">Lecture des pistes de la playlist...</string>
-    <string name="importer_reload">Recharger</string>
-    <string name="importer_retry">Réessayer</string>
-    <string name="importer_sign_browse">Se connecter &amp; naviguer</string>
-    <string name="importer_switch_account">Changer de compte</string>
     <string name="importer_try_again">Réessayer</string>
-    <string name="importer_web_view">Vue web</string>
     <!-- Library -->
     <string name="library_albums_appear_once_connected_source">Les albums apparaissent lorsqu\'au moins une source a été explorée.</string>
     <string name="library_all_albums">Tous les albums</string>

@@ -66,8 +66,45 @@ internal class SecureAccountPreferences(private val prefs: SharedPreferences) {
         _ytMusicConfigured.value = false
     }
 
+    val deezerAuthArl: String get() = prefs.getString(KEY_DEEZER_ARL, "").orEmpty()
+
+    private val _deezerConfigured = MutableStateFlow(deezerAuthArl.isNotBlank())
+    val deezerConfigured: StateFlow<Boolean> = _deezerConfigured.asStateFlow()
+
+    var deezerAccountName: String
+        get() = prefs.getString(KEY_DEEZER_ACCOUNT, "").orEmpty()
+        set(value) = prefs.edit { putString(KEY_DEEZER_ACCOUNT, value.trim()) }
+
+    var deezerAccountTier: String
+        get() = prefs.getString(KEY_DEEZER_TIER, "FREE").orEmpty()
+        set(value) = prefs.edit { putString(KEY_DEEZER_TIER, value.trim()) }
+
+    var deezerAudioQuality: String
+        get() = prefs.getString(KEY_DEEZER_QUALITY, "AUTO").orEmpty()
+        set(value) = prefs.edit { putString(KEY_DEEZER_QUALITY, value.trim()) }
+
+    fun setDeezerSession(arl: String, accountName: String = "", tier: String = "FREE") {
+        prefs.edit {
+            putString(KEY_DEEZER_ARL, arl.trim())
+            if (accountName.isNotBlank()) putString(KEY_DEEZER_ACCOUNT, accountName.trim())
+            putString(KEY_DEEZER_TIER, tier.trim())
+        }
+        _deezerConfigured.value = arl.isNotBlank()
+    }
+
+    fun clearDeezerSession() {
+        prefs.edit {
+            remove(KEY_DEEZER_ARL)
+            remove(KEY_DEEZER_ACCOUNT)
+            remove(KEY_DEEZER_TIER)
+            remove(KEY_DEEZER_QUALITY)
+        }
+        _deezerConfigured.value = false
+    }
+
     fun resetFlows() {
         _navidromeConfigured.value = false
         _ytMusicConfigured.value = false
+        _deezerConfigured.value = false
     }
 }

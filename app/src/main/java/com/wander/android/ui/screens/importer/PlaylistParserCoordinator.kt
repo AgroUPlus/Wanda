@@ -43,19 +43,17 @@ class PlaylistParserCoordinator @Inject constructor(
         url: String,
         fallbackTitle: String? = null,
         fallbackCover: String? = null,
-        spotifyFetcher: (suspend (String, Map<String, String>) -> String)? = null
+        spotifyFetcher: (suspend (String, Map<String, String>) -> String)? = null,
+        cookie: String? = null
     ): Result<RawImportPlaylist> = withContext(Dispatchers.IO) {
         val platform = PlatformType.detect(url)
 
-        // No cookie: every parser reads a playlist from its public share link, which is what a
-        // "share this playlist" action hands out and so exactly what gets pasted here. A playlist
-        // that was never shared needs real account access, which none of these parsers have.
         val result: Result<RawImportPlaylist> = when (platform) {
             PlatformType.SPOTIFY -> spotifyFetcher?.let { spotifyParser.parseViaFetcher(url, it) }
-                ?: spotifyParser.parse(url)
-            PlatformType.DEEZER -> deezerParser.parse(url)
+                ?: spotifyParser.parse(url, cookie)
+            PlatformType.DEEZER -> deezerParser.parse(url, cookie)
             PlatformType.YOUTUBE -> youtubeParser.parse(url)
-            PlatformType.APPLE_MUSIC -> appleMusicParser.parse(url)
+            PlatformType.APPLE_MUSIC -> appleMusicParser.parse(url, cookie)
             PlatformType.PLAIN_TEXT -> textParser.parse(url)
         }
 

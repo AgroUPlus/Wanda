@@ -87,6 +87,7 @@ internal object ArtistPageMerger {
         return ArtistPage(
             bio = details?.bio,
             imageUrl = details?.imageUrl,
+            genres = details?.genres.orEmpty(),
             topSongs = topSongs,
             episodes = episodes,
             albums = albumBucket,

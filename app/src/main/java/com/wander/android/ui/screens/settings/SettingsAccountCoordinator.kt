@@ -27,6 +27,7 @@ internal class SettingsAccountCoordinator @Inject constructor(
     private val navidromeSource: NavidromeSource,
     private val accountManager: GoogleAccountManager,
     private val ytMusicSource: YTMusicSource,
+    private val deezerAccountManager: com.wander.android.data.sources.deezer.DeezerAccountManager,
     private val localSource: LocalMusicSource,
     private val sessionApi: AgroSessionApi,
     private val socialRepository: SocialRepository,
@@ -67,6 +68,14 @@ internal class SettingsAccountCoordinator @Inject constructor(
         _youTubeAccount.value = ""
     }
 
+    val deezerConnected: StateFlow<Boolean> = deezerAccountManager.isLoggedIn
+    val deezerAccount: String get() = deezerAccountManager.accountName
+    val deezerTier: String get() = deezerAccountManager.tier.name
+
+    fun disconnectDeezer() {
+        deezerAccountManager.signOut()
+    }
+
     fun rescanLocalLibrary(scope: CoroutineScope) {
         scope.launch { localSource.refresh(full = true) }
     }
@@ -82,6 +91,9 @@ internal class SettingsAccountCoordinator @Inject constructor(
             }
             if (accountManager.isLoggedIn.value) {
                 runCatching { accountManager.signOut() }
+            }
+            if (deezerAccountManager.isLoggedIn.value) {
+                runCatching { deezerAccountManager.signOut() }
             }
             secureStorage.clearAllCredentials()
             runCatching { socialRepository.clear() }

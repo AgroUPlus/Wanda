@@ -58,7 +58,7 @@ private const val SwipeFadeDistancePx = 120f
  */
 val MiniProgressBarHeight = 12.dp
 
-/** Padding above and below the artwork row. Summed into `MiniPlayerHeight`. */
+/** Padding above and below the artwork row. Summed into `MiniStripHeight`. */
 val MiniRowVerticalPadding = 8.dp
 
 /** The strip's transport icons. `IconButton`'s own default, stated so the loading shape matches. */

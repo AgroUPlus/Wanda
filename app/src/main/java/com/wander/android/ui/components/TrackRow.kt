@@ -61,7 +61,15 @@ fun TrackRow(
      * status is never fetched by a row that is not showing it — see `FingerprintStatusRepository`
      * on why this arrives as one map for a whole screen rather than a query per row.
      */
-    fingerprintStatus: FingerprintStatus? = null
+    fingerprintStatus: FingerprintStatus? = null,
+    /**
+     * A small label drawn under the like button/equalizer, right-aligned. Null draws nothing.
+     *
+     * Added for History's per-play time (`HH:mm`) rather than folded into [subtitle]: every other
+     * caller's subtitle describes the *track* (artist, album, duration), while this describes the
+     * *play* — a fact only History has, and everyone else has nothing to put here.
+     */
+    trailingLabel: String? = null
 ) {
     // Dimming the whole row rather than each piece: the row is one object, and fading the parts
     // separately made the artwork and the text disagree about how unavailable the track was.
@@ -162,10 +170,20 @@ fun TrackRow(
             }
         }
 
-        if (isPlaying) {
-            KineticEqualizer(isPlaying = true)
-        } else if (onToggleLike != null) {
-            LikeButton(isLiked = track.isLiked, onToggle = onToggleLike)
+        Column(horizontalAlignment = Alignment.End) {
+            if (isPlaying) {
+                KineticEqualizer(isPlaying = true)
+            } else if (onToggleLike != null) {
+                LikeButton(isLiked = track.isLiked, onToggle = onToggleLike)
+            }
+            trailingLabel?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp, end = if (onToggleLike == null && !isPlaying) 4.dp else 0.dp)
+                )
+            }
         }
     }
 }

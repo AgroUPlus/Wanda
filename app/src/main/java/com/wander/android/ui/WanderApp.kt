@@ -102,6 +102,7 @@ fun WanderApp(
         showChrome = showChrome
     )
     val dockInset = dockMetrics.dockInset
+    val sheetBottomInset = dockMetrics.sheetBottomInset
     val dockedPlayerHeight = dockMetrics.dockedPlayerHeight
     val dockBottom = dockMetrics.dockBottom
 
@@ -177,6 +178,7 @@ fun WanderApp(
                     currentRoute = currentRoute,
                     showDockRow = showDockRow,
                     hasTrack = hasTrack,
+                    sheetState = sheetState,
                     dockInset = dockInset
                 )
 
@@ -184,10 +186,11 @@ fun WanderApp(
 
                 PlayerSheet(
                     sheetState = sheetState,
-                    bottomInset = if (showChrome) dockInset else 0.dp,
+                    bottomInset = if (showChrome) sheetBottomInset else 0.dp,
                     isVisible = hasTrack && showChrome,
                     dockedHeight = dockedPlayerHeight,
-                    coverSeed = shellCoverSeed
+                    coverSeed = shellCoverSeed,
+                    pairedWithDockRow = showDockRow
                 ) { progress, rawProgress, expandedHeight ->
                     PlayerSheetContent(
                         fingerprintStatus = playingFingerprintStatus,
@@ -214,8 +217,6 @@ fun WanderApp(
                             scope.launch { sheetState.collapse() }
                             navController.navigate(Routes.JAM)
                         },
-                        dockRow = dockState.dockRow,
-                        showDockRow = showDockRow,
                         immersivePlayer = isImmersivePlayer,
                         coverCarousel = true
                     )

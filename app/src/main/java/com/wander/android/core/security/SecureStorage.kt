@@ -63,6 +63,9 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
     val isExternalLyricsEnabled: StateFlow<Boolean> = playbackPrefs.isExternalLyricsEnabled
     fun setExternalLyricsEnabled(enabled: Boolean) = playbackPrefs.setExternalLyricsEnabled(enabled)
 
+    val isMusicBrainzLookupEnabled: StateFlow<Boolean> = playbackPrefs.isMusicBrainzLookupEnabled
+    fun setMusicBrainzLookupEnabled(enabled: Boolean) = playbackPrefs.setMusicBrainzLookupEnabled(enabled)
+
     val isAutoUpdateCheckEnabled: StateFlow<Boolean> = playbackPrefs.isAutoUpdateCheckEnabled
     fun setAutoUpdateCheckEnabled(enabled: Boolean) = playbackPrefs.setAutoUpdateCheckEnabled(enabled)
 
@@ -89,6 +92,21 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
         set(value) { accountPrefs.ytMusicAccountName = value }
     fun setYtMusicSession(cookie: String, visitor: String = ytMusicVisitorData) = accountPrefs.setYtMusicSession(cookie, visitor)
     fun clearYtMusicSession() = accountPrefs.clearYtMusicSession()
+
+    val deezerConfigured: StateFlow<Boolean> = accountPrefs.deezerConfigured
+    val deezerAuthArl: String get() = accountPrefs.deezerAuthArl
+    var deezerAccountName: String
+        get() = accountPrefs.deezerAccountName
+        set(value) { accountPrefs.deezerAccountName = value }
+    var deezerAccountTier: String
+        get() = accountPrefs.deezerAccountTier
+        set(value) { accountPrefs.deezerAccountTier = value }
+    var deezerAudioQuality: String
+        get() = accountPrefs.deezerAudioQuality
+        set(value) { accountPrefs.deezerAudioQuality = value }
+    fun setDeezerSession(arl: String, accountName: String = "", tier: String = "FREE") =
+        accountPrefs.setDeezerSession(arl, accountName, tier)
+    fun clearDeezerSession() = accountPrefs.clearDeezerSession()
 
     // ── Agro Server Integration ─────────────────────────────────────────────────────────────
     val agroConfigured: StateFlow<Boolean> = agroPrefs.agroConfigured

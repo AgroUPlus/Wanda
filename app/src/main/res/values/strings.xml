@@ -140,7 +140,9 @@
     <string name="common_share_link">Share a link</string>
     <string name="common_sign_out">Sign out</string>
     <string name="common_stream">Stream</string>
+    <string name="common_today">Today</string>
     <string name="common_try_again">Try again</string>
+    <string name="common_yesterday">Yesterday</string>
     <string name="common_update_available">Update available</string>
     <string name="common_undo">Undo</string>
     <string name="common_username">Username</string>
@@ -153,8 +155,11 @@
     <string name="album_album_unavailable">Album unavailable</string>
 
     <!-- Artist -->
+    <string name="artist_info_unavailable">Couldn\'t load extra artist info right now</string>
     <string name="artist_none_connected_sources_has_anything">None of your connected sources has anything by this artist.</string>
+    <string name="artist_follow_for_new_releases">Follow %1$s for new releases</string>
     <string name="artist_start_radio">Start radio</string>
+    <string name="artist_stop_following">Stop following %1$s</string>
     <string name="artist_top_songs">Top songs</string>
     <string name="artist_episodes">Episodes</string>
 
@@ -213,6 +218,18 @@
     <string name="login_sign">Sign in</string>
     <string name="login_sign_youtube_music">Sign in to YouTube Music</string>
     <string name="login_use_pasted_cookie">Use pasted cookie</string>
+    <string name="login_sign_deezer">Sign in to Deezer</string>
+    <string name="login_paste_arl">Or paste an ARL token</string>
+    <string name="login_use_pasted_arl">Use pasted ARL</string>
+    <string name="deezer_account">Deezer account</string>
+    <string name="deezer_tier_free">Free (128 kbps)</string>
+    <string name="deezer_tier_premium">Premium (320 kbps)</string>
+    <string name="deezer_tier_hifi">HiFi (Lossless FLAC)</string>
+    <string name="deezer_quality_auto">Automatic</string>
+    <string name="deezer_quality_standard">Standard (128 kbps)</string>
+    <string name="deezer_quality_high">High (320 kbps)</string>
+    <string name="deezer_quality_lossless">Lossless (FLAC)</string>
+    <string name="deezer_invalid_arl">The provided token does not contain a valid ARL.</string>
 
     <!-- Navigation -->
     <string name="nav_clear_search">Clear search</string>
@@ -328,6 +345,7 @@
     <string name="settings_nothing_else_signed_other_devices">Nothing else is signed in. This is the device you\'re holding, and other devices on this Agro account show up here instead.</string>
     <string name="settings_nothing_has_been_written_what">Nothing has been written. This is what the migration would do.</string>
     <string name="settings_nothing_send_no_music_files">Nothing to send. No music files are stored on this device.</string>
+    <string name="settings_musicbrainz_lookup">Accurate artist identification</string>
     <string name="settings_offline_mode">Offline mode</string>
     <string name="settings_online_lyrics_lookup">Online lyrics lookup</string>
     <string name="settings_only_play_what_already_device">Only play what is already on this device. Wanda offers to turn this on and off as your connection changes.</string>
@@ -343,6 +361,7 @@
     <string name="settings_playlist_imported">Playlist imported! 🎉</string>
     <string name="settings_popular_on_agro">Popular on Agro</string>
     <string name="settings_query_lrclib_when_no_local_or_server_lyrics">Query LRCLIB when no local or server lyrics are found</string>
+    <string name="settings_query_musicbrainz_for_accurate_artist_id">Query MusicBrainz to identify an artist by their unique id, instead of by name alone</string>
     <string name="settings_include_plays_in_the_servers_shared_chart">Add your plays to the server\'s shared chart of what everyone is listening to, counted in bulk and never tied to your name.</string>
     <string name="settings_re_check_model">Re-check model</string>
     <string name="settings_ready_next_track">Ready the next track</string>
@@ -359,6 +378,7 @@
     <string name="settings_section_storage">Storage</string>
     <string name="settings_section_credits">Credits</string>
     <string name="settings_section_visibility">What friends can see</string>
+    <string name="settings_section_third_party_lookups">Third-party lookups</string>
     <string name="settings_section_backup">Backup</string>
     <string name="settings_section_notifications">Notifications</string>
     <string name="settings_section_devices">Devices</string>

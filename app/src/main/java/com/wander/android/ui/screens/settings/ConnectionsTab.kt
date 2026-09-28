@@ -56,6 +56,25 @@ internal fun LazyListScope.connectionsTab(
                 {
                     SettingsRow(
                         modifier = Modifier.scale(rememberShelfEntranceScale(2)),
+                        title = stringResource(R.string.deezer_account),
+                        subtitle = if (state.deezer) {
+                            val account = state.deezerAccount.takeIf { it.isNotBlank() } ?: "Signed in"
+                            val tierDisplay = when (state.deezerTier) {
+                                "HIFI" -> stringResource(R.string.deezer_tier_hifi)
+                                "PREMIUM" -> stringResource(R.string.deezer_tier_premium)
+                                else -> stringResource(R.string.deezer_tier_free)
+                            }
+                            "$account ($tierDisplay)"
+                        } else {
+                            "Signed out"
+                        },
+                        onClick = if (state.deezer) actions.onDeezerSignOut else actions.onDeezerLogin,
+                        leading = { SourceIcon(SourceType.DEEZER) }
+                    )
+                },
+                {
+                    SettingsRow(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(3)),
                         title = stringResource(R.string.common_music_device),
                         subtitle = when {
                             !state.localReady -> "Needs permission to read audio files"

@@ -67,8 +67,15 @@ internal class ArtistViewModel @Inject constructor(
         albums,
         tracks,
         loader.details,
-        combine(loader.loading, loader.refreshing, loader.expanded, loader.loadingShelf, loader.hasCache) { l, r, e, s, c ->
-            Progress(l as Boolean, r as Boolean, e as Map<String, List<UnifiedAlbum>>, s as String?, c as Boolean)
+        combine(
+            loader.loading,
+            loader.refreshing,
+            loader.expanded,
+            loader.loadingShelf,
+            combine(loader.hasCache, loader.fetchFailed, ::Pair)
+        ) { l, r, e, s, cf ->
+            val (cached, failed) = cf as Pair<Boolean, Boolean>
+            Progress(l as Boolean, r as Boolean, e as Map<String, List<UnifiedAlbum>>, s as String?, cached, failed)
         },
         following
     ) { albums, tracks, details, progress, following ->
@@ -84,7 +91,8 @@ internal class ArtistViewModel @Inject constructor(
             isRefreshing = progress.refreshing || (progress.loading && progress.cached),
             canShare = artistTarget(tracks)?.let { shareRepository.canShare(it.source) } == true,
             expandedShelves = progress.expanded,
-            loadingShelf = progress.loadingShelf
+            loadingShelf = progress.loadingShelf,
+            pageFetchFailed = progress.fetchFailed
         )
     }.stateIn(
         viewModelScope,
@@ -97,7 +105,8 @@ internal class ArtistViewModel @Inject constructor(
         val refreshing: Boolean,
         val expanded: Map<String, List<UnifiedAlbum>>,
         val loadingShelf: String?,
-        val cached: Boolean
+        val cached: Boolean,
+        val fetchFailed: Boolean
     )
 
     fun refresh(skipSearchIfFresh: Boolean = false) {

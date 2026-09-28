@@ -1,5 +1,6 @@
 package com.wander.android.data.sources.navidrome
 
+import android.util.Log
 import com.wander.android.data.model.ArtistAlbumSection
 import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.SourceType
@@ -54,13 +55,20 @@ class NavidromeCatalogLoader @Inject constructor(
     suspend fun getArtist(artistId: String): Result<ArtistDetails> {
         val id = artistId.removePrefix(NAVIDROME_PREFIX)
         return apiClient.getArtist(id).map { artist ->
-            val info = apiClient.getArtistInfo2(id).getOrNull()
+            // A missing biography is not this call's failure to report — the artist row itself
+            // fetched fine, and plenty of Navidrome servers simply have no metadata agent
+            // configured. Logged rather than swallowed so a *network* hiccup here is at least
+            // visible in logcat instead of looking identical to "no bio configured".
+            val info = apiClient.getArtistInfo2(id)
+                .onFailure { Log.w(TAG, "Navidrome artist info unavailable for $id: ${it.javaClass.simpleName}") }
+                .getOrNull()
             val albums = artist.album.orEmpty().map { it.toUnified() }
             ArtistDetails(
                 id = "$NAVIDROME_PREFIX${artist.id}",
                 name = artist.name,
                 imageUrl = null,
                 bio = info?.biography?.stripBiographyMarkup(),
+                musicBrainzId = info?.musicBrainzId?.takeIf { it.isNotBlank() },
                 sections = if (albums.isEmpty()) {
                     emptyList()
                 } else {
@@ -124,5 +132,6 @@ class NavidromeCatalogLoader @Inject constructor(
 
     private companion object {
         const val RECENT_ALBUMS = 25
+        const val TAG = "NavidromeCatalogLoader"
     }
 }

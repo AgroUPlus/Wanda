@@ -1,12 +1,18 @@
 package com.wander.android.ui.screens.artist
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -154,9 +160,36 @@ internal fun ArtistScreen(
                     )
                 }
 
-                state.page.bio?.let { bio ->
+                if (state.page.bio != null || state.page.genres.isNotEmpty()) {
                     item(key = "bio", contentType = "bio") {
-                        Box(modifier = Modifier.padding(bottom = 8.dp)) { ArtistBio(bio) }
+                        Box(modifier = Modifier.padding(bottom = 8.dp)) {
+                            ArtistBio(bio = state.page.bio, genres = state.page.genres)
+                        }
+                    }
+                }
+
+                // Only for a genuine fetch failure, never for "this artist has no backend page" —
+                // see [ArtistUiState.pageFetchFailed]. The library-derived page above still renders
+                // in full either way, so this is an offer to try again, not a blocking error.
+                if (state.pageFetchFailed) {
+                    item(key = "fetch_failed", contentType = "fetch_failed") {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.artist_info_unavailable),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = { viewModel.refresh() }, shapes = ButtonDefaults.shapes()) {
+                                Text(stringResource(R.string.common_try_again))
+                            }
+                        }
                     }
                 }
 

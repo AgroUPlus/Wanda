@@ -4,8 +4,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,15 +16,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
-import com.wander.android.ui.components.ShapedActionSize
-import com.wander.android.ui.components.ShapedPlaySize
 import com.wander.android.ui.components.SkeletonBox
 import com.wander.android.ui.components.SkeletonLine
 import com.wander.android.ui.components.SkeletonRow
@@ -85,8 +84,8 @@ internal fun ArtistSkeleton(contentPadding: PaddingValues, modifier: Modifier = 
 }
 
 /**
- * Matches `ArtistHero` exactly — same portrait aspect, same centred control row — so the hero is
- * the one part of the page that does not move at all when the real data arrives.
+ * Matches `ArtistHero` exactly — same portrait aspect, same two full-width weighted control rows —
+ * so the hero is the one part of the page that does not move at all when the real data arrives.
  */
 @Composable
 private fun HeroSkeleton() {
@@ -100,19 +99,35 @@ private fun HeroSkeleton() {
         Spacer(Modifier.height(10.dp))
         SkeletonLine(widthFraction = 0.35f, height = 13.dp)
         Row(
-            horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(top = 18.dp)
+            horizontalArrangement = Arrangement.spacedBy(ButtonGap),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(HeroRowHeight)
+                .padding(horizontal = RowInset)
+                .padding(top = 18.dp)
         ) {
-            SkeletonBox(
-                modifier = Modifier.size(ShapedActionSize),
-                shape = MaterialTheme.shapes.small
-            )
-            SkeletonBox(modifier = Modifier.size(ShapedPlaySize), shape = CircleShape)
-            SkeletonBox(
-                modifier = Modifier.size(ShapedActionSize),
-                shape = MaterialTheme.shapes.small
-            )
+            SkeletonButton(weight = 1f)
+            SkeletonButton(weight = HeroWeight)
+            SkeletonButton(weight = 1f)
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(ButtonGap),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(ActionRowHeight)
+                .padding(horizontal = RowInset)
+                .padding(top = 14.dp, bottom = 4.dp)
+        ) {
+            SkeletonButton(weight = 1f)
+            SkeletonButton(weight = 1f)
         }
     }
+}
+
+@Composable
+private fun RowScope.SkeletonButton(weight: Float) {
+    SkeletonBox(
+        modifier = Modifier.weight(weight).fillMaxHeight(),
+        shape = MaterialTheme.shapes.large
+    )
 }

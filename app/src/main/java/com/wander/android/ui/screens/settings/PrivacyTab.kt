@@ -48,19 +48,37 @@ internal fun LazyListScope.privacyTab(
         )
     }
 
-    item(key = "online_lyrics") {
+    // Grouped rather than two single-toggle cards: both send a name to an external service
+    // (LRCLIB, MusicBrainz) and nothing else in this list does, so they read as one decision —
+    // "does this app talk to outside lookups at all" — with two independent answers, not two
+    // unrelated settings that happen to sit next to each other.
+    item(key = "sec_third_party_lookups") {
+        SettingsSection(stringResource(R.string.settings_section_third_party_lookups))
+    }
+    item(key = "third_party_lookups") {
         GroupedCard(
-            modifier = Modifier.padding(top = 16.dp),
-            items = listOf<@Composable () -> Unit>({
-                SettingsToggle(
-                    modifier = Modifier.scale(rememberShelfEntranceScale(7)),
-                    title = stringResource(R.string.settings_online_lyrics_lookup),
-                    subtitle = stringResource(R.string.settings_query_lrclib_when_no_local_or_server_lyrics),
-                    checked = state.externalLyricsEnabled,
-                    onCheckedChange = actions.onExternalLyricsChange,
-                    icon = Icons.Rounded.Language
-                )
-            })
+            items = listOf<@Composable () -> Unit>(
+                {
+                    SettingsToggle(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(7)),
+                        title = stringResource(R.string.settings_online_lyrics_lookup),
+                        subtitle = stringResource(R.string.settings_query_lrclib_when_no_local_or_server_lyrics),
+                        checked = state.externalLyricsEnabled,
+                        onCheckedChange = actions.onExternalLyricsChange,
+                        icon = Icons.Rounded.Language
+                    )
+                },
+                {
+                    SettingsToggle(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(8)),
+                        title = stringResource(R.string.settings_musicbrainz_lookup),
+                        subtitle = stringResource(R.string.settings_query_musicbrainz_for_accurate_artist_id),
+                        checked = state.musicBrainzLookupEnabled,
+                        onCheckedChange = actions.onMusicBrainzLookupChange,
+                        icon = Icons.Rounded.Language
+                    )
+                }
+            )
         )
     }
 

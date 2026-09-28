@@ -115,6 +115,16 @@ private fun MasonryCard(
             overflow = TextOverflow.Clip,
             modifier = Modifier.scrollingTitle()
         )
+        if (track.artist.isNotBlank()) {
+            Text(
+                text = track.artist,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Clip,
+                modifier = Modifier.scrollingTitle()
+            )
+        }
     }
 }
 
@@ -127,5 +137,5 @@ private val CardWidth = 120.dp
 private val RegularArtworkSize = 120.dp
 private val TallArtworkSize = 160.dp
 
-/** Tall row's card plus caption, twice over, plus the gap between rows. */
-private val ShelfHeight = 258.dp
+/** Tall row's card plus its two caption lines (title, artist), twice over, plus the row gap. */
+private val ShelfHeight = 298.dp

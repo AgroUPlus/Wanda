@@ -8,7 +8,6 @@ internal const val ListSize = 20
 internal const val SectionOnRepeat = "on_repeat"
 internal const val SectionContinueListening = "continue_listening"
 internal const val SectionMixes = "mixes"
-internal const val SectionJumpBackIn = "jump_back_in"
 internal const val SectionRecentlyPlayed = "recently_played"
 internal const val SectionLiked = "liked"
 internal const val SectionDiscover = "discover"
@@ -22,7 +21,6 @@ internal val SectionOrder = listOf(
     // else. Recorded now so whoever adds it doesn't have to re-derive the placement.
     SectionContinueListening,
     SectionMixes,
-    SectionJumpBackIn,
     SectionRecentlyPlayed,
     SectionLiked,
     SectionBecause,

@@ -3,6 +3,7 @@ package com.wander.android.data.importer
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -23,11 +24,15 @@ class DeezerPlaylistParser @Inject constructor(
         return regex.find(trimmed)?.groupValues?.getOrNull(1)
     }
 
-    suspend fun parse(url: String): Result<RawImportPlaylist> = runCatching {
+    suspend fun parse(url: String, cookie: String? = null): Result<RawImportPlaylist> = runCatching {
         val playlistId = extractPlaylistId(url)
             ?: throw IllegalArgumentException("Could not find a valid Deezer playlist ID in the link.")
 
-        val responseText: String = httpClient.get("https://api.deezer.com/playlist/$playlistId").body()
+        val responseText: String = httpClient.get("https://api.deezer.com/playlist/$playlistId") {
+            if (!cookie.isNullOrBlank()) {
+                header("Cookie", cookie)
+            }
+        }.body()
         val root = json.parseToJsonElement(responseText).jsonObject
 
         val errorObj = root["error"]?.jsonObject

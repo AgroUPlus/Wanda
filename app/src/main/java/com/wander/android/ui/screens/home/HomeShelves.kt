@@ -161,13 +161,12 @@ internal fun LazyListScope.homeSection(
             )
         }
 
-        HomeSectionStyle.OVERLAPPING_STACK -> item(
+        HomeSectionStyle.FAVORITES_CAROUSEL -> item(
             key = "${section.id}-row",
-            contentType = "overlapping-stack"
+            contentType = "favorites-carousel"
         ) {
-            OverlappingStackShelf(
+            FavoritesCarouselShelf(
                 tracks = section.tracks,
-                sectionId = section.id,
                 onPlay = { index -> viewModel.play(section.tracks, index) },
                 onLongPress = onLongPress
             )

@@ -30,28 +30,35 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.wander.android.core.permissions.hasPermission
+import com.wander.android.ui.components.bouncySpec
 import com.wander.android.ui.components.listen.ListenSheet
 import com.wander.android.ui.components.player.MiniPlayerGap
+import com.wander.android.ui.components.player.PlayerSheetState
 import com.wander.android.ui.navigation.TopLevelDestination
 import com.wander.android.ui.navigation.WanderDock
-import com.wander.android.ui.navigation.WanderDockRow
 
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.ui.unit.dp
-import com.wander.android.ui.components.player.MiniPlayerHeight
 import com.wander.android.ui.components.player.MiniStripHeight
 import com.wander.android.ui.navigation.DockRowHeight
 
 internal class WanderDockState(
-    val dockRow: @Composable () -> Unit,
     val standaloneDock: @Composable BoxScope.() -> Unit
 )
 
 internal data class WanderDockMetrics(
+    /** Where the dock row itself rests — unchanged by whether the mini player is showing. */
     val dockInset: Dp,
+    /**
+     * Where the *sheet* rests while docked. Equal to [dockInset] when there is no dock row to
+     * clear; otherwise [dockInset] plus the dock row's own height and the gap above it, since the
+     * dock row is its own independent card now and the sheet has to float above it rather than
+     * (as before, when the two were one fused block) simply resting at the same inset.
+     */
+    val sheetBottomInset: Dp,
     val dockedPlayerHeight: Dp,
     val dockBottom: Dp
 )
@@ -65,18 +72,29 @@ internal fun calculateDockMetrics(
     val systemBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val imeBottomInset = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
     val dockInset = if (showDockRow) maxOf(systemBottomInset, imeBottomInset) else systemBottomInset
-    val dockedPlayerHeight = if (showDockRow) MiniPlayerHeight else MiniStripHeight
+
+    // The dock row is its own card now, always resting at [dockInset], so the sheet — floating
+    // above it rather than fused to it — has to clear the dock row's own height plus the gap
+    // between the two cards on top of that, or it would rest exactly where the dock row does.
+    val dockRowClearance = if (showDockRow) DockRowHeight + MiniPlayerGap else 0.dp
+    val sheetBottomInset = dockInset + dockRowClearance
+
+    // Always just the mini strip: the sheet no longer reserves room for the dock row inside its
+    // own docked height, because the dock row is no longer inside it — see `PlayerSheet.kt`.
+    val dockedPlayerHeight = MiniStripHeight
+
     val dockBottom = systemBottomInset + MiniPlayerGap + when {
-        hasTrack && showChrome -> dockedPlayerHeight
+        hasTrack && showChrome -> dockRowClearance + dockedPlayerHeight
         showDockRow -> DockRowHeight
         else -> 0.dp
     }
-    return WanderDockMetrics(dockInset, dockedPlayerHeight, dockBottom)
+    return WanderDockMetrics(dockInset, sheetBottomInset, dockedPlayerHeight, dockBottom)
 }
 
 /**
  * Creates and remembers the dock state, handling search query updates, microphone recognition
- * launches, and rendering both the embedded dock row and standalone dock card.
+ * launches, and rendering the dock card — always its own independent element now, whether or not
+ * a track is playing; see [WanderDock].
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -87,6 +105,7 @@ internal fun rememberWanderDockState(
     currentRoute: String?,
     showDockRow: Boolean,
     hasTrack: Boolean,
+    sheetState: PlayerSheetState,
     dockInset: Dp
 ): WanderDockState {
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
@@ -118,27 +137,20 @@ internal fun rememberWanderDockState(
         viewModel.setSearchQuery(value)
     }
 
-    val dockRow: @Composable () -> Unit = {
-        WanderDockRow(
-            currentRoute = dockRoute,
-            query = searchQuery,
-            onOpenLibrary = openLibrary,
-            onOpenFriends = { navController.switchTab(TopLevelDestination.FRIENDS) },
-            onQueryChange = onQueryChange,
-            onSearch = openLibrary,
-            onListen = onListen
-        )
-    }
-
     val standaloneDock: @Composable BoxScope.() -> Unit = {
         AnimatedVisibility(
-            visible = showDockRow && !hasTrack,
+            visible = showDockRow,
+            // Enter and exit both bouncy, both travelling the card's own full height rather than
+            // half of it — this used to slide in a bouncy scale but slide *out* on the app's plain
+            // damped spec, so appearing read as lively and disappearing read as a different,
+            // flatter animation cutting it off. One spring, both directions, is what makes it read
+            // as the same card fluidly leaving and returning rather than two different behaviours.
             enter = fadeIn(motionScheme.defaultEffectsSpec()) +
-                slideInVertically(motionScheme.slowSpatialSpec()) { it / 2 } +
-                scaleIn(motionScheme.slowSpatialSpec(), initialScale = 0.92f),
+                slideInVertically(bouncySpec()) { it } +
+                scaleIn(bouncySpec(), initialScale = 0.85f),
             exit = fadeOut(motionScheme.fastEffectsSpec()) +
-                slideOutVertically(motionScheme.slowSpatialSpec()) { it / 2 } +
-                scaleOut(motionScheme.slowSpatialSpec(), targetScale = 0.92f),
+                slideOutVertically(bouncySpec()) { it } +
+                scaleOut(bouncySpec(), targetScale = 0.85f),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = dockInset + MiniPlayerGap)
@@ -150,13 +162,19 @@ internal fun rememberWanderDockState(
                 onOpenFriends = { navController.switchTab(TopLevelDestination.FRIENDS) },
                 onQueryChange = onQueryChange,
                 onSearch = openLibrary,
-                onListen = onListen
+                onListen = onListen,
+                // The raw signal, overshoot and all — see `WanderDock`'s own doc for why this is
+                // read straight off the sheet rather than animated again.
+                progress = { sheetState.rawProgress },
+                // Whether the mini player is (or is about to be) floating above this — see
+                // `WanderDock`'s own doc on why that changes its corners, not just its position.
+                pairedWithMiniPlayer = hasTrack
             )
         }
     }
 
-    return remember(dockRow, standaloneDock) {
-        WanderDockState(dockRow, standaloneDock)
+    return remember(standaloneDock) {
+        WanderDockState(standaloneDock)
     }
 }
 

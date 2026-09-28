@@ -7,9 +7,9 @@ import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.cache.CacheDataSource
+import com.wander.android.core.playback.DeezerDecryptingDataSource
 import com.wander.android.core.playback.RelayDecryptingDataSource
 import com.wander.android.core.security.IdentityKeyManager
-import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import okhttp3.OkHttpClient
@@ -28,13 +28,26 @@ class AudioCacheManager(
 ) {
     private val cacheDir = File(context.cacheDir, "audio_stream_cache")
 
+    /**
+     * Kept as a field, not just handed to [SimpleCache] and forgotten: [updateProtectedStreamUris]
+     * needs to reach the same evictor instance later, whenever what's liked changes.
+     */
+    private val evictor = ProtectingCacheEvictor(maxSizeBytes)
+
     val simpleCache: SimpleCache by lazy {
         SimpleCache(
             cacheDir,
-            LeastRecentlyUsedCacheEvictor(maxSizeBytes),
+            evictor,
             StandaloneDatabaseProvider(context)
         )
     }
+
+    /**
+     * Tells the evictor which stream URIs must not be evicted while any other cached audio could
+     * be evicted instead — liked tracks, chiefly. Called whenever the liked set changes; see
+     * [com.wander.android.data.repository.LikedTrackCacheProtector].
+     */
+    fun updateProtectedStreamUris(uris: Set<String>) = evictor.updateProtectedKeys(uris)
 
     /**
      * The plain network path, with no cache in front of it.
@@ -54,9 +67,11 @@ class AudioCacheManager(
      * could never be played again.
      */
     fun getUpstreamDataSourceFactory(): DataSource.Factory =
-        RelayDecryptingDataSource.Factory(
-            DefaultDataSource.Factory(context, OkHttpDataSource.Factory(okHttpClient)),
-            identityKeyManager
+        DeezerDecryptingDataSource.Factory(
+            RelayDecryptingDataSource.Factory(
+                DefaultDataSource.Factory(context, OkHttpDataSource.Factory(okHttpClient)),
+                identityKeyManager
+            )
         )
 
     fun getCacheDataSourceFactory(): DataSource.Factory =

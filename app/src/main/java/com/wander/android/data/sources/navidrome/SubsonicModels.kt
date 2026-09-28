@@ -53,7 +53,9 @@ data class SubsonicArtistDetail(
 data class SubsonicArtistInfo(
     val biography: String? = null,
     val largeImageUrl: String? = null,
-    val mediumImageUrl: String? = null
+    val mediumImageUrl: String? = null,
+    /** Set when the server's metadata agent linked this artist to MusicBrainz; often absent. */
+    val musicBrainzId: String? = null
 )
 
 /** `createShare` / `getShares`. Navidrome returns the public URL ready to hand out. */

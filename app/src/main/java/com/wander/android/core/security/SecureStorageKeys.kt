@@ -20,8 +20,14 @@ internal const val KEY_AGRO_IDENTITY_PUB = "key_agro_identity_pub"
 internal const val KEY_AGRO_SYNC_SETTINGS = "key_agro_sync_settings"
 internal const val KEY_AGRO_DEVICE_ID = "key_agro_device_id"
 
+internal const val KEY_DEEZER_ARL = "key_deezer_arl"
+internal const val KEY_DEEZER_ACCOUNT = "key_deezer_account"
+internal const val KEY_DEEZER_TIER = "key_deezer_tier"
+internal const val KEY_DEEZER_QUALITY = "key_deezer_quality"
+
 internal val ACCOUNT_KEYS = setOf(
     KEY_NAVIDROME_URL, KEY_NAVIDROME_USER, KEY_NAVIDROME_TOKEN, KEY_YTM_COOKIE,
+    KEY_DEEZER_ARL, KEY_DEEZER_ACCOUNT, KEY_DEEZER_TIER, KEY_DEEZER_QUALITY,
     KEY_AGRO_URL, KEY_AGRO_USER, KEY_AGRO_KEY, KEY_AGRO_PETNAME, KEY_AGRO_VAULT_KEY,
     KEY_AGRO_IDENTITY_PRIV, KEY_AGRO_IDENTITY_PUB
 )
@@ -37,6 +43,7 @@ internal const val KEY_AGRO_LIBRARY_SYNC = "key_agro_library_sync"
 internal const val KEY_AGRO_PROXY_ENABLED = "key_agro_proxy_enabled"
 
 internal const val KEY_EXTERNAL_LYRICS = "key_external_lyrics"
+internal const val KEY_MUSICBRAINZ_LOOKUP = "key_musicbrainz_lookup"
 internal const val KEY_OFFLINE_MODE = "key_offline_mode"
 internal const val KEY_PRELOAD_NEXT = "key_preload_next"
 internal const val KEY_SKIP_SILENCE = "key_skip_silence"

@@ -12,10 +12,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.QueueMusic
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -53,9 +54,9 @@ internal fun PlayerTopBar(
     modifier: Modifier = Modifier
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier.fillMaxWidth()) {
-        FilledTonalIconButton(onClick = onMinimize) {
+        FilledTonalIconButton(onClick = onMinimize, colors = playerOverlayButtonColors()) {
             Icon(
-                Icons.Rounded.KeyboardArrowDown,
+                Icons.Outlined.KeyboardArrowDown,
                 contentDescription = stringResource(R.string.player_minimize)
             )
         }
@@ -98,8 +99,26 @@ internal fun PlayerTopBar(
             }
         }
 
-        FilledTonalIconButton(onClick = onOpenQueue) {
-            Icon(Icons.Rounded.QueueMusic, contentDescription = stringResource(R.string.player_queue))
+        FilledTonalIconButton(onClick = onOpenQueue, colors = playerOverlayButtonColors()) {
+            Icon(Icons.Outlined.QueueMusic, contentDescription = stringResource(R.string.player_queue))
         }
     }
 }
+
+/**
+ * Colors for a control that floats over the full player — minimize, queue here, the share button
+ * in [PlayerOverlayButtons] — chosen fixed rather than read off `MaterialTheme.colorScheme`.
+ *
+ * The whole app is wrapped in a cover-tinted theme while a track with cover-art theming is playing
+ * (see `CoverTintedTheme`), and a tonal container is exactly one of the roles it repaints — so a
+ * button here used to pick up the very cover's own extracted colour. A transport control floating
+ * over that same cover and dressed in its colour reads as barely there instead of discreet; a fixed
+ * neutral scrim reads as a control regardless of what is behind it.
+ */
+@Composable
+internal fun playerOverlayButtonColors() = IconButtonDefaults.filledTonalIconButtonColors(
+    containerColor = Color.Black.copy(alpha = OverlayScrimAlpha),
+    contentColor = Color.White
+)
+
+private const val OverlayScrimAlpha = 0.28f

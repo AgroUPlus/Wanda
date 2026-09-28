@@ -4,6 +4,7 @@ import androidx.activity.BackEventCompat
 import androidx.activity.compose.PredictiveBackHandler
 import kotlin.coroutines.cancellation.CancellationException
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -28,12 +29,12 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp as lerpDp
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.util.lerp
 import com.wander.android.ui.components.MiniArtworkSize
 import com.wander.android.ui.components.MiniProgressBarHeight
 import com.wander.android.ui.components.MiniRowVerticalPadding
-import com.wander.android.ui.navigation.DockRowHeight
 import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.launch
@@ -47,16 +48,6 @@ import kotlinx.coroutines.launch
  * from it, so the last row of covers ended up under the strip.
  */
 val MiniStripHeight: Dp = MiniProgressBarHeight + MiniRowVerticalPadding * 2 + MiniArtworkSize
-
-/**
- * The whole docked block: the player strip *and* the dock row of destinations or search beneath it.
- *
- * The navigation bar used to be a separate `bottomBar` under a floating player card. Fusing them
- * means the sheet's docked area is taller by exactly one dock row, and because every content inset
- * in `WanderApp` is derived from this constant, widening it here is what moves every list's bottom
- * padding with it.
- */
-val MiniPlayerHeight: Dp = MiniStripHeight + DockRowHeight
 
 /** Gap between the docked strip and the navigation bar, so the strip reads as floating over it. */
 val MiniPlayerGap: Dp = 8.dp
@@ -81,8 +72,24 @@ val MiniPlayerShadowInset: Dp = 6.dp
  */
 internal val DockedSideInset: Dp = 12.dp
 
-/** Corner radius while docked; interpolated to square as the sheet fills the screen. */
-private val DockedCorner: Dp = 28.dp
+/**
+ * Corner radii while docked, interpolated to square as the sheet fills the screen (unchanged) —
+ * and, new, interpolated between two different *silhouettes* depending on whether a dock row is
+ * floating just beneath the strip (see `WanderAppDock.kt` — it's its own independent card now,
+ * shaped the same way from the other side — see `WanderDock`).
+ *
+ * Alone, every corner heads toward [AloneCorner] — half the strip's own height, a true stadium,
+ * "circled" the way a lone pill button already reads elsewhere in the app. Paired, the top edge
+ * (facing away from the dock row — the *exterior*) stays close to that same stadium curve at
+ * [PairedExteriorCorner], while the bottom edge (facing the dock row — the *interior*, where the
+ * gap between the two cards is) flattens toward [PairedInteriorCorner], a rounded square rather
+ * than a curve. Read together with the dock row's own mirrored shape, the two cards read as one
+ * continuous pill that got pulled apart in the middle, not two unrelated rectangles that happen
+ * to be near each other.
+ */
+private val AloneCorner: Dp = MiniStripHeight / 2
+private val PairedExteriorCorner: Dp = 32.dp
+private val PairedInteriorCorner: Dp = 14.dp
 
 /** How much the sheet shrinks at the very end of a predictive-back gesture. */
 private const val PredictiveBackMinScale = 0.9f
@@ -92,6 +99,13 @@ private val PredictiveBackMaxShift: Dp = 8.dp
 
 /** The corner radius the card takes on at the far end of a back swipe. */
 private val PredictiveBackCorner: Dp = 28.dp
+
+/**
+ * How far a drag can pull the docked strip past its resting position before the rubber band
+ * effectively stops it — see [PlayerSheetState.dragBy]. Never fully reached: [rubberBand] only
+ * approaches it asymptotically, so this is a ceiling on the give, not a distance the strip travels.
+ */
+private val OverdragDistance: Dp = 64.dp
 
 /**
  * The player as one continuously draggable surface.
@@ -117,24 +131,30 @@ fun PlayerSheet(
     isVisible: Boolean,
     modifier: Modifier = Modifier,
     /**
-     * How tall the sheet is while docked: [MiniPlayerHeight] with a dock row beneath the strip,
-     * [MiniStripHeight] on the screens that show the player alone. It decides both where the
-     * sheet rests and how far it has to travel, so it cannot be assumed — a sheet that rests one
-     * dock row lower than it measures leaves a strip-sized hole above the navigation bar.
+     * How tall the sheet is while docked — [MiniStripHeight], always, now that the dock row is
+     * its own independent card rather than something this height used to reserve room for. It
+     * still decides both where the sheet rests and how far it has to travel, so it cannot be
+     * assumed: paired with [pairedWithDockRow] and [bottomInset], see `WanderAppDock.kt`'s
+     * `calculateDockMetrics` for how the dock row's own height is cleared instead — by
+     * [bottomInset], not by this.
      */
-    dockedHeight: Dp = MiniPlayerHeight,
+    dockedHeight: Dp = MiniStripHeight,
     /**
      * The current track's cover-derived seed colour, null when cover-art theming is off. Darkened
-     * and blended in as the sheet expands, so the full player reads as a deeper, cover-tinted
-     * surface instead of the flat [expandedColor] — the docked strip is untouched by it.
+     * and blended into the surface — see `drawPlayerSheetBackground` — the same amount whether
+     * docked or expanded, so the strip and the full player it grows into are one continuous
+     * surface rather than two different shades of it.
      */
     coverSeed: Color? = null,
+    /** Whether the (now independent) dock row is currently floating just beneath the strip. */
+    pairedWithDockRow: Boolean = false,
     content: @Composable (progress: () -> Float, rawProgress: () -> Float, expandedHeight: Dp) -> Unit
 ) {
     if (!isVisible) return
 
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
+    val overdragLimitPx = with(density) { OverdragDistance.toPx() }
 
     // Navigating between a root and a page beneath it takes a dock row out from under the strip,
     // so the sheet's resting height changes by that much. Springing it — rather than cutting —
@@ -148,6 +168,15 @@ fun PlayerSheet(
         targetValue = dockedHeight,
         animationSpec = MaterialTheme.motionScheme.slowSpatialSpec(),
         label = "docked-height"
+    )
+
+    // Same discipline as `dockedHeightState` above: the target flips whenever navigation shows or
+    // hides the dock row, and this eases between the two corner silhouettes rather than snapping,
+    // read only inside `graphicsLayer` below — never in composition scope.
+    val pairednessState = animateFloatAsState(
+        targetValue = if (pairedWithDockRow) 1f else 0f,
+        animationSpec = MaterialTheme.motionScheme.slowSpatialSpec(),
+        label = "docked-pairedness"
     )
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
@@ -179,13 +208,19 @@ fun PlayerSheet(
             }
         }
 
-        // Two colours, not one. Docked, this is a card lifted off the screen and wants a raised
-        // container; expanded, it *is* the screen and wants the plain background — which is what
-        // makes it honour the OLED theme. Pinned to `surfaceContainerHigh` it stayed #1A1A1A with
-        // pure black switched on, so the one screen that fills the panel was the one screen that
-        // never went black.
-        val dockedColor = MaterialTheme.colorScheme.surfaceContainerHigh
-        val expandedColor = MaterialTheme.colorScheme.background
+        // One colour, not two — docked and expanded now paint the same surface, and
+        // `drawPlayerSheetBackground` no longer scales the cover tint by how open the sheet is
+        // either, so this is genuinely one flat colour at every point of the drag, not just the
+        // same two endpoints with a different shade in between.
+        //
+        // This used to be `surfaceContainerHigh` while docked and `background` while expanded, on
+        // the idea that docked is a card lifted off the screen and expanded *is* the screen. Real
+        // enough, but the whole app is already wrapped in a cover-tinted theme (`CoverTintedTheme`)
+        // whenever a track with cover-art theming is playing, and that tint lands differently on
+        // `surfaceContainerHigh` than it does on `background` — two roles the same seed colour
+        // pushes to two different final colours. The strip's background didn't match the full
+        // player it grows into; it jumped to a different shade the moment the drag started.
+        val baseColor = MaterialTheme.colorScheme.background
 
         // Modifier order matters here. Outside in:
         //   graphicsLayer  — translation, corner and shadow, clipping to the *animated* box
@@ -205,14 +240,21 @@ fun PlayerSheet(
                     }
                     val backVisual = sheetState.predictiveBackVisual
                     val backRadius = PredictiveBackCorner.toPx() * backVisual
-                    val radius = maxOf(DockedCorner.toPx() * (1f - progress), backRadius)
+                    // Exterior (top) vs interior (bottom, facing the dock row) at pairedness 1,
+                    // both equal to a full stadium at pairedness 0 (alone) — see `AloneCorner`'s
+                    // doc.
+                    val p = pairednessState.value
+                    val exteriorBase = lerpDp(AloneCorner, PairedExteriorCorner, p).toPx()
+                    val interiorBase = lerpDp(AloneCorner, PairedInteriorCorner, p).toPx()
+                    val exteriorRadius = maxOf(exteriorBase * (1f - progress), backRadius)
+                    val interiorRadius = maxOf(interiorBase * (1f - progress), backRadius)
                     shape = RoundedCornerShape(
-                        topStart = radius,
-                        topEnd = radius,
+                        topStart = exteriorRadius,
+                        topEnd = exteriorRadius,
                         // Square against the screen edge only at the very end of the travel —
                         // unless a back swipe has lifted the whole card off the edges.
-                        bottomStart = maxOf(radius * (1f - progress), backRadius),
-                        bottomEnd = maxOf(radius * (1f - progress), backRadius)
+                        bottomStart = maxOf(interiorRadius * (1f - progress), backRadius),
+                        bottomEnd = maxOf(interiorRadius * (1f - progress), backRadius)
                     )
                     clip = true
                     shadowElevation = (6.dp + 2.dp * progress).toPx()
@@ -232,7 +274,7 @@ fun PlayerSheet(
                 // Drawn rather than composed: the colour changes every frame of a drag, and a
                 // `background(...)` argument would recompose the sheet along with it.
                 .drawBehind {
-                    drawPlayerSheetBackground(sheetState.progress, dockedColor, expandedColor, coverSeed)
+                    drawPlayerSheetBackground(baseColor, coverSeed)
                 }
                 .layout { measurable, constraints ->
                     val fullWidth = constraints.maxWidth
@@ -273,7 +315,7 @@ fun PlayerSheet(
                 .draggable(
                     orientation = Orientation.Vertical,
                     state = rememberDraggableState { delta ->
-                        scope.launch { sheetState.dragBy(delta) }
+                        scope.launch { sheetState.dragBy(delta, overdragLimitPx) }
                     },
                     onDragStopped = { velocity ->
                         scope.launch { sheetState.settle(velocity) }
@@ -283,7 +325,7 @@ fun PlayerSheet(
             // A bare Box, unlike Surface, sets no content colour — so every Text and Icon in the
             // player fell back to the default and rendered black on a dark surface.
             CompositionLocalProvider(
-                LocalContentColor provides contentColorFor(dockedColor)
+                LocalContentColor provides contentColorFor(baseColor)
             ) {
                 content({ sheetState.progress }, { sheetState.rawProgress }, sheetHeight)
             }

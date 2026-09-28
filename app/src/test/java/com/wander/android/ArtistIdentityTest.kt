@@ -4,6 +4,8 @@ import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.ArtistIdentity
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -95,5 +97,37 @@ class ArtistIdentityTest {
         val aliases = ArtistIdentity.aliasesOf(tracks, pageArtistId = "nd:mili-1")
 
         assertEquals(setOf("nd:mili-1"), aliases)
+    }
+
+    /**
+     * `sameName`'s folding is what lets an artist tagged "The Beatles" on one backend and
+     * "Beatles" on another still be recognised as one page — see [ArtistIdentity.sameName].
+     */
+    @Test
+    fun `folds case, accents, a leading article and punctuation`() {
+        assertTrue(ArtistIdentity.sameName("ROSÉ", "rose"))
+        assertTrue(ArtistIdentity.sameName("The Beatles", "Beatles"))
+        assertTrue(ArtistIdentity.sameName("An Cafe", "Cafe"))
+        assertTrue(ArtistIdentity.sameName("Sigur Rós!", "Sigur Rós"))
+    }
+
+    @Test
+    fun `folds a trailing feat credit`() {
+        assertTrue(ArtistIdentity.sameName("Robin Schulz feat. Erika Sirola", "Robin Schulz"))
+        assertTrue(ArtistIdentity.sameName("Robin Schulz ft. Erika Sirola", "Robin Schulz"))
+        assertTrue(ArtistIdentity.sameName("Robin Schulz (feat. Erika Sirola)", "Robin Schulz"))
+    }
+
+    /**
+     * The reported regression: a name containing "ft" mid-word right before a space is shaped
+     * exactly like a real "ft " credit, and a boundary-less regex chopped it at that "ft" as if it
+     * were one — "Soft Cell" folded down to "so".
+     */
+    @Test
+    fun `does not mistake an ordinary word ending in ft for a feat credit`() {
+        assertTrue(ArtistIdentity.sameName("Soft Cell", "Soft Cell"))
+        assertFalse(ArtistIdentity.sameName("Soft Cell", "So"))
+        assertTrue(ArtistIdentity.sameName("Left Boy", "Left Boy"))
+        assertFalse(ArtistIdentity.sameName("Left Boy", "Le"))
     }
 }

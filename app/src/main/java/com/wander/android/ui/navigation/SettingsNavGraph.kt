@@ -8,6 +8,7 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.wander.android.data.replay.ReplayAvailability
 import com.wander.android.ui.screens.importer.PlaylistImportScreen
+import com.wander.android.ui.screens.login.DeezerLoginScreen
 import com.wander.android.ui.screens.login.NavidromeLoginScreen
 import com.wander.android.ui.screens.login.YouTubeLoginScreen
 import com.wander.android.ui.screens.replay.ReplayStoryScreen
@@ -70,6 +71,7 @@ internal fun NavGraphBuilder.settingsNavGraph(
                 onBack = navController::popBackStack,
                 onNavidromeLogin = { navController.navigateSettled(Routes.NAVIDROME_LOGIN) },
                 onYouTubeLogin = { navController.navigateSettled(Routes.YTMUSIC_LOGIN) },
+                onDeezerLogin = { navController.navigateSettled(Routes.DEEZER_LOGIN) },
                 onOpenImport = { navController.navigateSettled(Routes.IMPORT_PLAYLIST) },
                 onOpenMergePreview = { navController.navigateSettled(Routes.MERGE_PREVIEW) },
                 onOpenReplay = {
@@ -115,5 +117,9 @@ internal fun NavGraphBuilder.settingsNavGraph(
 
     detailDestination(motion, Routes.YTMUSIC_LOGIN) {
         YouTubeLoginScreen(onDone = navController::popBackStack)
+    }
+
+    detailDestination(motion, Routes.DEEZER_LOGIN) {
+        DeezerLoginScreen(onDone = navController::popBackStack)
     }
 }

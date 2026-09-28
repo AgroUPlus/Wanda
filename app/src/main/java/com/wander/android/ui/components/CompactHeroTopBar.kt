@@ -1,6 +1,8 @@
 package com.wander.android.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +17,7 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -84,7 +87,19 @@ fun CompactHeroTopBar(
                 // and the play button 16 dp from their edges — the same inset as the lists below.
                 .padding(horizontal = 12.dp)
         ) {
-            FilledTonalIconButton(onClick = onBack) {
+            // Round at rest, not the squircle `ShapedActionButton` defaults to — a back control
+            // reads as "back" by being the round button in the corner everywhere else in Android,
+            // and only deviates from that (toward a squarer shape) while actually held, the
+            // reverse of `ShapedActionButton`'s own resting/pressed pair.
+            val backInteraction = remember { MutableInteractionSource() }
+            val backPressed by backInteraction.collectIsPressedAsState()
+            val backShape = rememberPressMorphShape(MaterialShapes.Circle, MaterialShapes.Square, backPressed)
+            FilledTonalIconButton(
+                onClick = onBack,
+                shape = backShape,
+                interactionSource = backInteraction,
+                modifier = Modifier.size(BarButtonSize)
+            ) {
                 Icon(
                     Icons.AutoMirrored.Rounded.ArrowBack,
                     contentDescription = stringResource(R.string.common_back)
@@ -108,9 +123,16 @@ fun CompactHeroTopBar(
                 )
             }
 
+            val playInteraction = remember { MutableInteractionSource() }
+            val playPressed by playInteraction.collectIsPressedAsState()
+            // Same cookie-to-circle morph as the hero's own play button — this is a second copy
+            // of the one control the page exists for, not a different one, and should read as such.
+            val playShape = rememberPressMorphShape(PlayResting, PlayPressed, playPressed)
             FilledIconButton(
                 onClick = onPlay,
                 enabled = titleState.fraction > 0.5f,
+                shape = playShape,
+                interactionSource = playInteraction,
                 colors = IconButtonDefaults.filledIconButtonColors(
                     containerColor = MaterialTheme.colorScheme.primary
                 ),
@@ -222,9 +244,16 @@ private fun crossFade(t: Float): Float = ((t - 0.3f) / 0.4f).coerceIn(0f, 1f)
 
 private val BarHeight = 56.dp
 
-/** Bigger than the bar itself on purpose — see the `requiredSize` note where it's used. */
-private val PlayButtonSize = 72.dp
-private val PlayIconSize = 32.dp
+/** The back button's size — M3 Expressive's own Small icon-button-adjacent scale for a bar. */
+private val BarButtonSize = 48.dp
+
+/**
+ * Bigger than the bar itself on purpose — see the `requiredSize` note where it's used. Close to
+ * the hero's own [ShapedPlaySize]: this is the same control handed off from the same page, and a
+ * noticeably smaller copy read as a lesser, secondary version of it rather than a continuation.
+ */
+private val PlayButtonSize = 88.dp
+private val PlayIconSize = 40.dp
 
 /** How far above the bar the title starts sliding into it. */
 private val CollapseDistance = 120.dp

@@ -48,6 +48,7 @@ internal fun SettingsCategoryScreen(
     onBack: () -> Unit,
     onNavidromeLogin: () -> Unit,
     onYouTubeLogin: () -> Unit,
+    onDeezerLogin: () -> Unit = {},
     onOpenImport: () -> Unit,
     onOpenMergePreview: () -> Unit,
     onOpenReplay: () -> Unit,
@@ -56,6 +57,7 @@ internal fun SettingsCategoryScreen(
     val host = rememberSettingsHost(
         onNavidromeLogin = onNavidromeLogin,
         onYouTubeLogin = onYouTubeLogin,
+        onDeezerLogin = onDeezerLogin,
         onOpenImport = onOpenImport,
         onOpenMergePreview = onOpenMergePreview,
         onOpenReplay = onOpenReplay,
