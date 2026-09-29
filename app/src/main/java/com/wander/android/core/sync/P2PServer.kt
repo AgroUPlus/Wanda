@@ -8,7 +8,6 @@ import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.p2p.OffGridNowPlaying
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.security.IdentityKeyManager
-import com.wander.android.core.security.SecureStorage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import java.net.InetAddress
@@ -35,7 +34,6 @@ import kotlinx.serialization.json.Json
 class P2PServer @Inject constructor(
     @ApplicationContext private val context: Context,
     private val trackDao: TrackDao,
-    private val secureStorage: SecureStorage,
     private val identityKeyManager: IdentityKeyManager,
     private val playerConnection: Provider<PlayerConnection>
 ) {

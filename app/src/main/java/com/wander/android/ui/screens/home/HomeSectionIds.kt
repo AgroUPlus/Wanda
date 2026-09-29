@@ -12,7 +12,6 @@ internal const val SectionRecentlyPlayed = "recently_played"
 internal const val SectionLiked = "liked"
 internal const val SectionDiscover = "discover"
 internal const val SectionBecause = "because_you_listened"
-internal const val SectionRecentAdded = "recent_added"
 
 /** Per-source shelves are unlisted, so they sort after these and before the closing list. */
 internal val SectionOrder = listOf(

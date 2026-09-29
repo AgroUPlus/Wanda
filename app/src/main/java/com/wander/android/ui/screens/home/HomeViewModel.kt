@@ -13,7 +13,6 @@ import com.wander.android.data.repository.HomeShelfRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.repository.RecommendationRepository
-import com.wander.android.data.repository.SmartMixRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -36,7 +35,6 @@ class HomeViewModel @Inject constructor(
     private val recommendationRepository: RecommendationRepository,
     private val homeShelfRepository: HomeShelfRepository,
     private val shareRepository: ShareRepository,
-    private val smartMixRepository: SmartMixRepository,
     private val playerConnection: PlayerConnection,
     private val playbackCoordinator: PlaybackCoordinator,
     episodeProgress: EpisodeProgressRepository,

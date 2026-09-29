@@ -10,7 +10,6 @@ import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,19 +24,6 @@ import coil3.request.allowHardware
 import coil3.request.allowRgb565
 import coil3.request.bitmapConfig
 import coil3.toBitmap
-
-// ---------------------------------------------------------------------------
-// CompositionLocal
-// ---------------------------------------------------------------------------
-
-/**
- * A seed [Color] derived from the currently-playing cover art. Null while no art is loaded,
- * which tells consumers to fall back to the app-wide scheme.
- *
- * Scoped to the Now Playing surface only — nothing outside that surface reads it. The value
- * is null by default so callers that don't wrap themselves in [CoverTintedTheme] are safe.
- */
-val LocalCoverSeedColor = compositionLocalOf<Color?> { null }
 
 // ---------------------------------------------------------------------------
 // Bitmap loading + colour extraction

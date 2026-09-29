@@ -1,8 +1,5 @@
 package com.wander.android.ui.components.player
 
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 
@@ -27,14 +24,3 @@ internal const val SwipeFadeStart = 12f
 
 /** How far up a drag has to go to open a jam's queue screen. */
 internal val JamQueueOpenDistance = 56.dp
-
-/**
- * Takes every pointer event and gives nothing to the content beneath.
- */
-internal fun Modifier.swallowPointerInput(): Modifier = pointerInput(Unit) {
-    awaitPointerEventScope {
-        while (true) {
-            awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
-        }
-    }
-}
