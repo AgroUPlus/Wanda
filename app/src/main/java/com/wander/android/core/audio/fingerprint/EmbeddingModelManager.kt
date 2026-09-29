@@ -3,6 +3,7 @@ package com.wander.android.core.audio.fingerprint
 import android.content.Context
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -95,6 +96,10 @@ class EmbeddingModelManager @Inject constructor(
             }
 
             _state.value = installAndVerify(tmp)
+        } catch (e: CancellationException) {
+            tmp.safeDelete()
+            _state.value = State.Absent
+            throw e
         } catch (e: Exception) {
             tmp.safeDelete()
             Log.w(TAG, "model download failed", e)
