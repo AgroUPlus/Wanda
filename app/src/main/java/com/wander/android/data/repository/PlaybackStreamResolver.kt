@@ -53,7 +53,7 @@ internal class PlaybackStreamResolver(
         cached?.localFilePath?.takeIf { it.isNotBlank() }?.let { path ->
             return@withContext Result.success(StreamInfo(uri = path, isDirectFile = true))
         }
-        if (cached != null && cached.source != SourceType.LOCAL) {
+        if (cached != null && cached.effectiveSource != SourceType.LOCAL) {
             val localMatch = sameRecordingAs(cached, trackDao.findLocalOrDownloadedCandidates(cached.title, TITLE_CANDIDATES))
             val localPath = localMatch?.localFilePath?.takeIf { it.isNotBlank() } ?: localMatch?.streamUri
             if (localPath != null && localPath.isNotBlank()) {
@@ -62,13 +62,13 @@ internal class PlaybackStreamResolver(
         }
 
         // Tier 2: Navidrome (Personal Server)
-        if (cached != null && cached.source != SourceType.NAVIDROME && sourceFor(SourceType.NAVIDROME)?.isConfigured?.value == true) {
+        if (cached != null && cached.effectiveSource != SourceType.NAVIDROME && sourceFor(SourceType.NAVIDROME)?.isConfigured?.value == true) {
             withTimeoutOrNull(SUBSTITUTION_BUDGET_MS) { navidromeSubstituteFor(cached) }
                 ?.let { return@withContext Result.success(it) }
         }
 
         // Tier 3: Original Source / YouTube Music
-        val type = cached?.source ?: SourceType.entries.firstOrNull {
+        val type = cached?.effectiveSource ?: SourceType.entries.firstOrNull {
             trackId.startsWith(it.idPrefix)
         } ?: return@withContext Result.failure(
             IllegalArgumentException("Unrecognised track id: $trackId")
