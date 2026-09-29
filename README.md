@@ -26,7 +26,7 @@
 
 ---
 
-Wanda unifies **Navidrome / Subsonic**, **local device files**, **YouTube Music**, and the **Internet Archive** into a single cohesive library, queue, and playback engine. 
+Wanda unifies **Navidrome / Subsonic**, **local device files**, **YouTube Music**, and **Deezer** into a single cohesive library, queue, and playback engine. 
 
 Designed for digital sovereignty and hardened operating systems like GrapheneOS: zero telemetry, zero analytics, Keystore-backed secrets, application-layer HTTPS enforcement, and battery-first background audio.
 
@@ -47,12 +47,12 @@ Every backend implements a single interface (`IMusicSource`) declaring explicit 
 | **Navidrome / Subsonic** | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | **On This Device** | Yes | Yes | Yes | Local | N/A | N/A | Yes | Yes |
 | **YouTube Music** | Yes | Yes | Yes | Yes | Yes | N/A | Yes | N/A |
-| **Internet Archive** | Yes | Yes | Yes | N/A | N/A | N/A | N/A | Yes |
+| **Deezer** | Yes | Yes | Yes | Yes | Yes | N/A | Yes | Yes |
 
 * **Navidrome / Subsonic**: Full Subsonic API support, salted token authentication (passwords never touch the network), remote playlists, star ratings, scrobbling, and similar-artist radio.
 * **Local Files**: MediaStore and SAF indexing persisted directly in Room with incremental `DATE_MODIFIED` watermarks.
 * **YouTube Music**: Direct InnerTube integration with Opus (itag 251) stream extraction, artist discovery, and personalized mixes. Works completely signed out or with optional in-app sign-in.
-* **Internet Archive**: Instant access to millions of live concert recordings, historical audio, and public-domain releases.
+* **Deezer**: High-fidelity FLAC and 320kbps MP3 streaming with on-the-fly decryption, artist catalogs, search, and personal library integration.
 
 ---
 
@@ -111,7 +111,7 @@ app/src/main/java/com/wander/android/
 ├── data/
 │   ├── model/        Unified audio domain models
 │   ├── repository/   Room-backed reactive repositories
-│   └── sources/      Navidrome, Local, YouTube Music, Internet Archive, Agro
+│   └── sources/      Navidrome, Local, YouTube Music, Deezer, Agro
 └── ui/
     ├── components/   M3 Expressive player sheet, mini-player, and bars
     ├── navigation/   Deep-link routing and Compose destination graphs

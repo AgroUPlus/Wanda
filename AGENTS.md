@@ -1,6 +1,6 @@
 # Wanda
 
-Android music player unifying **Navidrome/Subsonic**, **local files**, **YouTube Music**, and **Internet Archive**. Material 3 Expressive throughout. Battery-first, privacy-first, zero telemetry.
+Android music player unifying **Navidrome/Subsonic**, **local files**, **YouTube Music**, and **Deezer**. Material 3 Expressive throughout. Battery-first, privacy-first, zero telemetry.
 
 ## 1. Non-Negotiable Hard Rules
 
