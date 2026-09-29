@@ -1,5 +1,12 @@
 package com.wander.android.ui.screens.player
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -22,6 +29,7 @@ import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -81,7 +89,11 @@ internal fun PlayerActionBar(
                 // stays in place rather than disappearing — a control that vanishes reads as a
                 // bug, one that dims reads as "not right now".
                 enabled = !state.orderLocked,
-                disabledDescription = "Shuffle, unavailable while the room chooses the order"
+                disabledDescription = "Shuffle, unavailable while the room chooses the order",
+                // The icon itself never changes for shuffle — only its checked colour does — so a
+                // spin on toggle is what gives this segment the same "something happened" motion
+                // the others get for free from their icon swapping.
+                spinOnToggle = true
             )
             Segment(
                 position = SegmentPosition.MIDDLE,
@@ -149,10 +161,13 @@ private fun RowScope.Segment(
     active: Boolean,
     onClick: () -> Unit,
     enabled: Boolean = true,
-    disabledDescription: String? = null
+    disabledDescription: String? = null,
+    /** True for a segment whose icon never swaps on toggle, so a spin stands in for that motion. */
+    spinOnToggle: Boolean = false
 ) {
     val interaction = remember { MutableInteractionSource() }
     val scale by rememberPressScale(interaction)
+    val spatial = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
 
     FilledIconToggleButton(
         checked = active,
@@ -191,11 +206,36 @@ private fun RowScope.Segment(
             .fillMaxHeight()
             .graphicsLayer { scaleX = scale; scaleY = scale }
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = if (enabled) description else disabledDescription ?: description,
-            modifier = Modifier.size(IconSize)
-        )
+        val contentDescription = if (enabled) description else disabledDescription ?: description
+        if (spinOnToggle) {
+            // The icon reference never changes, so `AnimatedContent` below would have nothing to
+            // key on — a full turn on each flip is this segment's own "something happened" tell.
+            val rotation = remember { Animatable(0f) }
+            LaunchedEffect(active) { rotation.animateTo(rotation.value + 180f, spatial) }
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                modifier = Modifier
+                    .size(IconSize)
+                    .graphicsLayer { rotationZ = rotation.value }
+            )
+        } else {
+            val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+            AnimatedContent(
+                targetState = icon,
+                transitionSpec = {
+                    (fadeIn(effects) + scaleIn(spatial, initialScale = 0.6f))
+                        .togetherWith(fadeOut(effects) + scaleOut(spatial, targetScale = 0.6f))
+                },
+                label = "segment-icon"
+            ) { targetIcon ->
+                Icon(
+                    imageVector = targetIcon,
+                    contentDescription = contentDescription,
+                    modifier = Modifier.size(IconSize)
+                )
+            }
+        }
     }
 }
 

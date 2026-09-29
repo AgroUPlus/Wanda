@@ -18,9 +18,10 @@ data class MoodMatrixUiState(
 )
 
 /**
- * Backs [MoodMatrixCard]. One tap on a mood starts its radio immediately — the same "pick a mood,
- * it plays" pattern YouTube Music uses — rather than picking a point and then confirming with a
- * separate button. [MoodRadioRepository] answers across every connected source, never just one.
+ * Backs [com.wander.android.ui.screens.home.RadioMoodFab]'s mood pills. One tap on a mood starts
+ * its radio immediately — the same "pick a mood, it plays" pattern YouTube Music uses — rather
+ * than picking a point and then confirming with a separate button. [MoodRadioRepository] answers
+ * across every connected source, never just one.
  */
 @HiltViewModel
 class MoodMatrixViewModel @Inject constructor(

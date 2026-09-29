@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -43,6 +44,7 @@ import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.rememberShelfEntranceScale
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -140,7 +142,8 @@ internal fun HistoryScreen(
                 val isFirstOfDay = previous == null || !sameDay(previous.playedAt, entry.playedAt, zone)
                 val isLastOfDay = next == null || !sameDay(next.playedAt, entry.playedAt, zone)
 
-                Column {
+                val entranceScale = rememberShelfEntranceScale(index)
+                Column(modifier = Modifier.scale(entranceScale)) {
                     if (isFirstOfDay) {
                         HistoryDateDivider(dayMillis = entry.playedAt, zone = zone)
                     }

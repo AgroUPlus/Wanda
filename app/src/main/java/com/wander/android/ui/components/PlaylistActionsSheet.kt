@@ -44,7 +44,7 @@ fun PlaylistActionsSheet(
     WandaSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ) {
+    ) { animatedDismiss ->
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -91,12 +91,12 @@ fun PlaylistActionsSheet(
             ActionButtonGroup(
                 modifier = Modifier.padding(top = 8.dp),
                 actions = buildList {
-                    add(MenuAction(Icons.Rounded.PlayArrow, play, ActionEmphasis.PRIMARY) { onPlay(); onDismiss() })
-                    add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, playNext, ActionEmphasis.SECONDARY) { onPlayNext(); onDismiss() })
-                    onShare?.let { add(MenuAction(Icons.Rounded.Share, share, ActionEmphasis.ICON) { it(); onDismiss() }) }
-                    onAddToPlaylist?.let { add(MenuAction(Icons.Rounded.LibraryAdd, addToPlaylist, ActionEmphasis.ICON) { it(); onDismiss() }) }
-                    add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, addQueue) { onAddToQueue(); onDismiss() })
-                    onDelete?.let { add(MenuAction(Icons.Rounded.Delete, delete, ActionEmphasis.DANGER) { it(); onDismiss() }) }
+                    add(MenuAction(Icons.Rounded.PlayArrow, play, ActionEmphasis.PRIMARY) { onPlay(); animatedDismiss() })
+                    add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, playNext, ActionEmphasis.SECONDARY) { onPlayNext(); animatedDismiss() })
+                    onShare?.let { add(MenuAction(Icons.Rounded.Share, share, ActionEmphasis.ICON) { it(); animatedDismiss() }) }
+                    onAddToPlaylist?.let { add(MenuAction(Icons.Rounded.LibraryAdd, addToPlaylist, ActionEmphasis.ICON) { it(); animatedDismiss() }) }
+                    add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, addQueue) { onAddToQueue(); animatedDismiss() })
+                    onDelete?.let { add(MenuAction(Icons.Rounded.Delete, delete, ActionEmphasis.DANGER) { it(); animatedDismiss() }) }
                 }
             )
         }

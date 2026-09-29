@@ -63,6 +63,11 @@ internal class InnerTubeSubtitle private constructor(private val tokens: List<Js
     /** `mm:ss` or `h:mm:ss`, always last when present — and absent on rows that have no length. */
     val duration: String? = tokens.lastOrNull()?.textOf()?.takeIf(DURATION::matches)
 
+    /** "1.2M plays", "138K views" — streaming play or view count when the subtitle carries one. */
+    val views: String? = tokens.firstNotNullOfOrNull { token ->
+        token.textOf()?.trim()?.takeIf(::isCount)
+    }
+
     /**
      * A best guess at the artist when no run links to one.
      *

@@ -8,14 +8,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.lerp
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.wander.android.ui.components.Artwork
 import kotlin.math.abs
@@ -34,7 +40,7 @@ import kotlin.math.roundToInt
 private val BadgeInset = 14.dp
 
 /** A subtle "settle," not a dramatic shrink — the cover barely moves, it just stops breathing. */
-private const val PausedScale = 0.96f
+internal const val PausedScale = 0.96f
 
 /** Shared with [PeekArtwork], which decodes neighbour covers at the same size. */
 internal val MorphArtworkSize = 360.dp
@@ -42,9 +48,37 @@ internal val MorphArtworkSize = 360.dp
 /**
  * Corner as a percentage of the box, so the radius grows with the cover on its own. A fixed dp
  * radius would need a second animated value and would read as a small corner stretched across a
- * large image. Shared with [PeekArtwork].
+ * large image. Shared with [PeekArtwork], which is never docked and so never needs [MorphingCoverShape].
  */
 internal val MorphShape = RoundedCornerShape(percent = 12)
+
+/** [MorphShape]'s own corner, as the percent [MorphingCoverShape] eases toward once expanded. */
+private const val FullCornerPercent = 12
+
+/** A full circle — `RoundedCornerShape(percent = 50)`'s own figure — while fully docked. */
+private const val CircleCornerPercent = 50
+
+/**
+ * The cover's own shape, circular while docked and easing to [MorphShape]'s rounded square as the
+ * player opens — the one thing about the strip that reads as a "mini player" rather than a smaller
+ * copy of the full one, the same way a circular avatar reads differently from a square thumbnail.
+ *
+ * A [Shape], not a plain `by` computed at the call site: [progress] changes every frame of a drag,
+ * and this file's whole discipline is never recomposing over that — see the class doc above. Corner
+ * *percent*, not two competing `RoundedCornerShape`s cross-faded, so the two endpoints are one
+ * continuous animation of the same underlying value rather than two shapes drawn on top of each
+ * other with one fading out.
+ */
+private class MorphingCoverShape(private val progress: () -> Float) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val percent = lerpFloat(
+            CircleCornerPercent.toFloat(),
+            FullCornerPercent.toFloat(),
+            progress().coerceIn(0f, 1f)
+        ).roundToInt()
+        return RoundedCornerShape(percent).createOutline(size, layoutDirection, density)
+    }
+}
 
 /**
  * Space between the current cover and the neighbours waiting either side of it.
@@ -153,13 +187,14 @@ internal fun MorphingArtwork(
                 }
             }
     ) {
+        val coverShape = remember(progress) { MorphingCoverShape(progress) }
         Artwork(
             // While a skip is settling this is the cover the gesture already put in the slot; see
             // [TrackSwipeState.pendingArtworkUrl].
             url = swipe.pendingArtworkUrl ?: url,
             contentDescription = contentDescription,
             sizeDp = MorphArtworkSize,
-            shape = MorphShape,
+            shape = coverShape,
             // Nothing to cross-fade: this is one continuous element, and animating it is what made
             // the hand-off visible.
             crossfade = false,

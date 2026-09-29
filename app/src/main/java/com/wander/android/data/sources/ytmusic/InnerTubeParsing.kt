@@ -123,7 +123,8 @@ internal fun parseResponsiveListItem(renderer: JsonObject): UnifiedTrack? {
         durationMs = parseDurationText(subtitle.duration),
         format = "audio/webm",
         bitRateKbps = 160,
-        isLive = renderer.isLiveEntry()
+        isLive = renderer.isLiveEntry(),
+        extraData = viewsExtra(subtitle.views)
     )
 }
 
@@ -146,9 +147,13 @@ internal fun parsePlaylistPanelVideo(renderer: JsonObject): UnifiedTrack? {
         durationMs = parseDurationText(renderer["lengthText"].runText()),
         format = "audio/webm",
         bitRateKbps = 160,
-        isLive = renderer.isLiveEntry()
+        isLive = renderer.isLiveEntry(),
+        extraData = viewsExtra(byline.views)
     )
 }
+
+private fun viewsExtra(views: String?): Map<String, String> =
+    if (views != null) mapOf("views" to views) else emptyMap()
 
 /** A library album row: the same renderer shape, but the endpoint points at a browse id. */
 internal fun parseLibraryAlbum(renderer: JsonObject): UnifiedAlbum? {

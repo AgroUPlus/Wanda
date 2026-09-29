@@ -27,6 +27,24 @@
     <string name="action_radio_mode_active">Radio mode (active)</string>
     <string name="menu_like">Like</string>
     <string name="menu_radio">Radio</string>
+    <string name="track_info">Info</string>
+    <string name="track_info_artist">Artist</string>
+    <string name="track_info_album">Album</string>
+    <string name="track_info_duration">Duration</string>
+    <string name="track_info_track">Track</string>
+    <string name="track_info_year">Year</string>
+    <string name="track_info_genre">Genre</string>
+    <string name="track_info_quality">Quality</string>
+    <string name="track_info_source">Source</string>
+    <string name="track_info_status">Status</string>
+    <string name="track_info_plays">Plays</string>
+    <string name="track_info_views">Views</string>
+    <string name="track_info_likes">Likes</string>
+    <string name="track_info_status_liked">Liked</string>
+    <string name="track_info_status_downloaded">Downloaded</string>
+    <string name="track_info_status_cached">Cached offline</string>
+    <string name="track_info_disc_track">Disc %1$d, track %2$d</string>
+    <string name="track_info_track_number">Track %1$d</string>
     <string name="action_start_radio">Start radio mode</string>
     <string name="action_speed_and_pitch">Speed &amp; Pitch</string>
     <string name="action_audio_language">Audio language</string>
@@ -61,6 +79,9 @@
     <string name="mood_preset_focus_flow">Focus Flow</string>
     <string name="mood_preset_morning_energizer">Morning Energizer</string>
     <string name="mood_preset_high_voltage">High Voltage</string>
+    <string name="home_radio_surprise_me">Surprise me</string>
+    <string name="home_radio_open_picker">Start radio</string>
+    <string name="home_radio_starting">Starting radio</string>
 
     <!-- Swipeable track row -->
     <string name="swipe_action_play_next">Play Next</string>

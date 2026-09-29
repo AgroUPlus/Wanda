@@ -61,8 +61,13 @@ class CatalogRepository @Inject constructor(
             albumDao.getAlbumsByArtistFlow(artist),
             trackDao.getTracksByArtistFlow(artist)
         ) { albumEntities, trackEntities ->
-            val aliases = ArtistIdentity.aliasesOf(trackEntities.map(TrackEntity::toUnifiedTrack), artistId)
-            ArtistIdentity.sameArtist(albumEntities, aliases) { it.artistId }
+            // The DAO query is a broad `LIKE`, so this is where "Artisan Collective" gets dropped
+            // from a page for "Art" — see `ArtistIdentity.creditsMatch`'s own doc.
+            val albums = albumEntities.filter { ArtistIdentity.creditsMatch(it.artist, artist) }
+            val tracks = trackEntities.filter { ArtistIdentity.creditsMatch(it.artist, artist) }
+                .map(TrackEntity::toUnifiedTrack)
+            val aliases = ArtistIdentity.aliasesOf(tracks, artistId)
+            ArtistIdentity.sameArtist(albums, aliases) { it.artistId }
                 .map(AlbumEntity::toUnifiedAlbum)
         }.flowOn(Dispatchers.Default)
 
@@ -73,10 +78,26 @@ class CatalogRepository @Inject constructor(
      */
     fun artistTracksFlow(artist: String, artistId: String? = null): Flow<List<UnifiedTrack>> =
         trackDao.getTracksByArtistFlow(artist).map { entities ->
-            val tracks = entities.map(TrackEntity::toUnifiedTrack)
+            val tracks = entities
+                .filter { ArtistIdentity.creditsMatch(it.artist, artist) }
+                .map(TrackEntity::toUnifiedTrack)
             val aliases = ArtistIdentity.aliasesOf(tracks, artistId)
             TrackDeduplicator.deduplicate(ArtistIdentity.sameArtist(tracks, aliases) { it.artistId })
         }.flowOn(Dispatchers.Default)
+
+    /**
+     * A one-shot read of everything Room has that credits [artist], for resolving which backend id
+     * is worth fetching a page for right after a cross-source search — see
+     * `ArtistCatalogLoader.refresh`, which used to ask this with whatever track list it already had
+     * *before* that search ran, so a first-ever visit to an artist's page always searched for an id
+     * among zero tracks and fell straight to the MusicBrainz fallback even when the search it had
+     * just run found plenty.
+     */
+    suspend fun tracksByArtist(artist: String): List<UnifiedTrack> = withContext(Dispatchers.IO) {
+        trackDao.getTracksByArtistOnce(artist)
+            .filter { ArtistIdentity.creditsMatch(it.artist, artist) }
+            .map(TrackEntity::toUnifiedTrack)
+    }
 
     /**
      * Fills in an artist Room only partly knows, by searching every configured backend for their

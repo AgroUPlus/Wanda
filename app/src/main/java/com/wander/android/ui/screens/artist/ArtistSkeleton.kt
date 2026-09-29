@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -126,8 +127,11 @@ private fun HeroSkeleton() {
 
 @Composable
 private fun RowScope.SkeletonButton(weight: Float) {
+    // A full stadium, matching `ArtistActionButton`'s own resting shape — `CircleShape`'s
+    // percentage-based corner lands on the same silhouette as `rowHeight / 2` without needing the
+    // row's actual height here.
     SkeletonBox(
         modifier = Modifier.weight(weight).fillMaxHeight(),
-        shape = MaterialTheme.shapes.large
+        shape = CircleShape
     )
 }

@@ -125,4 +125,26 @@ internal object ArtistIdentity {
             id.isNullOrBlank() || id in aliases
         }
     }
+
+    /**
+     * Whether a record's *raw, stored* artist credit — "Artist A, Artist B", "Artist A & Artist B",
+     * "Artist A / Artist B" — names [target] among its co-credited artists.
+     *
+     * The Room queries this backs (`getTracksByArtistFlow`, `getAlbumsByArtistFlow`) had to switch
+     * from an exact `artist = :name` match to a substring `LIKE '%name%'` one to catch these rows at
+     * all — SQLite has no access to [foldedName]'s folding, so an exact match against "Artist A"
+     * could never find a row stored as "Artist A, Artist B" in the first place, whatever [sameName]
+     * would have said about it once fetched. That widens what the query returns, which is why every
+     * candidate then has to be re-checked here: a `LIKE '%Art%'` also matches "Artisan Collective",
+     * and this is what tells the two apart.
+     *
+     * [sameName] alone already covers a lone "feat."/"ft." tail — [foldedName] strips it — so this
+     * only has to add splitting on the separators an equal-billing credit actually uses.
+     */
+    fun creditsMatch(rawArtist: String, target: String): Boolean {
+        if (sameName(rawArtist, target)) return true
+        return rawArtist.split(CREDIT_SEPARATORS).any { sameName(it, target) }
+    }
+
+    private val CREDIT_SEPARATORS = Regex("""\s*[,&/]\s*|\s+[xX]\s+""")
 }

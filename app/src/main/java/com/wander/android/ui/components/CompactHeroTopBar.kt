@@ -54,6 +54,10 @@ import com.wander.android.R
  *
  * [heroTitleStyle] and [heroTitleMaxLines] must match the hero's own title so the travelling copy
  * starts out indistinguishable from the text it replaces.
+ *
+ * [onPlay] is null when the hero below already carries its own, bigger play control — a second
+ * copy shrunk into this bar read as a worse version of it rather than a continuation, so the
+ * artist page (whose hero play button this session redid) leaves it out entirely.
  */
 @Composable
 fun CompactHeroTopBar(
@@ -61,9 +65,9 @@ fun CompactHeroTopBar(
     onBack: () -> Unit,
     title: String,
     heroTitleStyle: TextStyle,
-    onPlay: () -> Unit,
     topInset: Dp,
     modifier: Modifier = Modifier,
+    onPlay: (() -> Unit)? = null,
     heroTitleMaxLines: Int = 3
 ) {
     val collapseDistancePx = with(LocalDensity.current) { CollapseDistance.toPx() }
@@ -123,36 +127,38 @@ fun CompactHeroTopBar(
                 )
             }
 
-            val playInteraction = remember { MutableInteractionSource() }
-            val playPressed by playInteraction.collectIsPressedAsState()
-            // Same cookie-to-circle morph as the hero's own play button — this is a second copy
-            // of the one control the page exists for, not a different one, and should read as such.
-            val playShape = rememberPressMorphShape(PlayResting, PlayPressed, playPressed)
-            FilledIconButton(
-                onClick = onPlay,
-                enabled = titleState.fraction > 0.5f,
-                shape = playShape,
-                interactionSource = playInteraction,
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                ),
-                // `requiredSize`, not `size`: the bar's own height is fixed at `BarHeight`, and the
-                // button reading as the biggest thing on the page matters more than staying inside
-                // it — it overflows top and bottom rather than getting squeezed down to fit.
-                modifier = Modifier
-                    .requiredSize(PlayButtonSize)
-                    .graphicsLayer {
-                        val t = titleState.fraction
-                        alpha = t
-                        scaleX = lerp(0.6f, 1f, t)
-                        scaleY = lerp(0.6f, 1f, t)
-                    }
-            ) {
-                Icon(
-                    Icons.Rounded.PlayArrow,
-                    contentDescription = stringResource(R.string.action_play),
-                    modifier = Modifier.size(PlayIconSize)
-                )
+            onPlay?.let { play ->
+                val playInteraction = remember { MutableInteractionSource() }
+                val playPressed by playInteraction.collectIsPressedAsState()
+                // Same cookie-to-circle morph as the hero's own play button — this is a second copy
+                // of the one control the page exists for, not a different one, and should read as such.
+                val playShape = rememberPressMorphShape(PlayResting, PlayPressed, playPressed)
+                FilledIconButton(
+                    onClick = play,
+                    enabled = titleState.fraction > 0.5f,
+                    shape = playShape,
+                    interactionSource = playInteraction,
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ),
+                    // `requiredSize`, not `size`: the bar's own height is fixed at `BarHeight`, and
+                    // the button reading as the biggest thing on the page matters more than staying
+                    // inside it — it overflows top and bottom rather than getting squeezed to fit.
+                    modifier = Modifier
+                        .requiredSize(PlayButtonSize)
+                        .graphicsLayer {
+                            val t = titleState.fraction
+                            alpha = t
+                            scaleX = lerp(0.6f, 1f, t)
+                            scaleY = lerp(0.6f, 1f, t)
+                        }
+                ) {
+                    Icon(
+                        Icons.Rounded.PlayArrow,
+                        contentDescription = stringResource(R.string.action_play),
+                        modifier = Modifier.size(PlayIconSize)
+                    )
+                }
             }
         }
     }

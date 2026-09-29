@@ -210,13 +210,13 @@ internal fun ArtistScreen(
             }
         }
 
-        // The name slides and shrinks up into a compact bar (name + play) as the portrait scrolls
-        // away, so the page stays anchored without scrolling back up.
+        // The name slides and shrinks up into a compact bar as the portrait scrolls away, so the
+        // page stays anchored without scrolling back up. No play button here — the hero below
+        // already carries its own, bigger one; see `CompactHeroTopBar`'s own doc on `onPlay`.
         CompactHeroTopBar(
             titleState = titleState,
             onBack = onBack,
             title = state.artist,
-            onPlay = viewModel::playTop,
             heroTitleStyle = MaterialTheme.typography.displaySmall,
             heroTitleMaxLines = 2,
             topInset = contentPadding.calculateTopPadding(),

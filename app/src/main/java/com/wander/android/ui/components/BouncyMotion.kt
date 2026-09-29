@@ -17,3 +17,15 @@ fun <T> bouncySpec(): FiniteAnimationSpec<T> = spring(
     dampingRatio = Spring.DampingRatioMediumBouncy,
     stiffness = Spring.StiffnessMediumLow
 )
+
+/**
+ * The spring the dock row, the mini player's resting inset and the content padding all share while
+ * navigation shows or hides the dock. Deliberately much tamer than [bouncySpec] — that one's ~16%
+ * overshoot reads as lively on a lone card, but on a card returning to its rest position, with the
+ * player and the list moving in lockstep above it, it overshoots visibly and settles late. One
+ * spec for all three is what keeps them from drifting apart.
+ */
+fun <T> dockSpec(): FiniteAnimationSpec<T> = spring(
+    dampingRatio = Spring.DampingRatioLowBouncy,
+    stiffness = Spring.StiffnessMediumLow
+)

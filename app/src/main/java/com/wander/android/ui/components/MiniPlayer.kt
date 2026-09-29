@@ -1,28 +1,25 @@
 package com.wander.android.ui.components
 
-import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -31,13 +28,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.core.playback.PlayerConnection
-import com.wander.android.core.playback.progressOf
-import com.wander.android.core.playback.rememberPlaybackPosition
 import com.wander.android.data.model.UnifiedTrack
-import com.wander.android.ui.components.player.PlayPauseIcon
+import com.wander.android.ui.components.player.MiniButtonSize
+import com.wander.android.ui.components.player.MiniPlayButton
 import kotlin.math.abs
 
 /** The edge of the docked strip's cover art. */
@@ -49,29 +46,9 @@ val MiniArtworkSize = 48.dp
  */
 private const val SwipeFadeDistancePx = 120f
 
-/**
- * Fixed height for the progress bar, so the wavy indicator has a stable box to wave inside no
- * matter what its amplitude is.
- *
- * Public because `PlayerSheet` sizes the docked strip from the strip's real parts; keeping the
- * number in one place is what stops the two drifting apart again.
- */
-val MiniProgressBarHeight = 12.dp
-
 /** Padding above and below the artwork row. Summed into `MiniStripHeight`. */
 val MiniRowVerticalPadding = 8.dp
 
-/** The strip's transport icons. `IconButton`'s own default, stated so the loading shape matches. */
-private val MiniPlayIconSize = 24.dp
-
-/**
- * The containers behind those icons.
- *
- * 40dp rather than `IconButton`'s 48: the strip is only [MiniArtworkSize] plus its padding tall,
- * and two 48dp shapes in it read as a toolbar rather than as a detail on a strip. The touch target
- * is unchanged — `IconButton`'s minimum still applies underneath the visual size.
- */
-private val MiniButtonSize = 40.dp
 private val MiniButtonGap = 4.dp
 
 /** Tonal, not solid: the strip is translucent over the sheet and this should not fight it. */
@@ -101,10 +78,9 @@ fun MiniPlayer(
      * The length the *player* reports, not the one the metadata claimed.
      *
      * These disagree, and only one of them is reliable. A YouTube Music row whose subtitle carried
-     * no `3:45` reaches Room with `durationMs = 0`, so a progress bar driven from the track ran at
-     * zero for the whole song — and since the wave is drawn along the *elapsed* portion, that is a
-     * bar with no wave in it at all. The full player never had the bug because it was already
-     * reading the player's own duration; this is that same number.
+     * no `3:45` reaches Room with `durationMs = 0`, so a progress ring driven from the track ran at
+     * zero for the whole song. The full player never had the bug because it was already reading the
+     * player's own duration; this is that same number.
      */
     durationMs: Long,
     /** Whether the engine is still fetching audio — see [PlayPauseIcon]. */
@@ -129,82 +105,79 @@ fun MiniPlayer(
         color = containerColor,
         modifier = modifier.fillMaxWidth()
     ) {
-        Column {
-            PlaybackProgressBar(
-                playerConnection = playerConnection,
-                durationMs = durationMs,
-                isPlaying = isPlaying,
-                modifier = Modifier.graphicsLayer { alpha = contentAlpha() }
-            )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = MiniRowVerticalPadding)
+        ) {
+            artworkSlot()
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            Column(
+                verticalArrangement = Arrangement.Center,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = MiniRowVerticalPadding)
+                    .weight(1f)
+                    .padding(horizontal = 12.dp)
+                    .graphicsLayer {
+                        translationX = swipeOffset()
+                        // Fades as it travels, so the outgoing title does not simply run into
+                        // the play button. Reaching zero at the skip threshold means the
+                        // gesture's commit point is something you can see.
+                        val travel = (abs(swipeOffset()) / SwipeFadeDistancePx).coerceIn(0f, 1f)
+                        alpha = contentAlpha() * (1f - travel)
+                    }
             ) {
-                artworkSlot()
+                Text(
+                    text = track.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.scrollingTitle()
+                )
+                Text(
+                    text = track.artist,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.scrollingTitle()
+                )
+            }
 
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 12.dp)
-                        .graphicsLayer {
-                            translationX = swipeOffset()
-                            // Fades as it travels, so the outgoing title does not simply run into
-                            // the play button. Reaching zero at the skip threshold means the
-                            // gesture's commit point is something you can see.
-                            val travel = (abs(swipeOffset()) / SwipeFadeDistancePx).coerceIn(0f, 1f)
-                            alpha = contentAlpha() * (1f - travel)
-                        }
-                ) {
-                    Text(
-                        text = track.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Clip,
-                        modifier = Modifier.scrollingTitle()
-                    )
-                    Text(
-                        text = track.artist,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Clip,
-                        modifier = Modifier.scrollingTitle()
-                    )
-                }
-
-                // Each button gets a container of its own. Bare glyphs on the strip sat directly
-                // on whatever the sheet's cover tint happened to be that track, which is a colour
-                // chosen by the artwork rather than for legibility — a pale sleeve left them
-                // barely there. A tonal shape behind each one is a constant background to read
-                // against, and it gives the two targets a visible edge on a strip where they are
-                // otherwise a pair of icons floating next to the title.
+            // Each button gets a container of its own. Bare glyphs on the strip sat directly
+            // on whatever the sheet's cover tint happened to be that track, which is a colour
+            // chosen by the artwork rather than for legibility — a pale sleeve left them
+            // barely there. A tonal shape behind each one is a constant background to read
+            // against, and it gives the two targets a visible edge on a strip where they are
+            // otherwise a pair of icons floating next to the title.
+            //
+            // The *glyphs* on it are the empty/outline pair, not the containers — see
+            // `PlayPauseIcon`'s own doc on `outlined`. The container stays solid because a
+            // hollow button that small is hard to find by touch; only the icon inside it reads
+            // as the lighter mark this strip asked for.
+            //
+            // The 48dp minimum-touch-target wrapper is switched off for these: it lays a 40dp
+            // button out at 40dp but *places* it as if the box were 48, shifting the glyph 4dp
+            // down-right of its own layout box — which is what pushed the play button off the
+            // centre of the progress ring around it.
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
                 Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(MiniButtonGap),
                     modifier = Modifier.graphicsLayer { alpha = contentAlpha() }
                 ) {
-                    val playInteraction = remember { MutableInteractionSource() }
-                    val playScale by rememberPressScale(playInteraction)
-                    FilledIconButton(
-                        onClick = playerConnection::togglePlayPause,
-                        interactionSource = playInteraction,
-                        // The one filled button: play is what the strip is for, and the other is
-                        // beside it. Two equally solid shapes would make it a choice of two.
-                        shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier
-                            .size(MiniButtonSize)
-                            .graphicsLayer { scaleX = playScale; scaleY = playScale }
-                    ) {
-                        PlayPauseIcon(isPlaying = isPlaying, isBuffering = isBuffering, iconSize = MiniPlayIconSize)
-                    }
+                    MiniPlayButton(
+                        isPlaying = isPlaying,
+                        isBuffering = isBuffering,
+                        playerConnection = playerConnection,
+                        durationMs = durationMs
+                    )
                     val nextInteraction = remember { MutableInteractionSource() }
                     val nextScale by rememberPressScale(nextInteraction)
                     FilledTonalIconButton(
                         onClick = playerConnection::next,
                         interactionSource = nextInteraction,
-                        shape = MaterialTheme.shapes.medium,
+                        shape = CircleShape,
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
                                 .copy(alpha = MiniButtonContainerAlpha)
@@ -217,72 +190,6 @@ fun MiniPlayer(
                     }
                 }
             }
-        }
-    }
-}
-
-/**
- * Kept as its own composable so the twice-a-second position tick recomposes the progress bar
- * alone. Read inside [MiniPlayer] it recomposed the whole docked player while sitting above the
- * scrolling content.
- *
- * The wavy indicator cannot simply stay mounted: its wave is an infinite transition that runs
- * regardless of the progress value, and this strip sits behind Home, Library, Search and Settings
- * whenever a track is loaded — so leaving it mounted meant the app was never idle and every screen
- * paid for a full-rate redraw while scrolling. It also breaks the project's no-polling battery rule.
- *
- * But hard-swapping it for the flat indicator on pause made the line jump: the wave fills the whole
- * box and the flat bar is a thin line centred in it. So the wave's **amplitude** is animated down
- * to zero first, and only once it has settled flat — and playback is still paused — is the wavy
- * indicator unmounted in favour of the flat one it now looks like. Pausing therefore reads as the
- * wave relaxing into a line, and the infinite transition still stops.
- *
- * Which indicator is mounted is *derived* from the amplitude itself ([showWavy]) rather than
- * tracked as a separate flag set imperatively at specific points in the animating coroutine: a
- * flag like that only reaches its "flatten now" line if the coroutine runs to completion
- * uninterrupted, and `isPlaying` flickering rapidly (seen with YTM's network buffering, not
- * Navidrome's steadier stream) cancels and restarts that coroutine before it gets there — leaving
- * the flag stuck saying "still wavy" while nothing is actually drawn. Deriving the decision from
- * the current amplitude value instead means there is no in-between state to get stuck in.
- *
- * Everything sits in a fixed-height box ([MiniProgressBarHeight]) because the two indicators do not
- * measure the same: without it, pausing shrank this row and shifted everything below it up.
- */
-@Composable
-private fun PlaybackProgressBar(
-    playerConnection: PlayerConnection,
-    durationMs: Long,
-    isPlaying: Boolean,
-    modifier: Modifier = Modifier
-) {
-    val position by rememberPlaybackPosition(playerConnection)
-    val progress = { progressOf(position.positionMs, durationMs) }
-
-    val amplitude = remember { Animatable(if (isPlaying) 1f else 0f) }
-
-    // The *fast* effects spec, not the default one. This animation sits directly under a button
-    // press, so anything leisurely reads as the tap not having registered rather than as motion —
-    // the wave has to start settling on the same frame the icon changes.
-    val amplitudeSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
-
-    LaunchedEffect(isPlaying) {
-        amplitude.animateTo(if (isPlaying) 1f else 0f, amplitudeSpec)
-    }
-
-    val showWavy = isPlaying || amplitude.value > 0f
-
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = modifier.fillMaxWidth().height(MiniProgressBarHeight)
-    ) {
-        if (showWavy) {
-            LinearWavyProgressIndicator(
-                progress = progress,
-                amplitude = { amplitude.value },
-                modifier = Modifier.fillMaxWidth()
-            )
-        } else {
-            LinearProgressIndicator(progress = progress, modifier = Modifier.fillMaxWidth())
         }
     }
 }

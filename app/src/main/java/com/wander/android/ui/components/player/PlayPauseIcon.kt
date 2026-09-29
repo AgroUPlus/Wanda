@@ -8,6 +8,8 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Pause
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Icon
@@ -31,13 +33,26 @@ import kotlinx.coroutines.delay
  * connection and fill the buffer — the icon stays a triangle, so the only reading available is
  * "the tap missed". This is the same morphing `LoadingIndicator` the pull-to-refresh uses, in the
  * place you are already looking: the button you just pressed.
+ *
+ * A hand-drawn path morph between the triangle and the bars was tried here and reverted — it read
+ * as broken rather than expressive at icon size, and Compose has no stable, low-risk equivalent of
+ * the platform's own `AnimatedVectorDrawable` pathData morph (that needs a hand-authored XML pair
+ * with matching path-command counts, which is exactly the kind of thing that is easy to get subtly
+ * wrong and hard to verify without a device in hand). A cross-fade between two plain icons is the
+ * safer choice here.
+ *
+ * [outlined] draws the empty-glyph pair instead of the solid one — only the docked mini player
+ * asks for it, to read as the lighter, discreet touch that strip is meant to be. The full player's
+ * transport keeps the solid glyphs: this is the one control on the whole page, and a hollow icon
+ * that size reads as unavailable rather than as restrained.
  */
 @Composable
 internal fun PlayPauseIcon(
     isPlaying: Boolean,
     isBuffering: Boolean,
     iconSize: Dp,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    outlined: Boolean = false
 ) {
     val loading = rememberSettledBuffering(isBuffering)
 
@@ -61,8 +76,14 @@ internal fun PlayPauseIcon(
                 modifier = Modifier.size(iconSize)
             )
         } else {
+            val icon = when {
+                isPlaying && outlined -> Icons.Outlined.Pause
+                isPlaying -> Icons.Rounded.Pause
+                outlined -> Icons.Outlined.PlayArrow
+                else -> Icons.Rounded.PlayArrow
+            }
             Icon(
-                imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                imageVector = icon,
                 contentDescription = if (isPlaying) "Pause" else "Play",
                 modifier = Modifier.size(iconSize)
             )

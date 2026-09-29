@@ -3,8 +3,13 @@ package com.wander.android.ui.components.player
 import androidx.activity.BackEventCompat
 import androidx.activity.compose.PredictiveBackHandler
 import kotlin.coroutines.cancellation.CancellationException
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -19,7 +24,11 @@ import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,24 +42,27 @@ import androidx.compose.ui.unit.lerp as lerpDp
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.util.lerp
 import com.wander.android.ui.components.MiniArtworkSize
-import com.wander.android.ui.components.MiniProgressBarHeight
 import com.wander.android.ui.components.MiniRowVerticalPadding
+import com.wander.android.ui.components.bouncySpec
+import com.wander.android.ui.components.dockSpec
 import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.launch
 
 /**
  * Height of the docked strip, summed from what `MiniPlayer` actually lays out rather than guessed:
- * the progress bar, then the artwork row's vertical padding either side of the cover.
+ * the artwork row's vertical padding either side of the cover. There is no separate progress-bar
+ * row any more — playback progress is drawn as a ring around the play button itself, inside this
+ * same row — so the strip is exactly the artwork row's own height.
  *
  * It was a flat 68 dp, which is 8 dp short of the real content. The strip is clipped to this value
  * below, so the bottom of the play controls was cut off, and every screen's list padding is derived
  * from it, so the last row of covers ended up under the strip.
  */
-val MiniStripHeight: Dp = MiniProgressBarHeight + MiniRowVerticalPadding * 2 + MiniArtworkSize
+val MiniStripHeight: Dp = MiniRowVerticalPadding * 2 + MiniArtworkSize
 
 /** Gap between the docked strip and the navigation bar, so the strip reads as floating over it. */
-val MiniPlayerGap: Dp = 8.dp
+val MiniPlayerGap: Dp = 5.dp
 
 /**
  * The strip's drop shadow is drawn *outside* its clip box, so content scrolled to the very bottom
@@ -148,13 +160,36 @@ fun PlayerSheet(
     coverSeed: Color? = null,
     /** Whether the (now independent) dock row is currently floating just beneath the strip. */
     pairedWithDockRow: Boolean = false,
+    /**
+     * The current track's own playback progress, 0f..1f — read only inside [drawBehind], same
+     * discipline as everything else this file measures every frame of a drag. Drives the ambient
+     * scrim's slow drift in `drawPlayerSheetBackground`; a caller with no cover-art theming enabled
+     * can leave this at its default, since the flat fallback path never reads it.
+     */
+    seekProgress: () -> Float = { 0f },
     content: @Composable (progress: () -> Float, rawProgress: () -> Float, expandedHeight: Dp) -> Unit
 ) {
-    if (!isVisible) return
-
+    // A real enter/exit rather than a hard `if`: the player used to simply appear or vanish
+    // between frames whenever a track started or the queue ran out, while the dock row beside it
+    // (`WanderDock`) already slid and scaled in on a spring. One chrome element cutting and the
+    // other springing read as two different animations rather than the shell arriving as one
+    // piece — this gives the sheet the same bouncy slide+fade `WanderDock` uses.
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()) +
+            slideInVertically(bouncySpec()) { it / 2 },
+        exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
+            slideOutVertically(bouncySpec()) { it / 2 },
+        modifier = modifier.fillMaxSize()
+    ) {
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val overdragLimitPx = with(density) { OverdragDistance.toPx() }
+
+    // Decided once per gesture, at `onDragStarted` — see the `.draggable` block below for why a
+    // plain per-frame check on `offset` would cut the give off mid-motion instead of only refusing
+    // it to a finger that starts on an already-rested strip.
+    var allowOverdragThisGesture by remember { mutableStateOf(true) }
 
     // Navigating between a root and a page beneath it takes a dock row out from under the strip,
     // so the sheet's resting height changes by that much. Springing it — rather than cutting —
@@ -170,6 +205,17 @@ fun PlayerSheet(
         label = "docked-height"
     )
 
+    // The dock row appearing or leaving changes where the strip rests just as much as its own
+    // height does, and this used to be handed straight to the travel maths below — the strip
+    // teleported to its new resting place while the dock row itself was still springing. Same
+    // discipline as above: animated here, read only in effects and `graphicsLayer`, on the same
+    // spring the dock row animates on so the two stay in step.
+    val bottomInsetState = animateDpAsState(
+        targetValue = bottomInset,
+        animationSpec = dockSpec(),
+        label = "bottom-inset"
+    )
+
     // Same discipline as `dockedHeightState` above: the target flips whenever navigation shows or
     // hides the dock row, and this eases between the two corner silhouettes rather than snapping,
     // read only inside `graphicsLayer` below — never in composition scope.
@@ -179,19 +225,19 @@ fun PlayerSheet(
         label = "docked-pairedness"
     )
 
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val sheetHeight = maxHeight
 
         // How far the sheet has to travel, which the animated resting height moves. Collected
         // rather than computed in composition, for the reason above: `updateMaxOffset` snaps a
         // collapsed sheet onto the new anchor, so following the spring here is what carries the
         // docked strip down to its new resting place.
-        LaunchedEffect(sheetHeight, bottomInset, density) {
-            snapshotFlow { dockedHeightState.value }
+        LaunchedEffect(sheetHeight, density) {
+            snapshotFlow { dockedHeightState.value to bottomInsetState.value }
                 .distinctUntilChanged()
-                .collect { docked ->
+                .collect { (docked, inset) ->
                     val travel = with(density) {
-                        (sheetHeight - docked - bottomInset - MiniPlayerGap).toPx()
+                        (sheetHeight - docked - inset - MiniPlayerGap).toPx()
                     }
                     sheetState.updateMaxOffset(travel, scope)
                 }
@@ -236,7 +282,7 @@ fun PlayerSheet(
                     translationY = if (sheetState.maxOffsetPx > 0f) {
                         sheetState.offset.value
                     } else {
-                        (sheetHeight - dockedHeightState.value - bottomInset - MiniPlayerGap).toPx()
+                        (sheetHeight - dockedHeightState.value - bottomInsetState.value - MiniPlayerGap).toPx()
                     }
                     val backVisual = sheetState.predictiveBackVisual
                     val backRadius = PredictiveBackCorner.toPx() * backVisual
@@ -274,7 +320,7 @@ fun PlayerSheet(
                 // Drawn rather than composed: the colour changes every frame of a drag, and a
                 // `background(...)` argument would recompose the sheet along with it.
                 .drawBehind {
-                    drawPlayerSheetBackground(baseColor, coverSeed)
+                    drawPlayerSheetBackground(baseColor, coverSeed, seekProgress())
                 }
                 .layout { measurable, constraints ->
                     val fullWidth = constraints.maxWidth
@@ -315,7 +361,18 @@ fun PlayerSheet(
                 .draggable(
                     orientation = Orientation.Vertical,
                     state = rememberDraggableState { delta ->
-                        scope.launch { sheetState.dragBy(delta, overdragLimitPx) }
+                        scope.launch { sheetState.dragBy(delta, if (allowOverdragThisGesture) overdragLimitPx else 0f) }
+                    },
+                    // Overdrag only means something mid-transition — a collapse that arrives at
+                    // rest still carrying the finger's motion, and gets a little extra give at the
+                    // end of its trip. A finger placed on the strip *after* it is already fully at
+                    // rest and pulled down has nowhere real to go: it used to still rubber-band
+                    // every time regardless of how the gesture started, which read as the docked
+                    // mini player responding to a touch that does nothing. Decided once, at the
+                    // moment the finger lands — not re-checked every frame of the same drag, or the
+                    // give would cut out mid-motion the instant a genuine collapse reaches rest.
+                    onDragStarted = {
+                        allowOverdragThisGesture = sheetState.offset.value < sheetState.maxOffsetPx
                     },
                     onDragStopped = { velocity ->
                         scope.launch { sheetState.settle(velocity) }
@@ -330,5 +387,6 @@ fun PlayerSheet(
                 content({ sheetState.progress }, { sheetState.rawProgress }, sheetHeight)
             }
         }
+    }
     }
 }

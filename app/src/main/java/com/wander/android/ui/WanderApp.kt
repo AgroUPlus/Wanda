@@ -1,5 +1,6 @@
 package com.wander.android.ui
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,6 +31,7 @@ import com.wander.android.ui.components.LocalBackBlurEnabled
 import com.wander.android.ui.components.LocalBackdropBlur
 import com.wander.android.ui.components.LocalOfflinePlayback
 import com.wander.android.ui.components.backdropBlur
+import com.wander.android.ui.components.dockSpec
 import com.wander.android.ui.components.player.MiniPlayerShadowInset
 import com.wander.android.ui.components.player.PlayerSheet
 import com.wander.android.ui.components.player.PlayerSheetContent
@@ -70,6 +72,11 @@ fun WanderApp(
 
     val playbackState = playerConnection.state.collectAsStateWithLifecycle()
     val playback = playbackState.value
+    // Not `by`: this ticks up to twice a second while playing, and the sheet's own background
+    // reads it inside a `drawBehind` lambda rather than in composition — see `PlayerSheet`'s own
+    // discipline on `sheetState.progress` for the same reason. A `by` here would recompose the
+    // whole shell every tick just to feed one drifting gradient.
+    val playbackPosition = com.wander.android.core.playback.rememberPlaybackPosition(playerConnection)
     val showChrome = remember(currentRoute) { Routes.showsChrome(currentRoute) }
     val isImmersivePlayer by viewModel.isImmersivePlayer.collectAsStateWithLifecycle()
     val showDockRow = remember(currentRoute) { Routes.showsDock(currentRoute) }
@@ -104,7 +111,17 @@ fun WanderApp(
     val dockInset = dockMetrics.dockInset
     val sheetBottomInset = dockMetrics.sheetBottomInset
     val dockedPlayerHeight = dockMetrics.dockedPlayerHeight
-    val dockBottom = dockMetrics.dockBottom
+    // Animated, not read straight off `dockMetrics`: the dock row and mini player both fade/slide
+    // in over a few hundred ms when they appear, but this figure fed straight into scrolling
+    // content's own bottom padding, which Compose applies to layout in the same frame it changes.
+    // The result was the content above snapping to its new inset instantly while the chrome below
+    // it was still animating in underneath — the list visibly jumping (the "top part teleports"),
+    // out of step with the thing its padding was supposedly making room for.
+    val dockBottom by animateDpAsState(
+        targetValue = dockMetrics.dockBottom,
+        animationSpec = dockSpec(),
+        label = "dockBottomInset"
+    )
 
     val offlinePlayback by viewModel.offlinePlayback.collectAsStateWithLifecycle()
     val isCoverArtThemeEnabled by viewModel.isCoverArtThemeEnabled.collectAsStateWithLifecycle()
@@ -144,8 +161,17 @@ fun WanderApp(
                         }
                     }
                 ) { padding ->
+                    // `!showChrome` used to snap this straight to `0.dp` instead of falling through
+                    // to `dockBottom` — a hard cut the instant a route like History hid the chrome,
+                    // while the dock row and mini player themselves kept sliding away underneath on
+                    // their own spring for another few frames. The content above them jumped to fill
+                    // the space immediately; the chrome leaving it was still visibly catching up.
+                    // `dockBottom` already resolves to the right (small, system-inset-only) target
+                    // for a chromeless route on its own — see `calculateDockMetrics`'s `else -> 0.dp`
+                    // branch — and it is already animated, so routing through it here instead keeps
+                    // this on the same spring rather than a second, un-animated one.
                     val extraBottom = when {
-                        !showChrome -> 0.dp
+                        !showChrome -> dockBottom + MiniPlayerShadowInset
                         activeJam != null -> dockBottom + JamBarHeight + MiniPlayerShadowInset
                         listenAlongSession != null ->
                             dockBottom + ListenAlongBarHeight + MiniPlayerShadowInset
@@ -190,7 +216,13 @@ fun WanderApp(
                     isVisible = hasTrack && showChrome,
                     dockedHeight = dockedPlayerHeight,
                     coverSeed = shellCoverSeed,
-                    pairedWithDockRow = showDockRow
+                    pairedWithDockRow = showDockRow,
+                    seekProgress = {
+                        com.wander.android.core.playback.progressOf(
+                            playbackPosition.value.positionMs,
+                            playback.durationMs
+                        )
+                    }
                 ) { progress, rawProgress, expandedHeight ->
                     PlayerSheetContent(
                         fingerprintStatus = playingFingerprintStatus,

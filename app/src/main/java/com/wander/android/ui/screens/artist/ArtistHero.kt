@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.artist
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.NotificationAdd
 import androidx.compose.material.icons.rounded.NotificationsActive
@@ -31,8 +33,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -40,14 +42,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
-import com.wander.android.ui.components.ActionPressed
-import com.wander.android.ui.components.ActionResting
 import com.wander.android.ui.components.ArtistMonogram
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.ImmersiveHero
-import com.wander.android.ui.components.PlayPressed
-import com.wander.android.ui.components.PlayResting
-import com.wander.android.ui.components.rememberPressMorphShape
 
 /**
  * The top of an artist page: their portrait edge to edge, their name over it, and the things you
@@ -151,7 +148,9 @@ internal fun ArtistHero(
                 contentDescription = stringResource(R.string.artist_start_radio),
                 icon = Icons.Rounded.Podcasts,
                 baseWeight = 1f,
-                iconSize = ActionIconSize
+                iconSize = ActionIconSize,
+                rowHeight = HeroRowHeight,
+                tint = ActionTint.TERTIARY_CONTAINER
             )
             // Wider than its neighbours, not just present among them: the one control the page
             // exists for still reads as the biggest thing in the row, the same way `WideWeight`
@@ -162,14 +161,17 @@ internal fun ArtistHero(
                 icon = Icons.Rounded.PlayArrow,
                 baseWeight = HeroWeight,
                 iconSize = HeroIconSize,
-                isHero = true
+                rowHeight = HeroRowHeight,
+                tint = ActionTint.PRIMARY_SOLID
             )
             ArtistActionButton(
                 onClick = onShuffle,
                 contentDescription = stringResource(R.string.action_shuffle),
                 icon = Icons.Rounded.Shuffle,
                 baseWeight = 1f,
-                iconSize = ActionIconSize
+                iconSize = ActionIconSize,
+                rowHeight = HeroRowHeight,
+                tint = ActionTint.SECONDARY_CONTAINER
             )
         }
 
@@ -188,7 +190,9 @@ internal fun ArtistHero(
                         contentDescription = stringResource(R.string.action_share),
                         icon = Icons.Rounded.Share,
                         baseWeight = 1f,
-                        iconSize = ActionIconSize
+                        iconSize = ActionIconSize,
+                        rowHeight = ActionRowHeight,
+                        tint = ActionTint.TERTIARY_CONTAINER
                     )
                 }
                 if (isFollowing != null) {
@@ -205,7 +209,9 @@ internal fun ArtistHero(
                             Icons.Rounded.NotificationAdd
                         },
                         baseWeight = 1f,
-                        iconSize = ActionIconSize
+                        iconSize = ActionIconSize,
+                        rowHeight = ActionRowHeight,
+                        tint = if (isFollowing) ActionTint.PRIMARY_CONTAINER else ActionTint.NEUTRAL
                     )
                 }
             }
@@ -214,11 +220,39 @@ internal fun ArtistHero(
 }
 
 /**
+ * Which of the theme's own tonal pairs a button draws from — see [ArtistActionButton]'s [tint].
+ *
+ * Every one of these already exists in `WandaLightScheme`/`WandaDarkScheme`
+ * ([com.wander.android.ui.theme.WandaLightScheme]): this is a palette choice, not a new colour.
+ */
+private enum class ActionTint { PRIMARY_SOLID, PRIMARY_CONTAINER, SECONDARY_CONTAINER, TERTIARY_CONTAINER, NEUTRAL }
+
+@Composable
+private fun ActionTint.colors(): Pair<Color, Color> {
+    val scheme = MaterialTheme.colorScheme
+    return when (this) {
+        // The one solid, non-container colour — the hero play button, the single control the
+        // page exists for. Everything else stays on a tonal container, including a toggle that's
+        // switched on: a solid `primary` pill there would fight the hero for the same emphasis.
+        ActionTint.PRIMARY_SOLID -> scheme.primary to scheme.onPrimary
+        ActionTint.PRIMARY_CONTAINER -> scheme.primaryContainer to scheme.onPrimaryContainer
+        ActionTint.SECONDARY_CONTAINER -> scheme.secondaryContainer to scheme.onSecondaryContainer
+        ActionTint.TERTIARY_CONTAINER -> scheme.tertiaryContainer to scheme.onTertiaryContainer
+        ActionTint.NEUTRAL -> scheme.surfaceContainerHighest to scheme.onSurface
+    }
+}
+
+/**
  * One button in either row — see the doc above the rows themselves for the weight mechanism.
- * [isHero] picks both the bigger morph pair ([PlayResting]/[PlayPressed], the same cookie-to-circle
- * the top bar's own play button uses) and the filled `primary` colour; every other button gets the
- * quiet squircle-to-circle pair ([ActionResting]/[ActionPressed]) on a tonal container, matching
- * `ShapedActionButton`'s own palette.
+ *
+ * The shape mechanism is `ActionButtonGroup`'s own, not a polygon morph: a full stadium
+ * ([rowHeight] / 2) at rest that tightens to [ActionPressedCorner] under a finger, exactly the
+ * corner-radius animation every context menu in the app already uses — the user asked for these
+ * two to read as the same control, not two different ones that happen to share a press gesture.
+ *
+ * [tint] picks the button's colour from the app's own primary/secondary/tertiary palette rather
+ * than leaving every non-hero button on one uniform neutral tone — the row otherwise reads as one
+ * grey pill repeated four times with a single accent one buried in the middle of it.
  */
 @Composable
 private fun RowScope.ArtistActionButton(
@@ -227,30 +261,33 @@ private fun RowScope.ArtistActionButton(
     icon: ImageVector,
     baseWeight: Float,
     iconSize: Dp,
-    isHero: Boolean = false
+    rowHeight: Dp,
+    tint: ActionTint = ActionTint.NEUTRAL
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val shape: Shape = if (isHero) {
-        rememberPressMorphShape(PlayResting, PlayPressed, pressed)
-    } else {
-        rememberPressMorphShape(ActionResting, ActionPressed, pressed)
-    }
     // The fast spatial spec, not the default: this sits directly under a finger, and anything
-    // leisurely reads as the tap not having registered — same reasoning `ShapedPlayButton` already
-    // documents for its own press morph.
+    // leisurely reads as the tap not having registered — same reasoning `ActionButtonGroup`
+    // documents for its own press-corner animation.
+    val spatial = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+    val corner by animateDpAsState(
+        targetValue = if (pressed) ActionPressedCorner else rowHeight / 2,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        label = "artistActionCorner"
+    )
     val weight by animateFloatAsState(
         targetValue = if (pressed) baseWeight * PressedGrowth else baseWeight,
-        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        animationSpec = spatial,
         label = "artistActionWeight"
     )
+    val (containerColor, contentColor) = tint.colors()
 
     Surface(
         onClick = onClick,
         interactionSource = interaction,
-        shape = shape,
-        color = if (isHero) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
-        contentColor = if (isHero) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+        shape = RoundedCornerShape(corner),
+        color = containerColor,
+        contentColor = contentColor,
         modifier = Modifier
             .weight(weight)
             .fillMaxHeight()
@@ -275,8 +312,8 @@ private val PortraitDecodeSize = 480.dp
 internal val RowInset = 16.dp
 internal val ButtonGap = 10.dp
 
-internal val HeroRowHeight = 80.dp
-internal val ActionRowHeight = 64.dp
+internal val HeroRowHeight = 104.dp
+internal val ActionRowHeight = 80.dp
 private val HeroIconSize = 32.dp
 private val ActionIconSize = 26.dp
 
@@ -285,3 +322,6 @@ internal const val HeroWeight = 1.6f
 
 /** How much a pressed button takes from its row neighbours — the same figure `ActionButtonGroup` uses. */
 private const val PressedGrowth = 1.35f
+
+/** The pressed corner radius — the same figure `ActionButtonGroup`'s own `PressedCorner` uses. */
+private val ActionPressedCorner = 14.dp

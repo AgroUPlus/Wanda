@@ -76,7 +76,14 @@ internal class ArtistCatalogLoader @Inject constructor(
             try {
                 if (!skipSearchIfFresh) catalogRepository.refreshArtist(artist)
                 val idWasGiven = knownArtistId != null
-                val id = knownArtistId ?: findArtistId(artist, topSongs)?.also { knownArtistId = it }
+                // Not the `topSongs` argument as-is: on a first-ever visit that is always empty —
+                // the page has not rendered once yet to have collected any — so an id search over it
+                // found nothing regardless of what the cross-source search above just wrote to Room,
+                // and fell straight to the MusicBrainz fallback even when a real id was one query
+                // away. A fresh read only when the caller had nothing already is what fixes that
+                // without paying for an extra query on every ordinary refresh.
+                val songs = topSongs.ifEmpty { catalogRepository.tracksByArtist(artist) }
+                val id = knownArtistId ?: findArtistId(artist, songs)?.also { knownArtistId = it }
                 // No id from any track at all — most often a local-only artist, which never had a
                 // page to fetch in the first place. MusicBrainz is asked by name as a last resort,
                 // rather than giving up the way this always used to: see `MusicBrainzArtistFallback`.

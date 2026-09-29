@@ -62,8 +62,12 @@ interface AlbumDao {
      * Only Navidrome gives its tracks a stable artist id; YouTube Music rows carry none at all, so
      * an id-keyed discography would be empty for every streaming source. `COLLATE NOCASE` because
      * the same artist reaches Room capitalised differently from different backends.
+     *
+     * `LIKE`, not `=`: an album credited to more than one artist stores that as one string too, the
+     * same reason `TrackLibraryQueries.getTracksByArtistFlow` widened — see its own doc.
+     * `CatalogRepository.artistAlbumsFlow` re-checks every hit with `ArtistIdentity.creditsMatch`.
      */
-    @Query("SELECT * FROM albums WHERE artist = :artist COLLATE NOCASE ORDER BY year DESC, title ASC")
+    @Query("SELECT * FROM albums WHERE artist LIKE '%' || :artist || '%' COLLATE NOCASE ORDER BY year DESC, title ASC")
     fun getAlbumsByArtistFlow(artist: String): Flow<List<AlbumEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

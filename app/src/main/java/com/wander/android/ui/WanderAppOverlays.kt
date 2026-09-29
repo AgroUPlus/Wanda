@@ -12,10 +12,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.wander.android.core.permissions.rememberLocalNetworkGate
 import com.wander.android.data.repository.ListenAlongSession
+import com.wander.android.data.repository.MoodPresets
 import com.wander.android.data.sources.agro.Jam
 import com.wander.android.ui.agro.AgroSessionViewModel
 import kotlinx.coroutines.launch
@@ -27,7 +29,8 @@ import com.wander.android.ui.components.player.PlayerSheetValue
 import com.wander.android.ui.navigation.Routes
 import com.wander.android.ui.navigation.TopLevelDestination
 import com.wander.android.ui.navigation.navigateSettled
-import com.wander.android.ui.screens.home.InstantRadioFab
+import com.wander.android.ui.screens.home.MoodMatrixViewModel
+import com.wander.android.ui.screens.home.RadioMoodFab
 import com.wander.android.ui.screens.social.JamViewModel
 import com.wander.android.ui.screens.social.SocialViewModel
 
@@ -43,7 +46,7 @@ private val RadioFabClearance = 16.dp
 private const val DockedEpsilon = 0.01f
 
 /**
- * Overlays and floating controls anchored to the app shell: instant radio FAB, bottom offers,
+ * Overlays and floating controls anchored to the app shell: the radio/mood FAB, bottom offers,
  * sync sheets, Jam bar, listen-along bar, and snackbar host.
  */
 @Composable
@@ -67,6 +70,8 @@ internal fun BoxScope.WanderAppOverlays(
     val sheetCollapsed = sheetState.targetValue == PlayerSheetValue.COLLAPSED
 
     val isStartingRadio by viewModel.isStartingRadio.collectAsStateWithLifecycle()
+    val moodViewModel: MoodMatrixViewModel = hiltViewModel()
+    val moodState by moodViewModel.state.collectAsStateWithLifecycle()
     val playerDocked by remember(sheetState) {
         derivedStateOf { sheetState.progress <= DockedEpsilon }
     }
@@ -103,10 +108,13 @@ internal fun BoxScope.WanderAppOverlays(
         agroViewModel.clearError()
     }
 
-    InstantRadioFab(
+    RadioMoodFab(
         isStarting = isStartingRadio,
         visible = playerDocked && currentRoute == TopLevelDestination.HOME.route,
-        onClick = viewModel::startInstantRadio,
+        moods = MoodPresets,
+        playingMoodKey = moodState.playingKey,
+        onInstantRadio = viewModel::startInstantRadio,
+        onSelectMood = moodViewModel::playMood,
         modifier = Modifier
             .align(Alignment.BottomEnd)
             .padding(end = 16.dp, bottom = dockBottom + RadioFabClearance)

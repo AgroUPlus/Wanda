@@ -72,16 +72,21 @@ interface TrackLibraryQueries {
     @Query("SELECT * FROM tracks WHERE source = :source ORDER BY title ASC")
     suspend fun getTracksInSource(source: SourceType): List<TrackEntity>
 
+    // `LIKE`, not `= :artist`: a track credited to more than one artist ("Artist A, Artist B",
+    // "Artist A feat. Artist B") stores all of that in one `artist` column, and an exact match never
+    // found the row for either name on it — only for the string as a whole. This is deliberately
+    // wider than that; `ArtistIdentity.creditsMatch` is what narrows the wider result back down to
+    // real matches, since a bare substring also catches "Artisan" inside a query for "Art".
     @Query(
         """
         SELECT * FROM tracks
-        WHERE artist = :artist COLLATE NOCASE
+        WHERE artist LIKE '%' || :artist || '%' COLLATE NOCASE
         ORDER BY playCount DESC, title ASC
         """
     )
     fun getTracksByArtistFlow(artist: String): Flow<List<TrackEntity>>
 
-    @Query("SELECT * FROM tracks WHERE artist = :artist COLLATE NOCASE")
+    @Query("SELECT * FROM tracks WHERE artist LIKE '%' || :artist || '%' COLLATE NOCASE")
     suspend fun getTracksByArtistOnce(artist: String): List<TrackEntity>
 
     @Query("SELECT * FROM tracks WHERE isLiked = 1")

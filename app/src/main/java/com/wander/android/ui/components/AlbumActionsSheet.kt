@@ -54,7 +54,7 @@ fun AlbumActionsSheet(
     WandaSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ) {
+    ) { animatedDismiss ->
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -95,16 +95,16 @@ fun AlbumActionsSheet(
             ActionButtonGroup(
                 modifier = Modifier.padding(top = 8.dp),
                 actions = buildList {
-                    add(MenuAction(Icons.Rounded.PlayArrow, "Play", ActionEmphasis.PRIMARY) { onPlay(); onDismiss() })
-                    add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, "Play next", ActionEmphasis.SECONDARY) { onPlayNext(); onDismiss() })
+                    add(MenuAction(Icons.Rounded.PlayArrow, "Play", ActionEmphasis.PRIMARY) { onPlay(); animatedDismiss() })
+                    add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, "Play next", ActionEmphasis.SECONDARY) { onPlayNext(); animatedDismiss() })
                     // Always offered when present, unlike a track's share. An album link describes
                     // the record rather than naming a server, so it works from a source that cannot
                     // mint links at all — the local library included. See `ShareRepository.shareAlbum`.
-                    onShare?.let { add(MenuAction(Icons.Rounded.Share, "Share", ActionEmphasis.ICON) { it(); onDismiss() }) }
-                    onDownload?.let { add(MenuAction(Icons.Rounded.Download, "Download", ActionEmphasis.ICON) { it(); onDismiss() }) }
-                    onAddToPlaylist?.let { add(MenuAction(Icons.Rounded.LibraryAdd, "Add to playlist", ActionEmphasis.ICON) { it(); onDismiss() }) }
-                    add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, "Queue") { onAddToQueue(); onDismiss() })
-                    onGoToArtist?.let { add(MenuAction(Icons.Rounded.Person, album.artist) { it(); onDismiss() }) }
+                    onShare?.let { add(MenuAction(Icons.Rounded.Share, "Share", ActionEmphasis.ICON) { it(); animatedDismiss() }) }
+                    onDownload?.let { add(MenuAction(Icons.Rounded.Download, "Download", ActionEmphasis.ICON) { it(); animatedDismiss() }) }
+                    onAddToPlaylist?.let { add(MenuAction(Icons.Rounded.LibraryAdd, "Add to playlist", ActionEmphasis.ICON) { it(); animatedDismiss() }) }
+                    add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, "Queue") { onAddToQueue(); animatedDismiss() })
+                    onGoToArtist?.let { add(MenuAction(Icons.Rounded.Person, album.artist) { it(); animatedDismiss() }) }
                 }
             )
         }

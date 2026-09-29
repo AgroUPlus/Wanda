@@ -32,6 +32,7 @@ import com.wander.android.R
 import com.wander.android.data.sources.ytmusic.GoogleAccountManager
 import com.wander.android.ui.components.WebViewLifecycle
 import com.wander.android.ui.components.release
+import com.wander.android.ui.components.stripWebViewUserAgentToken
 
 private const val YT_MUSIC_URL = "https://music.youtube.com"
 
@@ -82,6 +83,10 @@ fun YouTubeLoginScreen(
                     webViewInstance = this
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
+                    // This screen's sign-in *is* Google's own — without this, Google's server
+                    // identifies the request as coming from inside a WebView and refuses it with a
+                    // blank "this browser may not be secure" page instead of the real consent flow.
+                    stripWebViewUserAgentToken()
                     webViewClient = object : WebViewClient() {
                         override fun onPageFinished(view: WebView?, url: String?) {
                             val cookie = CookieManager.getInstance().getCookie(YT_MUSIC_URL)

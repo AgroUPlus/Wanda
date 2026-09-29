@@ -176,12 +176,6 @@ fun HomeScreen(
                         )
                     }
 
-                    // Reachable only once `state.isGloballyEmpty` above is false, same as every
-                    // other item in this column.
-                    item(key = "mood_matrix", contentType = "mood-matrix") {
-                        MoodMatrixCard()
-                    }
-
                     // Only earns its row when there is more than one backend to choose between.
                     if (state.sources.size > 1) {
                         item(key = "sources", contentType = "source-chips") {

@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.os.Message
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import com.wander.android.data.importer.IMPORT_WEB_USER_AGENT
 import com.wander.android.ui.components.WebViewLifecycle
+import com.wander.android.ui.components.launchNonWebUrl
 import com.wander.android.ui.components.release
 
 /**
@@ -83,6 +85,16 @@ internal fun ExternalPlatformWebView(
 
                     override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
                         url?.let { onUrlChanged(it) }
+                    }
+
+                    // A login step embedded here — Spotify's or Deezer's own "Continue with
+                    // Google" — can redirect through an `intent://` or `market://` URI at any
+                    // point. Left un-overridden, the WebView hands that straight to Android and an
+                    // unresolvable one throws uncaught, from inside WebView's own code rather than
+                    // this composable's — see `launchNonWebUrl`'s own doc.
+                    override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                        val url = request?.url?.toString() ?: return false
+                        return launchNonWebUrl(context, url)
                     }
                 }
                 loadUrl(webUrl)

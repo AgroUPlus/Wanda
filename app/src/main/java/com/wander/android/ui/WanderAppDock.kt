@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.wander.android.core.permissions.hasPermission
-import com.wander.android.ui.components.bouncySpec
+import com.wander.android.ui.components.dockSpec
 import com.wander.android.ui.components.listen.ListenSheet
 import com.wander.android.ui.components.player.MiniPlayerGap
 import com.wander.android.ui.components.player.PlayerSheetState
@@ -140,17 +140,15 @@ internal fun rememberWanderDockState(
     val standaloneDock: @Composable BoxScope.() -> Unit = {
         AnimatedVisibility(
             visible = showDockRow,
-            // Enter and exit both bouncy, both travelling the card's own full height rather than
-            // half of it — this used to slide in a bouncy scale but slide *out* on the app's plain
-            // damped spec, so appearing read as lively and disappearing read as a different,
-            // flatter animation cutting it off. One spring, both directions, is what makes it read
-            // as the same card fluidly leaving and returning rather than two different behaviours.
+            // One spring for enter and exit, and the same one the player's resting inset and the
+            // content padding animate on, so the dock leaving and returning reads as one motion
+            // the player above it follows rather than three unrelated ones.
             enter = fadeIn(motionScheme.defaultEffectsSpec()) +
-                slideInVertically(bouncySpec()) { it } +
-                scaleIn(bouncySpec(), initialScale = 0.85f),
+                slideInVertically(dockSpec()) { it } +
+                scaleIn(dockSpec(), initialScale = 0.85f),
             exit = fadeOut(motionScheme.fastEffectsSpec()) +
-                slideOutVertically(bouncySpec()) { it } +
-                scaleOut(bouncySpec(), targetScale = 0.85f),
+                slideOutVertically(dockSpec()) { it } +
+                scaleOut(dockSpec(), targetScale = 0.85f),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = dockInset + MiniPlayerGap)

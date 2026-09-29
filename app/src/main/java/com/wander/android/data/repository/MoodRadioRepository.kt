@@ -42,8 +42,8 @@ class MoodRadioRepository @Inject constructor(
  * A named point on the matrix, for the quick-pick pills.
  *
  * [key] rather than a display label: this is a plain repository with no `Context`, and the label
- * shown for each key lives in `strings.xml` — see `MoodMatrixCard`'s `MoodPreset.label()`, which
- * is the only place these keys are turned into text.
+ * shown for each key lives in `strings.xml` — see `RadioMoodFab`'s `MoodPreset.label()`, which is
+ * the only place these keys are turned into text.
  */
 data class MoodPreset(
     val key: String,

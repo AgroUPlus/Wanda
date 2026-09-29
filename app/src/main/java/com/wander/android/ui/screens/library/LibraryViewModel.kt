@@ -80,7 +80,10 @@ class LibraryViewModel @Inject constructor(
     private val _sourceFilter = MutableStateFlow<SourceType?>(null)
     val sourceFilter: StateFlow<SourceType?> = _sourceFilter.asStateFlow()
 
-    val availableSources: List<SourceType> = musicRepository.sources.map { it.sourceType }.sorted()
+    // Configured sources only — not every registered backend, the same accessor Home's own source
+    // filter uses. A source no one is signed into (Deezer before login, say) has nothing to filter
+    // by and reads as a broken chip that always returns zero tracks.
+    val availableSources: List<SourceType> = musicRepository.configuredSources().sorted()
 
     /**
      * One flow per tab rather than one flow keyed on the selected tab.
