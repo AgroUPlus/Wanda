@@ -2,9 +2,7 @@ package com.wander.android.ui.screens.importer
 
 import android.annotation.SuppressLint
 import android.graphics.Color
-import android.os.Message
 import android.webkit.CookieManager
-import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -18,8 +16,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import com.wander.android.data.importer.IMPORT_WEB_USER_AGENT
 import com.wander.android.ui.components.WebViewLifecycle
+import com.wander.android.ui.components.WebViewPopupDialog
 import com.wander.android.ui.components.launchNonWebUrl
 import com.wander.android.ui.components.release
+import com.wander.android.ui.components.webChromeClientHostingPopups
 
 /**
  * Embedded WebView for external platforms (Spotify, Deezer, Apple Music).
@@ -37,6 +37,7 @@ internal fun ExternalPlatformWebView(
     modifier: Modifier = Modifier
 ) {
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
+    var popupWebView by remember { mutableStateOf<WebView?>(null) }
     WebViewLifecycle(webViewInstance)
 
     AndroidView(
@@ -50,27 +51,23 @@ internal fun ExternalPlatformWebView(
                 settings.databaseEnabled = true
                 settings.loadWithOverviewMode = true
                 settings.useWideViewPort = true
-                settings.setSupportMultipleWindows(true)
-                settings.javaScriptCanOpenWindowsAutomatically = true
                 settings.mediaPlaybackRequiresUserGesture = true
                 settings.userAgentString = IMPORT_WEB_USER_AGENT
                 CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
 
-                webChromeClient = object : WebChromeClient() {
-                    override fun onCreateWindow(
-                        view: WebView?,
-                        isDialog: Boolean,
-                        isUserGesture: Boolean,
-                        resultMsg: Message?
-                    ): Boolean {
-                        val host = view ?: return false
-                        val transport = resultMsg?.obj as? WebView.WebViewTransport ?: return false
-                        transport.webView = host
-                        resultMsg.sendToTarget()
-                        return true
+                // Spotify's/Deezer's own "Continue with Google" step needs a genuine second WebView
+                // — see `webChromeClientHostingPopups`'s own doc for why neither reusing this WebView
+                // nor disabling popups outright works for this specific sign-in flow.
+                settings.setSupportMultipleWindows(true)
+                settings.javaScriptCanOpenWindowsAutomatically = true
+                webChromeClient = webChromeClientHostingPopups(
+                    context = context,
+                    onPopupCreated = { popupWebView = it },
+                    onPopupClosed = {
+                        popupWebView?.release()
+                        popupWebView = null
                     }
-                }
-
+                )
                 webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView?, url: String?) {
                         val effectiveUrl = url ?: webUrl
@@ -105,4 +102,9 @@ internal fun ExternalPlatformWebView(
         },
         modifier = modifier.fillMaxSize()
     )
+
+    WebViewPopupDialog(popup = popupWebView) {
+        popupWebView?.release()
+        popupWebView = null
+    }
 }

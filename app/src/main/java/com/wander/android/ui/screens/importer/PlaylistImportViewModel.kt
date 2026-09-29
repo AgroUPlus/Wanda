@@ -11,6 +11,7 @@ import com.wander.android.data.importer.SpotifyPlaylistParser
 import com.wander.android.data.importer.TextPlaylistParser
 import com.wander.android.data.importer.YouTubePlaylistParser
 import com.wander.android.data.repository.PlaylistImportRepository
+import com.wander.android.data.sources.deezer.DeezerAccountManager
 import com.wander.android.data.sources.ytmusic.GoogleAccountManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,21 +21,21 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Every source's parser reads a playlist by its share link with no session at all — Deezer and
- * Apple Music always did this; Spotify's does too, via the web player's anonymous token (see
- * [SpotifyPlaylistParser.parse]). A share link is exactly what "share this playlist" hands out, so
- * this covers the playlists someone would actually paste in here. It does not cover a playlist that
- * was never shared, or Liked Songs, which have no link at all — those need Spotify's real OAuth,
- * deliberately left out for now (it needs a Developer Dashboard app of the user's own to add).
+ * Apple Music's parser, and Spotify's (via the web player's anonymous token, see
+ * [SpotifyPlaylistParser.parse]), read a playlist by its share link with no session at all — that
+ * covers the playlists someone would actually paste in here, but not a playlist that was never
+ * shared, or Liked Songs, which have no link at all; those need Spotify's real OAuth, deliberately
+ * left out for now (it needs a Developer Dashboard app of the user's own to add).
  *
- * YouTube is the one platform this app already holds an account for (see [GoogleAccountManager],
- * signed in from Settings), so it alone gets a "browse my library" option — no separate sign-in
- * step belongs in the importer for it.
+ * YouTube and Deezer are the two platforms this app already holds an account for elsewhere (see
+ * [GoogleAccountManager] and [DeezerAccountManager], both signed in from Settings), so they alone
+ * get a "browse my library" option — no separate sign-in step belongs in the importer for either.
  */
 @HiltViewModel
 class PlaylistImportViewModel @Inject constructor(
     private val importRepository: PlaylistImportRepository,
     private val googleAccountManager: GoogleAccountManager,
+    private val deezerAccountManager: DeezerAccountManager,
     private val parserCoordinator: PlaylistParserCoordinator
 ) : ViewModel() {
 
@@ -45,10 +46,12 @@ class PlaylistImportViewModel @Inject constructor(
         appleMusicParser: AppleMusicPlaylistParser,
         textParser: TextPlaylistParser,
         importRepository: PlaylistImportRepository,
-        googleAccountManager: GoogleAccountManager
+        googleAccountManager: GoogleAccountManager,
+        deezerAccountManager: DeezerAccountManager
     ) : this(
         importRepository = importRepository,
         googleAccountManager = googleAccountManager,
+        deezerAccountManager = deezerAccountManager,
         parserCoordinator = PlaylistParserCoordinator(
             spotifyParser,
             deezerParser,
@@ -63,6 +66,7 @@ class PlaylistImportViewModel @Inject constructor(
 
     val progress: StateFlow<ImportProgress> = importRepository.progress
     val isYouTubeLoggedIn: StateFlow<Boolean> = googleAccountManager.isLoggedIn
+    val isDeezerLoggedIn: StateFlow<Boolean> = deezerAccountManager.isLoggedIn
 
     /**
      * The live WebView backing the external platform's browse step, once it exists — see
@@ -95,18 +99,24 @@ class PlaylistImportViewModel @Inject constructor(
         }
     }
 
+    private fun isLoggedInElsewhere(platform: PlatformType): Boolean = when (platform) {
+        PlatformType.YOUTUBE -> googleAccountManager.isLoggedIn.value
+        PlatformType.DEEZER -> deezerAccountManager.isLoggedIn.value
+        else -> false
+    }
+
     fun selectPlatform(platform: PlatformType) {
         _state.value = _state.value.copy(
             platform = platform,
             discoveredPlaylists = emptyList(),
+            hasCheckedDiscovery = false,
+            discoveryDismissed = false,
             loadedPlaylist = null,
             selectedIndices = emptySet(),
             manualInput = "",
             error = null
         )
-        if (platform == PlatformType.YOUTUBE && googleAccountManager.isLoggedIn.value) {
-            checkYouTubePlaylists()
-        }
+        if (isLoggedInElsewhere(platform)) checkOwnAccountPlaylists(platform)
     }
 
     fun backToPlatformPicker() {
@@ -121,32 +131,39 @@ class PlaylistImportViewModel @Inject constructor(
         )
     }
 
-    /** Called on returning from Settings' YouTube sign-in — picks the account state back up. */
-    fun recheckYouTubeSession() {
-        if (_state.value.platform == PlatformType.YOUTUBE &&
-            _state.value.discoveredPlaylists.isEmpty() &&
-            googleAccountManager.isLoggedIn.value
-        ) {
-            checkYouTubePlaylists()
+    /** Called on returning from Settings' YouTube or Deezer sign-in — picks the account state back up. */
+    fun recheckSessions() {
+        val platform = _state.value.platform ?: return
+        if (!_state.value.hasCheckedDiscovery && isLoggedInElsewhere(platform)) {
+            checkOwnAccountPlaylists(platform)
         }
     }
 
     /** Drops the discovered library grid so the direct-link form shows instead. */
     fun switchToDirectLink() {
-        _state.value = _state.value.copy(discoveredPlaylists = emptyList())
+        _state.value = _state.value.copy(discoveredPlaylists = emptyList(), discoveryDismissed = true)
     }
 
-    fun checkYouTubePlaylists() {
+    fun checkYouTubePlaylists() = checkOwnAccountPlaylists(PlatformType.YOUTUBE)
+    fun checkDeezerPlaylists() = checkOwnAccountPlaylists(PlatformType.DEEZER)
+
+    private fun checkOwnAccountPlaylists(platform: PlatformType) {
+        val fetch = when (platform) {
+            PlatformType.YOUTUBE -> parserCoordinator::fetchYouTubePlaylists
+            PlatformType.DEEZER -> parserCoordinator::fetchDeezerPlaylists
+            else -> return
+        }
         viewModelScope.launch {
             _state.value = _state.value.copy(isDiscovering = true)
-            parserCoordinator.fetchYouTubePlaylists().onSuccess { lists ->
+            fetch().onSuccess { lists ->
                 _state.value = _state.value.copy(
                     isDiscovering = false,
+                    hasCheckedDiscovery = true,
                     discoveredPlaylists = lists,
                     error = null
                 )
-            }.onFailure {
-                _state.value = _state.value.copy(isDiscovering = false)
+            }.onFailure { err ->
+                _state.value = _state.value.copy(isDiscovering = false, hasCheckedDiscovery = true, error = err.message)
             }
         }
     }

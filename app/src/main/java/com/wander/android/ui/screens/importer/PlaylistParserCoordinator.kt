@@ -34,6 +34,11 @@ class PlaylistParserCoordinator @Inject constructor(
             youtubeParser.fetchUserPlaylists()
         }
 
+    suspend fun fetchDeezerPlaylists(): Result<List<RawUserPlaylistSummary>> =
+        withContext(Dispatchers.IO) {
+            deezerParser.fetchUserPlaylists()
+        }
+
     /**
      * [spotifyFetcher], when supplied, routes Spotify's calls through a live WebView's `fetch()`
      * instead of this app's own HTTP client — see [SpotifyPlaylistParser]'s class doc for why that

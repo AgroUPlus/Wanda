@@ -1,20 +1,22 @@
 package com.wander.android.ui.screens.login
 
 import android.annotation.SuppressLint
-import android.os.Message
 import android.webkit.CookieManager
-import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -25,7 +27,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -33,10 +37,15 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.ui.components.WebViewLifecycle
+import com.wander.android.ui.components.WebViewPopupDialog
+import com.wander.android.ui.components.blockLoginAsset
 import com.wander.android.ui.components.launchNonWebUrl
+import com.wander.android.ui.components.prepareForLogin
 import com.wander.android.ui.components.release
 import com.wander.android.ui.components.stripWebViewUserAgentToken
+import com.wander.android.ui.components.webChromeClientHostingPopups
 import kotlinx.coroutines.delay
+import java.util.concurrent.atomic.AtomicBoolean
 
 private const val DEEZER_LOGIN_URL = "https://www.deezer.com/en/login"
 private const val DEEZER_DOMAIN_COOKIE = "https://www.deezer.com"
@@ -56,6 +65,10 @@ fun DeezerLoginScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
+    var popupWebView by remember { mutableStateOf<WebView?>(null) }
+
+    var loading by remember { mutableStateOf(true) }
+    val darkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
 
     WebViewLifecycle(webViewInstance)
 
@@ -92,68 +105,81 @@ fun DeezerLoginScreen(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
         )
 
-        AndroidView(
-            factory = { context ->
-                CookieManager.getInstance().setAcceptCookie(true)
-                WebView(context).apply {
-                    webViewInstance = this
-                    settings.javaScriptEnabled = true
-                    settings.domStorageEnabled = true
-                    // Deezer's own login screen offers "Continue with Google" — without this,
-                    // tapping it landed on Google's blank "this browser may not be secure" refusal
-                    // page instead of the actual sign-in flow.
-                    stripWebViewUserAgentToken()
-                    // "Continue with Google" opens its own consent screen in a JS `window.open`
-                    // popup. With no `WebChromeClient` to answer `onCreateWindow`, Android drops
-                    // that request silently — the button read as doing nothing at all, not merely
-                    // as failing, because nothing ever appeared for it to fail *in*. This routes
-                    // the popup into the same WebView, matching `ExternalPlatformWebView`'s own
-                    // already-working handling of the identical flow for the playlist importer.
-                    settings.setSupportMultipleWindows(true)
-                    settings.javaScriptCanOpenWindowsAutomatically = true
-                    webChromeClient = object : WebChromeClient() {
-                        override fun onCreateWindow(
-                            view: WebView?,
-                            isDialog: Boolean,
-                            isUserGesture: Boolean,
-                            resultMsg: Message?
-                        ): Boolean {
-                            val host = view ?: return false
-                            val transport = resultMsg?.obj as? WebView.WebViewTransport ?: return false
-                            transport.webView = host
-                            resultMsg.sendToTarget()
-                            return true
-                        }
-                    }
-                    webViewClient = object : WebViewClient() {
-                        override fun onPageFinished(view: WebView?, url: String?) {
-                            val cookie = CookieManager.getInstance().getCookie(DEEZER_DOMAIN_COOKIE)
-                            if (cookie != null && cookie.contains("arl=")) {
-                                viewModel.onSessionCaptured(cookie)
+        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+            AndroidView(
+                factory = { context ->
+                    CookieManager.getInstance().setAcceptCookie(true)
+                    WebView(context).apply {
+                        webViewInstance = this
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        prepareForLogin(darkTheme)
+                        // Deezer's own login screen offers "Continue with Google" — without this,
+                        // tapping it landed on Google's blank "this browser may not be secure" refusal
+                        // page instead of the actual sign-in flow.
+                        stripWebViewUserAgentToken()
+                        // "Continue with Google" needs a genuine second WebView — see
+                        // `webChromeClientHostingPopups`'s own doc for why neither reusing this WebView
+                        // nor disabling popups outright works for this specific sign-in flow.
+                        settings.setSupportMultipleWindows(true)
+                        settings.javaScriptCanOpenWindowsAutomatically = true
+                        webChromeClient = webChromeClientHostingPopups(
+                            context = context,
+                            onPopupCreated = { popupWebView = it },
+                            onPopupClosed = {
+                                popupWebView?.release()
+                                popupWebView = null
+                            }
+                        )
+                        val captured = AtomicBoolean(false)
+                        webViewClient = object : WebViewClient() {
+                            override fun onPageCommitVisible(view: WebView, url: String) {
+                                loading = false
+                            }
+
+                            // The 500 ms poll above catches `arl` when a script sets it; this catches it
+                            // the moment a response header does, without waiting for a page to finish.
+                            override fun shouldInterceptRequest(
+                                view: WebView,
+                                request: WebResourceRequest
+                            ): WebResourceResponse? {
+                                val cookie = CookieManager.getInstance().getCookie(DEEZER_DOMAIN_COOKIE)
+                                if (cookie != null && cookie.contains("arl=") && captured.compareAndSet(false, true)) {
+                                    view.post { viewModel.onSessionCaptured(cookie) }
+                                }
+                                return blockLoginAsset(request)
+                            }
+
+                            override fun onPageFinished(view: WebView?, url: String?) {
+                                val cookie = CookieManager.getInstance().getCookie(DEEZER_DOMAIN_COOKIE)
+                                if (cookie != null && cookie.contains("arl=")) {
+                                    viewModel.onSessionCaptured(cookie)
+                                }
+                            }
+
+                            // Google's own sign-in step can redirect through an `intent://` or
+                            // `market://` URI. Left un-overridden this throws uncaught the moment it
+                            // hits one Android cannot resolve inside the WebView itself — see
+                            // `launchNonWebUrl`'s own doc — which is what crashed the app on exactly
+                            // this login, not anything specific to Deezer's own page.
+                            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                val url = request?.url?.toString() ?: return false
+                                return launchNonWebUrl(context, url)
                             }
                         }
-
-                        // Google's own sign-in step can redirect through an `intent://` or
-                        // `market://` URI. Left un-overridden this throws uncaught the moment it
-                        // hits one Android cannot resolve inside the WebView itself — see
-                        // `launchNonWebUrl`'s own doc — which is what crashed the app on exactly
-                        // this login, not anything specific to Deezer's own page.
-                        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                            val url = request?.url?.toString() ?: return false
-                            return launchNonWebUrl(context, url)
-                        }
+                        loadUrl(DEEZER_LOGIN_URL)
                     }
-                    loadUrl(DEEZER_LOGIN_URL)
-                }
-            },
-            onRelease = { webView ->
-                webViewInstance = null
-                webView.release()
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        )
+                },
+                onRelease = { webView ->
+                    webViewInstance = null
+                    webView.release()
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+            if (loading) {
+                LoadingIndicator(modifier = Modifier.size(56.dp).align(Alignment.Center))
+            }
+        }
 
         HorizontalDivider()
 
@@ -181,5 +207,10 @@ fun DeezerLoginScreen(
             // blank-looking post-login page, say — left no way back out but the system gesture.
             TextButton(onClick = onDone) { Text(stringResource(R.string.common_cancel)) }
         }
+    }
+
+    WebViewPopupDialog(popup = popupWebView) {
+        popupWebView?.release()
+        popupWebView = null
     }
 }

@@ -56,18 +56,20 @@ fun PlaylistImportScreen(
     onBack: () -> Unit,
     onOpenPlaylist: (String) -> Unit = {},
     onOpenYouTubeLogin: () -> Unit = {},
+    onOpenDeezerLogin: () -> Unit = {},
     viewModel: PlaylistImportViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val progress by viewModel.progress.collectAsStateWithLifecycle()
     val isYouTubeLoggedIn by viewModel.isYouTubeLoggedIn.collectAsStateWithLifecycle()
+    val isDeezerLoggedIn by viewModel.isDeezerLoggedIn.collectAsStateWithLifecycle()
     val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
     val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) viewModel.recheckYouTubeSession()
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.recheckSessions()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -160,10 +162,13 @@ fun PlaylistImportScreen(
                             platform = platform,
                             state = state,
                             isYouTubeLoggedIn = isYouTubeLoggedIn,
+                            isDeezerLoggedIn = isDeezerLoggedIn,
                             onSelectPlaylist = { viewModel.loadPlaylist(it.url, it.name, it.coverUrl) },
                             onRefreshYouTube = viewModel::checkYouTubePlaylists,
+                            onRefreshDeezer = viewModel::checkDeezerPlaylists,
                             onSwitchToDirectLink = viewModel::switchToDirectLink,
                             onOpenYouTubeLogin = onOpenYouTubeLogin,
+                            onOpenDeezerLogin = onOpenDeezerLogin,
                             onExternalWebViewReady = viewModel::setExternalWebView,
                             onWebUrlChanged = viewModel::onWebUrlChanged,
                             onInputChange = viewModel::setManualInput,

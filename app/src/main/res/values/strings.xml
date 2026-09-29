@@ -23,11 +23,8 @@
     <string name="action_add_to_queue">Add to queue</string>
     <string name="action_remove_from_queue">Remove from queue</string>
     <string name="action_add_to_playlist">Add to playlist</string>
-    <string name="action_radio_mode">Radio mode</string>
-    <string name="action_radio_mode_active">Radio mode (active)</string>
     <string name="menu_like">Like</string>
     <string name="menu_radio">Radio</string>
-    <string name="track_info">Info</string>
     <string name="track_info_artist">Artist</string>
     <string name="track_info_album">Album</string>
     <string name="track_info_duration">Duration</string>
@@ -45,12 +42,9 @@
     <string name="track_info_status_cached">Cached offline</string>
     <string name="track_info_disc_track">Disc %1$d, track %2$d</string>
     <string name="track_info_track_number">Track %1$d</string>
-    <string name="action_start_radio">Start radio mode</string>
     <string name="action_speed_and_pitch">Speed &amp; Pitch</string>
     <string name="action_audio_language">Audio language</string>
     <string name="action_switch_source">Switch source</string>
-    <string name="action_go_to_artist">Go to artist</string>
-    <string name="action_go_to_album">Go to album</string>
     <string name="action_jam">Jam</string>
     <string name="action_add_to_jam">Add to jam</string>
     <string name="action_close">Close</string>
@@ -191,12 +185,10 @@
     <string name="home_sessions_other_devices">Sessions on other devices</string>
 
     <!-- Importer -->
-    <string name="importer_detecting_playlists">Detecting your playlists...</string>
     <string name="importer_edit_title">Edit Title</string>
     <string name="importer_import_playlist">Import Playlist</string>
     <string name="importer_listen_now">Listen now</string>
     <string name="importer_load_playlist">Load Playlist</string>
-    <string name="importer_loading_playlist">Loading playlist...</string>
     <string name="importer_none">None</string>
     <string name="importer_paste">Paste</string>
     <string name="importer_paste_link_text_tracklist_inspect">Paste a link or text tracklist to inspect and choose tracks before importing.</string>
@@ -209,7 +201,8 @@
     <string name="importer_step_connect_label">Connect</string>
     <string name="importer_step_tracks_label">Select tracks</string>
     <string name="importer_step_import_label">Import</string>
-    <string name="importer_youtube_signed_out_title">Not signed in to YouTube Music</string>
+    <string name="importer_platform_signed_out_title">Not signed in to %1$s</string>
+    <string name="importer_no_playlists_found">Couldn\'t find any playlists on your %1$s account.</string>
     <string name="importer_youtube_signed_out_desc">Sign in to browse your own playlists, or paste a playlist link below.</string>
     <string name="importer_sign_in">Sign in</string>
     <string name="importer_or_paste_link">or paste a link</string>
@@ -242,15 +235,10 @@
     <string name="login_sign_deezer">Sign in to Deezer</string>
     <string name="login_paste_arl">Or paste an ARL token</string>
     <string name="login_use_pasted_arl">Use pasted ARL</string>
-    <string name="deezer_account">Deezer account</string>
+    <string name="deezer_account">Deezer</string>
     <string name="deezer_tier_free">Free (128 kbps)</string>
     <string name="deezer_tier_premium">Premium (320 kbps)</string>
     <string name="deezer_tier_hifi">HiFi (Lossless FLAC)</string>
-    <string name="deezer_quality_auto">Automatic</string>
-    <string name="deezer_quality_standard">Standard (128 kbps)</string>
-    <string name="deezer_quality_high">High (320 kbps)</string>
-    <string name="deezer_quality_lossless">Lossless (FLAC)</string>
-    <string name="deezer_invalid_arl">The provided token does not contain a valid ARL.</string>
 
     <!-- Navigation -->
     <string name="nav_clear_search">Clear search</string>
@@ -375,15 +363,11 @@
     <string name="settings_p2p_device_sync">P2P Device Sync</string>
     <string name="settings_passphrase">Passphrase</string>
     <string name="settings_passphrase_device_token">Passphrase or Device Token</string>
-    <string name="settings_paste_from_clipboard">Paste from clipboard</string>
-    <string name="settings_paste_link_from_spotify_deezer">Paste a link from Spotify, Deezer, YouTube Music, Apple Music, or raw text lines.</string>
     <string name="settings_paused_incognito">Paused by incognito</string>
     <string name="settings_paused_nothing_being_measured_until">Paused. Nothing is being measured until you resume.</string>
     <string name="settings_playlist_imported">Playlist imported! 🎉</string>
-    <string name="settings_popular_on_agro">Popular on Agro</string>
     <string name="settings_query_lrclib_when_no_local_or_server_lyrics">Query LRCLIB when no local or server lyrics are found</string>
     <string name="settings_query_musicbrainz_for_accurate_artist_id">Query MusicBrainz to identify an artist by their unique id, instead of by name alone</string>
-    <string name="settings_include_plays_in_the_servers_shared_chart">Add your plays to the server\'s shared chart of what everyone is listening to, counted in bulk and never tied to your name.</string>
     <string name="settings_re_check_model">Re-check model</string>
     <string name="settings_ready_next_track">Ready the next track</string>
     <string name="settings_recognition_model">Recognition model</string>
@@ -416,6 +400,8 @@
     <string name="settings_share_navidrome_address_between_devices">Share the Navidrome address between devices.</string>
     <string name="settings_sharing_paused_incognito">Sharing paused by incognito</string>
     <string name="settings_show_what_i_m_playing">Show what I\'m playing</string>
+    <string name="settings_sign_out_deezer">Sign out of Deezer?</string>
+    <string name="settings_deezer_streaming_stops_until">Deezer streaming stops until you sign in again. Anything already downloaded stays playable.</string>
     <string name="settings_sign_out_navidrome">Sign out of Navidrome?</string>
     <string name="settings_sign_out_youtube_music">Sign out of YouTube Music?</string>
     <string name="settings_signs_out_every_source_erases">Signs out of every source and erases stored secrets</string>
@@ -567,7 +553,6 @@
     <string name="queue_tracks">%1$s of %2$s tracks</string>
     <string name="queue_voted">Voted (%1$s)</string>
     <string name="search_nothing_found_connected_sources">Nothing found for \\"%1$s\\" in your connected sources.</string>
-    <string name="settings_detected">Detected: %1$s</string>
     <string name="settings_found">%1$s found</string>
     <string name="settings_matching_track">Matching track %1$s of %2$s</string>
     <string name="settings_measuring_now">Measuring \\"%1$s\\" now</string>
