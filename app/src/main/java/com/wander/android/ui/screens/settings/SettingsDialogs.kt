@@ -23,6 +23,7 @@ internal class SettingsDialogState(
     share: MutableState<Boolean>,
     navidrome: MutableState<Boolean>,
     youTube: MutableState<Boolean>,
+    deezer: MutableState<Boolean>,
     unpair: MutableState<Boolean>,
     forget: MutableState<Boolean>
 ) {
@@ -30,6 +31,7 @@ internal class SettingsDialogState(
     var showShareDomainDialog by share
     var confirmNavidromeSignOut by navidrome
     var confirmYouTubeSignOut by youTube
+    var confirmDeezerSignOut by deezer
     var confirmAgroUnpair by unpair
     var confirmForgetEverything by forget
 }
@@ -44,6 +46,7 @@ internal fun rememberSettingsDialogs(): SettingsDialogState = SettingsDialogStat
     share = rememberSaveable { mutableStateOf(false) },
     navidrome = rememberSaveable { mutableStateOf(false) },
     youTube = rememberSaveable { mutableStateOf(false) },
+    deezer = rememberSaveable { mutableStateOf(false) },
     unpair = rememberSaveable { mutableStateOf(false) },
     forget = rememberSaveable { mutableStateOf(false) }
 )
@@ -99,6 +102,16 @@ internal fun SettingsDialogs(
             confirmLabel = stringResource(R.string.common_sign_out),
             onConfirm = viewModel::disconnectYouTube,
             onDismiss = { dialogs.confirmYouTubeSignOut = false }
+        )
+    }
+
+    if (dialogs.confirmDeezerSignOut) {
+        ConfirmDialog(
+            title = stringResource(R.string.settings_sign_out_deezer),
+            message = stringResource(R.string.settings_deezer_streaming_stops_until),
+            confirmLabel = stringResource(R.string.common_sign_out),
+            onConfirm = viewModel::disconnectDeezer,
+            onDismiss = { dialogs.confirmDeezerSignOut = false }
         )
     }
 

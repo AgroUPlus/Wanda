@@ -86,7 +86,7 @@ internal fun rememberSettingsHost(
             onYouTubeLogin = onYouTubeLogin,
             onYouTubeSignOut = { dialogs.confirmYouTubeSignOut = true },
             onDeezerLogin = onDeezerLogin,
-            onDeezerSignOut = viewModel::disconnectDeezer,
+            onDeezerSignOut = { dialogs.confirmDeezerSignOut = true },
             onRescanLocal = viewModel::rescanLocalLibrary,
             onPickLocalFolder = pickLocalFolder.takeIf { supportsFolderScan },
             onAgroPair = { dialogs.showAgroDialog = true },
