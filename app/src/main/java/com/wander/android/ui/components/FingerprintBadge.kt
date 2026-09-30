@@ -23,9 +23,8 @@ import com.wander.android.data.repository.FingerprintStatus
  * own — and it must not compete with the title for attention the rest of the time. An icon at a
  * legible size would be a second thing to read on every row of a library of thousands.
  *
- * Green means both indexes exist: the landmark fingerprint *and* the melody contour. Blue means it
- * is being decoded right now. Red means neither, or only one — a track with half its measurements
- * is a track the other half of the feature cannot find, so it does not get to look finished.
+ * Green means the neural fingerprint exists. Blue means it
+ * is being decoded right now. Red means it is missing.
  *
  * Colour alone carries the meaning, which is normally a thing to avoid; the content description is
  * how that is answered for anyone who cannot use it, and the three hues are picked to stay

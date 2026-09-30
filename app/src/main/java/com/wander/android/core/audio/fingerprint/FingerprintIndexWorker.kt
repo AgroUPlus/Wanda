@@ -11,7 +11,6 @@ import com.wander.android.data.repository.AcousticFeatureRepository
 import com.wander.android.core.notification.WorkEta
 import com.wander.android.core.notification.WorkProgressNotification
 import com.wander.android.data.repository.MusicRepository
-import com.wander.android.data.repository.MelodySearchRepository
 import com.wander.android.data.repository.EmbeddingRepository
 import com.wander.android.data.repository.RecognitionRepository
 import com.wander.android.data.repository.RecordingIdentityRepository
@@ -45,7 +44,6 @@ class FingerprintIndexWorker @AssistedInject constructor(
     private val recordingLinks: RecordingLinkRepository,
     private val secureStorage: com.wander.android.core.security.SecureStorage,
     private val acousticFeatures: AcousticFeatureRepository,
-    private val melodySearch: MelodySearchRepository,
     private val embeddingSearch: EmbeddingRepository,
     decoder: PcmDecoder,
     progress: FingerprintProgress,
@@ -58,7 +56,6 @@ class FingerprintIndexWorker @AssistedInject constructor(
 
     private val trackProcessor = FingerprintTrackProcessor(
         acousticFeatures = acousticFeatures,
-        melodySearch = melodySearch,
         embeddingSearch = embeddingSearch,
         recordingIdentity = recordingIdentity,
         recordingLinks = recordingLinks,
@@ -81,11 +78,6 @@ class FingerprintIndexWorker @AssistedInject constructor(
             .let { all -> if (requestedId == null) all else all.filter { it == requestedId } }
 
         val needsFeatures = acousticFeatures.needingMeasurement(FEATURE_BATCH_LIMIT).toSet()
-        val needsContour = if (com.wander.android.core.audio.melody.MelodySearch.ENABLED) {
-            melodySearch.needingIndex(candidateIds).toSet()
-        } else {
-            emptySet()
-        }
         embeddingSearch.backfillCentroids()
         recordingIdentity.linkDuplicates(recordingLinks, secureStorage)
 
@@ -93,7 +85,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
             .let { needed -> needed.filterTo(mutableSetOf()) { it in candidateIds } }
 
         val now = System.currentTimeMillis()
-        val pendingIds = (needsFeatures + needsContour + needsEmbedding).intersect(candidateIds.toSet())
+        val pendingIds = (needsFeatures + needsEmbedding).intersect(candidateIds.toSet())
         val candidates = if (pendingIds.isEmpty()) emptyList() else trackDao.getTracksByIds(pendingIds.toList())
         val pending = candidates.filter {
             !workerProgress.isUnreachable(it.id) && !isBackedOff(it, now)
@@ -114,7 +106,6 @@ class FingerprintIndexWorker @AssistedInject constructor(
             trackProcessor.processTrack(
                 track = track,
                 needsFeatures = track.id in needsFeatures,
-                needsContour = track.id in needsContour,
                 needsEmbedding = track.id in needsEmbedding
             )
         }

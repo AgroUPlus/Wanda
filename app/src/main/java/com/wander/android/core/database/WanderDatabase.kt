@@ -12,7 +12,6 @@ import com.wander.android.core.database.dao.FriendDao
 import com.wander.android.core.database.dao.HistoryDao
 import com.wander.android.core.database.dao.ShelfDao
 import com.wander.android.core.database.dao.TrackDao
-import com.wander.android.core.database.dao.MelodyContourDao
 import com.wander.android.core.database.dao.TrackFeatureDao
 import com.wander.android.core.database.dao.PlaylistDao
 import com.wander.android.core.database.dao.RecordingLinkDao
@@ -22,7 +21,6 @@ import com.wander.android.core.database.entity.AlbumEntity
 import com.wander.android.core.database.entity.AnnouncedReleaseEntity
 import com.wander.android.core.database.entity.ArtistEntity
 import com.wander.android.core.database.entity.CanonicalMetadataEntity
-import com.wander.android.core.database.entity.MelodyContourEntity
 import com.wander.android.core.database.entity.TrackFeatureEntity
 import com.wander.android.core.database.entity.DropEntity
 import com.wander.android.core.database.entity.FriendEntity
@@ -52,7 +50,6 @@ import com.wander.android.core.database.converter.SourceTypeConverter
         RecordingLinkEntity::class,
         CanonicalMetadataEntity::class,
         TrackFeatureEntity::class,
-        MelodyContourEntity::class,
         TrackEmbeddingEntity::class,
         com.wander.android.core.database.entity.TrackLyricsEntity::class,
         com.wander.android.core.database.entity.LyricsFtsEntity::class,
@@ -60,7 +57,7 @@ import com.wander.android.core.database.converter.SourceTypeConverter
         com.wander.android.core.database.entity.EpisodeProgressEntity::class,
         com.wander.android.core.database.entity.ReplayRecapEntity::class
     ],
-    version = 36,
+    version = 37,
     exportSchema = true
 )
 @TypeConverters(SourceTypeConverter::class)
@@ -78,7 +75,6 @@ abstract class WanderDatabase : RoomDatabase() {
     abstract fun recordingLinkDao(): RecordingLinkDao
     abstract fun canonicalMetadataDao(): CanonicalMetadataDao
     abstract fun trackFeatureDao(): TrackFeatureDao
-    abstract fun melodyContourDao(): MelodyContourDao
     abstract fun trackEmbeddingDao(): TrackEmbeddingDao
     abstract fun trackAttemptDao(): com.wander.android.core.database.dao.TrackAttemptDao
     abstract fun trackLyricsDao(): com.wander.android.core.database.dao.TrackLyricsDao

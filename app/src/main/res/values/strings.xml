@@ -135,7 +135,6 @@
     <string name="common_listening_2">Listening…</string>
     <string name="common_live">LIVE</string>
     <string name="common_loading_playlists">Loading playlists…</string>
-    <string name="common_matched_melody_guess_from_tune">Matched by melody. This is a guess from the tune, not the recording.</string>
     <string name="common_music_device">Music on this device</string>
     <string name="common_my_profile">My profile</string>
     <string name="common_name">Name</string>

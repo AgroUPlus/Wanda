@@ -2,7 +2,7 @@ package com.wander.android.data.repository
 
 import com.wander.android.core.audio.fingerprint.AudioEmbedder
 import com.wander.android.core.audio.fingerprint.FingerprintProgress
-import com.wander.android.core.database.dao.MelodyContourDao
+
 import com.wander.android.core.database.dao.TrackEmbeddingDao
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -41,7 +41,7 @@ enum class FingerprintStatus {
  * Which tracks have been fingerprinted, as one thing a screen can watch.
  *
  * Two independent indexes answer two different questions and a track can easily have one and not
- * the other: the landmark fingerprint is "is this recording that recording", the melody contour is
+ * the other: the landmark fingerprint is "is this recording that recording".
  * "does this go like that". A badge that claimed a track was done when only one had been written
  * would be lying on the half the user was about to use, so [FingerprintStatus.INDEXED] requires
  * both and everything short of it is [FingerprintStatus.MISSING].
@@ -55,14 +55,12 @@ enum class FingerprintStatus {
 // `NowPlayingScreen`. Everything it exposes was already public.
 class FingerprintStatusRepository @Inject constructor(
     private val embeddingDao: TrackEmbeddingDao,
-    private val contourDao: MelodyContourDao,
     private val progress: FingerprintProgress
 ) {
 
     private data class Input(
         /** Tracks with a current neural fingerprint — what recognition actually reads now. */
         val embedded: Set<String>,
-        val contours: Set<String>,
         val indexing: String?
     )
 
@@ -93,9 +91,8 @@ class FingerprintStatusRepository @Inject constructor(
                 AudioEmbedder.MODEL_NAME,
                 AudioEmbedder.EMBEDDER_VERSION
             ),
-            contourDao.indexedTrackIdsFlow(MelodySearchRepository.CONTOUR_VERSION),
             progress.indexing
-        ) { embedded, contours, indexing -> Input(embedded.toSet(), contours.toSet(), indexing) }
+        ) { embedded, indexing -> Input(embedded.toSet(), indexing) }
 
         val ticks: Flow<Input?> = flow {
             while (true) {
@@ -119,11 +116,7 @@ class FingerprintStatusRepository @Inject constructor(
             // nothing else. It was the landmark index until the embedder replaced it; reading the
             // old table here would have shown a whole library as unmeasured the moment the
             // landmarks were dropped, while recognition was in fact working.
-            val done = if (com.wander.android.core.audio.melody.MelodySearch.ENABLED) {
-                input.embedded.filterTo(mutableSetOf()) { it in input.contours }
-            } else {
-                input.embedded.toMutableSet()
-            }
+            val done = input.embedded.toMutableSet()
             // Held only until the answer arrives, or until the window runs out.
             settling.keys.removeAll(done)
             settling.entries.removeAll { now - it.value > SETTLE_WINDOW_MS }

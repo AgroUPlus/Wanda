@@ -6,7 +6,6 @@ import com.wander.android.core.playback.LIVE_SUFFIX
 import com.wander.android.data.model.isOneShotTrackId
 import com.wander.android.data.repository.AcousticFeatureRepository
 import com.wander.android.data.repository.EmbeddingRepository
-import com.wander.android.data.repository.MelodySearchRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.RecordingIdentityRepository
 import com.wander.android.data.repository.RecordingLinkRepository
@@ -20,7 +19,6 @@ import javax.inject.Singleton
 @Singleton
 class FingerprintTrackProcessor @Inject constructor(
     private val acousticFeatures: AcousticFeatureRepository,
-    private val melodySearch: MelodySearchRepository,
     private val embeddingSearch: EmbeddingRepository,
     private val recordingIdentity: RecordingIdentityRepository,
     private val recordingLinks: RecordingLinkRepository,
@@ -35,7 +33,6 @@ class FingerprintTrackProcessor @Inject constructor(
     suspend fun processTrack(
         track: TrackEntity,
         needsFeatures: Boolean,
-        needsContour: Boolean,
         needsEmbedding: Boolean
     ) {
         progress.started(track.id)
@@ -74,7 +71,6 @@ class FingerprintTrackProcessor @Inject constructor(
             // marking the change. The embedding is the one that wanted the rest of the song.
             val head = samples.headSeconds(PcmDecoder.DEFAULT_MAX_SECONDS)
             if (needsFeatures) acousticFeatures.measure(track.id, head)
-            if (needsContour) melodySearch.index(track.id, head)
             if (needsEmbedding) {
                 embeddingSearch.index(track.id, samples)
                 // With neural embeddings now stored, find duplicates among other indexed tracks

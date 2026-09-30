@@ -121,8 +121,6 @@ private fun Listening(readiness: IndexReadiness, audioLevel: Float = 0f) {
     Text(stringResource(R.string.common_listening_2), style = MaterialTheme.typography.headlineSmall)
     Text(
         text = when (readiness) {
-            // No longer "or hum it": that path is switched off, and asking for something the
-            // engine cannot use is worse than asking for nothing. See `MelodySearch`.
             is IndexReadiness.Ready ->
                 "Hold it near the music. Matching against ${readiness.trackCount} " +
                     "${if (readiness.trackCount == 1) "track" else "tracks"} measured on this device."
@@ -191,23 +189,10 @@ private fun Matched(recognition: Recognition, onPlay: () -> Unit) {
         maxLines = 1,
         overflow = TextOverflow.Ellipsis
     )
-    if (recognition.engine == RecognitionEngine.MELODY) {
-        // Said out loud, because the two engines are not equally sure. An embedding match heard
-        // the record; this one matched the shape of a tune somebody hummed, and a listener shown a
-        // confident wrong answer has no way to know which kind they were given.
-        Text(
-            text = stringResource(R.string.common_matched_melody_guess_from_tune),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-    }
     Button(onClick = onPlay, shapes = ButtonDefaults.shapes()) {
         // Says where it will start, because it is not the beginning — picking the song up where
-        // the room has reached is the point, and a plain "Play" would look like a bug. A hummed
-        // match has no position to resume from, so it simply plays.
-        if (recognition.engine == RecognitionEngine.MELODY) Text(stringResource(R.string.action_play))
-        else Text(stringResource(R.string.common_play_from, formatPosition(recognition.positionSeconds)))
+        // the room has reached is the point, and a plain "Play" would look like a bug.
+        Text(stringResource(R.string.common_play_from, formatPosition(recognition.positionSeconds)))
     }
 }
 
