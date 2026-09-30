@@ -848,4 +848,11 @@
     <string name="sleep_timer_end_of_track">End of track</string>
     <string name="sleep_timer_off">Turn off timer</string>
     <string name="sleep_timer_remaining">%1$s left</string>
+    <string name="db_too_old_title">Wanda\'s data is too old</string>
+    <string name="db_too_old_message">This version of Wanda can no longer upgrade the library stored on this device. Reset it to start fresh: your likes, playlists, listening history and library cache on this device will be erased. Nothing on your servers is touched.</string>
+    <string name="db_too_old_reset">Reset library</string>
+    <string name="db_too_old_open_settings">App settings</string>
+    <string name="db_too_old_reset_confirm_title">Erase the local library?</string>
+    <string name="db_too_old_reset_confirm_message">This permanently deletes your likes, playlists and listening history stored on this device. It cannot be undone.</string>
+    <string name="db_too_old_reset_confirm">Erase and restart</string>
 </resources>

@@ -9,11 +9,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.wander.android.core.database.DatabaseCompatibility
 import com.wander.android.core.i18n.AppLocaleStore
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.sources.agro.AgroHandoffPublisher
 import com.wander.android.ui.WanderApp
+import com.wander.android.ui.screens.startup.DatabaseTooOldScreen
 import com.wander.android.ui.theme.WanderTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -41,13 +43,19 @@ class MainActivity : ComponentActivity() {
         super.attachBaseContext(AppLocaleStore.wrap(newBase))
     }
 
+    /** Set when the database is too old to open; nothing that would query it may run. */
+    private var databaseTooOld = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        intentHandler.handleIntent(lifecycleScope, intent)
-        // Announces the device once per launch. Without it the server only ever heard from Wanda
-        // at pairing time, so a device that had been restarted looked gone.
-        agroHandoffPublisher.register()
+        databaseTooOld = DatabaseCompatibility.isTooOld(this)
+        if (!databaseTooOld) {
+            intentHandler.handleIntent(lifecycleScope, intent)
+            // Announces the device once per launch. Without it the server only ever heard from Wanda
+            // at pairing time, so a device that had been restarted looked gone.
+            agroHandoffPublisher.register()
+        }
 
         setContent {
             val amoled by secureStorage.isAmoledBlack.collectAsStateWithLifecycle()
@@ -55,7 +63,7 @@ class MainActivity : ComponentActivity() {
             val reduceMotion by secureStorage.isReduceMotion.collectAsStateWithLifecycle()
 
             WanderTheme(dynamicColor = monet, amoledBlack = amoled, reduceMotion = reduceMotion) {
-                WanderApp(playerConnection = playerConnection)
+                if (databaseTooOld) DatabaseTooOldScreen() else WanderApp(playerConnection = playerConnection)
             }
         }
     }
@@ -63,7 +71,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        intentHandler.handleIntent(lifecycleScope, intent)
+        if (!databaseTooOld) intentHandler.handleIntent(lifecycleScope, intent)
     }
 
     override fun onStart() {

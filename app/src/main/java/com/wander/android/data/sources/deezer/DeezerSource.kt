@@ -45,6 +45,9 @@ class DeezerSource @Inject constructor(
     /** Deezer allows searching and browsing catalog metadata even before signing in. */
     override val isSearchable: StateFlow<Boolean> = ALWAYS_SEARCHABLE
 
+    /** Streams are only decryptable with the account's session, so signed out there is nothing to play. */
+    override val isStreamable: StateFlow<Boolean> = accountManager.isLoggedIn
+
     override suspend fun search(query: String): Result<List<UnifiedTrack>> =
         apiClient.searchTracks(query)
 

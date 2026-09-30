@@ -793,4 +793,11 @@
     <string name="sleep_timer_end_of_track">End of track</string>
     <string name="sleep_timer_off">Turn off timer</string>
     <string name="sleep_timer_remaining">%1$s left</string>
+    <string name="db_too_old_title">Les données de Wanda sont trop anciennes</string>
+    <string name="db_too_old_message">Cette version de Wanda ne peut plus mettre à jour la bibliothèque stockée sur cet appareil. Réinitialisez-la pour repartir de zéro : vos favoris, playlists, historique d\'écoute et cache de bibliothèque sur cet appareil seront effacés. Rien n\'est modifié sur vos serveurs.</string>
+    <string name="db_too_old_reset">Réinitialiser la bibliothèque</string>
+    <string name="db_too_old_open_settings">Paramètres de l\'app</string>
+    <string name="db_too_old_reset_confirm_title">Effacer la bibliothèque locale ?</string>
+    <string name="db_too_old_reset_confirm_message">Cela supprime définitivement vos favoris, playlists et historique d\'écoute stockés sur cet appareil. Cette action est irréversible.</string>
+    <string name="db_too_old_reset_confirm">Effacer et redémarrer</string>
 </resources>

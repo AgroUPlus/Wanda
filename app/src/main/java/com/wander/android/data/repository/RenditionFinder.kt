@@ -52,9 +52,7 @@ class RenditionFinder @Inject constructor(
             .joinToString(" ")
         if (query.isBlank()) return@coroutineScope listOf(track)
 
-        val others = musicRepository.searchableSources()
-            .map { it.sourceType }
-            .filter { it != track.source }
+        val others = alternativeSources(track)
 
         val found = others
             .map { source ->
@@ -103,5 +101,11 @@ class RenditionFinder @Inject constructor(
      */
     fun canSwitch(track: UnifiedTrack, durationMs: Long): Boolean =
         durationMs > 0L &&
-            musicRepository.searchableSources().any { it.sourceType != track.source }
+            alternativeSources(track).isNotEmpty()
+
+    /** Sources other than the playing one that can be searched and would actually play what they return. */
+    private fun alternativeSources(track: UnifiedTrack): List<SourceType> =
+        musicRepository.searchableSources()
+            .filter { it.isStreamable.value && it.sourceType != track.source }
+            .map { it.sourceType }
 }
