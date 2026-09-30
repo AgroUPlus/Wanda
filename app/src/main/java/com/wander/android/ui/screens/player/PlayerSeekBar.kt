@@ -114,14 +114,11 @@ private fun PlayerSeekBarInternal(
     // to the pre-seek `positionMs` for the frame or two before the player reports the new one.
     var pendingSeekFraction by remember { mutableFloatStateOf(-1f) }
     val haptics = rememberHaptics()
-    val fraction = if (scrubbing >= 0f) {
-        scrubbing
-    } else if (pendingSeekFraction >= 0f) {
-        pendingSeekFraction
-    } else if (durationMs > 0L) {
-        (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
-    } else {
-        0f
+    val fraction = when {
+        scrubbing >= 0f -> scrubbing
+        pendingSeekFraction >= 0f -> pendingSeekFraction
+        durationMs > 0L -> (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
+        else -> 0f
     }
 
     // Once `positionMs` actually reflects the seek (or it's been long enough that it evidently

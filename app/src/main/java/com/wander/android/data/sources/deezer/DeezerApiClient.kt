@@ -1,6 +1,7 @@
 package com.wander.android.data.sources.deezer
 
 import com.wander.android.data.model.ArtistDetails
+import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedArtist
 import com.wander.android.data.model.UnifiedTrack
@@ -67,7 +68,7 @@ class DeezerApiClient @Inject constructor(
     }
 
     suspend fun getTrack(trackId: String): Result<UnifiedTrack?> = withContext(Dispatchers.IO) {
-        val cleanId = trackId.removePrefix("deezer:")
+        val cleanId = trackId.removePrefix(ID_PREFIX)
         val url = "$BASE_URL/track/$cleanId"
         fetchJson(url).map { root ->
             DeezerParsing.parseTrack(root.jsonObject)
@@ -75,7 +76,7 @@ class DeezerApiClient @Inject constructor(
     }
 
     suspend fun getAlbum(albumId: String): Result<UnifiedAlbum?> = withContext(Dispatchers.IO) {
-        val cleanId = albumId.removePrefix("deezer:")
+        val cleanId = albumId.removePrefix(ID_PREFIX)
         val url = "$BASE_URL/album/$cleanId"
         fetchJson(url).map { root ->
             DeezerParsing.parseAlbum(root.jsonObject)
@@ -83,7 +84,7 @@ class DeezerApiClient @Inject constructor(
     }
 
     suspend fun getAlbumTracks(albumId: String): Result<List<UnifiedTrack>> = withContext(Dispatchers.IO) {
-        val cleanId = albumId.removePrefix("deezer:")
+        val cleanId = albumId.removePrefix(ID_PREFIX)
         val url = "$BASE_URL/album/$cleanId/tracks"
         fetchJson(url).map { root ->
             val data = root.jsonObject["data"]?.jsonArray ?: return@map emptyList()
@@ -92,7 +93,7 @@ class DeezerApiClient @Inject constructor(
     }
 
     suspend fun getArtist(artistId: String): Result<ArtistDetails> = withContext(Dispatchers.IO) {
-        val cleanId = artistId.removePrefix("deezer:")
+        val cleanId = artistId.removePrefix(ID_PREFIX)
         val artistUrl = "$BASE_URL/artist/$cleanId"
         val topTracksUrl = "$BASE_URL/artist/$cleanId/top?limit=20"
         val albumsUrl = "$BASE_URL/artist/$cleanId/albums?limit=25"
@@ -117,7 +118,7 @@ class DeezerApiClient @Inject constructor(
     }
 
     suspend fun getTrackRadio(trackId: String): Result<List<UnifiedTrack>> = withContext(Dispatchers.IO) {
-        val cleanId = trackId.removePrefix("deezer:")
+        val cleanId = trackId.removePrefix(ID_PREFIX)
         val url = "$BASE_URL/track/$cleanId/radio"
         fetchJson(url).map { root ->
             val data = root.jsonObject["data"]?.jsonArray ?: return@map emptyList()
@@ -144,5 +145,6 @@ class DeezerApiClient @Inject constructor(
 
     private companion object {
         const val BASE_URL = "https://api.deezer.com"
+        val ID_PREFIX = SourceType.DEEZER.idPrefix
     }
 }

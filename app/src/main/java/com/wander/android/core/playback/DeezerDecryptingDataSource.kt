@@ -83,10 +83,8 @@ internal class DeezerDecryptingDataSource(
 
         var totalRead = 0
         while (totalRead < length) {
-            if (chunkBufferPos >= chunkBufferLimit) {
-                if (!fillChunkBuffer(activeCipher)) {
-                    return if (totalRead > 0) totalRead else C.RESULT_END_OF_INPUT
-                }
+            if (chunkBufferPos >= chunkBufferLimit && !fillChunkBuffer(activeCipher)) {
+                return if (totalRead > 0) totalRead else C.RESULT_END_OF_INPUT
             }
 
             val available = chunkBufferLimit - chunkBufferPos
