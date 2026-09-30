@@ -2,6 +2,7 @@ package com.wander.android.di
 
 import android.content.Context
 import androidx.room.Room
+import com.wander.android.core.database.DATABASE_NAME
 import com.wander.android.core.database.WANDER_MIGRATIONS
 import com.wander.android.core.database.WanderDatabase
 import com.wander.android.core.database.dao.AlbumDao
@@ -31,7 +32,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): WanderDatabase =
-        Room.databaseBuilder(context, WanderDatabase::class.java, "wanda_music.db")
+        Room.databaseBuilder(context, WanderDatabase::class.java, DATABASE_NAME)
             // Real migrations, deliberately with no destructive fallback. The tracks table now
             // carries library-sync state — a content hash that costs minutes of hashing to
             // rebuild, and the record of which files the server has confirmed — so dropping it on

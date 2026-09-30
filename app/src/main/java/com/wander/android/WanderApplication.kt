@@ -13,6 +13,7 @@ import coil3.disk.directory
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.wander.android.core.cache.DownloadScheduler
+import com.wander.android.core.database.DatabaseCompatibility
 import com.wander.android.core.network.HttpClientFactory
 import com.wander.android.core.sync.ScrobbleSyncScheduler
 import com.zemer.cipher.ZemerCipher
@@ -87,6 +88,9 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
 
     override fun onCreate() {
         super.onCreate()
+        // A database too old for any migration cannot be opened, and everything below either
+        // queries it or starts something that does. MainActivity explains the situation instead.
+        if (DatabaseCompatibility.isTooOld(this)) return
         downloadScheduler.scheduleAutoDownload()
         com.wander.android.core.audio.fingerprint.FingerprintIndexing.schedulePeriodic(
             this,
