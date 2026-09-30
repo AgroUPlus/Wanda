@@ -148,27 +148,31 @@ fun TrackActionsSheet(
 
                 val actions = buildTrackActionsList(
                     track = track,
-                    playable = playable,
-                    liked = liked,
-                    likeLabel = likeLabel,
-                    removeFromQueue = removeFromQueue,
-                    deleteOffline = deleteOffline,
-                    jamState = jamState,
+                    state = TrackActionState(
+                        playable = playable,
+                        liked = liked,
+                        hasDropFriends = dropFriends.isNotEmpty(),
+                        jamState = jamState
+                    ),
+                    labels = TrackActionLabels(likeLabel, removeFromQueue, deleteOffline),
+                    callbacks = TrackActionCallbacks(
+                        onPlayNext = onPlayNext,
+                        onAddToQueue = onAddToQueue,
+                        onToggleLike = onToggleLike,
+                        onShare = onShare,
+                        onAddToPlaylist = onAddToPlaylist,
+                        onStartRadio = onStartRadio,
+                        onOpenArtist = onOpenArtist,
+                        onRemove = onRemove,
+                        onDeleteDownload = onDeleteDownload
+                    ),
                     jamViewModel = jamViewModel,
-                    hasDropFriends = dropFriends.isNotEmpty(),
-                    onPlayNext = onPlayNext,
-                    onAddToQueue = onAddToQueue,
-                    onToggleLike = onToggleLike,
-                    onShare = onShare,
-                    onAddToPlaylist = onAddToPlaylist,
-                    onStartRadio = onStartRadio,
-                    onOpenArtist = onOpenArtist,
-                    onRemove = onRemove,
-                    onDeleteDownload = onDeleteDownload,
-                    onToggleLikedState = { liked = !liked },
-                    onPickFriend = { pickingFriend = true },
-                    onChooseShare = { choosingShare = true },
-                    animatedDismiss = animatedDismiss
+                    sheet = TrackActionSheetFlow(
+                        onToggleLikedState = { liked = !liked },
+                        onPickFriend = { pickingFriend = true },
+                        onChooseShare = { choosingShare = true },
+                        animatedDismiss = animatedDismiss
+                    )
                 )
 
                 MenuSheetPager(

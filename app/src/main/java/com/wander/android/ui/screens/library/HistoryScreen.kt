@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -28,12 +29,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
 import com.wander.android.R
 import com.wander.android.data.model.HistoryTrack
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.ui.components.AddToPlaylistController
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.GroupedInnerRadius
@@ -77,25 +80,7 @@ internal fun HistoryScreen(
     val addToPlaylist = AddToPlaylistHost()
 
     actionsFor?.let { track ->
-        TrackActionsSheet(
-            track = track,
-            isLiked = track.isLiked,
-            onPlayNext = { viewModel.playNext(track) },
-            onAddToQueue = { viewModel.addToQueue(track) },
-            onStartRadio = { viewModel.startRadio(track) },
-            onToggleLike = { viewModel.toggleLike(track) },
-            onRemove = null,
-            onOpenArtist = track.artist
-                .takeIf { it.isNotBlank() }
-                ?.let { artist -> { onOpenArtist(artist, track.artistId) } },
-            onDismiss = { actionsFor = null },
-            onShare = null,
-            onAddToPlaylist = if (addToPlaylist.canAdd(track)) {
-                { addToPlaylist.open(track) }
-            } else {
-                null
-            }
-        )
+        HistoryTrackActions(track, viewModel, addToPlaylist, onOpenArtist) { actionsFor = null }
     }
 
     Column(modifier = Modifier
@@ -110,67 +95,122 @@ internal fun HistoryScreen(
         }
 
         if (plays.itemCount == 0) {
-            if (plays.loadState.refresh is LoadState.Loading) {
-                Column(modifier = Modifier.fillMaxSize().padding(contentPadding.listInset())) {
-                    repeat(SKELETON_ROWS) {
+            HistoryPlaceholder(plays, contentPadding)
+        } else {
+            LazyColumn(
+                contentPadding = contentPadding.listInset(),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                historyItems(plays, zone, viewModel) { actionsFor = it }
+                if (plays.loadState.append is LoadState.Loading) {
+                    items(count = 3, key = { "history_skeleton_$it" }, contentType = { "skeleton" }) {
                         SkeletonRow(leadingSize = 48.dp, leadingShape = MaterialTheme.shapes.extraSmall)
                     }
                 }
-                return@Column
-            }
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                EmptyState(
-                    title = stringResource(R.string.library_nothing_played_yet),
-                    message = stringResource(R.string.library_everything_play_turns_up_here)
-                )
-            }
-            return@Column
-        }
-
-        LazyColumn(
-            contentPadding = contentPadding.listInset(),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(
-                count = plays.itemCount,
-                key = plays.itemKey { it.historyId },
-                contentType = plays.itemContentType { "play" }
-            ) { index ->
-                val entry = plays[index] ?: return@items
-                val previous = if (index > 0) plays.peek(index - 1) else null
-                val next = if (index < plays.itemCount - 1) plays.peek(index + 1) else null
-                val isFirstOfDay = previous == null || !sameDay(previous.playedAt, entry.playedAt, zone)
-                val isLastOfDay = next == null || !sameDay(next.playedAt, entry.playedAt, zone)
-
-                val entranceScale = rememberShelfEntranceScale(index)
-                Column(modifier = Modifier.scale(entranceScale)) {
-                    if (isFirstOfDay) {
-                        HistoryDateDivider(dayMillis = entry.playedAt, zone = zone)
-                    }
-                    HistoryRow(
-                        entry = entry,
-                        isFirstOfDay = isFirstOfDay,
-                        isLastOfDay = isLastOfDay,
-                        onPlay = {
-                            // Queues from what is currently loaded, not the whole log: a play log
-                            // has no natural "everything after this" the way an album does, so the
-                            // queue is exactly the window already on screen, same as before paging.
-                            val loaded = plays.itemSnapshotList.filterNotNull()
-                            val playIndex = loaded.indexOfFirst { it.historyId == entry.historyId }
-                            viewModel.play(loaded.map { it.track }, playIndex.coerceAtLeast(0))
-                        },
-                        onToggleLike = { viewModel.toggleLike(entry.track) },
-                        onLongPress = { actionsFor = entry.track },
-                        zone = zone
-                    )
-                }
-            }
-            if (plays.loadState.append is LoadState.Loading) {
-                items(count = 3, key = { "history_skeleton_$it" }, contentType = { "skeleton" }) {
-                    SkeletonRow(leadingSize = 48.dp, leadingShape = MaterialTheme.shapes.extraSmall)
-                }
             }
         }
+    }
+}
+
+@Composable
+private fun HistoryTrackActions(
+    track: UnifiedTrack,
+    viewModel: HistoryViewModel,
+    addToPlaylist: AddToPlaylistController,
+    onOpenArtist: (String, String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    TrackActionsSheet(
+        track = track,
+        isLiked = track.isLiked,
+        onPlayNext = { viewModel.playNext(track) },
+        onAddToQueue = { viewModel.addToQueue(track) },
+        onStartRadio = { viewModel.startRadio(track) },
+        onToggleLike = { viewModel.toggleLike(track) },
+        onRemove = null,
+        onOpenArtist = track.artist
+            .takeIf { it.isNotBlank() }
+            ?.let { artist -> { onOpenArtist(artist, track.artistId) } },
+        onDismiss = onDismiss,
+        onShare = null,
+        onAddToPlaylist = if (addToPlaylist.canAdd(track)) {
+            { addToPlaylist.open(track) }
+        } else {
+            null
+        }
+    )
+}
+
+/** What shows while the log has no rows yet: skeletons while the first page loads, else the empty state. */
+@Composable
+private fun HistoryPlaceholder(plays: LazyPagingItems<HistoryTrack>, contentPadding: PaddingValues) {
+    if (plays.loadState.refresh is LoadState.Loading) {
+        Column(modifier = Modifier.fillMaxSize().padding(contentPadding.listInset())) {
+            repeat(SKELETON_ROWS) {
+                SkeletonRow(leadingSize = 48.dp, leadingShape = MaterialTheme.shapes.extraSmall)
+            }
+        }
+        return
+    }
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        EmptyState(
+            title = stringResource(R.string.library_nothing_played_yet),
+            message = stringResource(R.string.library_everything_play_turns_up_here)
+        )
+    }
+}
+
+private fun LazyListScope.historyItems(
+    plays: LazyPagingItems<HistoryTrack>,
+    zone: ZoneId,
+    viewModel: HistoryViewModel,
+    onLongPress: (UnifiedTrack) -> Unit
+) {
+    items(
+        count = plays.itemCount,
+        key = plays.itemKey { it.historyId },
+        contentType = plays.itemContentType { "play" }
+    ) { index ->
+        val entry = plays[index] ?: return@items
+        HistoryEntry(plays, index, entry, zone, viewModel, onLongPress)
+    }
+}
+
+@Composable
+private fun HistoryEntry(
+    plays: LazyPagingItems<HistoryTrack>,
+    index: Int,
+    entry: HistoryTrack,
+    zone: ZoneId,
+    viewModel: HistoryViewModel,
+    onLongPress: (UnifiedTrack) -> Unit
+) {
+    val previous = if (index > 0) plays.peek(index - 1) else null
+    val next = if (index < plays.itemCount - 1) plays.peek(index + 1) else null
+    val isFirstOfDay = previous == null || !sameDay(previous.playedAt, entry.playedAt, zone)
+    val isLastOfDay = next == null || !sameDay(next.playedAt, entry.playedAt, zone)
+
+    val entranceScale = rememberShelfEntranceScale(index)
+    Column(modifier = Modifier.scale(entranceScale)) {
+        if (isFirstOfDay) {
+            HistoryDateDivider(dayMillis = entry.playedAt, zone = zone)
+        }
+        HistoryRow(
+            entry = entry,
+            isFirstOfDay = isFirstOfDay,
+            isLastOfDay = isLastOfDay,
+            onPlay = {
+                // Queues from what is currently loaded, not the whole log: a play log
+                // has no natural "everything after this" the way an album does, so the
+                // queue is exactly the window already on screen, same as before paging.
+                val loaded = plays.itemSnapshotList.filterNotNull()
+                val playIndex = loaded.indexOfFirst { it.historyId == entry.historyId }
+                viewModel.play(loaded.map { it.track }, playIndex.coerceAtLeast(0))
+            },
+            onToggleLike = { viewModel.toggleLike(entry.track) },
+            onLongPress = { onLongPress(entry.track) },
+            zone = zone
+        )
     }
 }
 

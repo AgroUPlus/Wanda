@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.ui.components.AddToPlaylistController
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.AlbumActionsSheet
 import com.wander.android.ui.components.CompactHeroTopBar
@@ -64,54 +65,11 @@ internal fun ArtistScreen(
     val addToPlaylist = AddToPlaylistHost()
 
     actionsFor?.let { track ->
-        TrackActionsSheet(
-            track = track,
-            isLiked = track.isLiked,
-            onPlayNext = { viewModel.playNext(track) },
-            onAddToQueue = { viewModel.addToQueue(track) },
-            onStartRadio = { viewModel.startRadio(track) },
-            onToggleLike = { viewModel.toggleLike(track) },
-            onRemove = null,
-            onDismiss = { actionsFor = null },
-            onShare = if (viewModel.canShare(track)) {
-                { viewModel.share(track) }
-            } else {
-                null
-            },
-            onAddToPlaylist = if (addToPlaylist.canAdd(track)) {
-                { addToPlaylist.open(track) }
-            } else {
-                null
-            }
-        )
+        ArtistTrackActions(track, viewModel, addToPlaylist) { actionsFor = null }
     }
 
     albumActionsFor?.let { album ->
-        AlbumActionsSheet(
-            album = album,
-            onPlay = {
-                viewModel.playAlbum(album)
-                albumActionsFor = null
-            },
-            onPlayNext = {
-                viewModel.playAlbumNext(album)
-                albumActionsFor = null
-            },
-            onAddToQueue = {
-                viewModel.addAlbumToQueue(album)
-                albumActionsFor = null
-            },
-            onDismiss = { albumActionsFor = null },
-            onShare = if (viewModel.canShareAlbum(album)) {
-                { viewModel.shareAlbum(album) }
-            } else null,
-            onAddToPlaylist = {
-                viewModel.getAlbumTracks(album) { tracks ->
-                    addToPlaylist.openForTracks(tracks, album.source)
-                }
-                albumActionsFor = null
-            }
-        )
+        ArtistAlbumActions(album, viewModel, addToPlaylist) { albumActionsFor = null }
     }
 
     // A single Box rather than a header above a list: the portrait runs to the top of the window,
@@ -229,3 +187,66 @@ private fun artistSubtitle(albumCount: Int, trackCount: Int): String = listOfNot
     albumCount.takeIf { it > 0 }?.let { "$it album${if (it == 1) "" else "s"}" },
     trackCount.takeIf { it > 0 }?.let { "$it track${if (it == 1) "" else "s"}" }
 ).joinToString(" · ")
+
+@Composable
+private fun ArtistTrackActions(
+    track: UnifiedTrack,
+    viewModel: ArtistViewModel,
+    addToPlaylist: AddToPlaylistController,
+    onDismiss: () -> Unit
+) {
+    TrackActionsSheet(
+        track = track,
+        isLiked = track.isLiked,
+        onPlayNext = { viewModel.playNext(track) },
+        onAddToQueue = { viewModel.addToQueue(track) },
+        onStartRadio = { viewModel.startRadio(track) },
+        onToggleLike = { viewModel.toggleLike(track) },
+        onRemove = null,
+        onDismiss = onDismiss,
+        onShare = if (viewModel.canShare(track)) {
+            { viewModel.share(track) }
+        } else {
+            null
+        },
+        onAddToPlaylist = if (addToPlaylist.canAdd(track)) {
+            { addToPlaylist.open(track) }
+        } else {
+            null
+        }
+    )
+}
+
+@Composable
+private fun ArtistAlbumActions(
+    album: UnifiedAlbum,
+    viewModel: ArtistViewModel,
+    addToPlaylist: AddToPlaylistController,
+    onDismiss: () -> Unit
+) {
+    AlbumActionsSheet(
+        album = album,
+        onPlay = {
+            viewModel.playAlbum(album)
+            onDismiss()
+        },
+        onPlayNext = {
+            viewModel.playAlbumNext(album)
+            onDismiss()
+        },
+        onAddToQueue = {
+            viewModel.addAlbumToQueue(album)
+            onDismiss()
+        },
+        onDismiss = onDismiss,
+        onShare = if (viewModel.canShareAlbum(album)) {
+            { viewModel.shareAlbum(album) }
+        } else null,
+        onAddToPlaylist = {
+            viewModel.getAlbumTracks(album) { tracks ->
+                addToPlaylist.openForTracks(tracks, album.source)
+            }
+            onDismiss()
+        }
+    )
+}

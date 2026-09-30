@@ -16,70 +16,110 @@ import com.wander.android.data.sources.agro.JamMode
 import com.wander.android.ui.screens.social.JamUiState
 import com.wander.android.ui.screens.social.JamViewModel
 
+/** What the sheet knows about the track and session when it builds its actions. */
+internal class TrackActionState(
+    val playable: Boolean,
+    val liked: Boolean,
+    val hasDropFriends: Boolean,
+    val jamState: JamUiState
+)
+
+/** Text for the actions whose labels depend on a string resource. */
+internal class TrackActionLabels(val like: String, val removeFromQueue: String, val deleteOffline: String)
+
+/** What each action does; a null callback means the caller does not offer that action. */
+internal class TrackActionCallbacks(
+    val onPlayNext: () -> Unit,
+    val onAddToQueue: () -> Unit,
+    val onToggleLike: (() -> Unit)?,
+    val onShare: (() -> Unit)?,
+    val onAddToPlaylist: (() -> Unit)?,
+    val onStartRadio: (() -> Unit)?,
+    val onOpenArtist: (() -> Unit)?,
+    val onRemove: (() -> Unit)?,
+    val onDeleteDownload: (() -> Unit)?
+)
+
+/** The sheet's own state changes an action can trigger. */
+internal class TrackActionSheetFlow(
+    val onToggleLikedState: () -> Unit,
+    val onPickFriend: () -> Unit,
+    val onChooseShare: () -> Unit,
+    val animatedDismiss: () -> Unit
+)
+
 /**
  * Builds the contextual actions available for a track in [TrackActionsSheet].
  */
 internal fun buildTrackActionsList(
     track: UnifiedTrack,
-    playable: Boolean,
-    liked: Boolean,
-    likeLabel: String,
-    removeFromQueue: String,
-    deleteOffline: String,
-    jamState: JamUiState,
+    state: TrackActionState,
+    labels: TrackActionLabels,
+    callbacks: TrackActionCallbacks,
     jamViewModel: JamViewModel,
-    hasDropFriends: Boolean,
-    onPlayNext: () -> Unit,
-    onAddToQueue: () -> Unit,
-    onToggleLike: (() -> Unit)?,
-    onShare: (() -> Unit)?,
-    onAddToPlaylist: (() -> Unit)?,
-    onStartRadio: (() -> Unit)?,
-    onOpenArtist: (() -> Unit)?,
-    onRemove: (() -> Unit)?,
-    onDeleteDownload: (() -> Unit)?,
-    onToggleLikedState: () -> Unit,
-    onPickFriend: () -> Unit,
-    onChooseShare: () -> Unit,
-    animatedDismiss: () -> Unit
+    sheet: TrackActionSheetFlow
 ): List<MenuAction> = buildList {
-    if (playable) {
-        add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, "Play next", ActionEmphasis.PRIMARY) { onPlayNext(); animatedDismiss() })
-        add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, "Queue", ActionEmphasis.SECONDARY) { onAddToQueue(); animatedDismiss() })
+    val dismiss = sheet.animatedDismiss
+    if (state.playable) {
+        add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, "Play next", ActionEmphasis.PRIMARY) { callbacks.onPlayNext(); dismiss() })
+        add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, "Queue", ActionEmphasis.SECONDARY) { callbacks.onAddToQueue(); dismiss() })
     }
-    onToggleLike?.let {
-        add(
-            MenuAction(
-                icon = if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                label = likeLabel,
-                emphasis = ActionEmphasis.ICON,
-                selected = liked
-            ) {
-                onToggleLikedState()
-                it()
-            }
-        )
+    addLikeAction(state, labels, callbacks, sheet)
+    addShareAction(state, callbacks, sheet)
+    callbacks.onAddToPlaylist?.let {
+        add(MenuAction(Icons.Rounded.LibraryAdd, "Add to playlist", ActionEmphasis.ICON) { it(); dismiss() })
     }
-    if (onShare != null || hasDropFriends) {
-        add(MenuAction(Icons.Rounded.Share, "Share", ActionEmphasis.ICON) {
-            if (onShare == null) onPickFriend() else onChooseShare()
-        })
+    if (state.playable) {
+        callbacks.onStartRadio?.let { add(MenuAction(Icons.Rounded.Radio, "Radio") { it(); dismiss() }) }
+        callbacks.onOpenArtist?.let { add(MenuAction(Icons.Rounded.Person, "Artist") { it(); dismiss() }) }
     }
-    onAddToPlaylist?.let {
-        add(MenuAction(Icons.Rounded.LibraryAdd, "Add to playlist", ActionEmphasis.ICON) { it(); animatedDismiss() })
+    addJamAction(track, state, jamViewModel, dismiss)
+    callbacks.onRemove?.let {
+        add(MenuAction(Icons.Rounded.Delete, labels.removeFromQueue, ActionEmphasis.DANGER) { it(); dismiss() })
     }
-    if (playable) {
-        onStartRadio?.let { add(MenuAction(Icons.Rounded.Radio, "Radio") { it(); animatedDismiss() }) }
-        onOpenArtist?.let { add(MenuAction(Icons.Rounded.Person, "Artist") { it(); animatedDismiss() }) }
+    callbacks.onDeleteDownload?.let {
+        add(MenuAction(Icons.Rounded.Delete, labels.deleteOffline, ActionEmphasis.DANGER) { it(); dismiss() })
     }
-    jamState.jam?.let { jam ->
-        val label = if (jam.mode == JamMode.DEMOCRACY) "Suggest" else "Jam"
-        add(MenuAction(Icons.Rounded.Groups, label) { jamViewModel.suggest(track); animatedDismiss() })
-    }
-    onRemove?.let {
-        add(MenuAction(Icons.Rounded.Delete, removeFromQueue, ActionEmphasis.DANGER) { it(); animatedDismiss() })
-    }
-    onDeleteDownload?.let {
-        add(MenuAction(Icons.Rounded.Delete, deleteOffline, ActionEmphasis.DANGER) { it(); animatedDismiss() })
-    }
+}
+
+private fun MutableList<MenuAction>.addLikeAction(
+    state: TrackActionState,
+    labels: TrackActionLabels,
+    callbacks: TrackActionCallbacks,
+    sheet: TrackActionSheetFlow
+) {
+    val toggleLike = callbacks.onToggleLike ?: return
+    add(
+        MenuAction(
+            icon = if (state.liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+            label = labels.like,
+            emphasis = ActionEmphasis.ICON,
+            selected = state.liked
+        ) {
+            sheet.onToggleLikedState()
+            toggleLike()
+        }
+    )
+}
+
+private fun MutableList<MenuAction>.addShareAction(
+    state: TrackActionState,
+    callbacks: TrackActionCallbacks,
+    sheet: TrackActionSheetFlow
+) {
+    if (callbacks.onShare == null && !state.hasDropFriends) return
+    add(MenuAction(Icons.Rounded.Share, "Share", ActionEmphasis.ICON) {
+        if (callbacks.onShare == null) sheet.onPickFriend() else sheet.onChooseShare()
+    })
+}
+
+private fun MutableList<MenuAction>.addJamAction(
+    track: UnifiedTrack,
+    state: TrackActionState,
+    jamViewModel: JamViewModel,
+    dismiss: () -> Unit
+) {
+    val jam = state.jamState.jam ?: return
+    val label = if (jam.mode == JamMode.DEMOCRACY) "Suggest" else "Jam"
+    add(MenuAction(Icons.Rounded.Groups, label) { jamViewModel.suggest(track); dismiss() })
 }

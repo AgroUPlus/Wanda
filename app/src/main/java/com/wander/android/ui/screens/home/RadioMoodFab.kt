@@ -22,6 +22,7 @@ import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.FloatingActionButtonMenu
 import androidx.compose.material3.FloatingActionButtonMenuItem
+import androidx.compose.material3.FloatingActionButtonMenuScope
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -77,14 +78,6 @@ internal fun RadioMoodFab(
     var expanded by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(visible) { if (!visible) expanded = false }
 
-    val pulseTransition = rememberInfiniteTransition(label = "radio-fab")
-    val pulse by pulseTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0.6f,
-        animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-        label = "radio-pulse"
-    )
-
     val motion = MaterialTheme.motionScheme
     AnimatedVisibility(
         visible = visible,
@@ -99,57 +92,13 @@ internal fun RadioMoodFab(
     ) {
         FloatingActionButtonMenu(
             expanded = expanded,
-            button = {
-                ToggleFloatingActionButton(
-                    checked = expanded,
-                    onCheckedChange = { expanded = it }
-                ) {
-                    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
-                    val spatial = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
-                    AnimatedContent(
-                        targetState = expanded,
-                        transitionSpec = {
-                            (fadeIn(effects) + scaleIn(spatial, initialScale = 0.6f))
-                                .togetherWith(fadeOut(effects) + scaleOut(spatial, targetScale = 0.6f))
-                        },
-                        label = "radio-trigger-icon"
-                    ) { isExpanded ->
-                        if (isExpanded) {
-                            Icon(
-                                imageVector = Icons.Rounded.Close,
-                                contentDescription = stringResource(R.string.action_close)
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Rounded.Radio,
-                                contentDescription = if (isStarting) {
-                                    stringResource(R.string.home_radio_starting)
-                                } else {
-                                    stringResource(R.string.home_radio_open_picker)
-                                },
-                                modifier = Modifier.graphicsLayer { alpha = if (isStarting) pulse else 1f }
-                            )
-                        }
-                    }
-                }
-            }
+            button = { RadioTrigger(expanded = expanded, isStarting = isStarting, onToggle = { expanded = it }) }
         ) {
             moods.forEach { mood ->
-                FloatingActionButtonMenuItem(
-                    onClick = { onSelectMood(mood); expanded = false },
-                    icon = { Icon(mood.icon(), contentDescription = null) },
-                    text = { Text(mood.label()) },
-                    containerColor = if (mood.key == playingMoodKey) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.secondaryContainer
-                    },
-                    contentColor = if (mood.key == playingMoodKey) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSecondaryContainer
-                    }
-                )
+                MoodMenuItem(mood = mood, playing = mood.key == playingMoodKey) {
+                    onSelectMood(mood)
+                    expanded = false
+                }
             }
             FloatingActionButtonMenuItem(
                 onClick = { onInstantRadio(); expanded = false },
@@ -160,6 +109,64 @@ internal fun RadioMoodFab(
             )
         }
     }
+}
+
+/** The menu's trigger: its icon swaps between close and radio, and pulses while a radio is starting. */
+@Composable
+private fun RadioTrigger(expanded: Boolean, isStarting: Boolean, onToggle: (Boolean) -> Unit) {
+    val pulseTransition = rememberInfiniteTransition(label = "radio-fab")
+    val pulse by pulseTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.6f,
+        animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+        label = "radio-pulse"
+    )
+    ToggleFloatingActionButton(checked = expanded, onCheckedChange = onToggle) {
+        val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+        val spatial = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+        AnimatedContent(
+            targetState = expanded,
+            transitionSpec = {
+                (fadeIn(effects) + scaleIn(spatial, initialScale = 0.6f))
+                    .togetherWith(fadeOut(effects) + scaleOut(spatial, targetScale = 0.6f))
+            },
+            label = "radio-trigger-icon"
+        ) { isExpanded ->
+            if (isExpanded) {
+                Icon(
+                    imageVector = Icons.Rounded.Close,
+                    contentDescription = stringResource(R.string.action_close)
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.Radio,
+                    contentDescription = stringResource(
+                        if (isStarting) R.string.home_radio_starting else R.string.home_radio_open_picker
+                    ),
+                    modifier = Modifier.graphicsLayer { alpha = if (isStarting) pulse else 1f }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FloatingActionButtonMenuScope.MoodMenuItem(mood: MoodPreset, playing: Boolean, onClick: () -> Unit) {
+    FloatingActionButtonMenuItem(
+        onClick = onClick,
+        icon = { Icon(mood.icon(), contentDescription = null) },
+        text = { Text(mood.label()) },
+        containerColor = if (playing) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.secondaryContainer
+        },
+        contentColor = if (playing) {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSecondaryContainer
+        }
+    )
 }
 
 /** The localized label for a [MoodPreset] — the one place its [MoodPreset.key] becomes text. */
