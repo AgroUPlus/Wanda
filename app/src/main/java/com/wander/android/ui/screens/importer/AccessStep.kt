@@ -1,6 +1,5 @@
 package com.wander.android.ui.screens.importer
 
-import android.webkit.WebView
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,8 +26,8 @@ import com.wander.android.data.importer.RawUserPlaylistSummary
  *
  * YouTube Music and Deezer both already have an account elsewhere in this app; their signed-in
  * users browse discovered library playlists instead. For every other external platform (Spotify,
- * Apple Music), an embedded [ExternalPlatformWebView] catches web cookies while playlist importing
- * is done manually via share links.
+ * Apple Music), an embedded [ExternalPlatformWebView] is there to browse to a playlist and pick up
+ * its link, which is then imported manually.
  */
 /** What the access step can ask of its host: loading playlists, signing in, and handing the web view over. */
 internal class AccessStepActions(
@@ -38,7 +37,6 @@ internal class AccessStepActions(
     val onSwitchToDirectLink: () -> Unit,
     val onOpenYouTubeLogin: () -> Unit,
     val onOpenDeezerLogin: () -> Unit,
-    val onExternalWebViewReady: (WebView) -> Unit,
     val onWebUrlChanged: (String) -> Unit,
     val onInputChange: (String) -> Unit,
     val onLoadPlaylist: () -> Unit
@@ -133,7 +131,6 @@ internal fun AccessStep(
         platform.webUrl != null && platform != PlatformType.DEEZER -> Column(modifier = modifier) {
             ExternalPlatformWebView(
                 webUrl = platform.webUrl,
-                onWebViewReady = actions.onExternalWebViewReady,
                 onUrlChanged = actions.onWebUrlChanged,
                 modifier = Modifier.fillMaxWidth().weight(1f)
             )

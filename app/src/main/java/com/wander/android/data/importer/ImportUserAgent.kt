@@ -2,7 +2,7 @@ package com.wander.android.data.importer
 
 /**
  * The browser identity behind every plain HTTP request the importer's parsers make (Spotify's
- * web-player token endpoint, Apple Music's share-page scrape) — a normal-looking mobile Chrome
+ * embed page, Apple Music's share-page scrape) — a normal-looking mobile Chrome
  * User-Agent, since some of these are unofficial endpoints that reject requests without one.
  *
  * Keep the Chrome version here current: a server that branches on UA-sniffed feature support can

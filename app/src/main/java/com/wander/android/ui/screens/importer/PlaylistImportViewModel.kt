@@ -1,6 +1,5 @@
 package com.wander.android.ui.screens.importer
 
-import android.webkit.WebView
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.data.importer.AppleMusicPlaylistParser
@@ -21,11 +20,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Apple Music's parser, and Spotify's (via the web player's anonymous token, see
- * [SpotifyPlaylistParser.parse]), read a playlist by its share link with no session at all — that
- * covers the playlists someone would actually paste in here, but not a playlist that was never
- * shared, or Liked Songs, which have no link at all; those need Spotify's real OAuth, deliberately
- * left out for now (it needs a Developer Dashboard app of the user's own to add).
+ * Spotify's parser (see [SpotifyPlaylistParser]) and Apple Music's read a playlist by its share
+ * link with no session at all — that covers the public playlists someone would actually paste in
+ * here, but not a private one.
  *
  * YouTube and Deezer are the two platforms this app already holds an account for elsewhere (see
  * [GoogleAccountManager] and [DeezerAccountManager], both signed in from Settings), so they alone
@@ -67,19 +64,6 @@ class PlaylistImportViewModel @Inject constructor(
     val progress: StateFlow<ImportProgress> = importRepository.progress
     val isYouTubeLoggedIn: StateFlow<Boolean> = googleAccountManager.isLoggedIn
     val isDeezerLoggedIn: StateFlow<Boolean> = deezerAccountManager.isLoggedIn
-
-    /**
-     * The live WebView backing the external platform's browse step, once it exists — see
-     * [ExternalPlatformWebView] and [SpotifyWebFetch].
-     * A plain field, not state: it is Android View plumbing the screen owns, not UI state to render.
-     */
-    private var externalWebView: WebView? = null
-
-    fun setExternalWebView(webView: WebView?) {
-        externalWebView = webView
-    }
-
-    fun setSpotifyWebView(webView: WebView?) = setExternalWebView(webView)
 
     fun onWebUrlChanged(url: String) {
         val detected = detectPlaylistUrl(url)
@@ -173,21 +157,16 @@ class PlaylistImportViewModel @Inject constructor(
     }
 
     fun loadPlaylist(url: String, fallbackTitle: String? = null, fallbackCover: String? = null) {
-        val fetcher: (suspend (String, Map<String, String>) -> String)? = externalWebView?.let { webView ->
-            { fetchUrl: String, headers: Map<String, String> -> webView.fetchText(fetchUrl, headers) }
-        }
         val platform = PlatformType.detect(url)
         val cookie = when (platform) {
-            PlatformType.SPOTIFY -> android.webkit.CookieManager.getInstance().getCookie("https://open.spotify.com")
-                ?: android.webkit.CookieManager.getInstance().getCookie("https://accounts.spotify.com")
             PlatformType.DEEZER -> android.webkit.CookieManager.getInstance().getCookie("https://www.deezer.com")
             PlatformType.APPLE_MUSIC -> android.webkit.CookieManager.getInstance().getCookie("https://music.apple.com")
             PlatformType.YOUTUBE -> android.webkit.CookieManager.getInstance().getCookie("https://music.youtube.com")
-            PlatformType.PLAIN_TEXT -> null
+            PlatformType.SPOTIFY, PlatformType.PLAIN_TEXT -> null
         }
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoadingPlaylist = true, error = null)
-            parserCoordinator.parsePlaylist(url, fallbackTitle, fallbackCover, fetcher, cookie).onSuccess { updated ->
+            parserCoordinator.parsePlaylist(url, fallbackTitle, fallbackCover, cookie).onSuccess { updated ->
                 _state.value = _state.value.copy(
                     isLoadingPlaylist = false,
                     loadedPlaylist = updated,

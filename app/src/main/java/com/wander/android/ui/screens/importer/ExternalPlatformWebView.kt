@@ -31,7 +31,6 @@ import com.wander.android.ui.components.webChromeClientHostingPopups
 @Composable
 internal fun ExternalPlatformWebView(
     webUrl: String,
-    onWebViewReady: (WebView) -> Unit,
     onUrlChanged: (String) -> Unit = {},
     onCookieCaptured: (String) -> Unit = {},
     modifier: Modifier = Modifier
@@ -77,7 +76,6 @@ internal fun ExternalPlatformWebView(
                             onCookieCaptured(cookie)
                         }
                         onUrlChanged(effectiveUrl)
-                        onWebViewReady(this@apply)
                     }
 
                     override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
