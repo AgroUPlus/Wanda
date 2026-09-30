@@ -172,6 +172,17 @@ internal fun LazyListScope.homeSection(
             )
         }
 
+        HomeSectionStyle.HERO_CAROUSEL -> item(
+            key = "${section.id}-row",
+            contentType = "hero-carousel"
+        ) {
+            HeroCarouselShelf(
+                tracks = section.tracks,
+                onPlay = { index -> viewModel.play(section.tracks, index) },
+                onLongPress = onLongPress
+            )
+        }
+
         HomeSectionStyle.DISCOVER_MASONRY -> item(
             key = "${section.id}-row",
             contentType = "discover-masonry"

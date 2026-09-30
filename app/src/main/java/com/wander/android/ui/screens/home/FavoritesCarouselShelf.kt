@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.Artwork
@@ -29,7 +31,7 @@ import com.wander.android.ui.components.isPlayableNow
 import com.wander.android.ui.components.scrollingTitle
 
 /**
- * "Your Favourites" as an M3 Expressive carousel — the item under your thumb sits large, its
+ * "Your Favorites" as an M3 Expressive carousel — the item under your thumb sits large, its
  * neighbours are compressed toward the edges, and scrolling continuously re-balances which one
  * is which. Replaces the hand-rolled overlapping-stack look, which had no motion of its own and
  * showed no title at all.
@@ -53,20 +55,27 @@ internal fun FavoritesCarouselShelf(
             .padding(horizontal = 20.dp)
     ) { index ->
         val track = tracks[index]
-        FavoriteCard(
+        TrackCarouselCard(
             track = track,
+            artworkSize = PreferredItemWidth,
             onPlay = { onPlay(index) },
             onLongPress = { onLongPress(track) }
         )
     }
 }
 
+/**
+ * One masked carousel item: artwork under a scrim, title over it, and optionally the artist.
+ * Shared by every carousel shelf on Home so they read as one family.
+ */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun CarouselItemScope.FavoriteCard(
+internal fun CarouselItemScope.TrackCarouselCard(
     track: UnifiedTrack,
+    artworkSize: Dp,
     onPlay: () -> Unit,
     onLongPress: () -> Unit,
+    showArtist: Boolean = false,
     enabled: Boolean = track.isPlayableNow()
 ) {
     Box(
@@ -82,7 +91,7 @@ private fun CarouselItemScope.FavoriteCard(
         Artwork(
             url = track.artworkUrl,
             contentDescription = track.title,
-            sizeDp = PreferredItemWidth,
+            sizeDp = artworkSize,
             // The outer `maskClip` already shapes this card — a second, independent clip here
             // (Artwork's own default `medium` shape) rounded the corners twice at two different
             // radii as the carousel resized the item, which looked like a seam, not one card.
@@ -101,23 +110,36 @@ private fun CarouselItemScope.FavoriteCard(
                     )
                 )
         )
-        Text(
-            text = track.title,
-            style = MaterialTheme.typography.titleSmall,
-            color = Color.White,
-            maxLines = 1,
-            overflow = TextOverflow.Clip,
+        Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(12.dp)
-                .scrollingTitle()
-        )
+        ) {
+            Text(
+                text = track.title,
+                style = MaterialTheme.typography.titleSmall,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Clip,
+                modifier = Modifier.scrollingTitle()
+            )
+            if (showArtist) {
+                Text(
+                    text = track.artist,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = ArtistAlpha),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
     }
 }
 
 /** Material's disabled-content opacity, matching `TrackRow`. */
 private const val DisabledAlpha = 0.38f
 private const val ScrimAlpha = 0.65f
+private const val ArtistAlpha = 0.8f
 
 private val PreferredItemWidth = 160.dp
 private val CarouselHeight = 200.dp

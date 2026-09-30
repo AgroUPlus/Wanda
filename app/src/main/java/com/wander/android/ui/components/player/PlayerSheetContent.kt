@@ -54,6 +54,9 @@ fun PlayerSheetContent(
     coverCarousel: Boolean = true,
 ) {
     val anchors = remember { PlayerArtworkAnchors() }
+    // In the standard layout the full player's cover is a carousel that scrolls itself; the
+    // immersive layout keeps the drag-to-skip filmstrip.
+    val playerCarousel = coverCarousel && !immersivePlayer
     var lyricsVisible by rememberSaveable { mutableStateOf(false) }
 
     val queueDrawer = rememberQueueDrawerState()
@@ -75,11 +78,16 @@ fun PlayerSheetContent(
     val fullPlayerPresent by remember { derivedStateOf { progress() > 0f } }
     val docked by remember { derivedStateOf { progress() == 0f } }
     val playerFullyOpen by remember { derivedStateOf { progress() >= QueueGestureArmed } }
+    // 0 while the travelling cover is the only one, 1 once the carousel has fully taken over.
+    val carouselHandoff = { smoothStep(progress(), CarouselHandoffStart, CarouselHandoffEnd) }
+    val carouselTookOver by remember { derivedStateOf { playerCarousel && progress() >= CarouselHandoffEnd } }
 
     LaunchedEffect(playerFullyOpen) { if (!playerFullyOpen) queueDrawer.snapTo(0f) }
     LaunchedEffect(docked) { if (docked) lyricsVisible = false }
 
     val swipe = rememberTrackSwipeState()
+    // The cover the carousel is showing while it is ahead of the player; see PlayerCoverCarousel.
+    var previewIndex by remember { mutableStateOf<Int?>(null) }
     val previousRestartsCurrent = remember(swipe.isSwiping) {
         swipe.isSwiping && playerConnection.restartsOnPrevious
     }
@@ -108,7 +116,7 @@ fun PlayerSheetContent(
         canPrevious = canPreviousMini,
         exitDistance = DockedExitDistance
     )
-    val fullSwipe = Modifier.swipeToChangeTrack(
+    val fullSwipe = if (playerCarousel) Modifier else Modifier.swipeToChangeTrack(
         state = swipe,
         onNext = playerConnection::next,
         onPrevious = playerConnection::previousTrack,
@@ -124,7 +132,7 @@ fun PlayerSheetContent(
     swipe.rememberTrackArrival(
         trackId = playback.currentTrack?.id,
         index = playback.currentIndex,
-        enabled = !docked,
+        enabled = !docked && !carouselTookOver,
         spec = MaterialTheme.motionScheme.defaultSpatialSpec()
     )
     LaunchedEffect(playback.currentTrack?.id) {
@@ -176,14 +184,16 @@ fun PlayerSheetContent(
                 progress = progress,
                 rawProgress = rawProgress,
                 visible = artworkPresent,
-                alpha = { artworkAlphaState.value },
+                // Stays opaque under the carousel while it fades in, then leaves in one step, so the
+                // two never cross-fade into a dip.
+                alpha = { if (carouselTookOver) 0f else artworkAlphaState.value },
                 swipe = swipe,
                 previousUrl = previousArtwork,
                 nextUrl = nextArtwork,
                 canPrevious = hasPreviousSong,
                 canNext = hasNextSong,
                 fingerprintStatus = fingerprintStatus,
-                carouselEnabled = coverCarousel,
+                carouselEnabled = coverCarousel && !playerCarousel,
                 isPlaying = playback.isPlaying
             )
 
@@ -213,9 +223,22 @@ fun PlayerSheetContent(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .onGloballyPositioned(anchors::onFullPositioned)
-                        )
+                        ) {
+                            if (playerCarousel) {
+                                PlayerCoverCarousel(
+                                    queue = playback.queue,
+                                    currentIndex = playback.currentIndex,
+                                    onSeekToIndex = playerConnection::seekToIndex,
+                                    onPreviewIndex = { previewIndex = it },
+                                    isPlaying = playback.isPlaying,
+                                    fingerprintStatus = fingerprintStatus,
+                                    alpha = { carouselHandoff() * artworkAlphaState.value }
+                                )
+                            }
+                        }
                     },
                     immersivePlayer = immersivePlayer,
+                    previewIndex = previewIndex,
                     modifier = Modifier.fillMaxSize()
                 )
             }
