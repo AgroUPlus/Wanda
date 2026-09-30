@@ -47,7 +47,7 @@ internal fun OffGridScreen(
     viewModel: OffGridViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val withNearby = rememberNearbyGate()
+    val withNearby = rememberNearbyGate() // NOSONAR: used inside the start-sharing lambda below
     val haptics = rememberHaptics()
 
     DisposableEffect(Unit) { onDispose { viewModel.onScreenLeft() } }

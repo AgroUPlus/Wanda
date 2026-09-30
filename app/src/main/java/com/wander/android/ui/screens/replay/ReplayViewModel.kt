@@ -103,7 +103,7 @@ internal class ReplayViewModel @Inject constructor(
                 isLoading = false,
                 deck = buildReplayDeck(report),
                 report = report,
-                isSaved = saved != null,
+                isSaved = saved != null, // NOSONAR: ReplayArchivist.saved() returns ReplayReport?, so the check is needed
                 purgeableCount = archivist.purgeableCount(year)
             )
             // After the deck is up, so the story never waits on a picture.

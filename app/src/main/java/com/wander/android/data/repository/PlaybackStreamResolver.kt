@@ -70,7 +70,7 @@ internal class PlaybackStreamResolver(
         // Tier 3: Original Source / YouTube Music
         val type = cached?.effectiveSource ?: SourceType.entries.firstOrNull {
             trackId.startsWith(it.idPrefix)
-        } ?: return@withContext Result.failure(
+        } ?: return@withContext Result.failure( // NOSONAR: firstOrNull returns null for an unknown prefix, so this elvis is needed
             IllegalArgumentException("Unrecognised track id: $trackId")
         )
 

@@ -41,7 +41,7 @@ internal fun JamScreen(
     viewModel: JamViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val withLocalNetwork = rememberLocalNetworkGate()
+    val withLocalNetwork = rememberLocalNetworkGate() // NOSONAR: used inside the onCreate/onJoin lambdas below
 
     LaunchedEffect(initialCode) {
         val clean = initialCode?.trim()?.uppercase()?.filter { it.isLetterOrDigit() }
