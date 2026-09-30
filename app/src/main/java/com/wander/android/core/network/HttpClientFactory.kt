@@ -25,7 +25,7 @@ object HttpClientFactory {
 
     private fun isLocalOrLoopback(host: String): Boolean {
         val h = host.trim('[', ']')
-        if (h.equals("localhost", ignoreCase = true) || h == "127.0.0.1" || h == "::1" || h == "10.0.2.2") {
+        if (h.equals("localhost", ignoreCase = true) || h == "127.0.0.1" || h == "::1" || h == "10.0.2.2") { // NOSONAR: loopback/emulator allowlist for the cleartext-HTTP check
             return true
         }
         if (h.endsWith(".local", ignoreCase = true)) return true

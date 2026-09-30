@@ -31,7 +31,7 @@ internal class DeezerStreamCipher(trackId: String) {
      */
     fun decryptChunk(ciphertext: ByteArray, offset: Int = 0, length: Int = ciphertext.size): ByteArray {
         require(length == CHUNK_SIZE) { "Deezer encrypted chunks must be exactly $CHUNK_SIZE bytes, got $length" }
-        val cipher = Cipher.getInstance(TRANSFORMATION)
+        val cipher = Cipher.getInstance(TRANSFORMATION) // NOSONAR: Blowfish is mandated by Deezer's stream format, not our choice
         cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec)
         return cipher.doFinal(ciphertext, offset, length)
     }
@@ -41,7 +41,7 @@ internal class DeezerStreamCipher(trackId: String) {
      */
     fun encryptChunk(plaintext: ByteArray, offset: Int = 0, length: Int = plaintext.size): ByteArray {
         require(length == CHUNK_SIZE) { "Deezer plaintext chunks must be exactly $CHUNK_SIZE bytes, got $length" }
-        val cipher = Cipher.getInstance(TRANSFORMATION)
+        val cipher = Cipher.getInstance(TRANSFORMATION) // NOSONAR: Blowfish is mandated by Deezer's stream format, not our choice
         cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec)
         return cipher.doFinal(plaintext, offset, length)
     }
@@ -50,14 +50,14 @@ internal class DeezerStreamCipher(trackId: String) {
         const val CHUNK_SIZE = 2048
         private const val ALGORITHM = "Blowfish"
         private const val TRANSFORMATION = "Blowfish/CBC/NoPadding"
-        private const val SECRET = "g4el58wc0zvf9na1"
+        private const val SECRET = "g4el58wc0zvf9na1" // NOSONAR: public constant of Deezer's key derivation, not a credential of ours
         private val IV = byteArrayOf(0, 1, 2, 3, 4, 5, 6, 7)
 
         /**
          * Computes the 16-byte Blowfish key for [trackId].
          */
         fun deriveKey(trackId: String): ByteArray {
-            val md5Hex = MessageDigest.getInstance("MD5")
+            val md5Hex = MessageDigest.getInstance("MD5") // NOSONAR: key derivation step fixed by Deezer; not used for integrity or passwords
                 .digest(trackId.toByteArray(Charsets.US_ASCII))
                 .joinToString("") { "%02x".format(it) }
 
