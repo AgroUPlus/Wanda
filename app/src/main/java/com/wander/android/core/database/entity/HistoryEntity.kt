@@ -32,7 +32,7 @@ data class HistoryEntity(
      *
      * Room always writes this column explicitly on insert, so the SQL default never decides what a
      * new play gets — that is the `false` above, which is what puts it in the outbox. The SQL
-     * default exists only so a freshly created table matches one upgraded by `MIGRATION_3_4`:
+     * default exists only so a freshly created table matches one upgraded by an earlier migration:
      * SQLite cannot add a NOT NULL column without a default, and Room refuses to open a database
      * whose columns differ from the ones it would have created.
      */
