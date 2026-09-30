@@ -69,6 +69,7 @@ internal fun StandardPlayerLayout(
     onOpenQueue: () -> Unit,
     onMinimize: () -> Unit,
     onOpenMenu: () -> Unit,
+    onOpenSourcePicker: (() -> Unit)?,
     onToggleLyrics: () -> Unit,
     contentAlpha: () -> Float,
     overlayAlpha: () -> Float,
@@ -93,11 +94,14 @@ internal fun StandardPlayerLayout(
     ) {
         PlayerTopBar(
             jam = jam,
-            sourceLabel = track.source.displayName,
+            source = PlayerSourceChip(
+                label = track.source.displayName,
+                mutedColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                onOpenPicker = onOpenSourcePicker
+            ),
             onOpenJam = onOpenJam,
             onMinimize = onMinimize,
             onOpenQueue = onOpenQueue,
-            sourceLabelColorMuted = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.graphicsLayer { alpha = contentAlpha() }
         )
 

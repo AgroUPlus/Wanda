@@ -18,6 +18,8 @@ package com.wander.android.data.model
 data class ArtistPage(
     val bio: String? = null,
     val imageUrl: String? = null,
+    /** MusicBrainz genre tags, most-used first — see `ArtistDetails.genres`. Usually empty. */
+    val genres: List<String> = emptyList(),
     /** The songs shelf merged with everything the library knows by this artist, deduplicated. */
     val topSongs: List<UnifiedTrack> = emptyList(),
     /**

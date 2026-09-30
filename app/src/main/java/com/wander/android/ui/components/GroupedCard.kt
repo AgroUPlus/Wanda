@@ -3,10 +3,13 @@ package com.wander.android.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 
 /**
  * A tonal container for a set of related rows — settings sections, and anywhere else a screen
@@ -23,10 +26,16 @@ import androidx.compose.ui.Modifier
  * the way a caller manually tracking "am I the last one" across a handful of `if`s could.
  */
 @Composable
-fun GroupedCard(modifier: Modifier = Modifier, items: List<@Composable () -> Unit>) {
+fun GroupedCard(
+    modifier: Modifier = Modifier,
+    horizontalPadding: Dp = 16.dp,
+    items: List<@Composable () -> Unit>
+) {
     Column(
         verticalArrangement = Arrangement.spacedBy(GroupedItemGap),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = horizontalPadding, vertical = 6.dp)
     ) {
         items.forEachIndexed { index, item ->
             Surface(

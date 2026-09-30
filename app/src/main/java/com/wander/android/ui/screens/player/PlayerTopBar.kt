@@ -12,10 +12,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.QueueMusic
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -32,6 +33,9 @@ import com.wander.android.data.sources.agro.Jam
 import com.wander.android.ui.components.AvatarGroup
 import com.wander.android.ui.theme.LiveIndicator
 
+/** The track's source chip: its [label], the [mutedColor] it is drawn in, and the picker it opens (if any). */
+internal class PlayerSourceChip(val label: String, val mutedColor: Color, val onOpenPicker: (() -> Unit)?)
+
 /**
  * The player's top bar: minimize on the left, a centred chip (the source name, or a live jam
  * badge when one is active) in the middle, the queue button on the right.
@@ -44,17 +48,16 @@ import com.wander.android.ui.theme.LiveIndicator
 @Composable
 internal fun PlayerTopBar(
     jam: Jam?,
-    sourceLabel: String,
+    source: PlayerSourceChip,
     onOpenJam: () -> Unit,
     onMinimize: () -> Unit,
     onOpenQueue: () -> Unit,
-    sourceLabelColorMuted: Color,
     modifier: Modifier = Modifier
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier.fillMaxWidth()) {
-        FilledTonalIconButton(onClick = onMinimize) {
+        FilledTonalIconButton(onClick = onMinimize, colors = playerOverlayButtonColors()) {
             Icon(
-                Icons.Rounded.KeyboardArrowDown,
+                Icons.Outlined.KeyboardArrowDown,
                 contentDescription = stringResource(R.string.player_minimize)
             )
         }
@@ -88,16 +91,35 @@ internal fun PlayerTopBar(
                 }
             } else {
                 Text(
-                    text = sourceLabel,
+                    text = source.label,
                     style = MaterialTheme.typography.labelLarge,
-                    color = sourceLabelColorMuted,
-                    textAlign = TextAlign.Center
+                    color = source.mutedColor,
+                    textAlign = TextAlign.Center,
+                    modifier = source.onOpenPicker?.let { Modifier.clickable(onClick = it) } ?: Modifier
                 )
             }
         }
 
-        FilledTonalIconButton(onClick = onOpenQueue) {
-            Icon(Icons.Rounded.QueueMusic, contentDescription = stringResource(R.string.player_queue))
+        FilledTonalIconButton(onClick = onOpenQueue, colors = playerOverlayButtonColors()) {
+            Icon(Icons.Outlined.QueueMusic, contentDescription = stringResource(R.string.player_queue))
         }
     }
 }
+
+/**
+ * Colors for a control that floats over the full player — minimize, queue here, the share button
+ * in [PlayerOverlayButtons] — chosen fixed rather than read off `MaterialTheme.colorScheme`.
+ *
+ * The whole app is wrapped in a cover-tinted theme while a track with cover-art theming is playing
+ * (see `CoverTintedTheme`), and a tonal container is exactly one of the roles it repaints — so a
+ * button here used to pick up the very cover's own extracted colour. A transport control floating
+ * over that same cover and dressed in its colour reads as barely there instead of discreet; a fixed
+ * neutral scrim reads as a control regardless of what is behind it.
+ */
+@Composable
+internal fun playerOverlayButtonColors() = IconButtonDefaults.filledTonalIconButtonColors(
+    containerColor = Color.Black.copy(alpha = OverlayScrimAlpha),
+    contentColor = Color.White
+)
+
+private const val OverlayScrimAlpha = 0.28f

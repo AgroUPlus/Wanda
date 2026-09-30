@@ -2,6 +2,7 @@ package com.wander.android.data.sources.agro
 
 import java.net.Inet4Address
 import java.net.NetworkInterface
+import java.net.SocketException
 
 /**
  * Where this device can be reached by its peers on the local network.
@@ -37,7 +38,7 @@ internal object LocalNetwork {
                 .filterIsInstance<Inet4Address>()
                 .firstOrNull { !it.isLoopbackAddress }
                 ?.hostAddress
-        } catch (ignored: Exception) {
+        } catch (ignored: SocketException) {
             // Enumerating interfaces can throw on a device with none up. Not being reachable is a
             // normal state, not an error worth propagating to a caller who can only ignore it.
             null

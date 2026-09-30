@@ -17,8 +17,8 @@ enum class HomeSectionStyle {
     LARGE_GRID,
     /** One oversized hero card leading a small strip of related tracks beside it. */
     FEATURED_HERO,
-    /** A row of square covers that overlap like a loose stack rather than sitting edge to edge. */
-    OVERLAPPING_STACK,
+    /** An M3 Expressive carousel: the focused item is large, its neighbours compress toward it. */
+    FAVORITES_CAROUSEL,
     /** Two rows of cards at alternating heights, scrolling sideways as a broken grid. */
     DISCOVER_MASONRY
 }

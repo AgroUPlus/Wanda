@@ -21,6 +21,9 @@ internal data class SettingsUiState(
     val navidrome: Boolean,
     val youTube: Boolean,
     val youTubeAccount: String,
+    val deezer: Boolean = false,
+    val deezerAccount: String = "",
+    val deezerTier: String = "FREE",
     val localReady: Boolean,
     val syncedNavidrome: AgroSyncedSettings?,
     val monet: Boolean,
@@ -48,6 +51,8 @@ internal data class SettingsUiState(
     val agroVisibility: com.wander.android.data.sources.agro.AgroVisibility?,
     val agroSyncSettings: Boolean,
     val agroProxyEnabled: Boolean,
+    val externalLyricsEnabled: Boolean,
+    val musicBrainzLookupEnabled: Boolean,
     val librarySync: Boolean,
     val p2pSync: Boolean,
     val serverArchive: Boolean,
@@ -90,6 +95,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val navidrome by viewModel.navidromeConnected.collectAsStateWithLifecycle()
     val youTube by viewModel.youTubeConnected.collectAsStateWithLifecycle()
     val youTubeAccount by viewModel.youTubeAccount.collectAsStateWithLifecycle()
+    val deezer by viewModel.deezerConnected.collectAsStateWithLifecycle()
     val localReady by viewModel.localAvailable.collectAsStateWithLifecycle()
     val syncedNavidrome by viewModel.syncedNavidrome.collectAsStateWithLifecycle()
     val monet by viewModel.isMonetDynamic.collectAsStateWithLifecycle()
@@ -117,6 +123,8 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val agroVisibility by viewModel.agroVisibility.collectAsStateWithLifecycle()
     val agroSyncSettings by viewModel.agroSyncSettings.collectAsStateWithLifecycle()
     val agroProxyEnabled by viewModel.agroProxyEnabled.collectAsStateWithLifecycle()
+    val externalLyricsEnabled by viewModel.externalLyricsEnabled.collectAsStateWithLifecycle()
+    val musicBrainzLookupEnabled by viewModel.musicBrainzLookupEnabled.collectAsStateWithLifecycle()
     val librarySync by viewModel.librarySyncEnabled.collectAsStateWithLifecycle()
     val p2pSync by viewModel.p2pSyncEnabled.collectAsStateWithLifecycle()
     val serverArchive by viewModel.serverArchiveEnabled.collectAsStateWithLifecycle()
@@ -143,6 +151,9 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         navidrome = navidrome,
         youTube = youTube,
         youTubeAccount = youTubeAccount,
+        deezer = deezer,
+        deezerAccount = viewModel.deezerAccount,
+        deezerTier = viewModel.deezerTier,
         localReady = localReady,
         syncedNavidrome = syncedNavidrome,
         monet = monet,
@@ -168,6 +179,8 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         agroVisibility = agroVisibility,
         agroSyncSettings = agroSyncSettings,
         agroProxyEnabled = agroProxyEnabled,
+        externalLyricsEnabled = externalLyricsEnabled,
+        musicBrainzLookupEnabled = musicBrainzLookupEnabled,
         librarySync = librarySync,
         p2pSync = p2pSync,
         serverArchive = serverArchive,

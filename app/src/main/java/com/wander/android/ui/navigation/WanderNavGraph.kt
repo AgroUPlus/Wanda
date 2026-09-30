@@ -1,60 +1,28 @@
 package com.wander.android.ui.navigation
 
-import com.wander.android.ui.components.enteringBlur
-import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.Box
-import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.runtime.Composable
-import androidx.navigation.NamedNavArgument
-import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavGraphBuilder
 import androidx.compose.material3.MotionScheme
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.ui.screens.album.AlbumScreen
 import com.wander.android.ui.screens.artist.ArtistScreen
 import com.wander.android.ui.screens.home.HomeScreen
+import com.wander.android.ui.screens.library.HistoryScreen
 import com.wander.android.ui.screens.library.LibrarySurface
-import com.wander.android.ui.screens.login.NavidromeLoginScreen
-import com.wander.android.ui.screens.login.YouTubeLoginScreen
+import com.wander.android.ui.screens.playlist.PlaylistScreen
 import com.wander.android.ui.screens.queue.QueueScreen
-import com.wander.android.ui.screens.settings.SettingsCategory
-import com.wander.android.ui.screens.settings.SettingsScreen
-import com.wander.android.ui.screens.social.ActivityScreen
-import com.wander.android.ui.screens.social.CircleScreen
-import com.wander.android.ui.screens.social.InboxScreen
-import com.wander.android.ui.screens.settings.FingerprintsScreen
-import com.wander.android.ui.screens.social.OffGridScreen
-import com.wander.android.ui.screens.social.JamScreen
-import com.wander.android.ui.screens.social.MyProfileScreen
-import com.wander.android.ui.screens.social.ProfileScreen
-import com.wander.android.ui.screens.social.SocialScreen
-import com.wander.android.ui.screens.stats.StatsScreen
-import com.wander.android.ui.screens.welcome.WelcomeScreen
 
+/**
+ * Top-level navigation graph for Wanda, wiring home, library, social, settings, and media destinations.
+ */
 fun NavGraphBuilder.wanderNavGraph(
     navController: NavHostController,
-    /**
-     * The theme's motion scheme, read once by `WanderApp`.
-     *
-     * Passed rather than read here because the transition lambdas below are not `@Composable` —
-     * see `NavTransitions`. Stable across recompositions, so it does not churn the graph.
-     */
     motion: MotionScheme,
     playerConnection: PlayerConnection,
     contentPadding: PaddingValues,
-    /**
-     * Docks the player sheet.
-     *
-     * The sheet lives in the shell, above the whole nav host, and keeps its expanded state across
-     * navigation — so a destination reached *from* the maximized player opens underneath it and
-     * cannot be seen. Screens that navigate somewhere worth looking at have to say so.
-     */
     onCollapsePlayer: () -> Unit
 ) {
     tabDestination(motion, TopLevelDestination.HOME.route) {
@@ -65,8 +33,6 @@ fun NavGraphBuilder.wanderNavGraph(
         )
     }
 
-    // The library and the search results are one destination: the dock's field turns the first
-    // into the second without moving on the back stack. See `LibrarySurface`.
     tabDestination(motion, TopLevelDestination.LIBRARY.route) {
         LibrarySurface(
             contentPadding = contentPadding,
@@ -78,113 +44,16 @@ fun NavGraphBuilder.wanderNavGraph(
         )
     }
 
-    tabDestination(motion, TopLevelDestination.FRIENDS.route) {
-        SocialScreen(
-            contentPadding = contentPadding,
-            onOpenProfile = { navController.navigateSettled(Routes.profile(it)) },
-            onOpenJam = { navController.navigateSettled(Routes.JAM) },
-            onOpenActivity = { navController.navigateSettled(Routes.ACTIVITY) },
-            onOpenOffGrid = { navController.navigateSettled(Routes.OFFGRID) },
-            onOpenMyProfile = { navController.navigateSettled(Routes.MY_PROFILE) },
-            // Straight to Sync, not the hub. This button exists because there is no Agro server
-            // paired, and pairing lives on that one page — dropping the reader at the top of
-            // Settings makes them find it, which is the job the button offered to do.
-            onOpenSettings = { navController.navigateSettled(SYNC_SETTINGS) }
-        )
-    }
-
-    // Registered before `PROFILE`, whose `profile/{username}` pattern would otherwise swallow
-    // `profile/me` and open a page about a friend called "me".
-    tabDestination(motion, Routes.MY_PROFILE) {
-        MyProfileScreen(
-            contentPadding = contentPadding,
-            onBack = navController::popBackStack,
-            onOpenStats = { navController.navigateSettled(Routes.STATS) }
-        )
-    }
-
     tabDestination(motion, Routes.HISTORY) {
-        com.wander.android.ui.screens.library.HistoryScreen(
+        HistoryScreen(
             contentPadding = contentPadding,
             onBack = navController::popBackStack,
             onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) }
         )
     }
 
-    tabDestination(motion, Routes.MERGE_PREVIEW) {
-        com.wander.android.ui.screens.settings.MergePreviewScreen(
-            contentPadding = contentPadding,
-            onBack = navController::popBackStack
-        )
-    }
-
     detailDestination(
         motion,
-        Routes.REPLAY,
-        arguments = listOf(navArgument("year") { type = NavType.IntType })
-    ) { entry ->
-        com.wander.android.ui.screens.replay.ReplayStoryScreen(
-            // Defaulted rather than asserted: a malformed deep link should open last year's recap
-            // rather than crash on the way into a celebration.
-            year = entry.arguments?.getInt("year")?.takeIf { it > 0 }
-                ?: com.wander.android.data.replay.ReplayAvailability
-                    .yearOnDemand(java.time.LocalDate.now()),
-            onDismiss = navController::popBackStack
-        )
-    }
-
-    tabDestination(motion, Routes.STATS) {
-        StatsScreen(contentPadding = contentPadding)
-    }
-
-    tabDestination(motion, Routes.SETTINGS) {
-        SettingsScreen(
-            contentPadding = contentPadding,
-            onOpenCategory = { navController.navigateSettled(Routes.settingsCategory(it.name)) }
-        )
-    }
-
-    detailDestination(
-        motion,
-        route = Routes.SETTINGS_CATEGORY,
-        arguments = listOf(navArgument("category") { type = NavType.StringType })
-    ) { entry ->
-        val category = com.wander.android.ui.screens.settings.SettingsCategory
-            .fromRoute(entry.arguments?.getString("category"))
-        // A route naming no category is not a page to guess at — pop back to the hub rather than
-        // draw an arbitrary one.
-        if (category == null) {
-            navController.popBackStack()
-        } else {
-            com.wander.android.ui.screens.settings.SettingsCategoryScreen(
-                category = category,
-                contentPadding = contentPadding,
-                onBack = navController::popBackStack,
-                onNavidromeLogin = { navController.navigateSettled(Routes.NAVIDROME_LOGIN) },
-                onYouTubeLogin = { navController.navigateSettled(Routes.YTMUSIC_LOGIN) },
-                onOpenImport = { navController.navigateSettled(Routes.IMPORT_PLAYLIST) },
-                onOpenMergePreview = { navController.navigateSettled(Routes.MERGE_PREVIEW) },
-                onOpenReplay = {
-                    navController.navigateSettled(
-                        Routes.replay(
-                            com.wander.android.data.replay.ReplayAvailability
-                                .yearOnDemand(java.time.LocalDate.now())
-                        )
-                    )
-                },
-                onOpenFingerprints = { navController.navigateSettled(Routes.FINGERPRINTS) }
-            )
-        }
-    }
-
-    detailDestination(motion, Routes.IMPORT_PLAYLIST) {
-        com.wander.android.ui.screens.importer.PlaylistImportScreen(
-            onBack = navController::popBackStack,
-            onOpenPlaylist = { navController.navigateSettled(Routes.playlist(it)) }
-        )
-    }
-
-    detailDestination(motion, 
         route = Routes.ALBUM,
         arguments = listOf(navArgument("albumId") { type = NavType.StringType })
     ) {
@@ -195,100 +64,23 @@ fun NavGraphBuilder.wanderNavGraph(
         )
     }
 
-    detailDestination(motion, 
+    detailDestination(
+        motion,
         route = Routes.PLAYLIST,
         arguments = listOf(navArgument("playlistId") { type = NavType.StringType })
     ) {
-        com.wander.android.ui.screens.playlist.PlaylistScreen(
+        PlaylistScreen(
             contentPadding = contentPadding,
             onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) },
             onBack = navController::popBackStack
         )
     }
 
-    // A profile keeps the chrome — you arrive from a friend's now-playing card, and the player
-    // that card is about must stay reachable.
-    tabDestination(motion, 
-        route = Routes.PROFILE,
-        arguments = listOf(navArgument("username") { type = NavType.StringType })
-    ) {
-        ProfileScreen(
-            contentPadding = contentPadding,
-            onBack = navController::popBackStack
-        )
-    }
-
-    detailDestination(motion, route = Routes.OFFGRID) {
-        OffGridScreen(
-            contentPadding = contentPadding,
-            onBack = navController::popBackStack
-        )
-    }
-
-    detailDestination(motion, route = Routes.FINGERPRINTS) {
-        FingerprintsScreen(
-            contentPadding = contentPadding,
-            onBack = navController::popBackStack
-        )
-    }
-
-    detailDestination(motion, route = Routes.ACTIVITY) {
-        ActivityScreen(
-            contentPadding = contentPadding,
-            onBack = navController::popBackStack,
-            onOpenThread = { navController.navigateSettled(Routes.inbox(it)) },
-            onOpenCircleRecap = { navController.navigateSettled(Routes.CIRCLE) },
-            onOpenProfile = { navController.navigateSettled(Routes.profile(it)) },
-            onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) }
-        )
-    }
-
-    detailDestination(motion, route = Routes.INBOX) { entry ->
-        InboxScreen(
-            contentPadding = contentPadding,
-            onBack = navController::popBackStack,
-            openWith = entry.arguments?.getString("username")
-        )
-    }
-
-    detailDestination(motion, route = Routes.CIRCLE) {
-        CircleScreen(
-            contentPadding = contentPadding,
-            onBack = navController::popBackStack
-        )
-    }
-
-    detailDestination(motion, 
-        route = Routes.JAM_ROUTE,
-        arguments = listOf(
-            navArgument("code") {
-                type = NavType.StringType
-                nullable = true
-                defaultValue = null
-            }
-        )
-    ) { backStackEntry ->
-        val rawCode = backStackEntry.arguments?.getString("code")
-        val initialCode = if (rawCode.isNullOrBlank() || rawCode == "{code}" || rawCode.equals("CODE", ignoreCase = true)) {
-            null
-        } else {
-            rawCode.trim().uppercase().filter { it.isLetterOrDigit() }.take(10)
-        }
-        JamScreen(
-            contentPadding = contentPadding,
-            // Same notice, same destination — see the Friends tab above.
-            onOpenSettings = { navController.navigateSettled(SYNC_SETTINGS) },
-            onBack = navController::popBackStack,
-            initialCode = initialCode
-        )
-    }
-
-    detailDestination(motion, 
+    detailDestination(
+        motion,
         route = Routes.ARTIST,
         arguments = listOf(
             navArgument("artist") { type = NavType.StringType },
-            // Optional: callers that know who they mean pass it, and the page believes them over
-            // anything it could infer from the name. See `Routes.artist`.
             navArgument("artistId") {
                 type = NavType.StringType
                 defaultValue = ""
@@ -310,84 +102,13 @@ fun NavGraphBuilder.wanderNavGraph(
             onClose = navController::popBackStack,
             onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) },
             onOpenJam = {
-                // The queue is opened from the maximized player, so the sheet is still expanded
-                // behind it — without this the room opens correctly and is completely hidden.
                 onCollapsePlayer()
                 navController.popBackStack()
-                // Not guarded: the pop above leaves the entry mid-transition by construction, so
-                // a settled check here would swallow the navigation every time.
                 navController.navigate(Routes.JAM)
             }
         )
     }
 
-    detailDestination(motion, Routes.WELCOME) {
-        WelcomeScreen(
-            onNavidromeLogin = { navController.navigateSettled(Routes.NAVIDROME_LOGIN) },
-            onYouTubeLogin = { navController.navigateSettled(Routes.YTMUSIC_LOGIN) },
-            onDone = {
-                // Not guarded: setup finishing is not a stray tap, and this must not be dropped.
-                navController.navigate(TopLevelDestination.HOME.route) {
-                    popUpTo(Routes.WELCOME) { inclusive = true }
-                }
-            }
-        )
-    }
-
-    detailDestination(motion, Routes.NAVIDROME_LOGIN) {
-        NavidromeLoginScreen(onDone = navController::popBackStack)
-    }
-
-    detailDestination(motion, Routes.YTMUSIC_LOGIN) {
-        YouTubeLoginScreen(onDone = navController::popBackStack)
-    }
-}
-
-/** A top-level tab: peers, so they slide along X in the direction of the bar. */
-private fun NavGraphBuilder.tabDestination(
-    motion: MotionScheme,
-    route: String,
-    arguments: List<NamedNavArgument> = emptyList(),
-    content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit
-) = composable(
-    route = route,
-    arguments = arguments,
-    // Always the actual movement — where the transition comes from, where it goes — rather than
-    // this destination's own route. The exits used to be handed the *leaving* screen as their
-    // target, so a tab slid out as though every switch went the same way.
-    enterTransition = { tabEnter(initialState.route(), targetState.route(), motion) },
-    exitTransition = { tabExit(initialState.route(), targetState.route(), motion) },
-    popEnterTransition = { tabEnter(initialState.route(), targetState.route(), motion) },
-    popExitTransition = { tabExit(initialState.route(), targetState.route(), motion) },
-    content = { entry -> BlurredWhileEntering { content(entry) } }
-)
-
-private fun NavBackStackEntry.route(): String? = destination.route
-
-/** Where "Open Settings" goes when the thing that is missing is an Agro server. */
-private val SYNC_SETTINGS = Routes.settingsCategory(SettingsCategory.SYNC.name)
-
-/** A screen opened on top of another: shared-axis Z. */
-private fun NavGraphBuilder.detailDestination(
-    motion: MotionScheme,
-    route: String,
-    arguments: List<NamedNavArgument> = emptyList(),
-    content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit
-) = composable(
-    route = route,
-    arguments = arguments,
-    enterTransition = { detailEnter(motion) },
-    exitTransition = { detailExit(motion) },
-    popEnterTransition = { detailPopEnter(motion) },
-    popExitTransition = { detailPopExit(motion) },
-    content = { entry -> BlurredWhileEntering { content(entry) } }
-)
-
-/**
- * The screen a back swipe reveals starts blurred and sharpens with the swipe — see
- * [enteringBlur]. Wraps every destination, so it covers every back in the graph.
- */
-@Composable
-private fun AnimatedContentScope.BlurredWhileEntering(content: @Composable () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize().enteringBlur(this)) { content() }
+    socialNavGraph(navController, motion, contentPadding)
+    settingsNavGraph(navController, motion, contentPadding)
 }

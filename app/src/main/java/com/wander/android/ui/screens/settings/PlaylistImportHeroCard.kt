@@ -82,7 +82,7 @@ internal fun PlaylistImportHeroCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
             .scale(scale)
             .clip(HeroCardShape)
             .border(borderStroke, HeroCardShape)

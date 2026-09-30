@@ -44,8 +44,8 @@ class IdentityKeyManager @Inject constructor(
                     val pubKey = X25519PublicKeyParameters(pubBytes, 0)
                     return Pair(privKey, pubKey)
                 }
-            } catch (_: Exception) {
-                // Generate a fresh keypair if stored key is corrupt
+            } catch (_: IllegalArgumentException) {
+                // Malformed base64 or an invalid key length. Generate a fresh keypair instead.
             }
         }
 
@@ -147,7 +147,10 @@ class IdentityKeyManager @Inject constructor(
             if (deviceId.isBlank() || publicKey.isBlank()) return@mapNotNull null
             try {
                 deviceId to sealNote(publicKey, note)
-            } catch (_: Exception) {
+            } catch (_: IllegalArgumentException) {
+                // Malformed base64 or a public key of the wrong length.
+                null
+            } catch (_: org.bouncycastle.crypto.InvalidCipherTextException) {
                 null
             }
         }.toMap()
@@ -166,8 +169,11 @@ class IdentityKeyManager @Inject constructor(
             if (ciphertext.isBlank()) continue
             try {
                 return openNote(ciphertext)
-            } catch (_: Exception) {
-                // Sealed to a different device. Expected for every entry but ours.
+            } catch (_: IllegalArgumentException) {
+                // Malformed payload for this entry.
+            } catch (_: org.bouncycastle.crypto.InvalidCipherTextException) {
+                // Poly1305 tag didn't verify — sealed to a different device. Expected for every
+                // entry but ours.
             }
         }
         return null

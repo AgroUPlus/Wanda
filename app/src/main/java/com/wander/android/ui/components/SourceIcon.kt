@@ -30,6 +30,7 @@ internal val SourceType.color: Color
         SourceType.NAVIDROME -> NavidromeBlue
         SourceType.YTMUSIC -> YtMusicCoral
         SourceType.LOCAL -> LocalDeviceAmber
+        SourceType.DEEZER -> Color(0xFFA238FF)
     }
 
 /** A distinct outline per source, on top of the colour, so two badges are never told apart by hue
@@ -39,6 +40,7 @@ private val SourceType.badgeShape
         SourceType.NAVIDROME -> MaterialShapes.Cookie4Sided
         SourceType.YTMUSIC -> MaterialShapes.Circle
         SourceType.LOCAL -> MaterialShapes.Square
+        SourceType.DEEZER -> MaterialShapes.Pentagon
     }.toShape()
 
 /**
@@ -72,6 +74,7 @@ fun SourceIcon(source: SourceType, modifier: Modifier = Modifier, size: Dp = 40.
                 tint = hue,
                 modifier = Modifier.size(glyphSize)
             )
+            SourceType.DEEZER -> PlatformIcon(platform = PlatformType.DEEZER, size = glyphSize, tint = hue)
         }
     }
 }

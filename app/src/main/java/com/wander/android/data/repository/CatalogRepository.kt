@@ -1,5 +1,6 @@
 package com.wander.android.data.repository
 
+import android.util.Log
 import com.wander.android.core.database.dao.AlbumDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.dao.ArtistDao
@@ -10,6 +11,7 @@ import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.sources.musicbrainz.MusicBrainzArtistFallback
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -34,91 +36,18 @@ class CatalogRepository @Inject constructor(
     private val trackDao: TrackDao,
     private val albumDao: AlbumDao,
     private val artistDao: ArtistDao,
-    private val musicRepository: MusicRepository
+    private val musicRepository: MusicRepository,
+    private val musicBrainzFallback: MusicBrainzArtistFallback
 ) {
+    private val albums = CatalogAlbumRepository(trackDao, albumDao, musicRepository)
 
     // ── Album ───────────────────────────────────────────────────────────────────────────────
+    // Delegated to [CatalogAlbumRepository] — see its doc for why this file only forwards to it.
 
-    fun albumTracksFlow(albumId: String): Flow<List<UnifiedTrack>> =
-        trackDao.getTracksByAlbumFlow(albumId)
-            .map { it.map(TrackEntity::toUnifiedTrack) }
-            .flowOn(Dispatchers.Default)
-
-    suspend fun album(albumId: String): UnifiedAlbum? = withContext(Dispatchers.IO) {
-        albumDao.getAlbumById(albumId)?.toUnifiedAlbum() ?: albumFromTracks(albumId)
-    }
-
-    /**
-     * Pulls the album's tracks from its backend and persists them, so the flow above fills in.
-     *
-     * Two paths, because there are two ways to arrive here. When Room knows the album,
-     * [MusicRepository.getAlbumTracks] is used — it marks an album browsed on your own server as
-     * part of your library, which is the right claim for a record you host yourself.
-     *
-     * When it does not, the album is resolved from its id prefix instead. That branch is not an
-     * edge case: an album tapped in an artist's shelf has no `AlbumEntity` row *and* no tracks, so
-     * [album] returns null for it, and this used to return here without ever asking the backend —
-     * leaving every YouTube Music album opened from an artist page permanently empty.
-     */
-    suspend fun refreshAlbum(albumId: String) {
-        val album = album(albumId)
-        if (album != null) {
-            musicRepository.getAlbumTracks(album)
-        } else {
-            musicRepository.getAlbumTracksById(albumId)
-        }
-    }
-
-    /**
-     * Writes album rows the app has seen but not browsed — the shelves on an artist's page.
-     *
-     * Without this the album screen has no header until its tracks land, and then only the one
-     * [albumFromTracks] can reconstruct from them. Non-library, for the same reason the tracks
-     * are: seeing a record on an artist page is not owning it.
-     */
-    suspend fun rememberAlbums(albums: List<UnifiedAlbum>) = withContext(Dispatchers.IO) {
-        // Only records Room has never seen. `insertAlbums` replaces on conflict, and a tile off an
-        // artist shelf carries no track count and no duration — writing it over a Navidrome album
-        // that has actually been browsed would blank fields the library screen shows.
-        val known = albums.mapNotNull { album -> albumDao.getAlbumById(album.id)?.let { album to it } }
-
-        // Rows Room already has get their credit corrected if it has changed. Without this a bad
-        // one was permanent — inserts skip known albums, so an album once filed under an artist
-        // called "Single" stayed there however many times its artist's page was opened.
-        for ((incoming, stored) in known) {
-            if (incoming.artist.isNotBlank() && incoming.artist != stored.artist) {
-                albumDao.updateAlbumArtist(stored.id, incoming.artist, incoming.artistId)
-            }
-        }
-
-        val unknown = albums.filter { album -> known.none { it.second.id == album.id } }
-        if (unknown.isEmpty()) return@withContext
-        // Left non-library: a tile on an artist's page is a record you have looked at, and
-        // filing those into the Library tab is what made it list every artist you ever opened.
-        albumDao.insertAlbums(unknown.map { AlbumEntity.fromUnifiedAlbum(it, isLibrary = false) })
-    }
-
-    /**
-     * An album Room knows the *tracks* of but has no row for — the usual case for YouTube Music,
-     * whose album rows only arrive by browsing the library. Assembled from the tracks rather than
-     * left blank, since every field the header needs is already on them.
-     */
-    private suspend fun albumFromTracks(albumId: String): UnifiedAlbum? {
-        val tracks = trackDao.getTracksInAlbum(albumId).map(TrackEntity::toUnifiedTrack)
-        val first = tracks.firstOrNull() ?: return null
-        return UnifiedAlbum(
-            id = albumId,
-            source = first.source,
-            title = first.album ?: first.title,
-            artist = first.artist,
-            artistId = first.artistId,
-            coverArtUrl = tracks.firstNotNullOfOrNull { it.artworkUrl },
-            songCount = tracks.size,
-            durationMs = tracks.sumOf { it.durationMs },
-            year = first.year,
-            genre = first.genre
-        )
-    }
+    fun albumTracksFlow(albumId: String): Flow<List<UnifiedTrack>> = albums.albumTracksFlow(albumId)
+    suspend fun album(albumId: String): UnifiedAlbum? = albums.album(albumId)
+    suspend fun refreshAlbum(albumId: String) = albums.refreshAlbum(albumId)
+    suspend fun rememberAlbums(albums: List<UnifiedAlbum>) = this.albums.rememberAlbums(albums)
 
     // ── Artist ──────────────────────────────────────────────────────────────────────────────
 
@@ -132,8 +61,13 @@ class CatalogRepository @Inject constructor(
             albumDao.getAlbumsByArtistFlow(artist),
             trackDao.getTracksByArtistFlow(artist)
         ) { albumEntities, trackEntities ->
-            val aliases = ArtistIdentity.aliasesOf(trackEntities.map(TrackEntity::toUnifiedTrack), artistId)
-            ArtistIdentity.sameArtist(albumEntities, aliases) { it.artistId }
+            // The DAO query is a broad `LIKE`, so this is where "Artisan Collective" gets dropped
+            // from a page for "Art" — see `ArtistIdentity.creditsMatch`'s own doc.
+            val albums = albumEntities.filter { ArtistIdentity.creditsMatch(it.artist, artist) }
+            val tracks = trackEntities.filter { ArtistIdentity.creditsMatch(it.artist, artist) }
+                .map(TrackEntity::toUnifiedTrack)
+            val aliases = ArtistIdentity.aliasesOf(tracks, artistId)
+            ArtistIdentity.sameArtist(albums, aliases) { it.artistId }
                 .map(AlbumEntity::toUnifiedAlbum)
         }.flowOn(Dispatchers.Default)
 
@@ -144,10 +78,26 @@ class CatalogRepository @Inject constructor(
      */
     fun artistTracksFlow(artist: String, artistId: String? = null): Flow<List<UnifiedTrack>> =
         trackDao.getTracksByArtistFlow(artist).map { entities ->
-            val tracks = entities.map(TrackEntity::toUnifiedTrack)
+            val tracks = entities
+                .filter { ArtistIdentity.creditsMatch(it.artist, artist) }
+                .map(TrackEntity::toUnifiedTrack)
             val aliases = ArtistIdentity.aliasesOf(tracks, artistId)
             TrackDeduplicator.deduplicate(ArtistIdentity.sameArtist(tracks, aliases) { it.artistId })
         }.flowOn(Dispatchers.Default)
+
+    /**
+     * A one-shot read of everything Room has that credits [artist], for resolving which backend id
+     * is worth fetching a page for right after a cross-source search — see
+     * `ArtistCatalogLoader.refresh`, which used to ask this with whatever track list it already had
+     * *before* that search ran, so a first-ever visit to an artist's page always searched for an id
+     * among zero tracks and fell straight to the MusicBrainz fallback even when the search it had
+     * just run found plenty.
+     */
+    suspend fun tracksByArtist(artist: String): List<UnifiedTrack> = withContext(Dispatchers.IO) {
+        trackDao.getTracksByArtistOnce(artist)
+            .filter { ArtistIdentity.creditsMatch(it.artist, artist) }
+            .map(TrackEntity::toUnifiedTrack)
+    }
 
     /**
      * Fills in an artist Room only partly knows, by searching every configured backend for their
@@ -226,11 +176,23 @@ class CatalogRepository @Inject constructor(
     suspend fun artistDetails(
         artistId: String,
         expectedName: String? = null
-    ): ArtistDetails? = withContext(Dispatchers.IO) {
+    ): ArtistFetch = withContext(Dispatchers.IO) {
         val source = musicRepository.sources.firstOrNull {
             it.capabilities.artists && artistId.startsWith(it.sourceType.idPrefix)
-        } ?: return@withContext null
-        val page = source.getArtist(artistId).getOrNull() ?: return@withContext null
+        } ?: return@withContext ArtistFetch.NotFound
+        val result = source.getArtist(artistId)
+        val page = result.getOrNull()
+        if (page == null) {
+            val error = result.exceptionOrNull()
+            // A source returning `null`-through-`Result.failure` with nothing thrown (a well-formed
+            // "no such artist" answer) is [ArtistFetch.NotFound], not a failure — only an actual
+            // exception (network, parsing) is worth telling the screen apart from "no page exists".
+            if (error != null) {
+                Log.w(TAG, "Artist fetch failed for $artistId: ${error.javaClass.simpleName}")
+                return@withContext ArtistFetch.Failed(error)
+            }
+            return@withContext ArtistFetch.NotFound
+        }
 
         // The page has to be about the artist we asked for, or it is not this artist's page.
         //
@@ -244,12 +206,37 @@ class CatalogRepository @Inject constructor(
         //
         // Rejected rather than repaired. A page about somebody else has nothing salvageable on it,
         // and the artist screen renders perfectly well from the library alone with a monogram at
-        // the top — see `ArtistHero`.
+        // the top — see `ArtistHero`. Deliberate, so [ArtistFetch.NotFound] rather than
+        // [ArtistFetch.Failed]: nothing here is broken, the id just did not name who we thought.
         if (expectedName != null && !ArtistIdentity.sameName(page.name, expectedName)) {
-            return@withContext null
+            Log.i(TAG, "Artist page name mismatch for $artistId: fetched name did not match $expectedName")
+            return@withContext ArtistFetch.NotFound
         }
-        page
+        ArtistFetch.Found(withGenres(page))
     }
+
+    /**
+     * Adds MusicBrainz genre tags to a page that already knows its own [ArtistDetails.musicBrainzId]
+     * — Navidrome's `getArtistInfo2` gives the id but never the tags. Best-effort: [genresFor]
+     * already swallows its own failures and the consent check, so a page with no genres back is
+     * just a page with no genres, the same as any backend that never had any to give.
+     */
+    private suspend fun withGenres(page: ArtistDetails): ArtistDetails {
+        val mbid = page.musicBrainzId ?: return page
+        val genres = musicBrainzFallback.genresFor(mbid)
+        return if (genres.isEmpty()) page else page.copy(genres = genres)
+    }
+
+    /** Id prefixes of backends that publish artist pages — see [artistDetails]. */
+    fun artistCapableIdPrefixes(): Set<String> =
+        musicRepository.sources.filter { it.capabilities.artists }.map { it.sourceType.idPrefix }.toSet()
+
+    /**
+     * A last-resort page for an artist no configured source could name an id for — see
+     * [MusicBrainzArtistFallback], which this only forwards to.
+     */
+    suspend fun musicBrainzArtistFallback(name: String): ArtistFetch =
+        withContext(Dispatchers.IO) { musicBrainzFallback.lookup(name) }
 
     /**
      * The whole of one album shelf on an artist's page.
@@ -266,12 +253,18 @@ class CatalogRepository @Inject constructor(
         val source = musicRepository.sources.firstOrNull {
             it.capabilities.artists && browseId.startsWith(it.sourceType.idPrefix)
         } ?: return@withContext emptyList()
-        source.getArtistAlbumPage(browseId, params, artist).getOrDefault(emptyList())
+        source.getArtistAlbumPage(browseId, params, artist)
+            .onFailure { Log.w(TAG, "Artist album shelf fetch failed for $browseId: ${it.javaClass.simpleName}") }
+            .getOrDefault(emptyList())
     }
 
     /** Which backends this artist's known material came from, for the page's subtitle. */
     fun sourcesOf(tracks: List<UnifiedTrack>): List<SourceType> =
         tracks.map { it.source }.distinct().sorted()
+
+    private companion object {
+        const val TAG = "CatalogRepository"
+    }
 }
 
 /** How long an artist page is reused before the backend is asked again. */

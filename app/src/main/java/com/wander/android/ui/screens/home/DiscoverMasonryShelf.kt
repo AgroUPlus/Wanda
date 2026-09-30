@@ -32,9 +32,13 @@ import com.wander.android.ui.components.rememberShelfEntranceScale
 import com.wander.android.ui.components.scrollingTitle
 
 /**
- * Two rows at alternating heights, scrolling sideways as a broken grid rather than a straight
- * carousel. For "Discover" — unranked, mixed-provenance suggestions where a strict row implies an
- * ordering the shelf doesn't actually have.
+ * Two even rows, scrolling sideways. For "Discover" — unranked, mixed-provenance suggestions where
+ * a strict single row implies an ordering the shelf doesn't actually have.
+ *
+ * This used to stagger every third card taller, for a broken-grid masonry look. In practice that
+ * read as covers that just did not match — a shelf full of mismatched artwork sizes looks like a
+ * bug even when it is not one, and it *was* one everywhere a card's row happened to be the odd
+ * one out beside a taller neighbour. Uniform cards read as a deliberate grid instead.
  */
 @Composable
 internal fun DiscoverMasonryShelf(
@@ -60,9 +64,6 @@ internal fun DiscoverMasonryShelf(
             MasonryCard(
                 track = track,
                 index = index,
-                // Every third card runs tall, which is what throws the two rows out of
-                // alignment — a fixed alternation reads as broken-grid rather than random.
-                tall = index % 3 == 0,
                 onPlay = { onPlay(index) },
                 onLongPress = { onLongPress(track) }
             )
@@ -75,7 +76,6 @@ internal fun DiscoverMasonryShelf(
 private fun MasonryCard(
     track: UnifiedTrack,
     index: Int,
-    tall: Boolean,
     onPlay: () -> Unit,
     onLongPress: () -> Unit,
     enabled: Boolean = track.isPlayableNow()
@@ -85,7 +85,7 @@ private fun MasonryCard(
     val scale by rememberPressScale(interactionSource, label = "masonryCardPress")
     val entranceScale = rememberShelfEntranceScale(index)
     val artworkShape = rememberShelfArtworkShape(isPressed)
-    val artworkSize = if (tall) TallArtworkSize else RegularArtworkSize
+    val artworkSize = RegularArtworkSize
 
     Column(
         modifier = Modifier
@@ -115,6 +115,16 @@ private fun MasonryCard(
             overflow = TextOverflow.Clip,
             modifier = Modifier.scrollingTitle()
         )
+        if (track.artist.isNotBlank()) {
+            Text(
+                text = track.artist,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Clip,
+                modifier = Modifier.scrollingTitle()
+            )
+        }
     }
 }
 
@@ -125,7 +135,6 @@ private const val DisabledAlpha = 0.38f
 
 private val CardWidth = 120.dp
 private val RegularArtworkSize = 120.dp
-private val TallArtworkSize = 160.dp
 
-/** Tall row's card plus caption, twice over, plus the gap between rows. */
+/** One card's cover plus its two caption lines, twice over (two rows), plus the row gap. */
 private val ShelfHeight = 258.dp

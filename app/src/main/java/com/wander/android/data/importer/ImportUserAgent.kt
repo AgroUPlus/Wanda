@@ -1,12 +1,13 @@
 package com.wander.android.data.importer
 
 /**
- * The single browser identity the importer presents to a platform.
+ * The browser identity behind every plain HTTP request the importer's parsers make (Spotify's
+ * web-player token endpoint, Apple Music's share-page scrape) — a normal-looking mobile Chrome
+ * User-Agent, since some of these are unofficial endpoints that reject requests without one.
  *
- * The sign-in WebView and the HTTP calls that reuse its cookies have to look like the *same*
- * browser: Spotify ties its web session to the user agent that created it, so a WebView logging
- * in as mobile Chrome while the token call claims desktop Chrome gets the session rejected.
+ * Keep the Chrome version here current: a server that branches on UA-sniffed feature support can
+ * misbehave for a version far enough out of date to look suspicious.
  */
 internal const val IMPORT_WEB_USER_AGENT =
     "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) " +
-        "Chrome/128.0.0.0 Mobile Safari/537.36"
+        "Chrome/153.0.0.0 Mobile Safari/537.36"

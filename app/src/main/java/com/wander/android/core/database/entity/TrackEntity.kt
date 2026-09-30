@@ -108,9 +108,19 @@ data class TrackEntity(
     /** How many consecutive times decoding or indexing this track has failed. */
     val attempts: Int = 0
 ) {
+    /**
+     * The id's own prefix is ground truth over the stored [source] column — a row written while a
+     * source's prefix wasn't recognized yet (see `MediaItems.kt`'s own history of this exact
+     * mistake) persists that wrong label forever otherwise, since nothing ever writes over an
+     * existing row's `source` on its own. Every reader of this entity should use this, not
+     * [source] directly, so a stale label self-heals instead of needing a migration.
+     */
+    val effectiveSource: SourceType
+        get() = SourceType.entries.firstOrNull { id.startsWith(it.idPrefix) } ?: source
+
     fun toUnifiedTrack() = UnifiedTrack(
         id = id,
-        source = source,
+        source = effectiveSource,
         title = title,
         artist = artist,
         album = album,

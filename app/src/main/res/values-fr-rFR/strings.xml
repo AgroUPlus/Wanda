@@ -22,16 +22,11 @@
     <string name="action_add_to_queue">Add to queue</string>
     <string name="action_remove_from_queue">Retirer de la file</string>
     <string name="action_add_to_playlist">Ajouter à une playlist</string>
-    <string name="action_radio_mode">Mode radio</string>
-    <string name="action_radio_mode_active">Mode radio (actif)</string>
     <string name="menu_like">Like</string>
     <string name="menu_radio">Radio</string>
-    <string name="action_start_radio">Démarrer le mode radio</string>
     <string name="action_speed_and_pitch">Vitesse &amp; hauteur</string>
     <string name="action_audio_language">Langue de l\'audio</string>
     <string name="action_switch_source">Changer de source</string>
-    <string name="action_go_to_artist">Aller à l\'artiste</string>
-    <string name="action_go_to_album">Aller à l\'album</string>
     <string name="action_jam">Jam</string>
     <string name="action_add_to_jam">Ajouter à la jam</string>
     <string name="action_close">Fermer</string>
@@ -151,28 +146,17 @@
     <string name="home_nothing_play_yet">Rien à jouer pour l\'instant</string>
     <string name="home_sessions_other_devices">Sessions sur d\'autres appareils</string>
     <!-- Importer -->
-    <string name="importer_connect_auto_detect">Connecter &amp; détection automatique</string>
-    <string name="importer_detecting_playlists">Détection de vos playlists...</string>
-    <string name="importer_direct_link_text">Lien / Texte direct</string>
     <string name="importer_edit_title">Éditer le titre</string>
     <string name="importer_import_playlist">Importer une playlist</string>
     <string name="importer_listen_now">Écouter maintenant</string>
     <string name="importer_load_playlist">Charger une playlist</string>
-    <string name="importer_loading_playlist">Chargement de la playlist...</string>
-    <string name="importer_logout_switch_account">Déconnexion / Changer de compte</string>
     <string name="importer_none">Aucun</string>
     <string name="importer_paste">Coller</string>
     <string name="importer_paste_link_text_tracklist_inspect">Coller un lien ou une liste de pistes pour l\'inspecter et choisir les pistes avant l\'importation.</string>
-    <string name="importer_playlist_detected">Playlist détectée</string>
     <string name="importer_playlist_title">Titre de la playlsit</string>
     <string name="importer_reading">Lecture...</string>
     <string name="importer_reading_playlist_tracks">Lecture des pistes de la playlist...</string>
-    <string name="importer_reload">Recharger</string>
-    <string name="importer_retry">Réessayer</string>
-    <string name="importer_sign_browse">Se connecter &amp; naviguer</string>
-    <string name="importer_switch_account">Changer de compte</string>
     <string name="importer_try_again">Réessayer</string>
-    <string name="importer_web_view">Vue web</string>
     <!-- Library -->
     <string name="library_albums_appear_once_connected_source">Les albums apparaissent lorsqu\'au moins une source a été explorée.</string>
     <string name="library_all_albums">Tous les albums</string>
@@ -299,13 +283,9 @@
     <string name="settings_p2p_device_sync">Synchronisation des appareils en pair à pair</string>
     <string name="settings_passphrase">Phrase d\'authentification</string>
     <string name="settings_passphrase_device_token">Phrase d\'authentification ou jeton d\'appareil</string>
-    <string name="settings_paste_from_clipboard">Coller depuis le presse-papier</string>
-    <string name="settings_paste_link_from_spotify_deezer">Coller un lien depuis Spotify, Deezer, YouTube Music, Apple Music, ou des lignes textuelles.</string>
     <string name="settings_paused_incognito">Mis en pause par le mode incognito</string>
     <string name="settings_paused_nothing_being_measured_until">En pause. Rien n\'est mesuré jusqu\'à ce que vous ne le permettiez.</string>
     <string name="settings_playlist_imported">Playlist importée ! 🎉</string>
-    <string name="settings_popular_on_agro">Populaire sur Agro</string>
-    <string name="settings_include_plays_in_the_servers_shared_chart">Inclure vos écoutes dans les graphiques du serveur. Cela n\'est jamais associé à votre nom.</string>
     <string name="settings_re_check_model">Revérifier le modèle</string>
     <string name="settings_ready_next_track">Préparer la prochaine piste</string>
     <string name="settings_recognition_model">Modèle de reconnaissance</string>
@@ -484,7 +464,6 @@
     <string name="queue_tracks">%1$s des %2$s pistes</string>
     <string name="queue_voted">Voté (%1$s)</string>
     <string name="search_nothing_found_connected_sources">Rien n\'a été trouvé pour \"%1$s\" dans vos sources connectées.</string>
-    <string name="settings_detected">Détecté; %1$s</string>
     <string name="settings_found">%1$s trouvé</string>
     <string name="settings_matching_track">Correspondance de piste %1$s sur %2$s</string>
     <string name="settings_measuring_now">Mesure \"%1$s\" actuellement</string>

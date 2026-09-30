@@ -2,7 +2,6 @@ package com.wander.android.data.sources.agro
 
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.security.SecureStorage
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -17,79 +16,10 @@ import kotlinx.serialization.json.put
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** A peer source device that holds this track. */
-data class PeerSource(
-    val deviceId: String,
-    val petname: String,
-    val lanAddress: String? = null,
-    val isOnline: Boolean = false,
-    val isServerArchive: Boolean = false
-)
-
-/** A track another device holds that this one does not. */
-data class MissingTrack(
-    val contentHash: String,
-    val title: String,
-    val artist: String,
-    val album: String?,
-    val durationMs: Long,
-    val sizeBytes: Long,
-    /** Container as the server indexed it — "flac", "mp3", "m4a". Null when it never learned. */
-    val format: String? = null,
-    val peerSources: List<PeerSource> = emptyList()
-)
-
-/**
- * How this deployment moves music between devices, as the server sees it.
- *
- * Both clients ask the same question and act on the same answer; this used to be inferred
- * separately on each device from local settings that knew nothing about the server.
- */
-enum class SyncMode {
-    /** Streamable from Navidrome: a local copy is a convenience, not the only way to hear it. */
-    NAVIDROME,
-
-    /** The server keeps the files but nothing streams them, so a missing track is offered. */
-    PEER_TO_PEER,
-
-    /** Index only. The server is not a durable copy, so it never suggests deleting one. */
-    INDEX_ONLY;
-
-    /** Whether a device without a track should be offered the bytes. */
-    val offersDownloads: Boolean get() = this != NAVIDROME
-
-    /** Whether a redundant local copy is safe to suggest removing. */
-    val offersReclaim: Boolean get() = this == NAVIDROME
-}
-
-/**
- * How much of the account's allowance is gone.
- *
- * [quotaBytes] is null when the account is uncapped, which is not a quota of zero — the admin owns
- * the disk. A null must be shown as "no limit" rather than as a full bar.
- */
-data class StorageUsage(
-    val usedBytes: Long,
-    val quotaBytes: Long?
-) {
-    /** Null when uncapped, so a caller cannot accidentally divide by a missing limit. */
-    val fraction: Float? get() = quotaBytes
-        ?.takeIf { it > 0L }
-        ?.let { (usedBytes.toFloat() / it).coerceIn(0f, 1f) }
-}
-
-data class LibraryStats(
-    val trackCount: Int,
-    val archivedCount: Int,
-    val totalBytes: Long,
-    val spoolBytes: Long
-)
-
 /**
  * The library half of the Agro API: what this device holds, and what it is missing.
  *
- * Metadata only. Moving actual bytes is [AgroUploader]'s job, over REST — a multi-megabyte file
- * base64'd through a GraphQL envelope would be both larger and unstreamable.
+ * Metadata only. Moving actual bytes is [AgroUploader]'s job, over REST.
  */
 @Singleton
 class AgroLibraryApi @Inject constructor(
@@ -99,11 +29,6 @@ class AgroLibraryApi @Inject constructor(
 
     /**
      * Tells the server what this device holds.
-     *
-     * Idempotent and batched: re-sending a track already reported is a no-op server-side, so a
-     * client can send everything once and only deltas afterwards without risking divergence.
-     * Metadata travels with each entry so the server can index a file it has never been sent —
-     * which is what lets the diff work at all in index-only mode.
      */
     suspend fun reportHoldings(tracks: List<TrackEntity>): Result<Int> {
         if (tracks.isEmpty()) return Result.success(0)
@@ -134,8 +59,6 @@ class AgroLibraryApi @Inject constructor(
                         put("sizeBytes", track.sizeBytes ?: 0L)
                         track.format?.let { put("format", it) }
                         track.bitRateKbps?.let { put("bitrateKbps", it) }
-                        // The content URI, so this device can find its own copy again. Opaque to
-                        // the server, which never interprets it.
                         track.streamUri?.let { put("localRef", it) }
                     })
                 }
@@ -149,14 +72,6 @@ class AgroLibraryApi @Inject constructor(
 
     /**
      * Tells the server this device now holds a track it has just fetched.
-     *
-     * Reported the moment the bytes land, rather than waiting for the local library scan to
-     * rediscover the file and the next sync pass to report it. Without this the server went on
-     * listing the track as missing here, so the very next pass fetched it again — the same songs
-     * arrived two and three times, landing as "Wedding Hall.mp3" and "Wedding Hall (1).mp3".
-     *
-     * The metadata comes from the offer, which is the server's own index entry for the file, so
-     * nothing has to be re-read from disk to send it.
      */
     suspend fun reportFetchedHolding(track: MissingTrack, localRef: String?): Result<Int> {
         val mutation = """
@@ -189,10 +104,6 @@ class AgroLibraryApi @Inject constructor(
 
     /**
      * Every hash the server believes this device is holding.
-     *
-     * The other half of `reportHoldings`, which only ever adds. Without being able to read back
-     * what the server thinks, a phone has no way to notice that its own record and the server's
-     * have drifted — and they drift on any deletion whose notice was lost.
      */
     suspend fun deviceHoldings(): Result<List<String>> {
         val query = """
@@ -229,15 +140,11 @@ class AgroLibraryApi @Inject constructor(
 
     /**
      * What another of this account's devices has that this one does not.
-     *
-     * The server decides, matching on the recording rather than the bytes — so a different rip of
-     * a song already held here does not come back. That comparison deliberately lives on the
-     * server: it sees every device's holdings, and one implementation cannot drift from another.
      */
     suspend fun missingOnDevice(limit: Int = 50): Result<List<MissingTrack>> {
         val query = """
             query Missing(${'$'}userId: String!, ${'$'}deviceId: String!, ${'$'}limit: Int) {
-              missingOnDevice(userId: ${'$'}userId, deviceId: ${'$'}deviceId, limit: ${'$'}limit) {
+                missingOnDevice(userId: ${'$'}userId, deviceId: ${'$'}deviceId, limit: ${'$'}limit) {
                 contentHash title artist album durationMs sizeBytes format
                 peerSources { deviceId petname lanAddress isOnline isServerArchive }
               }
@@ -249,15 +156,12 @@ class AgroLibraryApi @Inject constructor(
             put("limit", limit)
         }
         return graphQl.execute(query, variables).map { data ->
-            (data["missingOnDevice"]?.jsonArray ?: emptyList()).mapNotNull(::parseTrack)
+            (data["missingOnDevice"]?.jsonArray ?: emptyList()).mapNotNull(::parseMissingTrack)
         }
     }
 
     /**
      * Files this device holds that the server has already filed away.
-     *
-     * The server checks its own disk before answering, so this is stronger than "our index says we
-     * uploaded it once" — which is the difference between freeing space and losing a track.
      */
     suspend fun reclaimable(limit: Int = 50): Result<List<MissingTrack>> {
         val query = """
@@ -273,7 +177,7 @@ class AgroLibraryApi @Inject constructor(
             put("limit", limit)
         }
         return graphQl.execute(query, variables).map { data ->
-            (data["reclaimable"]?.jsonArray ?: emptyList()).mapNotNull(::parseTrack)
+            (data["reclaimable"]?.jsonArray ?: emptyList()).mapNotNull(::parseMissingTrack)
         }
     }
 
@@ -287,36 +191,9 @@ class AgroLibraryApi @Inject constructor(
             when (data["syncMode"]?.jsonPrimitive?.contentOrNull) {
                 "NAVIDROME" -> SyncMode.NAVIDROME
                 "INDEX_ONLY" -> SyncMode.INDEX_ONLY
-                // An unrecognised mode from a newer server reads as peer-to-peer: it offers files
-                // and never suggests deleting one, which is the safe way to be wrong.
                 else -> SyncMode.PEER_TO_PEER
             }
         }
-    }
-
-    private fun parseTrack(element: kotlinx.serialization.json.JsonElement): MissingTrack? {
-        val obj = element as? JsonObject ?: return null
-        val peerSources = obj["peerSources"]?.jsonArray?.mapNotNull { item ->
-            val p = item as? JsonObject ?: return@mapNotNull null
-            PeerSource(
-                deviceId = p["deviceId"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null,
-                petname = p["petname"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-                lanAddress = p["lanAddress"]?.jsonPrimitive?.contentOrNull,
-                isOnline = p["isOnline"]?.jsonPrimitive?.contentOrNull?.toBooleanStrictOrNull() ?: false,
-                isServerArchive = p["isServerArchive"]?.jsonPrimitive?.contentOrNull?.toBooleanStrictOrNull() ?: false
-            )
-        } ?: emptyList()
-
-        return MissingTrack(
-            contentHash = obj["contentHash"]?.jsonPrimitive?.contentOrNull ?: return null,
-            title = obj["title"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-            artist = obj["artist"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-            album = obj["album"]?.jsonPrimitive?.contentOrNull,
-            durationMs = obj["durationMs"]?.jsonPrimitive?.long ?: 0L,
-            sizeBytes = obj["sizeBytes"]?.jsonPrimitive?.long ?: 0L,
-            format = obj["format"]?.jsonPrimitive?.contentOrNull,
-            peerSources = peerSources
-        )
     }
 
     suspend fun stats(): Result<LibraryStats> {
@@ -342,11 +219,6 @@ class AgroLibraryApi @Inject constructor(
 
     /**
      * Storage used against the account's quota.
-     *
-     * Asked of the server rather than derived from [stats]: `totalBytes` counts every archived
-     * track in the deployment, so it reads the same for an account holding nothing as for the one
-     * that owns the disk. The server computes this from the same two values the upload path
-     * enforces, so the bar cannot disagree with the answer an upload gets.
      */
     suspend fun storageUsage(): Result<StorageUsage> {
         val query = """

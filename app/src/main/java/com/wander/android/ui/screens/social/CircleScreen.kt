@@ -1,70 +1,37 @@
 package com.wander.android.ui.screens.social
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.GraphicEq
-import androidx.compose.material.icons.rounded.LocalFireDepartment
-import androidx.compose.material.icons.rounded.Stars
 import androidx.compose.material.icons.rounded.Whatshot
 import androidx.compose.material3.ButtonGroup
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
-import com.wander.android.data.sources.agro.AgroAnthem
-import com.wander.android.data.sources.agro.AgroFeedItem
-import com.wander.android.data.sources.agro.AgroRecap
-import com.wander.android.data.sources.agro.AgroTasteMatrixEntry
-import com.wander.android.data.sources.agro.AgroTrendsetter
-import com.wander.android.data.sources.agro.StatEntry
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
-import com.wander.android.ui.components.scrollingTitle
 
 private val PERIODS = listOf("WEEK", "MONTH", "YEAR", "ALL")
 
@@ -104,8 +71,6 @@ internal fun CircleScreen(
             }
         }
 
-        // A connected group, like the search-kind toggle: the periods are mutually exclusive and
-        // cover the whole range, and its members give way as one is pressed.
         ButtonGroup(
             overflowIndicator = {},
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)
@@ -181,341 +146,6 @@ internal fun CircleScreen(
 
                 items(count = state.feed.size, key = { index -> "feed_$index" }) { index ->
                     FeedItemCard(state.feed[index])
-                }
-            }
-        }
-    }
-}
-
-/**
- * Hero Anthem card with asymmetrical Material 3 Expressive shapes and member contribution breakdown.
- */
-@Composable
-private fun AnthemHeroCard(anthem: AgroAnthem) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-        ),
-        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 16.dp, bottomEnd = 32.dp, bottomStart = 16.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = MaterialTheme.shapes.small
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Icon(Icons.Rounded.GraphicEq, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.social_circle_anthem), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                    }
-                }
-                Text(
-                    text = stringResource(R.string.social_plays_2, anthem.plays),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-
-            Spacer(Modifier.height(14.dp))
-
-            Text(
-                text = anthem.title,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.ExtraBold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = anthem.artist,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
-                modifier = Modifier.padding(top = 2.dp)
-            )
-
-            if (anthem.byMember.isNotEmpty()) {
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    text = stringResource(R.string.social_top_listeners_room),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                )
-                Spacer(Modifier.height(6.dp))
-
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    val maxPlays = anthem.byMember.maxOfOrNull { it.value }?.coerceAtLeast(1L) ?: 1L
-                    anthem.byMember.forEach { member ->
-                        val ratio = (member.value.toFloat() / maxPlays).coerceIn(0f, 1f)
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            com.wander.android.ui.components.CuteAvatar(
-                                seed = member.name,
-                                size = 18.dp
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                text = member.name,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.width(64.dp),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(8.dp)
-                                    .clip(MaterialTheme.shapes.extraSmall)
-                                    .background(MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f))
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth(fraction = ratio)
-                                        .height(8.dp)
-                                        .clip(MaterialTheme.shapes.extraSmall)
-                                        .background(MaterialTheme.colorScheme.primary)
-                                )
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = "${member.value}",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * Trendsetter card highlighting the explorer of the friend group.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun TrendsetterCard(trendsetter: AgroTrendsetter) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-        ),
-        shape = MaterialTheme.shapes.large,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Surface(
-                    color = MaterialTheme.colorScheme.tertiary,
-                    contentColor = MaterialTheme.colorScheme.onTertiary,
-                    shape = MaterialTheme.shapes.extraSmall
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Icon(Icons.Rounded.AutoAwesome, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(stringResource(R.string.social_trendsetter), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                    }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    com.wander.android.ui.components.CuteAvatar(
-                        seed = trendsetter.username,
-                        size = 26.dp
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = "@${trendsetter.username}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = stringResource(R.string.social_first_discover_circle_s_top, trendsetter.firsts),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
-
-            if (trendsetter.examples.isNotEmpty()) {
-                Spacer(Modifier.height(10.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    trendsetter.examples.forEach { trackName ->
-                        Surface(
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-                            shape = MaterialTheme.shapes.extraSmall
-                        ) {
-                            Text(
-                                text = trackName,
-                                style = MaterialTheme.typography.labelSmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Clip,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).scrollingTitle()
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * Top artists & Top tracks leaderboards with proportional bar charts.
- */
-@Composable
-private fun CircleLeaderboards(
-    topArtists: List<StatEntry>,
-    topTracks: List<StatEntry>
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-        shape = MaterialTheme.shapes.large,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            if (topArtists.isNotEmpty()) {
-                LeaderboardSection(title = stringResource(R.string.social_top_artists), entries = topArtists.take(5))
-            }
-            if (topTracks.isNotEmpty()) {
-                LeaderboardSection(title = stringResource(R.string.social_top_tracks), entries = topTracks.take(5))
-            }
-        }
-    }
-}
-
-@Composable
-private fun LeaderboardSection(title: String, entries: List<StatEntry>) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-        val maxVal = entries.maxOfOrNull { it.value }?.coerceAtLeast(1L) ?: 1L
-        entries.forEachIndexed { index, entry ->
-            val ratio = (entry.value.toFloat() / maxVal).coerceIn(0f, 1f)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "${index + 1}",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.width(20.dp)
-                )
-                Column(modifier = Modifier.weight(1f).padding(horizontal = 6.dp)) {
-                    Text(
-                        text = entry.name,
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(Modifier.height(3.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(MaterialTheme.shapes.extraSmall)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(fraction = ratio)
-                                .height(6.dp)
-                                .clip(MaterialTheme.shapes.extraSmall)
-                                .background(MaterialTheme.colorScheme.primary)
-                        )
-                    }
-                }
-                Text(
-                    text = "${entry.value}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-/**
- * Taste Compatibility Matrix cards.
- */
-@Composable
-private fun TasteMatrixSection(matrix: List<AgroTasteMatrixEntry>) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        shape = MaterialTheme.shapes.large,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Rounded.Stars,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = stringResource(R.string.social_taste_compatibility),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            matrix.forEach { entry ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "${entry.a} & ${entry.b}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Surface(
-                        color = when {
-                            entry.score >= 70 -> MaterialTheme.colorScheme.primaryContainer
-                            entry.score >= 40 -> MaterialTheme.colorScheme.secondaryContainer
-                            else -> MaterialTheme.colorScheme.surfaceVariant
-                        },
-                        shape = MaterialTheme.shapes.extraSmall
-                    ) {
-                        Text(
-                            text = stringResource(R.string.social_match, entry.score),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
                 }
             }
         }

@@ -1,27 +1,12 @@
 package com.wander.android.ui.screens.social
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.PersonAdd
-import androidx.compose.material.icons.rounded.QueueMusic
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,19 +16,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
-import com.wander.android.ui.components.CuteAvatar
 import com.wander.android.ui.components.SkeletonRow
-import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
 
 /**
@@ -113,8 +92,7 @@ internal fun SocialScreen(
         val listState = rememberLazyListState()
 
         // Asking near the end rather than at it, so the next page is usually already there by the
-        // time the last card is reached. The ViewModel ignores a request while one is in flight or
-        // once the server has run out, so this does not need to debounce.
+        // time the last card is reached.
         val wantsMore by remember(state.feed.size, state.feedExhausted) {
             derivedStateOf {
                 if (state.feed.isEmpty() || state.feedExhausted) return@derivedStateOf false
@@ -134,24 +112,10 @@ internal fun SocialScreen(
         ) {
             state.error?.let { message ->
                 item(key = "error") {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        ),
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = message,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(12.dp)
-                        )
-                    }
+                    SocialErrorCard(message = message)
                 }
             }
 
-            // Before the roster rather than above the whole list: the header carries actions and
-            // has to stay reachable, so it stays pinned and this scrolls under it the way a
-            // record's hero scrolls under its own.
             item(key = "hero") {
                 FriendsHero(
                     friends = state.friends,
@@ -170,8 +134,6 @@ internal fun SocialScreen(
                             state.nowPlaying.map { it.username.lowercase() }.toSet()
                         },
                         onOpenProfile = onOpenProfile,
-                        // The hero's caption stops 8dp above its own foot, so a row that only
-                        // carried bottom padding began flush against it.
                         modifier = Modifier.padding(top = 14.dp, bottom = 12.dp)
                     )
                 }
@@ -193,36 +155,18 @@ internal fun SocialScreen(
             if (playing.isNotEmpty()) {
                 item(key = "listening_header") { SectionHeader("Listening now") }
                 item(key = "listening_row") {
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(horizontal = 20.dp)
-                    ) {
-                        items(
-                            count = playing.size,
-                            key = { index -> "presence_" + playing[index].first.username }
-                        ) { index ->
-                            val (profile, now) = playing[index]
-                            FriendPresenceCard(
-                                profile = profile,
-                                nowPlaying = now,
-                                isListeningAlong = state.session?.host
-                                    .equals(profile.username, ignoreCase = true),
-                                onOpenProfile = { onOpenProfile(profile.username) }
-                            )
-                        }
-                    }
+                    ListeningNowRow(
+                        playing = playing,
+                        isListeningAlong = { state.session?.host.equals(it, ignoreCase = true) },
+                        onOpenProfile = onOpenProfile
+                    )
                 }
             }
 
-            // The feed the server has always answered and nothing on this screen ever asked for.
-            // Placed above the roster because it is the only part of the tab that changes.
             if (state.feed.isNotEmpty()) {
                 item(key = "feed_header") { SectionHeader("Lately") }
                 items(
                     count = state.feed.size,
-                    // The server's feed carries no stable id, so position is all there is. It is a
-                    // sound key here only because the list grows at the end and is never reordered
-                    // — a prefix that was item 3 stays item 3 when a longer page arrives.
                     key = { index -> "feed_" + index }
                 ) { index ->
                     FeedItemCard(
@@ -254,11 +198,6 @@ internal fun SocialScreen(
                 }
             }
 
-            // No second pass over `state.friends` here. The roster is the avatar row above, and
-            // repeating it as a text list lower down said the same thing twice — once as faces,
-            // once as names — so the tab ended on a list nobody had asked for. Requests still get
-            // their own sections, because those are things to answer rather than people to open.
-
             if (state.outgoing.isNotEmpty()) {
                 item(key = "outgoing_header") { SectionHeader("Waiting for an answer") }
                 items(state.outgoing, key = { "outgoing_" + it.username }) { profile ->
@@ -286,43 +225,10 @@ internal fun SocialScreen(
     }
 }
 
-@Composable
-internal fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 8.dp)
-    )
-}
-
-@Composable
-internal fun NotPairedNotice(onOpenSettings: () -> Unit) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = Modifier.padding(20.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.social_friends_need_agro_server),
-            style = MaterialTheme.typography.titleMedium
-        )
-        Text(
-            text = stringResource(R.string.social_pair_one_create_account_one),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        FilledTonalButton(onClick = onOpenSettings, shapes = ButtonDefaults.shapes()) {
-            Text(stringResource(R.string.social_open_settings))
-        }
-    }
-}
-
 /** Enough to fill the fold. A placeholder nobody scrolls to is work for nothing. */
 private const val SKELETON_ROWS = 6
 
 /**
  * How close to the end the list gets before the next page is asked for.
- *
- * A few rows rather than the last one: fetching only once the final card is visible means the
- * skeletons are always seen, and the point is that usually they are not.
  */
 private const val FEED_PREFETCH_DISTANCE = 4

@@ -182,36 +182,13 @@ internal fun QueueDrawer(
             Box(modifier = Modifier.fillMaxSize().navigationBarsPadding()) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     BottomSheetDefaults.DragHandle(modifier = Modifier.align(Alignment.CenterHorizontally))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 6.dp)
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.action_queue),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            if (state.queue.isNotEmpty()) {
-                                Text(
-                                    text = stringResource(R.string.queue_tracks, state.currentIndex + 1, state.queue.size),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        if (state.queue.isNotEmpty() && !state.orderLocked) {
-                            IconButton(onClick = playerConnection::clearQueue, shapes = IconButtonDefaults.shapes()) {
-                                Icon(
-                                    imageVector = Icons.Rounded.DeleteSweep,
-                                    contentDescription = stringResource(R.string.action_clear_queue),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
+                    QueueDrawerHeader(
+                        currentIndex = state.currentIndex,
+                        queueSize = state.queue.size,
+                        orderLocked = state.orderLocked,
+                        onClearQueue = playerConnection::clearQueue
+                    )
+
 
                     QueueUpNext(
                         entries = rememberQueueEntries(state.queue, state.currentIndex, itemGenerations),
@@ -251,11 +228,3 @@ internal fun QueueDrawer(
     }
 }
 
-/** How far down a full back swipe pulls the drawer before it commits. */
-private const val BackPeek = 0.35f
-
-/** How dark the player gets behind a fully open drawer. */
-private const val ScrimAlpha = 0.4f
-
-/** Tall enough to be the queue, short enough that the player is still visibly behind it. */
-internal const val QueueDrawerHeightFraction = 0.82f

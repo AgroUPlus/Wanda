@@ -11,9 +11,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -66,14 +66,14 @@ internal fun DockSearchField(
                 label = "searchLeading"
             ) { active ->
                 if (active) {
-                    Icon(Icons.Rounded.Search, contentDescription = null)
+                    Icon(Icons.Outlined.Search, contentDescription = null)
                 } else {
                     IconButton(onClick = {
                         haptics.confirmed()
                         onListen()
                     }) {
                         Icon(
-                            imageVector = Icons.Rounded.MusicNote,
+                            imageVector = Icons.Outlined.MusicNote,
                             contentDescription = stringResource(R.string.nav_identify_what_s_playing)
                         )
                     }
@@ -92,7 +92,7 @@ internal fun DockSearchField(
                     haptics.settled()
                     onQueryChange("")
                 }) {
-                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.nav_clear_search))
+                    Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.nav_clear_search))
                 }
             }
         },

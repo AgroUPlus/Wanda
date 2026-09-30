@@ -176,6 +176,7 @@ ksp {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.webkit)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -240,12 +241,11 @@ dependencies {
 
     // YouTube cipher deobfuscation + PoToken (BotGuard) generation. GPL-3.0 (Wanda is EUPL-1.2;
     // EUPL-1.2 Article 5 & Appendix explicitly permit the combination under GPL-3.0) — see LICENSE.
-    implementation("com.github.ZemerTeam:zemer-cipher:55ef918b75")
+    implementation("com.github.ZemerTeam:zemer-cipher:301b0b6a25")
     // zemer-cipher declares Timber compileOnly; it's absent at runtime without this.
     implementation("com.jakewharton.timber:timber:5.0.1")
 
     testImplementation(libs.junit)
-    implementation(libs.androidx.webkit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.client.mock)
     androidTestImplementation(libs.androidx.junit)

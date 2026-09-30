@@ -138,3 +138,13 @@ internal fun drawerNestedScroll(
         return Velocity.Zero
     }
 }
+
+/** How far down a full back swipe pulls the drawer before it commits. */
+internal const val BackPeek = 0.35f
+
+/** How dark the player gets behind a fully open drawer. */
+internal const val ScrimAlpha = 0.4f
+
+/** Tall enough to be the queue, short enough that the player is still visibly behind it. */
+internal const val QueueDrawerHeightFraction = 0.82f
+

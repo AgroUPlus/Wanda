@@ -32,6 +32,7 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
     @Inject lateinit var librarySyncScheduler: com.wander.android.core.sync.LibrarySyncScheduler
     @Inject lateinit var p2pServer: com.wander.android.core.sync.P2PServer
     @Inject lateinit var secureStorage: com.wander.android.core.security.SecureStorage
+    @Inject lateinit var likedTrackCacheProtector: com.wander.android.data.repository.LikedTrackCacheProtector
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -56,10 +57,26 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
             .diskCache {
                 DiskCache.Builder()
                     .directory(context.cacheDir.resolve("image_cache"))
-                    .maxSizeBytes(100L * 1024 * 1024)
+                    .maxSizeBytes(imageDiskCacheBytes(context))
                     .build()
             }
             .build()
+    }
+
+    /**
+     * A percentage of free space, the same idea [MemoryCache.Builder.maxSizePercent] already
+     * applies above — a fixed 100MB was the same tiny slice of a 16GB phone and a 1TB tablet, so
+     * heavy libraries on capable devices were re-fetching artwork a bigger cache would have kept.
+     * Bounded on both ends: a phone nearly out of space still gets a floor worth having, and a
+     * phone with a completely empty drive does not get asked to give away most of it to album art.
+     */
+    private fun imageDiskCacheBytes(context: PlatformContext): Long {
+        val availableBytes = runCatching {
+            val stats = android.os.StatFs(context.cacheDir.path)
+            stats.blockSizeLong * stats.availableBlocksLong
+        }.getOrDefault(0L)
+        return (availableBytes / 50) // 2% of free space
+            .coerceIn(MIN_IMAGE_CACHE_BYTES, MAX_IMAGE_CACHE_BYTES)
     }
 
     /** Outlives every screen, like the server it starts. */
@@ -77,6 +94,7 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
         )
         // Cheap and self-gating: the worker does nothing until an Agro server is paired.
         scrobbleSyncScheduler.schedule()
+        likedTrackCacheProtector.start(applicationScope)
         if (secureStorage.agroCatalogTrade || secureStorage.agroP2pSync || secureStorage.agroServerArchive) {
             librarySyncScheduler.enablePeriodicSync()
         }
@@ -97,6 +115,15 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
         // Needed for YT Music's PO Token / signature-cipher deobfuscation (see InnerTubeClient).
         val isDebuggable = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         ZemerCipher.initialize(context = this, debugLogging = isDebuggable)
+        // Lets a debug build's importer WebView (Spotify/Deezer/YouTube sign-in) be inspected live
+        // from chrome://inspect on a connected machine — the only way to see a page that renders
+        // nothing and logs nothing itself, which `console.*`-only logging can't catch.
+        android.webkit.WebView.setWebContentsDebuggingEnabled(isDebuggable)
+    }
+
+    private companion object {
+        const val MIN_IMAGE_CACHE_BYTES = 100L * 1024 * 1024 // the old flat size, as a floor
+        const val MAX_IMAGE_CACHE_BYTES = 1024L * 1024 * 1024
     }
 }
 

@@ -140,8 +140,8 @@ private const val PlayingCorner = 0.3f
 private const val PlayingPressedCorner = 0.22f
 
 /** Resting and pressed shapes of the satellites beside it. */
-private val ActionResting = MaterialShapes.Square
-private val ActionPressed = MaterialShapes.Circle
+internal val ActionResting = MaterialShapes.Square
+internal val ActionPressed = MaterialShapes.Circle
 
 /**
  * M3 Expressive's own Large icon-button token (96dp container / 32dp icon) — not an arbitrary
@@ -169,9 +169,11 @@ fun ShapedPlayButton(
     contentDescription: String,
     icon: ImageVector,
     modifier: Modifier = Modifier,
-    size: Dp = ShapedPlaySize
+    size: Dp = ShapedPlaySize,
+    /** Hoisted out when a caller needs to react to this button's own press state — see `ArtistHero`. */
+    interactionSource: MutableInteractionSource? = null
 ) {
-    val interaction = remember { MutableInteractionSource() }
+    val interaction = interactionSource ?: remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     // The fast spatial spec, not the default: this sits directly under a finger, and anything
     // leisurely reads as the tap not having registered.
@@ -199,9 +201,11 @@ fun ShapedActionButton(
     contentDescription: String,
     icon: ImageVector,
     modifier: Modifier = Modifier,
-    size: Dp = ShapedActionSize
+    size: Dp = ShapedActionSize,
+    /** Hoisted out when a caller needs to react to this button's own press state — see `ArtistHero`. */
+    interactionSource: MutableInteractionSource? = null
 ) {
-    val interaction = remember { MutableInteractionSource() }
+    val interaction = interactionSource ?: remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val shape = rememberPressMorphShape(ActionResting, ActionPressed, pressed)
 

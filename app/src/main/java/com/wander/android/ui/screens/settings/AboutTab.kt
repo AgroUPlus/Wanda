@@ -27,7 +27,6 @@ import com.wander.android.ui.components.rememberShelfEntranceScale
  * network round trip when someone is looking at this row.
  */
 private const val ORG_URL = "https://github.com/AgroUPlus"
-private const val REPO_URL = "https://github.com/AgroUPlus/Wanda"
 
 internal fun LazyListScope.aboutTab(
     state: SettingsUiState,

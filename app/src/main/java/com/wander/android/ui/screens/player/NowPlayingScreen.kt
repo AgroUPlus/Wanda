@@ -161,6 +161,13 @@ internal fun NowPlayingScreen(
     val jamViewModel: JamViewModel = hiltViewModel()
     val speedAndPitch by playerConnection.speedAndPitch.collectAsStateWithLifecycle()
 
+    // Shared by the menu drawer's "Source" row and the top bar's source-name chip — same action,
+    // two entry points to it.
+    val onOpenSourcePicker: (() -> Unit)? = {
+        showSourcePicker = true
+        viewModel.findRenditions(track, state.durationMs)
+    }.takeIf { viewModel.canSwitchSource(track, state.durationMs) }
+
     if (showMenuDrawer) {
         NowPlayingMenuDrawer(
             track = track,
@@ -181,10 +188,7 @@ internal fun NowPlayingScreen(
             onAddToQueue = { playerConnection.addToQueue(listOf(track)) },
             onToggleLike = { viewModel.toggleLike(track) },
             onShare = { viewModel.share(track) }.takeIf { viewModel.canShare(track) },
-            onOpenSourcePicker = {
-                showSourcePicker = true
-                viewModel.findRenditions(track, state.durationMs)
-            }.takeIf { viewModel.canSwitchSource(track, state.durationMs) },
+            onOpenSourcePicker = onOpenSourcePicker,
             onOpenAudioTrackPicker = { showAudioTrackPicker = true }.takeIf { state.audioTracks.size > 1 },
             onOpenArtist = onOpenArtist?.let { open -> { open(track.artist, track.artistId) } },
             onOpenAlbum = track.albumId?.let { albumId -> onOpenAlbum?.let { open -> { open(albumId) } } },
@@ -223,6 +227,7 @@ internal fun NowPlayingScreen(
             onOpenQueue = onOpenQueue,
             onMinimize = onMinimize,
             onOpenMenu = onOpenMenu,
+            onOpenSourcePicker = onOpenSourcePicker,
             onToggleLyrics = onToggleLyrics,
             contentAlpha = contentAlpha,
             overlayAlpha = overlayAlpha,
@@ -250,6 +255,7 @@ internal fun NowPlayingScreen(
             onOpenQueue = onOpenQueue,
             onMinimize = onMinimize,
             onOpenMenu = onOpenMenu,
+            onOpenSourcePicker = onOpenSourcePicker,
             onToggleLyrics = onToggleLyrics,
             contentAlpha = contentAlpha,
             overlayAlpha = overlayAlpha,

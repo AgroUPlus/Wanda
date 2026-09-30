@@ -35,6 +35,7 @@ internal fun SourcesStep(
     Spacer(modifier = Modifier.height(8.dp))
 
     GroupedCard(
+        horizontalPadding = 0.dp,
         items = listOf<@Composable () -> Unit>(
             {
                 SourceSetupCard(

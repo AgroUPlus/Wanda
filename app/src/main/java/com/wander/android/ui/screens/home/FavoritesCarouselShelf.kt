@@ -1,0 +1,123 @@
+package com.wander.android.ui.screens.home
+
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.carousel.CarouselItemScope
+import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
+import androidx.compose.material3.carousel.rememberCarouselState
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.ui.components.Artwork
+import com.wander.android.ui.components.isPlayableNow
+import com.wander.android.ui.components.scrollingTitle
+
+/**
+ * "Your Favourites" as an M3 Expressive carousel — the item under your thumb sits large, its
+ * neighbours are compressed toward the edges, and scrolling continuously re-balances which one
+ * is which. Replaces the hand-rolled overlapping-stack look, which had no motion of its own and
+ * showed no title at all.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+internal fun FavoritesCarouselShelf(
+    tracks: List<UnifiedTrack>,
+    onPlay: (Int) -> Unit,
+    onLongPress: (UnifiedTrack) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val carouselState = rememberCarouselState { tracks.size }
+    HorizontalMultiBrowseCarousel(
+        state = carouselState,
+        preferredItemWidth = PreferredItemWidth,
+        itemSpacing = 8.dp,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(CarouselHeight)
+            .padding(horizontal = 20.dp)
+    ) { index ->
+        val track = tracks[index]
+        FavoriteCard(
+            track = track,
+            onPlay = { onPlay(index) },
+            onLongPress = { onLongPress(track) }
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun CarouselItemScope.FavoriteCard(
+    track: UnifiedTrack,
+    onPlay: () -> Unit,
+    onLongPress: () -> Unit,
+    enabled: Boolean = track.isPlayableNow()
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .maskClip(MaterialTheme.shapes.extraLarge)
+            .combinedClickable(
+                onClick = { if (enabled) onPlay() },
+                onLongClick = onLongPress
+            )
+            .graphicsLayer { alpha = if (enabled) 1f else DisabledAlpha }
+    ) {
+        Artwork(
+            url = track.artworkUrl,
+            contentDescription = track.title,
+            sizeDp = PreferredItemWidth,
+            // The outer `maskClip` already shapes this card — a second, independent clip here
+            // (Artwork's own default `medium` shape) rounded the corners twice at two different
+            // radii as the carousel resized the item, which looked like a seam, not one card.
+            shape = RectangleShape,
+            modifier = Modifier.fillMaxSize()
+        )
+        // A scrim rather than a solid strip under the text: the whole point of a carousel item is
+        // the artwork, and a title readable only over a flat bar would fight it for space at a
+        // width some items shrink to as small as `minSmallItemWidth`.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = ScrimAlpha))
+                    )
+                )
+        )
+        Text(
+            text = track.title,
+            style = MaterialTheme.typography.titleSmall,
+            color = Color.White,
+            maxLines = 1,
+            overflow = TextOverflow.Clip,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(12.dp)
+                .scrollingTitle()
+        )
+    }
+}
+
+/** Material's disabled-content opacity, matching `TrackRow`. */
+private const val DisabledAlpha = 0.38f
+private const val ScrimAlpha = 0.65f
+
+private val PreferredItemWidth = 160.dp
+private val CarouselHeight = 200.dp

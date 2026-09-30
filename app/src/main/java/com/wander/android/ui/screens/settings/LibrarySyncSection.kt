@@ -44,9 +44,9 @@ internal fun LazyListScope.librarySyncSection(
         SettingsToggle(
             title = stringResource(R.string.settings_p2p_device_sync),
             subtitle = if (state.incognito) {
-                "Paused — incognito is on"
+                stringResource(R.string.settings_paused_incognito)
             } else {
-                "Share songs between devices and index with server"
+                stringResource(R.string.settings_share_songs_between_devices_index_server)
             },
             checked = state.p2pSync && !state.incognito,
             onCheckedChange = actions.onP2pSyncChange,
@@ -60,9 +60,9 @@ internal fun LazyListScope.librarySyncSection(
         SettingsToggle(
             title = stringResource(R.string.settings_archive_server),
             subtitle = when {
-                state.incognito -> "Paused — incognito is on"
-                !state.canArchive -> "Your account is not allowed to upload files to this server."
-                else -> "Upload full audio files to server storage."
+                state.incognito -> stringResource(R.string.settings_paused_incognito)
+                !state.canArchive -> stringResource(R.string.settings_account_not_allowed_upload_files)
+                else -> stringResource(R.string.settings_upload_full_audio_files_server)
             },
             checked = state.serverArchive && !state.incognito && state.canArchive,
             onCheckedChange = actions.onServerArchiveChange,
@@ -77,9 +77,9 @@ internal fun LazyListScope.librarySyncSection(
             SettingsRow(
                 title = stringResource(R.string.settings_free_up_space_device),
                 subtitle = if (state.canDelete) {
-                    "Delete the ${state.syncedTracks} files your server already holds"
+                    stringResource(R.string.settings_delete_files_server_already_holds, state.syncedTracks)
                 } else {
-                    "Nothing to remove — the server has confirmed no files yet"
+                    stringResource(R.string.settings_nothing_remove_server_confirmed_no_files)
                 },
                 onClick = actions.onReviewDeletions,
                 destructive = state.canDelete,
@@ -164,9 +164,9 @@ internal fun LazyListScope.librarySyncSection(
         SettingsRow(
             title = stringResource(R.string.settings_sync_now),
             subtitle = when {
-                state.syncProgress.running -> "Running…"
-                state.serverArchive -> "Send files to the server now"
-                else -> "Update what your other devices can see. No files are sent."
+                state.syncProgress.running -> stringResource(R.string.settings_running)
+                state.serverArchive -> stringResource(R.string.settings_send_files_to_server_now)
+                else -> stringResource(R.string.settings_update_other_devices_no_files_sent)
             },
             onClick = actions.onSyncNow,
             modifier = Modifier.scale(rememberShelfEntranceScale(librarySyncNowIndex))

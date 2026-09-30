@@ -71,6 +71,7 @@ internal fun ImmersivePlayerLayout(
     onOpenQueue: () -> Unit,
     onMinimize: () -> Unit,
     onOpenMenu: () -> Unit,
+    onOpenSourcePicker: (() -> Unit)?,
     onToggleLyrics: () -> Unit,
     contentAlpha: () -> Float,
     overlayAlpha: () -> Float,
@@ -127,11 +128,14 @@ internal fun ImmersivePlayerLayout(
 
         PlayerTopBar(
             jam = jam,
-            sourceLabel = track.source.displayName,
+            source = PlayerSourceChip(
+                label = track.source.displayName,
+                mutedColor = OnCoverArt.copy(alpha = 0.75f),
+                onOpenPicker = onOpenSourcePicker
+            ),
             onOpenJam = onOpenJam,
             onMinimize = onMinimize,
             onOpenQueue = onOpenQueue,
-            sourceLabelColorMuted = OnCoverArt.copy(alpha = 0.75f),
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .onGloballyPositioned {

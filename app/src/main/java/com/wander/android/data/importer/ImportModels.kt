@@ -2,12 +2,12 @@ package com.wander.android.data.importer
 
 import kotlinx.serialization.Serializable
 
-enum class PlatformType(val displayName: String, val webUrl: String) {
+enum class PlatformType(val displayName: String, val webUrl: String? = null) {
     SPOTIFY("Spotify", "https://open.spotify.com/"),
-    DEEZER("Deezer", "https://www.deezer.com/login"),
+    DEEZER("Deezer", "https://www.deezer.com/"),
     YOUTUBE("YouTube Music", "https://music.youtube.com"),
     APPLE_MUSIC("Apple Music", "https://music.apple.com"),
-    PLAIN_TEXT("Text / M3U", "");
+    PLAIN_TEXT("Text / M3U", null);
 
     companion object {
         fun detect(input: String): PlatformType = when {

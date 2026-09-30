@@ -30,9 +30,6 @@ fun Context.hasPermission(permission: String): Boolean =
 
 fun Context.hasAudioPermission(): Boolean = hasPermission(AUDIO_PERMISSION)
 
-fun Context.hasNotificationPermission(): Boolean =
-    NOTIFICATION_PERMISSION?.let { hasPermission(it) } ?: true
-
 /** Whether this device may open connections to peers on the same network. */
 fun Context.hasLocalNetworkPermission(): Boolean =
     LOCAL_NETWORK_PERMISSION?.let { hasPermission(it) } ?: true

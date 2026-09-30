@@ -17,8 +17,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.LibraryMusic
-import androidx.compose.material.icons.rounded.People
+import androidx.compose.material.icons.outlined.LibraryMusic
+import androidx.compose.material.icons.outlined.People
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -113,14 +113,14 @@ fun WanderDockRow(
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(DockInset)) {
                 DockIconButton(
-                    icon = Icons.Rounded.LibraryMusic,
+                    icon = Icons.Outlined.LibraryMusic,
                     contentDescription = stringResource(R.string.nav_library),
                     selected = currentRoute == TopLevelDestination.LIBRARY.route,
                     label = "library",
                     onClick = onOpenLibrary
                 )
                 DockIconButton(
-                    icon = Icons.Rounded.People,
+                    icon = Icons.Outlined.People,
                     contentDescription = stringResource(R.string.nav_friends),
                     selected = currentRoute == TopLevelDestination.FRIENDS.route,
                     label = "friends",

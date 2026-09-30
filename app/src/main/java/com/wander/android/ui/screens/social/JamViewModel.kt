@@ -12,6 +12,7 @@ import com.wander.android.data.sources.agro.FriendJam
 import com.wander.android.data.sources.agro.Jam
 import com.wander.android.data.sources.agro.JamMode
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -200,6 +201,8 @@ internal class JamViewModel @Inject constructor(
                         }
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 // Topping the queue up is best-effort: the jam plays on with what it already has,
                 // and the next track change tries again. Surfacing this would put an error in

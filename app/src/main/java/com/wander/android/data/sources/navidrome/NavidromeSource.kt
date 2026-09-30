@@ -1,10 +1,9 @@
 package com.wander.android.data.sources.navidrome
 
 import com.wander.android.core.security.SecureStorage
+import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.LyricLine
 import com.wander.android.data.model.LyricsData
-import com.wander.android.data.model.ArtistAlbumSection
-import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
@@ -16,8 +15,6 @@ import com.wander.android.data.sources.StreamInfo
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.StateFlow
 
 private const val PREFIX = "navidrome:"
@@ -26,8 +23,18 @@ private const val PREFIX = "navidrome:"
 @Singleton
 class NavidromeSource @Inject constructor(
     private val secureStorage: SecureStorage,
-    private val apiClient: SubsonicApiClient
+    private val apiClient: SubsonicApiClient,
+    private val catalogLoader: NavidromeCatalogLoader
 ) : IMusicSource {
+
+    constructor(
+        secureStorage: SecureStorage,
+        apiClient: SubsonicApiClient
+    ) : this(
+        secureStorage = secureStorage,
+        apiClient = apiClient,
+        catalogLoader = NavidromeCatalogLoader(apiClient)
+    )
 
     override val sourceType = SourceType.NAVIDROME
     override val displayName = "Navidrome"
@@ -78,13 +85,11 @@ class NavidromeSource @Inject constructor(
 
     // ── Reads ───────────────────────────────────────────────────────────────────────────────
 
-    override suspend fun search(query: String) =
-        apiClient.search3(query).map { result -> result.song.orEmpty().map { it.toUnified() } }
+    override suspend fun search(query: String): Result<List<UnifiedTrack>> =
+        catalogLoader.search(query)
 
-    /** Resolves a `navidrome:` id straight off the server, so a handed-over session plays the
-     * user's own file rather than a lookalike found by searching. */
     override suspend fun getTrack(trackId: String): Result<UnifiedTrack?> =
-        apiClient.getSong(trackId.removePrefix(PREFIX)).map { it?.toUnified() }
+        catalogLoader.getTrack(trackId)
 
     override suspend fun getStreamInfo(trackId: String): Result<StreamInfo> {
         if (!apiClient.isConfigured) return Result.failure(IllegalStateException("Navidrome not configured"))
@@ -110,122 +115,34 @@ class NavidromeSource @Inject constructor(
             )
         }
 
-    override suspend fun getRadio(seedTrackId: String, count: Int) =
-        apiClient.getSimilarSongs2(seedTrackId.removePrefix(PREFIX), count)
-            .map { songs -> songs.map { it.toUnified() } }
+    override suspend fun getRadio(seedTrackId: String, count: Int): Result<List<UnifiedTrack>> =
+        catalogLoader.getRadio(seedTrackId, count)
 
-    override suspend fun getLikedTracks(limit: Int, offset: Int) =
-        apiClient.getStarred2().map { starred -> starred.song.orEmpty().map { it.toUnified() } }
+    override suspend fun getLikedTracks(limit: Int, offset: Int): Result<List<UnifiedTrack>> =
+        catalogLoader.getLikedTracks(limit, offset)
 
-    /**
-     * Recently *added*, which in Subsonic terms is `newest`.
-     *
-     * This asked for `recent`, which the Subsonic API defines as recently **played** — so the
-     * library could only ever contain albums the user had already listened to, and a freshly
-     * imported record never appeared until it was found by search and played once.
-     *
-     * The album fetches run in parallel: at [RECENT_ALBUMS] albums, doing them in sequence made a
-     * library refresh take as long as the slowest link in a chain of round-trips.
-     */
-    override suspend fun getRecentTracks(limit: Int) = coroutineScope {
-        apiClient.getAlbumList2(type = "newest", size = RECENT_ALBUMS).mapCatching { albums ->
-            albums
-                .map { album -> async { apiClient.getAlbum(album.id).getOrNull()?.song.orEmpty() } }
-                .flatMap { it.await() }
-                .map { it.toUnified() }
-                .take(limit)
-        }
-    }
+    override suspend fun getRecentTracks(limit: Int): Result<List<UnifiedTrack>> =
+        catalogLoader.getRecentTracks(limit)
 
-    override suspend fun getAlbums(limit: Int, offset: Int) =
-        apiClient.getAlbumList2(type = "alphabeticalByName", size = limit, offset = offset)
-            .map { albums -> albums.map { it.toUnified() } }
+    override suspend fun getAlbums(limit: Int, offset: Int): Result<List<UnifiedAlbum>> =
+        catalogLoader.getAlbums(limit, offset)
 
-    override suspend fun getAlbumTracks(albumId: String) =
-        apiClient.getAlbum(albumId.removePrefix(PREFIX))
-            .map { album -> album.song.orEmpty().map { it.toUnified() } }
+    override suspend fun getAlbumTracks(albumId: String): Result<List<UnifiedTrack>> =
+        catalogLoader.getAlbumTracks(albumId)
 
-    /**
-     * An artist, their records, and the biography Navidrome's metadata agent found for them.
-     *
-     * Two calls because Subsonic splits them: `getArtist` knows the discography and nothing about
-     * the person, `getArtistInfo2` knows the person and nothing about the discography. The second
-     * is allowed to fail — a server with no metadata agent configured answers nothing at all, and
-     * that is an artist without a bio rather than an artist that could not be loaded.
-     *
-     * One section, "Albums", because that is all Subsonic distinguishes. It does not separate
-     * singles from albums or publish a top-songs shelf, and inventing those headings over an
-     * arbitrary split of the same list would be a claim the server never made.
-     */
-    override suspend fun getArtist(artistId: String): Result<ArtistDetails> {
-        val id = artistId.removePrefix(PREFIX)
-        return apiClient.getArtist(id).map { artist ->
-            val info = apiClient.getArtistInfo2(id).getOrNull()
-            val albums = artist.album.orEmpty().map { it.toUnified() }
-            ArtistDetails(
-                id = "$PREFIX${artist.id}",
-                name = artist.name,
-                // No portrait from this source. Deliberately, and this is the whole of the fix for
-                // a bug that survived two other attempts at it.
-                //
-                // `getArtistInfo2` is Subsonic's metadata-agent endpoint, and on Navidrome the
-                // agent is Last.fm, which resolves an artist *by name*. A name is not an identity:
-                // asked about "Mili" or "ROSÉ" it answers with whichever artist it matched, and the
-                // response carries no id, no disambiguation, nothing that says whose face this is.
-                // So the server returns a correct name and a correct biography beside a photograph
-                // of a different person, and every check this app could make passes — the name
-                // matches, because the name was never the thing that was wrong.
-                //
-                // It cannot be validated client-side and it cannot be repaired, so it is not used.
-                // `artist.coverArt` is no better: on Navidrome that is an *album* cover id, a
-                // record sleeve rather than a face. The biography below is kept because it is the
-                // half Last.fm gets right, and because a wrong biography is legible as wrong in a
-                // way a wrong photograph is not.
-                //
-                // `ArtistHero` draws a monogram instead. A letter is never the wrong person.
-                imageUrl = null,
-                bio = info?.biography?.stripBiographyMarkup(),
-                sections = if (albums.isEmpty()) {
-                    emptyList()
-                } else {
-                    listOf(ArtistAlbumSection("Albums", albums))
-                }
-            )
-        }
-    }
+    override suspend fun getArtist(artistId: String): Result<ArtistDetails> =
+        catalogLoader.getArtist(artistId)
 
-    override suspend fun getPlaylists() = apiClient.getPlaylists().map { list ->
-        list.map { playlist ->
-            UnifiedPlaylist(
-                id = "$PREFIX${playlist.id}",
-                source = SourceType.NAVIDROME,
-                name = playlist.name,
-                comment = playlist.comment,
-                coverArtUrl = apiClient.buildCoverArtUrl(playlist.coverArt),
-                songCount = playlist.songCount,
-                durationMs = playlist.duration * 1000L,
-                isPublic = playlist.public
-            )
-        }
-    }
+    override suspend fun getPlaylists(): Result<List<UnifiedPlaylist>> =
+        catalogLoader.getPlaylists()
 
-    override suspend fun getPlaylistTracks(playlistId: String) =
-        apiClient.getPlaylist(playlistId.removePrefix(PREFIX))
-            .map { detail -> detail.entry.orEmpty().map { it.toUnified() } }
+    override suspend fun getPlaylistTracks(playlistId: String): Result<List<UnifiedTrack>> =
+        catalogLoader.getPlaylistTracks(playlistId)
 
     // ── Writes ──────────────────────────────────────────────────────────────────────────────
 
-    /** See [SubsonicApiClient.startScan] — called after library sync adds files to the server. */
     suspend fun startScan(): Result<Unit> = apiClient.startScan()
 
-    /**
-     * Creates the playlist and returns its prefixed id.
-     *
-     * Subsonic's `createPlaylist` is specified to return the new playlist, but not every server
-     * actually does — Navidrome answers some versions with an empty body. Rather than inventing an
-     * id, the name is looked up afterwards; the playlist genuinely exists by then, so this reads
-     * back what the server made instead of guessing what it should have made.
-     */
     override suspend fun createPlaylist(name: String, trackIds: List<String>): Result<String> {
         val songIds = trackIds.map { it.removePrefix(PREFIX) }
         val created = apiClient.createPlaylist(name, songIds)
@@ -246,10 +163,6 @@ class NavidromeSource @Inject constructor(
             songIdsToAdd = trackIds.map { it.removePrefix(PREFIX) }
         )
 
-    /**
-     * Subsonic's `createShare` takes ids of any kind — a song, an album, an artist or a playlist —
-     * and answers with a public URL for whatever it was given, so all four are the same call.
-     */
     override suspend fun createShareLink(target: ShareTarget): Result<String> =
         apiClient.createShare(listOf(target.id.removePrefix(PREFIX)), target.description)
 
@@ -263,53 +176,15 @@ class NavidromeSource @Inject constructor(
         return apiClient.scrobble(trackId.removePrefix(PREFIX), submissionTime / 1000L)
     }
 
-    /**
-     * Looks up a Navidrome public share by ID or URL and resolves the track.
-     */
     suspend fun resolveShare(shareUrlOrId: String): Result<UnifiedTrack> =
         apiClient.getShares().mapCatching { shares ->
             val share = shares.firstOrNull {
                 it.id == shareUrlOrId || it.url == shareUrlOrId || it.url.endsWith("/$shareUrlOrId") ||
                     (it.id.isNotBlank() && shareUrlOrId.contains(it.id))
-            } ?: throw java.io.IOException("Share not found or expired on Navidrome server")
-            share.entry?.firstOrNull()?.toUnified()
-                ?: throw java.io.IOException("Navidrome share has no playable songs")
+            } ?: throw IOException("Share not found or expired on Navidrome server")
+            with(catalogLoader) {
+                share.entry?.firstOrNull()?.toUnified()
+                    ?: throw IOException("Navidrome share has no playable songs")
+            }
         }
-
-    private fun SubsonicSong.toUnified() = UnifiedTrack(
-        id = "$PREFIX$id",
-        source = SourceType.NAVIDROME,
-        title = title,
-        artist = artist ?: "Unknown Artist",
-        album = album,
-        albumId = albumId?.let { "$PREFIX$it" },
-        artistId = artistId?.let { "$PREFIX$it" },
-        durationMs = (duration ?: 0L) * 1000L,
-        artworkUrl = apiClient.buildCoverArtUrl(coverArt),
-        trackNumber = track,
-        discNumber = discNumber,
-        year = year,
-        genre = genre,
-        bitRateKbps = bitRate,
-        format = suffix ?: contentType,
-        isLiked = starred != null,
-        playCount = playCount
-    )
-
-    private fun SubsonicAlbum.toUnified() = UnifiedAlbum(
-        id = "$PREFIX$id",
-        source = SourceType.NAVIDROME,
-        title = name,
-        artist = artist ?: "Unknown Artist",
-        artistId = artistId?.let { "$PREFIX$it" },
-        coverArtUrl = apiClient.buildCoverArtUrl(coverArt),
-        songCount = songCount,
-        durationMs = duration * 1000L,
-        year = year,
-        genre = genre
-    )
-
-    private companion object {
-        const val RECENT_ALBUMS = 25
-    }
 }

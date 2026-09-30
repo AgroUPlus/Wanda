@@ -1,6 +1,7 @@
 package com.wander.android.ui.screens.home
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -52,6 +53,7 @@ internal fun QuickPicksHeader(
     title: String,
     tracks: List<UnifiedTrack>,
     onPlay: (index: Int) -> Unit,
+    onLongPress: (UnifiedTrack) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -81,7 +83,12 @@ internal fun QuickPicksHeader(
         }
 
         if (tracks.isNotEmpty()) {
-            CoverCluster(tracks = tracks, onPlay = onPlay, modifier = Modifier.padding(top = 20.dp))
+            CoverCluster(
+                tracks = tracks,
+                onPlay = onPlay,
+                onLongPress = onLongPress,
+                modifier = Modifier.padding(top = 20.dp)
+            )
         }
     }
 }
@@ -91,10 +98,12 @@ internal fun QuickPicksHeader(
  * they still read as scattered. Sizes come from the available width, with [ClusterGap] reserved
  * between neighbours, so the covers never touch on any phone.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CoverCluster(
     tracks: List<UnifiedTrack>,
     onPlay: (Int) -> Unit,
+    onLongPress: (UnifiedTrack) -> Unit,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
@@ -119,7 +128,10 @@ private fun CoverCluster(
                             x = x,
                             y = (large - size) * slot.y
                         )
-                        .clickable { onPlay(index) }
+                        .combinedClickable(
+                            onClick = { onPlay(index) },
+                            onLongClick = { onLongPress(tracks[index]) }
+                        )
                 )
             }
         }

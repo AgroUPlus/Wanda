@@ -48,18 +48,22 @@ internal fun SettingsCategoryScreen(
     onBack: () -> Unit,
     onNavidromeLogin: () -> Unit,
     onYouTubeLogin: () -> Unit,
+    onDeezerLogin: () -> Unit = {},
     onOpenImport: () -> Unit,
     onOpenMergePreview: () -> Unit,
     onOpenReplay: () -> Unit,
     onOpenFingerprints: () -> Unit
 ) {
     val host = rememberSettingsHost(
-        onNavidromeLogin = onNavidromeLogin,
-        onYouTubeLogin = onYouTubeLogin,
-        onOpenImport = onOpenImport,
-        onOpenMergePreview = onOpenMergePreview,
-        onOpenReplay = onOpenReplay,
-        onOpenFingerprints = onOpenFingerprints
+        SettingsNavigation(
+            onNavidromeLogin = onNavidromeLogin,
+            onYouTubeLogin = onYouTubeLogin,
+            onDeezerLogin = onDeezerLogin,
+            onOpenImport = onOpenImport,
+            onOpenMergePreview = onOpenMergePreview,
+            onOpenReplay = onOpenReplay,
+            onOpenFingerprints = onOpenFingerprints
+        )
     )
 
     val listState = rememberLazyListState()

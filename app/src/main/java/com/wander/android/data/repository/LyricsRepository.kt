@@ -2,6 +2,7 @@ package com.wander.android.data.repository
 
 import com.wander.android.core.database.dao.TrackLyricsDao
 import com.wander.android.core.database.entity.TrackLyricsEntity
+import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.LyricLine
 import com.wander.android.data.model.LyricMatch
 import com.wander.android.data.model.LyricsData
@@ -37,7 +38,8 @@ data class LrclibResponse(
 class LyricsRepository @Inject constructor(
     private val sources: Set<@JvmSuppressWildcards IMusicSource>,
     private val trackLyricsDao: TrackLyricsDao,
-    private val client: HttpClient
+    private val client: HttpClient,
+    private val secureStorage: SecureStorage
 ) {
     private val lrclibBaseUrl = "https://lrclib.net/api/get"
 
@@ -131,7 +133,11 @@ class LyricsRepository @Inject constructor(
             return@withContext LyricsState.Present(nativeLyrics)
         }
 
-        // Step 3: Fallback to privacy-friendly LRCLIB
+        // Step 3: Fallback to privacy-friendly LRCLIB — never called without explicit consent,
+        // since this sends local track metadata to a third party.
+        if (!secureStorage.isExternalLyricsEnabled.value) {
+            return@withContext LyricsState.Absent
+        }
         try {
             val response: LrclibResponse = client.get(lrclibBaseUrl) {
                 parameter("track_name", trackTitle)

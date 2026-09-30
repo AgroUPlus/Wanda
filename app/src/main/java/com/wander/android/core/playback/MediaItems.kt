@@ -115,12 +115,10 @@ internal fun MediaItem.toUnifiedTrack(): UnifiedTrack? {
 
     // Robust fallback: Reconstruct UnifiedTrack from MediaItem standard fields when IPC drops extras Bundle
     val trackId = mediaId.takeIf { it.isNotBlank() } ?: requestMetadata.mediaUri?.wandaTrackId() ?: return null
-    val resolvedSource = when {
-        trackId.startsWith(SourceType.NAVIDROME.idPrefix) -> SourceType.NAVIDROME
-        trackId.startsWith(SourceType.YTMUSIC.idPrefix) -> SourceType.YTMUSIC
-        trackId.startsWith(SourceType.LOCAL.idPrefix) -> SourceType.LOCAL
-        else -> SourceType.LOCAL
-    }
+    // Every other prefix lookup in the codebase matches against the full SourceType.entries list;
+    // a hand-picked subset here silently fell back to LOCAL for any source added after it was
+    // written (Deezer), mislabeling the track and corrupting the Room row once played.
+    val resolvedSource = SourceType.entries.firstOrNull { trackId.startsWith(it.idPrefix) } ?: SourceType.LOCAL
     val trackTitle = mediaMetadata.title?.toString().takeIf { !it.isNullOrBlank() } ?: "Playing Track"
     val trackArtist = mediaMetadata.artist?.toString().takeIf { !it.isNullOrBlank() } ?: "Unknown Artist"
     val trackAlbum = mediaMetadata.albumTitle?.toString()

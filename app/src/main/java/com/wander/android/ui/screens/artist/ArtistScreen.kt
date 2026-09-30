@@ -1,12 +1,18 @@
 package com.wander.android.ui.screens.artist
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.ui.components.AddToPlaylistController
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.AlbumActionsSheet
 import com.wander.android.ui.components.CompactHeroTopBar
@@ -58,54 +65,11 @@ internal fun ArtistScreen(
     val addToPlaylist = AddToPlaylistHost()
 
     actionsFor?.let { track ->
-        TrackActionsSheet(
-            track = track,
-            isLiked = track.isLiked,
-            onPlayNext = { viewModel.playNext(track) },
-            onAddToQueue = { viewModel.addToQueue(track) },
-            onStartRadio = { viewModel.startRadio(track) },
-            onToggleLike = { viewModel.toggleLike(track) },
-            onRemove = null,
-            onDismiss = { actionsFor = null },
-            onShare = if (viewModel.canShare(track)) {
-                { viewModel.share(track) }
-            } else {
-                null
-            },
-            onAddToPlaylist = if (addToPlaylist.canAdd(track)) {
-                { addToPlaylist.open(track) }
-            } else {
-                null
-            }
-        )
+        ArtistTrackActions(track, viewModel, addToPlaylist) { actionsFor = null }
     }
 
     albumActionsFor?.let { album ->
-        AlbumActionsSheet(
-            album = album,
-            onPlay = {
-                viewModel.playAlbum(album)
-                albumActionsFor = null
-            },
-            onPlayNext = {
-                viewModel.playAlbumNext(album)
-                albumActionsFor = null
-            },
-            onAddToQueue = {
-                viewModel.addAlbumToQueue(album)
-                albumActionsFor = null
-            },
-            onDismiss = { albumActionsFor = null },
-            onShare = if (viewModel.canShareAlbum(album)) {
-                { viewModel.shareAlbum(album) }
-            } else null,
-            onAddToPlaylist = {
-                viewModel.getAlbumTracks(album) { tracks ->
-                    addToPlaylist.openForTracks(tracks, album.source)
-                }
-                albumActionsFor = null
-            }
-        )
+        ArtistAlbumActions(album, viewModel, addToPlaylist) { albumActionsFor = null }
     }
 
     // A single Box rather than a header above a list: the portrait runs to the top of the window,
@@ -154,9 +118,36 @@ internal fun ArtistScreen(
                     )
                 }
 
-                state.page.bio?.let { bio ->
+                if (state.page.bio != null || state.page.genres.isNotEmpty()) {
                     item(key = "bio", contentType = "bio") {
-                        Box(modifier = Modifier.padding(bottom = 8.dp)) { ArtistBio(bio) }
+                        Box(modifier = Modifier.padding(bottom = 8.dp)) {
+                            ArtistBio(bio = state.page.bio, genres = state.page.genres)
+                        }
+                    }
+                }
+
+                // Only for a genuine fetch failure, never for "this artist has no backend page" —
+                // see [ArtistUiState.pageFetchFailed]. The library-derived page above still renders
+                // in full either way, so this is an offer to try again, not a blocking error.
+                if (state.pageFetchFailed) {
+                    item(key = "fetch_failed", contentType = "fetch_failed") {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.artist_info_unavailable),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = { viewModel.refresh() }, shapes = ButtonDefaults.shapes()) {
+                                Text(stringResource(R.string.common_try_again))
+                            }
+                        }
                     }
                 }
 
@@ -177,13 +168,13 @@ internal fun ArtistScreen(
             }
         }
 
-        // The name slides and shrinks up into a compact bar (name + play) as the portrait scrolls
-        // away, so the page stays anchored without scrolling back up.
+        // The name slides and shrinks up into a compact bar as the portrait scrolls away, so the
+        // page stays anchored without scrolling back up. No play button here — the hero below
+        // already carries its own, bigger one; see `CompactHeroTopBar`'s own doc on `onPlay`.
         CompactHeroTopBar(
             titleState = titleState,
             onBack = onBack,
             title = state.artist,
-            onPlay = viewModel::playTop,
             heroTitleStyle = MaterialTheme.typography.displaySmall,
             heroTitleMaxLines = 2,
             topInset = contentPadding.calculateTopPadding(),
@@ -196,3 +187,66 @@ private fun artistSubtitle(albumCount: Int, trackCount: Int): String = listOfNot
     albumCount.takeIf { it > 0 }?.let { "$it album${if (it == 1) "" else "s"}" },
     trackCount.takeIf { it > 0 }?.let { "$it track${if (it == 1) "" else "s"}" }
 ).joinToString(" · ")
+
+@Composable
+private fun ArtistTrackActions(
+    track: UnifiedTrack,
+    viewModel: ArtistViewModel,
+    addToPlaylist: AddToPlaylistController,
+    onDismiss: () -> Unit
+) {
+    TrackActionsSheet(
+        track = track,
+        isLiked = track.isLiked,
+        onPlayNext = { viewModel.playNext(track) },
+        onAddToQueue = { viewModel.addToQueue(track) },
+        onStartRadio = { viewModel.startRadio(track) },
+        onToggleLike = { viewModel.toggleLike(track) },
+        onRemove = null,
+        onDismiss = onDismiss,
+        onShare = if (viewModel.canShare(track)) {
+            { viewModel.share(track) }
+        } else {
+            null
+        },
+        onAddToPlaylist = if (addToPlaylist.canAdd(track)) {
+            { addToPlaylist.open(track) }
+        } else {
+            null
+        }
+    )
+}
+
+@Composable
+private fun ArtistAlbumActions(
+    album: UnifiedAlbum,
+    viewModel: ArtistViewModel,
+    addToPlaylist: AddToPlaylistController,
+    onDismiss: () -> Unit
+) {
+    AlbumActionsSheet(
+        album = album,
+        onPlay = {
+            viewModel.playAlbum(album)
+            onDismiss()
+        },
+        onPlayNext = {
+            viewModel.playAlbumNext(album)
+            onDismiss()
+        },
+        onAddToQueue = {
+            viewModel.addAlbumToQueue(album)
+            onDismiss()
+        },
+        onDismiss = onDismiss,
+        onShare = if (viewModel.canShareAlbum(album)) {
+            { viewModel.shareAlbum(album) }
+        } else null,
+        onAddToPlaylist = {
+            viewModel.getAlbumTracks(album) { tracks ->
+                addToPlaylist.openForTracks(tracks, album.source)
+            }
+            onDismiss()
+        }
+    )
+}

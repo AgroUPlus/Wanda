@@ -141,14 +141,15 @@ private fun tradeTotals(shared: Int, received: Int): String {
  * deliberately vague: a failed check proves nothing about the credential, only that we could not
  * ask, and claiming otherwise would send the user to re-pair a pairing that is fine.
  */
+@Composable
 private fun AgroConnectionState.describe(
     devicePetname: String,
     paired: Boolean
 ): String = when (this) {
-    is AgroConnectionState.Unpaired -> if (paired) devicePetname else "Not paired"
-    is AgroConnectionState.Checking -> "Checking…"
+    is AgroConnectionState.Unpaired -> if (paired) devicePetname else stringResource(R.string.settings_agro_not_paired)
+    is AgroConnectionState.Checking -> stringResource(R.string.settings_agro_checking)
     is AgroConnectionState.Connected -> devicePetname
-    is AgroConnectionState.Rejected -> "Signed out — tap to pair again"
+    is AgroConnectionState.Rejected -> stringResource(R.string.settings_agro_signed_out_tap_to_pair)
     is AgroConnectionState.NotActive -> detail
-    is AgroConnectionState.Unreachable -> "Could not reach the server"
+    is AgroConnectionState.Unreachable -> stringResource(R.string.settings_agro_could_not_reach_server)
 }

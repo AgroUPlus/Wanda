@@ -27,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
+import com.wander.android.ui.components.bouncySpec
 import com.wander.android.ui.components.rememberHaptics
 
 /**
@@ -43,7 +44,6 @@ internal fun LibraryPlayShufflePill(
     modifier: Modifier = Modifier
 ) {
     val haptics = rememberHaptics()
-    val spatial = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
     val effects = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
     val corner = TransformOrigin(1f, 1f)
 
@@ -53,10 +53,15 @@ internal fun LibraryPlayShufflePill(
             .padding(end = 16.dp, bottom = bottomInset + 16.dp),
         contentAlignment = Alignment.BottomEnd
     ) {
+        // Bouncy, not just fast-spatial: the same spring the dock row and the mini player use for
+        // their own appear/disappear, so this corner pair grows and shrinks with the same lively
+        // character as the rest of the shell's chrome rather than reading as a flatter, separate
+        // animation next to them. Scale and fade only — never `expandVertically`/`shrinkVertically`,
+        // which is the "collapsing frame" look this is deliberately not.
         AnimatedVisibility(
             visible = visible,
-            enter = fadeIn(effects) + scaleIn(spatial, initialScale = 0.4f, transformOrigin = corner),
-            exit = fadeOut(effects) + scaleOut(spatial, targetScale = 0.4f, transformOrigin = corner)
+            enter = fadeIn(effects) + scaleIn(bouncySpec(), initialScale = 0.4f, transformOrigin = corner),
+            exit = fadeOut(effects) + scaleOut(bouncySpec(), targetScale = 0.4f, transformOrigin = corner)
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,

@@ -1,12 +1,15 @@
 package com.wander.android.ui.screens.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -30,6 +33,42 @@ fun SettingsSection(title: String, modifier: Modifier = Modifier) {
 }
 
 /**
+ * A setting row's glyph, on a plain tonal circle — discreet rather than the settings hub's own
+ * per-category coloured badge ([SettingsCategoryRow]): one setting has no hue of its own to give
+ * it, so this is the same neutral surface tone for every row rather than a colour invented per
+ * icon. Still a real circle behind it, not a bare floating glyph, so a page of a dozen rows reads
+ * as a column of distinct controls instead of a column of icons that happen to have labels.
+ */
+@Composable
+private fun SettingsIconBadge(
+    icon: ImageVector,
+    enabled: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .size(IconBadgeSize)
+            .background(
+                MaterialTheme.colorScheme.surfaceContainerHighest
+                    .copy(alpha = if (enabled) 1f else DisabledAlpha),
+                CircleShape
+            )
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                .copy(alpha = if (enabled) 1f else DisabledAlpha),
+            modifier = Modifier.size(IconGlyphSize)
+        )
+    }
+}
+
+private val IconBadgeSize = 40.dp
+private val IconGlyphSize = 22.dp
+
+/**
  * [enabled] dims the row and drops its click rather than hiding it.
  *
  * A setting that vanishes when another setting turns on is a setting the user cannot find again,
@@ -51,7 +90,7 @@ fun SettingsRow(
      * names one thing, not two.
      */
     leading: (@Composable () -> Unit)? = null,
-    /** A plain, backgroundless glyph for a row that doesn't name a thing — most rows. */
+    /** A circled glyph (see [SettingsIconBadge]) for a row that doesn't name a thing — most rows. */
     icon: ImageVector? = null,
     modifier: Modifier = Modifier
 ) {
@@ -66,17 +105,11 @@ fun SettingsRow(
                     Modifier
                 }
             )
-            .padding(horizontal = 20.dp, vertical = 14.dp)
+            .padding(horizontal = 20.dp, vertical = 18.dp)
     ) {
         leading?.invoke()
         if (leading == null && icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    .copy(alpha = if (enabled) 1f else DisabledAlpha),
-                modifier = Modifier.size(24.dp)
-            )
+            SettingsIconBadge(icon = icon, enabled = enabled)
         }
 
         Column(
@@ -111,7 +144,7 @@ fun SettingsToggle(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     enabled: Boolean = true,
-    /** A plain, backgroundless glyph — see [SettingsRow]'s equivalent parameter. */
+    /** A circled glyph — see [SettingsRow]'s equivalent parameter. */
     icon: ImageVector? = null,
     modifier: Modifier = Modifier
 ) {
@@ -133,16 +166,10 @@ fun SettingsToggle(
                     Modifier
                 }
             )
-            .padding(horizontal = 20.dp, vertical = 10.dp)
+            .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
         if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    .copy(alpha = if (enabled) 1f else DisabledAlpha),
-                modifier = Modifier.padding(end = 16.dp).size(24.dp)
-            )
+            SettingsIconBadge(icon = icon, enabled = enabled, modifier = Modifier.padding(end = 16.dp))
         }
 
         Column(modifier = Modifier.weight(1f)) {

@@ -97,7 +97,7 @@ internal fun SettingsCategoryRow(
                     onClick()
                 }
             )
-            .padding(horizontal = 20.dp, vertical = 12.dp)
+            .padding(horizontal = 20.dp, vertical = 18.dp)
     ) {
         Box(
             contentAlignment = Alignment.Center,
@@ -135,8 +135,8 @@ internal fun SettingsCategoryRow(
     }
 }
 
-private val BadgeSize = 48.dp
-private val GlyphSize = 26.dp
+private val BadgeSize = 56.dp
+private val GlyphSize = 30.dp
 
 /**
  * Enough tint to read as a coloured badge, little enough that the glyph over it stays the thing you

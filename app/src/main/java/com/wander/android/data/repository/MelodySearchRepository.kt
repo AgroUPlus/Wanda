@@ -5,7 +5,6 @@ import com.wander.android.core.audio.melody.ContourMatcher
 import com.wander.android.core.audio.melody.MelodyContour
 import com.wander.android.core.audio.melody.PitchDetector
 import com.wander.android.core.database.dao.MelodyContourDao
-import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.MelodyContourEntity
 import android.util.Log
 import kotlinx.coroutines.flow.map
@@ -45,7 +44,6 @@ data class MelodyMatch(
 @Singleton
 class MelodySearchRepository @Inject constructor(
     private val contourDao: MelodyContourDao,
-    private val trackDao: TrackDao,
     private val pitchDetector: PitchDetector
 ) {
 

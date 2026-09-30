@@ -4,7 +4,9 @@ import com.wander.android.core.database.dao.LyricSearchResult
 import com.wander.android.core.database.dao.TrackLyricsDao
 import com.wander.android.core.database.entity.TrackLyricsEntity
 import com.wander.android.core.network.HttpClientFactory
+import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.LyricsState
+import com.wander.android.data.repository.LrcParser
 import com.wander.android.data.repository.LyricsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -13,28 +15,57 @@ import org.junit.Test
 
 class LyricsParserTest {
 
-    private val fakeDao = object : TrackLyricsDao {
-        override suspend fun getLyricsForTrack(trackId: String): TrackLyricsEntity? = null
-        override suspend fun findLyricsForTrackOrMetadata(trackId: String, title: String, artist: String): TrackLyricsEntity? = null
-        override suspend fun insertLyrics(lyrics: TrackLyricsEntity) {}
-        override suspend fun insertFts(trackId: String, plainLyrics: String) {}
-        override suspend fun deleteFts(trackId: String) {}
-        override suspend fun deleteLyrics(trackId: String) {}
-        override suspend fun searchTracksByLyrics(query: String, limit: Int): List<LyricSearchResult> = emptyList()
-        override suspend fun countLyrics(): Int = 0
-        override fun countFromCatalogueFlow(): Flow<Int> = flowOf(0)
+    /**
+     * An in-memory stand-in for [android.content.SharedPreferences]. [SecureStorage] has no other
+     * constructor reachable from a plain JVM unit test — `create(context)` needs a real Android
+     * Keystore — and nothing under test here reads a preference, so a bare in-memory map is enough.
+     */
+    private class FakeSharedPreferences : android.content.SharedPreferences {
+        private val values = mutableMapOf<String, Any?>()
+
+        override fun getAll(): MutableMap<String, *> = values
+        override fun getString(key: String?, defValue: String?) = values[key] as? String ?: defValue
+        @Suppress("UNCHECKED_CAST")
+        override fun getStringSet(key: String?, defValues: MutableSet<String>?) =
+            values[key] as? MutableSet<String> ?: defValues
+        override fun getInt(key: String?, defValue: Int) = values[key] as? Int ?: defValue
+        override fun getLong(key: String?, defValue: Long) = values[key] as? Long ?: defValue
+        override fun getFloat(key: String?, defValue: Float) = values[key] as? Float ?: defValue
+        override fun getBoolean(key: String?, defValue: Boolean) = values[key] as? Boolean ?: defValue
+        override fun contains(key: String?) = values.containsKey(key)
+        override fun edit(): android.content.SharedPreferences.Editor = FakeEditor()
+        override fun registerOnSharedPreferenceChangeListener(
+            listener: android.content.SharedPreferences.OnSharedPreferenceChangeListener?
+        ) = Unit
+        override fun unregisterOnSharedPreferenceChangeListener(
+            listener: android.content.SharedPreferences.OnSharedPreferenceChangeListener?
+        ) = Unit
+
+        private inner class FakeEditor : android.content.SharedPreferences.Editor {
+            override fun putString(key: String?, value: String?) = apply { values[key!!] = value }
+            override fun putStringSet(key: String?, v: MutableSet<String>?) = apply { values[key!!] = v }
+            override fun putInt(key: String?, value: Int) = apply { values[key!!] = value }
+            override fun putLong(key: String?, value: Long) = apply { values[key!!] = value }
+            override fun putFloat(key: String?, value: Float) = apply { values[key!!] = value }
+            override fun putBoolean(key: String?, value: Boolean) = apply { values[key!!] = value }
+            override fun remove(key: String?) = apply { values.remove(key) }
+            override fun clear() = apply { values.clear() }
+            override fun commit() = true
+            override fun apply() = Unit
+        }
     }
+
+    private fun fakeSecureStorage() = SecureStorage(FakeSharedPreferences())
 
     @Test
     fun testLrcParserAccurateTimestamps() {
-        val repo = LyricsRepository(emptySet(), fakeDao, HttpClientFactory.ktorClient)
         val sampleLrc = """
             [00:12.50]Line one of song
             [01:04.20]Chorus starts here
             [02:30.00]Final outro
         """.trimIndent()
 
-        val lines = repo.parseLrc(sampleLrc)
+        val lines = LrcParser.parse(sampleLrc)
         assertEquals(3, lines.size)
 
         // 00:12.50 -> 12500ms
@@ -70,7 +101,7 @@ class LyricsParserTest {
             override suspend fun countLyrics(): Int = 1
             override fun countFromCatalogueFlow(): Flow<Int> = flowOf(0)
         }
-        val repo = LyricsRepository(emptySet(), cachedDao, HttpClientFactory.ktorClient)
+        val repo = LyricsRepository(emptySet(), cachedDao, HttpClientFactory.ktorClient, fakeSecureStorage())
         val state = repo.getLyrics("track_123", "Title", "Artist")
         val data = (state as? LyricsState.Present)?.lyrics
         org.junit.Assert.assertNotNull(data)
@@ -82,12 +113,11 @@ class LyricsParserTest {
 
     @Test
     fun testEnhancedLrcWordTimestamps() {
-        val repo = LyricsRepository(emptySet(), fakeDao, HttpClientFactory.ktorClient)
         val enhancedLrc = """
             [00:10.00]<00:10.00>Never <00:10.50>gonna <00:11.00>give <00:11.50>you <00:12.00>up
         """.trimIndent()
 
-        val lines = repo.parseLrc(enhancedLrc)
+        val lines = LrcParser.parse(enhancedLrc)
         assertEquals(1, lines.size)
         val line = lines[0]
         assertEquals("Never gonna give you up", line.text)

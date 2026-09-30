@@ -20,7 +20,19 @@ data class ArtistDetails(
     val bio: String? = null,
     val sections: List<ArtistSection> = emptyList(),
     /** Other artists the backend suggests. Empty when it suggests none, which is common. */
-    val related: List<RelatedArtist> = emptyList()
+    val related: List<RelatedArtist> = emptyList(),
+    /**
+     * MusicBrainz's id for this artist, when it is known — either because Navidrome's server-side
+     * metadata agent found one, or because this page *is* a MusicBrainz lookup (see
+     * `MusicBrainzClient`). Null for YouTube Music, which has no notion of MusicBrainz ids at all.
+     */
+    val musicBrainzId: String? = null,
+    /**
+     * MusicBrainz's community-tagged genres for this artist, most-used first. Empty for every
+     * source but MusicBrainz itself — Navidrome's own page carries none, so these are only ever
+     * filled in by `CatalogRepository` enriching a page that already has [musicBrainzId].
+     */
+    val genres: List<String> = emptyList()
 )
 
 /** One titled block on an artist's page. */
