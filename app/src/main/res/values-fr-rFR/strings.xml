@@ -24,6 +24,23 @@
     <string name="action_add_to_playlist">Ajouter à une playlist</string>
     <string name="menu_like">Like</string>
     <string name="menu_radio">Radio</string>
+    <string name="track_info_artist">Artist</string>
+    <string name="track_info_album">Album</string>
+    <string name="track_info_duration">Duration</string>
+    <string name="track_info_track">Track</string>
+    <string name="track_info_year">Year</string>
+    <string name="track_info_genre">Genre</string>
+    <string name="track_info_quality">Quality</string>
+    <string name="track_info_source">Source</string>
+    <string name="track_info_status">Status</string>
+    <string name="track_info_plays">Plays</string>
+    <string name="track_info_views">Views</string>
+    <string name="track_info_likes">Likes</string>
+    <string name="track_info_status_liked">Liked</string>
+    <string name="track_info_status_downloaded">Downloaded</string>
+    <string name="track_info_status_cached">Cached offline</string>
+    <string name="track_info_disc_track">Disc %1$d, track %2$d</string>
+    <string name="track_info_track_number">Track %1$d</string>
     <string name="action_speed_and_pitch">Vitesse &amp; hauteur</string>
     <string name="action_audio_language">Langue de l\'audio</string>
     <string name="action_switch_source">Changer de source</string>
@@ -51,6 +68,9 @@
     <string name="mood_preset_focus_flow">Concentration</string>
     <string name="mood_preset_morning_energizer">Matinée dynamique</string>
     <string name="mood_preset_high_voltage">Explosion d\'énergie</string>
+    <string name="home_radio_surprise_me">Surprise me</string>
+    <string name="home_radio_open_picker">Start radio</string>
+    <string name="home_radio_starting">Starting radio</string>
     <!-- Swipeable track row -->
     <string name="swipe_action_play_next">Jouer après</string>
     <string name="swipe_action_unlike">Retirer des favoris</string>
@@ -105,7 +125,7 @@
     <string name="common_listening_2">Écoute…</string>
     <string name="common_live">LIVE</string>
     <string name="common_loading_playlists">Chargement des playlists…</string>
-    <string name="common_matched_melody_guess_from_tune">Correspondance par mélodie — c\'est une hypothèse non issue de l\'enregistrement.</string>
+    <string name="common_matched_melody_guess_from_tune">Matched by melody. This is a guess from the tune, not the recording.</string>
     <string name="common_music_device">Musique sur l\'appareil</string>
     <string name="common_my_profile">Mon profil</string>
     <string name="common_name">Nom</string>
@@ -125,7 +145,9 @@
     <string name="common_share_link">Partager un lien</string>
     <string name="common_sign_out">Déconnexion</string>
     <string name="common_stream">Stream</string>
+    <string name="common_today">Today</string>
     <string name="common_try_again">Réessayer</string>
+    <string name="common_yesterday">Yesterday</string>
     <string name="common_update_available">Mise à jour disponible</string>
     <string name="common_undo">Annuler</string>
     <string name="common_username">Nom d\'utilisateur</string>
@@ -136,8 +158,11 @@
     <string name="album_album_isn_t_any_connected">Cet album n\'est accessible depuis aucune de vos sources.</string>
     <string name="album_album_unavailable">Album indisponible</string>
     <!-- Artist -->
+    <string name="artist_info_unavailable">Couldn\'t load extra artist info right now</string>
     <string name="artist_none_connected_sources_has_anything">Aucune de vos sources n\'a de contenu de cet artiste.</string>
+    <string name="artist_follow_for_new_releases">Follow %1$s for new releases</string>
     <string name="artist_start_radio">Démarrer la radio</string>
+    <string name="artist_stop_following">Stop following %1$s</string>
     <string name="artist_top_songs">Musiques à la une</string>
     <string name="artist_episodes">Episodes</string>
     <!-- Home -->
@@ -156,7 +181,19 @@
     <string name="importer_playlist_title">Titre de la playlsit</string>
     <string name="importer_reading">Lecture...</string>
     <string name="importer_reading_playlist_tracks">Lecture des pistes de la playlist...</string>
+    <string name="importer_step_x_of_y">Step %1$d of %2$d</string>
     <string name="importer_try_again">Réessayer</string>
+    <string name="importer_step_platform_label">Choose a platform</string>
+    <string name="importer_step_connect_label">Connect</string>
+    <string name="importer_step_tracks_label">Select tracks</string>
+    <string name="importer_step_import_label">Import</string>
+    <string name="importer_platform_signed_out_title">Not signed in to %1$s</string>
+    <string name="importer_no_playlists_found">Couldn\'t find any playlists on your %1$s account.</string>
+    <string name="importer_youtube_signed_out_desc">Sign in to browse your own playlists, or paste a playlist link below.</string>
+    <string name="importer_sign_in">Sign in</string>
+    <string name="importer_or_paste_link">or paste a link</string>
+    <string name="importer_refresh_library">Refresh</string>
+    <string name="importer_paste_link_instead">Paste a link instead</string>
     <!-- Library -->
     <string name="library_albums_appear_once_connected_source">Les albums apparaissent lorsqu\'au moins une source a été explorée.</string>
     <string name="library_all_albums">Tous les albums</string>
@@ -179,6 +216,13 @@
     <string name="login_sign">Se connecter</string>
     <string name="login_sign_youtube_music">Se connecter à YouTube Music</string>
     <string name="login_use_pasted_cookie">Utiliser le cookie collé</string>
+    <string name="login_sign_deezer">Sign in to Deezer</string>
+    <string name="login_paste_arl">Or paste an ARL token</string>
+    <string name="login_use_pasted_arl">Use pasted ARL</string>
+    <string name="deezer_account">Deezer</string>
+    <string name="deezer_tier_free">Free (128 kbps)</string>
+    <string name="deezer_tier_premium">Premium (320 kbps)</string>
+    <string name="deezer_tier_hifi">HiFi (Lossless FLAC)</string>
     <!-- Navigation -->
     <string name="nav_clear_search">Supprimer la recherche</string>
     <string name="nav_identify_what_s_playing">Identifier ce qui se joue</string>
@@ -221,6 +265,18 @@
     <string name="settings_account_passphrase_device_token_app">Phrase d\'authentification, ou token d\'appareil / Mot de passe d\'application depuis le tableau de bord d\'Agro.</string>
     <string name="settings_adds_play_counts_server_s">Ajoute le compte à au total de votre serveur, sans compte ou heures attachés. Les autres utilisateurs de ce serveur ne verront que le total. L\'étagère fonctionnera sans ce paramètre.</string>
     <string name="settings_agro_device">Appareil Agro</string>
+    <string name="settings_agro_signed_out_tap_to_pair">Signed out. Tap to pair again.</string>
+    <string name="settings_agro_not_paired">Not paired</string>
+    <string name="settings_agro_checking">Checking…</string>
+    <string name="settings_agro_could_not_reach_server">Could not reach the server</string>
+    <string name="settings_share_songs_between_devices_index_server">Share songs between devices and index with the server</string>
+    <string name="settings_account_not_allowed_upload_files">Your account can\'t upload files to this server</string>
+    <string name="settings_upload_full_audio_files_server">Upload full audio files to server storage</string>
+    <string name="settings_delete_files_server_already_holds">Delete the %1$d files your server already holds</string>
+    <string name="settings_nothing_remove_server_confirmed_no_files">Nothing to remove. The server has confirmed no files yet.</string>
+    <string name="settings_running">Running…</string>
+    <string name="settings_send_files_to_server_now">Send files to the server now</string>
+    <string name="settings_update_other_devices_no_files_sent">Update what your other devices can see. No files are sent.</string>
     <string name="settings_agro_privacy_relay">Relai de confidentialité d\'Agro</string>
     <string name="settings_agrouplus">AgroUPlus</string>
     <string name="settings_archive_server">Archiver sur le serveur</string>
@@ -273,10 +329,12 @@
     <string name="settings_measuring_streamed_song_reads_about">Mesurer une piste streamée lit environ une minute de cette dernière. Activé par défaut sur Wi-Fi.</string>
     <string name="settings_new_music_from_artists_follow">Nouvelle chanson d\'artistes que vous suivez</string>
     <string name="settings_not_same_recording_rest_group">Enregistrement différent du reste du groupe</string>
-    <string name="settings_nothing_else_signed_other_devices">Rien d\'autre n\'est connecté. Vos autres appareils s\'affichent ici — cet appareil n\'est jamais affiché.</string>
+    <string name="settings_nothing_else_signed_other_devices">Nothing else is signed in. This is the device you\'re holding, and other devices on this Agro account show up here instead.</string>
     <string name="settings_nothing_has_been_written_what">Rien n\'a été affecté. Voici ce que la migration ferait.</string>
-    <string name="settings_nothing_send_no_music_files">Rien à envoyer — aucun fichier audio sur cet appareil</string>
+    <string name="settings_nothing_send_no_music_files">Nothing to send. No music files are stored on this device.</string>
+    <string name="settings_musicbrainz_lookup">Accurate artist identification</string>
     <string name="settings_offline_mode">Mode hors ligne</string>
+    <string name="settings_online_lyrics_lookup">Online lyrics lookup</string>
     <string name="settings_only_play_what_already_device">Ne joue que ce qui est déjà sur cet appareil. Wanda propose de l\'activer automatiquement quand votre connexion change.</string>
     <string name="settings_open">Ouvrir</string>
     <string name="settings_otherwise_happens_wi_fi_while">Autrement cela arrive sur Wi-Fi lors du chargement</string>
@@ -286,6 +344,8 @@
     <string name="settings_paused_incognito">Mis en pause par le mode incognito</string>
     <string name="settings_paused_nothing_being_measured_until">En pause. Rien n\'est mesuré jusqu\'à ce que vous ne le permettiez.</string>
     <string name="settings_playlist_imported">Playlist importée ! 🎉</string>
+    <string name="settings_query_lrclib_when_no_local_or_server_lyrics">Query LRCLIB when no local or server lyrics are found</string>
+    <string name="settings_query_musicbrainz_for_accurate_artist_id">Query MusicBrainz to identify an artist by their unique id, instead of by name alone</string>
     <string name="settings_re_check_model">Revérifier le modèle</string>
     <string name="settings_ready_next_track">Préparer la prochaine piste</string>
     <string name="settings_recognition_model">Modèle de reconnaissance</string>
@@ -301,6 +361,7 @@
     <string name="settings_section_storage">Storage</string>
     <string name="settings_section_credits">Credits</string>
     <string name="settings_section_visibility">What friends can see</string>
+    <string name="settings_section_third_party_lookups">Third-party lookups</string>
     <string name="settings_section_backup">Backup</string>
     <string name="settings_section_notifications">Notifications</string>
     <string name="settings_section_devices">Devices</string>
@@ -317,6 +378,8 @@
     <string name="settings_share_navidrome_address_between_devices">Partager l\'adresse Navidrome entre les appareils.</string>
     <string name="settings_sharing_paused_incognito">Partage désactivé par le mode incognito</string>
     <string name="settings_show_what_i_m_playing">Montrer ce que j\'écoute</string>
+    <string name="settings_sign_out_deezer">Sign out of Deezer?</string>
+    <string name="settings_deezer_streaming_stops_until">Deezer streaming stops until you sign in again. Anything already downloaded stays playable.</string>
     <string name="settings_sign_out_navidrome">Se déconnecter de Navidrome ?</string>
     <string name="settings_sign_out_youtube_music">Se déconnecter de YouTube Music ?</string>
     <string name="settings_signs_out_every_source_erases">Se déconnecter de toutes les sources et supprimer les secrets ?</string>
@@ -342,7 +405,7 @@
     <string name="settings_what_has_been_measured">Ce qui a été mesuré</string>
     <string name="settings_what_trade_has_done">Ce que l\'échange a fait</string>
     <string name="settings_will_sign_out_every_music">Cela vous déconnectera de toutes les sources et supprime tous les mots de passes de votre appareil. Les pistes téléchargées restent.</string>
-    <string name="settings_write_passphrase_down_server_stores">Écrivez cette phrase. Le serveur ne la garde pas et ne pourra pas la montrer à nouveau — il est impossible de la réinitialiser.</string>
+    <string name="settings_write_passphrase_down_server_stores">Write this passphrase down. The server stores only a hash of it and can\'t show it again, and there\'s no reset.</string>
     <!-- Friends and activity -->
     <string name="social_add_friend">Ajouter un ami</string>
     <string name="social_anyone_adds">Ajout libre</string>
@@ -381,7 +444,7 @@
     <string name="social_new_from">Nouveautés de %1$s</string>
     <string name="social_no_conversations_yet">Aucune conversation actuellement</string>
     <string name="social_nobody_name_listed_people_only">Personne ne porte ce nom. Les utilisateurs apparaissent ici uniquement s\'ils l\'ont autorisé dans les paramètres.</string>
-    <string name="social_nobody_yet_tap_add_button">Personne actuellement. Cliquez sur le bouton d\'ajout pour trouver des utilisateurs — vous n\'apparaîtrez dans les recherches que si vous avez activé cette option dans Paramètres → Confidentialité.</string>
+    <string name="social_nobody_yet_tap_add_button">Nobody yet. Tap the add button to find people by username. You\'ll only turn up in their search if you\'ve made yourself discoverable in Settings, under Privacy.</string>
     <string name="social_not_enough_listening_between_yet">Pas assez d\'historique d\'écoute entre vous pour l\'instant.</string>
     <string name="social_notes_conversation_end_end_encrypted">Les notes dans cette conversation sont chiffrées de bout-en-bout.</string>
     <string name="social_notes_from_here_sealed_device">Les notes sont scellées sur votre appareil. Le serveur est incapable de les consulter.</string>
@@ -393,7 +456,7 @@
     <string name="social_open_friends">Ouvert aux amis</string>
     <string name="social_open_settings">Ouvrir les paramètres</string>
     <string name="social_pair_agro_server_settings_have">Appareiller un serveur Agro dans les paramètres pour avoir un nom, une bio et des amis. Votre historique et statistiques fonctionnent sans.</string>
-    <string name="social_pair_one_create_account_one">Appareiller avec un serveur Agro ou créer un nouveau compte pour partager avec les autres utilisateurs et écouter avec eux.</string>
+    <string name="social_pair_one_create_account_one">Pair with a server, or create an account on one, to see what the people you know are listening to and listen along with them.</string>
     <string name="social_phone_cannot_found_off_grid">Ce téléphone ne peut pas être trouvé hors-réseau.</string>
     <string name="social_plays">écoutes</string>
     <string name="social_press_hold_any_track_send">Cliquer et maintenir une piste pour l\'envoyer à un ami avec une note.</string>
@@ -404,7 +467,7 @@
     <string name="social_share_music_someone_beside_over">Partager de la musique avec d\'autres personnes, via Bluetooth et Wi-Fi Direct. Pas de routeur, pas de données mobiles, pas de serveur. Vous n\'êtes trouvable que lorsque cet écran est ouvert.</string>
     <string name="social_share_off_grid">Partager hors-réseau</string>
     <string name="social_start_jam">Démarrer une jam</string>
-    <string name="social_starts_need_most_name_not">Démarre avec — vous avez besoin de la majorité du nom, pas seulement un fragment.</string>
+    <string name="social_starts_need_most_name_not">Matches the start of a name, so type most of it, not just a fragment.</string>
     <string name="social_stop_listening_along">Arrêter l\'écoute simultanée</string>
     <string name="social_stop_sharing">Arrêter le partage</string>
     <string name="social_taste_compatibility">Compatibilité des goûts</string>
@@ -468,7 +531,7 @@
     <string name="settings_matching_track">Correspondance de piste %1$s sur %2$s</string>
     <string name="settings_measuring_now">Mesure \"%1$s\" actuellement</string>
     <string name="settings_now_exists">\"%1$s\" existe maintenant sur %2$s.</string>
-    <string name="settings_of">%1$s — %2$s sur %3$s</string>
+    <string name="settings_of">%1$s · %2$s of %3$s</string>
     <string name="settings_plays_would_combine">%1$s écoutes seraient combinées</string>
     <string name="settings_reading_playlist_from">Lecture de la playlist depuis %1$s...</string>
     <string name="settings_recognisable">%1$s sur %2$s reconnaissables</string>
@@ -547,6 +610,18 @@
     <string name="transport_spoken_finding">Recherche de la source optimale.</string>
     <!-- Agro Replay -->
     <string name="replay_title">Agro Replay</string>
+    <string name="replay_choose_year">Choose year</string>
+    <string name="replay_pause">Pause story</string>
+    <string name="replay_resume">Resume story</string>
+    <string name="replay_close">Close Replay</string>
+    <string name="replay_share">Share this card</string>
+    <string name="replay_share_chooser">Share your Replay card</string>
+    <string name="replay_share_failed">Could not create the image to share</string>
+    <!-- Printed at the bottom of a shared Replay card. %1$d is the year, %2$s the app name. -->
+    <string name="replay_share_footer">Agro Replay %1$d · %2$s</string>
+    <string name="replay_error_load">That year could not be read</string>
+    <string name="replay_error_save">The recap could not be saved</string>
+    <string name="replay_error_tidy">The tidy-up failed. Nothing was deleted.</string>
     <string name="replay_settings_subtitle">Your listening year, one card at a time</string>
     <plurals name="backup_restored_settings">
         <item quantity="one">%1$d setting restored. Close and reopen Wanda to apply it.</item>
@@ -640,7 +715,7 @@
         <item quantity="other">%1$d of you this year</item>
     </plurals>
     <string name="replay_circle_anthem">Your anthem</string>
-    <string name="replay_circle_anthem_value">%1$s — %2$s</string>
+    <string name="replay_circle_anthem_value">%1$s · %2$s</string>
     <string name="replay_circle_trendsetter">Got there first</string>
     <plurals name="replay_circle_trendsetter_value">
         <item quantity="one">%1$s, on %2$d track</item>
@@ -686,7 +761,7 @@
     <string name="settings_made_in_france_title">Made with ❤️ in France</string>
     <string name="settings_made_in_france_subtitle">Digital sovereignty &amp; EUPL-1.2</string>
     <string name="settings_sovereignty_dialog_title">Digital Sovereignty</string>
-    <string name="settings_sovereignty_dialog_body">Wanda is designed and built in France with privacy, battery-efficiency, and user autonomy as core principles.\n\nDigital sovereignty means retaining full control over your personal data, music library, and listening habits — without telemetry, tracking, or vendor lock-in.\n\nWanda\'s source code is licensed under the European Union Public Licence (EUPL-1.2), a reciprocal copyleft licence native to European civil law. The EUPL guarantees software freedom, covers both distribution and network services (closing cloud loopholes), and ensures Wanda remains sovereign, transparent, and community-owned forever.</string>
+    <string name="settings_sovereignty_dialog_body">Wanda is designed and built in France, with privacy, battery efficiency, and user autonomy as core principles.\n\nDigital sovereignty means full control over your data, your music library, and your listening habits, with no telemetry, tracking, or vendor lock-in.\n\nWanda\'s source is licensed under the European Union Public Licence (EUPL-1.2), a copyleft licence built for European civil law. It covers network services as well as distribution, so there\'s no cloud loophole, keeping Wanda sovereign, transparent, and community-owned.</string>
     <!-- Library tabs -->
     <string name="library_tab_tracks">Tracks</string>
     <string name="library_tab_liked">Liked</string>
