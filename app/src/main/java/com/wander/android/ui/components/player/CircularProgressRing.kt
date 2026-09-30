@@ -35,6 +35,15 @@ import kotlin.math.sin
 private const val CookieLobes = 6
 private const val LobeDepthFraction = 0.05f
 
+/** The two colours of a [CircularProgressRing]: the full-circle track and the progress sweep over it. */
+internal class RingColors(val track: Color, val progress: Color)
+
+@Composable
+internal fun ringColors(
+    track: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+    progress: Color = MaterialTheme.colorScheme.primary
+) = RingColors(track, progress)
+
 /**
  * A smooth circular progress ring around a player control, tracking playback position — scalloping
  * into the same soft "cookie" edge as [rememberCookieMorphShape] while [amplitude] is above zero, so
@@ -52,8 +61,7 @@ internal fun CircularProgressRing(
     modifier: Modifier = Modifier,
     amplitude: () -> Float = { 0f },
     strokeWidth: Dp = 3.dp,
-    trackColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-    progressColor: Color = MaterialTheme.colorScheme.primary,
+    colors: RingColors = ringColors(),
     content: @Composable () -> Unit = {}
 ) {
     Box(modifier = modifier.size(ringSize), contentAlignment = Alignment.Center) {
@@ -65,11 +73,11 @@ internal fun CircularProgressRing(
             val baseRadius = maxRadius - amplitudePx
             val style = Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round)
 
-            drawPath(cookiePath(size, baseRadius, amplitudePx, sweepFraction = 1f), trackColor, style = style)
+            drawPath(cookiePath(size, baseRadius, amplitudePx, sweepFraction = 1f), colors.track, style = style)
 
             val sweep = progress().coerceIn(0f, 1f)
             if (sweep > 0f) {
-                drawPath(cookiePath(size, baseRadius, amplitudePx, sweepFraction = sweep), progressColor, style = style)
+                drawPath(cookiePath(size, baseRadius, amplitudePx, sweepFraction = sweep), colors.progress, style = style)
             }
         }
         content()

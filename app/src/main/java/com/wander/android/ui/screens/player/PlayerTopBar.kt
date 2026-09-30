@@ -33,6 +33,9 @@ import com.wander.android.data.sources.agro.Jam
 import com.wander.android.ui.components.AvatarGroup
 import com.wander.android.ui.theme.LiveIndicator
 
+/** The track's source chip: its [label], the [mutedColor] it is drawn in, and the picker it opens (if any). */
+internal class PlayerSourceChip(val label: String, val mutedColor: Color, val onOpenPicker: (() -> Unit)?)
+
 /**
  * The player's top bar: minimize on the left, a centred chip (the source name, or a live jam
  * badge when one is active) in the middle, the queue button on the right.
@@ -45,12 +48,10 @@ import com.wander.android.ui.theme.LiveIndicator
 @Composable
 internal fun PlayerTopBar(
     jam: Jam?,
-    sourceLabel: String,
+    source: PlayerSourceChip,
     onOpenJam: () -> Unit,
     onMinimize: () -> Unit,
     onOpenQueue: () -> Unit,
-    onOpenSourcePicker: (() -> Unit)?,
-    sourceLabelColorMuted: Color,
     modifier: Modifier = Modifier
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier.fillMaxWidth()) {
@@ -90,11 +91,11 @@ internal fun PlayerTopBar(
                 }
             } else {
                 Text(
-                    text = sourceLabel,
+                    text = source.label,
                     style = MaterialTheme.typography.labelLarge,
-                    color = sourceLabelColorMuted,
+                    color = source.mutedColor,
                     textAlign = TextAlign.Center,
-                    modifier = onOpenSourcePicker?.let { Modifier.clickable(onClick = it) } ?: Modifier
+                    modifier = source.onOpenPicker?.let { Modifier.clickable(onClick = it) } ?: Modifier
                 )
             }
         }

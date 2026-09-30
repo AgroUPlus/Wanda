@@ -128,12 +128,14 @@ internal fun ImmersivePlayerLayout(
 
         PlayerTopBar(
             jam = jam,
-            sourceLabel = track.source.displayName,
+            source = PlayerSourceChip(
+                label = track.source.displayName,
+                mutedColor = OnCoverArt.copy(alpha = 0.75f),
+                onOpenPicker = onOpenSourcePicker
+            ),
             onOpenJam = onOpenJam,
             onMinimize = onMinimize,
             onOpenQueue = onOpenQueue,
-            onOpenSourcePicker = onOpenSourcePicker,
-            sourceLabelColorMuted = OnCoverArt.copy(alpha = 0.75f),
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .onGloballyPositioned {

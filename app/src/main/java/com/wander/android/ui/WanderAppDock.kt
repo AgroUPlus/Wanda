@@ -91,6 +91,9 @@ internal fun calculateDockMetrics(
     return WanderDockMetrics(dockInset, sheetBottomInset, dockedPlayerHeight, dockBottom)
 }
 
+/** What decides whether and how the dock shows: the current route, whether it has a dock row, and whether a track is loaded. */
+internal class DockVisibility(val currentRoute: String?, val showDockRow: Boolean, val hasTrack: Boolean)
+
 /**
  * Creates and remembers the dock state, handling search query updates, microphone recognition
  * launches, and rendering the dock card — always its own independent element now, whether or not
@@ -102,12 +105,13 @@ internal fun rememberWanderDockState(
     navController: NavHostController,
     viewModel: WanderAppViewModel,
     motionScheme: MotionScheme,
-    currentRoute: String?,
-    showDockRow: Boolean,
-    hasTrack: Boolean,
+    visibility: DockVisibility,
     sheetState: PlayerSheetState,
     dockInset: Dp
 ): WanderDockState {
+    val currentRoute = visibility.currentRoute
+    val showDockRow = visibility.showDockRow
+    val hasTrack = visibility.hasTrack
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val dockRoute = currentRoute?.substringBefore("?")
     val context = LocalContext.current

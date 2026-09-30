@@ -30,22 +30,27 @@ import com.wander.android.data.importer.RawUserPlaylistSummary
  * Apple Music), an embedded [ExternalPlatformWebView] catches web cookies while playlist importing
  * is done manually via share links.
  */
+/** What the access step can ask of its host: loading playlists, signing in, and handing the web view over. */
+internal class AccessStepActions(
+    val onSelectPlaylist: (RawUserPlaylistSummary) -> Unit,
+    val onRefreshYouTube: () -> Unit,
+    val onRefreshDeezer: () -> Unit,
+    val onSwitchToDirectLink: () -> Unit,
+    val onOpenYouTubeLogin: () -> Unit,
+    val onOpenDeezerLogin: () -> Unit,
+    val onExternalWebViewReady: (WebView) -> Unit,
+    val onWebUrlChanged: (String) -> Unit,
+    val onInputChange: (String) -> Unit,
+    val onLoadPlaylist: () -> Unit
+)
+
 @Composable
 internal fun AccessStep(
     platform: PlatformType,
     state: PlaylistImportUiState,
     isYouTubeLoggedIn: Boolean,
     isDeezerLoggedIn: Boolean,
-    onSelectPlaylist: (RawUserPlaylistSummary) -> Unit,
-    onRefreshYouTube: () -> Unit,
-    onRefreshDeezer: () -> Unit,
-    onSwitchToDirectLink: () -> Unit,
-    onOpenYouTubeLogin: () -> Unit,
-    onOpenDeezerLogin: () -> Unit,
-    onExternalWebViewReady: (WebView) -> Unit,
-    onWebUrlChanged: (String) -> Unit,
-    onInputChange: (String) -> Unit,
-    onLoadPlaylist: () -> Unit,
+    actions: AccessStepActions,
     modifier: Modifier = Modifier
 ) {
     val hasOwnAccount = platform == PlatformType.YOUTUBE || platform == PlatformType.DEEZER
@@ -54,8 +59,8 @@ internal fun AccessStep(
         PlatformType.DEEZER -> isDeezerLoggedIn
         else -> false
     }
-    val onRefresh = if (platform == PlatformType.YOUTUBE) onRefreshYouTube else onRefreshDeezer
-    val onOpenLogin = if (platform == PlatformType.YOUTUBE) onOpenYouTubeLogin else onOpenDeezerLogin
+    val onRefresh = if (platform == PlatformType.YOUTUBE) actions.onRefreshYouTube else actions.onRefreshDeezer
+    val onOpenLogin = if (platform == PlatformType.YOUTUBE) actions.onOpenYouTubeLogin else actions.onOpenDeezerLogin
 
     when {
         hasOwnAccount && state.isDiscovering -> Box(
@@ -68,9 +73,9 @@ internal fun AccessStep(
         hasOwnAccount && state.discoveredPlaylists.isNotEmpty() -> DiscoveredPlaylistsGrid(
             platform = platform,
             playlists = state.discoveredPlaylists,
-            onSelectPlaylist = onSelectPlaylist,
+            onSelectPlaylist = actions.onSelectPlaylist,
             onRefresh = onRefresh,
-            onPasteLinkInstead = onSwitchToDirectLink,
+            onPasteLinkInstead = actions.onSwitchToDirectLink,
             modifier = modifier
         )
 
@@ -98,8 +103,8 @@ internal fun AccessStep(
                     manualInput = state.manualInput,
                     isLoadingPlaylist = state.isLoadingPlaylist,
                     error = state.error,
-                    onInputChange = onInputChange,
-                    onLoadPlaylist = onLoadPlaylist,
+                    onInputChange = actions.onInputChange,
+                    onLoadPlaylist = actions.onLoadPlaylist,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -117,8 +122,8 @@ internal fun AccessStep(
                 manualInput = state.manualInput,
                 isLoadingPlaylist = state.isLoadingPlaylist,
                 error = state.error,
-                onInputChange = onInputChange,
-                onLoadPlaylist = onLoadPlaylist,
+                onInputChange = actions.onInputChange,
+                onLoadPlaylist = actions.onLoadPlaylist,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -128,16 +133,16 @@ internal fun AccessStep(
         platform.webUrl != null && platform != PlatformType.DEEZER -> Column(modifier = modifier) {
             ExternalPlatformWebView(
                 webUrl = platform.webUrl,
-                onWebViewReady = onExternalWebViewReady,
-                onUrlChanged = onWebUrlChanged,
+                onWebViewReady = actions.onExternalWebViewReady,
+                onUrlChanged = actions.onWebUrlChanged,
                 modifier = Modifier.fillMaxWidth().weight(1f)
             )
             ImportDirectLinkContent(
                 manualInput = state.manualInput,
                 isLoadingPlaylist = state.isLoadingPlaylist,
                 error = state.error,
-                onInputChange = onInputChange,
-                onLoadPlaylist = onLoadPlaylist,
+                onInputChange = actions.onInputChange,
+                onLoadPlaylist = actions.onLoadPlaylist,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -146,8 +151,8 @@ internal fun AccessStep(
             manualInput = state.manualInput,
             isLoadingPlaylist = state.isLoadingPlaylist,
             error = state.error,
-            onInputChange = onInputChange,
-            onLoadPlaylist = onLoadPlaylist,
+            onInputChange = actions.onInputChange,
+            onLoadPlaylist = actions.onLoadPlaylist,
             modifier = modifier
         )
     }

@@ -33,15 +33,20 @@ internal class SettingsHost(
     val devices: AgroDevicesState
 )
 
+/** Where the settings actions that leave the settings screens go. */
+internal class SettingsNavigation(
+    val onNavidromeLogin: () -> Unit,
+    val onYouTubeLogin: () -> Unit,
+    val onDeezerLogin: () -> Unit = {},
+    val onOpenImport: () -> Unit,
+    val onOpenMergePreview: () -> Unit,
+    val onOpenReplay: () -> Unit,
+    val onOpenFingerprints: () -> Unit
+)
+
 @Composable
 internal fun rememberSettingsHost(
-    onNavidromeLogin: () -> Unit,
-    onYouTubeLogin: () -> Unit,
-    onDeezerLogin: () -> Unit = {},
-    onOpenImport: () -> Unit,
-    onOpenMergePreview: () -> Unit,
-    onOpenReplay: () -> Unit,
-    onOpenFingerprints: () -> Unit,
+    navigation: SettingsNavigation,
     viewModel: SettingsViewModel = hiltViewModel()
 ): SettingsHost {
     val state = rememberSettingsUiState(viewModel)
@@ -81,11 +86,11 @@ internal fun rememberSettingsHost(
     // undo the point of the @Immutable holder.
     val actions = remember(viewModel, dialogs, pickLocalFolder, uriHandler, activity) {
         SettingsActions(
-            onNavidromeLogin = onNavidromeLogin,
+            onNavidromeLogin = navigation.onNavidromeLogin,
             onNavidromeSignOut = { dialogs.confirmNavidromeSignOut = true },
-            onYouTubeLogin = onYouTubeLogin,
+            onYouTubeLogin = navigation.onYouTubeLogin,
             onYouTubeSignOut = { dialogs.confirmYouTubeSignOut = true },
-            onDeezerLogin = onDeezerLogin,
+            onDeezerLogin = navigation.onDeezerLogin,
             onDeezerSignOut = { dialogs.confirmDeezerSignOut = true },
             onRescanLocal = viewModel::rescanLocalLibrary,
             onPickLocalFolder = pickLocalFolder.takeIf { supportsFolderScan },
@@ -126,9 +131,9 @@ internal fun rememberSettingsHost(
             onDownloadingPausedChange = viewModel::setDownloadingPaused,
             onDownloadLiked = viewModel::downloadLikedNow,
             onIndexFingerprints = viewModel::indexFingerprintsNow,
-            onOpenFingerprints = onOpenFingerprints,
+            onOpenFingerprints = navigation.onOpenFingerprints,
             onClearCache = viewModel::clearCache,
-            onOpenImport = onOpenImport,
+            onOpenImport = navigation.onOpenImport,
             onEditShareDomain = { dialogs.showShareDomainDialog = true },
             onIncognitoChange = viewModel::setIncognito,
             onVisibilityChange = viewModel::setAgroVisibility,
@@ -140,8 +145,8 @@ internal fun rememberSettingsHost(
             onAutoUpdateCheckChange = viewModel::setAutoUpdateCheckEnabled,
             onCheckForUpdate = viewModel::checkForUpdate,
             onOpenUrl = uriHandler::openUri,
-            onOpenMergePreview = onOpenMergePreview,
-            onOpenReplay = onOpenReplay
+            onOpenMergePreview = navigation.onOpenMergePreview,
+            onOpenReplay = navigation.onOpenReplay
         )
     }
 

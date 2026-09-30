@@ -45,26 +45,46 @@ private val RadioFabClearance = 16.dp
  */
 private const val DockedEpsilon = 0.01f
 
+/** The view models the shell overlays read from. */
+internal class ShellViewModels(
+    val app: WanderAppViewModel,
+    val agro: AgroSessionViewModel,
+    val social: SocialViewModel,
+    val jam: JamViewModel
+)
+
+/** What the shell knows about the current screen and session that decides which overlays show. */
+internal class ShellOverlayState(
+    val currentRoute: String?,
+    val showChrome: Boolean,
+    val isPlayingHere: Boolean,
+    val dockBottom: Dp,
+    val activeJam: Jam?,
+    val listenAlongSession: ListenAlongSession?
+)
+
 /**
  * Overlays and floating controls anchored to the app shell: the radio/mood FAB, bottom offers,
  * sync sheets, Jam bar, listen-along bar, and snackbar host.
  */
 @Composable
 internal fun BoxScope.WanderAppOverlays(
-    viewModel: WanderAppViewModel,
-    agroViewModel: AgroSessionViewModel,
-    socialViewModel: SocialViewModel,
-    jamViewModel: JamViewModel,
+    viewModels: ShellViewModels,
     navController: NavHostController,
     sheetState: PlayerSheetState,
     snackbarHostState: SnackbarHostState,
-    currentRoute: String?,
-    showChrome: Boolean,
-    isPlayingHere: Boolean,
-    dockBottom: Dp,
-    activeJam: Jam?,
-    listenAlongSession: ListenAlongSession?
+    shell: ShellOverlayState
 ) {
+    val viewModel = viewModels.app
+    val agroViewModel = viewModels.agro
+    val socialViewModel = viewModels.social
+    val jamViewModel = viewModels.jam
+    val currentRoute = shell.currentRoute
+    val showChrome = shell.showChrome
+    val isPlayingHere = shell.isPlayingHere
+    val dockBottom = shell.dockBottom
+    val activeJam = shell.activeJam
+    val listenAlongSession = shell.listenAlongSession
     // Both bottom-anchored cards belong to the browsing surface, not to the player: floating
     // them over a full-screen Now Playing reads as a stray dialog.
     val sheetCollapsed = sheetState.targetValue == PlayerSheetValue.COLLAPSED

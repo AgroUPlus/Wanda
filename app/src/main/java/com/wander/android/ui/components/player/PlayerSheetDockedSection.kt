@@ -19,6 +19,9 @@ import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.ui.components.MiniArtworkSize
 import com.wander.android.ui.components.MiniPlayer
 
+/** The horizontal dismiss swipe on the docked strip: the gesture [modifier] and the live drag offset. */
+internal class DockedSwipe(val modifier: Modifier, val offsetX: () -> Float)
+
 /**
  * Renders the docked mini player strip.
  *
@@ -31,8 +34,7 @@ internal fun BoxScope.PlayerSheetDockedSection(
     playerConnection: PlayerConnection,
     progress: () -> Float,
     docked: Boolean,
-    miniSwipe: Modifier,
-    swipeOffsetX: () -> Float,
+    swipe: DockedSwipe,
     anchors: PlayerArtworkAnchors,
     onExpand: () -> Unit
 ) {
@@ -43,7 +45,7 @@ internal fun BoxScope.PlayerSheetDockedSection(
         isBuffering = playback.isBuffering,
         playerConnection = playerConnection,
         contentAlpha = { 1f - smoothStep(progress(), 0f, 0.30f) },
-        swipeOffset = swipeOffsetX,
+        swipeOffset = swipe.offsetX,
         containerColor = Color.Transparent,
         artworkSlot = {
             Box(
@@ -57,7 +59,7 @@ internal fun BoxScope.PlayerSheetDockedSection(
             .fillMaxWidth()
             .padding(horizontal = DockedSideInset)
             .height(MiniStripHeight)
-            .then(if (docked) miniSwipe else Modifier)
+            .then(if (docked) swipe.modifier else Modifier)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,

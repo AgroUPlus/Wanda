@@ -163,16 +163,18 @@ fun PlaylistImportScreen(
                             state = state,
                             isYouTubeLoggedIn = isYouTubeLoggedIn,
                             isDeezerLoggedIn = isDeezerLoggedIn,
-                            onSelectPlaylist = { viewModel.loadPlaylist(it.url, it.name, it.coverUrl) },
-                            onRefreshYouTube = viewModel::checkYouTubePlaylists,
-                            onRefreshDeezer = viewModel::checkDeezerPlaylists,
-                            onSwitchToDirectLink = viewModel::switchToDirectLink,
-                            onOpenYouTubeLogin = onOpenYouTubeLogin,
-                            onOpenDeezerLogin = onOpenDeezerLogin,
-                            onExternalWebViewReady = viewModel::setExternalWebView,
-                            onWebUrlChanged = viewModel::onWebUrlChanged,
-                            onInputChange = viewModel::setManualInput,
-                            onLoadPlaylist = { viewModel.loadPlaylist(state.manualInput) },
+                            actions = AccessStepActions(
+                                onSelectPlaylist = { viewModel.loadPlaylist(it.url, it.name, it.coverUrl) },
+                                onRefreshYouTube = viewModel::checkYouTubePlaylists,
+                                onRefreshDeezer = viewModel::checkDeezerPlaylists,
+                                onSwitchToDirectLink = viewModel::switchToDirectLink,
+                                onOpenYouTubeLogin = onOpenYouTubeLogin,
+                                onOpenDeezerLogin = onOpenDeezerLogin,
+                                onExternalWebViewReady = viewModel::setExternalWebView,
+                                onWebUrlChanged = viewModel::onWebUrlChanged,
+                                onInputChange = viewModel::setManualInput,
+                                onLoadPlaylist = { viewModel.loadPlaylist(state.manualInput) }
+                            ),
                             modifier = Modifier.fillMaxSize()
                         )
                     }

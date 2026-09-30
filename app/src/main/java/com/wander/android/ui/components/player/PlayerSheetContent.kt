@@ -164,8 +164,7 @@ fun PlayerSheetContent(
                 playerConnection = playerConnection,
                 progress = progress,
                 docked = docked,
-                miniSwipe = miniSwipe,
-                swipeOffsetX = { swipe.offsetX.value },
+                swipe = DockedSwipe(miniSwipe) { swipe.offsetX.value },
                 anchors = anchors,
                 onExpand = onExpand
             )

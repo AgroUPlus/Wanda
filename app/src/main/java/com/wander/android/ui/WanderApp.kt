@@ -34,6 +34,7 @@ import com.wander.android.ui.components.backdropBlur
 import com.wander.android.ui.components.dockSpec
 import com.wander.android.ui.components.player.MiniPlayerShadowInset
 import com.wander.android.ui.components.player.PlayerSheet
+import com.wander.android.ui.components.player.SheetDock
 import com.wander.android.ui.components.player.PlayerSheetContent
 import com.wander.android.ui.components.player.rememberPlayerSheetState
 import com.wander.android.ui.navigation.Routes
@@ -201,9 +202,7 @@ fun WanderApp(
                     navController = navController,
                     viewModel = viewModel,
                     motionScheme = motionScheme,
-                    currentRoute = currentRoute,
-                    showDockRow = showDockRow,
-                    hasTrack = hasTrack,
+                    visibility = DockVisibility(currentRoute, showDockRow, hasTrack),
                     sheetState = sheetState,
                     dockInset = dockInset
                 )
@@ -212,11 +211,13 @@ fun WanderApp(
 
                 PlayerSheet(
                     sheetState = sheetState,
-                    bottomInset = if (showChrome) sheetBottomInset else 0.dp,
+                    dock = SheetDock(
+                        bottomInset = if (showChrome) sheetBottomInset else 0.dp,
+                        dockedHeight = dockedPlayerHeight,
+                        pairedWithDockRow = showDockRow
+                    ),
                     isVisible = hasTrack && showChrome,
-                    dockedHeight = dockedPlayerHeight,
                     coverSeed = shellCoverSeed,
-                    pairedWithDockRow = showDockRow,
                     seekProgress = {
                         com.wander.android.core.playback.progressOf(
                             playbackPosition.value.positionMs,
@@ -255,19 +256,18 @@ fun WanderApp(
                 }
 
                 WanderAppOverlays(
-                    viewModel = viewModel,
-                    agroViewModel = agroViewModel,
-                    socialViewModel = socialViewModel,
-                    jamViewModel = jamViewModel,
+                    viewModels = ShellViewModels(viewModel, agroViewModel, socialViewModel, jamViewModel),
                     navController = navController,
                     sheetState = sheetState,
                     snackbarHostState = snackbarHostState,
-                    currentRoute = currentRoute,
-                    showChrome = showChrome,
-                    isPlayingHere = isPlayingHere,
-                    dockBottom = dockBottom,
-                    activeJam = activeJam,
-                    listenAlongSession = listenAlongSession
+                    shell = ShellOverlayState(
+                        currentRoute = currentRoute,
+                        showChrome = showChrome,
+                        isPlayingHere = isPlayingHere,
+                        dockBottom = dockBottom,
+                        activeJam = activeJam,
+                        listenAlongSession = listenAlongSession
+                    )
                 )
             }
         }

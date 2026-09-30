@@ -88,8 +88,10 @@ internal fun PlayerActionBar(
                 // In a jam or a listen-along the running order is somebody else's. The segment
                 // stays in place rather than disappearing — a control that vanishes reads as a
                 // bug, one that dims reads as "not right now".
-                enabled = !state.orderLocked,
-                disabledDescription = "Shuffle, unavailable while the room chooses the order",
+                availability = SegmentAvailability(
+                    enabled = !state.orderLocked,
+                    disabledDescription = "Shuffle, unavailable while the room chooses the order"
+                ),
                 // The icon itself never changes for shuffle — only its checked colour does — so a
                 // spin on toggle is what gives this segment the same "something happened" motion
                 // the others get for free from their icon swapping.
@@ -110,8 +112,10 @@ internal fun PlayerActionBar(
                 ),
                 active = state.repeatMode != RepeatMode.OFF,
                 onClick = connection::toggleRepeat,
-                enabled = !state.orderLocked,
-                disabledDescription = "Repeat, unavailable while the room chooses the order"
+                availability = SegmentAvailability(
+                    enabled = !state.orderLocked,
+                    disabledDescription = "Repeat, unavailable while the room chooses the order"
+                )
             )
             Segment(
                 position = SegmentPosition.MIDDLE,
@@ -153,6 +157,13 @@ internal fun PlayerActionBar(
  */
 private enum class SegmentPosition { START, MIDDLE, END }
 
+/** Whether a segment can be used right now, and what to announce in its place when it cannot. */
+private class SegmentAvailability(val enabled: Boolean, val disabledDescription: String? = null) {
+    companion object {
+        val Available = SegmentAvailability(enabled = true)
+    }
+}
+
 @Composable
 private fun RowScope.Segment(
     position: SegmentPosition,
@@ -160,8 +171,7 @@ private fun RowScope.Segment(
     description: String,
     active: Boolean,
     onClick: () -> Unit,
-    enabled: Boolean = true,
-    disabledDescription: String? = null,
+    availability: SegmentAvailability = SegmentAvailability.Available,
     /** True for a segment whose icon never swaps on toggle, so a spin stands in for that motion. */
     spinOnToggle: Boolean = false
 ) {
@@ -172,7 +182,7 @@ private fun RowScope.Segment(
     FilledIconToggleButton(
         checked = active,
         onCheckedChange = { onClick() },
-        enabled = enabled,
+        enabled = availability.enabled,
         shape = when (position) {
             SegmentPosition.START -> RoundedCornerShape(
                 topStart = OuterCorner,
@@ -206,7 +216,7 @@ private fun RowScope.Segment(
             .fillMaxHeight()
             .graphicsLayer { scaleX = scale; scaleY = scale }
     ) {
-        val contentDescription = if (enabled) description else disabledDescription ?: description
+        val contentDescription = if (availability.enabled) description else availability.disabledDescription ?: description
         if (spinOnToggle) {
             // The icon reference never changes, so `AnimatedContent` below would have nothing to
             // key on — a full turn on each flip is this segment's own "something happened" tell.

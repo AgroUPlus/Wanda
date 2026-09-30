@@ -94,12 +94,14 @@ internal fun StandardPlayerLayout(
     ) {
         PlayerTopBar(
             jam = jam,
-            sourceLabel = track.source.displayName,
+            source = PlayerSourceChip(
+                label = track.source.displayName,
+                mutedColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                onOpenPicker = onOpenSourcePicker
+            ),
             onOpenJam = onOpenJam,
             onMinimize = onMinimize,
             onOpenQueue = onOpenQueue,
-            onOpenSourcePicker = onOpenSourcePicker,
-            sourceLabelColorMuted = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.graphicsLayer { alpha = contentAlpha() }
         )
 
