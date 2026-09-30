@@ -55,33 +55,11 @@ internal class AgroSessionWebSocket(
             request,
             object : WebSocketListener() {
                 override fun onOpen(webSocket: WebSocket, response: Response) {
-                    val authFrame = buildJsonObject {
-                        put("msg_type", "AUTH")
-                        put("payload", buildJsonObject {
-                            put("token", graphQl.apiKey)
-                            put("device", graphQl.deviceId)
-                            put("lan", LocalNetwork.lanAddress())
-                        })
-                    }
-                    webSocket.send(authFrame.toString())
+                    webSocket.send(authFrame().toString())
                 }
 
                 override fun onMessage(webSocket: WebSocket, text: String) {
-                    if (AgroLiveMessageParser.isAuthSuccess(text)) {
-                        if (lastSeq > 0L) webSocket.send(AgroLiveMessageParser.resumeFrame(lastSeq))
-                        return
-                    }
-                    if (AgroLiveMessageParser.needsResync(text)) {
-                        lastSeq = 0L
-                        trySend(AgroLiveMessage.Resync)
-                        return
-                    }
-                    AgroLiveMessageParser.sequenceOf(text)?.let { seq ->
-                        if (seq > lastSeq) lastSeq = seq
-                    }
-                    AgroLiveMessageParser.parse(text, graphQl.userId, identityKeyManager)?.let {
-                        trySend(it)
-                    }
+                    handleMessage(webSocket, text) { trySend(it) }
                 }
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
@@ -91,6 +69,31 @@ internal class AgroSessionWebSocket(
             }
         )
         awaitClose { socket.close(NORMAL_CLOSURE, null) }
+    }
+
+    private fun authFrame() = buildJsonObject {
+        put("msg_type", "AUTH")
+        put("payload", buildJsonObject {
+            put("token", graphQl.apiKey)
+            put("device", graphQl.deviceId)
+            put("lan", LocalNetwork.lanAddress())
+        })
+    }
+
+    private fun handleMessage(webSocket: WebSocket, text: String, emit: (AgroLiveMessage) -> Unit) {
+        if (AgroLiveMessageParser.isAuthSuccess(text)) {
+            if (lastSeq > 0L) webSocket.send(AgroLiveMessageParser.resumeFrame(lastSeq))
+            return
+        }
+        if (AgroLiveMessageParser.needsResync(text)) {
+            lastSeq = 0L
+            emit(AgroLiveMessage.Resync)
+            return
+        }
+        AgroLiveMessageParser.sequenceOf(text)?.let { seq ->
+            if (seq > lastSeq) lastSeq = seq
+        }
+        AgroLiveMessageParser.parse(text, graphQl.userId, identityKeyManager)?.let(emit)
     }
 
     private companion object {

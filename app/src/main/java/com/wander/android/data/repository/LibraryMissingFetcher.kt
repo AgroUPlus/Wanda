@@ -36,33 +36,11 @@ internal class LibraryMissingFetcher @Inject constructor(
         for (track in tracks) {
             onProgress(FetchProgress(done.toSet(), track.contentHash, tracks.size, null))
             val stream = uploader.fetchP2POrRelay(track).getOrElse { error ->
-                return@withContext if (fetched > 0) Result.success(fetched) else Result.failure(error)
+                return@withContext partialOrFailure(fetched, error)
             }
             onProgress(FetchProgress(done.toSet(), track.contentHash, tracks.size, stream.route))
-            val written = stream.response.use { body ->
-                mediaStoreWriter.write(
-                    source = body.body.byteStream(),
-                    title = track.title,
-                    artist = track.artist,
-                    album = track.album,
-                    extension = track.format?.takeIf { it.isNotBlank() } ?: "flac",
-                    expectedHash = track.contentHash
-                )
-            }
-            val problem = when (written) {
-                is WriteResult.Written -> null
-                WriteResult.Empty ->
-                    "Nothing arrived for \"${track.title}\" — the device holding it did not send."
-                WriteResult.HashMismatch -> "\"${track.title}\" arrived corrupted."
-                is WriteResult.Failed -> "Couldn't save \"${track.title}\": ${written.reason}."
-            }
-            if (problem != null) {
-                return@withContext if (fetched > 0) {
-                    Result.success(fetched)
-                } else {
-                    Result.failure(IOException(problem))
-                }
-            }
+            val written = write(track, stream.response)
+            problemOf(track, written)?.let { return@withContext partialOrFailure(fetched, IOException(it)) }
             fetched++
             done += track.contentHash
             (written as? WriteResult.Written)?.let { result ->
@@ -78,4 +56,27 @@ internal class LibraryMissingFetcher @Inject constructor(
         }
         Result.success(fetched)
     }
+
+    private suspend fun write(track: MissingTrack, response: okhttp3.Response): WriteResult =
+        response.use { body ->
+            mediaStoreWriter.write(
+                source = body.body.byteStream(),
+                title = track.title,
+                artist = track.artist,
+                album = track.album,
+                extension = track.format?.takeIf { it.isNotBlank() } ?: "flac",
+                expectedHash = track.contentHash
+            )
+        }
+
+    private fun problemOf(track: MissingTrack, written: WriteResult): String? = when (written) {
+        is WriteResult.Written -> null
+        WriteResult.Empty -> "Nothing arrived for \"${track.title}\" — the device holding it did not send."
+        WriteResult.HashMismatch -> "\"${track.title}\" arrived corrupted."
+        is WriteResult.Failed -> "Couldn't save \"${track.title}\": ${written.reason}."
+    }
+
+    /** A failure only fails the batch when nothing was fetched before it; otherwise report the partial count. */
+    private fun partialOrFailure(fetched: Int, error: Throwable): Result<Int> =
+        if (fetched > 0) Result.success(fetched) else Result.failure(error)
 }

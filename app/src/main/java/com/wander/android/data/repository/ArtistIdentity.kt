@@ -31,6 +31,13 @@ internal object ArtistIdentity {
         pageArtistId: String?
     ): Set<String> {
         val groups = TrackDeduplicator.groupRecordings(tracks)
+        val aliases = seedAliases(tracks, pageArtistId)
+        if (aliases.isEmpty()) return emptySet()
+        bridgeAcrossBackends(groups, aliases)
+        return aliases
+    }
+
+    private fun seedAliases(tracks: List<UnifiedTrack>, pageArtistId: String?): MutableSet<String> {
         val aliases = mutableSetOf<String>()
         if (pageArtistId != null) {
             aliases.add(pageArtistId)
@@ -53,23 +60,24 @@ internal object ArtistIdentity {
             val firstId = tracks.firstNotNullOfOrNull { it.artistId?.takeIf { id -> id.isNotBlank() } }
             if (firstId != null) aliases.add(firstId)
         }
-        if (aliases.isEmpty()) return emptySet()
+        return aliases
+    }
 
+    /** Grows [aliases] with every id that shares a same-recording group with one already in it. */
+    private fun bridgeAcrossBackends(groups: List<List<UnifiedTrack>>, aliases: MutableSet<String>) {
         var added = true
         while (added) {
             added = false
             for (group in groups) {
                 val groupIds = group.mapNotNull { it.artistId?.takeIf { id -> id.isNotBlank() } }
-                if (groupIds.any { it in aliases }) {
-                    val newIds = groupIds.filterNot { it in aliases }
-                    if (newIds.isNotEmpty()) {
-                        aliases.addAll(newIds)
-                        added = true
-                    }
+                if (groupIds.none { it in aliases }) continue
+                val newIds = groupIds.filterNot { it in aliases }
+                if (newIds.isNotEmpty()) {
+                    aliases.addAll(newIds)
+                    added = true
                 }
             }
         }
-        return aliases
     }
 
     /**

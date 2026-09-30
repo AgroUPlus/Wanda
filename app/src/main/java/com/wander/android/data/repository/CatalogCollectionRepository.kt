@@ -49,27 +49,28 @@ internal class CatalogCollectionRepository(
     suspend fun refreshAlbums(pageSize: Int = ALBUM_PAGE_SIZE): List<UnifiedAlbum> = coroutineScope {
         val albums = activeSources()
             .filter { it.capabilities.albums }
-            .map { source ->
-                async {
-                    val collected = ArrayList<UnifiedAlbum>()
-                    val seen = HashSet<String>()
-                    var offset = 0
-                    while (collected.size < MAX_LIBRARY_ALBUMS) {
-                        val page = source.getAlbums(pageSize, offset).getOrDefault(emptyList())
-                        if (page.isEmpty()) break
-                        val fresh = page.filter { seen.add(it.id) }
-                        collected += fresh
-                        if (fresh.isEmpty() || page.size < pageSize) break
-                        offset += page.size
-                    }
-                    collected
-                }
-            }
+            .map { source -> async { collectAlbums(source, pageSize) } }
             .flatMap { it.await() }
         if (albums.isNotEmpty()) {
             albumDao.insertAlbums(albums.map { AlbumEntity.fromUnifiedAlbum(it, isLibrary = true) })
         }
         albums
+    }
+
+    /** Pages through one source's albums until it runs dry, repeats itself, or hits the library cap. */
+    private suspend fun collectAlbums(source: IMusicSource, pageSize: Int): List<UnifiedAlbum> {
+        val collected = ArrayList<UnifiedAlbum>()
+        val seen = HashSet<String>()
+        var offset = 0
+        while (collected.size < MAX_LIBRARY_ALBUMS) {
+            val page = source.getAlbums(pageSize, offset).getOrDefault(emptyList())
+            if (page.isEmpty()) break
+            val fresh = page.filter { seen.add(it.id) }
+            collected += fresh
+            if (fresh.isEmpty() || page.size < pageSize) break
+            offset += page.size
+        }
+        return collected
     }
 
     suspend fun importMissingAlbumTracks(limit: Int = ALBUM_IMPORT_BATCH): Int =

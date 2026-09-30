@@ -5,6 +5,7 @@ import android.util.Log
 import com.wander.android.BuildConfig
 import com.wander.android.core.audio.fingerprint.AudioEmbedder
 import com.wander.android.core.audio.fingerprint.SegmentVectors
+import com.wander.android.core.database.dao.Centroid
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.dao.TrackEmbeddingDao
 import kotlinx.coroutines.Dispatchers
@@ -77,6 +78,23 @@ internal class EmbeddingMatcher(
         }
         if (centroids.isEmpty()) return emptyList()
 
+        val (unmeasured, ranked) = rankByCentroid(clipMean, centroids)
+        val shortlist = LinkedHashSet<String>(unmeasured)
+        ranked.take(EmbeddingScorer.SHORTLIST).forEach { shortlist += it.first }
+
+        val (candidates, candidateIds) = loadCandidates(shortlist)
+        val scored = scoreCandidates(query, candidates, candidateIds)
+        Log.i(
+            tag,
+            "Shortlisted ${shortlist.size} of ${centroids.size} tracks, " +
+                "scored ${scored.size} in full" +
+                if (unmeasured.isEmpty()) "" else " (${unmeasured.size} without a centroid yet)"
+        )
+        return scored
+    }
+
+    /** Splits [centroids] into the ids with no usable centroid yet and the rest, best match first. */
+    private fun rankByCentroid(clipMean: ByteArray, centroids: List<Centroid>): Pair<List<String>, List<Pair<String, Float>>> {
         val unmeasured = ArrayList<String>()
         val ranked = ArrayList<Pair<String, Float>>(centroids.size)
         for (row in centroids) {
@@ -94,12 +112,10 @@ internal class EmbeddingMatcher(
             ranked += row.trackId to best
         }
         ranked.sortByDescending { it.second }
+        return unmeasured to ranked
+    }
 
-        val shortlist = LinkedHashSet<String>(unmeasured)
-        for (i in 0 until minOf(EmbeddingScorer.SHORTLIST, ranked.size)) {
-            shortlist += ranked[i].first
-        }
-
+    private suspend fun loadCandidates(shortlist: Set<String>): Pair<List<SegmentVectors>, List<String>> {
         val candidates = ArrayList<SegmentVectors>(shortlist.size)
         val candidateIds = ArrayList<String>(shortlist.size)
         for (ids in shortlist.chunked(EmbeddingScorer.FETCH_CHUNK)) {
@@ -115,7 +131,15 @@ internal class EmbeddingMatcher(
                 candidateIds += entity.trackId
             }
         }
+        return candidates to candidateIds
+    }
 
+    /** A cheap coarse pass prunes the candidates; only the survivors get the full score. */
+    private fun scoreCandidates(
+        query: SegmentVectors,
+        candidates: List<SegmentVectors>,
+        candidateIds: List<String>
+    ): List<EmbeddingRepository.Match> {
         val coarse = EmbeddingScorer.coarseQuery(query)
         val coarseScores = FloatArray(candidates.size) {
             EmbeddingScorer.score(coarse, candidates[it], candidateIds[it]).similarity
@@ -128,12 +152,6 @@ internal class EmbeddingMatcher(
             EmbeddingScorer.score(query, candidates[it], candidateIds[it])
         }
         scored.sortByDescending { it.similarity }
-        Log.i(
-            tag,
-            "Shortlisted ${shortlist.size} of ${centroids.size} tracks, " +
-                "scored ${scored.size} in full" +
-                if (unmeasured.isEmpty()) "" else " (${unmeasured.size} without a centroid yet)"
-        )
         return scored
     }
 }

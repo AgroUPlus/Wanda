@@ -49,35 +49,41 @@ internal class PlaybackStreamResolver(
 
         val cached = trackDao.getTrackById(trackId)
 
-        // Tier 1: Internal / Downloaded local file
+        localStreamFor(cached)?.let { return@withContext Result.success(it) }
+        navidromeStreamFor(cached)?.let { return@withContext Result.success(it) }
+        originalSourceStream(trackId, cached)
+    }
+
+    /** Tier 1: Internal / Downloaded local file, or a local copy of the same recording. */
+    private suspend fun localStreamFor(cached: TrackEntity?): StreamInfo? {
         cached?.localFilePath?.takeIf { it.isNotBlank() }?.let { path ->
-            return@withContext Result.success(StreamInfo(uri = path, isDirectFile = true))
+            return StreamInfo(uri = path, isDirectFile = true)
         }
-        if (cached != null && cached.effectiveSource != SourceType.LOCAL) {
-            val localMatch = sameRecordingAs(cached, trackDao.findLocalOrDownloadedCandidates(cached.title, TITLE_CANDIDATES))
-            val localPath = localMatch?.localFilePath?.takeIf { it.isNotBlank() } ?: localMatch?.streamUri
-            if (localPath != null && localPath.isNotBlank()) {
-                return@withContext Result.success(StreamInfo(uri = localPath, isDirectFile = true))
-            }
-        }
+        if (cached == null || cached.effectiveSource == SourceType.LOCAL) return null
+        val localMatch = sameRecordingAs(cached, trackDao.findLocalOrDownloadedCandidates(cached.title, TITLE_CANDIDATES))
+        val localPath = localMatch?.localFilePath?.takeIf { it.isNotBlank() } ?: localMatch?.streamUri
+        return localPath?.takeIf { it.isNotBlank() }?.let { StreamInfo(uri = it, isDirectFile = true) }
+    }
 
-        // Tier 2: Navidrome (Personal Server)
-        if (cached != null && cached.effectiveSource != SourceType.NAVIDROME && sourceFor(SourceType.NAVIDROME)?.isConfigured?.value == true) {
-            withTimeoutOrNull(SUBSTITUTION_BUDGET_MS) { navidromeSubstituteFor(cached) }
-                ?.let { return@withContext Result.success(it) }
-        }
+    /** Tier 2: Navidrome (Personal Server), within a time budget so a slow server can't stall playback. */
+    private suspend fun navidromeStreamFor(cached: TrackEntity?): StreamInfo? {
+        if (cached == null || cached.effectiveSource == SourceType.NAVIDROME) return null
+        if (sourceFor(SourceType.NAVIDROME)?.isConfigured?.value != true) return null
+        return withTimeoutOrNull(SUBSTITUTION_BUDGET_MS) { navidromeSubstituteFor(cached) }
+    }
 
-        // Tier 3: Original Source / YouTube Music
+    /** Tier 3: Original Source / YouTube Music. */
+    private suspend fun originalSourceStream(trackId: String, cached: TrackEntity?): Result<StreamInfo> {
         val type = cached?.effectiveSource ?: SourceType.entries.firstOrNull {
             trackId.startsWith(it.idPrefix)
-        } ?: return@withContext Result.failure( // NOSONAR: firstOrNull returns null for an unknown prefix, so this elvis is needed
+        } ?: return Result.failure( // NOSONAR: firstOrNull returns null for an unknown prefix, so this elvis is needed
             IllegalArgumentException("Unrecognised track id: $trackId")
         )
 
         if (type != SourceType.LOCAL &&
             (!connectivity.isOnline.value || secureStorage.isOfflineMode.value)
         ) {
-            return@withContext Result.failure(
+            return Result.failure(
                 IOException(
                     if (secureStorage.isOfflineMode.value) {
                         "Offline mode — this track is not downloaded to this device"
@@ -87,9 +93,8 @@ internal class PlaybackStreamResolver(
                 )
             )
         }
-        val source = sourceFor(type)
-            ?: return@withContext Result.failure(IllegalStateException("$type is unavailable"))
-        source.getStreamInfo(trackId).onSuccess { info ->
+        val source = sourceFor(type) ?: return Result.failure(IllegalStateException("$type is unavailable"))
+        return source.getStreamInfo(trackId).onSuccess { info ->
             if (info.format == MimeTypes.APPLICATION_M3U8) trackDao.markLive(trackId)
         }
     }
