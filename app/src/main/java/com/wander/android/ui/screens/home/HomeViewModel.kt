@@ -97,7 +97,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(
                         allSections = state.allSections.withSection(
-                            shelf(SectionLiked, "Your Favourites", HomeSectionStyle.FAVORITES_CAROUSEL, liked.take(CarouselSize))
+                            shelf(SectionLiked, "Your Favorites", HomeSectionStyle.FAVORITES_CAROUSEL, liked.take(CarouselSize))
                         )
                     )
                 }
@@ -133,9 +133,9 @@ class HomeViewModel @Inject constructor(
                     // The lead shelf earns legible full-width rows; the second earns big
                     // artwork. The rest stay carousels, so the top of Home has a shape to it.
                     add(shelf(SectionOnRepeat, "Quick picks", HomeSectionStyle.TRACK_PAGER, onRepeat.await()))
+                    add(shelf(SectionRecentlyPlayed, "Recently Played", HomeSectionStyle.HERO_CAROUSEL, recentlyPlayed.await()))
                     add(continueListening.value)
-                    add(carousel(SectionRecentlyPlayed, "Recently Played", recentlyPlayed.await()))
-                    add(shelf(SectionLiked, "Your Favourites", HomeSectionStyle.FAVORITES_CAROUSEL, liked.await()))
+                    add(shelf(SectionLiked, "Your Favorites", HomeSectionStyle.FAVORITES_CAROUSEL, liked.await()))
                     add(shelf(SectionDiscover, "Discover", HomeSectionStyle.DISCOVER_MASONRY, discover.await()))
                 }.filterNot(HomeSection::isEmpty)
             }
@@ -166,7 +166,7 @@ class HomeViewModel @Inject constructor(
                         // "Music videos") is a dead end here, not a discovery opportunity. Dropped
                         // by title rather than by some upstream flag: YouTube Music's own feed is
                         // the only source of these, and it names them, not tags them.
-                        val feed = feedDeferred.await().filterNot { it.title.contains("video", ignoreCase = true) }
+                        val feed = feedDeferred.await().filterNot { it.id == FeedListenAgain || it.title.contains("video", ignoreCase = true) }
                         val (seed, suggestions) = recommendedDeferred.await()
 
                         if (feed.isNotEmpty() || (seed != null && suggestions.isNotEmpty())) {
@@ -175,12 +175,14 @@ class HomeViewModel @Inject constructor(
                                 val updated = buildList {
                                     // Keep On Repeat first
                                     state.allSections.find { it.id == SectionOnRepeat }?.let { add(it) }
+                                    // ...and Recently Played straight under it, ahead of the feed
+                                    state.allSections.find { it.id == SectionRecentlyPlayed }?.let { add(it) }
                                     // Add online recommendation feed shelves
                                     feed.forEach { shelf ->
                                         add(carousel(shelf.id, shelf.title, shelf.tracks.take(CarouselSize)))
                                     }
                                     // Add remaining local sections without duplicating feed or because
-                                    state.allSections.filterNot { it.id == SectionOnRepeat || it.id in feedIds || it.id == SectionBecause }.forEach { add(it) }
+                                    state.allSections.filterNot { it.id == SectionOnRepeat || it.id == SectionRecentlyPlayed || it.id in feedIds || it.id == SectionBecause }.forEach { add(it) }
                                     // Add seed radio recommendations
                                     if (seed != null && suggestions.isNotEmpty()) {
                                         add(

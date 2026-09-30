@@ -77,6 +77,8 @@ internal fun NowPlayingScreen(
     showLyrics: Boolean = false,
     onToggleLyrics: () -> Unit = {},
     immersivePlayer: Boolean = false,
+    /** A queue index whose title and artist to show ahead of the player; see `PlayerCoverCarousel`. */
+    previewIndex: Int? = null,
     viewModel: NowPlayingViewModel = hiltViewModel()
 ) {
     val state by playerConnection.state.collectAsStateWithLifecycle()
@@ -246,6 +248,7 @@ internal fun NowPlayingScreen(
             viewModel = viewModel,
             state = state,
             track = track,
+            previewIndex = previewIndex,
             jam = jam,
             likedTrackIds = likedTrackIds,
             fingerprintStatus = fingerprintStatus,

@@ -4,7 +4,7 @@ import androidx.media3.common.C
 import androidx.media3.session.MediaController
 
 /**
- * 2-second grace window to restore playback position when returning from an accidental skip.
+ * Grace window to restore playback position when returning from an accidental skip.
  */
 internal data class SkipGraceWindow(
     val fromIndex: Int,
@@ -38,9 +38,24 @@ internal class SkipGraceManager {
         if (grace != null && grace.fromIndex == index && System.currentTimeMillis() - grace.timestampSystemMs <= SKIP_GRACE_WINDOW_MS) {
             skipGraceWindow = null
             ctrl.seekTo(index, grace.fromPositionMs)
-        } else {
-            ctrl.seekToDefaultPosition(index)
+            return
         }
+
+        // Recorded like [next] and [previous] do: the player's cover carousel skips through here,
+        // so without this a swipe forward left nothing to go back to.
+        val currentIndex = ctrl.currentMediaItemIndex
+        val currentPos = ctrl.currentPosition
+        skipGraceWindow = if (index != currentIndex && currentPos > 1000L) {
+            SkipGraceWindow(
+                fromIndex = currentIndex,
+                fromPositionMs = currentPos,
+                toIndex = index,
+                timestampSystemMs = System.currentTimeMillis()
+            )
+        } else {
+            null
+        }
+        ctrl.seekToDefaultPosition(index)
     }
 
     fun next(ctrl: MediaController) {
@@ -128,6 +143,6 @@ internal class SkipGraceManager {
 
     companion object {
         const val RESTART_THRESHOLD_MS = 3_000L
-        const val SKIP_GRACE_WINDOW_MS = 2_000L
+        const val SKIP_GRACE_WINDOW_MS = 4_000L
     }
 }

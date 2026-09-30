@@ -37,7 +37,7 @@ import kotlin.math.roundToInt
  * one bitmap, for the whole gesture.
  */
 /** Clear of the rounded corner at full size, and off the artwork's busiest region. */
-private val BadgeInset = 14.dp
+internal val BadgeInset = 14.dp
 
 /** A subtle "settle," not a dramatic shrink — the cover barely moves, it just stops breathing. */
 internal const val PausedScale = 0.96f

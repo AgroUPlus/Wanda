@@ -20,6 +20,10 @@ internal fun swipeFade(offsetX: Float): Float =
  */
 internal const val QueueGestureArmed = 0.98f
 
+/** Where the full player's carousel starts fading in over the travelling cover, and where it owns the cover. */
+internal const val CarouselHandoffStart = 0.9f
+internal const val CarouselHandoffEnd = 0.999f
+
 internal const val SwipeFadeStart = 12f
 
 /** How far up a drag has to go to open a jam's queue screen. */

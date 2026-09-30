@@ -19,6 +19,8 @@ enum class HomeSectionStyle {
     FEATURED_HERO,
     /** An M3 Expressive carousel: the focused item is large, its neighbours compress toward it. */
     FAVORITES_CAROUSEL,
+    /** An M3 Expressive hero carousel: one oversized centred item, slivers of its neighbours. */
+    HERO_CAROUSEL,
     /** Two rows of cards at alternating heights, scrolling sideways as a broken grid. */
     DISCOVER_MASONRY
 }

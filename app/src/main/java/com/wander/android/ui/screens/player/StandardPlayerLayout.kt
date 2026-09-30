@@ -60,6 +60,7 @@ internal fun StandardPlayerLayout(
     viewModel: NowPlayingViewModel,
     state: PlaybackState,
     track: UnifiedTrack,
+    previewIndex: Int?,
     jam: Jam?,
     likedTrackIds: Set<String>,
     fingerprintStatus: Map<String, FingerprintStatus>,
@@ -184,7 +185,11 @@ internal fun StandardPlayerLayout(
                 .fillMaxWidth()
                 .graphicsLayer { alpha = contentAlpha() }
         ) {
-            TrackTextTransition(track = track, queueIndex = state.currentIndex) { shown ->
+            val previewTrack = previewIndex?.let { state.queue.getOrNull(it) }
+            TrackTextTransition(
+                track = previewTrack ?: track,
+                queueIndex = if (previewTrack != null) previewIndex else state.currentIndex
+            ) { shown ->
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()
