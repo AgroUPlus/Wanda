@@ -885,5 +885,13 @@
     <string name="podcasts_refresh_failed">%1$d feeds could not be refreshed</string>
     <string name="podcasts_file_unreadable">The file could not be opened</string>
     <string name="podcasts_opml_title">Wanda podcast subscriptions</string>
+
+    <!-- Episode chapters and transcripts -->
+    <string name="chapters_title">Chapters</string>
+    <string name="chapters_empty">This episode has no chapters.</string>
+    <string name="chapters_load_failed">Couldn\'t load the chapters: %1$s</string>
+    <string name="transcript_title">Transcript</string>
+    <string name="transcript_empty">This transcript is empty.</string>
+    <string name="transcript_load_failed">Couldn\'t load the transcript: %1$s</string>
     <string name="podcasts_reset_progress">Reset progress</string>
 </resources>

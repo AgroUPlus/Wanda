@@ -104,6 +104,11 @@ internal fun NowPlayingScreen(
 
     if (track == null) return
 
+    val extrasViewModel: EpisodeExtrasViewModel = hiltViewModel()
+    val episodeExtras by remember(track.id) { extrasViewModel.extras(track.id) }
+        .collectAsStateWithLifecycle(initialValue = null)
+    var episodePanel by remember { mutableStateOf<EpisodePanel?>(null) }
+
     KeepScreenOn(keepAwake = showLyrics)
 
     // Extract the dominant colour from the cover art and use it to tint the player surface,
@@ -195,12 +200,21 @@ internal fun NowPlayingScreen(
             onShare = { viewModel.share(track) }.takeIf { viewModel.canShare(track) },
             onOpenSourcePicker = onOpenSourcePicker,
             onOpenAudioTrackPicker = { showAudioTrackPicker = true }.takeIf { state.audioTracks.size > 1 },
+            onOpenChapters = { episodePanel = EpisodePanel.CHAPTERS }.takeIf { episodeExtras?.chaptersUrl != null },
+            onOpenTranscript = { episodePanel = EpisodePanel.TRANSCRIPT }.takeIf { episodeExtras?.transcriptUrl != null },
             onOpenArtist = onOpenArtist?.let { open -> { open(track.artist, track.artistId) } },
             onOpenAlbum = track.albumId?.let { albumId -> onOpenAlbum?.let { open -> { open(albumId) } } },
             onJamAction = jam?.let { { jamViewModel.suggest(track) } },
             onDismiss = { showMenuDrawer = false }
         )
     }
+
+    EpisodePanels(
+        panel = episodePanel,
+        extras = episodeExtras,
+        playerConnection = playerConnection,
+        onDismiss = { episodePanel = null }
+    )
 
     if (showSleepTimer) {
         SleepTimerSheet(
