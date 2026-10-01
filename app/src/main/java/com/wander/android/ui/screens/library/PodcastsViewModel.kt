@@ -8,6 +8,7 @@ import com.wander.android.data.model.EpisodeItem
 import com.wander.android.data.model.EpisodeState
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.EpisodeProgressRepository
+import com.wander.android.data.repository.PodcastRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 /** Episodes of one show, newest listened first. The show is the episode's artist on YouTube. */
@@ -40,6 +42,7 @@ data class PodcastsUiState(
 @HiltViewModel
 class PodcastsViewModel @Inject constructor(
     episodeProgress: EpisodeProgressRepository,
+    podcasts: PodcastRepository,
     private val playerConnection: PlayerConnection
 ) : ViewModel() {
 
@@ -65,6 +68,19 @@ class PodcastsViewModel @Inject constructor(
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PodcastsUiState())
 
+    /**
+     * New episodes of subscribed feeds, minus the ones already started, which Continue listening
+     * shows. Capped: the Inbox is a glance, and the full list is one subscription away.
+     */
+    val inbox: StateFlow<List<UnifiedTrack>> = combine(podcasts.inbox, episodeProgress.inProgress) { inbox, started ->
+        val startedIds = started.mapTo(mutableSetOf()) { it.id }
+        inbox.filter { it.id !in startedIds }.take(INBOX_LIMIT)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val hasSubscriptions: StateFlow<Boolean> = podcasts.subscriptions
+        .map { it.isNotEmpty() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     /** Tapping the selected chip again clears it, back to every episode. */
     fun selectFilter(state: EpisodeState?) {
         filter.value = if (filter.value == state) null else state
@@ -76,4 +92,8 @@ class PodcastsViewModel @Inject constructor(
      * podcast does not. Resume is handled by `PlaybackCoordinator`.
      */
     fun play(episode: UnifiedTrack) = playerConnection.play(listOf(episode), 0)
+
+    private companion object {
+        const val INBOX_LIMIT = 20
+    }
 }
