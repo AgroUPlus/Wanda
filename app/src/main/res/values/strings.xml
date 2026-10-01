@@ -894,4 +894,8 @@
     <string name="transcript_empty">This transcript is empty.</string>
     <string name="transcript_load_failed">Couldn\'t load the transcript: %1$s</string>
     <string name="podcasts_reset_progress">Reset progress</string>
+
+    <!-- Podcast search (PodcastIndex) -->
+    <string name="settings_podcast_search">Podcast search</string>
+    <string name="settings_podcast_search_subtitle">Send podcast searches to api.podcastindex.org</string>
 </resources>

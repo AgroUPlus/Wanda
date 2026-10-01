@@ -65,6 +65,7 @@ internal data class SettingsActions(
     val onProxyChange: (Boolean) -> Unit,
     val onExternalLyricsChange: (Boolean) -> Unit,
     val onMusicBrainzLookupChange: (Boolean) -> Unit,
+    val onPodcastIndexChange: (Boolean) -> Unit,
     val onForgetEverything: () -> Unit,
     // About
     val onArtistReleaseNotificationsChange: (Boolean) -> Unit,
