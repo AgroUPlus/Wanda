@@ -115,6 +115,7 @@ class PlayerConnection @Inject constructor(
             return
         }
         jamCoordinator.onUserInitiatedPlay()
+        skipManager.clear()
         val ctrl = _controller.value ?: run {
             pendingPlay = PendingPlay(tracks, startIndex, startPositionMs)
             connect()
