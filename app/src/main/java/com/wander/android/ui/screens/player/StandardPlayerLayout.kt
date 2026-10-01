@@ -56,6 +56,8 @@ private const val CoverWidthFraction = 0.88f
  */
 @Composable
 internal fun StandardPlayerLayout(
+    mediaToggle: MediaToggleState?,
+    onSwapMediaType: () -> Unit,
     playerConnection: PlayerConnection,
     viewModel: NowPlayingViewModel,
     state: PlaybackState,
@@ -94,6 +96,8 @@ internal fun StandardPlayerLayout(
             .padding(horizontal = 24.dp, vertical = 12.dp)
     ) {
         PlayerTopBar(
+            mediaToggle = mediaToggle,
+            onSwapMediaType = onSwapMediaType,
             jam = jam,
             source = PlayerSourceChip(
                 label = track.source.displayName,

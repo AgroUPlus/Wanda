@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.player
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,6 +22,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,8 +42,8 @@ import com.wander.android.ui.theme.LiveIndicator
 internal class PlayerSourceChip(val label: String, val mutedColor: Color, val onOpenPicker: (() -> Unit)?)
 
 /**
- * The player's top bar: minimize on the left, a centred chip (the source name, or a live jam
- * badge when one is active) in the middle, the queue button on the right.
+ * The player's top bar: minimize on the left, the source name in the middle with the song/video
+ * toggle under it (or a live jam badge when one is active), the queue button on the right.
  *
  * Shared between [ImmersivePlayerLayout] and [StandardPlayerLayout], which differ only in the
  * chip's text colour (drawn over artwork vs. over a plain surface) and in what wraps this — the
@@ -47,6 +52,8 @@ internal class PlayerSourceChip(val label: String, val mutedColor: Color, val on
  */
 @Composable
 internal fun PlayerTopBar(
+    mediaToggle: MediaToggleState?,
+    onSwapMediaType: () -> Unit,
     jam: Jam?,
     source: PlayerSourceChip,
     onOpenJam: () -> Unit,
@@ -90,13 +97,16 @@ internal fun PlayerTopBar(
                     }
                 }
             } else {
-                Text(
-                    text = source.label,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = source.mutedColor,
-                    textAlign = TextAlign.Center,
-                    modifier = source.onOpenPicker?.let { Modifier.clickable(onClick = it) } ?: Modifier
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = source.label,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = source.mutedColor,
+                        textAlign = TextAlign.Center,
+                        modifier = source.onOpenPicker?.let { Modifier.clickable(onClick = it) } ?: Modifier
+                    )
+                    AnimatedMediaToggle(state = mediaToggle, onSwap = onSwapMediaType)
+                }
             }
         }
 
