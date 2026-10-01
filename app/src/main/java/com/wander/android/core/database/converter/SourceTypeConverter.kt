@@ -8,6 +8,7 @@ class SourceTypeConverter {
     fun toSourceType(value: String?): SourceType = when (value) {
         "NAVIDROME" -> SourceType.NAVIDROME
         "YTMUSIC" -> SourceType.YTMUSIC
+        "DEEZER" -> SourceType.DEEZER
         "LOCAL" -> SourceType.LOCAL
         else -> SourceType.LOCAL
     }
