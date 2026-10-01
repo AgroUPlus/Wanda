@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Podcasts
 import androidx.compose.material.icons.rounded.LockPerson
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.QueryStats
@@ -76,6 +77,16 @@ internal fun LazyListScope.privacyTab(
                         checked = state.musicBrainzLookupEnabled,
                         onCheckedChange = actions.onMusicBrainzLookupChange,
                         icon = Icons.Rounded.Language
+                    )
+                },
+                {
+                    SettingsToggle(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(9)),
+                        title = stringResource(R.string.settings_podcast_search),
+                        subtitle = stringResource(R.string.settings_podcast_search_subtitle),
+                        checked = state.podcastIndexEnabled,
+                        onCheckedChange = actions.onPodcastIndexChange,
+                        icon = Icons.Rounded.Podcasts
                     )
                 }
             )

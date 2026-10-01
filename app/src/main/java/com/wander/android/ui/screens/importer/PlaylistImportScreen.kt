@@ -170,7 +170,6 @@ fun PlaylistImportScreen(
                                 onSwitchToDirectLink = viewModel::switchToDirectLink,
                                 onOpenYouTubeLogin = onOpenYouTubeLogin,
                                 onOpenDeezerLogin = onOpenDeezerLogin,
-                                onExternalWebViewReady = viewModel::setExternalWebView,
                                 onWebUrlChanged = viewModel::onWebUrlChanged,
                                 onInputChange = viewModel::setManualInput,
                                 onLoadPlaylist = { viewModel.loadPlaylist(state.manualInput) }

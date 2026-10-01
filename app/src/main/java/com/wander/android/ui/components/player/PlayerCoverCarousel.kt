@@ -17,22 +17,28 @@ import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.FingerprintStatus
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.FingerprintBadge
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.delay
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -42,8 +48,8 @@ import kotlinx.coroutines.flow.filter
  * own square: only the playing cover shows at rest, and a swipe shrinks it while the previous or
  * next one slides in.
  *
- * Laid out the width of the window and clipped back to the slot, so the hero item has room to be
- * exactly cover-sized. That is what lets [MorphingArtwork] hand over to this without a jump.
+ * The hero item is exactly cover-sized (see the bleed below), which is what lets [MorphingArtwork]
+ * hand over to this without a jump.
  *
  * @param onPreviewIndex the queue index the carousel is showing while it differs from what is
  *   playing because of a swipe, or null. Lets the text under the cover follow the gesture instead
@@ -77,12 +83,12 @@ internal fun PlayerCoverCarousel(
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         // A fixed radius, not a percentage: a percentage shrinks with the item, so the covers
         // sliding in would be less rounded than the one sitting still.
-        val cornerShape = RoundedCornerShape(maxWidth * CoverCornerFraction)
+        val cornerRadius = maxWidth * CoverCornerFraction
+        val cornerShape = RoundedCornerShape(cornerRadius)
         // The hero item is a hair larger than the cover on every side, so it can never come out
         // narrower than it and crop the artwork's edges; the clip below trims it back.
         val itemWidth = maxWidth + ItemBleed * 2
         val itemHeight = maxHeight + ItemBleed * 2
-        val containerWidth = itemWidth + (SliverWidth + ItemSpacing) * 2 + 2.dp
         // Clipped to the cover's own rounded square: at rest only the playing cover shows, and a
         // swipe shrinks it while the neighbour slides in from beyond the edge. Rounded, so the
         // neighbour arrives with a curved edge instead of a cut-off square one.
@@ -90,13 +96,16 @@ internal fun PlayerCoverCarousel(
             HorizontalCenteredHeroCarousel(
                 state = state,
                 maxItemWidth = itemWidth,
-                itemSpacing = ItemSpacing,
+                itemSpacing = 0.dp,
                 // One cover per swipe, however hard the fling.
                 flingBehavior = CarouselDefaults.singleAdvanceFlingBehavior(state),
-                minSmallItemWidth = SliverWidth,
-                maxSmallItemWidth = SliverWidth,
+                // No spare room for slivers or gaps: the carousel pins the first and last hero to
+                // the container's edge, so any slack would sit the cover off-centre there, with
+                // its neighbour peeking in. The hero then always fills the container exactly.
+                minSmallItemWidth = 0.dp,
+                maxSmallItemWidth = 0.dp,
                 modifier = Modifier
-                    .requiredWidth(containerWidth)
+                    .requiredWidth(itemWidth)
                     .requiredHeight(itemHeight)
                     .graphicsLayer {
                         this.alpha = alpha()
@@ -106,7 +115,7 @@ internal fun PlayerCoverCarousel(
             ) { index ->
                 val track = queue.getOrNull(index)
                 if (track != null) {
-                    CoverItem(track, cornerShape, isCurrent = index == currentIndex, fingerprintStatus)
+                    CoverItem(track, cornerRadius, itemWidth, isCurrent = index == currentIndex, fingerprintStatus)
                 }
             }
         }
@@ -117,10 +126,12 @@ internal fun PlayerCoverCarousel(
 @Composable
 private fun CarouselItemScope.CoverItem(
     track: UnifiedTrack,
-    shape: Shape,
+    cornerRadius: Dp,
+    itemWidth: Dp,
     isCurrent: Boolean,
     fingerprintStatus: FingerprintStatus
 ) {
+    val shape = remember(cornerRadius, itemWidth) { SwipeGapShape(carouselItemDrawInfo, cornerRadius, itemWidth) }
     Box(modifier = Modifier.fillMaxSize().maskClip(shape)) {
         Artwork(
             url = track.artworkUrl,
@@ -168,19 +179,41 @@ private fun CarouselPlaybackSync(
     val seek by rememberUpdatedState(onSeekToIndex)
     val settleSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
 
-    // How many of our own slides are running. A count, not a flag: a restarted effect cancels its
-    // predecessor, whose cleanup can land after the successor has already begun. It is what tells
-    // a finger on the carousel apart from one of these slides, both of which read as "scrolling".
-    val slides = remember { intArrayOf(0) }
-    val slideTo: suspend (Int) -> Unit = { item ->
-        slides[0]++
-        try {
-            state.animateScrollToItem(item, settleSpec)
-        } finally {
-            slides[0]--
+    // Every programmatic slide goes through this one queue, one at a time, and only the newest
+    // request waits its turn: however fast the presses come, the carousel ends on the last cover
+    // asked for. A slide is never cut short by the next one. `animateScrollToItem` works out its
+    // distance from the nearest cover, not from where the carousel actually is, so a slide begun
+    // mid-slide falls short by whatever fraction was left and leaves a cover part-way across.
+    val slideRequests = remember { Channel<Pair<Long, Int>>(Channel.CONFLATED) }
+    val requestSeq = remember { longArrayOf(0L) }
+    // True from a request until its slide has run to the end or a finger has taken over. It is what
+    // tells a finger on the carousel apart from one of these slides, both of which read as "scrolling".
+    // State rather than a flag, so the settle effect below re-reads it the moment it clears.
+    var sliding by remember { mutableStateOf(false) }
+    val lastSlideEnd = remember { longArrayOf(0L) }
+    val slideTo = { item: Int ->
+        sliding = true
+        slideRequests.trySend(++requestSeq[0] to item)
+        Unit
+    }
+    LaunchedEffect(state) {
+        for ((seq, item) in slideRequests) {
+            try {
+                state.animateScrollToItem(item, settleSpec)
+                // Lands the cover exactly, whatever the animation left over: a no-op when it
+                // already is, and a small correction rather than a cover stuck part-way when not.
+                state.scrollToItem(item)
+                lastSlideEnd[0] = System.currentTimeMillis()
+            } catch (e: CancellationException) {
+                // This effect ending is a real cancellation; anything else is a finger taking the
+                // scroll over, which the swipe then settles by itself.
+                currentCoroutineContext().ensureActive()
+            }
+            // Unless a newer request arrived as this one finished, and is still queued.
+            if (seq == requestSeq[0]) sliding = false
         }
     }
-    val fingerDown = { state.isScrollInProgress && slides[0] == 0 }
+    val fingerDown = { state.isScrollInProgress && !sliding }
 
     // What the text under the cover should show: the cover the carousel is on, from the moment a
     // swipe carries it past halfway until the player has caught up. Not for a change the player
@@ -196,7 +229,10 @@ private fun CarouselPlaybackSync(
     }
 
     LaunchedEffect(state) {
-        snapshotFlow { if (state.isScrollInProgress) NotSettled else state.currentItem }
+        // Not while one of our own slides is pending either: between a cancelled slide and the one
+        // replacing it the scroll reads as stopped on some cover in between, which is no swipe
+        // result and must not send the player back to it.
+        snapshotFlow { if (state.isScrollInProgress || sliding) NotSettled else state.currentItem }
             .filter { it != NotSettled }
             .distinctUntilChanged()
             .collectLatest { settled ->
@@ -215,18 +251,16 @@ private fun CarouselPlaybackSync(
 
     // A scroll cut short (a programmatic slide interrupted by the next touch, a fling from a very
     // fast run of swipes) can leave the carousel resting between two covers. Once things have been
-    // still for a moment, slide to the nearest one. The cooldown keeps this one's own motion from
-    // triggering another.
+    // still for a moment, slide to the nearest one. A stop right after one of our own completed
+    // slides is skipped, so this never triggers itself; a stop left by a cancelled slide is not.
+    // Nothing is healed while a slide is pending, or it would replace the cover that was asked for.
     LaunchedEffect(state) {
-        var lastHeal = 0L
         snapshotFlow { state.isScrollInProgress }
             .filter { !it }
             .collectLatest {
                 delay(HealDelayMs)
-                val now = System.currentTimeMillis()
-                if (now - lastHeal < HealCooldownMs) return@collectLatest
-                lastHeal = now
-                slideTo(state.currentItem)
+                val ownStop = System.currentTimeMillis() - lastSlideEnd[0] < OwnSlideGraceMs
+                if (!ownStop && !sliding && !state.isScrollInProgress) slideTo(state.currentItem)
             }
     }
 
@@ -241,8 +275,10 @@ private fun CarouselPlaybackSync(
         publishPreview()
         // Not while a finger is on it: the swipe wins, and whatever it settles on is what plays.
         // Our own slide in flight does not count, or a run of button presses would freeze the
-        // carousel on the first cover it was heading for.
-        if (currentIndex in 0 until itemCount && state.currentItem != currentIndex && !fingerDown()) {
+        // carousel on the first cover it was heading for. Not gated on `currentItem` either: a
+        // slide cut short by the next press can leave the carousel past halfway to this cover, so
+        // it already reads as current while still resting between two.
+        if (currentIndex in 0 until itemCount && !fingerDown()) {
             slideTo(currentIndex)
         }
     }
@@ -251,15 +287,10 @@ private fun CarouselPlaybackSync(
 private const val NotSettled = -1
 private const val EchoTimeoutMs = 2_000L
 private const val HealDelayMs = 120L
-private const val HealCooldownMs = 500L
+private const val OwnSlideGraceMs = 300L
 
 /** [MorphShape]'s 12% corner, as a fraction of the cover's width. */
 private const val CoverCornerFraction = 0.12f
 
-private val ItemSpacing = 12.dp
-
 /** How far the hero item overshoots the cover on each side, before the clip trims it. */
 private val ItemBleed = 2.dp
-
-/** Only sizes the carousel's small items; clipped away at rest, they are never seen. */
-private val SliverWidth = 16.dp

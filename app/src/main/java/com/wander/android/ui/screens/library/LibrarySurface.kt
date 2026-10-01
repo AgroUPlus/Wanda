@@ -39,6 +39,7 @@ fun LibrarySurface(
     onOpenHistory: () -> Unit,
     onOpenPlaylist: (String) -> Unit = {},
     onOpenImport: () -> Unit = {},
+    onOpenSubscriptions: () -> Unit = {},
     searchViewModel: SearchViewModel = hiltViewModel()
 ) {
     val query by searchViewModel.query.collectAsStateWithLifecycle()
@@ -68,7 +69,8 @@ fun LibrarySurface(
                 onOpenArtist = onOpenArtist,
                 onOpenHistory = onOpenHistory,
                 onOpenPlaylist = onOpenPlaylist,
-                onOpenImport = onOpenImport
+                onOpenImport = onOpenImport,
+                onOpenSubscriptions = onOpenSubscriptions
             )
         }
     }

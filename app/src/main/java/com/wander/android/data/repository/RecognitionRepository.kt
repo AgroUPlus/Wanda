@@ -1,7 +1,6 @@
 package com.wander.android.data.repository
 
 import com.wander.android.core.audio.fingerprint.MicRecorder
-import com.wander.android.core.audio.melody.ContourMatcher
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.UnifiedTrack
@@ -20,16 +19,13 @@ import javax.inject.Singleton
 enum class RecognitionEngine {
     /** The record was playing, and its neural fingerprint matched — robust to the codec and
      *  timing degradation that defeated the landmark pass it replaced. Exact. */
-    EMBEDDING,
-
-    /** Somebody hummed the tune and its shape fitted. A good guess, not a certainty. */
-    MELODY
+    EMBEDDING
 }
 
 /** What the microphone heard, when it was recognised. */
 data class Recognition(
     val track: UnifiedTrack,
-    /** Where in the track the listener came in, in seconds. Zero for a melody match. */
+    /** Where in the track the listener came in, in seconds. */
     val positionSeconds: Int,
     /** How certain this answer is, on a 0-100 scale. Higher is more certain. */
     val score: Int,
@@ -85,7 +81,6 @@ sealed interface IndexReadiness {
 class RecognitionRepository @Inject constructor(
     private val trackDao: TrackDao,
     private val micRecorder: MicRecorder,
-    private val melodySearch: MelodySearchRepository,
     private val embeddingSearch: EmbeddingRepository
 ) {
 
@@ -157,10 +152,8 @@ class RecognitionRepository @Inject constructor(
      * way. Which of them can do anything with it is what differs.
      *
      * The embedding engine goes first and wins outright when it answers. It is comparing the audio
-     * against itself, so its answer is a fact; the melody engine is comparing a shape against a
-     * shape and its answer is an inference. Running them in the other order — or blending their
-     * scores — would let a plausible melody match override a certain acoustic one, and their
-     * scores are not on a common scale to be blended anyway.
+     * against itself, so its answer is a fact
+     * scores
      */
     private suspend fun identifyOrHum(samples: FloatArray, early: Boolean = false): Recognition? {
         // The neural fingerprint is the recognition path. It replaced the landmark index, which is
@@ -181,38 +174,13 @@ class RecognitionRepository @Inject constructor(
                 return Recognition(
                     track = entity.toUnifiedTrack(),
                     positionSeconds = recognised.positionSeconds.coerceAtLeast(0),
-                    // A cosine in roughly [0.55, 1.0] on the 0-100 scale the melody engine's
-                    // score is also mapped onto, so one confidence bar can render both.
                     score = (recognised.similarity * EMBEDDING_SCORE_SCALE).toInt(),
                     engine = RecognitionEngine.EMBEDDING
                 )
             }
         }
 
-        // Only the finished clip is offered to the melody engine: it is the weaker of the two and
-        // has no business answering on a fraction of a capture.
-        if (early) return null
-
-        // Humming is switched off, and deliberately: see [MelodySearch]. The melody engine can only
-        // compare a hum against a shape extracted from a finished mix, and on anything dense that
-        // shape is the bass line rather than the tune — so the answers it gave were guesses wearing
-        // a result's clothes. The embedding pass above is the whole feature until that is fixed
-        // properly.
-        if (!com.wander.android.core.audio.melody.MelodySearch.ENABLED) return null
-
-        val hummed = melodySearch.search(samples).firstOrNull() ?: return null
-        val entity = withContext(Dispatchers.IO) { trackDao.getTrackById(hummed.trackId) } ?: return null
-        return Recognition(
-            track = entity.toUnifiedTrack(),
-            // A hum says nothing about where in the track it came from: somebody humming the
-            // chorus is not listening to it, and reporting a position would be inventing one.
-            positionSeconds = 0,
-            // Distance is an error measure — lower is better — and `score` is a confidence, so it
-            // has to be turned around rather than passed through. Scaled onto the same 0-100
-            // range as an embedding score so a UI can render one bar for both.
-            score = ((ContourMatcher.MAX_DISTANCE - hummed.distance) * MELODY_SCORE_SCALE).toInt(),
-            engine = RecognitionEngine.MELODY
-        )
+        return null
     }
 
     /**
@@ -253,8 +221,6 @@ class RecognitionRepository @Inject constructor(
          */
         const val CHECKPOINT_SECONDS = 3
 
-        /** Puts a melody match's confidence on roughly the same scale as an embedding score. */
-        const val MELODY_SCORE_SCALE = 20
 
         /** An embedding cosine as a bar: ~0.8 similarity reads as ~80. */
         const val EMBEDDING_SCORE_SCALE = 100

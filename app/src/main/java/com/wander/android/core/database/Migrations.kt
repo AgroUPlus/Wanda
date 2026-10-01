@@ -9,4 +9,4 @@ import androidx.room.migration.Migration
  * [DatabaseCompatibility.minSupportedVersion]); anything older has no path to the current schema
  * and is offered a reset instead. Earlier steps were dropped on purpose — they remain in git history.
  */
-val WANDER_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_35_36)
+val WANDER_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_35_36, MIGRATION_36_37, MIGRATION_37_38, MIGRATION_38_39)

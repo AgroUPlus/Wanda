@@ -40,6 +40,8 @@ internal data class BackupDocument(
     val splits: List<BackupRecordingPair> = emptyList(),
     val links: List<BackupRecordingPair> = emptyList(),
     val episodes: List<BackupEpisode> = emptyList(),
+    /** Subscribed podcast feeds; travel with the LIBRARY section. */
+    val podcasts: List<BackupPodcast> = emptyList(),
     /**
      * One digest per section the file carries, keyed by [BackupSection.name] — which sections
      * were chosen, and proof each arrived whole. Empty before version 3; see [verifyIntegrity].

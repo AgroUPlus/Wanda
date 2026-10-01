@@ -102,7 +102,24 @@ internal class SecureAccountPreferences(private val prefs: SharedPreferences) {
         _deezerConfigured.value = false
     }
 
+    val podcastIndexKey: String get() = prefs.getString(KEY_PODCASTINDEX_KEY, "").orEmpty()
+    val podcastIndexSecret: String get() = prefs.getString(KEY_PODCASTINDEX_SECRET, "").orEmpty()
+
+    private val _podcastIndexConfigured = MutableStateFlow(hasPodcastIndexCredentials())
+    val podcastIndexConfigured: StateFlow<Boolean> = _podcastIndexConfigured.asStateFlow()
+
+    fun setPodcastIndexCredentials(key: String, secret: String) {
+        prefs.edit {
+            putString(KEY_PODCASTINDEX_KEY, key.trim())
+            putString(KEY_PODCASTINDEX_SECRET, secret.trim())
+        }
+        _podcastIndexConfigured.value = hasPodcastIndexCredentials()
+    }
+
+    private fun hasPodcastIndexCredentials() = podcastIndexKey.isNotBlank() && podcastIndexSecret.isNotBlank()
+
     fun resetFlows() {
+        _podcastIndexConfigured.value = false
         _navidromeConfigured.value = false
         _ytMusicConfigured.value = false
         _deezerConfigured.value = false

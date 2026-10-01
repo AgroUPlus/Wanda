@@ -71,6 +71,15 @@ fun WanderApp(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
+    // The query is held outside any one screen so it survives the trip into an artist or album and
+    // back. Reaching another tab is the end of that search, and without this the field was still
+    // full, and Library still showing results, the next time the tab opened.
+    LaunchedEffect(currentRoute) {
+        if (currentRoute in Routes.topLevel && currentRoute != TopLevelDestination.LIBRARY.route) {
+            viewModel.setSearchQuery("")
+        }
+    }
+
     val playbackState = playerConnection.state.collectAsStateWithLifecycle()
     val playback = playbackState.value
     // Not `by`: this ticks up to twice a second while playing, and the sheet's own background

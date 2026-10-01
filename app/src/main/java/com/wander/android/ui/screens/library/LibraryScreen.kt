@@ -53,9 +53,12 @@ fun LibraryScreen(
     onOpenHistory: () -> Unit,
     onOpenPlaylist: (String) -> Unit = {},
     onOpenImport: () -> Unit = {},
+    onOpenSubscriptions: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val tab by viewModel.tab.collectAsStateWithLifecycle()
+    // The same instance the Podcasts page resolves: both sit under this destination.
+    val podcastsViewModel: PodcastsViewModel = hiltViewModel()
     val sourceFilter by viewModel.sourceFilter.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<com.wander.android.data.model.UnifiedTrack?>(null) }
@@ -105,6 +108,9 @@ fun LibraryScreen(
             },
             onDeleteDownload = if (tab == LibraryTab.DOWNLOADS || track.isDownloaded) {
                 { viewModel.deleteDownloadedTrack(track) }
+            } else null,
+            onResetProgress = if (tab == LibraryTab.PODCASTS && track.isEpisode) {
+                { podcastsViewModel.resetProgress(track) }
             } else null
         )
     }
@@ -238,7 +244,12 @@ fun LibraryScreen(
                     LibraryTab.DOWNLOADS ->
                         TrackList(downloadedTracks, pageTab, isRefreshing, contentPadding, viewModel) { actionsFor = it }
                     LibraryTab.PODCASTS ->
-                        LibraryPodcastsPage(contentPadding, viewModel::toggleLike, onLongPress = { actionsFor = it })
+                        LibraryPodcastsPage(
+                            contentPadding,
+                            viewModel::toggleLike,
+                            onLongPress = { actionsFor = it },
+                            onOpenSubscriptions = onOpenSubscriptions
+                        )
                     LibraryTab.TRACKS -> Column(modifier = Modifier.fillMaxSize()) {
                         if (viewModel.availableSources.size > 1) {
                             SourceFilterChips(

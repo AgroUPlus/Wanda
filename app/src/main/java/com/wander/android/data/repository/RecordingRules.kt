@@ -25,6 +25,17 @@ class RecordingRules(
     fun isSame(a: UnifiedTrack, b: UnifiedTrack): Boolean =
         TrackDeduplicator.isSameRecording(a, b, splits, links)
 
+    /**
+     * Whether [a] and [b] are the same piece under the same title and artist, whatever their
+     * length. A music video runs longer than its studio cut, so [isSame] (which also compares
+     * duration) rejects the very pair a song/video toggle is looking for. The user's pins still win.
+     */
+    fun isSameWork(a: UnifiedTrack, b: UnifiedTrack): Boolean = when {
+        splits.isApart(a.id, b.id) -> false
+        links.isLinked(a.id, b.id) -> true
+        else -> TrackDeduplicator.keyOf(a) == TrackDeduplicator.keyOf(b)
+    }
+
     /** One row per recording, keeping the first copy of each. */
     fun distinct(tracks: List<UnifiedTrack>): List<UnifiedTrack> =
         TrackDeduplicator.distinctRecordings(tracks, splits, links)

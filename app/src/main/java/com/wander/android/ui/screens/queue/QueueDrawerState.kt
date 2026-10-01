@@ -148,3 +148,6 @@ internal const val ScrimAlpha = 0.4f
 /** Tall enough to be the queue, short enough that the player is still visibly behind it. */
 internal const val QueueDrawerHeightFraction = 0.82f
 
+
+/** Of the drawer's height, how much surface is drawn below it to cover the spring's overshoot. */
+internal const val OvershootFill = 0.25f

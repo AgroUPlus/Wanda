@@ -135,7 +135,6 @@
     <string name="common_listening_2">Listening…</string>
     <string name="common_live">LIVE</string>
     <string name="common_loading_playlists">Loading playlists…</string>
-    <string name="common_matched_melody_guess_from_tune">Matched by melody. This is a guess from the tune, not the recording.</string>
     <string name="common_music_device">Music on this device</string>
     <string name="common_my_profile">My profile</string>
     <string name="common_name">Name</string>
@@ -855,4 +854,61 @@
     <string name="db_too_old_reset_confirm_title">Erase the local library?</string>
     <string name="db_too_old_reset_confirm_message">This permanently deletes your likes, playlists and listening history stored on this device. It cannot be undone.</string>
     <string name="db_too_old_reset_confirm">Erase and restart</string>
+    <string name="media_type_song">Song</string>
+    <string name="media_type_video">Video</string>
+
+    <!-- Podcast subscriptions -->
+    <string name="podcasts_inbox">Inbox</string>
+    <string name="podcasts_manage">Subscriptions</string>
+    <string name="podcasts_inbox_empty">You\'re all caught up.</string>
+    <string name="podcasts_empty_action">Add a podcast</string>
+    <string name="podcasts_subscriptions_title">Podcast subscriptions</string>
+    <string name="podcasts_subscriptions_empty_title">No subscriptions yet</string>
+    <string name="podcasts_subscriptions_empty_message">Add a feed address, or import an OPML file from another podcast app.</string>
+    <string name="podcasts_add">Add podcast</string>
+    <string name="podcasts_add_hint">Feed address (RSS)</string>
+    <string name="podcasts_add_confirm">Subscribe</string>
+    <string name="podcasts_refresh">Check for new episodes</string>
+    <string name="podcasts_more">More options</string>
+    <string name="podcasts_import_opml">Import OPML</string>
+    <string name="podcasts_export_opml">Export OPML</string>
+    <string name="podcasts_unsubscribe">Unsubscribe</string>
+    <string name="podcasts_unsubscribe_title">Unsubscribe from %1$s?</string>
+    <string name="podcasts_unsubscribe_message">Episodes you liked, downloaded or played stay in your library.</string>
+    <string name="podcasts_added">Subscribed to %1$s</string>
+    <string name="podcasts_add_failed">Couldn\'t add the podcast: %1$s</string>
+    <string name="podcasts_import_done">Imported %1$d new, %2$d already subscribed, %3$d invalid</string>
+    <string name="podcasts_import_failed">Couldn\'t read that file: %1$s</string>
+    <string name="podcasts_export_done">Subscriptions exported</string>
+    <string name="podcasts_export_failed">Couldn\'t export: %1$s</string>
+    <string name="podcasts_refreshed">Podcasts are up to date</string>
+    <string name="podcasts_refresh_failed">%1$d feeds could not be refreshed</string>
+    <string name="podcasts_file_unreadable">The file could not be opened</string>
+    <string name="podcasts_opml_title">Wanda podcast subscriptions</string>
+
+    <!-- Episode chapters and transcripts -->
+    <string name="chapters_title">Chapters</string>
+    <string name="chapters_empty">This episode has no chapters.</string>
+    <string name="chapters_load_failed">Couldn\'t load the chapters: %1$s</string>
+    <string name="transcript_title">Transcript</string>
+    <string name="transcript_empty">This transcript is empty.</string>
+    <string name="transcript_load_failed">Couldn\'t load the transcript: %1$s</string>
+    <string name="podcasts_reset_progress">Reset progress</string>
+
+    <!-- Podcast search (PodcastIndex) -->
+    <string name="settings_podcast_search">Podcast search</string>
+    <string name="settings_podcast_search_subtitle">Send podcast searches to api.podcastindex.org</string>
+    <string name="podcasts_search_title">Find podcasts</string>
+    <string name="podcasts_search_hint">Search PodcastIndex</string>
+    <string name="podcasts_search_consent_title">Search with PodcastIndex?</string>
+    <string name="podcasts_search_consent_message">Searching sends what you type, and your IP address, to api.podcastindex.org, an open podcast directory. Nothing else is sent, and only when you search. You can turn it off in Settings, under Privacy.</string>
+    <string name="podcasts_search_consent_action">Turn on podcast search</string>
+    <string name="podcasts_search_keys_title">Add your PodcastIndex key</string>
+    <string name="podcasts_search_keys_message">PodcastIndex gives every app user a free key. Create one on podcastindex.org, then paste the key and secret here. They stay on this device, encrypted.</string>
+    <string name="podcasts_search_key">API key</string>
+    <string name="podcasts_search_secret">API secret</string>
+    <string name="podcasts_search_keys_save">Save</string>
+    <string name="podcasts_search_none">No podcasts found.</string>
+    <string name="podcasts_search_failed">The search failed: %1$s</string>
+    <string name="podcasts_subscribed">Subscribed</string>
 </resources>

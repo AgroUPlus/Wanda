@@ -115,6 +115,7 @@ class PlayerConnection @Inject constructor(
             return
         }
         jamCoordinator.onUserInitiatedPlay()
+        skipManager.clear()
         val ctrl = _controller.value ?: run {
             pendingPlay = PendingPlay(tracks, startIndex, startPositionMs)
             connect()
@@ -125,6 +126,8 @@ class PlayerConnection @Inject constructor(
 
     fun addToQueue(tracks: List<UnifiedTrack>) = _controller.value?.let { queueManager.addToQueue(it, tracks) }
     fun playNext(tracks: List<UnifiedTrack>) = _controller.value?.let { queueManager.playNext(it, tracks) }
+    fun replaceCurrentTrack(track: UnifiedTrack) { if (!isFollowing) _controller.value?.let { queueManager.replaceCurrentItem(it, track) } }
+
     fun removeFromQueue(index: Int) = _controller.value?.let { queueManager.removeFromQueue(it, index) }
     fun insertInQueue(index: Int, track: UnifiedTrack) = _controller.value?.let { queueManager.insertInQueue(it, index, track) }
     fun moveInQueue(from: Int, to: Int) = _controller.value?.let { queueManager.moveInQueue(it, from, to, state.value.orderLocked) }

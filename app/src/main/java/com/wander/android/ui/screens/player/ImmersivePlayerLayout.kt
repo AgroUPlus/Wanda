@@ -59,6 +59,8 @@ import com.wander.android.ui.theme.OnCoverArt
  */
 @Composable
 internal fun ImmersivePlayerLayout(
+    mediaToggle: MediaToggleState?,
+    onSwapMediaType: () -> Unit,
     playerConnection: PlayerConnection,
     viewModel: NowPlayingViewModel,
     state: PlaybackState,
@@ -127,6 +129,8 @@ internal fun ImmersivePlayerLayout(
         )
 
         PlayerTopBar(
+            mediaToggle = mediaToggle,
+            onSwapMediaType = onSwapMediaType,
             jam = jam,
             source = PlayerSourceChip(
                 label = track.source.displayName,

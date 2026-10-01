@@ -12,6 +12,8 @@ import com.wander.android.ui.screens.artist.ArtistScreen
 import com.wander.android.ui.screens.home.HomeScreen
 import com.wander.android.ui.screens.library.HistoryScreen
 import com.wander.android.ui.screens.library.LibrarySurface
+import com.wander.android.ui.screens.library.PodcastSearchScreen
+import com.wander.android.ui.screens.library.PodcastSubscriptionsScreen
 import com.wander.android.ui.screens.playlist.PlaylistScreen
 import com.wander.android.ui.screens.queue.QueueScreen
 
@@ -40,8 +42,21 @@ fun NavGraphBuilder.wanderNavGraph(
             onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) },
             onOpenHistory = { navController.navigateSettled(Routes.HISTORY) },
             onOpenPlaylist = { navController.navigateSettled(Routes.playlist(it)) },
-            onOpenImport = { navController.navigateSettled(Routes.IMPORT_PLAYLIST) }
+            onOpenImport = { navController.navigateSettled(Routes.IMPORT_PLAYLIST) },
+            onOpenSubscriptions = { navController.navigateSettled(Routes.PODCAST_SUBSCRIPTIONS) }
         )
+    }
+
+    detailDestination(motion, route = Routes.PODCAST_SUBSCRIPTIONS) {
+        PodcastSubscriptionsScreen(
+            contentPadding = contentPadding,
+            onBack = navController::popBackStack,
+            onOpenSearch = { navController.navigateSettled(Routes.PODCAST_SEARCH) }
+        )
+    }
+
+    detailDestination(motion, route = Routes.PODCAST_SEARCH) {
+        PodcastSearchScreen(contentPadding = contentPadding, onBack = navController::popBackStack)
     }
 
     tabDestination(motion, Routes.HISTORY) {

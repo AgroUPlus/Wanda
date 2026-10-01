@@ -82,6 +82,9 @@ class EpisodeProgressRepository @Inject constructor(
             )
         }
 
+    /** Forgets where the listener got to in [trackId]: it is unplayed again, and back in the Inbox if it came from a feed. */
+    suspend fun reset(trackId: String) = withContext(Dispatchers.IO) { dao.delete(trackId) }
+
     /** Forgets positions nothing has touched in [RETENTION_MS]. */
     suspend fun prune() = withContext(Dispatchers.IO) {
         dao.deleteOlderThan(System.currentTimeMillis() - RETENTION_MS)
