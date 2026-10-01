@@ -1,5 +1,6 @@
 package com.wander.android.data.podcast
 
+import com.wander.android.core.database.entity.EpisodeExtrasEntity
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.SourceType
 import java.security.MessageDigest
@@ -44,6 +45,13 @@ internal object PodcastEpisodes {
             // Inbox order is publication order, and `addedTimestamp` is what every list sorts on.
             addedTimestamp = published
         )
+    }
+
+    /** The chapters and transcript addresses worth keeping, or null for an episode with neither. */
+    fun extrasOf(trackId: String, episode: ParsedEpisode): EpisodeExtrasEntity? {
+        val transcript = TranscriptParser.pick(episode.transcripts)
+        if (episode.chaptersUrl == null && transcript == null) return null
+        return EpisodeExtrasEntity(trackId, episode.chaptersUrl, transcript?.url, transcript?.mimeType)
     }
 
     private fun sha256(value: String): String =
