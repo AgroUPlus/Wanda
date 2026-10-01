@@ -38,12 +38,16 @@ internal class SearchAndDiscoveryRepository(
             .filter { onlySources == null || it.sourceType in onlySources }
         val allowedTypes = allowed.map(IMusicSource::sourceType).toSet()
 
-        val cached = if (kind == SearchKind.TRACKS) {
-            trackDao.searchTracks(query)
+        val cached = when (kind) {
+            // Podcast episodes are not songs, and a downloaded one must not slip into this list
+            // through the `isDownloaded` allowance below.
+            SearchKind.TRACKS -> trackDao.searchTracks(query)
                 .map(TrackEntity::toUnifiedTrack)
-                .filter { it.source in allowedTypes || it.isDownloaded }
-        } else {
-            emptyList()
+                .filter { it.source != SourceType.PODCAST && (it.source in allowedTypes || it.isDownloaded) }
+            // Subscribed episodes live only in Room and have no backend to ask, so this is the
+            // whole search for them.
+            SearchKind.EPISODES -> trackDao.searchSubscribedEpisodes(query).map(TrackEntity::toUnifiedTrack)
+            else -> emptyList()
         }
         val remote = allowed
             .filter { it.capabilities.search }

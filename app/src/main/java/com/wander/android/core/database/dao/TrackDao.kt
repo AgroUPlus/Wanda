@@ -42,6 +42,20 @@ interface TrackDao : TrackLibraryQueries, TrackSyncQueries {
         }
     }
 
+    /** Episodes of subscribed feeds whose title, show or author contains [query], newest first. */
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE source = 'PODCAST'
+          AND (title LIKE '%' || :query || '%'
+            OR artist LIKE '%' || :query || '%'
+            OR album LIKE '%' || :query || '%')
+        ORDER BY addedTimestamp DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun searchSubscribedEpisodes(query: String, limit: Int = 50): List<TrackEntity>
+
     @Query("UPDATE tracks SET isEpisode = 1 WHERE id IN (:trackIds)")
     suspend fun markAsEpisodes(trackIds: List<String>)
 
