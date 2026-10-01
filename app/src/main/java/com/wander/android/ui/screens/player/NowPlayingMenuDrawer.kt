@@ -10,9 +10,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
+import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Groups
@@ -72,6 +74,8 @@ internal fun NowPlayingMenuDrawer(
     onShare: (() -> Unit)?,
     onOpenSourcePicker: (() -> Unit)?,
     onOpenAudioTrackPicker: (() -> Unit)?,
+    onOpenChapters: (() -> Unit)?,
+    onOpenTranscript: (() -> Unit)?,
     onOpenArtist: (() -> Unit)?,
     onOpenAlbum: (() -> Unit)?,
     onJamAction: (() -> Unit)?,
@@ -114,7 +118,9 @@ internal fun NowPlayingMenuDrawer(
                     jam = stringResource(R.string.action_add_to_jam),
                     share = stringResource(R.string.action_share),
                     like = stringResource(R.string.menu_like),
-                    sleepTimer = stringResource(R.string.sleep_timer)
+                    sleepTimer = stringResource(R.string.sleep_timer),
+                    chapters = stringResource(R.string.chapters_title),
+                    transcript = stringResource(R.string.transcript_title)
                 )
                 val actions = buildList {
                     add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, queueLabel, ActionEmphasis.PRIMARY) { onOpenQueue(); animatedDismiss() })
@@ -141,6 +147,12 @@ internal fun NowPlayingMenuDrawer(
                             onOpenSleepTimer(); animatedDismiss()
                         }
                     )
+                    onOpenChapters?.let { open ->
+                        add(MenuAction(Icons.Rounded.Bookmark, strings.chapters, ActionEmphasis.ICON) { open(); animatedDismiss() })
+                    }
+                    onOpenTranscript?.let { open ->
+                        add(MenuAction(Icons.AutoMirrored.Rounded.Notes, strings.transcript, ActionEmphasis.ICON) { open(); animatedDismiss() })
+                    }
                     add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, strings.playNext) { onPlayNext(); animatedDismiss() })
                     add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, strings.addToQueue) { onAddToQueue(); animatedDismiss() })
                     onOpenArtist?.let { add(MenuAction(Icons.Rounded.Person, track.artist) { it(); animatedDismiss() }) }
@@ -194,5 +206,7 @@ private class MenuStrings(
     val jam: String,
     val share: String,
     val like: String,
-    val sleepTimer: String
+    val sleepTimer: String,
+    val chapters: String,
+    val transcript: String
 )
