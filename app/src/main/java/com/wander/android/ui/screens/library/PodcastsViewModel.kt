@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /** Episodes of one show, newest listened first. The show is the episode's artist on YouTube. */
 @Immutable
@@ -41,7 +42,7 @@ data class PodcastsUiState(
  */
 @HiltViewModel
 class PodcastsViewModel @Inject constructor(
-    episodeProgress: EpisodeProgressRepository,
+    private val episodeProgress: EpisodeProgressRepository,
     podcasts: PodcastRepository,
     private val playerConnection: PlayerConnection
 ) : ViewModel() {
@@ -92,6 +93,11 @@ class PodcastsViewModel @Inject constructor(
      * podcast does not. Resume is handled by `PlaybackCoordinator`.
      */
     fun play(episode: UnifiedTrack) = playerConnection.play(listOf(episode), 0)
+
+    /** "Reset progress" in the episode's menu. */
+    fun resetProgress(episode: UnifiedTrack) {
+        viewModelScope.launch { episodeProgress.reset(episode.id) }
+    }
 
     private companion object {
         const val INBOX_LIMIT = 20
