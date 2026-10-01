@@ -29,7 +29,7 @@ internal val ACCOUNT_KEYS = setOf(
     KEY_NAVIDROME_URL, KEY_NAVIDROME_USER, KEY_NAVIDROME_TOKEN, KEY_YTM_COOKIE,
     KEY_DEEZER_ARL, KEY_DEEZER_ACCOUNT, KEY_DEEZER_TIER, KEY_DEEZER_QUALITY,
     KEY_AGRO_URL, KEY_AGRO_USER, KEY_AGRO_KEY, KEY_AGRO_PETNAME, KEY_AGRO_VAULT_KEY,
-    KEY_AGRO_IDENTITY_PRIV, KEY_AGRO_IDENTITY_PUB
+    KEY_AGRO_IDENTITY_PRIV, KEY_AGRO_IDENTITY_PUB, KEY_PODCASTINDEX_KEY, KEY_PODCASTINDEX_SECRET
 )
 
 internal const val KEY_AGRO_CATALOG_TRADE = "key_agro_catalog_trade"
@@ -44,6 +44,9 @@ internal const val KEY_AGRO_PROXY_ENABLED = "key_agro_proxy_enabled"
 
 internal const val KEY_EXTERNAL_LYRICS = "key_external_lyrics"
 internal const val KEY_MUSICBRAINZ_LOOKUP = "key_musicbrainz_lookup"
+internal const val KEY_PODCASTINDEX_ENABLED = "key_podcastindex_enabled"
+internal const val KEY_PODCASTINDEX_KEY = "key_podcastindex_key"
+internal const val KEY_PODCASTINDEX_SECRET = "key_podcastindex_secret"
 internal const val KEY_OFFLINE_MODE = "key_offline_mode"
 internal const val KEY_PRELOAD_NEXT = "key_preload_next"
 internal const val KEY_SKIP_SILENCE = "key_skip_silence"

@@ -37,6 +37,10 @@ internal class SecurePlaybackPreferences(private val prefs: SharedPreferences) {
     private val _isMusicBrainzLookupEnabled = MutableStateFlow(prefs.getBoolean(KEY_MUSICBRAINZ_LOOKUP, false))
     val isMusicBrainzLookupEnabled: StateFlow<Boolean> = _isMusicBrainzLookupEnabled.asStateFlow()
 
+    /** Off until the listener turns it on: podcast searches go to api.podcastindex.org, which nothing else did. */
+    private val _isPodcastIndexEnabled = MutableStateFlow(prefs.getBoolean(KEY_PODCASTINDEX_ENABLED, false))
+    val isPodcastIndexEnabled: StateFlow<Boolean> = _isPodcastIndexEnabled.asStateFlow()
+
     private val _isAutoUpdateCheckEnabled =
         MutableStateFlow(prefs.getBoolean(KEY_AUTO_UPDATE_CHECK, false))
     val isAutoUpdateCheckEnabled: StateFlow<Boolean> = _isAutoUpdateCheckEnabled.asStateFlow()
@@ -85,6 +89,11 @@ internal class SecurePlaybackPreferences(private val prefs: SharedPreferences) {
         _isMusicBrainzLookupEnabled.value = enabled
     }
 
+    fun setPodcastIndexEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_PODCASTINDEX_ENABLED, enabled) }
+        _isPodcastIndexEnabled.value = enabled
+    }
+
     fun setAutoUpdateCheckEnabled(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_AUTO_UPDATE_CHECK, enabled) }
         _isAutoUpdateCheckEnabled.value = enabled
@@ -103,6 +112,7 @@ internal class SecurePlaybackPreferences(private val prefs: SharedPreferences) {
         _isRadioMode.value = true
         _isExternalLyricsEnabled.value = true
         _isMusicBrainzLookupEnabled.value = false
+        _isPodcastIndexEnabled.value = false
         _isAutoUpdateCheckEnabled.value = false
         _isArtistReleaseNotificationEnabled.value = false
     }
