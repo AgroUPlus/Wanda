@@ -4,6 +4,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -98,6 +99,8 @@ internal fun NowPlayingScreen(
     // what lets reopening the lyrics find them exactly where they were left.
     val lyricsListState = androidx.compose.foundation.lazy.rememberLazyListState()
     val track = state.currentTrack
+    val mediaToggle by viewModel.mediaToggle.collectAsStateWithLifecycle()
+    LaunchedEffect(track?.id) { track?.let(viewModel::findMediaAlternative) }
 
     if (track == null) return
 
@@ -217,6 +220,8 @@ internal fun NowPlayingScreen(
 
     if (immersivePlayer && artworkSlot != null) {
         ImmersivePlayerLayout(
+            mediaToggle = mediaToggle,
+            onSwapMediaType = viewModel::swapMediaType,
             playerConnection = playerConnection,
             viewModel = viewModel,
             state = state,
@@ -244,6 +249,8 @@ internal fun NowPlayingScreen(
         )
     } else {
         StandardPlayerLayout(
+            mediaToggle = mediaToggle,
+            onSwapMediaType = viewModel::swapMediaType,
             playerConnection = playerConnection,
             viewModel = viewModel,
             state = state,

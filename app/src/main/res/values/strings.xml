@@ -854,4 +854,6 @@
     <string name="db_too_old_reset_confirm_title">Erase the local library?</string>
     <string name="db_too_old_reset_confirm_message">This permanently deletes your likes, playlists and listening history stored on this device. It cannot be undone.</string>
     <string name="db_too_old_reset_confirm">Erase and restart</string>
+    <string name="media_type_song">Song</string>
+    <string name="media_type_video">Video</string>
 </resources>
