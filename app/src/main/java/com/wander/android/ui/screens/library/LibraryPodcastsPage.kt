@@ -13,9 +13,11 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Podcasts
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -48,22 +50,28 @@ internal fun LibraryPodcastsPage(
     contentPadding: PaddingValues,
     onToggleLike: (UnifiedTrack) -> Unit,
     onLongPress: (UnifiedTrack) -> Unit,
+    onOpenSubscriptions: () -> Unit,
     viewModel: PodcastsViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val inbox by viewModel.inbox.collectAsStateWithLifecycle()
+    val hasSubscriptions by viewModel.hasSubscriptions.collectAsStateWithLifecycle()
 
-    if (state.hasNoEpisodes) {
+    if (state.hasNoEpisodes && inbox.isEmpty() && !hasSubscriptions) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             EmptyState(
                 title = stringResource(R.string.podcasts_empty_title),
                 message = stringResource(R.string.podcasts_empty_message),
-                icon = Icons.Rounded.Podcasts
+                icon = Icons.Rounded.Podcasts,
+                actionLabel = stringResource(R.string.podcasts_empty_action),
+                onAction = onOpenSubscriptions
             )
         }
         return
     }
 
     LazyColumn(contentPadding = contentPadding.listInset(), modifier = Modifier.fillMaxSize()) {
+        inboxSection(inbox, hasSubscriptions, onOpenSubscriptions, viewModel::play, onToggleLike, onLongPress)
         if (state.continueListening.isNotEmpty()) {
             continueListening(state.continueListening, viewModel::play, onLongPress)
         }
@@ -105,6 +113,43 @@ internal fun LibraryPodcastsPage(
                 )
             }
         }
+    }
+}
+
+/** The Inbox leads, with the way into Subscriptions beside its title so it is reachable even when empty. */
+private fun LazyListScope.inboxSection(
+    inbox: List<UnifiedTrack>,
+    hasSubscriptions: Boolean,
+    onOpenSubscriptions: () -> Unit,
+    onPlay: (UnifiedTrack) -> Unit,
+    onToggleLike: (UnifiedTrack) -> Unit,
+    onLongPress: (UnifiedTrack) -> Unit
+) {
+    item(key = "inbox-title", contentType = "section-title") {
+        SectionTitle(stringResource(R.string.podcasts_inbox)) {
+            TextButton(onClick = onOpenSubscriptions, shapes = ButtonDefaults.shapes()) {
+                Text(stringResource(R.string.podcasts_manage))
+            }
+        }
+    }
+    if (inbox.isEmpty() && hasSubscriptions) {
+        item(key = "inbox-empty", contentType = "empty") {
+            Text(
+                text = stringResource(R.string.podcasts_inbox_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+            )
+        }
+    }
+    itemsIndexed(items = inbox, key = { _, track -> "inbox-${track.id}" }, contentType = { _, _ -> "inbox-episode" }) { index, track ->
+        TrackRow(
+            track = track,
+            onPlay = { onPlay(track) },
+            onToggleLike = { onToggleLike(track) },
+            onLongPress = { onLongPress(track) },
+            modifier = Modifier.animateItem().groupedListItem(index, inbox.size)
+        )
     }
 }
 

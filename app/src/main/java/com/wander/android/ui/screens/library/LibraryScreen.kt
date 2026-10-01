@@ -53,6 +53,7 @@ fun LibraryScreen(
     onOpenHistory: () -> Unit,
     onOpenPlaylist: (String) -> Unit = {},
     onOpenImport: () -> Unit = {},
+    onOpenSubscriptions: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val tab by viewModel.tab.collectAsStateWithLifecycle()
@@ -238,7 +239,12 @@ fun LibraryScreen(
                     LibraryTab.DOWNLOADS ->
                         TrackList(downloadedTracks, pageTab, isRefreshing, contentPadding, viewModel) { actionsFor = it }
                     LibraryTab.PODCASTS ->
-                        LibraryPodcastsPage(contentPadding, viewModel::toggleLike, onLongPress = { actionsFor = it })
+                        LibraryPodcastsPage(
+                            contentPadding,
+                            viewModel::toggleLike,
+                            onLongPress = { actionsFor = it },
+                            onOpenSubscriptions = onOpenSubscriptions
+                        )
                     LibraryTab.TRACKS -> Column(modifier = Modifier.fillMaxSize()) {
                         if (viewModel.availableSources.size > 1) {
                             SourceFilterChips(
