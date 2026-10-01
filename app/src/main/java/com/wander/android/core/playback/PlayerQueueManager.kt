@@ -43,6 +43,15 @@ internal class PlayerQueueManager {
         }
     }
 
+    fun replaceCurrentItem(ctrl: MediaController, track: UnifiedTrack) {
+        val index = ctrl.currentMediaItemIndex
+        if (index < 0 || index >= ctrl.mediaItemCount) return
+        val pos = ctrl.currentPosition
+        trackCache[track.id] = track
+        ctrl.replaceMediaItem(index, track.toMediaItem())
+        ctrl.seekTo(index, pos)
+    }
+
     fun removeFromQueue(ctrl: MediaController, index: Int) {
         ctrl.removeMediaItem(index)
     }
