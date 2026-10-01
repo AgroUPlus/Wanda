@@ -180,6 +180,7 @@ internal class SettingsViewModel @Inject constructor(
     val agroProxyEnabled: StateFlow<Boolean> = secureStorage.agroProxyEnabled
     val externalLyricsEnabled: StateFlow<Boolean> = secureStorage.isExternalLyricsEnabled
     val musicBrainzLookupEnabled: StateFlow<Boolean> = secureStorage.isMusicBrainzLookupEnabled
+    val podcastIndexEnabled: StateFlow<Boolean> = secureStorage.isPodcastIndexEnabled
 
     val syncedNavidrome: StateFlow<AgroSyncedSettings?> = agroCoordinator.syncedNavidrome
     fun refreshSyncedSettings() = agroCoordinator.refreshSyncedSettings(viewModelScope)
@@ -190,6 +191,7 @@ internal class SettingsViewModel @Inject constructor(
     fun setAgroProxyEnabled(enabled: Boolean) = secureStorage.setAgroProxyEnabled(enabled)
     fun setExternalLyricsEnabled(enabled: Boolean) = secureStorage.setExternalLyricsEnabled(enabled)
     fun setMusicBrainzLookupEnabled(enabled: Boolean) = secureStorage.setMusicBrainzLookupEnabled(enabled)
+    fun setPodcastIndexEnabled(enabled: Boolean) = secureStorage.setPodcastIndexEnabled(enabled)
 
     // ── Library Sync (delegated to SettingsLibrarySyncCoordinator) ─────────────────────────
 
