@@ -885,4 +885,5 @@
     <string name="podcasts_refresh_failed">%1$d feeds could not be refreshed</string>
     <string name="podcasts_file_unreadable">The file could not be opened</string>
     <string name="podcasts_opml_title">Wanda podcast subscriptions</string>
+    <string name="podcasts_reset_progress">Reset progress</string>
 </resources>
