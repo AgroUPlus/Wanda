@@ -28,7 +28,8 @@ enum class SourceType(
     LOCAL("On this device", "local:", priority = 0, isPersonalLibrary = true, shortName = "Local"),
     NAVIDROME("Navidrome", "navidrome:", priority = 1, isPersonalLibrary = true),
     YTMUSIC("YouTube Music", "ytm:", priority = 2, isPersonalLibrary = false),
-    DEEZER("Deezer", "deezer:", priority = 3, isPersonalLibrary = false);
+    DEEZER("Deezer", "deezer:", priority = 3, isPersonalLibrary = false),
+    PODCAST("Podcasts", "podcast:", priority = 4, isPersonalLibrary = false);
 
     /** The name to use where space is tight. Full name unless one was given. */
     val shortName: String = shortName ?: displayName

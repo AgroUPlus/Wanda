@@ -9,6 +9,7 @@ class SourceTypeConverter {
         "NAVIDROME" -> SourceType.NAVIDROME
         "YTMUSIC" -> SourceType.YTMUSIC
         "DEEZER" -> SourceType.DEEZER
+        "PODCAST" -> SourceType.PODCAST
         "LOCAL" -> SourceType.LOCAL
         else -> SourceType.LOCAL
     }

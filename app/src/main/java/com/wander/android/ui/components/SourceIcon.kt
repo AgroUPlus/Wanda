@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Podcasts
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
@@ -31,6 +32,7 @@ internal val SourceType.color: Color
         SourceType.YTMUSIC -> YtMusicCoral
         SourceType.LOCAL -> LocalDeviceAmber
         SourceType.DEEZER -> Color(0xFFA238FF)
+        SourceType.PODCAST -> Color(0xFF2E9E8F)
     }
 
 /** A distinct outline per source, on top of the colour, so two badges are never told apart by hue
@@ -41,6 +43,7 @@ private val SourceType.badgeShape
         SourceType.YTMUSIC -> MaterialShapes.Circle
         SourceType.LOCAL -> MaterialShapes.Square
         SourceType.DEEZER -> MaterialShapes.Pentagon
+        SourceType.PODCAST -> MaterialShapes.Cookie6Sided
     }.toShape()
 
 /**
@@ -75,6 +78,12 @@ fun SourceIcon(source: SourceType, modifier: Modifier = Modifier, size: Dp = 40.
                 modifier = Modifier.size(glyphSize)
             )
             SourceType.DEEZER -> PlatformIcon(platform = PlatformType.DEEZER, size = glyphSize, tint = hue)
+            SourceType.PODCAST -> Icon(
+                imageVector = Icons.Rounded.Podcasts,
+                contentDescription = null,
+                tint = hue,
+                modifier = Modifier.size(glyphSize)
+            )
         }
     }
 }

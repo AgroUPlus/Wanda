@@ -55,9 +55,10 @@ import com.wander.android.core.database.converter.SourceTypeConverter
         com.wander.android.core.database.entity.LyricsFtsEntity::class,
         AnnouncedReleaseEntity::class,
         com.wander.android.core.database.entity.EpisodeProgressEntity::class,
-        com.wander.android.core.database.entity.ReplayRecapEntity::class
+        com.wander.android.core.database.entity.ReplayRecapEntity::class,
+        com.wander.android.core.database.entity.PodcastEntity::class
     ],
-    version = 37,
+    version = 38,
     exportSchema = true
 )
 @TypeConverters(SourceTypeConverter::class)
@@ -80,4 +81,5 @@ abstract class WanderDatabase : RoomDatabase() {
     abstract fun trackLyricsDao(): com.wander.android.core.database.dao.TrackLyricsDao
     abstract fun announcedReleaseDao(): AnnouncedReleaseDao
     abstract fun episodeProgressDao(): com.wander.android.core.database.dao.EpisodeProgressDao
+    abstract fun podcastDao(): com.wander.android.core.database.dao.PodcastDao
 }
