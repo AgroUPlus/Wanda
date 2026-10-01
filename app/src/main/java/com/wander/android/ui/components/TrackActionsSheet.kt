@@ -69,7 +69,9 @@ fun TrackActionsSheet(
      * anywhere: a queue, a search result, a shelf on Home. Previously the only route in was
      * tapping the name on the full player, which meant the track had to be the one playing.
      */
-    onOpenArtist: (() -> Unit)? = null
+    onOpenArtist: (() -> Unit)? = null,
+    /** Forgets how far into an episode the listener got. Null for anything but a podcast episode. */
+    onResetProgress: (() -> Unit)? = null
 ) {
     val playable = track.isPlayableNow()
     // Held here and flipped optimistically: callers pass the track as it was when the menu opened,
@@ -78,6 +80,7 @@ fun TrackActionsSheet(
     val likeLabel = stringResource(R.string.menu_like)
     val removeFromQueue = stringResource(R.string.action_remove_from_queue)
     val deleteOffline = stringResource(R.string.common_delete_offline_file)
+    val resetProgress = stringResource(R.string.podcasts_reset_progress)
 
     // Resolved here rather than passed in by each caller. This sheet is opened from a dozen
     // screens, and threading a jam callback through all of them would mean the action quietly
@@ -154,7 +157,7 @@ fun TrackActionsSheet(
                         hasDropFriends = dropFriends.isNotEmpty(),
                         jamState = jamState
                     ),
-                    labels = TrackActionLabels(likeLabel, removeFromQueue, deleteOffline),
+                    labels = TrackActionLabels(likeLabel, removeFromQueue, deleteOffline, resetProgress),
                     callbacks = TrackActionCallbacks(
                         onPlayNext = onPlayNext,
                         onAddToQueue = onAddToQueue,
@@ -164,7 +167,8 @@ fun TrackActionsSheet(
                         onStartRadio = onStartRadio,
                         onOpenArtist = onOpenArtist,
                         onRemove = onRemove,
-                        onDeleteDownload = onDeleteDownload
+                        onDeleteDownload = onDeleteDownload,
+                        onResetProgress = onResetProgress
                     ),
                     jamViewModel = jamViewModel,
                     sheet = TrackActionSheetFlow(

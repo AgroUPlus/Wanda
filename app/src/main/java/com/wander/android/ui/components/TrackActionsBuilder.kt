@@ -10,6 +10,7 @@ import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.LibraryAdd
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Radio
+import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Share
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.agro.JamMode
@@ -25,7 +26,12 @@ internal class TrackActionState(
 )
 
 /** Text for the actions whose labels depend on a string resource. */
-internal class TrackActionLabels(val like: String, val removeFromQueue: String, val deleteOffline: String)
+internal class TrackActionLabels(
+    val like: String,
+    val removeFromQueue: String,
+    val deleteOffline: String,
+    val resetProgress: String
+)
 
 /** What each action does; a null callback means the caller does not offer that action. */
 internal class TrackActionCallbacks(
@@ -37,7 +43,8 @@ internal class TrackActionCallbacks(
     val onStartRadio: (() -> Unit)?,
     val onOpenArtist: (() -> Unit)?,
     val onRemove: (() -> Unit)?,
-    val onDeleteDownload: (() -> Unit)?
+    val onDeleteDownload: (() -> Unit)?,
+    val onResetProgress: (() -> Unit)?
 )
 
 /** The sheet's own state changes an action can trigger. */
@@ -74,6 +81,9 @@ internal fun buildTrackActionsList(
         callbacks.onOpenArtist?.let { add(MenuAction(Icons.Rounded.Person, "Artist") { it(); dismiss() }) }
     }
     addJamAction(track, state, jamViewModel, dismiss)
+    callbacks.onResetProgress?.let {
+        add(MenuAction(Icons.Rounded.RestartAlt, labels.resetProgress, ActionEmphasis.ICON) { it(); dismiss() })
+    }
     callbacks.onRemove?.let {
         add(MenuAction(Icons.Rounded.Delete, labels.removeFromQueue, ActionEmphasis.DANGER) { it(); dismiss() })
     }
