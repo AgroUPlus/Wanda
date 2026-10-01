@@ -856,4 +856,33 @@
     <string name="db_too_old_reset_confirm">Erase and restart</string>
     <string name="media_type_song">Song</string>
     <string name="media_type_video">Video</string>
+
+    <!-- Podcast subscriptions -->
+    <string name="podcasts_inbox">Inbox</string>
+    <string name="podcasts_manage">Subscriptions</string>
+    <string name="podcasts_inbox_empty">You\'re all caught up.</string>
+    <string name="podcasts_empty_action">Add a podcast</string>
+    <string name="podcasts_subscriptions_title">Podcast subscriptions</string>
+    <string name="podcasts_subscriptions_empty_title">No subscriptions yet</string>
+    <string name="podcasts_subscriptions_empty_message">Add a feed address, or import an OPML file from another podcast app.</string>
+    <string name="podcasts_add">Add podcast</string>
+    <string name="podcasts_add_hint">Feed address (RSS)</string>
+    <string name="podcasts_add_confirm">Subscribe</string>
+    <string name="podcasts_refresh">Check for new episodes</string>
+    <string name="podcasts_more">More options</string>
+    <string name="podcasts_import_opml">Import OPML</string>
+    <string name="podcasts_export_opml">Export OPML</string>
+    <string name="podcasts_unsubscribe">Unsubscribe</string>
+    <string name="podcasts_unsubscribe_title">Unsubscribe from %1$s?</string>
+    <string name="podcasts_unsubscribe_message">Episodes you liked, downloaded or played stay in your library.</string>
+    <string name="podcasts_added">Subscribed to %1$s</string>
+    <string name="podcasts_add_failed">Couldn\'t add the podcast: %1$s</string>
+    <string name="podcasts_import_done">Imported %1$d new, %2$d already subscribed, %3$d invalid</string>
+    <string name="podcasts_import_failed">Couldn\'t read that file: %1$s</string>
+    <string name="podcasts_export_done">Subscriptions exported</string>
+    <string name="podcasts_export_failed">Couldn\'t export: %1$s</string>
+    <string name="podcasts_refreshed">Podcasts are up to date</string>
+    <string name="podcasts_refresh_failed">%1$d feeds could not be refreshed</string>
+    <string name="podcasts_file_unreadable">The file could not be opened</string>
+    <string name="podcasts_opml_title">Wanda podcast subscriptions</string>
 </resources>

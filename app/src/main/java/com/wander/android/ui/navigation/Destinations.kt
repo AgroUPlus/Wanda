@@ -123,6 +123,7 @@ object Routes {
      */
     const val OFFGRID = "offgrid"
     const val FINGERPRINTS = "fingerprints"
+    const val PODCAST_SUBSCRIPTIONS = "podcasts/subscriptions"
 
     /**
      * Ids and names both contain `/` and `:` — a `navidrome:al-42` id, an artist called
@@ -188,7 +189,7 @@ object Routes {
         (topLevel + ALBUM + PLAYLIST + ARTIST + PROFILE + MY_PROFILE + SETTINGS +
             SETTINGS_CATEGORY + STATS +
             HISTORY + MERGE_PREVIEW + JAM + JAM_ROUTE + ACTIVITY + INBOX + CIRCLE + OFFGRID +
-            FINGERPRINTS)
+            FINGERPRINTS + PODCAST_SUBSCRIPTIONS)
             .map { it.withoutArgs() }
             .toSet()
 
