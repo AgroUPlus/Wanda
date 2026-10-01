@@ -3,6 +3,7 @@ package com.wander.android.data.repository
 import android.util.Xml
 import androidx.room.withTransaction
 import com.wander.android.core.database.WanderDatabase
+import com.wander.android.core.database.dao.EpisodeExtrasDao
 import com.wander.android.core.database.dao.PodcastDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.PodcastEntity
@@ -36,6 +37,7 @@ class PodcastRepository @Inject constructor(
     private val database: WanderDatabase,
     private val podcastDao: PodcastDao,
     private val trackDao: TrackDao,
+    private val extrasDao: EpisodeExtrasDao,
     private val client: PodcastFeedClient,
     private val scheduler: PodcastSyncScheduler
 ) {
@@ -60,6 +62,7 @@ class PodcastRepository @Inject constructor(
         database.withTransaction {
             podcastDao.deleteUntouchedEpisodes(PodcastEpisodes.albumIdOf(feedUrl))
             podcastDao.delete(feedUrl)
+            extrasDao.deleteOrphans()
         }
     }
 
@@ -100,10 +103,9 @@ class PodcastRepository @Inject constructor(
             }
             is FeedFetch.Updated -> {
                 val limit = if (first) INITIAL_EPISODES else MAX_NEW_EPISODES
-                val episodes = fetched.feed.episodes
-                    .sortedByDescending { it.publishedAt ?: 0L }
-                    .take(limit)
-                    .map { PodcastEpisodes.toTrack(podcast.feedUrl, fetched.feed, it, now) }
+                val parsed = fetched.feed.episodes.sortedByDescending { it.publishedAt ?: 0L }.take(limit)
+                val episodes = parsed.map { PodcastEpisodes.toTrack(podcast.feedUrl, fetched.feed, it, now) }
+                val extras = parsed.zip(episodes).mapNotNull { (episode, track) -> PodcastEpisodes.extrasOf(track.id, episode) }
                 val saved = podcast.copy(
                     title = fetched.feed.title,
                     author = fetched.feed.author,
@@ -116,7 +118,9 @@ class PodcastRepository @Inject constructor(
                     podcastDao.upsert(saved)
                     // IGNORE keeps the state of an episode already here; only new ones are added.
                     trackDao.insertNewTracks(episodes)
+                    extrasDao.upsert(extras)
                     podcastDao.pruneEpisodes(PodcastEpisodes.albumIdOf(podcast.feedUrl), KEEP_EPISODES)
+                    extrasDao.deleteOrphans()
                 }
                 Result.success(saved to true)
             }
