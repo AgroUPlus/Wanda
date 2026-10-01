@@ -898,4 +898,17 @@
     <!-- Podcast search (PodcastIndex) -->
     <string name="settings_podcast_search">Podcast search</string>
     <string name="settings_podcast_search_subtitle">Send podcast searches to api.podcastindex.org</string>
+    <string name="podcasts_search_title">Find podcasts</string>
+    <string name="podcasts_search_hint">Search PodcastIndex</string>
+    <string name="podcasts_search_consent_title">Search with PodcastIndex?</string>
+    <string name="podcasts_search_consent_message">Searching sends what you type, and your IP address, to api.podcastindex.org, an open podcast directory. Nothing else is sent, and only when you search. You can turn it off in Settings, under Privacy.</string>
+    <string name="podcasts_search_consent_action">Turn on podcast search</string>
+    <string name="podcasts_search_keys_title">Add your PodcastIndex key</string>
+    <string name="podcasts_search_keys_message">PodcastIndex gives every app user a free key. Create one on podcastindex.org, then paste the key and secret here. They stay on this device, encrypted.</string>
+    <string name="podcasts_search_key">API key</string>
+    <string name="podcasts_search_secret">API secret</string>
+    <string name="podcasts_search_keys_save">Save</string>
+    <string name="podcasts_search_none">No podcasts found.</string>
+    <string name="podcasts_search_failed">The search failed: %1$s</string>
+    <string name="podcasts_subscribed">Subscribed</string>
 </resources>

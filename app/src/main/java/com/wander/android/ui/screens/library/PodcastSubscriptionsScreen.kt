@@ -19,6 +19,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Podcasts
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -67,6 +68,7 @@ private val ArtworkSize = 56.dp
 internal fun PodcastSubscriptionsScreen(
     contentPadding: PaddingValues,
     onBack: () -> Unit,
+    onOpenSearch: () -> Unit,
     viewModel: PodcastSubscriptionsViewModel = hiltViewModel()
 ) {
     val subscriptions by viewModel.subscriptions.collectAsStateWithLifecycle()
@@ -101,6 +103,9 @@ internal fun PodcastSubscriptionsScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onOpenSearch) {
+                        Icon(Icons.Rounded.Search, stringResource(R.string.podcasts_search_title))
+                    }
                     IconButton(onClick = { showAdd = true }) {
                         Icon(Icons.Rounded.Add, stringResource(R.string.podcasts_add))
                     }
