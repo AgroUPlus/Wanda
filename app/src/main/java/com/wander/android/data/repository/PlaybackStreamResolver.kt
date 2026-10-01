@@ -59,7 +59,7 @@ internal class PlaybackStreamResolver(
         cached?.localFilePath?.takeIf { it.isNotBlank() }?.let { path ->
             return StreamInfo(uri = path, isDirectFile = true)
         }
-        if (cached == null || cached.effectiveSource == SourceType.LOCAL) return null
+        if (cached == null || cached.effectiveSource == SourceType.LOCAL || cached.effectiveSource == SourceType.PODCAST) return null
         val localMatch = sameRecordingAs(cached, trackDao.findLocalOrDownloadedCandidates(cached.title, TITLE_CANDIDATES))
         val localPath = localMatch?.localFilePath?.takeIf { it.isNotBlank() } ?: localMatch?.streamUri
         return localPath?.takeIf { it.isNotBlank() }?.let { StreamInfo(uri = it, isDirectFile = true) }
@@ -67,7 +67,8 @@ internal class PlaybackStreamResolver(
 
     /** Tier 2: Navidrome (Personal Server), within a time budget so a slow server can't stall playback. */
     private suspend fun navidromeStreamFor(cached: TrackEntity?): StreamInfo? {
-        if (cached == null || cached.effectiveSource == SourceType.NAVIDROME) return null
+        // An episode is one specific recording; a same-titled Navidrome song is never a substitute.
+        if (cached == null || cached.effectiveSource == SourceType.NAVIDROME || cached.effectiveSource == SourceType.PODCAST) return null
         if (sourceFor(SourceType.NAVIDROME)?.isConfigured?.value != true) return null
         return withTimeoutOrNull(SUBSTITUTION_BUDGET_MS) { navidromeSubstituteFor(cached) }
     }
@@ -93,10 +94,18 @@ internal class PlaybackStreamResolver(
                 )
             )
         }
+        if (type == SourceType.PODCAST) return podcastStream(cached)
         val source = sourceFor(type) ?: return Result.failure(IllegalStateException("$type is unavailable"))
         return source.getStreamInfo(trackId).onSuccess { info ->
             if (info.format == MimeTypes.APPLICATION_M3U8) trackDao.markLive(trackId)
         }
+    }
+
+    /** Episodes carry their enclosure URL in Room; there is no backend to ask for a stream. */
+    private fun podcastStream(cached: TrackEntity?): Result<StreamInfo> {
+        val uri = cached?.streamUri?.takeIf { it.isNotBlank() }
+            ?: return Result.failure(IllegalStateException("This episode has no audio URL"))
+        return Result.success(StreamInfo(uri = uri, format = cached.format ?: MimeTypes.AUDIO_MPEG))
     }
 
     private suspend fun navidromeSubstituteFor(cached: TrackEntity): StreamInfo? {
