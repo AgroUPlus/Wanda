@@ -2,6 +2,7 @@ package com.wander.android.core.backup
 
 import com.wander.android.core.database.entity.EpisodeProgressEntity
 import com.wander.android.core.database.entity.PlaylistEntity
+import com.wander.android.core.database.entity.PodcastEntity
 import com.wander.android.core.database.entity.RecordingLinkEntity
 import com.wander.android.core.database.entity.RecordingSplitEntity
 import com.wander.android.core.database.entity.TrackEntity
@@ -125,3 +126,23 @@ internal fun EpisodeProgressEntity.toBackup() =
 
 internal fun BackupEpisode.toEntity() =
     EpisodeProgressEntity(trackId, positionMs, durationMs, updatedAt)
+
+/**
+ * A subscription. Validators and sync time are left out on purpose: a restored feed is fetched
+ * fresh once, instead of trusting an ETag that belongs to another device's last fetch.
+ */
+@Serializable
+internal data class BackupPodcast(
+    val feedUrl: String,
+    val title: String,
+    val author: String? = null,
+    val artworkUrl: String? = null,
+    val subscribedAt: Long
+)
+
+internal fun PodcastEntity.toBackup() = BackupPodcast(feedUrl, title, author, artworkUrl, subscribedAt)
+
+internal fun BackupPodcast.toEntity() = PodcastEntity(
+    feedUrl = feedUrl, title = title, author = author, artworkUrl = artworkUrl,
+    etag = null, lastModified = null, lastSyncAt = null, subscribedAt = subscribedAt
+)

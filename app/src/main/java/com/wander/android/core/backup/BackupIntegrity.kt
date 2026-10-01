@@ -68,7 +68,7 @@ private fun BackupDocument.digestOf(json: Json, section: BackupSection): Section
         json, historyPart, HistoryPart(history, recaps, tracks), history.size + recaps.size
     )
     BackupSection.LIBRARY -> digest(
-        json, libraryPart, LibraryPart(tracks, playlists), tracks.size + playlists.size
+        json, libraryPart, LibraryPart(tracks, playlists, podcasts), tracks.size + playlists.size + podcasts.size
     )
     BackupSection.MERGES -> digest(json, mergesPart, MergesPart(splits, links), splits.size + links.size)
     BackupSection.EPISODES -> digest(json, episodeList, episodes, episodes.size)
@@ -85,7 +85,12 @@ private fun <T> digest(json: Json, serializer: KSerializer<T>, value: T, count: 
     val recaps: List<BackupRecap>,
     val tracks: List<BackupTrack>
 )
-@Serializable private data class LibraryPart(val tracks: List<BackupTrack>, val playlists: List<BackupPlaylist>)
+/** [podcasts] is defaulted so an empty list is not encoded: digests of backups from before it existed still match. */
+@Serializable private data class LibraryPart(
+    val tracks: List<BackupTrack>,
+    val playlists: List<BackupPlaylist>,
+    val podcasts: List<BackupPodcast> = emptyList()
+)
 @Serializable private data class MergesPart(val splits: List<BackupRecordingPair>, val links: List<BackupRecordingPair>)
 
 private val entryMap = MapSerializer(String.serializer(), BackupEntry.serializer())

@@ -5,6 +5,7 @@ import com.wander.android.core.database.WanderDatabase
 import com.wander.android.core.database.dao.EpisodeProgressDao
 import com.wander.android.core.database.dao.HistoryDao
 import com.wander.android.core.database.dao.PlaylistDao
+import com.wander.android.core.database.dao.PodcastDao
 import com.wander.android.core.database.dao.RecordingLinkDao
 import com.wander.android.core.database.dao.RecordingSplitDao
 import com.wander.android.core.database.dao.ReplayRecapDao
@@ -30,7 +31,8 @@ internal class BackupContentsIO @Inject constructor(
     private val playlistDao: PlaylistDao,
     private val splitDao: RecordingSplitDao,
     private val linkDao: RecordingLinkDao,
-    private val episodeDao: EpisodeProgressDao
+    private val episodeDao: EpisodeProgressDao,
+    private val podcastDao: PodcastDao
 ) {
 
     suspend fun collect(sections: Set<BackupSection>): BackupDocument {
@@ -52,6 +54,7 @@ internal class BackupContentsIO @Inject constructor(
             playlists = if (on(BackupSection.LIBRARY)) playlistDao.getAllPlaylists().map { it.toBackup() } else emptyList(),
             splits = if (on(BackupSection.MERGES)) splitDao.getAllOnce().map { it.toBackup() } else emptyList(),
             links = if (on(BackupSection.MERGES)) linkDao.getAllOnce().map { it.toBackup() } else emptyList(),
+            podcasts = if (on(BackupSection.LIBRARY)) podcastDao.getAll().map { it.toBackup() } else emptyList(),
             episodes = if (on(BackupSection.EPISODES)) episodeDao.getAll().map { it.toBackup() } else emptyList()
         ).let { it.copy(manifest = it.sectionDigests(BackupJson, sections)) }
     }
@@ -100,6 +103,8 @@ internal class BackupContentsIO @Inject constructor(
             // one is at least as complete as whatever this device had.
             document.recaps.forEach { recapDao.save(it.toEntity()) }
             restorePlaylists(document.playlists)
+            // IGNORE: a feed already subscribed here keeps its validators and sync time.
+            podcastDao.insertAllIfAbsent(document.podcasts.map { it.toEntity() })
             splitDao.upsert(document.splits.map { it.toSplit() })
             linkDao.upsert(document.links.map { it.toLink() })
             document.episodes.forEach { episode ->

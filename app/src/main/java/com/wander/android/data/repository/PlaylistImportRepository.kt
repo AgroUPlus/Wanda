@@ -175,7 +175,7 @@ class PlaylistImportRepository @Inject constructor(
                 SourceType.LOCAL -> 150
                 SourceType.NAVIDROME -> 100
                 SourceType.YTMUSIC -> 50
-                SourceType.DEEZER -> 0
+                SourceType.DEEZER, SourceType.PODCAST -> 0
             }
 
             val titleMatched = when {
