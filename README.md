@@ -38,6 +38,66 @@ Seamlessly pairs with [Agro](https://github.com/AgroUPlus/Agro) for E2EE listen-
 
 ---
 
+## Welcome to Wanda! (FAQ for Newcomers)
+
+<details>
+<summary><b>I already use a major streaming app. Why should I use Wanda?</b></summary>
+<br>
+Because your music shouldn't be trapped in silos. Wanda is a premium Android player that lets you seamlessly mix your local files, your private Navidrome/Subsonic server, Deezer, and YouTube Music into <em>one single library</em>. Plus, it has zero tracking, true offline support, and social features that don't rely on a corporate server.
+</details>
+
+<details>
+<summary><b>How does it actually combine those sources? Do I just flip between a "YouTube tab" and a "Local tab"?</b></summary>
+<br>
+No, and this is where Wanda gets really smart. Wanda actually analyzes the audio on your device. If you have a lossless FLAC of a song on your home server, and that same song exists on YouTube Music, Wanda’s engine figures out they are the exact same recording. It links them together invisibly, so you only see <em>one</em> beautiful, unified track in your library.
+</details>
+
+<details>
+<summary><b>I care a lot about audio quality. If it merges tracks, what version does it actually play?</b></summary>
+<br>
+Wanda always prioritizes the highest <b>Quality</b> available with the lowest latency. If you hit play, and Wanda knows you have the lossless local file or a high-res stream on your private server, it plays that directly to the hardware decoder. It only falls back to a compressed stream if you don't have the high-quality version. 
+</details>
+
+<details>
+<summary><b>I keep seeing "Agro" mentioned everywhere. What is that? Do I need to host a server?</b></summary>
+<br>
+You don't need a server! <a href="https://github.com/AgroUPlus/Agro">Agro</a> is our custom peer-to-peer (P2P) ecosystem built right into the app. Instead of relying on a centralized cloud, Agro connects your devices directly to each other. It’s what powers our syncing and makes our social features possible entirely off-the-grid.
+</details>
+
+<details>
+<summary><b>Wait, social features? Can I listen with my friends?</b></summary>
+<br>
+Yes! Through Agro, Wanda has a native <b>Friends System</b> and <b>Jam Rooms</b>. You can see what your friends are listening to, share your presence, and collaboratively build a queue in real-time. 
+</details>
+
+<details>
+<summary><b>Is it safe to share my listening activity with friends over P2P?</b></summary>
+<br>
+Incredibly safe. Agro provides <b>End-to-End Encryption (E2EE)</b> for absolutely everything. It also uses a <b>Privacy Relay</b> system to mask network metadata. This means your communication, your social graph, and your listening habits are completely untraceable—even to your ISP.
+</details>
+
+<details>
+<summary><b>A lot of open-source music players look a bit... dated. How is the design?</b></summary>
+<br>
+We take design just as seriously as the engineering. Wanda is built with <b>Material 3 Expressive</b>. It features a true edge-to-edge layout, dynamic theming, and bespoke, fluid motion (like the bouncy, tactile animations when you open your queue). It is designed to feel incredibly premium and native to Android. 
+</details>
+
+<details>
+<summary><b>What do you mean by "Offline-First" and "Battery-First"?</b></summary>
+<br>
+Most apps freeze or show spinners when your signal drops. Wanda doesn't. Everything you see in the app is loaded instantly from a highly optimized local database on your phone. When you connect to the internet, Wanda quietly updates the database in the background. This makes the app blindingly fast, completely usable in airplane mode, and incredibly gentle on your battery.
+</details>
+
+<details>
+<summary><b>Is it tracking me? What is the privacy policy?</b></summary>
+<br>
+Our threat mitigation philosophy is simple: <b>Zero Telemetry and Zero Trust.</b> We do not track you. We strictly enforce application-layer HTTPS, and we never store your backend passwords in plaintext. Even looking up lyrics requires your explicit consent. Your data belongs entirely to you.
+</details>
+
+<br>
+
+---
+
 ## Unified Sources
 
 Every backend implements a single interface (`IMusicSource`) declaring explicit capabilities (`SourceCapabilities`). The UI adapts dynamically to what each source supports instead of failing or faking missing endpoints:

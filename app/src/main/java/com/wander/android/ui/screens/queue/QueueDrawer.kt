@@ -2,6 +2,10 @@ package com.wander.android.ui.screens.queue
  
 import kotlin.coroutines.cancellation.CancellationException
 import com.wander.android.ui.components.backResistance
+import com.wander.android.ui.components.bouncySpec
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -96,7 +100,8 @@ internal fun QueueDrawer(
     val snackbarHostState = remember { SnackbarHostState() }
     var itemGenerations by remember { mutableStateOf(mapOf<String, Int>()) }
 
-    val spec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+    val spec = remember { bouncySpec<Float>() }
+    val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLow
     val closeDrawer: () -> Unit = { scope.launch { drawer.close(spec) } }
 
     // A back swipe pulls the drawer down with the finger, with growing resistance, and lets it
@@ -163,14 +168,19 @@ internal fun QueueDrawer(
 
         Surface(
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            color = surfaceColor,
             shadowElevation = 8.dp,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .height(with(LocalDensity.current) { drawer.heightPx.toDp() })
                 .graphicsLayer {
-                    translationY = (1f - drawer.progress.coerceIn(0f, 1f)) * size.height
+                    // Past 1 on purpose: the spring's overshoot lifts the drawer above its rest.
+                    translationY = (1f - drawer.progress) * size.height
+                }
+                // Fills the gap the overshoot would open under the drawer's bottom edge.
+                .drawBehind {
+                    drawRect(surfaceColor, topLeft = Offset(0f, size.height), size = Size(size.width, size.height * OvershootFill))
                 }
                 .nestedScroll(nestedScroll)
                 .draggable(

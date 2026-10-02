@@ -45,7 +45,11 @@ internal class PlaybackEventListener(
         if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)) collaborators.actualAudioFormat.value = null
         if (events.contains(Player.EVENT_POSITION_DISCONTINUITY)) seekEpoch++
         checkpointTracker.rememberDuration(currentTrack(player), player.duration)
-        if (events.contains(Player.EVENT_IS_PLAYING_CHANGED) && !player.isPlaying) {
+        // Not in a batch that also changed the playing item: by then `currentTrack` is already the
+        // new item while `currentPosition` can still be the old one's, and that pairing would save
+        // the previous episode's time as the new episode's progress. The old item was checkpointed
+        // by `onPositionDiscontinuity`, so nothing is lost by skipping it here.
+        if (events.contains(Player.EVENT_IS_PLAYING_CHANGED) && !player.isPlaying && !events.changesPlayingItem()) {
             checkpointTracker.checkpoint(currentTrack(player), player.currentPosition, player.duration)
         }
         emitSnapshot(player)
@@ -92,3 +96,10 @@ internal class PlaybackEventListener(
         )
     }
 }
+
+/** Whether this batch replaced, moved or re-timed the playing item rather than just changing its play state. */
+internal fun Player.Events.changesPlayingItem(): Boolean = containsAny(
+    Player.EVENT_MEDIA_ITEM_TRANSITION,
+    Player.EVENT_TIMELINE_CHANGED,
+    Player.EVENT_POSITION_DISCONTINUITY
+)

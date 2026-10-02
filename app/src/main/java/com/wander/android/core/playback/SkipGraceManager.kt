@@ -20,6 +20,14 @@ internal class SkipGraceManager {
 
     private var skipGraceWindow: SkipGraceWindow? = null
 
+    /**
+     * Forgets the last skip. The window is remembered by queue index, so it must not outlive the
+     * queue: after a different list is started, the same index is a different item.
+     */
+    fun clear() {
+        skipGraceWindow = null
+    }
+
     fun restartsOnPrevious(ctrl: MediaController?): Boolean {
         val grace = skipGraceWindow
         val prevIndex = ctrl?.previousMediaItemIndex ?: C.INDEX_UNSET
