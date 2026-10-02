@@ -29,21 +29,21 @@ class VideoClipFormatTest {
     private val opus = """audio/webm; codecs=\"opus\""""
 
     @Test
-    fun `prefers the tallest H264 within 720p and ignores audio`() {
+    fun `prefers the tallest H264 within 1080p and ignores audio`() {
         val picked = player(
             format(251, opus),
+            format(299, avc, 1440),
             format(137, avc, 1080),
             format(136, avc, 720),
-            format(135, avc, 480),
-            format(247, vp9, 720)
+            format(248, vp9, 1080)
         ).bestVideoFormat()
-        assertEquals("136", picked?.get("itag")?.toString())
+        assertEquals("137", picked?.get("itag")?.toString())
     }
 
     @Test
     fun `falls back to VP9 then to the smallest oversized stream`() {
-        assertEquals("247", player(format(247, vp9, 720), format(137, avc, 1080)).bestVideoFormat()?.get("itag")?.toString())
-        assertEquals("137", player(format(137, avc, 1080), format(299, avc, 1440)).bestVideoFormat()?.get("itag")?.toString())
+        assertEquals("248", player(format(248, vp9, 1080), format(299, avc, 1440)).bestVideoFormat()?.get("itag")?.toString())
+        assertEquals("299", player(format(299, avc, 1440), format(400, avc, 2160)).bestVideoFormat()?.get("itag")?.toString())
     }
 
     @Test

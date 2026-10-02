@@ -3,8 +3,8 @@ package com.wander.android.data.sources.ytmusic
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 
-/** Tall enough to look sharp on a phone-sized cover, small enough to stay cheap to decode and fetch. */
-internal const val MAX_CLIP_HEIGHT = 720
+/** Full HD: sharp even filling the screen in the immersive player, and still hardware-decoded. */
+internal const val MAX_CLIP_HEIGHT = 1080
 
 /**
  * The video-only stream to show as the cover while a clip plays, or null when there is none.
