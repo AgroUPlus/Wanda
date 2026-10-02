@@ -61,19 +61,18 @@ internal fun LazyListScope.aboutTab(
                         modifier = Modifier.scale(rememberShelfEntranceScale(2)),
                         title = stringResource(R.string.settings_version),
                         subtitle = when {
+                            state.isCheckingForUpdate -> stringResource(R.string.settings_update_checking, state.appVersion)
                             state.updateCheck is UpdateCheckResult.UpdateAvailable ->
-                                "Update available — ${state.updateCheck.version}"
-                            state.updateCheck is UpdateCheckResult.Failed -> "Couldn't check for updates"
-                            else -> state.appVersion
+                                stringResource(R.string.settings_update_available, state.appVersion, state.updateCheck.version)
+                            state.updateCheck is UpdateCheckResult.UpToDate ->
+                                stringResource(R.string.settings_update_up_to_date, state.appVersion)
+                            state.updateCheck is UpdateCheckResult.Failed ->
+                                stringResource(R.string.settings_update_failed, state.appVersion)
+                            else -> stringResource(R.string.settings_update_tap_to_check, state.appVersion)
                         },
-                        onClick = {
-                            val available = state.updateCheck
-                            if (available is UpdateCheckResult.UpdateAvailable) {
-                                actions.onOpenUrl(available.releaseUrl)
-                            } else {
-                                actions.onCheckForUpdate()
-                            }
-                        },
+                        // Every tap checks again, and a newer release opens on its own; see
+                        // `SettingsViewModel.releaseToOpen`.
+                        onClick = actions.onCheckForUpdate,
                         icon = Icons.Rounded.Info
                     )
                 }

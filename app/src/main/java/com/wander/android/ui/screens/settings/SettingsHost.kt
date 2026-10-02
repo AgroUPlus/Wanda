@@ -75,6 +75,7 @@ internal fun rememberSettingsHost(
     }
 
     val uriHandler = LocalUriHandler.current
+    LaunchedEffect(viewModel, uriHandler) { viewModel.releaseToOpen.collect(uriHandler::openUri) }
     val activity = LocalActivity.current
     val pickLocalFolder = rememberLocalFolderPicker(viewModel::setLocalScanFolder)
     val dialogs = rememberSettingsDialogs()

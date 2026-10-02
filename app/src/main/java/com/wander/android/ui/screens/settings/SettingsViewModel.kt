@@ -1,5 +1,8 @@
 package com.wander.android.ui.screens.settings
 
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import android.content.Context
 import android.content.IntentSender
 import androidx.lifecycle.ViewModel
@@ -50,12 +53,20 @@ internal class SettingsViewModel @Inject constructor(
     private val _isCheckingForUpdate = MutableStateFlow(false)
     val isCheckingForUpdate: StateFlow<Boolean> = _isCheckingForUpdate.asStateFlow()
 
+    private val _releaseToOpen = MutableSharedFlow<String>(extraBufferCapacity = 1)
+
+    /** The release page to open, when a tap on the version row found a newer one. */
+    val releaseToOpen: SharedFlow<String> = _releaseToOpen.asSharedFlow()
+
+    /** Checks, and goes straight to the release when there is a newer one: one tap, not two. */
     fun checkForUpdate() {
         if (_isCheckingForUpdate.value) return
         viewModelScope.launch {
             _isCheckingForUpdate.value = true
-            _updateCheck.value = updateChecker.checkForUpdate()
+            val result = updateChecker.checkForUpdate()
+            _updateCheck.value = result
             _isCheckingForUpdate.value = false
+            if (result is UpdateCheckResult.UpdateAvailable) _releaseToOpen.tryEmit(result.releaseUrl)
         }
     }
 
