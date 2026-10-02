@@ -126,7 +126,7 @@ internal fun RateSection(
             }
 
             // Labels are resolved here: ButtonGroup's item builders are not composable scopes.
-            val labels = presets.map(::formatRate)
+            val labels = presets.map(::formatPreset)
             ButtonGroup(
                 overflowIndicator = {},
                 modifier = Modifier.fillMaxWidth()
@@ -173,6 +173,10 @@ private fun RollingRate(rate: Float) {
 }
 
 private fun formatRate(rate: Float) = String.format(Locale.US, "%.2f×", rate)
+
+/** A preset as short as it can be said — `1×`, `1.5×`, `0.75×` — so four fit across a phone. */
+private fun formatPreset(rate: Float) =
+    String.format(Locale.US, "%.2f", rate).trimEnd('0').trimEnd('.') + "×"
 
 /** Rounds to the 0.05 grid the slider used to tick on, so presets and steps line up. */
 private fun snap(rate: Float): Float =

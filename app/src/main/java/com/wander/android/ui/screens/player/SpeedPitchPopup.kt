@@ -58,7 +58,7 @@ internal fun SpeedPitchPopup(
                     label = stringResource(R.string.speed_label),
                     icon = Icons.Rounded.Speed,
                     rate = value.speed,
-                    presets = listOf(0.75f, 1.0f, 1.25f, 1.5f, 2.0f),
+                    presets = listOf(0.75f, 1.0f, 1.25f, 1.5f),
                     onRate = { onChange(value.copy(speed = it)) }
                 )
 
@@ -66,7 +66,7 @@ internal fun SpeedPitchPopup(
                     label = stringResource(R.string.pitch_label),
                     icon = Icons.Rounded.GraphicEq,
                     rate = value.pitch,
-                    presets = listOf(0.8f, 0.9f, 1.0f, 1.1f, 1.2f),
+                    presets = listOf(0.9f, 1.0f, 1.1f, 1.2f),
                     onRate = { onChange(value.copy(pitch = it)) }
                 )
 
