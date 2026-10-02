@@ -114,11 +114,17 @@ class PlaylistViewModel @Inject constructor(
         viewModelScope.launch { shareRepository.share(track) }
     }
 
-    fun canSharePlaylist(): Boolean =
-        _playlist.value?.let { shareRepository.canShare(it.source) } ?: false
+    /** A source with its own link offers it; any other playlist with tracks is shared as a described link. */
+    fun canSharePlaylist(): Boolean = _playlist.value?.let {
+        shareRepository.canShare(it.source) || _tracks.value.isNotEmpty()
+    } ?: false
 
     fun sharePlaylist() {
         val pl = _playlist.value ?: return
+        if (!shareRepository.canShare(pl.source)) {
+            shareRepository.shareUniversalPlaylist(pl, _tracks.value)
+            return
+        }
         viewModelScope.launch {
             shareRepository.share(
                 ShareTarget(

@@ -66,21 +66,40 @@ class PlaylistImportRepository @Inject constructor(
     }
 
     /**
-     * Saves the playlist at once with every track as an [SourceType.UNRESOLVED] placeholder, then
-     * hands matching to [PlaylistImportWorker]. Room is the source of truth, so the playlist is
-     * usable and visible immediately and fills in as the worker resolves tracks.
+     * The importer screen's entry: [savePending], reported through [progress] for the stages it
+     * draws.
      */
     suspend fun importParsedPlaylist(
         rawPlaylist: RawImportPlaylist,
         customTitle: String? = null,
         tracksToImport: List<RawImportTrack>? = null
-    ): Result<String> = withContext(Dispatchers.IO) {
+    ): Result<String> {
         val title = customTitle?.takeIf { it.isNotBlank() } ?: rawPlaylist.title
+        val count = (tracksToImport ?: rawPlaylist.tracks).size
+        return savePending(rawPlaylist, title, tracksToImport).also { result ->
+            _progress.value = result.fold(
+                onSuccess = { ImportProgress.Success(it, title, count) },
+                onFailure = { ImportProgress.Failed(it.message.orEmpty()) }
+            )
+        }
+    }
+
+    /**
+     * Saves the playlist at once with every track as an [SourceType.UNRESOLVED] placeholder, then
+     * hands matching to [PlaylistImportWorker]. Room is the source of truth, so the playlist is
+     * usable and visible immediately and fills in as the worker resolves tracks.
+     *
+     * Leaves [progress] alone, so a playlist arriving from a link does not disturb an importer
+     * screen that is open.
+     */
+    suspend fun savePending(
+        rawPlaylist: RawImportPlaylist,
+        title: String = rawPlaylist.title,
+        tracksToImport: List<RawImportTrack>? = null
+    ): Result<String> = withContext(Dispatchers.IO) {
         val tracks = tracksToImport ?: rawPlaylist.tracks
         if (tracks.isEmpty()) {
-            val msg = "This playlist has no tracks to import."
-            _progress.value = ImportProgress.Failed(msg)
-            return@withContext Result.failure(IllegalStateException(msg))
+            return@withContext Result.failure(IllegalStateException("This playlist has no tracks to import."))
         }
 
         val placeholders = tracks.map { raw ->
@@ -102,14 +121,12 @@ class PlaylistImportRepository @Inject constructor(
             PlaylistEntity(
                 id = playlistId,
                 name = title,
-                comment = "Imported from ${rawPlaylist.platform.displayName}",
+                comment = rawPlaylist.description ?: "Imported from ${rawPlaylist.platform.displayName}",
                 coverArtUrl = rawPlaylist.coverUrl,
                 trackIds = placeholders.joinToString(",") { it.id }
             )
         )
         importScheduler.enqueue(playlistId)
-
-        _progress.value = ImportProgress.Success(playlistId, title, tracks.size)
         Result.success(playlistId)
     }
 }
