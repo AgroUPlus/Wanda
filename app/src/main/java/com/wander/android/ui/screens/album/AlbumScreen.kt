@@ -1,5 +1,7 @@
 package com.wander.android.ui.screens.album
 
+import com.wander.android.ui.components.rememberShelfEntranceScale
+import androidx.compose.ui.draw.scale
 import com.wander.android.ui.components.groupedListItem
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -145,7 +147,10 @@ fun AlbumScreen(
                             track = track,
                             onPlay = { viewModel.play(index) },
                             onLongPress = { actionsFor = track },
-                            modifier = Modifier.groupedListItem(index, tracks.size)
+                            modifier = Modifier
+                                .animateItem()
+                                .scale(rememberShelfEntranceScale(index))
+                                .groupedListItem(index, tracks.size)
                         )
                     }
                 }

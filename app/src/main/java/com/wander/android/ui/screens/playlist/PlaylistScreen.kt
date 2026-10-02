@@ -1,5 +1,7 @@
 package com.wander.android.ui.screens.playlist
 
+import com.wander.android.ui.components.rememberShelfEntranceScale
+import androidx.compose.ui.draw.scale
 import com.wander.android.ui.components.groupedListItem
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -157,7 +159,10 @@ fun PlaylistScreen(
                                 importWork.isRunning -> MatchStatus.MATCHING
                                 else -> MatchStatus.NOT_FOUND
                             },
-                            modifier = Modifier.groupedListItem(index, tracks.size)
+                            modifier = Modifier
+                                .animateItem()
+                                .scale(rememberShelfEntranceScale(index))
+                                .groupedListItem(index, tracks.size)
                         )
                     }
                 }

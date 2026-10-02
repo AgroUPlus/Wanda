@@ -1,5 +1,8 @@
 package com.wander.android.ui.screens.library
 
+import androidx.compose.foundation.lazy.itemsIndexed
+import com.wander.android.ui.components.rememberShelfEntranceScale
+import androidx.compose.ui.draw.scale
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -11,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
@@ -153,8 +155,12 @@ internal fun PodcastSubscriptionsScreen(
                     contentPadding = contentPadding.listInset(),
                     modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection)
                 ) {
-                    items(list, key = { it.feedUrl }) { podcast ->
-                        SubscriptionRow(podcast, onRemove = { removing = podcast }, modifier = Modifier.animateItem())
+                    itemsIndexed(list, key = { _, podcast -> podcast.feedUrl }) { index, podcast ->
+                        SubscriptionRow(
+                            podcast,
+                            onRemove = { removing = podcast },
+                            modifier = Modifier.animateItem().scale(rememberShelfEntranceScale(index))
+                        )
                     }
                 }
             }

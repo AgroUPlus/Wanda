@@ -172,7 +172,7 @@ private fun LazyListScope.historyItems(
         contentType = plays.itemContentType { "play" }
     ) { index ->
         val entry = plays[index] ?: return@items
-        HistoryEntry(plays, index, entry, zone, viewModel, onLongPress)
+        HistoryEntry(plays, index, entry, zone, viewModel, onLongPress, Modifier.animateItem())
     }
 }
 
@@ -183,7 +183,8 @@ private fun HistoryEntry(
     entry: HistoryTrack,
     zone: ZoneId,
     viewModel: HistoryViewModel,
-    onLongPress: (UnifiedTrack) -> Unit
+    onLongPress: (UnifiedTrack) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val previous = if (index > 0) plays.peek(index - 1) else null
     val next = if (index < plays.itemCount - 1) plays.peek(index + 1) else null
@@ -191,7 +192,7 @@ private fun HistoryEntry(
     val isLastOfDay = next == null || !sameDay(next.playedAt, entry.playedAt, zone)
 
     val entranceScale = rememberShelfEntranceScale(index)
-    Column(modifier = Modifier.scale(entranceScale)) {
+    Column(modifier = modifier.scale(entranceScale)) {
         if (isFirstOfDay) {
             HistoryDateDivider(dayMillis = entry.playedAt, zone = zone)
         }

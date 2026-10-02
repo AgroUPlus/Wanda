@@ -1,5 +1,7 @@
 package com.wander.android.ui.screens.library
 
+import com.wander.android.ui.components.rememberShelfEntranceScale
+import androidx.compose.ui.draw.scale
 import com.wander.android.ui.components.groupedListItem
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -178,7 +180,10 @@ internal fun PlaylistList(
                 index = index,
                 onClick = { onOpenPlaylist(playlist.id) },
                 onLongPress = { actionsForPlaylist = playlist },
-                modifier = Modifier.groupedListItem(index, visiblePlaylists.size)
+                modifier = Modifier
+                    .animateItem()
+                    .scale(rememberShelfEntranceScale(index))
+                    .groupedListItem(index, visiblePlaylists.size)
             )
         }
         if (hasMorePlaylists) {

@@ -1,5 +1,7 @@
 package com.wander.android.ui.screens.artist
 
+import com.wander.android.ui.components.rememberShelfEntranceScale
+import androidx.compose.ui.draw.scale
 import com.wander.android.ui.components.groupedListItem
 import com.wander.android.data.repository.newestFirst
 import androidx.compose.foundation.layout.Arrangement
@@ -84,7 +86,7 @@ internal fun LazyListScope.artistPageSections(
                 track = track,
                 onPlay = { onPlaySong(index) },
                 onLongPress = { onLongPressTrack(track) },
-                modifier = Modifier.animateItem().groupedListItem(index, shown.size)
+                modifier = Modifier.animateItem().scale(rememberShelfEntranceScale(index)).groupedListItem(index, shown.size)
             )
         }
     }
@@ -99,7 +101,7 @@ internal fun LazyListScope.artistPageSections(
                 track = track,
                 onPlay = { onPlayTrack(track) },
                 onLongPress = { onLongPressTrack(track) },
-                modifier = Modifier.animateItem().groupedListItem(index, page.episodes.size)
+                modifier = Modifier.animateItem().scale(rememberShelfEntranceScale(index)).groupedListItem(index, page.episodes.size)
             )
         }
     }
@@ -114,7 +116,7 @@ internal fun LazyListScope.artistPageSections(
                 track = track,
                 onPlay = { onPlayTrack(track) },
                 onLongPress = { onLongPressTrack(track) },
-                modifier = Modifier.animateItem().groupedListItem(index, page.videos.size)
+                modifier = Modifier.animateItem().scale(rememberShelfEntranceScale(index)).groupedListItem(index, page.videos.size)
             )
         }
     }
@@ -140,7 +142,7 @@ internal fun LazyListScope.artistPageSections(
                     track = track,
                     onPlay = { onPlayTrack(track) },
                     onLongPress = { onLongPressTrack(track) },
-                    modifier = Modifier.animateItem().groupedListItem(index, section.tracks.size)
+                    modifier = Modifier.animateItem().scale(rememberShelfEntranceScale(index)).groupedListItem(index, section.tracks.size)
                 )
             }
         }

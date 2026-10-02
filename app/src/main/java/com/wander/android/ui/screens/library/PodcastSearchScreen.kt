@@ -1,5 +1,8 @@
 package com.wander.android.ui.screens.library
 
+import androidx.compose.foundation.lazy.itemsIndexed
+import com.wander.android.ui.components.rememberShelfEntranceScale
+import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -9,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -130,8 +132,13 @@ private fun SearchBody(
             Message(stringResource(R.string.podcasts_search_none))
         } else {
             LazyColumn(contentPadding = contentPadding.listInset(), modifier = Modifier.fillMaxSize()) {
-                items(state.hits, key = { it.feedUrl }) { hit ->
-                    HitRow(hit, isSubscribed = hit.feedUrl in subscribed, onSubscribe = { onSubscribe(hit) })
+                itemsIndexed(state.hits, key = { _, hit -> hit.feedUrl }) { index, hit ->
+                    HitRow(
+                        hit,
+                        isSubscribed = hit.feedUrl in subscribed,
+                        onSubscribe = { onSubscribe(hit) },
+                        modifier = Modifier.animateItem().scale(rememberShelfEntranceScale(index))
+                    )
                 }
             }
         }
@@ -150,8 +157,9 @@ private fun Message(text: String) {
 }
 
 @Composable
-private fun HitRow(hit: PodcastHit, isSubscribed: Boolean, onSubscribe: () -> Unit) {
+private fun HitRow(hit: PodcastHit, isSubscribed: Boolean, onSubscribe: () -> Unit, modifier: Modifier = Modifier) {
     ListItem(
+        modifier = modifier,
         headlineContent = { Text(hit.title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
         supportingContent = if (hit.author != null) {
             { Text(hit.author, maxLines = 1, overflow = TextOverflow.Ellipsis) }
