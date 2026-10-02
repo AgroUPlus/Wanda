@@ -119,7 +119,10 @@ internal fun AccessStep(
             pasteLink(Modifier.fillMaxWidth())
         }
 
-        else -> pasteLink(modifier)
+        else -> Column(modifier = modifier.padding(16.dp)) {
+            PlaylistFileButton(onText = actions.onInputChange)
+            pasteLink(Modifier.fillMaxWidth())
+        }
     }
 }
 

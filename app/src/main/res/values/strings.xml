@@ -188,6 +188,9 @@
     <string name="importer_import_playlist">Import Playlist</string>
     <string name="link_playlist_saved">Saved “%1$s”. Matching its tracks to your sources…</string>
     <string name="link_playlist_invalid">That playlist link is damaged, or too long to open.</string>
+    <string name="importer_open_playlist_file">Open an M3U file</string>
+    <string name="importer_file_too_large">That file is too large to be a playlist.</string>
+    <string name="importer_file_unreadable">Couldn\'t read that file.</string>
     <string name="importer_guide_title">Make it public, then paste the link</string>
     <string name="importer_guide_subtitle">Wanda can read playlists that anyone with the link can open. You don\'t sign in to anything here.</string>
     <string name="importer_open_platform">Open %1$s</string>
