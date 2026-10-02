@@ -89,4 +89,25 @@ class AgroPlaylistTest {
         assertTrue(AgroPlaylistApi.friendlyVisibilityError(old, PlaylistVisibility.FRIENDS).message!!.contains("too old"))
         assertEquals(old, AgroPlaylistApi.friendlyVisibilityError(old, PlaylistVisibility.PUBLIC))
     }
+
+    @Test
+    fun changingToFriendsOnlyUsesTheVisibilityArgument() {
+        val vars = AgroPlaylistApi.updateVisibilityVariables(id, PlaylistVisibility.FRIENDS)
+
+        assertTrue(AgroPlaylistApi.updateVisibilityQuery(PlaylistVisibility.FRIENDS).contains("visibility: \$visibility"))
+        assertEquals(id, vars["id"]!!.jsonPrimitive.content)
+        assertEquals("FRIENDS", vars["visibility"]!!.jsonPrimitive.content)
+        assertFalse(vars.containsKey("isPublic"))
+    }
+
+    @Test
+    fun changingToPublicOrPrivateUsesTheOlderFlag() {
+        val public = AgroPlaylistApi.updateVisibilityVariables(id, PlaylistVisibility.PUBLIC)
+        val private = AgroPlaylistApi.updateVisibilityVariables(id, PlaylistVisibility.PRIVATE)
+
+        assertTrue(AgroPlaylistApi.updateVisibilityQuery(PlaylistVisibility.PRIVATE).contains("isPublic: \$isPublic"))
+        assertEquals("true", public["isPublic"]!!.jsonPrimitive.content)
+        assertEquals("false", private["isPublic"]!!.jsonPrimitive.content)
+        assertFalse(public.containsKey("visibility"))
+    }
 }

@@ -3,6 +3,7 @@ package com.wander.android.data.sources.agro
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -64,6 +65,16 @@ class AgroPlaylistApi @Inject constructor(private val graphQl: AgroGraphQl) {
         return Result.success(id)
     }
 
+    /** Changes who can open the published playlist [id]. Only its owner may. */
+    suspend fun updateVisibility(id: String, visibility: PlaylistVisibility): Result<Unit> =
+        graphQl.execute(updateVisibilityQuery(visibility), updateVisibilityVariables(id, visibility))
+            .recoverCatching { error -> throw friendlyVisibilityError(error, visibility) }
+            .mapCatching { data ->
+                if (data["updatePlaylistVisibility"]?.jsonPrimitive?.booleanOrNull != true) {
+                    throw IOException("Agro did not change the playlist's visibility")
+                }
+            }
+
     suspend fun fetch(id: String): Result<AgroPlaylist> =
         graphQl.execute(FETCH, buildJsonObject { put("id", id) }).mapCatching { data ->
             val playlist = data["playlist"]?.jsonObject ?: throw IOException("Agro has no such playlist")
@@ -103,6 +114,20 @@ class AgroPlaylistApi @Inject constructor(private val graphQl: AgroGraphQl) {
 
         fun createVariables(name: String, visibility: PlaylistVisibility): JsonObject = buildJsonObject {
             put("title", name.take(MAX_TITLE))
+            if (visibility == PlaylistVisibility.FRIENDS) put("visibility", "FRIENDS")
+            else put("isPublic", visibility == PlaylistVisibility.PUBLIC)
+        }
+
+        /** The same split as [createQuery], for the same reason. */
+        fun updateVisibilityQuery(visibility: PlaylistVisibility): String = when (visibility) {
+            PlaylistVisibility.FRIENDS ->
+                "mutation(\$id: String!, \$visibility: PlaylistVisibility) { updatePlaylistVisibility(playlistId: \$id, visibility: \$visibility) }"
+            else ->
+                "mutation(\$id: String!, \$isPublic: Boolean) { updatePlaylistVisibility(playlistId: \$id, isPublic: \$isPublic) }"
+        }
+
+        fun updateVisibilityVariables(id: String, visibility: PlaylistVisibility): JsonObject = buildJsonObject {
+            put("id", id)
             if (visibility == PlaylistVisibility.FRIENDS) put("visibility", "FRIENDS")
             else put("isPublic", visibility == PlaylistVisibility.PUBLIC)
         }

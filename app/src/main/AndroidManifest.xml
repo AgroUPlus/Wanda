@@ -241,6 +241,20 @@
                 android:resource="@xml/replay_share_paths" />
         </provider>
 
+        <!--
+          Hands one exported playlist file to the share sheet, on the same terms as the Replay
+          provider above: not exported, a read grant on the one URI, for the app the user picks.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.playlistshare"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/playlist_share_paths" />
+        </provider>
+
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"

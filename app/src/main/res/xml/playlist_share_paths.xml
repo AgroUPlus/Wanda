@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The only directory the playlist share provider can hand out: exported .m3u8 files. -->
+<paths>
+    <cache-path name="playlists" path="playlists/" />
+</paths>

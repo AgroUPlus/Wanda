@@ -144,17 +144,20 @@ class ShareRepository @Inject constructor(
      * there and the link names only its id, which has no length limit and reaches the other
      * accounts on that server; without one, the tracks go in the link itself — see
      * [shareUniversalPlaylist].
+     *
+     * Returns the playlist's id on Agro when it was published there, so its visibility can be
+     * changed later; null when it went out as a link or failed (the failure is on [errors]).
      */
     suspend fun shareLocalPlaylist(
         playlist: UnifiedPlaylist,
         tracks: List<UnifiedTrack>,
         visibility: PlaylistVisibility = PlaylistVisibility.FRIENDS
-    ) {
+    ): String? {
         if (!agroPlaylists.isAvailable) {
             shareUniversalPlaylist(playlist, tracks)
-            return
+            return null
         }
-        agroPlaylists.publish(
+        return agroPlaylists.publish(
             playlist.name,
             tracks.map { AgroPlaylistTrack(it.title, it.artist, it.album, it.durationMs) },
             visibility
@@ -172,8 +175,12 @@ class ShareRepository @Inject constructor(
                         url = AgroPlaylistLink.toUri(id)
                     )
                 )
+                id
             },
-            onFailure = { _errors.tryEmit("Couldn't publish the playlist to Agro: ${it.message}") }
+            onFailure = {
+                _errors.tryEmit("Couldn't publish the playlist to Agro: ${it.message}")
+                null
+            }
         )
     }
 
