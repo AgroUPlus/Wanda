@@ -183,7 +183,13 @@ class WanderAppViewModel @Inject constructor(
     )
     val replayOffer: StateFlow<Int?> = _replayOffer.asStateFlow()
 
+    /** "Later": hidden until the app next starts, and offered again then while it is the season. */
     fun dismissReplayOffer() {
+        _replayOffer.value = null
+    }
+
+    /** Opened, or "don't show again": either way this year's recap stops offering itself. */
+    fun retireReplayOffer() {
         _replayOffer.value?.let { year ->
             if (year > secureStorage.lastSeenReplayYear) {
                 secureStorage.lastSeenReplayYear = year

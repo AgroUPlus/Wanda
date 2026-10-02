@@ -523,6 +523,11 @@
     <string name="settings_use_wallpaper_palette_android_12">Use the wallpaper palette (Android 12+)</string>
     <string name="settings_username_appears_when_someone_searches">Your username appears when someone searches for it. Off means only people you have already added can see you at all.</string>
     <string name="settings_version">Version</string>
+    <string name="settings_update_tap_to_check">%1$s · Tap to check for updates</string>
+    <string name="settings_update_checking">%1$s · Checking for updates…</string>
+    <string name="settings_update_up_to_date">%1$s · Up to date</string>
+    <string name="settings_update_available">%1$s · Version %2$s is out. Tap to open it.</string>
+    <string name="settings_update_failed">%1$s · Couldn\'t check for updates. Tap to try again.</string>
     <string name="settings_wanda_agro_built_here_source">Wanda and Agro are built here. Source, issues and releases on GitHub.</string>
     <string name="settings_what_has_been_measured">What has been measured</string>
     <string name="settings_what_trade_has_done">What the trade has done</string>
@@ -783,7 +788,9 @@
     <string name="replay_offer_title">Your %1$d is ready</string>
     <string name="replay_offer_subtitle">A year of listening, one card at a time</string>
     <string name="replay_offer_open">Open</string>
-    <string name="replay_offer_later">Not now</string>
+    <string name="replay_offer_later">Later</string>
+    <string name="replay_offer_never">Don\'t show again</string>
+    <string name="replay_offer_settings_hint">You can open it anytime in Settings › About.</string>
 
     <string name="replay_intro_kicker">Agro Replay</string>
     <string name="replay_intro_headline">Your %1$d</string>

@@ -52,6 +52,7 @@ internal fun BoxScope.BottomOffers(
     replayYear: Int?,
     onOpenReplay: (Int) -> Unit,
     onDismissReplay: () -> Unit,
+    onNeverShowReplay: () -> Unit,
     agroDevices: List<AgroNode>,
     isResuming: Boolean,
     sessionArtwork: String?,
@@ -107,7 +108,8 @@ internal fun BoxScope.BottomOffers(
         ReplayOfferCard(
             year = year,
             onOpen = { onOpenReplay(year) },
-            onDismiss = onDismissReplay
+            onDismiss = onDismissReplay,
+            onNeverShow = onNeverShowReplay
         )
     }
 

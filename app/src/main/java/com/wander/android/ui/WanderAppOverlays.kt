@@ -152,10 +152,11 @@ internal fun BoxScope.WanderAppOverlays(
         handoff = incomingHandoff?.takeIf { !isPlayingHere && showChrome && sheetCollapsed },
         replayYear = replayOffer.takeIf { showChrome && sheetCollapsed },
         onOpenReplay = { year ->
-            viewModel.dismissReplayOffer()
+            viewModel.retireReplayOffer()
             navController.navigateSettled(Routes.replay(year))
         },
         onDismissReplay = viewModel::dismissReplayOffer,
+        onNeverShowReplay = viewModel::retireReplayOffer,
         agroDevices = agroDevices,
         isResuming = isResuming,
         sessionArtwork = sessionArtwork,
