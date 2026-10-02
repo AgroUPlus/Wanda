@@ -38,32 +38,30 @@ internal class P2PAudioResponseWriter(
     ): Boolean {
         val (inputStream, totalLength) = openTrackStream(context, track) ?: return false
 
-        try {
-            inputStream.use { fileIn ->
-                val mime = when (track?.format?.lowercase()) {
-                    "flac" -> "audio/flac"
-                    "opus", "webm" -> "audio/ogg"
-                    "m4a", "mp4" -> "audio/mp4"
-                    else -> "audio/mpeg"
-                }
-                val recipientKey = grantManager.sealingKeyFor(
-                    grantManager.tokenOf(request),
-                    grantManager.identityKeyOf(request)
-                )
-                val session = queryUri.getQueryParameter("session").orEmpty()
-                val range = request.lineSequence().firstOrNull { it.startsWith("Range:", ignoreCase = true) }
-                if (range != null) Log.w(TAG, "Ignoring a range request: ${range.trim()}")
-
-                if (recipientKey != null && session.isNotBlank()) {
-                    writeEncrypted(output, fileIn, mime, recipientKey, session)
-                } else {
-                    writePlain(output, fileIn, mime, totalLength)
-                }
-                return true
+        // No catch here: once the 200 header is out, a failure can only end the connection. Caught
+        // here and reported as `false`, it used to have the server append a 404 to a response
+        // already under way. `P2PServer.handleClient` logs it as the peer going away.
+        inputStream.use { fileIn ->
+            val mime = when (track?.format?.lowercase()) {
+                "flac" -> "audio/flac"
+                "opus", "webm" -> "audio/ogg"
+                "m4a", "mp4" -> "audio/mp4"
+                else -> "audio/mpeg"
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed streaming track", e)
-            return false
+            val recipientKey = grantManager.sealingKeyFor(
+                grantManager.tokenOf(request),
+                grantManager.identityKeyOf(request)
+            )
+            val session = queryUri.getQueryParameter("session").orEmpty()
+            val range = request.lineSequence().firstOrNull { it.startsWith("Range:", ignoreCase = true) }
+            if (range != null) Log.w(TAG, "Ignoring a range request: ${range.trim()}")
+
+            if (recipientKey != null && session.isNotBlank()) {
+                writeEncrypted(output, fileIn, mime, recipientKey, session)
+            } else {
+                writePlain(output, fileIn, mime, totalLength)
+            }
+            return true
         }
     }
 

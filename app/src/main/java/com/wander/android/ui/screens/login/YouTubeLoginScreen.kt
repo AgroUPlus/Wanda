@@ -39,8 +39,8 @@ import com.wander.android.R
 import com.wander.android.data.sources.ytmusic.GoogleAccountManager
 import com.wander.android.ui.components.WebViewLifecycle
 import com.wander.android.ui.components.blockLoginAsset
+import com.wander.android.ui.components.launchNonWebUrl
 import com.wander.android.ui.components.prepareForLogin
-import com.wander.android.ui.components.release
 import com.wander.android.ui.components.stripWebViewUserAgentToken
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -123,13 +123,17 @@ fun YouTubeLoginScreen(
                             override fun onPageCommitVisible(view: WebView, url: String) {
                                 loading = false
                             }
+
+                            // Google's sign-in can redirect through an `intent://` or `market://`
+                            // URI, which WebView cannot load and throws on uncaught — see
+                            // `launchNonWebUrl`.
+                            override fun shouldOverrideUrlLoading(
+                                view: WebView,
+                                request: WebResourceRequest
+                            ): Boolean = launchNonWebUrl(context, request.url.toString())
                         }
                         loadUrl(YT_MUSIC_URL)
                     }
-                },
-                onRelease = { webView ->
-                    webViewInstance = null
-                    webView.release()
                 },
                 modifier = Modifier.fillMaxSize()
             )
@@ -147,7 +151,7 @@ fun YouTubeLoginScreen(
             singleLine = false,
             maxLines = 3,
             isError = state.error != null,
-            supportingText = state.error?.let { { Text(it) } },
+            supportingText = state.error?.let { error -> { Text(stringResource(error)) } },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)

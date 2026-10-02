@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.social
 
+import android.database.SQLException
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
@@ -12,13 +13,13 @@ import com.wander.android.data.sources.agro.FriendJam
 import com.wander.android.data.sources.agro.Jam
 import com.wander.android.data.sources.agro.JamMode
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 
 import com.wander.android.data.repository.MusicRepository
@@ -181,8 +182,9 @@ internal class JamViewModel @Inject constructor(
                 var added = false
                 for ((title, artist) in shuffledCandidates) {
                     val resolved = resolver.resolve(title, artist)
-                    if (resolved != null && resolved.track.id != now.trackId) {
-                        repository.add(resolved.track)
+                    if (resolved != null && resolved.track.id != now.trackId &&
+                        repository.add(resolved.track).isSuccess
+                    ) {
                         repository.noteAutoRadioTrack(resolved.track.id)
                         added = true
                         break
@@ -196,17 +198,17 @@ internal class JamViewModel @Inject constructor(
                         val radio = musicRepository.generateRadio(resolvedNow.track, 1)
                         if (radio.isNotEmpty()) {
                             val track = radio.first()
-                            repository.add(track)
-                            repository.noteAutoRadioTrack(track.id)
+                            if (repository.add(track).isSuccess) repository.noteAutoRadioTrack(track.id)
                         }
                     }
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 // Topping the queue up is best-effort: the jam plays on with what it already has,
                 // and the next track change tries again. Surfacing this would put an error in
                 // front of someone whose music never stopped.
+                Log.d(TAG, "Auto top-up skipped", e)
+            } catch (e: SQLException) {
+                // Same reasoning, for the local library lookups the resolver and radio make.
                 Log.d(TAG, "Auto top-up skipped", e)
             } finally {
                 toppingUp = false

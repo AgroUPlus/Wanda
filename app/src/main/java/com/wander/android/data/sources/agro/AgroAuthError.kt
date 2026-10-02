@@ -1,5 +1,8 @@
 package com.wander.android.data.sources.agro
 
+import android.content.Context
+import androidx.annotation.StringRes
+import com.wander.android.R
 import java.io.IOException
 
 /**
@@ -36,8 +39,10 @@ internal sealed class AgroAuthError(message: String, cause: Throwable? = null) :
     internal class Unreachable(message: String, cause: Throwable? = null) :
         AgroAuthError(message, cause)
 
-    /** The server answered, but with something we cannot act on. */
-    internal class Server(message: String) : AgroAuthError(message)
+    /** The server answered, but with something we cannot act on. [serverMessage] is the server's
+     *  own wording when it sent any; [diagnostic] is what went wrong, for logs. */
+    internal class Server(val serverMessage: String?, diagnostic: String) :
+        AgroAuthError(serverMessage ?: diagnostic)
 
     internal companion object {
         /**
@@ -58,7 +63,7 @@ internal sealed class AgroAuthError(message: String, cause: Throwable? = null) :
                 status == 401 && (message?.contains("authenticator", ignoreCase = true) == true || message?.contains("code", ignoreCase = true) == true) ->
                     TwoFactorRequired(message)
                 status == 401 -> Rejected(message ?: "Those credentials were not accepted")
-                else -> Server(message ?: "The server could not complete that (HTTP $status)")
+                else -> Server(message, "HTTP $status")
             }
         }
 
@@ -82,19 +87,18 @@ internal sealed class AgroAuthError(message: String, cause: Throwable? = null) :
  * What to put in front of the user for each way authentication can fail.
  *
  * The server's own wording is good, but it cannot know what the app is able to offer next, and that
- * is the part that makes an error useful rather than merely accurate.
+ * is the part that makes an error useful rather than merely accurate. Only a [AgroAuthError.Server]
+ * failure shows the server's words, since there the app has nothing better to add.
  */
-internal fun AgroAuthError.explain(): String = when (this) {
-    is AgroAuthError.TwoFactorRequired ->
-        "2FA is enabled on this account. Pair with a Device Token or scan the QR Code from Devices & Sign-ins in the Agro dashboard."
-    is AgroAuthError.Rejected ->
-        "That username and passphrase were not accepted. If you generated a Device Token in the dashboard, paste it into the passphrase field."
-    is AgroAuthError.NotActive ->
-        "This account is not active yet. A new account waits for the server's admin to let it in; " +
-            "once they have, tap Check again."
-    is AgroAuthError.RateLimited ->
-        "Too many attempts from this network. The server stops counting after about five minutes."
-    is AgroAuthError.Unreachable ->
-        "Could not reach that server. Check the address and that this device is online."
-    is AgroAuthError.Server -> message ?: "The server could not complete that."
+internal fun AgroAuthError.explain(context: Context): String =
+    (this as? AgroAuthError.Server)?.serverMessage ?: context.getString(explanation())
+
+@StringRes
+private fun AgroAuthError.explanation(): Int = when (this) {
+    is AgroAuthError.TwoFactorRequired -> R.string.agro_error_two_factor
+    is AgroAuthError.Rejected -> R.string.agro_error_rejected
+    is AgroAuthError.NotActive -> R.string.agro_error_not_active
+    is AgroAuthError.RateLimited -> R.string.agro_error_rate_limited
+    is AgroAuthError.Unreachable -> R.string.agro_error_unreachable
+    is AgroAuthError.Server -> R.string.agro_error_server
 }

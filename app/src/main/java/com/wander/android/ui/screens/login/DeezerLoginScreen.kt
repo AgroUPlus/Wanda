@@ -43,7 +43,6 @@ import com.wander.android.ui.components.WebViewPopupDialog
 import com.wander.android.ui.components.blockLoginAsset
 import com.wander.android.ui.components.launchNonWebUrl
 import com.wander.android.ui.components.prepareForLogin
-import com.wander.android.ui.components.release
 import com.wander.android.ui.components.stripWebViewUserAgentToken
 import com.wander.android.ui.components.webChromeClientHostingPopups
 import kotlinx.coroutines.delay
@@ -110,10 +109,8 @@ fun DeezerLoginScreen(
                     val chrome = webChromeClientHostingPopups(
                         context = context,
                         onPopupCreated = { popupWebView = it },
-                        onPopupClosed = {
-                            popupWebView?.release()
-                            popupWebView = null
-                        }
+                        // `WebViewPopupDialog` releases the popup once it is no longer shown.
+                        onPopupClosed = { popupWebView = null }
                     )
                     val client = DeezerLoginWebViewClient(
                         context = context,
@@ -121,10 +118,6 @@ fun DeezerLoginScreen(
                         onCommitVisible = { loading = false }
                     )
                     createDeezerWebView(context, darkTheme, chrome, client).also { webViewInstance = it }
-                },
-                onRelease = { webView ->
-                    webViewInstance = null
-                    webView.release()
                 },
                 modifier = Modifier.fillMaxSize()
             )
@@ -137,10 +130,7 @@ fun DeezerLoginScreen(
         ManualArlSection(state, viewModel, onDone)
     }
 
-    WebViewPopupDialog(popup = popupWebView) {
-        popupWebView?.release()
-        popupWebView = null
-    }
+    WebViewPopupDialog(popup = popupWebView) { popupWebView = null }
 }
 
 /** The pasted-ARL fallback, for when the embedded sign-in never completes. */
@@ -151,7 +141,7 @@ private fun ManualArlSection(state: DeezerLoginState, viewModel: DeezerLoginView
         onValueChange = viewModel::onManualArlChange,
         label = { Text(stringResource(R.string.login_paste_arl)) },
         isError = state.error != null,
-        supportingText = state.error?.let { msg -> { Text(msg) } },
+        supportingText = state.error?.let { error -> { Text(stringResource(error)) } },
         singleLine = true,
         modifier = Modifier
             .fillMaxWidth()

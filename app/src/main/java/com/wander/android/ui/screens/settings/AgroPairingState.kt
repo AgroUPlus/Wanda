@@ -43,7 +43,7 @@ internal sealed interface AgroConnectionState {
     data object Rejected : AgroConnectionState
 
     /** The token is fine; the account behind it is pending approval or suspended. */
-    data class NotActive(val detail: String) : AgroConnectionState
+    data object NotActive : AgroConnectionState
 
     /** No answer. Says nothing about whether the credentials are good. */
     data object Unreachable : AgroConnectionState

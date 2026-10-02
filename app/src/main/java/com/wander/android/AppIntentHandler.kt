@@ -273,7 +273,7 @@ internal class AppIntentHandler @Inject constructor(
                 },
                 onFailure = { error ->
                     android.util.Log.w("Wanda", "Agro pairing failed: ${error.message}")
-                    AgroAuthError.from(error).explain()
+                    AgroAuthError.from(error).explain(context)
                 }
             )
             Toast.makeText(context, message, Toast.LENGTH_LONG).show()

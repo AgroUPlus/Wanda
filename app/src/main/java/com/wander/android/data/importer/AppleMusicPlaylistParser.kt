@@ -51,7 +51,9 @@ class AppleMusicPlaylistParser @Inject constructor(
             val content = match.groupValues.getOrNull(1)?.trim() ?: continue
             try {
                 collectJsonLdTracks(json.parseToJsonElement(content), tracks)
-            } catch (e: Exception) {
+            } catch (e: IllegalArgumentException) {
+                // Covers both a block that is not JSON (SerializationException is one) and one
+                // whose shape is not what `collectJsonLdTracks` expects.
                 // One malformed JSON-LD block is not a failed import. Apple ships several of these
                 // scripts per page and only some carry a tracklist; the regex fallback picks
                 // the page up if none of them parsed.

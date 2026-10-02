@@ -148,7 +148,7 @@ internal fun AgroPairingForm(
 
     if (error != null) {
         Text(
-            text = error.explain(),
+            text = error.explain(LocalContext.current),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.error
         )

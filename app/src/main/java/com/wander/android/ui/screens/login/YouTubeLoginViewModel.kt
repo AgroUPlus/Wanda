@@ -1,6 +1,8 @@
 package com.wander.android.ui.screens.login
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
+import com.wander.android.R
 import com.wander.android.data.sources.ytmusic.GoogleAccountManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,7 +13,7 @@ import javax.inject.Inject
 
 data class YouTubeLoginState(
     val manualCookie: String = "",
-    val error: String? = null,
+    @StringRes val error: Int? = null,
     val isSignedIn: Boolean = false
 )
 
@@ -39,9 +41,7 @@ class YouTubeLoginViewModel @Inject constructor(
         if (accountManager.signIn(cookie, visitorData)) {
             _state.update { it.copy(isSignedIn = true, error = null) }
         } else {
-            _state.update {
-                it.copy(error = "That cookie has no SAPISID value, so requests cannot be signed.")
-            }
+            _state.update { it.copy(error = R.string.login_error_cookie_no_sapisid) }
         }
     }
 }

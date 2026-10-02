@@ -1,7 +1,6 @@
 package com.wander.android.ui.theme
 
 import android.graphics.Bitmap
-import android.os.Build
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -95,7 +94,7 @@ private const val SeedTweenMs = 450
  * Safely converts [Config#HARDWARE] bitmaps to software bitmaps to avoid crashes on Android 8+.
  */
 fun extractSeedColor(bitmap: Bitmap): Color? {
-    val safeBitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && bitmap.config == Bitmap.Config.HARDWARE) {
+    val safeBitmap = if (bitmap.config == Bitmap.Config.HARDWARE) {
         bitmap.copy(Bitmap.Config.ARGB_8888, false) ?: return null
     } else {
         bitmap
@@ -104,7 +103,13 @@ fun extractSeedColor(bitmap: Bitmap): Color? {
         Palette.from(safeBitmap)
             .maximumColorCount(16)
             .generate()
-    } catch (_: Throwable) {
+    } catch (_: IllegalStateException) {
+        // The bitmap was recycled under us — Coil's memory cache can let go of it at any time.
+        // A missing seed colour just keeps the default theme.
+        if (safeBitmap != bitmap) safeBitmap.recycle()
+        return null
+    } catch (_: IllegalArgumentException) {
+        // An empty or zero-sized bitmap, which Palette cannot sample.
         if (safeBitmap != bitmap) safeBitmap.recycle()
         return null
     }

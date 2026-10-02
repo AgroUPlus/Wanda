@@ -86,8 +86,11 @@ class AgroStreamFetcher @Inject constructor(
                     return FetchedStream(response, SyncRoute.DIRECT)
                 }
                 response.close()
-            } catch (e: Exception) {
-                android.util.Log.w("P2P", "LAN P2P connection to $lan failed: ${e.message}")
+            } catch (e: IOException) {
+                android.util.Log.w("P2P", "LAN P2P connection to $lan failed: ${e.javaClass.simpleName}")
+            } catch (e: IllegalArgumentException) {
+                // A peer advertising a LAN address OkHttp cannot build a URL from.
+                android.util.Log.w("P2P", "LAN P2P address $lan is not usable")
             }
         }
         return null
@@ -99,11 +102,15 @@ class AgroStreamFetcher @Inject constructor(
         android.util.Log.i("P2P", "Relaying \"${track.title}\" via ${remotePeer.petname}")
         return try {
             openRelaySession(track, remotePeer)?.let { receiveRelay(it) }
-        } catch (error: Exception) {
+        } catch (error: IOException) {
             // Swallowed silently until now, which is why a relay that never worked looked
             // exactly like one that was never tried. It still falls through to the archive —
             // this only makes the reason visible.
-            android.util.Log.w("P2P", "Relay failed for \"${track.title}\": ${error.message}")
+            android.util.Log.w("P2P", "Relay failed for \"${track.title}\": ${error.javaClass.simpleName}")
+            null
+        } catch (error: IllegalArgumentException) {
+            // The relay's open response was not the JSON object it should be.
+            android.util.Log.w("P2P", "Relay answered something unreadable for \"${track.title}\"")
             null
         }
     }
@@ -115,7 +122,7 @@ class AgroStreamFetcher @Inject constructor(
             put("toDevice", secureStorage.agroDeviceId)
         }.toString().toRequestBody("application/json".toMediaType())
 
-        android.util.Log.i("P2P", "POST $base/api/v1/relay/open …")
+        android.util.Log.i("P2P", "Opening a relay session …")
         val openRes = relayClient.newCall(authorized("$base/api/v1/relay/open").post(openBody).build()).execute()
         android.util.Log.i("P2P", "Relay open answered HTTP ${openRes.code}")
         if (!openRes.isSuccessful) {
@@ -127,15 +134,15 @@ class AgroStreamFetcher @Inject constructor(
         openRes.close()
         val jsonObj = kotlinx.serialization.json.Json.parseToJsonElement(bodyStr) as? JsonObject
         val sessionId = jsonObj?.get("sessionId")?.jsonPrimitive?.contentOrNull
-        if (sessionId == null) android.util.Log.w("P2P", "Relay open returned no session id: $bodyStr")
+        if (sessionId == null) android.util.Log.w("P2P", "Relay open returned no session id")
         return sessionId
     }
 
     private fun receiveRelay(sessionId: String): FetchedStream? {
-        android.util.Log.i("P2P", "GET relay/$sessionId/receive …")
+        android.util.Log.i("P2P", "Receiving from the relay session …")
         val recvRes = relayClient.newCall(authorized("$base/api/v1/relay/$sessionId/receive").get().build()).execute()
         if (recvRes.isSuccessful && recvRes.body != null) {
-            android.util.Log.i("P2P", "Relay stream open (session $sessionId)")
+            android.util.Log.i("P2P", "Relay stream open")
             return FetchedStream(recvRes, SyncRoute.RELAY)
         }
         android.util.Log.w("P2P", "Relay receive refused: HTTP ${recvRes.code}")

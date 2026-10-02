@@ -14,6 +14,7 @@ import okhttp3.Request
 import org.tensorflow.lite.Interpreter
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.channels.FileChannel
 import java.security.MessageDigest
@@ -89,7 +90,7 @@ class EmbeddingModelManager @Inject constructor(
         try {
             httpClient.newCall(Request.Builder().url(MODEL_URL).build()).execute().use { r ->
                 val body = r.body
-                if (!r.isSuccessful) error("HTTP ${r.code}")
+                if (!r.isSuccessful) throw IOException("HTTP ${r.code}")
                 streamToFileWithDigest(body, tmp) { fraction ->
                     _state.value = State.Downloading(fraction)
                 }
@@ -100,7 +101,7 @@ class EmbeddingModelManager @Inject constructor(
             tmp.safeDelete()
             _state.value = State.Absent
             throw e
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             tmp.safeDelete()
             Log.w(TAG, "model download failed", e)
             _state.value = State.Failed(e.message ?: "download failed")
@@ -129,7 +130,7 @@ class EmbeddingModelManager @Inject constructor(
             }
         }
         val hex = digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
-        if (hex != SHA256) error("checksum mismatch (got $hex)")
+        if (hex != SHA256) throw IOException("checksum mismatch (got $hex)")
     }
 
     private fun installAndVerify(tmp: File): State {
@@ -174,9 +175,19 @@ class EmbeddingModelManager @Inject constructor(
             interp.run(input, output)
             if (output[0].all { it == 0f }) "model produced an empty embedding" else null
         }
-    } catch (e: Exception) {
+    } catch (e: IOException) {
+        unloadable(e)
+    } catch (e: IllegalArgumentException) {
+        // What LiteRT throws for a file that is not a valid model, or one whose shapes do not match.
+        unloadable(e)
+    } catch (e: IllegalStateException) {
+        // What LiteRT throws when the interpreter itself fails to run.
+        unloadable(e)
+    }
+
+    private fun unloadable(e: Exception): String {
         Log.w(TAG, "model self-check failed", e)
-        "model could not be loaded: ${e.message}"
+        return "model could not be loaded: ${e.message}"
     }
 
     /** Removes the model. For a Settings "free up space" action. */

@@ -14,17 +14,18 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 
 /**
- * Stops a [WebView] costing battery once nobody is looking at it.
+ * Stops a [WebView] costing battery once nobody is looking at it, and [release]s it when the
+ * calling screen leaves — the one place it is torn down, so callers do not release it themselves.
  *
  * A WebView left alone keeps its JavaScript timers, its network requests and any media it started
  * running after the screen it lives on has gone. Compose detaches the view when the composable
- * leaves, which stops it drawing and nothing else — so without this, browsing an import page and
+ * leaves, which stops it drawing and nothing else — so without this, leaving a login page open and
  * pressing home leaves timers firing for as long as the process survives.
  *
  * [WebView.pauseTimers] is process-wide rather than per-instance: it suspends the shared JS
- * timer thread for every WebView in the app. That is correct here only because these screens are
- * full-screen and never coexist. A second, simultaneously-visible WebView would need
- * [WebView.onPause] alone, which is per-instance.
+ * timer thread for every WebView in the app, including zemer-cipher's hidden one that mints the
+ * PO tokens YouTube playback needs. So every pause here is matched by a resume — on the way back to
+ * the foreground, or when the screen goes away while still paused — and never left in place.
  */
 @Composable
 internal fun WebViewLifecycle(webView: WebView?) {
@@ -32,16 +33,19 @@ internal fun WebViewLifecycle(webView: WebView?) {
     DisposableEffect(owner, webView) {
         if (webView == null) return@DisposableEffect onDispose { }
 
+        var timersPaused = false
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> {
                     webView.onPause()
                     webView.pauseTimers()
+                    timersPaused = true
                 }
 
                 Lifecycle.Event.ON_RESUME -> {
                     webView.onResume()
                     webView.resumeTimers()
+                    timersPaused = false
                 }
 
                 else -> Unit
@@ -50,6 +54,7 @@ internal fun WebViewLifecycle(webView: WebView?) {
         owner.lifecycle.addObserver(observer)
         onDispose {
             owner.lifecycle.removeObserver(observer)
+            if (timersPaused) webView.resumeTimers()
             webView.release()
         }
     }
@@ -60,11 +65,14 @@ internal fun WebViewLifecycle(webView: WebView?) {
  *
  * The order matters: [WebView.destroy] on a view still attached to a window throws, and destroying
  * one still loading leaves the request in flight, so the page is stopped and blanked first.
+ *
+ * Deliberately no [WebView.pauseTimers]: destroying this view already ends its own JavaScript, and
+ * the process-wide pause would freeze every other WebView with nothing to resume them — the page
+ * under a closing sign-in popup, the next login screen, and zemer-cipher's PO-token page.
  */
 internal fun WebView.release() {
     stopLoading()
     onPause()
-    pauseTimers()
     loadUrl("about:blank")
     clearHistory()
     (parent as? ViewGroup)?.removeView(this)
@@ -101,19 +109,23 @@ internal fun WebView.stripWebViewUserAgentToken() {
  */
 internal fun launchNonWebUrl(context: Context, url: String): Boolean {
     if (url.startsWith("http://") || url.startsWith("https://")) return false
+    val uri = Uri.parse(url)
+    // Only the scheme is ever logged: these links can carry sign-in state in their path or query,
+    // and so can both exceptions' messages, which quote the whole intent.
     return try {
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        context.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         true
     } catch (e: ActivityNotFoundException) {
         // No app on the device can open it — a `market://` link with no Play Store, an
         // authenticator scheme nothing here has installed. The WebView simply does not navigate;
         // that reads as the tap doing nothing, which is a far smaller failure than crashing.
-        Log.w("WebViewLifecycle", "No app to handle $url")
+        Log.w(TAG, "No app to handle a ${uri.scheme}: link")
         true
-    } catch (e: Exception) {
-        // Malformed `intent://` URIs and similar can throw before `startActivity` is even reached.
-        // Same reasoning as above: swallow it, the WebView was never going to load this itself.
-        Log.w("WebViewLifecycle", "Could not open $url", e)
+    } catch (e: SecurityException) {
+        // An app claims the scheme but will not be started by others. Same outcome as above.
+        Log.w(TAG, "Not allowed to open a ${uri.scheme}: link")
         true
     }
 }
+
+private const val TAG = "WebViewLifecycle"

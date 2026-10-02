@@ -21,6 +21,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -98,8 +99,13 @@ class P2PServer @Inject constructor(
                 try {
                     val client = server.accept()
                     scope.launch { handleClient(client) }
-                } catch (e: Exception) {
+                } catch (e: IOException) {
+                    // `stop()` closing the socket is how this loop is meant to end.
                     if (!isRunning) break
+                    // Anything else — out of file descriptors, say — would fail again at once, so
+                    // it is logged and given a moment rather than retried in a tight loop.
+                    Log.w(TAG, "Accepting a peer failed: ${e.javaClass.simpleName}")
+                    delay(ACCEPT_RETRY_MS)
                 }
             }
         }
@@ -127,7 +133,9 @@ class P2PServer @Inject constructor(
                     setReferenceCounted(false)
                     acquire()
                 }
-        } catch (e: Exception) {
+        } catch (e: SecurityException) {
+            // Without WAKE_LOCK the transfer still runs, just at whatever speed Wi-Fi power
+            // saving allows.
             Log.w(TAG, "Could not acquire WifiLock", e)
         }
     }
@@ -138,11 +146,9 @@ class P2PServer @Inject constructor(
     }
 
     private fun releaseWifiLock() {
-        try {
-            wifiLock?.release()
-        } catch (e: Exception) {
-            Log.d(TAG, "Wi-Fi lock was already released", e)
-        }
+        // Not reference-counted, so releasing one that is no longer held is the only way this
+        // could throw — checked rather than caught.
+        wifiLock?.takeIf { it.isHeld }?.release()
         wifiLock = null
     }
 
@@ -152,17 +158,19 @@ class P2PServer @Inject constructor(
         releaseWifiLock()
         try {
             serverSocket?.close()
-        } catch (e: Exception) {
-            Log.d(TAG, "Server socket was already closed", e)
+        } catch (e: IOException) {
+            Log.d(TAG, "Server socket did not close cleanly", e)
         }
         serverSocket = null
     }
 
     private suspend fun handleClient(socket: Socket) {
         acquireWifiLockForTransfer()
+        // Only I/O failures are the peer's doing and expected; anything else reaches the scope's
+        // handler, and cancellation still ends the coroutine.
         try {
             serve(socket)
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             Log.i(TAG, "peer went away mid-request: ${e.javaClass.simpleName}")
         } finally {
             releaseWifiLockAfterTransfer()
@@ -177,7 +185,9 @@ class P2PServer @Inject constructor(
             val buffer = ByteArray(4096)
             val bytesRead = try {
                 input.read(buffer)
-            } catch (e: Exception) {
+            } catch (e: IOException) {
+                // Connected but never sent a request inside the timeout, or dropped before it did.
+                Log.d(TAG, "No request from peer: ${e.javaClass.simpleName}")
                 return
             }
             if (bytesRead <= 0) return
@@ -269,5 +279,6 @@ class P2PServer @Inject constructor(
     private companion object {
         const val TAG = "P2PServer"
         const val FETCH_PREFIX = "/p2p/fetch/"
+        const val ACCEPT_RETRY_MS = 500L
     }
 }

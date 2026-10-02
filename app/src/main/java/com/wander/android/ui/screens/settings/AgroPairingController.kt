@@ -81,7 +81,7 @@ internal class AgroPairingController @Inject constructor(
             onSuccess = { AgroConnectionState.Connected(it.username, it.role) },
             onFailure = { error ->
                 when (val typed = AgroAuthError.from(error)) {
-                    is AgroAuthError.NotActive -> AgroConnectionState.NotActive(typed.explain())
+                    is AgroAuthError.NotActive -> AgroConnectionState.NotActive
                     is AgroAuthError.Rejected -> AgroConnectionState.Rejected
                     // A rate limit or an unreachable host says nothing about whether the
                     // credential is good, so neither may be reported as being signed out.

@@ -150,6 +150,6 @@ private fun AgroConnectionState.describe(
     is AgroConnectionState.Checking -> stringResource(R.string.settings_agro_checking)
     is AgroConnectionState.Connected -> devicePetname
     is AgroConnectionState.Rejected -> stringResource(R.string.settings_agro_signed_out_tap_to_pair)
-    is AgroConnectionState.NotActive -> detail
+    is AgroConnectionState.NotActive -> stringResource(R.string.agro_error_not_active)
     is AgroConnectionState.Unreachable -> stringResource(R.string.settings_agro_could_not_reach_server)
 }

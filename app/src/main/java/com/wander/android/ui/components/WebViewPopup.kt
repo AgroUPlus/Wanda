@@ -8,6 +8,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
@@ -18,7 +19,7 @@ import androidx.compose.ui.window.DialogProperties
  * Answers `WebChromeClient.onCreateWindow` by handing the request a genuine second [WebView]
  * rather than the one that asked for it.
  *
- * Some "Continue with Google" buttons (Deezer's, Spotify's) use Google Identity Services' popup
+ * Some "Continue with Google" buttons (Deezer's among them) use Google Identity Services' popup
  * mode: the button calls `window.open()`, and the page that opens posts the credential back to
  * `window.opener` with `postMessage` and then calls `window.close()` on itself once done. Two
  * simpler-looking approaches both fail this specific handshake:
@@ -66,10 +67,15 @@ internal fun webChromeClientHostingPopups(
  * Shows [popup] full-screen for as long as it's non-null, then gets out of the way. The popup is
  * expected to close itself once its sign-in flow finishes; [onDismissRequest] only covers the
  * person backing out of it manually (system back gesture, tap outside).
+ *
+ * This owns the popup's teardown: it is released whenever it stops being shown — closed by the
+ * page, dismissed, or the whole screen leaving while it was still open — so callers only ever
+ * clear their reference to it.
  */
 @Composable
 internal fun WebViewPopupDialog(popup: WebView?, onDismissRequest: () -> Unit) {
     if (popup == null) return
+    DisposableEffect(popup) { onDispose { popup.release() } }
     Dialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = false)

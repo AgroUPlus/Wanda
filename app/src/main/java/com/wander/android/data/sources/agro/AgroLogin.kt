@@ -69,7 +69,8 @@ class AgroLogin @Inject constructor(
     ).mapCatching { json ->
         val token = json["token"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
             ?: throw AgroAuthError.Server(
-                json["error"]?.jsonPrimitive?.contentOrNull ?: "Server returned no device token"
+                serverMessage = json["error"]?.jsonPrimitive?.contentOrNull,
+                diagnostic = "Server returned no device token"
             )
         val vaultSalt = json["vaultSalt"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
         val vaultKeyWrapped = json["vaultKeyWrapped"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
@@ -102,7 +103,8 @@ class AgroLogin @Inject constructor(
         val passphrase = json["passphrase"]?.jsonPrimitive?.contentOrNull
         if (passphrase.isNullOrBlank()) {
             throw AgroAuthError.Server(
-                json["error"]?.jsonPrimitive?.contentOrNull ?: "Server returned no passphrase"
+                serverMessage = json["error"]?.jsonPrimitive?.contentOrNull,
+                diagnostic = "Server returned no passphrase"
             )
         }
         AgroSignup(
@@ -143,7 +145,7 @@ class AgroLogin @Inject constructor(
                         serverMessage = errorMsg
                     )
                 }
-                json ?: throw AgroAuthError.Server("The server did not answer with JSON")
+                json ?: throw AgroAuthError.Server(serverMessage = null, diagnostic = "The server did not answer with JSON")
             }.recoverCatching { throw AgroAuthError.from(it) }
         }
 }

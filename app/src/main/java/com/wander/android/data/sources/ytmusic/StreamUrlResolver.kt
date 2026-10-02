@@ -1,6 +1,8 @@
 package com.wander.android.data.sources.ytmusic
 
 import com.zemer.cipher.CipherDeobfuscator
+import com.zemer.cipher.CipherException
+import com.zemer.cipher.CipherRendererGoneException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
@@ -32,7 +34,11 @@ class StreamUrlResolver @Inject constructor() {
         // swallowing it would hide the cause of a stall, so it surfaces.
         try {
             CipherDeobfuscator.transformNParamInUrl(signed)
-        } catch (e: Exception) {
+        } catch (e: CipherException) {
+            throw IOException("Could not transform the YouTube stream throttling parameter", e)
+        } catch (e: CipherRendererGoneException) {
+            throw IOException("Could not transform the YouTube stream throttling parameter", e)
+        } catch (e: IllegalStateException) {
             throw IOException("Could not transform the YouTube stream throttling parameter", e)
         }
     }
@@ -42,7 +48,11 @@ class StreamUrlResolver @Inject constructor() {
             ?: throw IOException("YouTube Music returned no playable audio for this track")
         val url = try {
             CipherDeobfuscator.deobfuscateStreamUrl(cipher, videoId)
-        } catch (e: Exception) {
+        } catch (e: CipherException) {
+            throw IOException("Could not unscramble the YouTube stream signature", e)
+        } catch (e: CipherRendererGoneException) {
+            throw IOException("Could not unscramble the YouTube stream signature", e)
+        } catch (e: IllegalStateException) {
             throw IOException("Could not unscramble the YouTube stream signature", e)
         }
         // The deobfuscator answers null when the player JS it fetched no longer exposes the

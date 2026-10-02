@@ -1,7 +1,9 @@
 package com.wander.android.ui.screens.login
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.R
 import com.wander.android.data.sources.deezer.DeezerAccountManager
 import com.wander.android.data.sources.deezer.DeezerStreamResolver
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,7 +16,7 @@ import javax.inject.Inject
 
 data class DeezerLoginState(
     val manualArl: String = "",
-    val error: String? = null,
+    @StringRes val error: Int? = null,
     val isLoading: Boolean = false,
     val isSignedIn: Boolean = false
 )
@@ -31,7 +33,13 @@ class DeezerLoginViewModel @Inject constructor(
     fun onManualArlChange(value: String) =
         _state.update { it.copy(manualArl = value, error = null) }
 
+    /**
+     * Called by the login WebView whenever the cookie jar holds an `arl`. Three separate checks
+     * report it — a request interceptor, page loads, and a timer — so only the first one counts.
+     * Every later call would store the same session again and drop the stream resolver's cache.
+     */
     fun onSessionCaptured(cookieHeader: String) {
+        if (_state.value.isLoading || _state.value.isSignedIn) return
         val extracted = extractArl(cookieHeader)
         if (extracted != null) {
             submitArl(extracted)
@@ -44,7 +52,7 @@ class DeezerLoginViewModel @Inject constructor(
         if (extracted != null) {
             submitArl(extracted)
         } else {
-            _state.update { it.copy(error = "Invalid ARL token format.") }
+            _state.update { it.copy(error = R.string.login_error_invalid_arl) }
         }
     }
 
