@@ -4,6 +4,8 @@ import com.wander.android.core.database.dao.PlaylistDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.PlaylistEntity
 import com.wander.android.core.database.entity.TrackEntity
+import com.wander.android.core.work.PlaylistImportScheduler
+import com.wander.android.core.work.PlaylistImportWorker
 import com.wander.android.data.importer.AppleMusicPlaylistParser
 import com.wander.android.data.importer.DeezerPlaylistParser
 import com.wander.android.data.importer.ImportProgress
@@ -13,6 +15,7 @@ import com.wander.android.data.importer.RawImportTrack
 import com.wander.android.data.importer.SpotifyPlaylistParser
 import com.wander.android.data.importer.TextPlaylistParser
 import com.wander.android.data.importer.YouTubePlaylistParser
+import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +33,7 @@ class PlaylistImportRepository @Inject constructor(
     private val youtubeParser: YouTubePlaylistParser,
     private val appleMusicParser: AppleMusicPlaylistParser,
     private val textParser: TextPlaylistParser,
-    private val trackMatcher: TrackMatcher,
+    private val importScheduler: PlaylistImportScheduler,
     private val trackDao: TrackDao,
     private val playlistDao: PlaylistDao
 ) {
@@ -62,6 +65,11 @@ class PlaylistImportRepository @Inject constructor(
         importParsedPlaylist(rawPlaylist)
     }
 
+    /**
+     * Saves the playlist at once with every track as an [SourceType.UNRESOLVED] placeholder, then
+     * hands matching to [PlaylistImportWorker]. Room is the source of truth, so the playlist is
+     * usable and visible immediately and fills in as the worker resolves tracks.
+     */
     suspend fun importParsedPlaylist(
         rawPlaylist: RawImportPlaylist,
         customTitle: String? = null,
@@ -69,55 +77,39 @@ class PlaylistImportRepository @Inject constructor(
     ): Result<String> = withContext(Dispatchers.IO) {
         val title = customTitle?.takeIf { it.isNotBlank() } ?: rawPlaylist.title
         val tracks = tracksToImport ?: rawPlaylist.tracks
-        val total = tracks.size
-        val matchedTracks = mutableListOf<UnifiedTrack>()
-
-        tracks.forEachIndexed { index, rawTrack ->
-            _progress.value = ImportProgress.Matching(
-                current = index + 1,
-                total = total,
-                currentTrackName = "${rawTrack.artist} - ${rawTrack.title}",
-                matchedCount = matchedTracks.size
-            )
-
-            val bestMatch = trackMatcher.match(rawTrack.title, rawTrack.artist, rawTrack.durationMs)
-
-            if (bestMatch != null) {
-                matchedTracks.add(bestMatch)
-            }
-        }
-
-        if (matchedTracks.isEmpty()) {
-            val msg = "Couldn't match any tracks from this playlist."
+        if (tracks.isEmpty()) {
+            val msg = "This playlist has no tracks to import."
             _progress.value = ImportProgress.Failed(msg)
             return@withContext Result.failure(IllegalStateException(msg))
         }
 
-        _progress.value = ImportProgress.Saving(title, matchedTracks.size)
-
-        // Save matched tracks uniquely to Room so they are addressable locally
-        val uniqueTracks = matchedTracks.distinctBy { it.id }
-        trackDao.upsertTracks(
-            uniqueTracks.map { TrackEntity.fromUnifiedTrack(it, isLibrary = true) }
-        )
+        val placeholders = tracks.map { raw ->
+            TrackEntity.fromUnifiedTrack(
+                UnifiedTrack(
+                    id = SourceType.UNRESOLVED.idPrefix + UUID.randomUUID(),
+                    source = SourceType.UNRESOLVED,
+                    title = raw.title,
+                    artist = raw.artist,
+                    album = raw.album?.takeIf { it.isNotBlank() },
+                    durationMs = raw.durationMs
+                )
+            )
+        }
+        trackDao.upsertTracks(placeholders)
 
         val playlistId = "local:playlist:${UUID.randomUUID()}"
-        val playlistEntity = PlaylistEntity(
-            id = playlistId,
-            name = title,
-            comment = "Imported from ${rawPlaylist.platform.displayName} • ${matchedTracks.size}/$total matched",
-            coverArtUrl = rawPlaylist.coverUrl ?: matchedTracks.firstOrNull()?.artworkUrl,
-            trackIds = matchedTracks.map { it.id }.joinToString(",")
+        playlistDao.insertPlaylist(
+            PlaylistEntity(
+                id = playlistId,
+                name = title,
+                comment = "Imported from ${rawPlaylist.platform.displayName}",
+                coverArtUrl = rawPlaylist.coverUrl,
+                trackIds = placeholders.joinToString(",") { it.id }
+            )
         )
-        playlistDao.insertPlaylist(playlistEntity)
+        importScheduler.enqueue(playlistId)
 
-        _progress.value = ImportProgress.Success(
-            playlistId = playlistId,
-            playlistName = title,
-            matchedCount = matchedTracks.size,
-            totalCount = total
-        )
-
+        _progress.value = ImportProgress.Success(playlistId, title, tracks.size)
         Result.success(playlistId)
     }
 }

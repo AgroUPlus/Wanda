@@ -51,18 +51,10 @@ data class RawImportPlaylist(
 sealed interface ImportProgress {
     data object Idle : ImportProgress
     data class Fetching(val platform: PlatformType) : ImportProgress
-    data class Matching(
-        val current: Int,
-        val total: Int,
-        val currentTrackName: String,
-        val matchedCount: Int
-    ) : ImportProgress
-    data class Saving(val playlistName: String, val trackCount: Int) : ImportProgress
     data class Success(
         val playlistId: String,
         val playlistName: String,
-        val matchedCount: Int,
-        val totalCount: Int
+        val trackCount: Int
     ) : ImportProgress
     data class Failed(val error: String) : ImportProgress
 }

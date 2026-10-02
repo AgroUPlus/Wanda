@@ -199,6 +199,7 @@ class LocalMusicSource @Inject constructor(
 
     override suspend fun deletePlaylist(playlistId: String): Result<Unit> {
         playlistDao.deletePlaylist(playlistId)
+        trackDao.deleteUnreferencedUnresolved()
         return Result.success(Unit)
     }
 }

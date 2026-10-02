@@ -186,6 +186,9 @@
     <!-- Importer -->
     <string name="importer_edit_title">Edit Title</string>
     <string name="importer_import_playlist">Import Playlist</string>
+    <string name="notif_importing_playlist">Matching \"%1$s\"</string>
+    <string name="notif_import_progress">%1$d of %2$d tracks</string>
+    <string name="importer_saved_matching_background">\"%1$s\" • %2$d tracks saved. They are matched to your sources in the background.</string>
     <string name="importer_listen_now">Listen now</string>
     <string name="importer_load_playlist">Load Playlist</string>
     <string name="importer_none">None</string>

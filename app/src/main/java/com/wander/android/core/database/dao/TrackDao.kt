@@ -56,6 +56,24 @@ interface TrackDao : TrackLibraryQueries, TrackSyncQueries {
     )
     suspend fun searchSubscribedEpisodes(query: String, limit: Int = 50): List<TrackEntity>
 
+    /**
+     * Drops import placeholders that no playlist lists any more — resolved ones, and those of a
+     * deleted playlist. Decided by what the playlists hold now rather than by an id the caller
+     * remembers, so a placeholder the user also added to another playlist is never pulled out
+     * from under it.
+     */
+    @Query(
+        """
+        DELETE FROM tracks
+        WHERE source = 'UNRESOLVED'
+          AND NOT EXISTS (
+            SELECT 1 FROM local_playlists
+            WHERE ',' || local_playlists.trackIds || ',' LIKE '%,' || tracks.id || ',%'
+          )
+        """
+    )
+    suspend fun deleteUnreferencedUnresolved(): Int
+
     @Query("UPDATE tracks SET isEpisode = 1 WHERE id IN (:trackIds)")
     suspend fun markAsEpisodes(trackIds: List<String>)
 

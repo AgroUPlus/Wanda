@@ -49,7 +49,8 @@ class WorkProgressNotification @Inject constructor(
     ) {
         LIBRARY_SYNC("wanda_library_sync", "Library sync", 4711, deepLinkHost = null),
         FINGERPRINT("wanda_fingerprint", "Measuring your library", 4713, "fingerprints"),
-        DOWNLOAD("wanda_downloads", "Downloads", 4714, deepLinkHost = null)
+        DOWNLOAD("wanda_downloads", "Downloads", 4714, deepLinkHost = null),
+        PLAYLIST_IMPORT("wanda_playlist_import", "Playlist imports", 4715, deepLinkHost = null)
     }
 
     /**
