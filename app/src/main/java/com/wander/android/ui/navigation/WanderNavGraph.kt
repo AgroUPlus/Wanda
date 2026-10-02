@@ -87,6 +87,13 @@ fun NavGraphBuilder.wanderNavGraph(
         PlaylistScreen(
             contentPadding = contentPadding,
             onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) },
+            // The converted copy replaces the original on the stack: Back from it leads where the
+            // original was opened from, not to the playlist that was just copied.
+            onOpenPlaylist = { id ->
+                navController.navigate(Routes.playlist(id)) {
+                    popUpTo(Routes.PLAYLIST) { inclusive = true }
+                }
+            },
             onBack = navController::popBackStack
         )
     }

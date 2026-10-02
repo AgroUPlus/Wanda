@@ -56,6 +56,10 @@ internal fun AppEvents(
     }
 
     LaunchedEffect(viewModel) {
+        viewModel.playlistMessages.collect { message -> snackbarHostState.showSnackbar(message) }
+    }
+
+    LaunchedEffect(viewModel) {
         viewModel.syncErrors.collect { message ->
             snackbarHostState.showSnackbar(message, withDismissAction = true)
         }

@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.LibraryAdd
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,6 +24,7 @@ import com.wander.android.R
 import com.wander.android.ui.components.ImmersiveHero
 import com.wander.android.ui.components.ShapedActionButton
 import com.wander.android.ui.components.ShapedPlayButton
+import com.wander.android.ui.components.ShapedPlaySize
 
 /**
  * The top of an album or playlist page: the cover, at the size a cover is worth looking at.
@@ -46,6 +49,10 @@ internal fun AlbumHero(
     modifier: Modifier = Modifier,
     /** Null when this record's backend cannot publish a link for it. */
     onShare: (() -> Unit)? = null,
+    /** Playlists only: copy a backend's playlist into a Wanda one. Null when it already is one. */
+    onConvert: (() -> Unit)? = null,
+    /** Playlists only: save the tracks as an `.m3u8` file. */
+    onDownload: (() -> Unit)? = null,
     /** On the title alone — how the page's collapsing bar tracks it. */
     titleModifier: Modifier = Modifier
 ) {
@@ -80,8 +87,14 @@ internal fun AlbumHero(
         // Centred under the cover rather than pushed to the edges. With the artwork centred above
         // them, actions pinned left and right read as belonging to the screen instead of to the
         // record — and Play keeps its size advantage, which is what states the hierarchy here.
+        // Five buttons at the usual spacing are wider than a 360 dp phone, so a playlist's full
+        // row closes up and Play gives up a little of its size; it still leads by a wide margin.
+        val crowded = listOfNotNull(onShare, onConvert, onDownload).size > 1
         Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(
+                if (crowded) 8.dp else 16.dp,
+                Alignment.CenterHorizontally
+            ),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
@@ -95,13 +108,28 @@ internal fun AlbumHero(
             ShapedPlayButton(
                 onClick = onPlay,
                 contentDescription = stringResource(R.string.action_play),
-                icon = Icons.Rounded.PlayArrow
+                icon = Icons.Rounded.PlayArrow,
+                size = if (crowded) CrowdedPlaySize else ShapedPlaySize
             )
             onShare?.let { share ->
                 ShapedActionButton(
                     onClick = share,
                     contentDescription = stringResource(R.string.action_share),
                     icon = Icons.Rounded.Share
+                )
+            }
+            onConvert?.let { convert ->
+                ShapedActionButton(
+                    onClick = convert,
+                    contentDescription = stringResource(R.string.playlist_convert_action),
+                    icon = Icons.Rounded.LibraryAdd
+                )
+            }
+            onDownload?.let { download ->
+                ShapedActionButton(
+                    onClick = download,
+                    contentDescription = stringResource(R.string.playlist_download),
+                    icon = Icons.Rounded.Download
                 )
             }
         }
@@ -115,3 +143,5 @@ internal fun AlbumHero(
  * height is the room the title needs without covering the record's own centre.
  */
 internal const val CoverAspect = 0.86f
+
+private val CrowdedPlaySize = 84.dp

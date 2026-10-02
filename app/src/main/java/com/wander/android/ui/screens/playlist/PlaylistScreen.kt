@@ -41,13 +41,13 @@ fun PlaylistScreen(
     contentPadding: PaddingValues,
     onBack: () -> Unit,
     onOpenArtist: (String, String?) -> Unit,
+    onOpenPlaylist: (String) -> Unit,
     viewModel: PlaylistViewModel = hiltViewModel()
 ) {
     val playlist by viewModel.playlist.collectAsStateWithLifecycle()
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val importWork by viewModel.importWork.collectAsStateWithLifecycle()
-    val choosingVisibility by viewModel.choosingVisibility.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
 
     val listState = rememberLazyListState()
@@ -55,12 +55,7 @@ fun PlaylistScreen(
 
     val addToPlaylist = AddToPlaylistHost()
 
-    if (choosingVisibility) {
-        PlaylistVisibilitySheet(
-            onPick = viewModel::shareWithVisibility,
-            onDismiss = viewModel::dismissVisibilityChoice
-        )
-    }
+    val shareActions = PlaylistShareHost(playlist, tracks, onOpenPlaylist)
 
     actionsFor?.let { track ->
         TrackActionsSheet(
@@ -129,7 +124,9 @@ fun PlaylistScreen(
                             artworkUrl = current?.coverArtUrl ?: tracks.firstNotNullOfOrNull { it.artworkUrl },
                             onPlay = viewModel::playAll,
                             onShuffle = viewModel::shuffle,
-                            onShare = viewModel::sharePlaylist.takeIf { viewModel.canSharePlaylist() },
+                            onShare = shareActions.onShare,
+                            onConvert = shareActions.onConvert,
+                            onDownload = shareActions.onDownload,
                             modifier = Modifier
                                 .padding(bottom = 16.dp),
                             titleModifier = Modifier.collapsingTitleSource(titleState)

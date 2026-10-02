@@ -15,12 +15,15 @@ import com.wander.android.data.repository.InstantRadioRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.SearchQueryHolder
 import com.wander.android.data.repository.ShareRepository
+import com.wander.android.data.repository.PlaylistPublicationRepository
+import com.wander.android.data.repository.PlaylistWriteRepository
 import com.wander.android.data.sources.agro.MissingTrack
 import com.wander.android.data.sources.agro.SyncRoute
 import com.wander.android.data.sources.local.LocalMusicSource
 import com.wander.android.ui.navigation.DeepLinkRouter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -37,6 +40,8 @@ class WanderAppViewModel @Inject constructor(
     private val localSource: LocalMusicSource,
     private val musicRepository: MusicRepository,
     shareRepository: ShareRepository,
+    playlistPublications: PlaylistPublicationRepository,
+    playlistWrites: PlaylistWriteRepository,
     private val syncCoordinator: SyncOfferCoordinator,
     private val networkCoordinator: NetworkPromptCoordinator,
     private val secureStorage: SecureStorage,
@@ -111,6 +116,12 @@ class WanderAppViewModel @Inject constructor(
 
     /** A share the backend refused — usually sharing disabled server-side. */
     val shareErrors = shareRepository.errors
+
+    /**
+     * Outcomes of playlist writes and exports — a playlist created or added to, a file saved, a
+     * visibility changed — whose sheet or screen has usually closed by the time they land.
+     */
+    val playlistMessages = merge(playlistWrites.messages, playlistPublications.messages)
 
     // ── Library sync offers (delegated to SyncOfferCoordinator) ─────────────────────────────
 
