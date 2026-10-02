@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.data.importer.ImportProgress
@@ -44,7 +45,8 @@ internal fun ImportProgressContent(progress: ImportProgress) {
                 Text(
                     text = stringResource(R.string.importer_saved_matching_background, progress.playlistName, progress.trackCount),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
                 )
             }
         }
@@ -70,7 +72,8 @@ internal fun ImportProgressContent(progress: ImportProgress) {
                 Text(
                     text = progress.error,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
                 )
             }
         }
