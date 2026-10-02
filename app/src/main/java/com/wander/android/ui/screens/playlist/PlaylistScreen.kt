@@ -47,12 +47,20 @@ fun PlaylistScreen(
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val importWork by viewModel.importWork.collectAsStateWithLifecycle()
+    val choosingVisibility by viewModel.choosingVisibility.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
 
     val listState = rememberLazyListState()
     val titleState = rememberCollapsingTitleState(listState)
 
     val addToPlaylist = AddToPlaylistHost()
+
+    if (choosingVisibility) {
+        PlaylistVisibilitySheet(
+            onPick = viewModel::shareWithVisibility,
+            onDismiss = viewModel::dismissVisibilityChoice
+        )
+    }
 
     actionsFor?.let { track ->
         TrackActionsSheet(

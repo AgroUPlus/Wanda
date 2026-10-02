@@ -9,6 +9,7 @@ import com.wander.android.data.sources.ShareKind
 import com.wander.android.data.sources.ShareTarget
 import com.wander.android.data.sources.agro.AgroPlaylistApi
 import com.wander.android.data.sources.agro.AgroPlaylistTrack
+import com.wander.android.data.sources.agro.PlaylistVisibility
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -135,20 +136,28 @@ class ShareRepository @Inject constructor(
         )
     }
 
+    /** Whether a share can go through Agro, in which case the person chooses who can open it. */
+    val canPublishToAgro: Boolean get() = agroPlaylists.isAvailable
+
     /**
      * Shares a playlist that has no link of its own. With an Agro server paired it is published
      * there and the link names only its id, which has no length limit and reaches the other
      * accounts on that server; without one, the tracks go in the link itself — see
      * [shareUniversalPlaylist].
      */
-    suspend fun shareLocalPlaylist(playlist: UnifiedPlaylist, tracks: List<UnifiedTrack>) {
+    suspend fun shareLocalPlaylist(
+        playlist: UnifiedPlaylist,
+        tracks: List<UnifiedTrack>,
+        visibility: PlaylistVisibility = PlaylistVisibility.FRIENDS
+    ) {
         if (!agroPlaylists.isAvailable) {
             shareUniversalPlaylist(playlist, tracks)
             return
         }
         agroPlaylists.publish(
             playlist.name,
-            tracks.map { AgroPlaylistTrack(it.title, it.artist, it.album, it.durationMs) }
+            tracks.map { AgroPlaylistTrack(it.title, it.artist, it.album, it.durationMs) },
+            visibility
         ).fold(
             onSuccess = { id ->
                 _links.tryEmit(

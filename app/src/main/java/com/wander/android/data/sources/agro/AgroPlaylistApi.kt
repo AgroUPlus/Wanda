@@ -24,11 +24,14 @@ data class AgroPlaylistTrack(
 
 data class AgroPlaylist(val title: String, val tracks: List<AgroPlaylistTrack>)
 
+/** Who on the server can open a published playlist. The owner always can. */
+enum class PlaylistVisibility { PRIVATE, FRIENDS, PUBLIC }
+
 /**
  * Playlists on the paired Agro server, used to share one with the other accounts on it.
  *
- * Publishing makes the playlist public on the server, which is what lets another signed-in
- * account fetch it by id; the server refuses anyone who is not signed in. Tracks are added in
+ * Publishing sets who can fetch the playlist by id: only the owner, the owner's friends, or every
+ * signed-in account; the server refuses anyone who is not signed in. Tracks are added in
  * aliased batches: mutation fields run in order, so positions come out right, and one request per
  * batch keeps a long playlist from costing a round trip per track.
  */
@@ -37,15 +40,15 @@ class AgroPlaylistApi @Inject constructor(private val graphQl: AgroGraphQl) {
 
     val isAvailable: Boolean get() = graphQl.isConfigured
 
-    /** Creates a public playlist holding [tracks] and returns its id, or removes what it made and fails. */
-    suspend fun publish(name: String, tracks: List<AgroPlaylistTrack>): Result<String> {
-        val created = graphQl.execute(
-            CREATE,
-            buildJsonObject {
-                put("title", name.take(MAX_TITLE))
-                put("isPublic", true)
-            }
-        ).mapCatching { data ->
+    /** Creates a playlist holding [tracks] and returns its id, or removes what it made and fails. */
+    suspend fun publish(
+        name: String,
+        tracks: List<AgroPlaylistTrack>,
+        visibility: PlaylistVisibility
+    ): Result<String> {
+        val created = graphQl.execute(createQuery(visibility), createVariables(name, visibility))
+            .recoverCatching { error -> throw friendlyVisibilityError(error, visibility) }
+            .mapCatching { data ->
             data["createPlaylist"]?.jsonObject?.get("id")?.jsonPrimitive?.contentOrNull
                 ?: throw IOException("Agro did not return the new playlist")
         }
@@ -86,8 +89,31 @@ class AgroPlaylistApi @Inject constructor(private val graphQl: AgroGraphQl) {
         private const val MAX_TITLE = 255
         private const val MAX_FIELD = 500
 
-        private const val CREATE =
-            "mutation(\$title: String!, \$isPublic: Boolean) { createPlaylist(title: \$title, isPublic: \$isPublic) { id } }"
+        /**
+         * Public and private use the `isPublic` flag every server has had since playlists existed,
+         * so they keep working against one that has not been updated. Only friends-only needs the
+         * newer `visibility` argument.
+         */
+        fun createQuery(visibility: PlaylistVisibility): String = when (visibility) {
+            PlaylistVisibility.FRIENDS ->
+                "mutation(\$title: String!, \$visibility: PlaylistVisibility) { createPlaylist(title: \$title, visibility: \$visibility) { id } }"
+            else ->
+                "mutation(\$title: String!, \$isPublic: Boolean) { createPlaylist(title: \$title, isPublic: \$isPublic) { id } }"
+        }
+
+        fun createVariables(name: String, visibility: PlaylistVisibility): JsonObject = buildJsonObject {
+            put("title", name.take(MAX_TITLE))
+            if (visibility == PlaylistVisibility.FRIENDS) put("visibility", "FRIENDS")
+            else put("isPublic", visibility == PlaylistVisibility.PUBLIC)
+        }
+
+        /** An older server rejects the friends-only argument by name; say what to do about it. */
+        fun friendlyVisibilityError(error: Throwable, visibility: PlaylistVisibility): Throwable =
+            if (visibility == PlaylistVisibility.FRIENDS && error.message?.contains("PlaylistVisibility") == true) {
+                IOException("This Agro server is too old for friends-only playlists. Update it, or choose another option.")
+            } else {
+                error
+            }
         private const val DELETE = "mutation(\$id: String!) { deletePlaylist(playlistId: \$id) }"
         private const val FETCH =
             "query(\$id: String!) { playlist(id: \$id) { title items { title artist album durationMs } } }"

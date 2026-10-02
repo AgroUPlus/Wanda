@@ -7,6 +7,7 @@ import com.wander.android.core.playback.PlaybackCoordinator
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.work.ImportWorkState
 import com.wander.android.core.work.PlaylistImportScheduler
+import com.wander.android.data.sources.agro.PlaylistVisibility
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MusicRepository
@@ -93,6 +94,22 @@ class PlaylistViewModel @Inject constructor(
         if (start >= 0) playerConnection.play(queue, start)
     }
 
+    private val _choosingVisibility = MutableStateFlow(false)
+
+    /** True while the person is picking who can open the playlist they are about to publish. */
+    val choosingVisibility: StateFlow<Boolean> = _choosingVisibility.asStateFlow()
+
+    fun dismissVisibilityChoice() {
+        _choosingVisibility.value = false
+    }
+
+    fun shareWithVisibility(visibility: PlaylistVisibility) {
+        _choosingVisibility.value = false
+        val pl = _playlist.value ?: return
+        val list = _tracks.value
+        viewModelScope.launch { shareRepository.shareLocalPlaylist(pl, list, visibility) }
+    }
+
     /** Matches the placeholders that were not found, again. */
     fun retryImport() = importScheduler.enqueue(playlistId)
 
@@ -122,8 +139,13 @@ class PlaylistViewModel @Inject constructor(
     fun sharePlaylist() {
         val pl = _playlist.value ?: return
         if (!shareRepository.canShare(pl.source)) {
-            val list = _tracks.value
-            viewModelScope.launch { shareRepository.shareLocalPlaylist(pl, list) }
+            // With Agro paired the person decides who can open it; otherwise it is just a link.
+            if (shareRepository.canPublishToAgro) {
+                _choosingVisibility.value = true
+            } else {
+                val list = _tracks.value
+                viewModelScope.launch { shareRepository.shareLocalPlaylist(pl, list) }
+            }
             return
         }
         viewModelScope.launch {

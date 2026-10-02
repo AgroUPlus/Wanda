@@ -3,6 +3,7 @@ package com.wander.android
 import com.wander.android.data.repository.AgroPlaylistLink
 import com.wander.android.data.sources.agro.AgroPlaylistApi
 import com.wander.android.data.sources.agro.AgroPlaylistTrack
+import com.wander.android.data.sources.agro.PlaylistVisibility
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
@@ -61,5 +62,31 @@ class AgroPlaylistTest {
         assertFalse("album" in second)
         assertFalse("durationMs" in second)
         assertEquals("1000", vars["t0"]!!.jsonObject["durationMs"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun publicAndPrivateStayOnTheFlagEveryServerUnderstands() {
+        for (visibility in listOf(PlaylistVisibility.PUBLIC, PlaylistVisibility.PRIVATE)) {
+            assertFalse(AgroPlaylistApi.createQuery(visibility).contains("PlaylistVisibility"))
+        }
+        assertEquals("true", AgroPlaylistApi.createVariables("A", PlaylistVisibility.PUBLIC)["isPublic"]!!.jsonPrimitive.content)
+        assertEquals("false", AgroPlaylistApi.createVariables("A", PlaylistVisibility.PRIVATE)["isPublic"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun friendsOnlyUsesTheVisibilityArgument() {
+        val vars = AgroPlaylistApi.createVariables("A", PlaylistVisibility.FRIENDS)
+
+        assertTrue(AgroPlaylistApi.createQuery(PlaylistVisibility.FRIENDS).contains("visibility: \$visibility"))
+        assertEquals("FRIENDS", vars["visibility"]!!.jsonPrimitive.content)
+        assertFalse("isPublic" in vars)
+    }
+
+    @Test
+    fun anOlderServerGetsAnExplanationInsteadOfAGraphQlError() {
+        val old = java.io.IOException("Agro rejected the request: Unknown type \"PlaylistVisibility\"")
+
+        assertTrue(AgroPlaylistApi.friendlyVisibilityError(old, PlaylistVisibility.FRIENDS).message!!.contains("too old"))
+        assertEquals(old, AgroPlaylistApi.friendlyVisibilityError(old, PlaylistVisibility.PUBLIC))
     }
 }
