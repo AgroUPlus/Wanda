@@ -9,10 +9,12 @@ import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.IMusicSource
+import com.wander.android.data.sources.ShareKind
 import com.wander.android.data.sources.ShareTarget
 import com.wander.android.data.sources.SourceCapabilities
 import com.wander.android.data.sources.StreamInfo
 import java.io.IOException
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.StateFlow
@@ -163,8 +165,20 @@ class NavidromeSource @Inject constructor(
             songIdsToAdd = trackIds.map { it.removePrefix(PREFIX) }
         )
 
-    override suspend fun createShareLink(target: ShareTarget): Result<String> =
-        apiClient.createShare(listOf(target.id.removePrefix(PREFIX)), target.description)
+    /**
+     * A song already shared on its own gets the share it has; anything else gets a new one. When
+     * the server cannot list its shares, the share is made anyway — the user asked for a link, and
+     * a duplicate is a smaller failure than none.
+     */
+    override suspend fun createShareLink(target: ShareTarget): Result<String> {
+        val id = target.id.removePrefix(PREFIX)
+        if (target.kind == ShareKind.TRACK) {
+            apiClient.getShares().getOrNull()
+                ?.let { reusableShare(it, id, Instant.now()) }
+                ?.let { return Result.success(it.url) }
+        }
+        return apiClient.createShare(listOf(id), target.description)
+    }
 
     override suspend fun setLiked(trackId: String, liked: Boolean): Result<Unit> {
         val id = trackId.removePrefix(PREFIX)
