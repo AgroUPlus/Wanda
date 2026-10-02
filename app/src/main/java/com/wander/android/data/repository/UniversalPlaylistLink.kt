@@ -115,7 +115,7 @@ internal data class UniversalPlaylistLink(
                     out.write(chunk, 0, read)
                 }
             }
-            return out.toString(Charsets.UTF_8)
+            return String(out.toByteArray(), Charsets.UTF_8)
         }
     }
 }
