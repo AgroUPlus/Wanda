@@ -1,6 +1,8 @@
 package com.wander.android.ui.screens.playlist
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +20,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,9 +50,14 @@ internal fun PlaylistShareSheet(
     onAgro: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    // Opened in full: half-expanded, the buttons at the bottom would sit below the screen.
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ) {
         Column(
             modifier = Modifier
+                .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
                 .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)

@@ -2,6 +2,8 @@ package com.wander.android.ui.screens.playlist
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +21,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,9 +40,14 @@ import com.wander.android.R
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun ConvertPlaylistSheet(sourceName: String, onConvert: () -> Unit, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    // Opened in full: half-expanded, the buttons at the bottom would sit below the screen.
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ) {
         Column(
             modifier = Modifier
+                .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
                 .padding(start = 24.dp, end = 24.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
