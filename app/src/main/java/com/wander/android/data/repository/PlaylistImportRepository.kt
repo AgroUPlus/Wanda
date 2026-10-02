@@ -13,7 +13,6 @@ import com.wander.android.data.importer.RawImportTrack
 import com.wander.android.data.importer.SpotifyPlaylistParser
 import com.wander.android.data.importer.TextPlaylistParser
 import com.wander.android.data.importer.YouTubePlaylistParser
-import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,28 +22,6 @@ import kotlinx.coroutines.withContext
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.abs
-
-/**
- * Bracketed editorial noise on an imported title. One term per line because the list is the part
- * that gets edited; the pattern around it never changes.
- */
-private val NOISE_SUFFIX_TERMS = listOf(
-    """official\s*(?:music)?\s*video""",
-    """official\s*audio""",
-    """lyrics?""",
-    "audio",
-    """remaster(?:ed)?\s*\d*""",
-    "video",
-    "explicit",
-    "clean",
-    "visualizer"
-)
-
-private val NOISE_SUFFIXES =
-    Regex("""(?i)\s*[\(\[](?:${NOISE_SUFFIX_TERMS.joinToString("|")})[\)\]]""")
-private val FEAT_REGEX = Regex("""(?i)\s*(?:feat\.?|ft\.?|featuring)\s+.*""")
-private const val MIN_MATCH_SCORE = 100
 
 @Singleton
 class PlaylistImportRepository @Inject constructor(
@@ -53,7 +30,7 @@ class PlaylistImportRepository @Inject constructor(
     private val youtubeParser: YouTubePlaylistParser,
     private val appleMusicParser: AppleMusicPlaylistParser,
     private val textParser: TextPlaylistParser,
-    private val musicRepository: MusicRepository,
+    private val trackMatcher: TrackMatcher,
     private val trackDao: TrackDao,
     private val playlistDao: PlaylistDao
 ) {
@@ -103,17 +80,7 @@ class PlaylistImportRepository @Inject constructor(
                 matchedCount = matchedTracks.size
             )
 
-            val query = "${rawTrack.artist.cleanArtist()} ${rawTrack.title.cleanTitle()}".trim()
-            var searchResults = musicRepository.searchAllSources(query)
-            var bestMatch = findBestMatch(rawTrack.title, rawTrack.artist, rawTrack.durationMs, searchResults)
-
-            if (bestMatch == null) {
-                val titleQuery = rawTrack.title.cleanTitle()
-                if (titleQuery.isNotBlank()) {
-                    searchResults = musicRepository.searchAllSources(titleQuery)
-                    bestMatch = findBestMatch(rawTrack.title, rawTrack.artist, rawTrack.durationMs, searchResults)
-                }
-            }
+            val bestMatch = trackMatcher.match(rawTrack.title, rawTrack.artist, rawTrack.durationMs)
 
             if (bestMatch != null) {
                 matchedTracks.add(bestMatch)
@@ -153,66 +120,4 @@ class PlaylistImportRepository @Inject constructor(
 
         Result.success(playlistId)
     }
-
-    private fun findBestMatch(
-        rawTitle: String,
-        rawArtist: String,
-        durationMs: Long,
-        candidates: List<UnifiedTrack>
-    ): UnifiedTrack? {
-        if (candidates.isEmpty()) return null
-        val cleanTitle = rawTitle.cleanTitle()
-        val normTitle = cleanTitle.normalize()
-        val cleanArtist = rawArtist.cleanArtist()
-        val normArtist = cleanArtist.normalize()
-
-        val scored = candidates.mapNotNull { candidate ->
-            val cTitleNorm = candidate.title.cleanTitle().normalize()
-            val cArtistNorm = candidate.artist.cleanArtist().normalize()
-
-            var score = 0
-            score += when (candidate.source) {
-                SourceType.LOCAL -> 150
-                SourceType.NAVIDROME -> 100
-                SourceType.YTMUSIC -> 50
-                SourceType.DEEZER, SourceType.PODCAST -> 0
-            }
-
-            val titleMatched = when {
-                cTitleNorm == normTitle -> { score += 100; true }
-                cTitleNorm.contains(normTitle) || normTitle.contains(cTitleNorm) -> { score += 60; true }
-                else -> false
-            }
-
-            if (!titleMatched) return@mapNotNull null
-
-            when {
-                cArtistNorm == normArtist -> score += 80
-                cArtistNorm.contains(normArtist) || normArtist.contains(cArtistNorm) -> score += 40
-                normArtist.isBlank() || normArtist == "unknown" -> score += 20
-            }
-
-            if (durationMs > 0 && candidate.durationMs > 0) {
-                val deltaSec = abs(candidate.durationMs - durationMs) / 1000
-                when {
-                    deltaSec <= 3 -> score += 40
-                    deltaSec <= 10 -> score += 20
-                    deltaSec > 60 -> score -= 30
-                }
-            }
-
-            if (score >= MIN_MATCH_SCORE) candidate to score else null
-        }
-
-        return scored.maxByOrNull { it.second }?.first
-    }
-
-    private fun String.cleanTitle(): String =
-        replace(NOISE_SUFFIXES, "").replace(FEAT_REGEX, "").trim()
-
-    private fun String.cleanArtist(): String =
-        replace(FEAT_REGEX, "").trim()
-
-    private fun String.normalize(): String =
-        lowercase().filter { it.isLetterOrDigit() || it.isWhitespace() }.trim()
 }
