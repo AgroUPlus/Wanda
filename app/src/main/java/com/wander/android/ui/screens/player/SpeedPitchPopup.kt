@@ -1,44 +1,41 @@
 package com.wander.android.ui.screens.player
 
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.wander.android.R
 import com.wander.android.core.playback.SpeedAndPitch
-import com.wander.android.ui.components.rememberPressScale
-import java.util.Locale
 
 /**
  * Material 3 Expressive dialog for adjusting playback speed and pitch.
  * Centered on screen rather than spawning at the touch point.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun SpeedPitchPopup(
     value: SpeedAndPitch,
@@ -49,75 +46,57 @@ internal fun SpeedPitchPopup(
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 6.dp,
-            modifier = Modifier.width(320.dp)
+            modifier = Modifier.widthIn(max = 360.dp)
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Expressive Header
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Surface(
-                        shape = MaterialTheme.shapes.medium,
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Speed,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier
-                                .padding(8.dp)
-                                .size(24.dp)
-                        )
-                    }
-                    Column {
-                        Text(
-                            text = stringResource(R.string.action_speed_and_pitch),
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                        Text(
-                            text = stringResource(R.string.speed_pitch_subtitle),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                SpeedPitchHeader()
 
-                // Speed Section
-                ExpressiveRateSlider(
+                RateSection(
                     label = stringResource(R.string.speed_label),
+                    icon = Icons.Rounded.Speed,
                     rate = value.speed,
-                    presets = listOf(0.75f, 1.0f, 1.25f, 1.5f),
+                    presets = listOf(0.75f, 1.0f, 1.25f, 1.5f, 2.0f),
                     onRate = { onChange(value.copy(speed = it)) }
                 )
 
-                // Pitch Section
-                ExpressiveRateSlider(
+                RateSection(
                     label = stringResource(R.string.pitch_label),
+                    icon = Icons.Rounded.GraphicEq,
                     rate = value.pitch,
-                    presets = listOf(0.9f, 1.0f, 1.1f),
+                    presets = listOf(0.8f, 0.9f, 1.0f, 1.1f, 1.2f),
                     onRate = { onChange(value.copy(pitch = it)) }
                 )
 
-                // Bottom Actions
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    TextButton(
+                    OutlinedButton(
                         onClick = { onChange(SpeedAndPitch()) },
                         enabled = !value.isDefault,
-                        shapes = ButtonDefaults.shapes()
+                        shapes = ButtonDefaults.shapes(),
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Text(stringResource(R.string.action_reset))
+                        Icon(
+                            imageVector = Icons.Rounded.RestartAlt,
+                            contentDescription = null,
+                            modifier = Modifier.size(ButtonDefaults.IconSize)
+                        )
+                        Text(
+                            text = stringResource(R.string.action_reset),
+                            modifier = Modifier.padding(start = ButtonDefaults.IconSpacing)
+                        )
                     }
-                    FilledTonalButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
+                    Button(
+                        onClick = onDismiss,
+                        shapes = ButtonDefaults.shapes(),
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Text(stringResource(R.string.action_done))
                     }
                 }
@@ -126,73 +105,38 @@ internal fun SpeedPitchPopup(
     }
 }
 
+/** A cookie-cut emblem beside the title, the way expressive dialogs open. */
 @Composable
-private fun ExpressiveRateSlider(
-    label: String,
-    rate: Float,
-    presets: List<Float>,
-    onRate: (Float) -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+private fun SpeedPitchHeader() {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+    ) {
+        Surface(
+            shape = MaterialShapes.Cookie9Sided.toShape(),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier.size(52.dp)
         ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.titleSmall
-            )
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                modifier = Modifier.padding(start = 8.dp)
-            ) {
-                Text(
-                    text = String.format(Locale.US, "%.2f×", rate),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Rounded.Speed,
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp)
                 )
             }
         }
-
-        Slider(
-            value = rate,
-            onValueChange = onRate,
-            valueRange = SpeedAndPitch.RANGE,
-            steps = STEPS
-        )
-
-        // Preset Chips Row
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            presets.forEach { preset ->
-                val isSelected = kotlin.math.abs(rate - preset) < 0.02f
-                val interaction = remember { MutableInteractionSource() }
-                val scale by rememberPressScale(interaction)
-                Surface(
-                    shape = MaterialTheme.shapes.small,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.surfaceContainerHighest,
-                    contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                    onClick = { onRate(preset) },
-                    interactionSource = interaction,
-                    modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale }
-                ) {
-                    Text(
-                        text = String.format(Locale.US, "%.2f×", preset),
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
+        Column {
+            Text(
+                text = stringResource(R.string.action_speed_and_pitch),
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Text(
+                text = stringResource(R.string.speed_pitch_subtitle),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
-
-/** Interior stops only, which is what `Slider` counts. */
-private const val STEPS = 29
