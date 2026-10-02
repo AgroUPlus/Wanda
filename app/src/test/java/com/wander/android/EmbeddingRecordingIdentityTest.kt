@@ -119,6 +119,7 @@ class EmbeddingRecordingIdentityTest {
         override suspend fun getLikedTracksOnce(): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun searchTracks(query: String, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun searchTracksInSource(source: com.wander.android.data.model.SourceType, query: String, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun searchSubscribedEpisodes(query: String, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun getRandomTracksInSource(source: com.wander.android.data.model.SourceType, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun getRecentlyAddedInSource(source: com.wander.android.data.model.SourceType, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun getRecentlyAddedTracks(limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
