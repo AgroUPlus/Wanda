@@ -18,9 +18,11 @@ import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.PlaylistImportRepository
 import com.wander.android.data.repository.ShareLinkRewriter
 import com.wander.android.data.repository.SocialRepository
+import com.wander.android.data.repository.AgroPlaylistLink
 import com.wander.android.data.repository.UniversalPlaylistLink
 import com.wander.android.data.sources.agro.AgroAuthError
 import com.wander.android.data.sources.agro.AgroClient
+import com.wander.android.data.sources.agro.AgroPlaylistApi
 import com.wander.android.data.sources.agro.explain
 import com.wander.android.data.sources.ytmusic.YouTubeEntity
 import com.wander.android.data.sources.ytmusic.YouTubeEntityKind
@@ -46,6 +48,7 @@ internal class AppIntentHandler @Inject constructor(
     private val linkRepository: LinkRepository,
     private val musicRepository: MusicRepository,
     private val playlistImporter: PlaylistImportRepository,
+    private val agroPlaylists: AgroPlaylistApi,
     private val catalogRepository: CatalogRepository,
     private val shareLinkRewriter: ShareLinkRewriter,
     private val deepLinkRouter: DeepLinkRouter,
@@ -113,6 +116,10 @@ internal class AppIntentHandler @Inject constructor(
      * sources in the background — the same path as an import from another service.
      */
     private fun openSharedPlaylist(scope: CoroutineScope, uri: Uri) {
+        if (AgroPlaylistLink.isAgroLink(uri.toString())) {
+            openAgroPlaylist(scope, AgroPlaylistLink.parse(uri.toString()))
+            return
+        }
         val link = UniversalPlaylistLink.parse(uri.toString())
         if (link == null) {
             Toast.makeText(context, R.string.link_playlist_invalid, Toast.LENGTH_LONG).show()
@@ -133,6 +140,38 @@ internal class AppIntentHandler @Inject constructor(
                 onFailure = { cause ->
                     Toast.makeText(context, cause.message ?: context.getString(R.string.link_playlist_invalid), Toast.LENGTH_LONG).show()
                 }
+            )
+        }
+    }
+
+    /** A playlist on the Agro server this device is paired with, fetched by its id and saved like any other. */
+    private fun openAgroPlaylist(scope: CoroutineScope, id: String?) {
+        if (id == null) {
+            Toast.makeText(context, R.string.link_playlist_invalid, Toast.LENGTH_LONG).show()
+            return
+        }
+        if (!agroPlaylists.isAvailable) {
+            Toast.makeText(context, R.string.link_playlist_needs_agro, Toast.LENGTH_LONG).show()
+            return
+        }
+        scope.launch {
+            agroPlaylists.fetch(id).fold(
+                onSuccess = { shared ->
+                    val playlist = RawImportPlaylist(
+                        platform = PlatformType.PLAIN_TEXT,
+                        title = shared.title.ifBlank { "Shared playlist" },
+                        description = "Shared playlist",
+                        tracks = shared.tracks.map { RawImportTrack(it.title, it.artist, it.album, it.durationMs) }
+                    )
+                    playlistImporter.savePending(playlist).fold(
+                        onSuccess = { saved ->
+                            Toast.makeText(context, context.getString(R.string.link_playlist_saved, playlist.title), Toast.LENGTH_LONG).show()
+                            deepLinkRouter.request(Routes.playlist(saved))
+                        },
+                        onFailure = { Toast.makeText(context, it.message ?: context.getString(R.string.link_playlist_invalid), Toast.LENGTH_LONG).show() }
+                    )
+                },
+                onFailure = { Toast.makeText(context, context.getString(R.string.link_playlist_agro_failed, it.message), Toast.LENGTH_LONG).show() }
             )
         }
     }

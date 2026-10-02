@@ -187,6 +187,8 @@
     <string name="importer_edit_title">Edit Title</string>
     <string name="importer_import_playlist">Import Playlist</string>
     <string name="link_playlist_saved">Saved “%1$s”. Matching its tracks to your sources…</string>
+    <string name="link_playlist_needs_agro">This playlist is on an Agro server. Pair yours in Settings to open it.</string>
+    <string name="link_playlist_agro_failed">Couldn\'t open that playlist: %1$s</string>
     <string name="link_playlist_invalid">That playlist link is damaged, or too long to open.</string>
     <string name="importer_open_playlist_file">Open an M3U file</string>
     <string name="importer_file_too_large">That file is too large to be a playlist.</string>

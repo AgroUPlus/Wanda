@@ -7,6 +7,8 @@ import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.ShareKind
 import com.wander.android.data.sources.ShareTarget
+import com.wander.android.data.sources.agro.AgroPlaylistApi
+import com.wander.android.data.sources.agro.AgroPlaylistTrack
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -28,7 +30,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 @Singleton
 class ShareRepository @Inject constructor(
     private val musicRepository: MusicRepository,
-    private val shareLinkRewriter: ShareLinkRewriter
+    private val shareLinkRewriter: ShareLinkRewriter,
+    private val agroPlaylists: AgroPlaylistApi
 ) {
 
     private val _links = MutableSharedFlow<ShareLink>(extraBufferCapacity = 1)
@@ -129,6 +132,39 @@ class ShareRepository @Inject constructor(
                 ),
                 url = link.toUri()
             )
+        )
+    }
+
+    /**
+     * Shares a playlist that has no link of its own. With an Agro server paired it is published
+     * there and the link names only its id, which has no length limit and reaches the other
+     * accounts on that server; without one, the tracks go in the link itself — see
+     * [shareUniversalPlaylist].
+     */
+    suspend fun shareLocalPlaylist(playlist: UnifiedPlaylist, tracks: List<UnifiedTrack>) {
+        if (!agroPlaylists.isAvailable) {
+            shareUniversalPlaylist(playlist, tracks)
+            return
+        }
+        agroPlaylists.publish(
+            playlist.name,
+            tracks.map { AgroPlaylistTrack(it.title, it.artist, it.album, it.durationMs) }
+        ).fold(
+            onSuccess = { id ->
+                _links.tryEmit(
+                    ShareLink(
+                        target = ShareTarget(
+                            kind = ShareKind.PLAYLIST,
+                            source = playlist.source,
+                            id = playlist.id,
+                            title = playlist.name,
+                            subtitle = "${tracks.size} tracks"
+                        ),
+                        url = AgroPlaylistLink.toUri(id)
+                    )
+                )
+            },
+            onFailure = { _errors.tryEmit("Couldn't publish the playlist to Agro: ${it.message}") }
         )
     }
 

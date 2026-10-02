@@ -122,7 +122,8 @@ class PlaylistViewModel @Inject constructor(
     fun sharePlaylist() {
         val pl = _playlist.value ?: return
         if (!shareRepository.canShare(pl.source)) {
-            shareRepository.shareUniversalPlaylist(pl, _tracks.value)
+            val list = _tracks.value
+            viewModelScope.launch { shareRepository.shareLocalPlaylist(pl, list) }
             return
         }
         viewModelScope.launch {
