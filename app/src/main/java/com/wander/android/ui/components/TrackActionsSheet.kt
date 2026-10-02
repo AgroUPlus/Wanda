@@ -95,6 +95,26 @@ fun TrackActionsSheet(
     val dropFriends by hiltViewModel<DropToFriendViewModel>().friends.collectAsStateWithLifecycle()
     var pickingFriend by remember { mutableStateOf(false) }
     var choosingShare by remember { mutableStateOf(false) }
+    var confirming by remember { mutableStateOf<ConfirmRequest?>(null) }
+
+    // A destructive entry replaces the sheet with its confirmation, and either answer closes both.
+    confirming?.let { request ->
+        ConfirmDialog(request, onDismiss = {
+            confirming = null
+            onDismiss()
+        })
+        return
+    }
+    val deleteTitle = stringResource(R.string.confirm_delete_download_title)
+    val deleteMessage = stringResource(R.string.confirm_delete_download_message, track.title)
+    val resetTitle = stringResource(R.string.confirm_reset_progress_title)
+    val resetMessage = stringResource(R.string.confirm_reset_progress_message, track.title)
+    val askDeleteDownload = onDeleteDownload?.let { delete ->
+        { confirming = ConfirmRequest(deleteTitle, deleteMessage, deleteOffline, delete) }
+    }
+    val askResetProgress = onResetProgress?.let { reset ->
+        { confirming = ConfirmRequest(resetTitle, resetMessage, resetProgress, reset) }
+    }
 
     if (choosingShare) {
         ShareChooserSheet(
@@ -167,8 +187,8 @@ fun TrackActionsSheet(
                         onStartRadio = onStartRadio,
                         onOpenArtist = onOpenArtist,
                         onRemove = onRemove,
-                        onDeleteDownload = onDeleteDownload,
-                        onResetProgress = onResetProgress
+                        onDeleteDownload = askDeleteDownload,
+                        onResetProgress = askResetProgress
                     ),
                     jamViewModel = jamViewModel,
                     sheet = TrackActionSheetFlow(

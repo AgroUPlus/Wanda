@@ -94,28 +94,7 @@ internal fun ProfileScreen(
 
         item(key = "header") { ProfileHero(profile) }
 
-        item(key = "action") {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-            ) {
-                when (profile.friendState) {
-                    FriendState.NONE -> Button(onClick = viewModel::sendRequest, shapes = ButtonDefaults.shapes()) {
-                        Text(stringResource(R.string.social_add_friend))
-                    }
-                    FriendState.PENDING -> if (profile.outgoing) {
-                        OutlinedButton(onClick = viewModel::remove, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.social_cancel_request)) }
-                    } else {
-                        Button(onClick = viewModel::accept, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_accept)) }
-                        OutlinedButton(onClick = viewModel::remove, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.social_decline)) }
-                    }
-                    FriendState.ACCEPTED -> OutlinedButton(onClick = viewModel::remove, shapes = ButtonDefaults.shapes()) {
-                        Text(stringResource(R.string.social_remove_friend))
-                    }
-                }
-                TextButton(onClick = viewModel::block, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.social_block)) }
-            }
-        }
+        item(key = "action") { ProfileActions(profile, viewModel) }
 
         val now = state.nowPlaying
         item(key = "listening") {

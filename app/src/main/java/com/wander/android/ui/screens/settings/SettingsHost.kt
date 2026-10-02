@@ -132,7 +132,7 @@ internal fun rememberSettingsHost(
             onDownloadLiked = viewModel::downloadLikedNow,
             onIndexFingerprints = viewModel::indexFingerprintsNow,
             onOpenFingerprints = navigation.onOpenFingerprints,
-            onClearCache = viewModel::clearCache,
+            onClearCache = { dialogs.confirmClearCache = true },
             onOpenImport = navigation.onOpenImport,
             onEditShareDomain = { dialogs.showShareDomainDialog = true },
             onIncognitoChange = viewModel::setIncognito,

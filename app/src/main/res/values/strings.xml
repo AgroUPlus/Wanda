@@ -116,6 +116,26 @@
     <string name="common_create">Create</string>
     <string name="common_delete_offline_file">Delete offline file</string>
     <string name="common_delete_playlist">Delete playlist</string>
+    <string name="confirm_delete_playlist_title">Delete “%1$s”?</string>
+    <string name="confirm_delete_playlist_local">This Wanda playlist exists only on this device. It cannot be brought back.</string>
+    <string name="confirm_delete_playlist_remote">It will be deleted from %1$s too, for every device using it. It cannot be brought back.</string>
+    <string name="confirm_delete_download_title">Delete the downloaded file?</string>
+    <string name="confirm_delete_download_message">“%1$s” will stream again, and needs downloading again to play offline.</string>
+    <string name="confirm_clear_queue_title">Clear the queue?</string>
+    <plurals name="confirm_clear_queue_message">
+        <item quantity="one">%1$d track will be removed from the queue.</item>
+        <item quantity="other">%1$d tracks will be removed from the queue.</item>
+    </plurals>
+    <string name="confirm_clear_cache_title">Clear the streaming cache?</string>
+    <string name="confirm_clear_cache_message">Tracks played recently will need to stream again. Downloads are kept.</string>
+    <string name="confirm_remove_friend_title">Remove %1$s as a friend?</string>
+    <string name="confirm_remove_friend_message">You will stop seeing each other\'s listening and friends-only playlists. Becoming friends again needs a new request.</string>
+    <string name="confirm_block_title">Block %1$s?</string>
+    <string name="confirm_block_message">This also removes them as a friend and ends any listen-along between you.</string>
+    <string name="confirm_remove_drop_title">Remove this drop?</string>
+    <string name="confirm_remove_drop_message">It disappears from this conversation on your side. It cannot be brought back.</string>
+    <string name="confirm_reset_progress_title">Reset progress?</string>
+    <string name="confirm_reset_progress_message">Wanda will forget how far you got into “%1$s”.</string>
     <string name="common_device">Device %1$s</string>
     <string name="common_device_2">On device</string>
     <string name="common_dismiss">Dismiss</string>
@@ -208,6 +228,17 @@
     <string name="playlist_file_failed">Couldn\'t write the playlist file: %1$s</string>
     <string name="playlist_shared_as_file">Too long for a link, so it\'s shared as a file.</string>
     <string name="playlist_share_title">Share this playlist</string>
+    <string name="playlist_shared_on_agro">Shared on Agro</string>
+    <string name="playlist_shared_badge">Shared · %1$s</string>
+    <string name="playlist_share_agro_resend">Send the link again</string>
+    <string name="playlist_share_agro_resend_desc">The same link as before. Who can open it: %1$s.</string>
+    <string name="playlist_share_other">Other ways to share</string>
+    <string name="playlist_unshare">Stop sharing</string>
+    <string name="playlist_unshare_desc">Deletes the copy on Agro. Its link stops working.</string>
+    <string name="playlist_unshare_confirm_title">Stop sharing “%1$s”?</string>
+    <string name="playlist_unshare_confirm_message">The copy on your Agro server is deleted and its link stops working for everyone. The playlist on this device is kept.</string>
+    <string name="playlist_unshared">Stopped sharing. The link no longer opens.</string>
+    <string name="playlist_unshare_failed">Couldn\'t stop sharing: %1$s</string>
     <string name="playlist_share_link">As a link</string>
     <string name="playlist_share_link_desc">Lists the tracks. Anyone with Wanda can open it.</string>
     <string name="playlist_share_file">As a file</string>
@@ -921,6 +952,7 @@
     <string name="db_too_old_reset_confirm">Erase and restart</string>
     <string name="media_type_song">Song</string>
     <string name="media_type_video">Video</string>
+    <string name="video_clip_unavailable">Couldn\'t load the video. Showing the cover instead.</string>
 
     <!-- Podcast subscriptions -->
     <string name="podcasts_inbox">Inbox</string>

@@ -1,5 +1,10 @@
 package com.wander.android.ui.screens.social
 
+import com.wander.android.ui.components.ConfirmDialog
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -58,6 +63,19 @@ internal fun DropActionsSheet(
     onRemove: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    var confirmingRemove by remember { mutableStateOf(false) }
+    if (confirmingRemove) {
+        // The sheet gives way to the question, and either answer closes both.
+        ConfirmDialog(
+            title = stringResource(R.string.confirm_remove_drop_title),
+            message = stringResource(R.string.confirm_remove_drop_message),
+            confirmLabel = stringResource(R.string.social_remove_me),
+            onConfirm = onRemove,
+            onDismiss = onDismiss
+        )
+        return
+    }
+
     WandaSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -104,7 +122,7 @@ internal fun DropActionsSheet(
 
             val removeLabel = stringResource(R.string.social_remove_me)
             ActionButtonGroup(
-                actions = listOf(MenuAction(Icons.Rounded.Delete, removeLabel, ActionEmphasis.DANGER, onClick = onRemove)),
+                actions = listOf(MenuAction(Icons.Rounded.Delete, removeLabel, ActionEmphasis.DANGER, onClick = { confirmingRemove = true })),
                 modifier = Modifier.padding(top = 8.dp)
             )
         }

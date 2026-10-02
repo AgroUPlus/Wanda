@@ -81,14 +81,15 @@ internal fun buildTrackActionsList(
         callbacks.onOpenArtist?.let { add(MenuAction(Icons.Rounded.Person, "Artist") { it(); dismiss() }) }
     }
     addJamAction(track, state, jamViewModel, dismiss)
+    // These two ask first, and the confirmation closes the sheet; see `TrackActionsSheet`.
     callbacks.onResetProgress?.let {
-        add(MenuAction(Icons.Rounded.RestartAlt, labels.resetProgress, ActionEmphasis.ICON) { it(); dismiss() })
+        add(MenuAction(Icons.Rounded.RestartAlt, labels.resetProgress, ActionEmphasis.ICON) { it() })
     }
     callbacks.onRemove?.let {
         add(MenuAction(Icons.Rounded.Delete, labels.removeFromQueue, ActionEmphasis.DANGER) { it(); dismiss() })
     }
     callbacks.onDeleteDownload?.let {
-        add(MenuAction(Icons.Rounded.Delete, labels.deleteOffline, ActionEmphasis.DANGER) { it(); dismiss() })
+        add(MenuAction(Icons.Rounded.Delete, labels.deleteOffline, ActionEmphasis.DANGER) { it() })
     }
 }
 

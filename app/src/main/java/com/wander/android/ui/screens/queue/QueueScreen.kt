@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.queue
 
+import com.wander.android.ui.components.ClearQueueButton
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -119,9 +119,7 @@ internal fun QueueScreen(
             }
 
             if (jam == null && state.queue.isNotEmpty()) {
-                IconButton(onClick = playerConnection::clearQueue) {
-                    Icon(Icons.Rounded.DeleteSweep, contentDescription = stringResource(R.string.action_clear_queue))
-                }
+                ClearQueueButton(state.queue.size, playerConnection::clearQueue)
             }
         }
 

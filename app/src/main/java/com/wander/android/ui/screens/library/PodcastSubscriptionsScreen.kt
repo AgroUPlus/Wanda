@@ -58,7 +58,7 @@ import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
-import com.wander.android.ui.screens.settings.ConfirmDialog
+import com.wander.android.ui.components.ConfirmDialog
 
 private const val OPML_MIME = "text/x-opml"
 private const val OPML_FILE_NAME = "wanda-podcasts.opml"

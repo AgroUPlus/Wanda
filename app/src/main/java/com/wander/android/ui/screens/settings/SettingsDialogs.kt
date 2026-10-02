@@ -9,6 +9,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import com.wander.android.R
+import com.wander.android.ui.components.ConfirmDialog
 
 /**
  * Which settings dialog, if any, is open.
@@ -25,7 +26,8 @@ internal class SettingsDialogState(
     youTube: MutableState<Boolean>,
     deezer: MutableState<Boolean>,
     unpair: MutableState<Boolean>,
-    forget: MutableState<Boolean>
+    forget: MutableState<Boolean>,
+    cache: MutableState<Boolean>
 ) {
     var showAgroDialog by agro
     var showShareDomainDialog by share
@@ -34,11 +36,12 @@ internal class SettingsDialogState(
     var confirmDeezerSignOut by deezer
     var confirmAgroUnpair by unpair
     var confirmForgetEverything by forget
+    var confirmClearCache by cache
 }
 
 /**
  * The flags are saved individually rather than the holder as a whole: the holder is not Parcelable,
- * and six booleans restore perfectly well on their own.
+ * and the booleans restore perfectly well on their own.
  */
 @Composable
 internal fun rememberSettingsDialogs(): SettingsDialogState = SettingsDialogState(
@@ -48,7 +51,8 @@ internal fun rememberSettingsDialogs(): SettingsDialogState = SettingsDialogStat
     youTube = rememberSaveable { mutableStateOf(false) },
     deezer = rememberSaveable { mutableStateOf(false) },
     unpair = rememberSaveable { mutableStateOf(false) },
-    forget = rememberSaveable { mutableStateOf(false) }
+    forget = rememberSaveable { mutableStateOf(false) },
+    cache = rememberSaveable { mutableStateOf(false) }
 )
 
 @Composable
@@ -122,6 +126,16 @@ internal fun SettingsDialogs(
             confirmLabel = stringResource(R.string.settings_unpair),
             onConfirm = viewModel::disconnectAgro,
             onDismiss = { dialogs.confirmAgroUnpair = false }
+        )
+    }
+
+    if (dialogs.confirmClearCache) {
+        ConfirmDialog(
+            title = stringResource(R.string.confirm_clear_cache_title),
+            message = stringResource(R.string.confirm_clear_cache_message),
+            confirmLabel = stringResource(R.string.settings_clear_streaming_cache),
+            onConfirm = viewModel::clearCache,
+            onDismiss = { dialogs.confirmClearCache = false }
         )
     }
 

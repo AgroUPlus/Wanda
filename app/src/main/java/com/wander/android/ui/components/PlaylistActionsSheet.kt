@@ -1,5 +1,10 @@
 package com.wander.android.ui.components
 
+import com.wander.android.data.model.SourceType
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,6 +46,24 @@ fun PlaylistActionsSheet(
     onShare: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null
 ) {
+    var confirmingDelete by remember { mutableStateOf(false) }
+    if (confirmingDelete && onDelete != null) {
+        // A Wanda playlist exists only here; a backend's is deleted on the server too. Either way
+        // there is no undo, so the sheet gives way to the question and either answer closes it.
+        ConfirmDialog(
+            title = stringResource(R.string.confirm_delete_playlist_title, playlist.name),
+            message = stringResource(
+                if (playlist.source == SourceType.LOCAL) R.string.confirm_delete_playlist_local
+                else R.string.confirm_delete_playlist_remote,
+                playlist.source.displayName
+            ),
+            confirmLabel = stringResource(R.string.common_delete_playlist),
+            onConfirm = onDelete,
+            onDismiss = onDismiss
+        )
+        return
+    }
+
     WandaSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -96,7 +119,7 @@ fun PlaylistActionsSheet(
                     onShare?.let { add(MenuAction(Icons.Rounded.Share, share, ActionEmphasis.ICON) { it(); animatedDismiss() }) }
                     onAddToPlaylist?.let { add(MenuAction(Icons.Rounded.LibraryAdd, addToPlaylist, ActionEmphasis.ICON) { it(); animatedDismiss() }) }
                     add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, addQueue) { onAddToQueue(); animatedDismiss() })
-                    onDelete?.let { add(MenuAction(Icons.Rounded.Delete, delete, ActionEmphasis.DANGER) { it(); animatedDismiss() }) }
+                    onDelete?.let { add(MenuAction(Icons.Rounded.Delete, delete, ActionEmphasis.DANGER) { confirmingDelete = true }) }
                 }
             )
         }
