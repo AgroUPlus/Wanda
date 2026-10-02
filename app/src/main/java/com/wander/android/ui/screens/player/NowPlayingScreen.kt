@@ -4,7 +4,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -100,7 +100,8 @@ internal fun NowPlayingScreen(
     val lyricsListState = androidx.compose.foundation.lazy.rememberLazyListState()
     val track = state.currentTrack
     val mediaToggle by viewModel.mediaToggle.collectAsStateWithLifecycle()
-    LaunchedEffect(track?.id) { track?.let(viewModel::findMediaAlternative) }
+    // Composed only while the full player is out: lets the toggle look for the other form.
+    DisposableEffect(viewModel) { viewModel.setPlayerOpen(true); onDispose { viewModel.setPlayerOpen(false) } }
 
     if (track == null) return
 

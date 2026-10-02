@@ -12,6 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.lerp
@@ -119,7 +120,9 @@ internal fun MorphingArtwork(
     fingerprintStatus: com.wander.android.data.repository.FingerprintStatus =
         com.wander.android.data.repository.FingerprintStatus.MISSING,
     carouselEnabled: Boolean = true,
-    isPlaying: Boolean = true
+    isPlaying: Boolean = true,
+    /** Drawn over the cover inside its shape, so it travels and shrinks with it — the video clip. */
+    overlay: @Composable () -> Unit = {}
 ) {
     if (!visible) return
 
@@ -200,6 +203,7 @@ internal fun MorphingArtwork(
             crossfade = false,
             modifier = Modifier.fillMaxSize()
         )
+        Box(Modifier.fillMaxSize().clip(coverShape)) { overlay() }
 
         // Bottom-left, and only once the sheet is open. On the docked strip the cover is a
         // thumbnail and a six-pixel dot on it would be lint rather than information, so it fades in

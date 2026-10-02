@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.wander.android.data.model.PlaybackMediaType
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -79,6 +80,9 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
 
     val isArtistReleaseNotificationEnabled: StateFlow<Boolean> = playbackPrefs.isArtistReleaseNotificationEnabled
     fun setArtistReleaseNotificationEnabled(enabled: Boolean) = playbackPrefs.setArtistReleaseNotificationEnabled(enabled)
+
+    val preferredMediaType: StateFlow<PlaybackMediaType> = playbackPrefs.preferredMediaType
+    fun setPreferredMediaType(type: PlaybackMediaType) = playbackPrefs.setPreferredMediaType(type)
 
     var preferredAudioLanguage: String?
         get() = playbackPrefs.preferredAudioLanguage

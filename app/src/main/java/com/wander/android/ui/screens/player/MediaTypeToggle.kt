@@ -41,9 +41,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
+import com.wander.android.data.model.PlaybackMediaType
 import com.wander.android.data.model.UnifiedTrack
-
-internal enum class PlaybackMediaType { SONG, VIDEO }
 
 /**
  * What the song/video toggle shows for the playing track.

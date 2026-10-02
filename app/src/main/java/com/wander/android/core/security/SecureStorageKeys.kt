@@ -78,5 +78,6 @@ internal const val KEY_SHARE_DOMAIN = "key_share_domain"
 internal const val KEY_AGRO_SHARE_DOMAIN = "key_agro_share_domain"
 internal const val KEY_AGRO_SHARE_HOSTS = "key_agro_share_hosts"
 internal const val KEY_PREFERRED_AUDIO_LANGUAGE = "key_preferred_audio_language"
+internal const val KEY_PREFERRED_MEDIA_TYPE = "key_preferred_media_type"
 
 internal val HOST_REGEX = Regex("""[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+""")

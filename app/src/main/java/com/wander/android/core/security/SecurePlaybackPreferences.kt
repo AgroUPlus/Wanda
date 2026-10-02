@@ -2,6 +2,7 @@ package com.wander.android.core.security
 
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import com.wander.android.data.model.PlaybackMediaType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -49,6 +50,17 @@ internal class SecurePlaybackPreferences(private val prefs: SharedPreferences) {
         MutableStateFlow(prefs.getBoolean(KEY_RELEASE_NOTIFICATIONS, false))
     val isArtistReleaseNotificationEnabled: StateFlow<Boolean> =
         _isArtistReleaseNotificationEnabled.asStateFlow()
+
+    private val _preferredMediaType = MutableStateFlow(
+        PlaybackMediaType.entries.firstOrNull { it.name == prefs.getString(KEY_PREFERRED_MEDIA_TYPE, null) }
+            ?: PlaybackMediaType.SONG
+    )
+    val preferredMediaType: StateFlow<PlaybackMediaType> = _preferredMediaType.asStateFlow()
+
+    fun setPreferredMediaType(type: PlaybackMediaType) {
+        prefs.edit { putString(KEY_PREFERRED_MEDIA_TYPE, type.name) }
+        _preferredMediaType.value = type
+    }
 
     var preferredAudioLanguage: String?
         get() = prefs.getString(KEY_PREFERRED_AUDIO_LANGUAGE, null)
@@ -115,6 +127,7 @@ internal class SecurePlaybackPreferences(private val prefs: SharedPreferences) {
         _isPodcastIndexEnabled.value = false
         _isAutoUpdateCheckEnabled.value = false
         _isArtistReleaseNotificationEnabled.value = false
+        _preferredMediaType.value = PlaybackMediaType.SONG
     }
 }
 

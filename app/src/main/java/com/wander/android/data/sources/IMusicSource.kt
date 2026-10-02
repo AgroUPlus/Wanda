@@ -71,6 +71,10 @@ interface IMusicSource {
         if (kind == SearchKind.TRACKS) search(query) else Result.success(emptyList())
     suspend fun getStreamInfo(trackId: String): Result<StreamInfo>
 
+    /** The video-only stream of a clip; only meaningful when [SourceCapabilities.videoClips] is set. */
+    suspend fun getVideoStreamInfo(trackId: String): Result<StreamInfo> =
+        Result.failure(UnsupportedOperationException("$displayName has no video clips"))
+
     /**
      * One track by its id, for when another device hands over a session: the id identifies the
      * exact recording on a backend both devices share, which a title search only approximates.

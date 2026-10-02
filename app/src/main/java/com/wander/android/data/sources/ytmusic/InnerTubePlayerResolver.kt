@@ -21,7 +21,9 @@ internal data class PlayerResponse(
     /** When present, must be appended to the stream URL as a `pot` query param. */
     val streamingPoToken: String? = null,
     /** Set for a livestream: play this manifest directly, no signature or nonce to resolve. */
-    val hlsManifestUrl: String? = null
+    val hlsManifestUrl: String? = null,
+    /** The video-only stream shown in place of the cover in Video mode; see [bestVideoFormat]. */
+    val videoFormat: JsonObject? = null
 )
 
 /**
@@ -144,7 +146,7 @@ internal class InnerTubePlayerResolver @Inject constructor(
             } else {
                 val format = body.bestAudioFormat()
                     ?: throw IOException("YouTube Music returned no playable audio for this track")
-                PlayerResponse(format, variant, poToken?.streamingDataPoToken)
+                PlayerResponse(format, variant, poToken?.streamingDataPoToken, videoFormat = body.bestVideoFormat())
             }
         }
     }

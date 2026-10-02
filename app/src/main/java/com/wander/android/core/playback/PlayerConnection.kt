@@ -208,6 +208,9 @@ class PlayerConnection @Inject constructor(
             .build()
     }
 
+    /** Raises [message] — already localized by the caller — as a snackbar through [notices]. */
+    fun notify(message: String) = _notices.tryEmit(message)
+
     fun notifyNoStation() = _notices.tryEmit("Not enough listening yet — play a few tracks and try again")
 
     fun toggleRadio() {

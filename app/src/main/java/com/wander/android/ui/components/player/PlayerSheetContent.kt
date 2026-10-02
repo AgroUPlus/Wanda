@@ -21,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.repository.FingerprintStatus
@@ -54,9 +56,12 @@ fun PlayerSheetContent(
     coverCarousel: Boolean = true,
 ) {
     val anchors = remember { PlayerArtworkAnchors() }
+    val clipViewModel: VideoClipViewModel = hiltViewModel()
+    val clipTrack by clipViewModel.clipTrack.collectAsStateWithLifecycle()
     // In the standard layout the full player's cover is a carousel that scrolls itself; the
-    // immersive layout keeps the drag-to-skip filmstrip.
-    val playerCarousel = coverCarousel && !immersivePlayer
+    // immersive layout keeps the drag-to-skip filmstrip, and so does a playing video, which only
+    // the travelling cover draws.
+    val playerCarousel = coverCarousel && !immersivePlayer && clipTrack == null
     var lyricsVisible by rememberSaveable { mutableStateOf(false) }
 
     val queueDrawer = rememberQueueDrawerState()
@@ -194,7 +199,9 @@ fun PlayerSheetContent(
                 canNext = hasNextSong,
                 fingerprintStatus = fingerprintStatus,
                 carouselEnabled = coverCarousel && !playerCarousel,
-                isPlaying = playback.isPlaying
+                isPlaying = playback.isPlaying,
+                // Out of composition once docked, so the clip stops there and plays while it shrinks.
+                overlay = { VideoClipOverlay(clipTrack, fill = immersivePlayer, active = fullPlayerPresent && !lyricsVisible) }
             )
 
             if (fullPlayerPresent) {

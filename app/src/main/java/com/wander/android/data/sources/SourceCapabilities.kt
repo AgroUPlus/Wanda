@@ -35,5 +35,10 @@ data class SourceCapabilities(
      * that hosts the audio on a server the user controls — so the share action is absent
      * elsewhere rather than present and failing.
      */
-    val share: Boolean = false
+    val share: Boolean = false,
+    /**
+     * The backend serves a track's music video as its own stream, shown in place of the cover when
+     * the player is in Video mode. Only YouTube Music files clips alongside songs.
+     */
+    val videoClips: Boolean = false
 )

@@ -273,7 +273,7 @@ internal fun JsonObject.visitorData(): String? =
     path("responseContext", "visitorData").text()?.takeIf { it.isNotBlank() }
 
 /** Either a ready-to-fetch `url`, or a cipher `StreamUrlResolver` can turn into one. */
-private fun JsonObject.hasPlayableSource(): Boolean =
+internal fun JsonObject.hasPlayableSource(): Boolean =
     !this["url"].text().isNullOrBlank() || !signatureCipher().isNullOrBlank()
 
 /** The obfuscated `s`/`sp`/`url` query blob web clients return in place of a plain `url`. */

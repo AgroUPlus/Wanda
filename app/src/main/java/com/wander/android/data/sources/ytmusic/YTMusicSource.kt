@@ -50,7 +50,8 @@ class YTMusicSource @Inject constructor(
         likes = true,
         radio = true,
         recommendations = true,
-        share = true
+        share = true,
+        videoClips = true
     )
 
     /**
@@ -85,6 +86,9 @@ class YTMusicSource @Inject constructor(
 
     override suspend fun getStreamInfo(trackId: String): Result<StreamInfo> =
         streamResolver.getStreamInfo(trackId)
+
+    override suspend fun getVideoStreamInfo(trackId: String): Result<StreamInfo> =
+        streamResolver.getVideoStreamInfo(trackId)
 
     override suspend fun getTrack(trackId: String): Result<UnifiedTrack?> =
         catalogLoader.getTrack(trackId)

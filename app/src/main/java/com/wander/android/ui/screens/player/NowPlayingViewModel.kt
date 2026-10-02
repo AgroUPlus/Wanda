@@ -7,8 +7,6 @@ import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.repository.RenditionFinder
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.playback.PlaybackCoordinator
-import com.wander.android.data.model.SearchKind
-import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.core.audio.fingerprint.FingerprintIndexing
 import com.wander.android.data.repository.FingerprintStatus
@@ -17,8 +15,6 @@ import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.repository.JamRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -34,13 +30,13 @@ internal class NowPlayingViewModel @Inject constructor(
     private val musicRepository: MusicRepository,
     private val shareRepository: ShareRepository,
     private val renditionFinder: RenditionFinder,
-    private val recordingRules: com.wander.android.data.repository.RecordingRulesRepository,
     private val playerConnection: PlayerConnection,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     fingerprintStatuses: FingerprintStatusRepository,
     jamRepository: JamRepository,
     private val secureStorage: com.wander.android.core.security.SecureStorage,
-    private val sleepTimer: com.wander.android.core.playback.SleepTimer
+    private val sleepTimer: com.wander.android.core.playback.SleepTimer,
+    private val mediaForms: MediaFormController
 ) : ViewModel() {
 
     val sleepTimerState = sleepTimer.state
@@ -179,59 +175,10 @@ internal class NowPlayingViewModel @Inject constructor(
         playerConnection.setPreferredAudioLanguage(language)
     }
 
-    private val _mediaToggle = MutableStateFlow<MediaToggleState?>(null)
-
     /** Null when the playing track's source has no video form, so the toggle is not shown at all. */
-    val mediaToggle: StateFlow<MediaToggleState?> = _mediaToggle.asStateFlow()
+    val mediaToggle: StateFlow<MediaToggleState?> = mediaForms.toggle
 
-    /** Pairs made by a swap in this session, keyed by the track now playing, so swapping back is instant. */
-    private val swappedPairs = HashMap<String, MediaToggleState>()
-    private var alternativeSearch: kotlinx.coroutines.Job? = null
+    fun setPlayerOpen(open: Boolean) = mediaForms.setPlayerOpen(open)
 
-    /**
-     * Works out which form of [track] is playing and finds the other one.
-     *
-     * YouTube Music files a song and its video as separate ids, and nothing on the track says which
-     * it is, so both searches run and the playing id's list decides. The other form must match on
-     * title and artist ([RecordingRules.isSameWork]); length is ignored because a video runs
-     * longer than the studio cut.
-     */
-    fun findMediaAlternative(track: UnifiedTrack) {
-        alternativeSearch?.cancel()
-        swappedPairs[track.id]?.let { _mediaToggle.value = it; return }
-        if (track.source != SourceType.YTMUSIC || track.isEpisode) {
-            _mediaToggle.value = null
-            return
-        }
-        _mediaToggle.value = MediaToggleState(playing = null, alternative = null)
-        alternativeSearch = viewModelScope.launch {
-            val rules = recordingRules.current()
-            val query = "${track.artist} ${track.title}"
-            val sources = setOf(track.source)
-            val (songs, videos) = coroutineScope {
-                val songs = async { musicRepository.searchAllSources(query, sources, SearchKind.TRACKS) }
-                val videos = async { musicRepository.searchAllSources(query, sources, SearchKind.VIDEOS) }
-                songs.await() to videos.await()
-            }
-            val isVideo = videos.any { it.id == track.id } && songs.none { it.id == track.id }
-            val playing = if (isVideo) PlaybackMediaType.VIDEO else PlaybackMediaType.SONG
-            val others = if (isVideo) songs else videos
-            val hit = others.firstOrNull { it.id != track.id && rules.isSameWork(track, it) }
-            _mediaToggle.value = MediaToggleState(playing, hit)
-        }
-    }
-
-    fun swapMediaType() {
-        val toggle = _mediaToggle.value ?: return
-        val alternative = toggle.alternative ?: return
-        val playing = toggle.playing ?: return
-        val current = playerConnection.state.value.currentTrack ?: return
-        val back = if (playing == PlaybackMediaType.SONG) PlaybackMediaType.VIDEO else PlaybackMediaType.SONG
-        val now = MediaToggleState(back, current)
-        swappedPairs[alternative.id] = now
-        // Shown straight away so the highlight moves on the tap, not when the new track arrives.
-        _mediaToggle.value = now
-        playerConnection.replaceCurrentTrack(alternative)
-    }
-
+    fun swapMediaType() = mediaForms.swap()
 }

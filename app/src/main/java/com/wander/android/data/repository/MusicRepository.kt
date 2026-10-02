@@ -156,6 +156,12 @@ class MusicRepository @Inject constructor(
     fun clearEphemeralStreams() = streamResolver.clearEphemeralStreams()
     suspend fun getStreamInfo(trackId: String) = streamResolver.getStreamInfo(trackId)
 
+    /** The clip shown in place of the cover in Video mode, from the track's own backend. */
+    suspend fun getVideoStreamInfo(track: UnifiedTrack): Result<StreamInfo> =
+        sources.firstOrNull { it.sourceType == track.source && it.capabilities.videoClips }
+            ?.getVideoStreamInfo(track.id)
+            ?: Result.failure(UnsupportedOperationException("${track.source.displayName} has no video clips"))
+
     // ── Search & Discovery ──────────────────────────────────────────────────────────────────
     suspend fun searchAllSources(query: String, onlySources: Set<SourceType>? = null, kind: SearchKind = SearchKind.TRACKS) =
         searchRepo.searchAllSources(query, onlySources, kind)
