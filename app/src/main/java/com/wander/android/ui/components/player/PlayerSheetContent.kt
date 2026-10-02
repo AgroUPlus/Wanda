@@ -85,7 +85,9 @@ fun PlayerSheetContent(
     val playerFullyOpen by remember { derivedStateOf { progress() >= QueueGestureArmed } }
     // 0 while the travelling cover is the only one, 1 once the carousel has fully taken over.
     val carouselHandoff = { smoothStep(progress(), CarouselHandoffStart, CarouselHandoffEnd) }
-    val carouselTookOver by remember { derivedStateOf { playerCarousel && progress() >= CarouselHandoffEnd } }
+    // Keyed on the flag: it flips with Video mode, and a stale `true` hid the travelling cover —
+    // and the clip on it — once open, with no carousel drawn in its place.
+    val carouselTookOver by remember(playerCarousel) { derivedStateOf { playerCarousel && progress() >= CarouselHandoffEnd } }
 
     LaunchedEffect(playerFullyOpen) { if (!playerFullyOpen) queueDrawer.snapTo(0f) }
     LaunchedEffect(docked) { if (docked) lyricsVisible = false }
