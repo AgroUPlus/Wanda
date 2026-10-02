@@ -43,10 +43,6 @@ class DeezerAccountManager @Inject constructor(
         secureStorage.deezerAccountName = name.trim()
     }
 
-    fun updateAudioQuality(quality: String) {
-        secureStorage.deezerAudioQuality = quality
-    }
-
     /**
      * Purges credentials and all browser-side storage.
      *

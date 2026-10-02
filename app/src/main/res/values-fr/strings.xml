@@ -52,9 +52,6 @@
     <string name="mood_preset_morning_energizer">Matinée dynamique</string>
     <string name="mood_preset_high_voltage">Explosion d\'énergie</string>
     <!-- Swipeable track row -->
-    <string name="swipe_action_play_next">Jouer après</string>
-    <string name="swipe_action_unlike">Retirer des favoris</string>
-    <string name="swipe_action_like">Ajouter aux favoris</string>
     <!-- Storage butler (Settings) -->
     <string name="storage_source_line">%1$s · %2$d pistes · %3$s</string>
     <string name="storage_clean_stale_title">Supprimer les téléchargements en attente</string>

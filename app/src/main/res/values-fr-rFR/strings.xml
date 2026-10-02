@@ -74,9 +74,6 @@
     <string name="home_radio_open_picker">Start radio</string>
     <string name="home_radio_starting">Starting radio</string>
     <!-- Swipeable track row -->
-    <string name="swipe_action_play_next">Jouer après</string>
-    <string name="swipe_action_unlike">Retirer des favoris</string>
-    <string name="swipe_action_like">Ajouter aux favoris</string>
     <!-- Storage butler (Settings) -->
     <string name="storage_source_line">%1$s · %2$d pistes · %3$s</string>
     <string name="storage_clean_stale_title">Supprimer les téléchargements en attente</string>

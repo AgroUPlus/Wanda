@@ -40,9 +40,6 @@ internal sealed class AgroAuthError(message: String, cause: Throwable? = null) :
     internal class Server(message: String) : AgroAuthError(message)
 
     internal companion object {
-        /** How long [RateLimited] asks the caller to wait, matching the server's fixed window. */
-        const val RATE_LIMIT_WINDOW_SECONDS = 300
-
         /**
          * Maps an HTTP status onto the reason for it.
          *

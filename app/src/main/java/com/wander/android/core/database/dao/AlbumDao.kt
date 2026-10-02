@@ -50,9 +50,6 @@ interface AlbumDao {
     @Query("SELECT * FROM albums WHERE isLibrary = 1 ORDER BY title ASC")
     fun getLibraryAlbumsFlow(): Flow<List<AlbumEntity>>
 
-    @Query("SELECT * FROM albums WHERE source = :source ORDER BY title ASC")
-    fun getAlbumsBySourceFlow(source: SourceType): Flow<List<AlbumEntity>>
-
     @Query("SELECT * FROM albums WHERE id = :albumId LIMIT 1")
     suspend fun getAlbumById(albumId: String): AlbumEntity?
 

@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.shareIn
 
@@ -160,11 +159,6 @@ class FingerprintStatusRepository @Inject constructor(
      * same reason `OffGridTransport` has one.
      */
     fun statuses(): Flow<Map<String, FingerprintStatus>> = shared
-
-    /** How many tracks are fully indexed, for a summary line. */
-    fun indexedCount(): Flow<Int> = statuses()
-        .map { statuses -> statuses.count { it.value == FingerprintStatus.INDEXED } }
-        .distinctUntilChanged()
 
     private companion object {
         /** How long a measured track is held blue while waiting for Room to publish the write. */

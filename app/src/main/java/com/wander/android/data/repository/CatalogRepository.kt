@@ -8,7 +8,6 @@ import com.wander.android.core.database.entity.AlbumEntity
 import com.wander.android.core.database.entity.ArtistEntity
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.ArtistDetails
-import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.musicbrainz.MusicBrainzArtistFallback
@@ -257,10 +256,6 @@ class CatalogRepository @Inject constructor(
             .onFailure { Log.w(TAG, "Artist album shelf fetch failed for $browseId: ${it.javaClass.simpleName}") }
             .getOrDefault(emptyList())
     }
-
-    /** Which backends this artist's known material came from, for the page's subtitle. */
-    fun sourcesOf(tracks: List<UnifiedTrack>): List<SourceType> =
-        tracks.map { it.source }.distinct().sorted()
 
     private companion object {
         const val TAG = "CatalogRepository"

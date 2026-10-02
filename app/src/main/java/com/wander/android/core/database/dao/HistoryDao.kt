@@ -11,9 +11,6 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface HistoryDao {
 
-    @Query("SELECT * FROM history ORDER BY playedAt DESC LIMIT :limit")
-    fun getRecentHistoryFlow(limit: Int = 50): Flow<List<HistoryEntity>>
-
     /**
      * What was played, most recent first, as tracks rather than as ids.
      *

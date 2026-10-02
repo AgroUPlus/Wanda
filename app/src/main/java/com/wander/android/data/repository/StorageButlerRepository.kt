@@ -76,9 +76,6 @@ class StorageButlerRepository @Inject constructor(
         stale.size
     }
 
-    /** Empties the streaming cache. Downloads are untouched — this is only replayable audio. */
-    fun optimizeCacheSize() = audioCacheManager.clearCache()
-
     /**
      * `playCount` is lifetime, not "since this download" — there is no per-download counter, so a
      * track played heavily before ever being downloaded reads as "played" here even if it has sat

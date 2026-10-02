@@ -163,10 +163,6 @@ internal class ReplayViewModel @Inject constructor(
         }
     }
 
-    fun dismissActionFailure() {
-        _state.value = _state.value.copy(actionFailure = null)
-    }
-
     private companion object {
         const val TAG = "ReplayViewModel"
     }

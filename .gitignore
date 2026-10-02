@@ -33,3 +33,4 @@ metrics.json
 report.json
 sonarcloud_report.md
 *.wsl.bak
+/app/stdout

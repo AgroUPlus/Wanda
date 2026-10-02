@@ -48,7 +48,4 @@ class LocalFileDeleter @Inject constructor(
             MediaStore.createTrashRequest(context.contentResolver, parsed, true).intentSender
         }.getOrNull()
     }
-
-    /** True when the user accepted the system dialog. */
-    fun wasAccepted(resultCode: Int): Boolean = resultCode == Activity.RESULT_OK
 }

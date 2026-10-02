@@ -12,9 +12,6 @@ import kotlinx.coroutines.flow.Flow
 interface PlaylistDao {
 
     @Query("SELECT * FROM local_playlists ORDER BY updatedAt DESC")
-    fun getAllPlaylistsFlow(): Flow<List<PlaylistEntity>>
-
-    @Query("SELECT * FROM local_playlists ORDER BY updatedAt DESC")
     suspend fun getAllPlaylists(): List<PlaylistEntity>
 
     @Query("SELECT * FROM local_playlists WHERE id = :id LIMIT 1")
