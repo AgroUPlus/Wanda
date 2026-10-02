@@ -22,10 +22,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
+import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.CompactHeroTopBar
 import com.wander.android.ui.components.EmptyState
+import com.wander.android.ui.components.MatchStatus
 import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.listInset
@@ -44,6 +46,7 @@ fun PlaylistScreen(
     val playlist by viewModel.playlist.collectAsStateWithLifecycle()
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val importWork by viewModel.importWork.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
 
     val listState = rememberLazyListState()
@@ -125,15 +128,30 @@ fun PlaylistScreen(
                         )
                     }
 
+                    item(key = "import-status", contentType = "import-status") {
+                        PlaylistImportBanner(
+                            work = importWork,
+                            notFoundCount = tracks.count { it.source == SourceType.UNRESOLVED },
+                            onRetry = viewModel::retryImport
+                        )
+                    }
+
                     itemsIndexed(
                         items = tracks,
                         key = { index, track -> "${track.id}_$index" },
                         contentType = { _, _ -> "track" }
                     ) { index, track ->
+                        val unmatched = track.source == SourceType.UNRESOLVED
                         TrackRow(
                             track = track,
                             onPlay = { viewModel.play(index) },
-                            onLongPress = { actionsFor = track },
+                            // Nothing in the actions sheet applies to a track that does not exist yet.
+                            onLongPress = { actionsFor = track }.takeUnless { unmatched },
+                            matchStatus = when {
+                                !unmatched -> null
+                                importWork.isRunning -> MatchStatus.MATCHING
+                                else -> MatchStatus.NOT_FOUND
+                            },
                             modifier = Modifier.groupedListItem(index, tracks.size)
                         )
                     }

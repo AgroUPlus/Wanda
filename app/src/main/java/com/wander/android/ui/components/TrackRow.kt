@@ -19,6 +19,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,8 +30,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.FingerprintStatus
 
@@ -69,7 +74,12 @@ fun TrackRow(
      * caller's subtitle describes the *track* (artist, album, duration), while this describes the
      * *play* — a fact only History has, and everyone else has nothing to put here.
      */
-    trailingLabel: String? = null
+    trailingLabel: String? = null,
+    /**
+     * Where an imported placeholder is in being matched to a playable track. Null for every real
+     * track, which is every row outside an import.
+     */
+    matchStatus: MatchStatus? = null
 ) {
     // Dimming the whole row rather than each piece: the row is one object, and fading the parts
     // separately made the artwork and the text disagree about how unavailable the track was.
@@ -171,10 +181,18 @@ fun TrackRow(
         }
 
         Column(horizontalAlignment = Alignment.End) {
-            if (isPlaying) {
-                KineticEqualizer(isPlaying = true)
-            } else if (onToggleLike != null) {
-                LikeButton(isLiked = track.isLiked, onToggle = onToggleLike)
+            when {
+                matchStatus == MatchStatus.MATCHING -> {
+                    val finding = stringResource(R.string.track_matching)
+                    LoadingIndicator(modifier = Modifier.size(24.dp).semantics { contentDescription = finding })
+                }
+                matchStatus == MatchStatus.NOT_FOUND -> Text(
+                    text = stringResource(R.string.track_not_found),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
+                isPlaying -> KineticEqualizer(isPlaying = true)
+                onToggleLike != null -> LikeButton(isLiked = track.isLiked, onToggle = onToggleLike)
             }
             trailingLabel?.let {
                 Text(
