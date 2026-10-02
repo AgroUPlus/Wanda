@@ -186,6 +186,19 @@
     <!-- Importer -->
     <string name="importer_edit_title">Edit Title</string>
     <string name="importer_import_playlist">Import Playlist</string>
+    <string name="importer_guide_title">Make it public, then paste the link</string>
+    <string name="importer_guide_subtitle">Wanda can read playlists that anyone with the link can open. You don\'t sign in to anything here.</string>
+    <string name="importer_open_platform">Open %1$s</string>
+    <string name="importer_wrong_platform">That\'s a %1$s link, but you chose %2$s. Go back and choose %1$s, or paste a %2$s link.</string>
+    <string name="importer_guide_spotify_1">Open the playlist in Spotify and tap the ⋯ menu.</string>
+    <string name="importer_guide_spotify_2">If you see “Make public”, tap it. If you see “Make private”, it is already public.</string>
+    <string name="importer_guide_spotify_3">Share the playlist and copy its link.</string>
+    <string name="importer_guide_deezer_1">Open the playlist in Deezer and edit it.</string>
+    <string name="importer_guide_deezer_2">Make sure the Private switch is off.</string>
+    <string name="importer_guide_deezer_3">Share the playlist and copy its link.</string>
+    <string name="importer_guide_apple_1">In Apple Music, tap your account button, then Music Profile, then Edit.</string>
+    <string name="importer_guide_apple_2">Turn the playlist on so it shows on your profile.</string>
+    <string name="importer_guide_apple_3">Open the playlist, tap Share and copy its link.</string>
     <string name="notif_importing_playlist">Matching \"%1$s\"</string>
     <string name="notif_import_progress">%1$d of %2$d tracks</string>
     <string name="track_matching">Finding this track</string>
@@ -564,17 +577,13 @@
     <string name="queue_tracks">%1$s of %2$s tracks</string>
     <string name="queue_voted">Voted (%1$s)</string>
     <string name="search_nothing_found_connected_sources">Nothing found for \\"%1$s\\" in your connected sources.</string>
-    <string name="settings_found">%1$s found</string>
-    <string name="settings_matching_track">Matching track %1$s of %2$s</string>
     <string name="settings_measuring_now">Measuring \\"%1$s\\" now</string>
     <string name="settings_now_exists">“%1$s” now exists on %2$s.</string>
     <string name="settings_of">%1$s · %2$s of %3$s</string>
     <string name="settings_plays_would_combine">%1$s plays would combine</string>
     <string name="settings_reading_playlist_from">Reading playlist from %1$s...</string>
     <string name="settings_recognisable">%1$s of %2$s recognisable</string>
-    <string name="settings_saving_library">Saving \\"%1$s\\" to your library...</string>
     <string name="settings_signed_as">Signed in as %1$s.</string>
-    <string name="settings_tracks_matched">\\"%1$s\\" • %2$s of %3$s tracks matched</string>
     <string name="social_added_by">%1$s · added by %2$s</string>
     <string name="social_first_discover_circle_s_top">First to discover %1$s of the circle\'s top tracks before anyone else</string>
     <string name="social_match">%1$s%% Match</string>
