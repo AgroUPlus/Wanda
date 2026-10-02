@@ -10,6 +10,7 @@ class SourceTypeConverter {
         "YTMUSIC" -> SourceType.YTMUSIC
         "DEEZER" -> SourceType.DEEZER
         "PODCAST" -> SourceType.PODCAST
+        "UNRESOLVED" -> SourceType.UNRESOLVED
         "LOCAL" -> SourceType.LOCAL
         else -> SourceType.LOCAL
     }

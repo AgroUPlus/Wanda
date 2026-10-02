@@ -20,12 +20,9 @@ class AppleMusicPlaylistParser @Inject constructor(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun parse(url: String, cookie: String? = null): Result<RawImportPlaylist> = runCatching {
+    suspend fun parse(url: String): Result<RawImportPlaylist> = runCatching {
         val html: String = httpClient.get(url.trim()) {
             header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
-            if (!cookie.isNullOrBlank()) {
-                header("Cookie", cookie)
-            }
         }.body()
 
         // schema.org JSON-LD first; the serialized track rows only if it carried no tracklist.

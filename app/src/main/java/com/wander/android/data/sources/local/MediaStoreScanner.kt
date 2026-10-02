@@ -1,5 +1,12 @@
 package com.wander.android.data.sources.local
 
+import kotlin.coroutines.resume
+import java.util.concurrent.atomic.AtomicInteger
+import java.io.File
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.suspendCancellableCoroutine
+import android.os.Environment
+import android.media.MediaScannerConnection
 import android.content.ContentUris
 import android.content.Context
 import android.net.Uri
@@ -73,6 +80,40 @@ class MediaStoreScanner @Inject constructor(
             while (c.moveToNext()) ids += c.getLong(idCol)
         }
         ids
+    }
+
+    /**
+     * Asks MediaStore to index the audio files in the chosen folder, and waits until it has.
+     *
+     * [scan] only reports what MediaStore already knows, and MediaStore only knows what Android has
+     * got round to indexing. Files copied over USB, or put somewhere the media scanner has not
+     * visited since, are on the disk and playable but simply not in its database — so a folder
+     * full of `.m4a` could be chosen and the library stay empty. Returns how many files it asked
+     * about; 0 when no folder is chosen, which is the default and leaves indexing to Android.
+     *
+     * A folder holding a `.nomedia` file is skipped by the scanner by design and stays empty.
+     */
+    @Suppress("DEPRECATION")
+    suspend fun indexChosenFolder(): Int = withContext(Dispatchers.IO) {
+        val folder = secureStorage.localScanFolder?.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q }
+            ?: return@withContext 0
+        val root = File(Environment.getExternalStorageDirectory(), folder)
+        val paths = root.walkTopDown()
+            .filter { it.isFile && it.extension.lowercase() in AUDIO_EXTENSIONS }
+            .map { it.absolutePath }
+            .toList()
+        if (paths.isEmpty()) return@withContext 0
+
+        // Bounded, so a scanner that never calls back cannot hold a rescan open forever.
+        withTimeoutOrNull(INDEX_TIMEOUT_MS) {
+            suspendCancellableCoroutine { continuation ->
+                val remaining = AtomicInteger(paths.size)
+                MediaScannerConnection.scanFile(context, paths.toTypedArray(), null) { _, _ ->
+                    if (remaining.decrementAndGet() == 0 && continuation.isActive) continuation.resume(Unit)
+                }
+            }
+        }
+        paths.size
     }
 
     suspend fun scan(sinceSeconds: Long = 0L): MediaStoreScan = withContext(Dispatchers.IO) {
@@ -192,3 +233,10 @@ class MediaStoreScanner @Inject constructor(
         MediaStoreScan(tracks, watermark)
     }
 }
+
+private const val INDEX_TIMEOUT_MS = 60_000L
+
+/** What the media scanner indexes as music. M4A and M4B are MPEG-4 audio, which it files under `audio/mp4`. */
+private val AUDIO_EXTENSIONS = setOf(
+    "mp3", "m4a", "m4b", "aac", "flac", "ogg", "oga", "opus", "wav", "wma", "mka", "amr", "aif", "aiff"
+)

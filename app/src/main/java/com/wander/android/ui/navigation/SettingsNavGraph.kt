@@ -89,7 +89,6 @@ internal fun NavGraphBuilder.settingsNavGraph(
             onBack = navController::popBackStack,
             onOpenPlaylist = { navController.navigateSettled(Routes.playlist(it)) },
             onOpenYouTubeLogin = { navController.navigateSettled(Routes.YTMUSIC_LOGIN) },
-            onOpenDeezerLogin = { navController.navigateSettled(Routes.DEEZER_LOGIN) }
         )
     }
 

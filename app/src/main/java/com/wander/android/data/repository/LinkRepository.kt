@@ -85,6 +85,9 @@ class LinkRepository @Inject constructor(
     /** Whether this is an album link. Separate from [canOpen] because it resolves to an album. */
     fun isAlbumLink(uri: Uri): Boolean = UniversalAlbumLink.matches(uri.toString())
 
+    /** Whether this is a shared playlist. Separate from [canOpen], same reason as [isAlbumLink]. */
+    fun isPlaylistLink(uri: Uri): Boolean = UniversalPlaylistLink.matches(uri.toString())
+
     /** Whether this is a universal track link. Separate from [canOpen], same reason as [isAlbumLink]. */
     fun isTrackLink(uri: Uri): Boolean = UniversalTrackLink.matches(uri.toString())
 

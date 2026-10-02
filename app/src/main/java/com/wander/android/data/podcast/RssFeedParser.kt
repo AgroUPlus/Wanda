@@ -23,7 +23,10 @@ object RssFeedParser {
     fun parse(parser: XmlPullParser): ParsedFeed {
         var title: String? = null
         var author: String? = null
-        var artwork: String? = null
+        // Two ways a feed names its cover, and either can come first. iTunes' is the one current
+        // players read and is the larger, so it wins; the plain `<image>` is only the fallback.
+        var itunesArtwork: String? = null
+        var imageArtwork: String? = null
         val episodes = mutableListOf<ParsedEpisode>()
         var sawChannel = false
 
@@ -36,17 +39,17 @@ object RssFeedParser {
                 "itunes:author" -> if (parser.depth == CHANNEL_CHILD_DEPTH && author == null) {
                     author = parser.nextText().trim().ifBlank { null }
                 }
-                "itunes:image" -> if (parser.depth == CHANNEL_CHILD_DEPTH && artwork == null) {
-                    artwork = parser.getAttributeValue(null, "href")
+                "itunes:image" -> if (parser.depth == CHANNEL_CHILD_DEPTH && itunesArtwork == null) {
+                    itunesArtwork = parser.getAttributeValue(null, "href")
                 }
-                "image" -> if (parser.depth == CHANNEL_CHILD_DEPTH && artwork == null) artwork = readImageUrl(parser)
+                "image" -> if (parser.depth == CHANNEL_CHILD_DEPTH && imageArtwork == null) imageArtwork = readImageUrl(parser)
             }
         }
         if (!sawChannel) throw FeedParseException("Not an RSS podcast feed")
         return ParsedFeed(
             title = title?.ifBlank { null } ?: throw FeedParseException("The feed has no title"),
             author = author,
-            artworkUrl = artwork,
+            artworkUrl = itunesArtwork ?: imageArtwork,
             episodes = episodes
         )
     }

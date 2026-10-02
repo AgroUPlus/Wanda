@@ -26,7 +26,7 @@ interface TrackLibraryQueries {
     @Query("SELECT id FROM tracks WHERE isLibrary = 1 AND isEpisode = 0 AND source = :source ORDER BY title ASC")
     suspend fun libraryTrackIdsBySource(source: SourceType): List<String>
 
-    @Query("SELECT * FROM tracks")
+    @Query("SELECT * FROM tracks WHERE source != 'UNRESOLVED'")
     suspend fun getAllTracksOnce(): List<TrackEntity>
 
     @Query("SELECT * FROM tracks WHERE isLibrary = 1 AND source = :source ORDER BY title ASC")
@@ -63,7 +63,7 @@ interface TrackLibraryQueries {
     )
     suspend fun artworkFor(title: String, artist: String): String?
 
-    @Query("SELECT id FROM tracks WHERE id != :excludingId AND durationMs BETWEEN :minDurationMs AND :maxDurationMs")
+    @Query("SELECT id FROM tracks WHERE id != :excludingId AND source != 'UNRESOLVED' AND durationMs BETWEEN :minDurationMs AND :maxDurationMs")
     suspend fun getCandidateIdsByDuration(excludingId: String, minDurationMs: Long, maxDurationMs: Long): List<String>
 
     @Query("SELECT * FROM tracks WHERE albumId = :albumId ORDER BY discNumber ASC, trackNumber ASC")
@@ -80,13 +80,13 @@ interface TrackLibraryQueries {
     @Query(
         """
         SELECT * FROM tracks
-        WHERE artist LIKE '%' || :artist || '%' COLLATE NOCASE
+        WHERE source != 'UNRESOLVED' AND artist LIKE '%' || :artist || '%' COLLATE NOCASE
         ORDER BY playCount DESC, title ASC
         """
     )
     fun getTracksByArtistFlow(artist: String): Flow<List<TrackEntity>>
 
-    @Query("SELECT * FROM tracks WHERE artist LIKE '%' || :artist || '%' COLLATE NOCASE")
+    @Query("SELECT * FROM tracks WHERE source != 'UNRESOLVED' AND artist LIKE '%' || :artist || '%' COLLATE NOCASE")
     suspend fun getTracksByArtistOnce(artist: String): List<TrackEntity>
 
     @Query("SELECT * FROM tracks WHERE isLiked = 1")
@@ -95,9 +95,10 @@ interface TrackLibraryQueries {
     @Query(
         """
         SELECT * FROM tracks
-        WHERE title LIKE '%' || :query || '%'
-           OR artist LIKE '%' || :query || '%'
-           OR album LIKE '%' || :query || '%'
+        WHERE source != 'UNRESOLVED'
+          AND (title LIKE '%' || :query || '%'
+            OR artist LIKE '%' || :query || '%'
+            OR album LIKE '%' || :query || '%')
         ORDER BY playCount DESC
         LIMIT :limit
         """

@@ -24,20 +24,16 @@ import com.wander.android.data.importer.RawUserPlaylistSummary
 /**
  * Step 2: how to get a playlist, once a platform is chosen.
  *
- * YouTube Music and Deezer both already have an account elsewhere in this app; their signed-in
- * users browse discovered library playlists instead. For every other external platform (Spotify,
- * Apple Music), an embedded [ExternalPlatformWebView] is there to browse to a playlist and pick up
- * its link, which is then imported manually.
+ * Spotify, Deezer and Apple Music get a [GuideStep]: how to make the playlist public, then a link
+ * to paste. YouTube Music already has an account elsewhere in this app, so its signed-in users
+ * browse their library playlists instead and everyone else pastes a link.
  */
-/** What the access step can ask of its host: loading playlists, signing in, and handing the web view over. */
+/** What the access step can ask of its host: loading playlists, signing in, and taking a pasted link. */
 internal class AccessStepActions(
     val onSelectPlaylist: (RawUserPlaylistSummary) -> Unit,
     val onRefreshYouTube: () -> Unit,
-    val onRefreshDeezer: () -> Unit,
     val onSwitchToDirectLink: () -> Unit,
     val onOpenYouTubeLogin: () -> Unit,
-    val onOpenDeezerLogin: () -> Unit,
-    val onWebUrlChanged: (String) -> Unit,
     val onInputChange: (String) -> Unit,
     val onLoadPlaylist: () -> Unit
 )
@@ -47,39 +43,50 @@ internal fun AccessStep(
     platform: PlatformType,
     state: PlaylistImportUiState,
     isYouTubeLoggedIn: Boolean,
-    isDeezerLoggedIn: Boolean,
     actions: AccessStepActions,
     modifier: Modifier = Modifier
 ) {
-    val hasOwnAccount = platform == PlatformType.YOUTUBE || platform == PlatformType.DEEZER
-    val isLoggedIn = when (platform) {
-        PlatformType.YOUTUBE -> isYouTubeLoggedIn
-        PlatformType.DEEZER -> isDeezerLoggedIn
-        else -> false
+    val guide = platform.guideSteps()
+    val isYouTube = platform == PlatformType.YOUTUBE
+    val pasteLink = @Composable { linkModifier: Modifier ->
+        ImportDirectLinkContent(
+            manualInput = state.manualInput,
+            isLoadingPlaylist = state.isLoadingPlaylist,
+            error = state.error,
+            onInputChange = actions.onInputChange,
+            onLoadPlaylist = actions.onLoadPlaylist,
+            modifier = linkModifier
+        )
     }
-    val onRefresh = if (platform == PlatformType.YOUTUBE) actions.onRefreshYouTube else actions.onRefreshDeezer
-    val onOpenLogin = if (platform == PlatformType.YOUTUBE) actions.onOpenYouTubeLogin else actions.onOpenDeezerLogin
 
     when {
-        hasOwnAccount && state.isDiscovering -> Box(
+        guide != null -> GuideStep(
+            platform = platform,
+            steps = guide,
+            state = state,
+            actions = actions,
+            modifier = modifier
+        )
+
+        isYouTube && state.isDiscovering -> Box(
             modifier = modifier,
             contentAlignment = Alignment.Center
         ) {
             LoadingIndicator()
         }
 
-        hasOwnAccount && state.discoveredPlaylists.isNotEmpty() -> DiscoveredPlaylistsGrid(
+        isYouTube && state.discoveredPlaylists.isNotEmpty() -> DiscoveredPlaylistsGrid(
             platform = platform,
             playlists = state.discoveredPlaylists,
             onSelectPlaylist = actions.onSelectPlaylist,
-            onRefresh = onRefresh,
+            onRefresh = actions.onRefreshYouTube,
             onPasteLinkInstead = actions.onSwitchToDirectLink,
             modifier = modifier
         )
 
         // Distinct from the plain paste-link fallback below: this is what a completed, empty
         // discovery looks like, so it doesn't silently read as "the app never even tried."
-        hasOwnAccount && isLoggedIn && state.hasCheckedDiscovery && !state.discoveryDismissed ->
+        isYouTube && isYouTubeLoggedIn && state.hasCheckedDiscovery && !state.discoveryDismissed ->
             Column(modifier = modifier.padding(16.dp)) {
                 Text(
                     text = stringResource(R.string.importer_no_playlists_found, platform.displayName),
@@ -87,7 +94,7 @@ internal fun AccessStep(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
-                Button(onClick = onRefresh, shapes = ButtonDefaults.shapes()) {
+                Button(onClick = actions.onRefreshYouTube, shapes = ButtonDefaults.shapes()) {
                     Text(stringResource(R.string.importer_refresh_library))
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 20.dp))
@@ -97,18 +104,11 @@ internal fun AccessStep(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
-                ImportDirectLinkContent(
-                    manualInput = state.manualInput,
-                    isLoadingPlaylist = state.isLoadingPlaylist,
-                    error = state.error,
-                    onInputChange = actions.onInputChange,
-                    onLoadPlaylist = actions.onLoadPlaylist,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                pasteLink(Modifier.fillMaxWidth())
             }
 
-        hasOwnAccount && !isLoggedIn -> Column(modifier = modifier.padding(16.dp)) {
-            OwnAccountSignInPrompt(platform = platform, onOpenLogin = onOpenLogin)
+        isYouTube && !isYouTubeLoggedIn -> Column(modifier = modifier.padding(16.dp)) {
+            OwnAccountSignInPrompt(platform = platform, onOpenLogin = actions.onOpenYouTubeLogin)
             HorizontalDivider(modifier = Modifier.padding(vertical = 20.dp))
             Text(
                 text = stringResource(R.string.importer_or_paste_link),
@@ -116,42 +116,13 @@ internal fun AccessStep(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-            ImportDirectLinkContent(
-                manualInput = state.manualInput,
-                isLoadingPlaylist = state.isLoadingPlaylist,
-                error = state.error,
-                onInputChange = actions.onInputChange,
-                onLoadPlaylist = actions.onLoadPlaylist,
-                modifier = Modifier.fillMaxWidth()
-            )
+            pasteLink(Modifier.fillMaxWidth())
         }
 
-        // Deezer is already covered by the `hasOwnAccount` branches above; only Spotify and
-        // Apple Music still fall through to the embedded-WebView + manual-paste flow.
-        platform.webUrl != null && platform != PlatformType.DEEZER -> Column(modifier = modifier) {
-            ExternalPlatformWebView(
-                webUrl = platform.webUrl,
-                onUrlChanged = actions.onWebUrlChanged,
-                modifier = Modifier.fillMaxWidth().weight(1f)
-            )
-            ImportDirectLinkContent(
-                manualInput = state.manualInput,
-                isLoadingPlaylist = state.isLoadingPlaylist,
-                error = state.error,
-                onInputChange = actions.onInputChange,
-                onLoadPlaylist = actions.onLoadPlaylist,
-                modifier = Modifier.fillMaxWidth()
-            )
+        else -> Column(modifier = modifier.padding(16.dp)) {
+            PlaylistFileButton(onText = actions.onInputChange)
+            pasteLink(Modifier.fillMaxWidth())
         }
-
-        else -> ImportDirectLinkContent(
-            manualInput = state.manualInput,
-            isLoadingPlaylist = state.isLoadingPlaylist,
-            error = state.error,
-            onInputChange = actions.onInputChange,
-            onLoadPlaylist = actions.onLoadPlaylist,
-            modifier = modifier
-        )
     }
 }
 

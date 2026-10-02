@@ -459,17 +459,12 @@
     <string name="queue_tracks">%1$s des %2$s pistes</string>
     <string name="queue_voted">Voté (%1$s)</string>
     <string name="search_nothing_found_connected_sources">Rien n\'a été trouvé pour \"%1$s\" dans vos sources connectées.</string>
-    <string name="settings_found">%1$s trouvé</string>
-    <string name="settings_matching_track">Correspondance de piste %1$s sur %2$s</string>
     <string name="settings_measuring_now">Mesure \"%1$s\" actuellement</string>
     <string name="settings_now_exists">\"%1$s\" existe maintenant sur %2$s.</string>
     <string name="settings_of">%1$s — %2$s sur %3$s</string>
     <string name="settings_plays_would_combine">%1$s écoutes seraient combinées</string>
-    <string name="settings_reading_playlist_from">Lecture de la playlist depuis %1$s...</string>
     <string name="settings_recognisable">%1$s sur %2$s reconnaissables</string>
-    <string name="settings_saving_library">Sauvegarde de \"%1$s\" dans votre bibliothèque...</string>
     <string name="settings_signed_as">Connecté en tant que %1$s.</string>
-    <string name="settings_tracks_matched">\"%1$s\" - %2$s sur %3$s pistes en correspondance</string>
     <string name="social_added_by">%1$s - ajouté via %2$s</string>
     <string name="social_first_discover_circle_s_top">Premier à découvrir %1$s dans les pistes populaires du cercle avant tout le monde</string>
     <string name="social_match">%1$s%% Match</string>

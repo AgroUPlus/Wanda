@@ -29,7 +29,14 @@ enum class SourceType(
     NAVIDROME("Navidrome", "navidrome:", priority = 1, isPersonalLibrary = true),
     YTMUSIC("YouTube Music", "ytm:", priority = 2, isPersonalLibrary = false),
     DEEZER("Deezer", "deezer:", priority = 3, isPersonalLibrary = false),
-    PODCAST("Podcasts", "podcast:", priority = 4, isPersonalLibrary = false);
+    PODCAST("Podcasts", "podcast:", priority = 4, isPersonalLibrary = false),
+
+    /**
+     * A track imported from a pasted playlist that no backend has been matched to yet. It has no
+     * `IMusicSource`, is never playable and never a search candidate; `PlaylistImportWorker`
+     * replaces it with the matched track.
+     */
+    UNRESOLVED("Importing", "unresolved:", priority = 99, isPersonalLibrary = false);
 
     /** The name to use where space is tight. Full name unless one was given. */
     val shortName: String = shortName ?: displayName

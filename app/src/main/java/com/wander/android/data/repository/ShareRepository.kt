@@ -3,9 +3,13 @@ package com.wander.android.data.repository
 import com.wander.android.core.playback.SpeedAndPitch
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
+import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.ShareKind
 import com.wander.android.data.sources.ShareTarget
+import com.wander.android.data.sources.agro.AgroPlaylistApi
+import com.wander.android.data.sources.agro.AgroPlaylistTrack
+import com.wander.android.data.sources.agro.PlaylistVisibility
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -27,7 +31,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 @Singleton
 class ShareRepository @Inject constructor(
     private val musicRepository: MusicRepository,
-    private val shareLinkRewriter: ShareLinkRewriter
+    private val shareLinkRewriter: ShareLinkRewriter,
+    private val agroPlaylists: AgroPlaylistApi
 ) {
 
     private val _links = MutableSharedFlow<ShareLink>(extraBufferCapacity = 1)
@@ -125,6 +130,75 @@ class ShareRepository @Inject constructor(
                     id = album.id,
                     title = album.title,
                     subtitle = album.artist
+                ),
+                url = link.toUri()
+            )
+        )
+    }
+
+    /** Whether a share can go through Agro, in which case the person chooses who can open it. */
+    val canPublishToAgro: Boolean get() = agroPlaylists.isAvailable
+
+    /**
+     * Shares a playlist that has no link of its own. With an Agro server paired it is published
+     * there and the link names only its id, which has no length limit and reaches the other
+     * accounts on that server; without one, the tracks go in the link itself — see
+     * [shareUniversalPlaylist].
+     */
+    suspend fun shareLocalPlaylist(
+        playlist: UnifiedPlaylist,
+        tracks: List<UnifiedTrack>,
+        visibility: PlaylistVisibility = PlaylistVisibility.FRIENDS
+    ) {
+        if (!agroPlaylists.isAvailable) {
+            shareUniversalPlaylist(playlist, tracks)
+            return
+        }
+        agroPlaylists.publish(
+            playlist.name,
+            tracks.map { AgroPlaylistTrack(it.title, it.artist, it.album, it.durationMs) },
+            visibility
+        ).fold(
+            onSuccess = { id ->
+                _links.tryEmit(
+                    ShareLink(
+                        target = ShareTarget(
+                            kind = ShareKind.PLAYLIST,
+                            source = playlist.source,
+                            id = playlist.id,
+                            title = playlist.name,
+                            subtitle = "${tracks.size} tracks"
+                        ),
+                        url = AgroPlaylistLink.toUri(id)
+                    )
+                )
+            },
+            onFailure = { _errors.tryEmit("Couldn't publish the playlist to Agro: ${it.message}") }
+        )
+    }
+
+    /**
+     * Shares a playlist as a link that lists its tracks and names no backend — see
+     * [UniversalPlaylistLink]. Works for a playlist on any source, including one kept only on this
+     * device, which has no link of its own to give. A playlist too long for one link is reported
+     * through [errors] rather than cut short without saying so.
+     */
+    fun shareUniversalPlaylist(playlist: UnifiedPlaylist, tracks: List<UnifiedTrack>) {
+        val link = UniversalPlaylistLink.from(playlist.name, tracks)
+        if (link == null) {
+            _errors.tryEmit(
+                "A playlist link holds up to ${UniversalPlaylistLink.MAX_TRACKS} tracks, and this one has ${tracks.size}."
+            )
+            return
+        }
+        _links.tryEmit(
+            ShareLink(
+                target = ShareTarget(
+                    kind = ShareKind.PLAYLIST,
+                    source = playlist.source,
+                    id = playlist.id,
+                    title = playlist.name,
+                    subtitle = "${tracks.size} tracks"
                 ),
                 url = link.toUri()
             )

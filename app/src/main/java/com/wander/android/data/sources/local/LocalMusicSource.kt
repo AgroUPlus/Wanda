@@ -60,6 +60,8 @@ class LocalMusicSource @Inject constructor(
         _isConfigured.value = context.hasAudioPermission()
         if (!_isConfigured.value) return@withLock
 
+        // A full rescan is the user asking for everything in the chosen folder, indexed or not.
+        if (full) scanner.indexChosenFolder()
         val since = if (full) 0L else secureStorage.localScanWatermark
         val scan = scanner.scan(since)
         if (full) trackDao.clearBySource(SourceType.LOCAL)
@@ -199,6 +201,7 @@ class LocalMusicSource @Inject constructor(
 
     override suspend fun deletePlaylist(playlistId: String): Result<Unit> {
         playlistDao.deletePlaylist(playlistId)
+        trackDao.deleteUnreferencedUnresolved()
         return Result.success(Unit)
     }
 }

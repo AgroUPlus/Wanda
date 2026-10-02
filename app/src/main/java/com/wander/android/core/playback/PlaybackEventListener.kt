@@ -98,7 +98,15 @@ internal class PlaybackEventListener(
 }
 
 /** Whether this batch replaced, moved or re-timed the playing item rather than just changing its play state. */
-internal fun Player.Events.changesPlayingItem(): Boolean = containsAny(
+internal fun Player.Events.changesPlayingItem(): Boolean = containsAny(*PLAYING_ITEM_EVENTS)
+
+/**
+ * The same rule over plain event ids. `Player.Events` is built on an Android collection that does
+ * not exist in a JVM unit test, so the rule lives here where a test can reach it.
+ */
+internal fun changesPlayingItem(eventIds: Set<Int>): Boolean = PLAYING_ITEM_EVENTS.any { it in eventIds }
+
+private val PLAYING_ITEM_EVENTS = intArrayOf(
     Player.EVENT_MEDIA_ITEM_TRANSITION,
     Player.EVENT_TIMELINE_CHANGED,
     Player.EVENT_POSITION_DISCONTINUITY

@@ -3,6 +3,7 @@ package com.wander.android.ui.components
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.compositionLocalOf
+import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.model.isPlayableOffline
 
@@ -24,8 +25,11 @@ import com.wander.android.data.model.isPlayableOffline
  */
 val LocalOfflinePlayback = compositionLocalOf { false }
 
-/** True when this track can be played given the current network state. */
+/**
+ * True when this track can be played given the current network state. An imported placeholder
+ * has nothing behind it yet, so it never is, online or off.
+ */
 @Composable
 @ReadOnlyComposable
 fun UnifiedTrack.isPlayableNow(): Boolean =
-    !LocalOfflinePlayback.current || isPlayableOffline()
+    source != SourceType.UNRESOLVED && (!LocalOfflinePlayback.current || isPlayableOffline())

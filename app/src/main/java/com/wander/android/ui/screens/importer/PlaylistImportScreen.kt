@@ -40,8 +40,8 @@ import com.wander.android.data.importer.ImportProgress
  * Step 1 picks a platform, step 2 gets a playlist (a share link for every platform; YouTube alone
  * also offers browsing the account this app already has), step 3 picks tracks, step 4 imports.
  *
- * For external platforms (Spotify, Deezer, Apple Music), an embedded WebView catches cookies while
- * manual link input allows importing any shareable playlist link.
+ * Spotify, Deezer and Apple Music have no sign-in here: step 2 explains how to make a playlist
+ * public and takes its link. The link is all that is needed.
  */
 private enum class ImporterStage(val step: Int, val labelRes: Int) {
     PLATFORM(1, R.string.importer_step_platform_label),
@@ -56,13 +56,11 @@ fun PlaylistImportScreen(
     onBack: () -> Unit,
     onOpenPlaylist: (String) -> Unit = {},
     onOpenYouTubeLogin: () -> Unit = {},
-    onOpenDeezerLogin: () -> Unit = {},
     viewModel: PlaylistImportViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val progress by viewModel.progress.collectAsStateWithLifecycle()
     val isYouTubeLoggedIn by viewModel.isYouTubeLoggedIn.collectAsStateWithLifecycle()
-    val isDeezerLoggedIn by viewModel.isDeezerLoggedIn.collectAsStateWithLifecycle()
     val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
     val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
 
@@ -162,15 +160,11 @@ fun PlaylistImportScreen(
                             platform = platform,
                             state = state,
                             isYouTubeLoggedIn = isYouTubeLoggedIn,
-                            isDeezerLoggedIn = isDeezerLoggedIn,
                             actions = AccessStepActions(
                                 onSelectPlaylist = { viewModel.loadPlaylist(it.url, it.name, it.coverUrl) },
                                 onRefreshYouTube = viewModel::checkYouTubePlaylists,
-                                onRefreshDeezer = viewModel::checkDeezerPlaylists,
                                 onSwitchToDirectLink = viewModel::switchToDirectLink,
                                 onOpenYouTubeLogin = onOpenYouTubeLogin,
-                                onOpenDeezerLogin = onOpenDeezerLogin,
-                                onWebUrlChanged = viewModel::onWebUrlChanged,
                                 onInputChange = viewModel::setManualInput,
                                 onLoadPlaylist = { viewModel.loadPlaylist(state.manualInput) }
                             ),
