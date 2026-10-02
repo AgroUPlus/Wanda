@@ -9,6 +9,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -29,12 +30,14 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.ToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -125,18 +128,32 @@ internal fun RateSection(
                 }
             }
 
-            // Labels are resolved here: ButtonGroup's item builders are not composable scopes.
-            val labels = presets.map(::formatPreset)
             ButtonGroup(
                 overflowIndicator = {},
                 modifier = Modifier.fillMaxWidth()
             ) {
-                presets.forEachIndexed { i, preset ->
-                    toggleableItem(
-                        checked = abs(rate - preset) < HALF_STEP,
-                        label = labels[i],
-                        onCheckedChange = { onRate(preset) },
-                        weight = 1f
+                presets.forEach { preset ->
+                    customItem(
+                        buttonGroupContent = {
+                            val interaction = remember { MutableInteractionSource() }
+                            ToggleButton(
+                                checked = abs(rate - preset) < HALF_STEP,
+                                onCheckedChange = { onRate(preset) },
+                                interactionSource = interaction,
+                                // The default 24 dp a side left a quarter of the row too narrow for
+                                // `0.75×`, which then spilled out to the right instead of centring.
+                                contentPadding = PaddingValues(horizontal = 4.dp),
+                                modifier = Modifier.weight(1f).animateWidth(interaction)
+                            ) {
+                                Text(
+                                    text = formatPreset(preset),
+                                    maxLines = 1,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        },
+                        menuContent = {}
                     )
                 }
             }
