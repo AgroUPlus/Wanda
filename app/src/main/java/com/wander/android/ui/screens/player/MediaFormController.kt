@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Keeps the playing track in the listener's saved form — song or music video — and reports which
@@ -121,7 +122,7 @@ internal class MediaFormController @Inject constructor(
      * title and artist ([com.wander.android.data.repository.RecordingRules.isSameWork]); length is
      * ignored because a video runs longer than the studio cut.
      */
-    private suspend fun findForms(track: UnifiedTrack): MediaToggleState {
+    private suspend fun findForms(track: UnifiedTrack): MediaToggleState = withContext(Dispatchers.IO) {
         val rules = recordingRules.current()
         val query = "${track.artist} ${track.title}"
         val sources = setOf(track.source)
@@ -133,7 +134,7 @@ internal class MediaFormController @Inject constructor(
         val isVideo = videos.any { it.id == track.id } && songs.none { it.id == track.id }
         val playing = if (isVideo) PlaybackMediaType.VIDEO else PlaybackMediaType.SONG
         val others = if (isVideo) songs else videos
-        return MediaToggleState(playing, others.firstOrNull { it.id != track.id && rules.isSameWork(track, it) })
+        MediaToggleState(playing, others.firstOrNull { it.id != track.id && rules.isSameWork(track, it) })
     }
 }
 

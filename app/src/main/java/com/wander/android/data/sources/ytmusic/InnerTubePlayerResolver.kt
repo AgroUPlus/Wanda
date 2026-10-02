@@ -2,7 +2,9 @@ package com.wander.android.data.sources.ytmusic
 
 import com.zemer.cipher.CipherDeobfuscator
 import com.zemer.cipher.potoken.PoTokenGenerator
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -81,8 +83,13 @@ internal class InnerTubePlayerResolver @Inject constructor(
         val isLive = variant == InnerTubeVariant.VISIONOS
         val visitorId = if (isLive) visitorSession() else null
         val sessionId = accountManager.visitorData.ifBlank { fallbackSessionId }
+        // `getWebClientPoToken` blocks in `runBlocking` while a WebView mints the token, and that
+        // WebView needs the main thread: called from it, the two wait on each other and the whole
+        // app freezes. Pinned to IO here so no caller can walk into that, whatever thread it is on.
         val poToken = if (isWeb) {
-            runCatching { PoTokenGenerator().getWebClientPoToken(videoId, sessionId) }.getOrNull()
+            withContext(Dispatchers.IO) {
+                runCatching { PoTokenGenerator().getWebClientPoToken(videoId, sessionId) }.getOrNull()
+            }
         } else {
             null
         }
