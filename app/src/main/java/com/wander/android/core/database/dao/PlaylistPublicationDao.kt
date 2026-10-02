@@ -20,6 +20,9 @@ interface PlaylistPublicationDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(publication: PlaylistPublicationEntity)
 
+    @Query("DELETE FROM playlist_publications WHERE playlistId = :playlistId")
+    suspend fun delete(playlistId: String)
+
     @Query("UPDATE playlist_publications SET visibility = :visibility WHERE playlistId = :playlistId")
     suspend fun setVisibility(playlistId: String, visibility: String)
 }

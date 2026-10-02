@@ -65,6 +65,17 @@ class AgroPlaylistApi @Inject constructor(private val graphQl: AgroGraphQl) {
         return Result.success(id)
     }
 
+    /**
+     * Deletes the published playlist [id] from the server. The server answers false when there is
+     * no such playlist of this account's, which for a copy this account published means it is
+     * already gone: either way nothing is left there, so both count as done.
+     */
+    suspend fun delete(id: String): Result<Unit> =
+        graphQl.execute(DELETE, buildJsonObject { put("id", id) }).mapCatching { data ->
+            data["deletePlaylist"]?.jsonPrimitive?.booleanOrNull
+                ?: throw IOException("Agro did not answer the delete")
+        }
+
     /** Changes who can open the published playlist [id]. Only its owner may. */
     suspend fun updateVisibility(id: String, visibility: PlaylistVisibility): Result<Unit> =
         graphQl.execute(updateVisibilityQuery(visibility), updateVisibilityVariables(id, visibility))

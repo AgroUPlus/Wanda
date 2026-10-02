@@ -13,6 +13,12 @@ internal object AgroPlaylistLink {
 
     fun toUri(id: String): String = "wanda://playlist?" + UniversalLinkCodec.buildQuery(listOf("agro" to id))
 
+    /**
+     * The tappable form: the Agro server's `/listen?pl=<id>` page, which hands the app [toUri].
+     * A `wanda://` link is not one a chat will open. See `SHARE_LINKS.md` §7a in Agro.
+     */
+    fun toWebUrl(origin: String, id: String): String = "$origin/listen?pl=$id"
+
     /** The playlist id in [uri], or null when it is not an Agro playlist link or the id is malformed. */
     fun parse(uri: String): String? {
         if (!UniversalPlaylistLink.matches(uri)) return null

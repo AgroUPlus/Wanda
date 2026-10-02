@@ -45,7 +45,8 @@ internal const val APP_SCHEME = "wanda"
 @Singleton
 class ShareLinkRewriter @Inject constructor(
     private val secureStorage: SecureStorage,
-    private val agroGraphQl: AgroGraphQl
+    private val agroGraphQl: AgroGraphQl,
+    private val agroLinkBase: AgroLinkBase
 ) {
 
     /**
@@ -114,11 +115,7 @@ class ShareLinkRewriter @Inject constructor(
      */
     private fun shareBase(): String? {
         domain().takeIf { it.isNotBlank() }?.let { return "https://$it" }
-        if (!agroGraphQl.isConfigured) return null
-        val server = runCatching { Uri.parse(secureStorage.agroServerUrl) }.getOrNull() ?: return null
-        val scheme = server.scheme?.lowercase()?.takeIf { it == "http" || it == "https" } ?: return null
-        val authority = server.authority?.takeIf(String::isNotBlank) ?: return null
-        return "$scheme://$authority"
+        return agroLinkBase.serverOrigin()
     }
 
     /**

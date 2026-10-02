@@ -32,7 +32,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 class ShareRepository @Inject constructor(
     private val musicRepository: MusicRepository,
     private val shareLinkRewriter: ShareLinkRewriter,
-    private val agroPlaylists: AgroPlaylistApi
+    private val agroPlaylists: AgroPlaylistApi,
+    private val agroLinkBase: AgroLinkBase
 ) {
 
     private val _links = MutableSharedFlow<ShareLink>(extraBufferCapacity = 1)
@@ -163,24 +164,34 @@ class ShareRepository @Inject constructor(
             visibility
         ).fold(
             onSuccess = { id ->
-                _links.tryEmit(
-                    ShareLink(
-                        target = ShareTarget(
-                            kind = ShareKind.PLAYLIST,
-                            source = playlist.source,
-                            id = playlist.id,
-                            title = playlist.name,
-                            subtitle = "${tracks.size} tracks"
-                        ),
-                        url = AgroPlaylistLink.toUri(id)
-                    )
-                )
+                shareAgroPlaylist(playlist, id, tracks.size)
                 id
             },
             onFailure = {
                 _errors.tryEmit("Couldn't publish the playlist to Agro: ${it.message}")
                 null
             }
+        )
+    }
+
+    /**
+     * Sends the link to a playlist already on Agro, without publishing it again. The link is the
+     * server's `/listen?pl=` page, which a chat will open, rather than the bare `wanda://` link.
+     */
+    fun shareAgroPlaylist(playlist: UnifiedPlaylist, agroId: String, trackCount: Int) {
+        val url = agroLinkBase.origin()?.let { AgroPlaylistLink.toWebUrl(it, agroId) }
+            ?: AgroPlaylistLink.toUri(agroId)
+        _links.tryEmit(
+            ShareLink(
+                target = ShareTarget(
+                    kind = ShareKind.PLAYLIST,
+                    source = playlist.source,
+                    id = playlist.id,
+                    title = playlist.name,
+                    subtitle = "$trackCount tracks"
+                ),
+                url = url
+            )
         )
     }
 

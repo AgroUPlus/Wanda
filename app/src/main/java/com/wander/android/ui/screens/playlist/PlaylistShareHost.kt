@@ -1,5 +1,11 @@
 package com.wander.android.ui.screens.playlist
 
+import com.wander.android.ui.components.ConfirmDialog
+import com.wander.android.data.sources.agro.PlaylistVisibility
+import androidx.compose.ui.res.stringResource
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
@@ -22,7 +28,9 @@ import com.wander.android.data.repository.PlaylistFileExporter
 internal class PlaylistShareActions(
     val onShare: (() -> Unit)?,
     val onConvert: (() -> Unit)?,
-    val onDownload: (() -> Unit)?
+    val onDownload: (() -> Unit)?,
+    /** Who can open the playlist's Agro copy, for the header to say it is shared; null when not. */
+    val sharedWith: PlaylistVisibility? = null
 )
 
 /**
@@ -37,7 +45,8 @@ internal fun PlaylistShareHost(
     viewModel: PlaylistShareViewModel = hiltViewModel()
 ): PlaylistShareActions {
     val sheet by viewModel.sheet.collectAsStateWithLifecycle()
-    val published by viewModel.publishedVisibility.collectAsStateWithLifecycle()
+    val publication by viewModel.publication.collectAsStateWithLifecycle()
+    var confirmingUnshare by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     val saveFile = rememberLauncherForActivityResult(
@@ -56,16 +65,24 @@ internal fun PlaylistShareHost(
     when (sheet) {
         PlaylistSheet.SHARE -> PlaylistShareSheet(
             originalSource = playlist.source.displayName.takeIf { viewModel.canShareOriginal(playlist) },
-            canUseAgro = viewModel.canPublishToAgro,
-            publishedVisibility = published,
-            onOriginal = { viewModel.shareOriginal(playlist) },
-            onLink = { viewModel.shareAsLink(playlist, tracks) },
-            onFile = { viewModel.shareAsFile(playlist, tracks) },
-            onAgro = { viewModel.open(PlaylistSheet.VISIBILITY) },
+            publication = publication,
+            choices = PlaylistShareChoices(
+                onOriginal = { viewModel.shareOriginal(playlist) },
+                onLink = { viewModel.shareAsLink(playlist, tracks) },
+                onFile = { viewModel.shareAsFile(playlist, tracks) },
+                onPublish = { viewModel.open(PlaylistSheet.VISIBILITY) }
+                    .takeIf { viewModel.canPublishToAgro && publication == null },
+                onResend = { viewModel.resendAgroLink(playlist, tracks) },
+                onChangeVisibility = { viewModel.open(PlaylistSheet.VISIBILITY) },
+                onUnshare = {
+                    viewModel.dismiss()
+                    confirmingUnshare = true
+                }
+            ),
             onDismiss = viewModel::dismiss
         )
         PlaylistSheet.VISIBILITY -> PlaylistVisibilitySheet(
-            current = published,
+            current = publication?.visibility,
             onPick = { viewModel.pickVisibility(it, playlist, tracks) },
             onDismiss = viewModel::dismiss
         )
@@ -77,11 +94,22 @@ internal fun PlaylistShareHost(
         null -> Unit
     }
 
+    if (confirmingUnshare) {
+        ConfirmDialog(
+            title = stringResource(R.string.playlist_unshare_confirm_title, playlist.name),
+            message = stringResource(R.string.playlist_unshare_confirm_message),
+            confirmLabel = stringResource(R.string.playlist_unshare),
+            onConfirm = viewModel::unshare,
+            onDismiss = { confirmingUnshare = false }
+        )
+    }
+
     val hasTracks = tracks.isNotEmpty()
     return PlaylistShareActions(
         onShare = { viewModel.open(PlaylistSheet.SHARE) }.takeIf { hasTracks },
         onConvert = { viewModel.open(PlaylistSheet.CONVERT) }.takeIf { viewModel.canConvert(playlist, tracks) },
-        onDownload = { saveFile.launch(M3uWriter.fileName(playlist.name)) }.takeIf { hasTracks }
+        onDownload = { saveFile.launch(M3uWriter.fileName(playlist.name)) }.takeIf { hasTracks },
+        sharedWith = publication?.visibility
     )
 }
 

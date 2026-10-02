@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.CloudDone
 import androidx.compose.material.icons.rounded.LibraryAdd
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Shuffle
@@ -49,6 +50,8 @@ internal fun AlbumHero(
     modifier: Modifier = Modifier,
     /** Null when this record's backend cannot publish a link for it. */
     onShare: (() -> Unit)? = null,
+    /** Playlists only: already shared through Agro, so the button opens what is shared, not a new share. */
+    isShared: Boolean = false,
     /** Playlists only: copy a backend's playlist into a Wanda one. Null when it already is one. */
     onConvert: (() -> Unit)? = null,
     /** Playlists only: save the tracks as an `.m3u8` file. */
@@ -114,8 +117,8 @@ internal fun AlbumHero(
             onShare?.let { share ->
                 ShapedActionButton(
                     onClick = share,
-                    contentDescription = stringResource(R.string.action_share),
-                    icon = Icons.Rounded.Share
+                    contentDescription = stringResource(if (isShared) R.string.playlist_shared_on_agro else R.string.action_share),
+                    icon = if (isShared) Icons.Rounded.CloudDone else Icons.Rounded.Share
                 )
             }
             onConvert?.let { convert ->

@@ -117,6 +117,7 @@ fun PlaylistScreen(
                         val subtitle = listOfNotNull(
                             current?.source?.displayName,
                             "$trackCount track${if (trackCount == 1) "" else "s"}",
+                            shareActions.sharedWith?.let { stringResource(R.string.playlist_shared_badge, stringResource(visibilityTitle(it))) },
                             current?.comment?.takeIf { it.isNotBlank() }
                         ).joinToString(" · ")
 
@@ -127,6 +128,7 @@ fun PlaylistScreen(
                             onPlay = viewModel::playAll,
                             onShuffle = viewModel::shuffle,
                             onShare = shareActions.onShare,
+                            isShared = shareActions.sharedWith != null,
                             onConvert = shareActions.onConvert,
                             onDownload = shareActions.onDownload,
                             modifier = Modifier

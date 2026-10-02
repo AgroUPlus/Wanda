@@ -9,6 +9,7 @@ import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.PlaylistFileExporter
+import com.wander.android.data.repository.PlaylistPublication
 import com.wander.android.data.repository.PlaylistPublicationRepository
 import com.wander.android.data.repository.PlaylistWriteRepository
 import com.wander.android.data.repository.ShareRepository
@@ -55,8 +56,8 @@ class PlaylistShareViewModel @Inject constructor(
     private val _sheet = MutableStateFlow<PlaylistSheet?>(null)
     val sheet: StateFlow<PlaylistSheet?> = _sheet.asStateFlow()
 
-    /** Who can open this playlist's Agro copy; null when it has none. */
-    val publishedVisibility: StateFlow<PlaylistVisibility?> = publications.visibility(playlistId)
+    /** This playlist's Agro copy; null when it has none. */
+    val publication: StateFlow<PlaylistPublication?> = publications.publication(playlistId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private val _fileShares = MutableSharedFlow<Uri>(extraBufferCapacity = 1)
@@ -138,13 +139,26 @@ class PlaylistShareViewModel @Inject constructor(
     fun pickVisibility(visibility: PlaylistVisibility, playlist: UnifiedPlaylist, tracks: List<UnifiedTrack>) {
         dismiss()
         viewModelScope.launch {
-            if (publishedVisibility.value != null) {
+            if (publication.value != null) {
                 publications.changeVisibility(playlistId, visibility)
                 return@launch
             }
             shareRepository.shareLocalPlaylist(playlist, tracks, visibility)
                 ?.let { agroId -> publications.record(playlistId, agroId, visibility) }
         }
+    }
+
+    /** Sends the link to the existing Agro copy again; never makes a second copy. */
+    fun resendAgroLink(playlist: UnifiedPlaylist, tracks: List<UnifiedTrack>) {
+        val current = publication.value ?: return
+        dismiss()
+        shareRepository.shareAgroPlaylist(playlist, current.agroId, tracks.size)
+    }
+
+    /** Deletes the Agro copy; the screen has already asked. */
+    fun unshare() {
+        dismiss()
+        viewModelScope.launch { publications.unshare(playlistId) }
     }
 
     /** Copies a backend's playlist into a Wanda playlist, which can then hold any source's tracks. */
