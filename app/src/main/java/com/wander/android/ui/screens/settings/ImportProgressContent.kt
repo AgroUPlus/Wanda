@@ -10,7 +10,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,21 +24,6 @@ import com.wander.android.data.importer.ImportProgress
 @Composable
 internal fun ImportProgressContent(progress: ImportProgress) {
     when (progress) {
-        is ImportProgress.Fetching -> {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
-            ) {
-                LoadingIndicator(modifier = Modifier.size(40.dp))
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = stringResource(R.string.settings_reading_playlist_from, progress.platform.displayName),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-
         is ImportProgress.Success -> {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,

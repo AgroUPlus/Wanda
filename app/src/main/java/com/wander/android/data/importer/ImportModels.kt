@@ -76,7 +76,6 @@ data class RawImportPlaylist(
 
 sealed interface ImportProgress {
     data object Idle : ImportProgress
-    data class Fetching(val platform: PlatformType) : ImportProgress
     data class Success(
         val playlistId: String,
         val playlistName: String,

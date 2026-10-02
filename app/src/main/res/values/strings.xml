@@ -583,7 +583,6 @@
     <string name="settings_now_exists">“%1$s” now exists on %2$s.</string>
     <string name="settings_of">%1$s · %2$s of %3$s</string>
     <string name="settings_plays_would_combine">%1$s plays would combine</string>
-    <string name="settings_reading_playlist_from">Reading playlist from %1$s...</string>
     <string name="settings_recognisable">%1$s of %2$s recognisable</string>
     <string name="settings_signed_as">Signed in as %1$s.</string>
     <string name="social_added_by">%1$s · added by %2$s</string>

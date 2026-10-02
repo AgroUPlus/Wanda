@@ -6,15 +6,9 @@ import com.wander.android.core.database.entity.PlaylistEntity
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.work.PlaylistImportScheduler
 import com.wander.android.core.work.PlaylistImportWorker
-import com.wander.android.data.importer.AppleMusicPlaylistParser
-import com.wander.android.data.importer.DeezerPlaylistParser
 import com.wander.android.data.importer.ImportProgress
-import com.wander.android.data.importer.PlatformType
 import com.wander.android.data.importer.RawImportPlaylist
 import com.wander.android.data.importer.RawImportTrack
-import com.wander.android.data.importer.SpotifyPlaylistParser
-import com.wander.android.data.importer.TextPlaylistParser
-import com.wander.android.data.importer.YouTubePlaylistParser
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.Dispatchers
@@ -28,11 +22,6 @@ import javax.inject.Singleton
 
 @Singleton
 class PlaylistImportRepository @Inject constructor(
-    private val spotifyParser: SpotifyPlaylistParser,
-    private val deezerParser: DeezerPlaylistParser,
-    private val youtubeParser: YouTubePlaylistParser,
-    private val appleMusicParser: AppleMusicPlaylistParser,
-    private val textParser: TextPlaylistParser,
     private val importScheduler: PlaylistImportScheduler,
     private val trackDao: TrackDao,
     private val playlistDao: PlaylistDao
@@ -42,27 +31,6 @@ class PlaylistImportRepository @Inject constructor(
 
     fun reset() {
         _progress.value = ImportProgress.Idle
-    }
-
-    suspend fun importPlaylist(input: String): Result<String> = withContext(Dispatchers.IO) {
-        val platform = PlatformType.detect(input)
-        _progress.value = ImportProgress.Fetching(platform)
-
-        val rawPlaylistResult: Result<RawImportPlaylist> = when (platform) {
-            PlatformType.SPOTIFY -> spotifyParser.parse(input)
-            PlatformType.DEEZER -> deezerParser.parse(input)
-            PlatformType.YOUTUBE -> youtubeParser.parse(input)
-            PlatformType.APPLE_MUSIC -> appleMusicParser.parse(input)
-            PlatformType.PLAIN_TEXT -> textParser.parse(input)
-        }
-
-        val rawPlaylist = rawPlaylistResult.getOrElse { error ->
-            val msg = error.message ?: "Failed to read playlist from $platform"
-            _progress.value = ImportProgress.Failed(msg)
-            return@withContext Result.failure(error)
-        }
-
-        importParsedPlaylist(rawPlaylist)
     }
 
     /**
