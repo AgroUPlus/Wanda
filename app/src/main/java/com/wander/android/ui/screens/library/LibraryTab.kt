@@ -12,10 +12,13 @@ import com.wander.android.R
  *
  * Podcasts is: spoken audio is resumed and finished rather than replayed, so mixed in with songs
  * it was only ever in the way of both.
+ *
+ * Liked comes first and is where the library opens: it is the collection you chose, small enough
+ * to read at a glance, where Tracks is everything every source has ever handed over.
  */
 enum class LibraryTab(@StringRes val label: Int) {
-    TRACKS(R.string.library_tab_tracks),
     LIKED(R.string.library_tab_liked),
+    TRACKS(R.string.library_tab_tracks),
     ALBUMS(R.string.library_tab_albums),
     PLAYLISTS(R.string.library_tab_playlists),
     PODCASTS(R.string.library_tab_podcasts),

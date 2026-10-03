@@ -61,6 +61,7 @@ fun LibraryScreen(
     val podcastsViewModel: PodcastsViewModel = hiltViewModel()
     val sourceFilter by viewModel.sourceFilter.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<com.wander.android.data.model.UnifiedTrack?>(null) }
     var albumActionsFor by remember { mutableStateOf<com.wander.android.data.model.UnifiedAlbum?>(null) }
 
@@ -240,9 +241,9 @@ fun LibraryScreen(
                     LibraryTab.PLAYLISTS ->
                         PlaylistList(playlists, contentPadding, viewModel, addToPlaylist, onOpenPlaylist, onOpenImport)
                     LibraryTab.LIKED ->
-                        TrackList(likedTracks, pageTab, isRefreshing, contentPadding, viewModel) { actionsFor = it }
+                        TrackList(likedTracks, pageTab, isSyncing, contentPadding, viewModel) { actionsFor = it }
                     LibraryTab.DOWNLOADS ->
-                        TrackList(downloadedTracks, pageTab, isRefreshing, contentPadding, viewModel) { actionsFor = it }
+                        TrackList(downloadedTracks, pageTab, isSyncing, contentPadding, viewModel) { actionsFor = it }
                     LibraryTab.PODCASTS ->
                         LibraryPodcastsPage(
                             contentPadding,
@@ -259,7 +260,7 @@ fun LibraryScreen(
                                 modifier = Modifier.padding(vertical = 8.dp)
                             )
                         }
-                        PagedTrackList(tracks, pageTab, isRefreshing, contentPadding, viewModel) { actionsFor = it }
+                        PagedTrackList(tracks, pageTab, isSyncing, contentPadding, viewModel) { actionsFor = it }
                     }
                 }
             }

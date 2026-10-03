@@ -74,7 +74,7 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    private val _tab = MutableStateFlow(LibraryTab.TRACKS)
+    private val _tab = MutableStateFlow(LibraryTab.LIKED)
     val tab: StateFlow<LibraryTab> = _tab.asStateFlow()
 
     private val _sourceFilter = MutableStateFlow<SourceType?>(null)
@@ -119,21 +119,34 @@ class LibraryViewModel @Inject constructor(
     private val _playlists = MutableStateFlow<List<UnifiedPlaylist>>(emptyList())
     val playlists: StateFlow<List<UnifiedPlaylist>> = _playlists.asStateFlow()
 
+    /** A refresh the user asked for by pulling: the only one that shows the spinner. */
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    /**
+     * Any refresh at all, including the one every visit starts on its own. Only an empty list
+     * shows it, as skeleton rows: what Room already holds is on screen at once, and a spinner over
+     * it for the length of a network round trip read as the library still loading when it wasn't.
+     */
+    private val _isSyncing = MutableStateFlow(false)
+    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
     init {
-        refresh()
+        refresh(pulled = false)
     }
 
-    fun refresh() {
+    fun refresh() = refresh(pulled = true)
+
+    private fun refresh(pulled: Boolean) {
         viewModelScope.launch {
-            _isRefreshing.value = true
+            _isSyncing.value = true
+            if (pulled) _isRefreshing.value = true
             localSource.refresh()
             musicRepository.refreshAlbums()
             musicRepository.getRecentTracks(LIBRARY_TRACK_REFRESH)
             _playlists.value = musicRepository.getPlaylists()
             _isRefreshing.value = false
+            _isSyncing.value = false
             backfillAlbumTracks()
         }
     }

@@ -37,13 +37,13 @@ private const val SKELETON_ROWS = 8
 internal fun TrackList(
     tracks: List<UnifiedTrack>,
     tab: LibraryTab,
-    isRefreshing: Boolean,
+    isSyncing: Boolean,
     contentPadding: PaddingValues,
     viewModel: LibraryViewModel,
     onLongPress: (UnifiedTrack) -> Unit
 ) {
     if (tracks.isEmpty()) {
-        if (isRefreshing) {
+        if (isSyncing) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -109,7 +109,7 @@ internal fun TrackList(
 internal fun PagedTrackList(
     tracks: LazyPagingItems<UnifiedTrack>,
     tab: LibraryTab,
-    isRefreshing: Boolean,
+    isSyncing: Boolean,
     contentPadding: PaddingValues,
     viewModel: LibraryViewModel,
     onLongPress: (UnifiedTrack) -> Unit
@@ -118,7 +118,7 @@ internal fun PagedTrackList(
         // `refresh is Loading` as well as the caller's flag: a paged list is empty for a moment on
         // every filter change while the first page loads, and "your library is empty" shown in that
         // gap is a lie that lasts just long enough to be read.
-        if (isRefreshing || tracks.loadState.refresh is LoadState.Loading) {
+        if (isSyncing || tracks.loadState.refresh is LoadState.Loading) {
             Column(
                 modifier = Modifier.fillMaxSize().padding(contentPadding.listInset())
             ) {
