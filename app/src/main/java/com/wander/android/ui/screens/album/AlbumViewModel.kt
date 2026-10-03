@@ -10,8 +10,6 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.CatalogRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.ShareRepository
-import com.wander.android.data.sources.ShareKind
-import com.wander.android.data.sources.ShareTarget
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.net.URLDecoder
 import javax.inject.Inject
@@ -86,22 +84,12 @@ class AlbumViewModel @Inject constructor(
         viewModelScope.launch { shareRepository.share(track) }
     }
 
-    /** Whether this record's backend can publish a link for the album itself, not just a track. */
-    fun canShareAlbum(): Boolean =
-        _album.value?.let { shareRepository.canShare(it.source) } ?: false
-
+    /**
+     * The record's own link, never its backend's — see [ShareRepository.shareAlbum]. A backend's
+     * link went out through `/listen`, which the recipient's Wanda opens as a track and fails on.
+     */
     fun shareAlbum() {
         val album = _album.value ?: return
-        viewModelScope.launch {
-            shareRepository.share(
-                ShareTarget(
-                    kind = ShareKind.ALBUM,
-                    source = album.source,
-                    id = album.id,
-                    title = album.title,
-                    subtitle = album.artist
-                )
-            )
-        }
+        shareRepository.shareAlbum(album)
     }
 }

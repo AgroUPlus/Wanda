@@ -240,9 +240,8 @@ private fun ArtistAlbumActions(
             onDismiss()
         },
         onDismiss = onDismiss,
-        onShare = if (viewModel.canShareAlbum(album)) {
-            { viewModel.shareAlbum(album) }
-        } else null,
+        // No `canShare` gate: an album link describes the record rather than naming a server.
+        onShare = { viewModel.shareAlbum(album) },
         onAddToPlaylist = {
             viewModel.getAlbumTracks(album) { tracks ->
                 addToPlaylist.openForTracks(tracks, album.source)

@@ -6,8 +6,6 @@ import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.ShareRepository
-import com.wander.android.data.sources.ShareKind
-import com.wander.android.data.sources.ShareTarget
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -76,21 +74,8 @@ internal class ArtistPlaybackCoordinator @Inject constructor(
         }
     }
 
-    fun canShareAlbum(album: UnifiedAlbum): Boolean =
-        shareRepository.canShare(album.source)
-
-    fun shareAlbum(album: UnifiedAlbum, scope: CoroutineScope) {
-        scope.launch {
-            shareRepository.share(
-                ShareTarget(
-                    kind = ShareKind.ALBUM,
-                    source = album.source,
-                    id = album.id,
-                    title = "${album.title} - ${album.artist}"
-                )
-            )
-        }
-    }
+    /** The record's own link, never its backend's — see [ShareRepository.shareAlbum]. */
+    fun shareAlbum(album: UnifiedAlbum) = shareRepository.shareAlbum(album)
 
     fun getAlbumTracks(
         album: UnifiedAlbum,

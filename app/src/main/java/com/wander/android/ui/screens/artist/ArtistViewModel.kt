@@ -175,8 +175,7 @@ internal class ArtistViewModel @Inject constructor(
     fun playAlbum(album: UnifiedAlbum) = playback.playAlbum(album, viewModelScope)
     fun playAlbumNext(album: UnifiedAlbum) = playback.playAlbumNext(album, viewModelScope)
     fun addAlbumToQueue(album: UnifiedAlbum) = playback.addAlbumToQueue(album, viewModelScope)
-    fun canShareAlbum(album: UnifiedAlbum): Boolean = playback.canShareAlbum(album)
-    fun shareAlbum(album: UnifiedAlbum) = playback.shareAlbum(album, viewModelScope)
+    fun shareAlbum(album: UnifiedAlbum) = playback.shareAlbum(album)
     fun getAlbumTracks(album: UnifiedAlbum, onTracks: (List<UnifiedTrack>) -> Unit) =
         playback.getAlbumTracks(album, viewModelScope, onTracks)
 }

@@ -120,7 +120,9 @@ fun AlbumScreen(
                                 ?: tracks.firstNotNullOfOrNull { it.artworkUrl },
                             onPlay = viewModel::playAll,
                             onShuffle = viewModel::shuffle,
-                            onShare = viewModel::shareAlbum.takeIf { viewModel.canShareAlbum() },
+                            // No `canShare` gate: an album link describes the record rather than
+                            // naming a server, so it works from every source.
+                            onShare = viewModel::shareAlbum.takeIf { current != null },
                             modifier = Modifier
                                 .padding(bottom = 16.dp),
                             titleModifier = Modifier.collapsingTitleSource(titleState)
