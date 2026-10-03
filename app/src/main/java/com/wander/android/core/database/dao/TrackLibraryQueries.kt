@@ -63,9 +63,6 @@ interface TrackLibraryQueries {
     )
     suspend fun artworkFor(title: String, artist: String): String?
 
-    @Query("SELECT id FROM tracks WHERE id != :excludingId AND source != 'UNRESOLVED' AND durationMs BETWEEN :minDurationMs AND :maxDurationMs")
-    suspend fun getCandidateIdsByDuration(excludingId: String, minDurationMs: Long, maxDurationMs: Long): List<String>
-
     @Query("SELECT * FROM tracks WHERE albumId = :albumId ORDER BY discNumber ASC, trackNumber ASC")
     suspend fun getTracksInAlbum(albumId: String): List<TrackEntity>
 

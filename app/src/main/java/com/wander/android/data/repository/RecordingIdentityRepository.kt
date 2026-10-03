@@ -83,9 +83,7 @@ class RecordingIdentityRepository @Inject constructor(
         val minDuration = targetDuration - durationToleranceMs
         val maxDuration = targetDuration + durationToleranceMs
 
-        val candidateIds = withContext(Dispatchers.IO) {
-            trackDao.getCandidateIdsByDuration(trackId, minDuration, maxDuration)
-        }
+        val candidateIds = candidatesBetween(trackId, minDuration, maxDuration)
         if (candidateIds.isEmpty()) return@withContext emptyList()
 
         val candidateEntities = withContext(Dispatchers.IO) {
@@ -128,13 +126,11 @@ class RecordingIdentityRepository @Inject constructor(
     ): List<Match> = withContext(Dispatchers.Default) {
         if (vectors.isEmpty() || durationMs <= 0L) return@withContext emptyList()
 
-        val candidateIds = withContext(Dispatchers.IO) {
-            trackDao.getCandidateIdsByDuration(
-                "",
-                durationMs - durationToleranceMs,
-                durationMs + durationToleranceMs
-            )
-        }
+        val candidateIds = candidatesBetween(
+            excludingId = "",
+            minMs = durationMs - durationToleranceMs,
+            maxMs = durationMs + durationToleranceMs
+        )
         if (candidateIds.isEmpty()) return@withContext emptyList()
 
         val candidateEntities = withContext(Dispatchers.IO) {
@@ -156,6 +152,20 @@ class RecordingIdentityRepository @Inject constructor(
 
         matches.sortedByDescending { it.similarity }
     }
+
+    /** Fingerprinted tracks in a duration window, measured where the metadata has none — see the DAO. */
+    private suspend fun candidatesBetween(excludingId: String, minMs: Long, maxMs: Long): List<String> =
+        withContext(Dispatchers.IO) {
+            embeddingDao.candidateIdsByDuration(
+                excludingId = excludingId,
+                minMs = minMs,
+                maxMs = maxMs,
+                model = AudioEmbedder.MODEL_NAME,
+                version = AudioEmbedder.EMBEDDER_VERSION,
+                bytesPerSegment = AudioEmbedder.EMBED_DIM,
+                segmentHopMs = EmbeddingScorer.SEGMENT_HOP_MS
+            )
+        }
 
     /** True if [trackId] already has a computed embedding. */
     suspend fun isIndexed(trackId: String): Boolean = withContext(Dispatchers.IO) {
@@ -261,10 +271,11 @@ class RecordingIdentityRepository @Inject constructor(
         var linked = 0
         for (trackId in pending) {
             val matches = matchesFor(trackId)
-            if (matches.isNotEmpty()) {
-                linkRepository.record(trackId, matches)
-                linked++
-            }
+            // Recorded when empty too, so a link that no longer holds is dropped. Safe now that
+            // the duration gate is symmetric — see `TrackEmbeddingDao.candidateIdsByDuration` —
+            // where before this pass would have cleared links only the other side could see.
+            linkRepository.record(trackId, matches)
+            if (matches.isNotEmpty()) linked++
         }
         secureStorage.duplicateScanCursor = pending.last()
         android.util.Log.i(TAG, "Duplicate link pass: examined ${pending.size}, linked $linked")

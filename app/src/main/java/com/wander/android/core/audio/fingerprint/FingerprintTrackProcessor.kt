@@ -74,11 +74,10 @@ class FingerprintTrackProcessor @Inject constructor(
             if (needsEmbedding) {
                 embeddingSearch.index(track.id, samples)
                 // With neural embeddings now stored, find duplicates among other indexed tracks
-                // and record links in recording_links.
-                val matches = recordingIdentity.matchesFor(track.id)
-                if (matches.isNotEmpty()) {
-                    recordingLinks.record(track.id, matches)
-                }
+                // and record links in recording_links. Recorded even when there are none: a
+                // re-index is a correction, and a link the fresh fingerprint no longer supports
+                // has to be able to go away.
+                recordingLinks.record(track.id, recordingIdentity.matchesFor(track.id))
             }
         } finally {
             progress.finished(track.id)

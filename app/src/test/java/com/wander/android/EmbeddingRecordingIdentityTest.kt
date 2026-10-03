@@ -73,7 +73,7 @@ class EmbeddingRecordingIdentityTest {
         override fun indexedTrackIdsFlow(model: String, version: Int) = kotlinx.coroutines.flow.emptyFlow<List<String>>()
         override fun publishedCountFlow(model: String, version: Int, publishedThrough: Long) = kotlinx.coroutines.flow.emptyFlow<Int>()
         override suspend fun upsert(embedding: com.wander.android.core.database.entity.TrackEmbeddingEntity) {}
-        override suspend fun computedSince(after: Long, model: String, version: Int, limit: Int) =
+        override suspend fun computedSince(after: Long, afterTrackId: String, model: String, version: Int, limit: Int) =
             emptyList<com.wander.android.core.database.entity.TrackEmbeddingEntity>()
         override suspend fun needingIndex(
             model: String,
@@ -82,6 +82,15 @@ class EmbeddingRecordingIdentityTest {
             bytesPerSegment: Int,
             segmentHopMs: Int,
             coverageToleranceMs: Int
+        ) = emptyList<String>()
+        override suspend fun candidateIdsByDuration(
+            excludingId: String,
+            minMs: Long,
+            maxMs: Long,
+            model: String,
+            version: Int,
+            bytesPerSegment: Int,
+            segmentHopMs: Int
         ) = emptyList<String>()
         override suspend fun prune(model: String, version: Int) {}
         override suspend fun clear() {}
@@ -111,7 +120,6 @@ class EmbeddingRecordingIdentityTest {
         override fun getTracksByAlbumFlow(albumId: String): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
         override suspend fun getTrackById(id: String): com.wander.android.core.database.entity.TrackEntity? = null
         override suspend fun artworkFor(title: String, artist: String): String? = null
-        override suspend fun getCandidateIdsByDuration(excludingId: String, minDurationMs: Long, maxDurationMs: Long): List<String> = emptyList()
         override suspend fun getTracksInAlbum(albumId: String): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun getTracksInSource(source: com.wander.android.data.model.SourceType): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override fun getTracksByArtistFlow(artist: String): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
