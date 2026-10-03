@@ -85,7 +85,6 @@ internal fun NowPlayingScreen(
     val state by playerConnection.state.collectAsStateWithLifecycle()
     val lyrics by viewModel.lyrics.collectAsStateWithLifecycle()
     val likedTrackIds by viewModel.likedTrackIds.collectAsStateWithLifecycle()
-    val fingerprintStatus by viewModel.fingerprintStatus.collectAsStateWithLifecycle()
     var showSourcePicker by remember { mutableStateOf(false) }
     var showAudioTrackPicker by remember { mutableStateOf(false) }
     val renditions by viewModel.renditions.collectAsStateWithLifecycle()
@@ -273,7 +272,6 @@ internal fun NowPlayingScreen(
             previewIndex = previewIndex,
             jam = jam,
             likedTrackIds = likedTrackIds,
-            fingerprintStatus = fingerprintStatus,
             onOpenJam = onOpenJam,
             onOpenArtist = onOpenArtist,
             onOpenAlbum = onOpenAlbum,

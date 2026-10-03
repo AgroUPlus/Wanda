@@ -9,8 +9,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
@@ -28,6 +26,9 @@ import com.wander.android.ui.components.Artwork
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+/** A subtle "settle," not a dramatic shrink — the cover barely moves, it just stops breathing. */
+internal const val PausedScale = 0.96f
+
 /**
  * Decode size for the travelling cover. **Constant on purpose.**
  *
@@ -35,15 +36,9 @@ import kotlin.math.roundToInt
  * had reported its bounds — asked for a 48 dp bitmap, and the next frame asked for a 360 dp one.
  * That is a different `ImageRequest`, so Coil decoded a second bitmap and swapped it in: the
  * "small blurry cover that grows, then gets replaced by a big one" bug. One size, one request,
- * one bitmap, for the whole gesture.
+ * one bitmap, for the whole gesture. Shared with [PeekArtwork], which decodes neighbour covers at
+ * the same size.
  */
-/** Clear of the rounded corner at full size, and off the artwork's busiest region. */
-internal val BadgeInset = 14.dp
-
-/** A subtle "settle," not a dramatic shrink — the cover barely moves, it just stops breathing. */
-internal const val PausedScale = 0.96f
-
-/** Shared with [PeekArtwork], which decodes neighbour covers at the same size. */
 internal val MorphArtworkSize = 360.dp
 
 /**
@@ -117,8 +112,6 @@ internal fun MorphingArtwork(
     canNext: Boolean = true,
     modifier: Modifier = Modifier,
     alpha: () -> Float = { 1f },
-    fingerprintStatus: com.wander.android.data.repository.FingerprintStatus =
-        com.wander.android.data.repository.FingerprintStatus.MISSING,
     carouselEnabled: Boolean = true,
     isPlaying: Boolean = true,
     /** Drawn over the cover inside its shape, so it travels and shrinks with it — the video clip. */
@@ -204,21 +197,6 @@ internal fun MorphingArtwork(
             modifier = Modifier.fillMaxSize()
         )
         Box(Modifier.fillMaxSize().clip(coverShape)) { overlay() }
-
-        // Bottom-left, and only once the sheet is open. On the docked strip the cover is a
-        // thumbnail and a six-pixel dot on it would be lint rather than information, so it fades in
-        // with the expansion rather than riding the cover all the way down.
-        //
-        // Drawn here rather than in `NowPlayingScreen` because this is the cover the user is
-        // looking at: that screen's artwork slot is an empty box reporting bounds, so the badge it
-        // contained was in a branch the real player never takes.
-        com.wander.android.ui.components.FingerprintBadge(
-            status = fingerprintStatus,
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(BadgeInset)
-                .graphicsLayer { this.alpha = smoothStep(progress(), 0.75f, 1f) }
-        )
     }
 }
 

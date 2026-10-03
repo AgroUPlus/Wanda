@@ -9,8 +9,6 @@ import com.wander.android.core.update.UpdateCheckResult
 import com.wander.android.core.update.UpdateChecker
 import com.wander.android.data.replay.ReplayAvailability
 import com.wander.android.data.repository.FetchProgress
-import com.wander.android.data.repository.FingerprintStatus
-import com.wander.android.data.repository.FingerprintStatusRepository
 import com.wander.android.data.repository.InstantRadioRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.SearchQueryHolder
@@ -26,11 +24,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
@@ -50,7 +45,6 @@ class WanderAppViewModel @Inject constructor(
     private val instantRadio: InstantRadioRepository,
     private val playerConnection: PlayerConnection,
     private val searchQueryHolder: SearchQueryHolder,
-    fingerprintStatuses: FingerprintStatusRepository,
     @ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
 
@@ -62,19 +56,6 @@ class WanderAppViewModel @Inject constructor(
 
     /** Whether back gestures blur what they reveal — see `LocalBackBlurEnabled`. */
     val isBackBlurEnabled: StateFlow<Boolean> = secureStorage.isBackBlurEnabled
-
-    /** Whether the track on the player's cover has been measured. */
-    val playingFingerprintStatus: StateFlow<FingerprintStatus> =
-        combine(
-            playerConnection.state,
-            fingerprintStatuses.statuses()
-        ) { playback, statuses ->
-            playback.currentTrack?.id?.let { statuses[it] } ?: FingerprintStatus.MISSING
-        }.stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5_000),
-            FingerprintStatus.MISSING
-        )
 
     /** The dock's search text. */
     val searchQuery: StateFlow<String> = searchQueryHolder.query

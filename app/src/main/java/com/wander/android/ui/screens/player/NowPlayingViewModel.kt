@@ -47,8 +47,8 @@ internal class NowPlayingViewModel @Inject constructor(
     val isCoverArtThemeEnabled: StateFlow<Boolean> = secureStorage.isCoverArtThemeEnabled
     val isLetterByLetterLyricsEnabled: StateFlow<Boolean> = secureStorage.isLetterByLetterLyricsEnabled
 
-    /** What has been measured about the track on screen. */
-    val fingerprintStatus: StateFlow<Map<String, FingerprintStatus>> = fingerprintStatuses
+    /** What has been measured about the playing track — only to schedule it below; nothing draws it. */
+    private val fingerprintStatus: StateFlow<Map<String, FingerprintStatus>> = fingerprintStatuses
         .statuses()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 

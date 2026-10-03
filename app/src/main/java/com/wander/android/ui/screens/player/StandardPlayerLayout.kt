@@ -35,10 +35,8 @@ import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.SpeedAndPitch
 import com.wander.android.data.model.UnifiedTrack
-import com.wander.android.data.repository.FingerprintStatus
 import com.wander.android.data.sources.agro.Jam
 import com.wander.android.ui.components.Artwork
-import com.wander.android.ui.components.FingerprintBadge
 import com.wander.android.ui.components.scrollingTitle
 
 /** Nominal edge of the full-screen cover; drives the decode size, not the layout. */
@@ -65,7 +63,6 @@ internal fun StandardPlayerLayout(
     previewIndex: Int?,
     jam: Jam?,
     likedTrackIds: Set<String>,
-    fingerprintStatus: Map<String, FingerprintStatus>,
     onOpenJam: () -> Unit,
     onOpenArtist: ((String, String?) -> Unit)?,
     onOpenAlbum: ((String) -> Unit)?,
@@ -141,12 +138,6 @@ internal fun StandardPlayerLayout(
                             shape = MaterialTheme.shapes.extraLarge,
                             crossfade = true,
                             modifier = Modifier.fillMaxSize()
-                        )
-                        FingerprintBadge(
-                            status = fingerprintStatus[track.id] ?: FingerprintStatus.MISSING,
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .padding(14.dp)
                         )
                     }
                 }

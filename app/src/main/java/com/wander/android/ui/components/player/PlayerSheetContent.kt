@@ -25,7 +25,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
-import com.wander.android.data.repository.FingerprintStatus
 import com.wander.android.ui.components.LocalBackBlurEnabled
 import com.wander.android.ui.components.backdropBlur
 import com.wander.android.ui.screens.player.NowPlayingScreen
@@ -51,7 +50,6 @@ fun PlayerSheetContent(
     onOpenArtist: (String, String?) -> Unit = { _, _ -> },
     onOpenAlbum: (String) -> Unit = {},
     onOpenJam: () -> Unit = {},
-    fingerprintStatus: FingerprintStatus = FingerprintStatus.MISSING,
     immersivePlayer: Boolean = false,
     coverCarousel: Boolean = true,
 ) {
@@ -199,7 +197,6 @@ fun PlayerSheetContent(
                 nextUrl = nextArtwork,
                 canPrevious = hasPreviousSong,
                 canNext = hasNextSong,
-                fingerprintStatus = fingerprintStatus,
                 carouselEnabled = coverCarousel && !playerCarousel,
                 isPlaying = playback.isPlaying,
                 // Out of composition once docked, so the clip stops there and plays while it shrinks.
@@ -240,7 +237,6 @@ fun PlayerSheetContent(
                                     onSeekToIndex = playerConnection::seekToIndex,
                                     onPreviewIndex = { previewIndex = it },
                                     isPlaying = playback.isPlaying,
-                                    fingerprintStatus = fingerprintStatus,
                                     alpha = { carouselHandoff() * artworkAlphaState.value }
                                 )
                             }

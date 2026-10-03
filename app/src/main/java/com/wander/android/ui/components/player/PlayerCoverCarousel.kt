@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.requiredHeight
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
@@ -22,7 +21,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,9 +29,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.UnifiedTrack
-import com.wander.android.data.repository.FingerprintStatus
 import com.wander.android.ui.components.Artwork
-import com.wander.android.ui.components.FingerprintBadge
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -64,7 +60,6 @@ internal fun PlayerCoverCarousel(
     onSeekToIndex: (Int) -> Unit,
     onPreviewIndex: (Int?) -> Unit,
     isPlaying: Boolean,
-    fingerprintStatus: FingerprintStatus,
     alpha: () -> Float,
     modifier: Modifier = Modifier
 ) {
@@ -115,7 +110,7 @@ internal fun PlayerCoverCarousel(
             ) { index ->
                 val track = queue.getOrNull(index)
                 if (track != null) {
-                    CoverItem(track, cornerRadius, itemWidth, isCurrent = index == currentIndex, fingerprintStatus)
+                    CoverItem(track, cornerRadius, itemWidth)
                 }
             }
         }
@@ -127,9 +122,7 @@ internal fun PlayerCoverCarousel(
 private fun CarouselItemScope.CoverItem(
     track: UnifiedTrack,
     cornerRadius: Dp,
-    itemWidth: Dp,
-    isCurrent: Boolean,
-    fingerprintStatus: FingerprintStatus
+    itemWidth: Dp
 ) {
     val shape = remember(cornerRadius, itemWidth) { SwipeGapShape(carouselItemDrawInfo, cornerRadius, itemWidth) }
     Box(modifier = Modifier.fillMaxSize().maskClip(shape)) {
@@ -142,12 +135,6 @@ private fun CarouselItemScope.CoverItem(
             crossfade = false,
             modifier = Modifier.fillMaxSize()
         )
-        if (isCurrent) {
-            FingerprintBadge(
-                status = fingerprintStatus,
-                modifier = Modifier.align(Alignment.BottomStart).padding(BadgeInset)
-            )
-        }
     }
 }
 
