@@ -159,7 +159,7 @@ internal fun QuickFactTiles(report: ListeningReport) {
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = report.playsPerDay.value.toString(),
+                    text = report.playsPerDay?.value?.toString() ?: stringResource(R.string.stats_value_unknown),
                     style = MaterialTheme.typography.displayStatMid,
                     color = colors.onTertiary
                 )

@@ -35,5 +35,10 @@ data class AgroStats(
     /** Seconds per hour of the day, UTC, index 0 = midnight. */
     val byHour: List<Long>,
     /** Seconds per device, most-listened first. Empty when Agro is not the source. */
-    val byDevice: List<StatEntry>
+    val byDevice: List<StatEntry>,
+    /**
+     * When the earliest play in the period happened, epoch seconds. Null when there is none, or
+     * when the server is too old to say — which matters for ALL, whose length is only this.
+     */
+    val firstPlayedAt: Long? = null
 )

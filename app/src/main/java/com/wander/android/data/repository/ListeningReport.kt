@@ -134,7 +134,8 @@ data class ListeningReport(
     val topSong: TopSong?,
     val songsPlayed: Trend,
     val listenedSeconds: Trend,
-    val playsPerDay: Trend,
+    /** Null when the window's length cannot be known: all-time figures from an older Agro. */
+    val playsPerDay: Trend?,
     val busiestDay: BusiestDay?,
     val artists: Trend?
 ) {

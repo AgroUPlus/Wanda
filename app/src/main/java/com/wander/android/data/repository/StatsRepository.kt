@@ -55,7 +55,10 @@ class StatsRepository @Inject constructor(
      * is built with every comparative figure absent. The screen renders the tiles it has.
      */
     private suspend fun fleetReport(window: StatsWindow, stats: AgroStats): ListeningReport {
-        val days = window.period.dayCount().coerceAtLeast(1)
+        // ALL has no length of its own: it is as long as the history the server found. Dividing by
+        // a stand-in of one day reported the whole total as the daily average.
+        val days = window.period.dayCount().takeIf { it > 0 }
+            ?: stats.firstPlayedAt?.let { first -> daysSince(first * 1000, System.currentTimeMillis()) }
         return ListeningReport(
             window = window.copy(offset = 0),
             stats = stats,
@@ -63,7 +66,7 @@ class StatsRepository @Inject constructor(
             topSong = stats.topTracks.firstOrNull()?.let { entry -> topSongFromEntry(entry) },
             songsPlayed = Trend(stats.playCount),
             listenedSeconds = Trend(stats.secondsTotal),
-            playsPerDay = Trend(stats.playCount / days),
+            playsPerDay = days?.let { Trend(stats.playCount / it) },
             // Agro breaks the fleet's days down by seconds, not by plays, and there is no earlier
             // window to compare the heaviest one against.
             busiestDay = null,
@@ -239,6 +242,10 @@ private fun List<PlayedTrack>.seconds(): Long = sumOf { it.durationMs } / 1000
 
 private fun List<PlayedTrack>.distinctArtists(): Long =
     mapTo(mutableSetOf()) { it.artist.lowercase() }.size.toLong()
+
+/** Whole days from [fromMillis] up to and including the day of [toMillis]; at least one. */
+private fun daysSince(fromMillis: Long, toMillis: Long): Int =
+    ((toMillis - fromMillis).coerceAtLeast(0) / TimeUnit.DAYS.toMillis(1)).toInt() + 1
 
 /** How many days of listening `ALL` actually covers, so its per-day average means something. */
 private fun spannedDays(plays: List<PlayedTrack>): Int {

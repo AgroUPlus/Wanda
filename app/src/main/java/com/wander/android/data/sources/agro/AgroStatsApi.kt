@@ -126,6 +126,22 @@ class AgroStatsApi @Inject constructor(
         period: StatsPeriod,
         deviceName: String? = null,
         username: String? = null
+    ): Result<AgroStats> {
+        val result = listeningStats(period, deviceName, username, FIRST_PLAYED_AT)
+        // A server older than the field rejects the whole query; ask again without it, and the
+        // all-time average is left unknown rather than wrong.
+        return if (AgroGraphQl.isUnknownFieldError(result, FIRST_PLAYED_AT)) {
+            listeningStats(period, deviceName, username, extraFields = "")
+        } else {
+            result
+        }
+    }
+
+    private suspend fun listeningStats(
+        period: StatsPeriod,
+        deviceName: String?,
+        username: String?,
+        extraFields: String
     ): Result<AgroStats> = graphQl.execute(
         """
         query Stats(${'$'}userId: String!, ${'$'}period: String, ${'$'}deviceName: String) {
@@ -139,6 +155,7 @@ class AgroStatsApi @Inject constructor(
                 byDay
                 byHour
                 byDevice { name value }
+                $extraFields
             }
         }
         """.trimIndent(),
@@ -161,7 +178,12 @@ class AgroStatsApi @Inject constructor(
             topTracks = stats.entries("topTracks"),
             byDay = stats.longs("byDay"),
             byHour = stats.longs("byHour"),
-            byDevice = stats.entries("byDevice")
+            byDevice = stats.entries("byDevice"),
+            firstPlayedAt = stats[FIRST_PLAYED_AT]?.jsonPrimitive?.longOrNull
         )
+    }
+
+    private companion object {
+        const val FIRST_PLAYED_AT = "firstPlayedAt"
     }
 }
