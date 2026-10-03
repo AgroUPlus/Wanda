@@ -22,83 +22,95 @@ internal class CatalogPublisher @Inject constructor(
     private val secureStorage: SecureStorage
 ) {
     /**
-     * Sends every local embedding the server has not been told about.
+     * Sends local embeddings the server has not been told about, up to [MAX_PER_RUN] per call.
+     *
+     * The cursor advances past an embedding once it has been sent *or* deliberately skipped (its
+     * track has left the library). It used to advance only past sent ones, so a page made up
+     * entirely of skipped rows left it where it was — and every later sync read the same page and
+     * stopped there, publishing nothing ever again.
      */
     suspend fun publishLocal(): Int {
-        val lastPublished = secureStorage.catalogLastPublishedAt
-        val mine = embeddingDao.computedSince(
-            after = lastPublished,
-            model = AudioEmbedder.MODEL_NAME,
-            version = AudioEmbedder.EMBEDDER_VERSION,
-            limit = PUBLISH_BATCH
-        )
-        if (mine.isEmpty()) return 0
-
-        val pending = mine.mapNotNull { embedding ->
-            val track = musicRepository.trackById(embedding.trackId) ?: return@mapNotNull null
-            if (track.durationMs <= 0L) return@mapNotNull null
-
-            val lyricsEntity = trackLyricsDao.findLyricsForTrackOrMetadata(track.id, track.title, track.artist)
-                ?: trackLyricsDao.getLyricsForTrack(embedding.trackId)
-            val lyricsPayload = lyricsEntity?.syncedLyrics
-                ?: lyricsEntity?.plainLyrics?.takeIf { it.isNotBlank() }
-
-            embedding to AgroCatalogApi.Publication(
-                embeddingHex = CatalogVectorCodec.quantiseToHex(AudioEmbedder.unpack(embedding.vector)),
-                dim = embedding.dim,
-                model = embedding.model,
-                version = embedding.version,
-                durationMs = track.durationMs,
-                title = track.title,
-                artist = track.artist,
-                album = track.album,
-                sourceUri = embedding.trackId.takeUnless { it.startsWith(LOCAL_PREFIX) },
-                lyrics = lyricsPayload,
-                lyricsSource = lyricsEntity?.source?.takeIf { lyricsPayload != null }
+        var sent = 0
+        while (sent < MAX_PER_RUN) {
+            val page = embeddingDao.computedSince(
+                after = secureStorage.catalogLastPublishedAt,
+                afterTrackId = secureStorage.catalogLastPublishedTrack,
+                model = AudioEmbedder.MODEL_NAME,
+                version = AudioEmbedder.EMBEDDER_VERSION,
+                limit = AgroCatalogApi.MAX_BATCH
             )
-        }
-        if (pending.isEmpty()) return 0
-
-        return if (catalogApi.supportsBatch) {
-            publishInBatches(pending)
-        } else {
-            publishOneAtATime(pending)
-        }
-    }
-
-    private suspend fun publishInBatches(pending: List<Pair<TrackEmbeddingEntity, AgroCatalogApi.Publication>>): Int {
-        var sent = 0
-        var newest = secureStorage.catalogLastPublishedAt
-        for (chunk in pending.chunked(AgroCatalogApi.MAX_BATCH)) {
-            val outcomes = catalogApi.publishAll(chunk.map { it.second }).getOrElse { break }
-            chunk.forEachIndexed { index, (embedding, _) ->
-                val outcome = outcomes.getOrNull(index)
-                if (outcome != null && outcome.error != null) {
-                    Log.w(TAG, "The catalogue would not take one recording: ${outcome.error}")
-                }
-                sent++
-                newest = maxOf(newest, embedding.computedAt)
+            if (page.isEmpty()) break
+            val publications = page.mapNotNull { embedding -> publicationFor(embedding)?.let { embedding to it } }
+            val delivered = when {
+                publications.isEmpty() -> true
+                catalogApi.supportsBatch -> catalogApi.publishAll(publications.map { it.second })
+                    .onSuccess { outcomes ->
+                        outcomes.mapNotNull { it.error }.forEach { Log.w(TAG, "The catalogue would not take one recording: $it") }
+                    }
+                    .isSuccess
+                else -> publishOneAtATime(publications)
             }
+            if (!delivered) break
+            sent += publications.size
+            markPublished(page.last())
         }
-        secureStorage.catalogLastPublishedAt = newest
         return sent
     }
 
-    private suspend fun publishOneAtATime(pending: List<Pair<TrackEmbeddingEntity, AgroCatalogApi.Publication>>): Int {
-        var sent = 0
-        var newest = secureStorage.catalogLastPublishedAt
-        for ((embedding, publication) in pending) {
-            if (catalogApi.publish(publication).isFailure) break
-            sent++
-            newest = maxOf(newest, embedding.computedAt)
+    /** What the catalogue is told about one embedding, or null when its track has left the library. */
+    private suspend fun publicationFor(embedding: TrackEmbeddingEntity): AgroCatalogApi.Publication? {
+        val track = musicRepository.trackById(embedding.trackId) ?: return null
+        // A backend that left the duration at zero still has audio of a known length: the
+        // fingerprint is half a second per segment of what actually decoded. Skipping these used
+        // to keep most of a YouTube Music library out of the catalogue altogether.
+        val durationMs = track.durationMs.takeIf { it > 0L }
+            ?: (embedding.vector.size / embedding.dim).toLong() * EmbeddingScorer.SEGMENT_HOP_MS
+
+        val lyricsEntity = trackLyricsDao.findLyricsForTrackOrMetadata(track.id, track.title, track.artist)
+            ?: trackLyricsDao.getLyricsForTrack(embedding.trackId)
+        val lyricsPayload = lyricsEntity?.syncedLyrics
+            ?: lyricsEntity?.plainLyrics?.takeIf { it.isNotBlank() }
+
+        return AgroCatalogApi.Publication(
+            embeddingHex = CatalogVectorCodec.quantiseToHex(AudioEmbedder.unpack(embedding.vector)),
+            dim = embedding.dim,
+            model = embedding.model,
+            version = embedding.version,
+            durationMs = durationMs,
+            title = track.title,
+            artist = track.artist,
+            album = track.album,
+            sourceUri = embedding.trackId.takeUnless { it.startsWith(LOCAL_PREFIX) },
+            lyrics = lyricsPayload,
+            lyricsSource = lyricsEntity?.source?.takeIf { lyricsPayload != null }
+        )
+    }
+
+    /** For a server without the batch mutation. True when every one of them was taken. */
+    private suspend fun publishOneAtATime(
+        publications: List<Pair<TrackEmbeddingEntity, AgroCatalogApi.Publication>>
+    ): Boolean {
+        for ((embedding, publication) in publications) {
+            if (catalogApi.publish(publication).isFailure) return false
+            // Per entry, so a failure part-way through does not resend the ones before it.
+            markPublished(embedding)
         }
-        secureStorage.catalogLastPublishedAt = newest
-        return sent
+        return true
+    }
+
+    private fun markPublished(embedding: TrackEmbeddingEntity) {
+        secureStorage.catalogLastPublishedAt = embedding.computedAt
+        secureStorage.catalogLastPublishedTrack = embedding.trackId
     }
 
     companion object {
         private const val TAG = "CatalogPublisher"
-        const val PUBLISH_BATCH = 20
+
+        /**
+         * Recordings one run may publish. Under the server's 300 per five minutes, so a run is
+         * never refused part-way; it used to be 20, which put a few thousand tracks a month away.
+         */
+        const val MAX_PER_RUN = 250
         const val LOCAL_PREFIX = "local:"
     }
 }

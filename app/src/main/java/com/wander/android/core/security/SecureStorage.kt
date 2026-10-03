@@ -136,6 +136,10 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
         get() = agroPrefs.catalogLastPublishedAt
         set(value) { agroPrefs.catalogLastPublishedAt = value }
 
+    var catalogLastPublishedTrack: String
+        get() = agroPrefs.catalogLastPublishedTrack
+        set(value) { agroPrefs.catalogLastPublishedTrack = value }
+
     var agroCapabilities: Set<String>
         get() = agroPrefs.agroCapabilities
         set(value) { agroPrefs.agroCapabilities = value }

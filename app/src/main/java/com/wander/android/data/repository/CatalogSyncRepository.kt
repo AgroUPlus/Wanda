@@ -7,6 +7,7 @@ import com.wander.android.core.database.dao.TrackLyricsDao
 import com.wander.android.core.database.entity.TrackLyricsEntity
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.sources.agro.AgroCatalogApi
+import com.wander.android.data.sources.agro.AgroCatalogEntry
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -89,60 +90,76 @@ internal class CatalogSyncRepository @Inject constructor(
 
     /**
      * Reads what the fleet has learned and records whatever names a recording this device holds.
+     *
+     * Several pages per sync, up to [MAX_PULL_PAGES]: one page of [PULL_PAGE] every six hours left
+     * a device joining a busy server weeks behind it.
      */
     private suspend fun pullCatalogue(): Int {
-        val cursor = secureStorage.catalogCursor
-        val entries = catalogApi.since(cursor).getOrElse { return 0 }
-        if (entries.isEmpty()) return 0
-
         var applied = 0
-        for (entry in entries) {
-            if (entry.model != AudioEmbedder.MODEL_NAME ||
-                entry.version != AudioEmbedder.EMBEDDER_VERSION
-            ) {
-                continue
-            }
-            val vectors = unpackHex(entry.embeddingHex, entry.dim) ?: continue
-            val matches = recordingIdentity.matchesForEmbedding(vectors, entry.durationMs)
-            for (match in matches) {
-                if (canonicalMetadata.record(
-                        trackId = match.trackId,
-                        recordingId = entry.recordingId,
-                        title = entry.title,
-                        artist = entry.artist,
-                        album = entry.album
-                    )
-                ) {
-                    applied++
-                }
+        repeat(MAX_PULL_PAGES) {
+            val entries = catalogApi.since(secureStorage.catalogCursor, PULL_PAGE).getOrElse { return applied }
+            if (entries.isEmpty()) return applied
+            for (entry in entries) applied += applyEntry(entry)
 
-                if (!entry.lyrics.isNullOrBlank()) {
-                    val existing = trackLyricsDao.getLyricsForTrack(match.trackId)
-                    if (existing == null || (existing.syncedLyrics.isNullOrBlank() && entry.lyrics.startsWith("["))) {
-                        val isSynced = entry.lyrics.startsWith("[")
-                        val plain = if (isSynced) {
-                            entry.lyrics.lineSequence()
-                                .map { it.replace(Regex("""^\[\d{2}:\d{2}\.\d{2,3}\]"""), "").trim() }
-                                .filter { it.isNotBlank() }
-                                .joinToString("\n")
-                        } else {
-                            entry.lyrics
-                        }
-                        trackLyricsDao.saveLyricsWithFts(
-                            TrackLyricsEntity(
-                                trackId = match.trackId,
-                                plainLyrics = plain,
-                                syncedLyrics = if (isSynced) entry.lyrics else null,
-                                source = entry.lyricsSource?.takeIf { it.isNotBlank() } ?: "Agro",
-                                viaCatalog = true
-                            )
-                        )
-                    }
-                }
-            }
+            // The server's `updated_at` is in whole seconds and one batch publish stamps 25 rows
+            // with the same one, so a full page can stop part-way through a second. Resuming
+            // strictly after it skipped the rest of that second for good; re-reading it is
+            // harmless — see `AgroCatalogApi.since`. A page that is all one second has to move
+            // on regardless, or it would be read again forever.
+            val newest = entries.maxOf { it.updatedAt }
+            val full = entries.size >= PULL_PAGE
+            secureStorage.catalogCursor =
+                if (full && entries.any { it.updatedAt < newest }) newest - 1 else newest
+            if (!full) return applied
         }
-        secureStorage.catalogCursor = entries.maxOf { it.updatedAt }
         return applied
+    }
+
+    /** Applies one catalogue entry to every local track holding its audio; how many it improved. */
+    private suspend fun applyEntry(entry: AgroCatalogEntry): Int {
+        if (entry.model != AudioEmbedder.MODEL_NAME || entry.version != AudioEmbedder.EMBEDDER_VERSION) {
+            return 0
+        }
+        val vectors = unpackHex(entry.embeddingHex, entry.dim) ?: return 0
+        var applied = 0
+        for (match in recordingIdentity.matchesForEmbedding(vectors, entry.durationMs)) {
+            if (canonicalMetadata.record(
+                    trackId = match.trackId,
+                    recordingId = entry.recordingId,
+                    title = entry.title,
+                    artist = entry.artist,
+                    album = entry.album
+                )
+            ) {
+                applied++
+            }
+            if (!entry.lyrics.isNullOrBlank()) saveLyrics(match.trackId, entry.lyrics, entry.lyricsSource)
+        }
+        return applied
+    }
+
+    /** Keeps the catalogue's lyrics where the track has none, or only plain ones and these are synced. */
+    private suspend fun saveLyrics(trackId: String, lyrics: String, source: String?) {
+        val isSynced = lyrics.startsWith("[")
+        val existing = trackLyricsDao.getLyricsForTrack(trackId)
+        if (existing != null && !(existing.syncedLyrics.isNullOrBlank() && isSynced)) return
+        val plain = if (isSynced) {
+            lyrics.lineSequence()
+                .map { it.replace(Regex("""^\[\d{2}:\d{2}\.\d{2,3}\]"""), "").trim() }
+                .filter { it.isNotBlank() }
+                .joinToString("\n")
+        } else {
+            lyrics
+        }
+        trackLyricsDao.saveLyricsWithFts(
+            TrackLyricsEntity(
+                trackId = trackId,
+                plainLyrics = plain,
+                syncedLyrics = if (isSynced) lyrics else null,
+                source = source?.takeIf { it.isNotBlank() } ?: "Agro",
+                viaCatalog = true
+            )
+        )
     }
 
     /** What one sync did. */
@@ -164,6 +181,12 @@ internal class CatalogSyncRepository @Inject constructor(
 
     internal companion object {
         const val TAG = "CatalogSync"
+
+        /** Entries per catalogue read; the server's own default. */
+        const val PULL_PAGE = 200
+
+        /** Pages one sync reads at most, so a catch-up is spread over a few syncs, not one long one. */
+        const val MAX_PULL_PAGES = 10
 
         fun quantiseToHex(vectors: Array<FloatArray>): String =
             CatalogVectorCodec.quantiseToHex(vectors)

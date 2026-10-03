@@ -29,6 +29,11 @@ internal class SecureAgroPreferences(private val prefs: SharedPreferences) {
         get() = prefs.getLong(KEY_CATALOG_PUBLISHED_AT, 0L)
         set(value) = prefs.edit { putLong(KEY_CATALOG_PUBLISHED_AT, value) }
 
+    /** The tie-breaker for [catalogLastPublishedAt] — see `TrackEmbeddingDao.computedSince`. */
+    var catalogLastPublishedTrack: String
+        get() = prefs.getString(KEY_CATALOG_PUBLISHED_TRACK, "").orEmpty()
+        set(value) = prefs.edit { putString(KEY_CATALOG_PUBLISHED_TRACK, value) }
+
     var agroCapabilities: Set<String>
         get() = prefs.getStringSet(KEY_AGRO_CAPABILITIES, emptySet()).orEmpty()
         set(value) = prefs.edit { putStringSet(KEY_AGRO_CAPABILITIES, value) }
@@ -150,6 +155,12 @@ internal class SecureAgroPreferences(private val prefs: SharedPreferences) {
             remove(KEY_AGRO_VAULT_KEY)
             remove(KEY_AGRO_IDENTITY_PRIV)
             remove(KEY_AGRO_IDENTITY_PUB)
+            // The catalogue cursors are positions on *that* server. Kept, a different server
+            // paired later would never be sent what was fingerprinted before it, and would be
+            // read from the middle. Re-sending to the same one is harmless: it merges.
+            remove(KEY_CATALOG_CURSOR)
+            remove(KEY_CATALOG_PUBLISHED_AT)
+            remove(KEY_CATALOG_PUBLISHED_TRACK)
         }
         _agroConfigured.value = false
     }

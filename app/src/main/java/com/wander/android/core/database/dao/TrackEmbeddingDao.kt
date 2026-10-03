@@ -56,13 +56,19 @@ interface TrackEmbeddingDao {
      * reading the whole table to find the handful that are new would be the expensive way to
      * answer a cheap question. Oldest first so the caller can advance its cursor to the last row it
      * actually managed to send.
+     *
+     * The cursor is the pair ([after], [afterTrackId]), not the timestamp alone. The desktop
+     * indexer stamps a whole run with one `computedAt`, so a strict `computedAt >` cursor read the
+     * first page of such a run and then skipped every remaining row of it for good.
      */
     @Query(
         "SELECT * FROM track_embeddings WHERE model = :model AND version = :version " +
-            "AND computedAt > :after ORDER BY computedAt LIMIT :limit"
+            "AND (computedAt > :after OR (computedAt = :after AND trackId > :afterTrackId)) " +
+            "ORDER BY computedAt, trackId LIMIT :limit"
     )
     suspend fun computedSince(
         after: Long,
+        afterTrackId: String,
         model: String,
         version: Int,
         limit: Int
@@ -142,6 +148,39 @@ interface TrackEmbeddingDao {
         bytesPerSegment: Int,
         segmentHopMs: Int,
         coverageToleranceMs: Int
+    ): List<String>
+
+    /**
+     * Fingerprinted tracks about [minMs]..[maxMs] long: the row's declared duration, or the one its
+     * fingerprint measured when the backend left it at zero.
+     *
+     * The fallback is what makes duplicate detection symmetric. A YouTube Music row routinely has
+     * no duration, so filtering on `tracks.durationMs` alone kept it from ever being a *candidate*:
+     * its own pass found its twin and linked them, and the twin's next pass — which could not see
+     * it — cleared the link again. The same gate kept catalogue entries from reaching the very rows
+     * worst placed to name themselves.
+     */
+    @Query(
+        """
+        SELECT t.id FROM tracks t
+        JOIN track_embeddings e
+          ON e.trackId = t.id AND e.model = :model AND e.version = :version
+        WHERE t.id != :excludingId AND t.source != 'UNRESOLVED'
+          AND (
+                CASE WHEN t.durationMs > 0 THEN t.durationMs
+                     ELSE (length(e.vector) / :bytesPerSegment) * :segmentHopMs
+                END
+              ) BETWEEN :minMs AND :maxMs
+        """
+    )
+    suspend fun candidateIdsByDuration(
+        excludingId: String,
+        minMs: Long,
+        maxMs: Long,
+        model: String,
+        version: Int,
+        bytesPerSegment: Int,
+        segmentHopMs: Int
     ): List<String>
 
     /** Drops rows for departed tracks and for every superseded model or version. */
