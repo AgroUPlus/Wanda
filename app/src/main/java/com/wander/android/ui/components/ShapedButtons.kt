@@ -1,19 +1,11 @@
 package com.wander.android.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
 import androidx.compose.material3.toPath
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -24,11 +16,8 @@ import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.dp
 import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.RoundedPolygon
 
@@ -138,84 +127,3 @@ private const val PausedPressedCorner = 0.4f
 /** The reference's rounded rectangle: roughly 28dp on the player's 92dp toggle. */
 private const val PlayingCorner = 0.3f
 private const val PlayingPressedCorner = 0.22f
-
-/** Resting and pressed shapes of the satellites beside it. */
-internal val ActionResting = MaterialShapes.Square
-internal val ActionPressed = MaterialShapes.Circle
-
-/**
- * M3 Expressive's own Large icon-button token (96dp container / 32dp icon) — not an arbitrary
- * number. Detail pages exist to be played from; the control that does it should read as the
- * biggest, most confident thing on the screen, which a size that sits between two real tokens
- * (the previous 64dp) never quite managed.
- */
-val ShapedPlaySize: Dp = 96.dp
-private val ShapedPlayIconSize: Dp = 32.dp
-
-/** M3 Expressive's Medium icon-button token (56dp container / 24dp icon). */
-val ShapedActionSize: Dp = 56.dp
-private val ShapedActionIconSize: Dp = 24.dp
-
-/**
- * The one control a detail page exists for.
- *
- * A twelve-lobed cookie at rest that settles into a circle while held. It is deliberately the only
- * shape of its kind on the screen — the satellites beside it are quiet squircles — so the page has
- * exactly one thing that draws the eye.
- */
-@Composable
-fun ShapedPlayButton(
-    onClick: () -> Unit,
-    contentDescription: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier,
-    size: Dp = ShapedPlaySize,
-    /** Hoisted out when a caller needs to react to this button's own press state — see `ArtistHero`. */
-    interactionSource: MutableInteractionSource? = null
-) {
-    val interaction = interactionSource ?: remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    // The fast spatial spec, not the default: this sits directly under a finger, and anything
-    // leisurely reads as the tap not having registered.
-    val shape = rememberPressMorphShape(PlayResting, PlayPressed, pressed)
-
-    FilledIconButton(
-        onClick = onClick,
-        shape = shape,
-        interactionSource = interaction,
-        modifier = modifier.size(size)
-    ) {
-        Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(ShapedPlayIconSize))
-    }
-}
-
-/**
- * Shuffle, radio, share — the actions that sit beside [ShapedPlayButton].
- *
- * Tonal rather than filled, and a squircle rather than a cookie, so the hierarchy on the page is
- * legible without reading a single label.
- */
-@Composable
-fun ShapedActionButton(
-    onClick: () -> Unit,
-    contentDescription: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier,
-    size: Dp = ShapedActionSize,
-    /** Hoisted out when a caller needs to react to this button's own press state — see `ArtistHero`. */
-    interactionSource: MutableInteractionSource? = null
-) {
-    val interaction = interactionSource ?: remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val shape = rememberPressMorphShape(ActionResting, ActionPressed, pressed)
-
-    FilledTonalIconButton(
-        onClick = onClick,
-        shape = shape,
-        interactionSource = interaction,
-        colors = IconButtonDefaults.filledTonalIconButtonColors(),
-        modifier = modifier.size(size)
-    ) {
-        Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(ShapedActionIconSize))
-    }
-}

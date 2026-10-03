@@ -1,11 +1,14 @@
 package com.wander.android.ui.components
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -38,4 +41,18 @@ internal fun ImmersiveHeroSkeleton(aspect: Float, modifier: Modifier = Modifier)
             }
         }
     }
+}
+
+/**
+ * A [HeroActionButton] before its page has loaded, inside a [HeroActionRow].
+ *
+ * A full stadium, matching the button's own resting shape — `CircleShape`'s percentage-based corner
+ * lands on the same silhouette as `rowHeight / 2` without needing the row's actual height here.
+ */
+@Composable
+internal fun RowScope.HeroActionSkeleton(weight: Float) {
+    SkeletonBox(
+        modifier = Modifier.weight(weight).fillMaxHeight(),
+        shape = CircleShape
+    )
 }

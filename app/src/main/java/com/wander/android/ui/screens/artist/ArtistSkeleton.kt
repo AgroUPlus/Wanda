@@ -3,24 +3,25 @@ package com.wander.android.ui.screens.artist
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.wander.android.ui.components.HeroActionRow
+import com.wander.android.ui.components.HeroActionSkeleton
+import com.wander.android.ui.components.HeroPlayWeight
+import com.wander.android.ui.components.HeroSecondaryRowHeight
+import com.wander.android.ui.components.HeroTransportRowHeight
 import com.wander.android.ui.components.ImmersiveHeroSkeleton
 import com.wander.android.ui.components.SkeletonBox
 import com.wander.android.ui.components.SkeletonLine
@@ -91,39 +92,17 @@ internal fun ArtistSkeleton(contentPadding: PaddingValues, modifier: Modifier = 
 private fun HeroSkeleton() {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         ImmersiveHeroSkeleton(aspect = PortraitAspect)
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(ButtonGap),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(HeroRowHeight)
-                .padding(horizontal = RowInset)
-                .padding(top = 18.dp)
-        ) {
-            SkeletonButton(weight = 1f)
-            SkeletonButton(weight = HeroWeight)
-            SkeletonButton(weight = 1f)
+        HeroActionRow(height = HeroTransportRowHeight, modifier = Modifier.padding(top = 18.dp)) {
+            HeroActionSkeleton(weight = 1f)
+            HeroActionSkeleton(weight = HeroPlayWeight)
+            HeroActionSkeleton(weight = 1f)
         }
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(ButtonGap),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(ActionRowHeight)
-                .padding(horizontal = RowInset)
-                .padding(top = 14.dp, bottom = 4.dp)
+        HeroActionRow(
+            height = HeroSecondaryRowHeight,
+            modifier = Modifier.padding(top = 14.dp, bottom = 4.dp)
         ) {
-            SkeletonButton(weight = 1f)
-            SkeletonButton(weight = 1f)
+            HeroActionSkeleton(weight = 1f)
+            HeroActionSkeleton(weight = 1f)
         }
     }
-}
-
-@Composable
-private fun RowScope.SkeletonButton(weight: Float) {
-    // A full stadium, matching `ArtistActionButton`'s own resting shape — `CircleShape`'s
-    // percentage-based corner lands on the same silhouette as `rowHeight / 2` without needing the
-    // row's actual height here.
-    SkeletonBox(
-        modifier = Modifier.weight(weight).fillMaxHeight(),
-        shape = CircleShape
-    )
 }

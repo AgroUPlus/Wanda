@@ -97,10 +97,9 @@ fun CompactHeroTopBar(
                 // and the play button 16 dp from their edges — the same inset as the lists below.
                 .padding(horizontal = 12.dp)
         ) {
-            // Round at rest, not the squircle `ShapedActionButton` defaults to — a back control
-            // reads as "back" by being the round button in the corner everywhere else in Android,
-            // and only deviates from that (toward a squarer shape) while actually held, the
-            // reverse of `ShapedActionButton`'s own resting/pressed pair.
+            // Round at rest — a back control reads as "back" by being the round button in the
+            // corner everywhere else in Android, and only deviates from that (toward a squarer
+            // shape) while actually held.
             val backInteraction = remember { MutableInteractionSource() }
             val backPressed by backInteraction.collectIsPressedAsState()
             val backShape = rememberPressMorphShape(MaterialShapes.Circle, MaterialShapes.Square, backPressed)
@@ -264,7 +263,7 @@ private val BarButtonSize = 48.dp
 
 /**
  * Bigger than the bar itself on purpose — see the `requiredSize` note where it's used. Close to
- * the hero's own [ShapedPlaySize]: this is the same control handed off from the same page, and a
+ * the hero's own play button: this is the same control handed off from the same page, and a
  * noticeably smaller copy read as a lesser, secondary version of it rather than a continuation.
  */
 private val PlayButtonSize = 88.dp

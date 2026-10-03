@@ -1,17 +1,14 @@
 package com.wander.android.ui.screens.social
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.wander.android.ui.components.HeroActionRow
+import com.wander.android.ui.components.HeroActionSkeleton
 import com.wander.android.ui.components.PersonShape
 import com.wander.android.ui.components.SkeletonBox
 import com.wander.android.ui.components.SkeletonLine
@@ -25,18 +22,21 @@ import com.wander.android.ui.components.SkeletonLine
  */
 @Composable
 internal fun ProfileSkeleton() {
-    Column(
-        horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)
-    ) {
-        SkeletonBox(modifier = Modifier.size(120.dp), shape = PersonShape)
-        Spacer(Modifier.height(10.dp))
-        SkeletonLine(widthFraction = 0.5f, height = 44.dp)
-        SkeletonLine(widthFraction = 0.3f, height = 14.dp)
-        SkeletonLine(widthFraction = 0.85f, height = 14.dp)
-        SkeletonLine(widthFraction = 0.65f, height = 14.dp)
-        Spacer(Modifier.height(10.dp))
-        SkeletonBox(modifier = Modifier.fillMaxWidth().height(56.dp), shape = CircleShape)
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // [ProfileHero]'s own insets and gaps, box for box.
+        Column(modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 8.dp)) {
+            SkeletonBox(modifier = Modifier.size(120.dp), shape = PersonShape)
+            SkeletonLine(widthFraction = 0.5f, height = 44.dp, modifier = Modifier.padding(top = 20.dp))
+            SkeletonLine(widthFraction = 0.3f, height = 14.dp, modifier = Modifier.padding(top = 8.dp))
+            SkeletonLine(widthFraction = 0.85f, height = 14.dp, modifier = Modifier.padding(top = 12.dp))
+            SkeletonLine(widthFraction = 0.65f, height = 14.dp, modifier = Modifier.padding(top = 6.dp))
+        }
+        // [ProfileActions]' row, at its 16 dp inset rather than the hero's 24.
+        HeroActionRow(
+            height = ProfileActionHeight + ProfileActionTopGap,
+            modifier = Modifier.padding(top = ProfileActionTopGap)
+        ) {
+            HeroActionSkeleton(weight = 1f)
+        }
     }
 }

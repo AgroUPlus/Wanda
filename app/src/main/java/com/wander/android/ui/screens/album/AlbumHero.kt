@@ -1,9 +1,7 @@
 package com.wander.android.ui.screens.album
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -16,18 +14,22 @@ import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
+import com.wander.android.ui.components.HeroActionButton
+import com.wander.android.ui.components.HeroActionIconSize
+import com.wander.android.ui.components.HeroActionRow
+import com.wander.android.ui.components.HeroActionTint
 import com.wander.android.ui.components.HeroOverline
+import com.wander.android.ui.components.HeroPlayIconSize
+import com.wander.android.ui.components.HeroPlayWeight
+import com.wander.android.ui.components.HeroSecondaryRowHeight
+import com.wander.android.ui.components.HeroTransportRowHeight
 import com.wander.android.ui.components.ImmersiveHero
-import com.wander.android.ui.components.ShapedActionButton
-import com.wander.android.ui.components.ShapedPlayButton
-import com.wander.android.ui.components.ShapedPlaySize
 import com.wander.android.ui.theme.heroTitle
 
 /**
@@ -90,53 +92,69 @@ internal fun AlbumHero(
             }
         }
 
-        // Centred under the cover rather than pushed to the edges. With the artwork centred above
-        // them, actions pinned left and right read as belonging to the screen instead of to the
-        // record — and Play keeps its size advantage, which is what states the hierarchy here.
-        // Five buttons at the usual spacing are wider than a 360 dp phone, so a playlist's full
-        // row closes up and Play gives up a little of its size; it still leads by a wide margin.
-        val crowded = listOfNotNull(onShare, onConvert, onDownload).size > 1
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(
-                if (crowded) 8.dp else 16.dp,
-                Alignment.CenterHorizontally
-            ),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 20.dp, bottom = 4.dp)
-        ) {
-            ShapedActionButton(
+        // The artist page's two rows, for the same reasons — see [HeroActionButton]. Transport
+        // first; sharing and the playlist-only actions below it, only when there are any.
+        HeroActionRow(height = HeroTransportRowHeight, modifier = Modifier.padding(top = 18.dp)) {
+            HeroActionButton(
                 onClick = onShuffle,
                 contentDescription = stringResource(R.string.action_shuffle),
-                icon = Icons.Rounded.Shuffle
+                icon = Icons.Rounded.Shuffle,
+                baseWeight = 1f,
+                iconSize = HeroActionIconSize,
+                rowHeight = HeroTransportRowHeight,
+                tint = HeroActionTint.SECONDARY_CONTAINER
             )
-            ShapedPlayButton(
+            HeroActionButton(
                 onClick = onPlay,
                 contentDescription = stringResource(R.string.action_play),
                 icon = Icons.Rounded.PlayArrow,
-                size = if (crowded) CrowdedPlaySize else ShapedPlaySize
+                baseWeight = HeroPlayWeight,
+                iconSize = HeroPlayIconSize,
+                rowHeight = HeroTransportRowHeight,
+                tint = HeroActionTint.PRIMARY_SOLID
             )
-            onShare?.let { share ->
-                ShapedActionButton(
-                    onClick = share,
-                    contentDescription = stringResource(if (isShared) R.string.playlist_shared_on_agro else R.string.action_share),
-                    icon = if (isShared) Icons.Rounded.CloudDone else Icons.Rounded.Share
-                )
-            }
-            onConvert?.let { convert ->
-                ShapedActionButton(
-                    onClick = convert,
-                    contentDescription = stringResource(R.string.playlist_convert_action),
-                    icon = Icons.Rounded.LibraryAdd
-                )
-            }
-            onDownload?.let { download ->
-                ShapedActionButton(
-                    onClick = download,
-                    contentDescription = stringResource(R.string.playlist_download),
-                    icon = Icons.Rounded.Download
-                )
+        }
+
+        if (onShare != null || onConvert != null || onDownload != null) {
+            HeroActionRow(
+                height = HeroSecondaryRowHeight,
+                modifier = Modifier.padding(top = 14.dp, bottom = 4.dp)
+            ) {
+                onShare?.let { share ->
+                    HeroActionButton(
+                        onClick = share,
+                        contentDescription = stringResource(if (isShared) R.string.playlist_shared_on_agro else R.string.action_share),
+                        icon = if (isShared) Icons.Rounded.CloudDone else Icons.Rounded.Share,
+                        baseWeight = 1f,
+                        iconSize = HeroActionIconSize,
+                        rowHeight = HeroSecondaryRowHeight,
+                        // Switched on reads like the artist page's Following: a container, never
+                        // solid, so it does not compete with Play.
+                        tint = if (isShared) HeroActionTint.PRIMARY_CONTAINER else HeroActionTint.TERTIARY_CONTAINER
+                    )
+                }
+                onConvert?.let { convert ->
+                    HeroActionButton(
+                        onClick = convert,
+                        contentDescription = stringResource(R.string.playlist_convert_action),
+                        icon = Icons.Rounded.LibraryAdd,
+                        baseWeight = 1f,
+                        iconSize = HeroActionIconSize,
+                        rowHeight = HeroSecondaryRowHeight,
+                        tint = HeroActionTint.SECONDARY_CONTAINER
+                    )
+                }
+                onDownload?.let { download ->
+                    HeroActionButton(
+                        onClick = download,
+                        contentDescription = stringResource(R.string.playlist_download),
+                        icon = Icons.Rounded.Download,
+                        baseWeight = 1f,
+                        iconSize = HeroActionIconSize,
+                        rowHeight = HeroSecondaryRowHeight,
+                        tint = HeroActionTint.NEUTRAL
+                    )
+                }
             }
         }
     }
@@ -147,5 +165,3 @@ internal const val CoverAspect = 1f
 
 /** Shared with the page's collapsing bar, which must wrap the title exactly as the hero does. */
 internal const val HeroTitleMaxLines = 3
-
-private val CrowdedPlaySize = 84.dp
