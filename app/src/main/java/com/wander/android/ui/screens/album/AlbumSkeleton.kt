@@ -4,11 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,12 +15,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
+import com.wander.android.ui.components.ImmersiveHeroSkeleton
 import com.wander.android.ui.components.ShapedActionSize
 import com.wander.android.ui.components.ShapedPlaySize
 import com.wander.android.ui.components.SkeletonBox
-import com.wander.android.ui.components.SkeletonLine
 import com.wander.android.ui.components.SkeletonRow
 
 /**
@@ -54,29 +50,11 @@ private fun HeaderSkeleton() {
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
     ) {
-        androidx.compose.foundation.layout.Box(
-            modifier = Modifier.fillMaxWidth().aspectRatio(CoverAspect)
-        ) {
-            SkeletonBox(
-                modifier = Modifier.fillMaxSize(),
-                shape = RectangleShape
-            )
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp)
-            ) {
-                SkeletonLine(widthFraction = 0.7f, height = 26.dp)
-                Spacer(Modifier.height(8.dp))
-                SkeletonLine(widthFraction = 0.45f, height = 13.dp)
-            }
-        }
+        ImmersiveHeroSkeleton(aspect = CoverAspect)
         Row(
             horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 4.dp)
+            modifier = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 4.dp)
         ) {
             SkeletonBox(
                 modifier = Modifier.size(ShapedActionSize),

@@ -163,7 +163,6 @@ internal fun ActivityHero(
 
     ImmersiveHero(
         aspect = ActivityAspect,
-        scrimHeight = 12.dp,
         backdrop = {
             Spacer(
                 modifier = Modifier
@@ -188,8 +187,7 @@ internal fun ActivityHero(
         caption = {
             Text(
                 text = stringResource(R.string.common_activity),
-                style = MaterialTheme.typography.headlineMediumEmphasized,
-                textAlign = TextAlign.Center
+                style = MaterialTheme.typography.headlineMediumEmphasized
             )
             Spacer(Modifier.height(4.dp))
             Text(
@@ -199,8 +197,7 @@ internal fun ActivityHero(
                     "Your circle, and what people sent you"
                 },
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     )

@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.sources.agro.AgroProfile
 import com.wander.android.ui.components.CuteAvatar
@@ -31,7 +32,11 @@ import com.wander.android.ui.theme.profileName
  * people's pages still differ from each other exactly as much as their avatars do.
  */
 @Composable
-internal fun ProfileHero(profile: AgroProfile) {
+internal fun ProfileHero(
+    profile: AgroProfile,
+    /** On the name alone — how the page's collapsing bar tracks it. */
+    titleModifier: Modifier = Modifier
+) {
     Column(modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 8.dp)) {
         CuteAvatar(
             seed = profile.username,
@@ -42,7 +47,9 @@ internal fun ProfileHero(profile: AgroProfile) {
         Text(
             text = profile.name,
             style = MaterialTheme.typography.profileName,
-            modifier = Modifier.padding(top = 20.dp)
+            maxLines = ProfileNameMaxLines,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 20.dp).then(titleModifier)
         )
         Text(
             text = "@" + profile.username,
@@ -60,6 +67,9 @@ internal fun ProfileHero(profile: AgroProfile) {
         }
     }
 }
+
+/** Shared with the page's collapsing bar, which must wrap the name exactly as the hero does. */
+internal const val ProfileNameMaxLines = 2
 
 /**
  * A large cookie in a dark wash of the person's own avatar colour, behind the top of the page.

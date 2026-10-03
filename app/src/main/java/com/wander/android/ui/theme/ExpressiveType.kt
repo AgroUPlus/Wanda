@@ -26,6 +26,10 @@ internal val Typography.profileName: TextStyle
 internal val Typography.heroTitle: TextStyle
     get() = displayLarge.copy(fontSize = 32.sp, lineHeight = 1.05.em, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.sp)
 
+/** The coloured label above a hero's title ("Album", "Top song"). */
+internal val Typography.heroOverline: TextStyle
+    get() = labelLarge.copy(fontSize = 13.sp, letterSpacing = 0.4.sp)
+
 internal val Typography.heroTitleSmall: TextStyle
     get() = heroTitle.copy(fontSize = 28.sp)
 

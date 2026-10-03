@@ -20,21 +20,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.ui.components.ArtistMonogram
 import com.wander.android.ui.components.Artwork
+import com.wander.android.ui.components.HeroOverline
 import com.wander.android.ui.components.ImmersiveHero
+import com.wander.android.ui.theme.heroTitle
 
 /**
  * The top of an artist page: their portrait edge to edge, their name over it, and the things you
  * can do with them.
  *
  * This used to be a rounded card with a 96 dp circular portrait beside two lines of text, laid out
- * to match the album page's header. The two pages *should* differ here, and now do — see
- * [ImmersiveHero], which is the shape both of them settled on.
+ * to match the album page's header. It now opens like every detail page — see [ImmersiveHero] —
+ * with the name on a sheet rising over the foot of the portrait.
  *
  * The portrait is the backend's when it publishes one, and a monogram when it does not. It is
  * deliberately never a cover off one of their records: that fallback is how a correct biography
@@ -65,8 +67,6 @@ internal fun ArtistHero(
     Column(modifier = modifier.fillMaxWidth()) {
         ImmersiveHero(
             aspect = PortraitAspect,
-            scrimHeight = 108.dp,
-            horizontalPadding = 24.dp,
             backdrop = {
                 // A portrait or a letter, and nothing in between.
                 //
@@ -88,20 +88,19 @@ internal fun ArtistHero(
                 }
             }
         ) {
+            HeroOverline(R.string.hero_overline_artist)
             Text(
                 text = name,
-                style = MaterialTheme.typography.displaySmall,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
+                style = MaterialTheme.typography.heroTitle,
+                maxLines = ArtistNameMaxLines,
                 overflow = TextOverflow.Ellipsis,
                 modifier = titleModifier
             )
             if (subtitle.isNotBlank()) {
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 6.dp)
                 )
             }
@@ -203,6 +202,9 @@ internal fun ArtistHero(
 
 /** A shade taller than the shared default: a head-and-shoulders shot needs the extra height. */
 internal const val PortraitAspect = 0.86f
+
+/** Shared with the page's collapsing bar, which must wrap the name exactly as the hero does. */
+internal const val ArtistNameMaxLines = 2
 
 /** Constant, not measured — see the note in [ImmersiveHero]'s own backdrop. */
 private val PortraitDecodeSize = 480.dp

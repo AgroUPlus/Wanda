@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowDropDown
@@ -32,17 +31,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.wander.android.R
 import com.wander.android.data.repository.TopSong
 import com.wander.android.data.sources.agro.StatsPeriod
 import com.wander.android.ui.components.Artwork
+import com.wander.android.ui.components.HeroOverline
+import com.wander.android.ui.components.HeroSheetOverlap
+import com.wander.android.ui.components.HeroSheetShape
+import com.wander.android.ui.components.riseBy
 import com.wander.android.ui.theme.buttonSmall
 import com.wander.android.ui.theme.heroTitle
 
@@ -92,22 +92,17 @@ internal fun StatsHero(
             HeroControls(period, onPeriod, onBack, topInset, overArt = true)
         }
         Surface(
-            shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp),
+            shape = HeroSheetShape,
             color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.fillMaxWidth().riseBy(SheetOverlap)
+            modifier = Modifier.fillMaxWidth().riseBy(HeroSheetOverlap)
         ) {
             Column(modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp)) {
-                Text(
-                    text = stringResource(R.string.stats_top_song),
-                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, letterSpacing = 0.4.sp),
-                    color = MaterialTheme.colorScheme.primary
-                )
+                HeroOverline(R.string.stats_top_song)
                 Text(
                     text = topSong.title,
                     style = MaterialTheme.typography.heroTitle,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 6.dp)
+                    overflow = TextOverflow.Ellipsis
                 )
                 if (topSong.artist.isNotBlank()) {
                     Text(
@@ -122,19 +117,6 @@ internal fun StatsHero(
             }
         }
     }
-}
-
-/** How far the title sheet rises over the cover. */
-private val SheetOverlap = 40.dp
-
-/**
- * Draws this [rise] higher *and* reports itself that much shorter, so what follows in the list moves
- * up with it. A plain `offset` would move only the drawing and leave a gap of the same size below.
- */
-private fun Modifier.riseBy(rise: Dp): Modifier = layout { measurable, constraints ->
-    val placeable = measurable.measure(constraints)
-    val px = rise.roundToPx()
-    layout(placeable.width, (placeable.height - px).coerceAtLeast(0)) { placeable.place(0, -px) }
 }
 
 @Composable

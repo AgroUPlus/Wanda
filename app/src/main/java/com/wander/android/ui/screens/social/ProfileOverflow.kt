@@ -3,16 +3,12 @@ package com.wander.android.ui.screens.social
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PersonRemove
@@ -28,7 +24,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -40,42 +35,19 @@ import com.wander.android.R
 import com.wander.android.data.sources.agro.AgroProfile
 import com.wander.android.data.sources.agro.FriendState
 import com.wander.android.ui.components.ConfirmRequest
-import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.rememberConfirmState
 
 /**
- * Back, and the two things you do to a person you rarely do: unfriend and block.
+ * The two things you do to a person you rarely do: unfriend and block.
  *
  * Both used to sit as buttons under the name, at the same level as adding someone — an unfriend a
  * stray tap away from the thing you came to the page to do. In the overflow they are one deliberate
  * step further off, and each still asks first: both end something the other person has to agree to
- * again, and blocking also hides you from them.
+ * again, and blocking also hides you from them. It sits at the trailing end of the page's
+ * collapsing bar.
  */
 @Composable
-internal fun ProfileTopBar(
-    contentPadding: PaddingValues,
-    profile: AgroProfile?,
-    onBack: () -> Unit,
-    onRemove: () -> Unit,
-    onBlock: () -> Unit
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .padding(contentPadding.headerInset())
-            .padding(8.dp)
-            .fillMaxWidth()
-    ) {
-        IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
-        }
-        Spacer(Modifier.weight(1f))
-        if (profile != null) ProfileOverflow(profile, onRemove, onBlock)
-    }
-}
-
-@Composable
-private fun ProfileOverflow(profile: AgroProfile, onRemove: () -> Unit, onBlock: () -> Unit) {
+internal fun ProfileOverflow(profile: AgroProfile, onRemove: () -> Unit, onBlock: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     val confirm = rememberConfirmState()
     val name = profile.displayName?.takeIf { it.isNotBlank() } ?: "@${profile.username}"

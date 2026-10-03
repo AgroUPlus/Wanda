@@ -30,6 +30,9 @@
     <string name="menu_radio">Radio</string>
     <string name="track_info_artist">Artist</string>
     <string name="track_info_album">Album</string>
+    <string name="hero_overline_album">Album</string>
+    <string name="hero_overline_playlist">Playlist</string>
+    <string name="hero_overline_artist">Artist</string>
     <string name="track_info_duration">Duration</string>
     <string name="track_info_track">Track</string>
     <string name="track_info_year">Year</string>
@@ -209,11 +212,11 @@
     <string name="importer_edit_title">Edit Title</string>
     <string name="importer_import_playlist">Import Playlist</string>
     <string name="link_playlist_saved">Saved “%1$s”. Matching its tracks to your sources…</string>
-    <string name="playlist_share_visibility_title">Who can open this playlist?</string>
-    <string name="playlist_visibility_friends">Friends only</string>
+    <string name="playlist_share_visibility_title">Who can open it</string>
+    <string name="playlist_visibility_friends">Friends</string>
     <string name="playlist_visibility_friends_desc">Only your Agro friends can open the link.</string>
-    <string name="playlist_visibility_public">Anyone on your server</string>
-    <string name="playlist_visibility_public_desc">Every signed-in account on your Agro server can open it and find it in its playlist list.</string>
+    <string name="playlist_visibility_public">Everyone</string>
+    <string name="playlist_visibility_public_desc">Anyone signed in to your Agro server can open it and find it in their playlists.</string>
     <string name="playlist_visibility_private">Only me</string>
     <string name="playlist_visibility_private_desc">Only you can open it, for example on your other devices.</string>
     <string name="link_playlist_needs_agro">This playlist is on an Agro server. Pair yours in Settings to open it.</string>
@@ -228,6 +231,11 @@
     <string name="playlist_file_failed">Couldn\'t write the playlist file: %1$s</string>
     <string name="playlist_shared_as_file">Too long for a link, so it\'s shared as a file.</string>
     <string name="playlist_share_title">Share this playlist</string>
+    <!-- Under the loading indicator while a playlist goes up to, or comes off, the Agro server. -->
+    <string name="playlist_working_sharing">Sharing on Agro…</string>
+    <string name="playlist_working_updating">Updating the shared playlist…</string>
+    <string name="playlist_working_unsharing">Unsharing…</string>
+    <string name="playlist_working_file">Preparing the file…</string>
     <string name="playlist_shared_on_agro">Shared on Agro</string>
     <string name="playlist_shared_badge">Shared · %1$s</string>
     <string name="playlist_share_agro_resend">Send the link again</string>
@@ -238,14 +246,16 @@
     <string name="playlist_unshare_confirm_title">Stop sharing “%1$s”?</string>
     <string name="playlist_unshare_confirm_message">The copy on your Agro server is deleted and its link stops working for everyone. People following it are told it\'s no longer shared. The playlist on this device is kept.</string>
     <string name="playlist_unshared">Stopped sharing. The link no longer opens.</string>
+    <!-- The owner deleted a shared playlist's copy on Agro itself. %1$s is the playlist. -->
+    <string name="playlist_unshared_from_agro">“%1$s” was unshared from Agro</string>
     <string name="playlist_unshare_failed">Couldn\'t stop sharing: %1$s</string>
     <string name="playlist_collab_action">Who can edit it</string>
-    <string name="playlist_collab_title">Who can edit this playlist</string>
+    <string name="playlist_collab_title">Who can edit it</string>
     <string name="playlist_collab_off">Only you</string>
     <string name="playlist_collab_off_desc">Everyone else can listen, but not change it.</string>
     <string name="playlist_collab_friends">Friends</string>
     <string name="playlist_collab_friends_desc">Your friends can add, remove and reorder tracks.</string>
-    <string name="playlist_collab_public">Friends, and anyone can add</string>
+    <string name="playlist_collab_public">Anyone can add</string>
     <string name="playlist_collab_public_desc">Friends edit freely. Anyone else who can open it can add tracks, and remove only their own.</string>
     <string name="playlist_collab_needs_wider">Let more people open it first.</string>
     <string name="playlist_collab_changed">Updated who can edit this playlist.</string>
@@ -279,6 +289,7 @@
     <string name="playlist_share_file_desc">An .m3u8 file. Works for any length and in other players.</string>
     <string name="playlist_share_agro">Through Agro</string>
     <string name="playlist_share_agro_desc">Publish it to your Agro server and choose who can open it.</string>
+    <string name="playlist_share_agro_copy_desc">Makes it a Wanda playlist first, so the shared copy stays in sync and others can edit it. The original is left as it is.</string>
     <string name="playlist_share_source">Original link</string>
     <string name="playlist_share_source_desc">The playlist\'s own %1$s link.</string>
     <string name="playlist_download">Download as M3U</string>
@@ -663,6 +674,8 @@
     <string name="stats_by_device">By device</string>
     <string name="stats_total_listened_time">Total listened time</string>
     <string name="stats_average_per_day">Average per day</string>
+    <!-- Shown in place of a figure that cannot be worked out, e.g. an all-time average from an older Agro server. -->
+    <string name="stats_value_unknown">–</string>
     <string name="stats_artists">Artists</string>
     <string name="stats_today">Today</string>
     <string name="stats_tab_artists">Artists</string>

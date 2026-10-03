@@ -5,6 +5,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -53,11 +54,15 @@ import com.wander.android.R
  * and the play button arrive with the title, in step with [CollapsingTitleState.fraction].
  *
  * [heroTitleStyle] and [heroTitleMaxLines] must match the hero's own title so the travelling copy
- * starts out indistinguishable from the text it replaces.
+ * starts out indistinguishable from the text it replaces. Hero titles are start-aligned, as on the
+ * sheet [ImmersiveHero] sets them on.
  *
  * [onPlay] is null when the hero below already carries its own, bigger play control — a second
  * copy shrunk into this bar read as a worse version of it rather than a continuation, so the
  * artist page (whose hero play button this session redid) leaves it out entirely.
+ *
+ * [actions] sit at the trailing end and, like the back button, are there from the start — a
+ * profile's overflow menu is as reachable before the page scrolls as after.
  */
 @Composable
 fun CompactHeroTopBar(
@@ -68,7 +73,8 @@ fun CompactHeroTopBar(
     topInset: Dp,
     modifier: Modifier = Modifier,
     onPlay: (() -> Unit)? = null,
-    heroTitleMaxLines: Int = 3
+    heroTitleMaxLines: Int = 3,
+    actions: @Composable RowScope.() -> Unit = {}
 ) {
     val collapseDistancePx = with(LocalDensity.current) { CollapseDistance.toPx() }
     SideEffect { titleState.collapseDistancePx = collapseDistancePx }
@@ -76,7 +82,7 @@ fun CompactHeroTopBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(topInset + BarHeight)
+                .height(topInset + CompactHeroBarHeight)
                 .graphicsLayer { alpha = titleState.fraction }
                 .background(MaterialTheme.colorScheme.surfaceContainer)
         )
@@ -86,7 +92,7 @@ fun CompactHeroTopBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = topInset)
-                .height(BarHeight)
+                .height(CompactHeroBarHeight)
                 // 12 dp plus the buttons' own 4 dp touch-target margin puts both the back button
                 // and the play button 16 dp from their edges — the same inset as the lists below.
                 .padding(horizontal = 12.dp)
@@ -141,7 +147,7 @@ fun CompactHeroTopBar(
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     ),
-                    // `requiredSize`, not `size`: the bar's own height is fixed at `BarHeight`, and
+                    // `requiredSize`, not `size`: the bar's own height is fixed at `CompactHeroBarHeight`, and
                     // the button reading as the biggest thing on the page matters more than staying
                     // inside it — it overflows top and bottom rather than getting squeezed to fit.
                     modifier = Modifier
@@ -160,6 +166,8 @@ fun CompactHeroTopBar(
                     )
                 }
             }
+
+            actions()
         }
     }
 }
@@ -212,7 +220,7 @@ private fun TravellingTitle(
     Text(
         text = title,
         style = heroStyle,
-        textAlign = TextAlign.Center,
+        textAlign = TextAlign.Start,
         maxLines = heroMaxLines,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier
@@ -248,7 +256,8 @@ private fun TravellingTitle(
 /** The two copies trade places over the middle of the trip, overlapping so it never dips. */
 private fun crossFade(t: Float): Float = ((t - 0.3f) / 0.4f).coerceIn(0f, 1f)
 
-private val BarHeight = 56.dp
+/** The bar's own height, below the status bar — what a page without a full-bleed hero leaves room for. */
+val CompactHeroBarHeight = 56.dp
 
 /** The back button's size — M3 Expressive's own Small icon-button-adjacent scale for a bar. */
 private val BarButtonSize = 48.dp

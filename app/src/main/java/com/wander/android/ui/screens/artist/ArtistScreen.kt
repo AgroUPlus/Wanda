@@ -25,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.ui.theme.heroTitle
 import com.wander.android.R
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
@@ -175,8 +176,8 @@ internal fun ArtistScreen(
             titleState = titleState,
             onBack = onBack,
             title = state.artist,
-            heroTitleStyle = MaterialTheme.typography.displaySmall,
-            heroTitleMaxLines = 2,
+            heroTitleStyle = MaterialTheme.typography.heroTitle,
+            heroTitleMaxLines = ArtistNameMaxLines,
             topInset = contentPadding.calculateTopPadding(),
             modifier = Modifier.align(Alignment.TopStart)
         )

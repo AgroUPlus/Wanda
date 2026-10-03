@@ -1,10 +1,10 @@
 package com.wander.android.ui.screens.album
 
+import com.wander.android.ui.theme.heroTitle
 import com.wander.android.ui.components.rememberShelfEntranceScale
 import androidx.compose.ui.draw.scale
 import com.wander.android.ui.components.groupedListItem
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -162,8 +162,8 @@ fun AlbumScreen(
             onBack = onBack,
             title = album?.title ?: tracks.firstOrNull()?.album.orEmpty(),
             onPlay = viewModel::playAll,
-            heroTitleStyle = MaterialTheme.typography.headlineMedium,
-            heroTitleMaxLines = 3,
+            heroTitleStyle = MaterialTheme.typography.heroTitle,
+            heroTitleMaxLines = HeroTitleMaxLines,
             topInset = contentPadding.calculateTopPadding(),
             modifier = Modifier.align(Alignment.TopStart)
         )
