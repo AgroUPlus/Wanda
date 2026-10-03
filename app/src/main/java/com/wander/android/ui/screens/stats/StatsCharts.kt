@@ -1,117 +1,139 @@
 package com.wander.android.ui.screens.stats
 
-import androidx.compose.foundation.Canvas
+import android.text.format.DateFormat
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.wander.android.R
-import com.wander.android.data.sources.agro.StatEntry
-import com.wander.android.ui.components.scrollingTitle
+import androidx.compose.ui.unit.sp
+import com.wander.android.ui.theme.extraColors
+import com.wander.android.ui.theme.sectionTitle
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
-/**
- * A row of bars scaled to the largest value in the set.
- *
- * Scaled to the set rather than to a fixed ceiling: a quiet week and a heavy one are both worth
- * reading the shape of, and a shared axis flattens the quiet one into a flat line.
- *
- * Drawn on a `Canvas` rather than as a `Row` of boxes — fourteen to twenty-four of those is a
- * measurable amount of layout for something that is one drawing operation.
- */
+/** A chart in its own card, titled like a section. */
 @Composable
-internal fun BarChart(
-    values: List<Long>,
-    modifier: Modifier = Modifier
+internal fun ChartCard(
+    title: String,
+    subtitle: String? = null,
+    content: @Composable () -> Unit
 ) {
-    if (values.isEmpty()) return
-    val peak = values.max().coerceAtLeast(1L)
-    val barColor = MaterialTheme.colorScheme.primary
-    val trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-
-    Canvas(modifier = modifier.fillMaxWidth().height(88.dp)) {
-        val gap = 3.dp.toPx()
-        val slot = (size.width - gap * (values.size - 1)) / values.size
-        val radius = CornerRadius(3.dp.toPx())
-
-        values.forEachIndexed { index, value ->
-            val left = index * (slot + gap)
-            drawRoundRect(
-                color = trackColor,
-                topLeft = Offset(left, 0f),
-                size = Size(slot, size.height),
-                cornerRadius = radius
-            )
-            // A nonzero value would otherwise round away to an invisible sliver.
-            val height = if (value == 0L) 0f else {
-                (value.toFloat() / peak * size.height).coerceAtLeast(2.dp.toPx())
+    Surface(
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(20.dp)) {
+            Column {
+                Text(title, style = MaterialTheme.typography.sectionTitle)
+                subtitle?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
             }
-            if (height > 0f) {
-                drawRoundRect(
-                    color = barColor,
-                    topLeft = Offset(left, size.height - height),
-                    size = Size(slot, height),
-                    cornerRadius = radius
-                )
-            }
+            content()
         }
     }
 }
 
-/** A ranked list: position, name, and what it is ranked by. */
+/**
+ * Plays per day, oldest first. The last bar is today's when the window reaches the present, and
+ * is the one drawn in primary; a quiet day still gets a stub so the row reads as fourteen days.
+ */
 @Composable
-internal fun TopList(
-    entries: List<StatEntry>,
-    valueLabel: (Long) -> String,
-    modifier: Modifier = Modifier
-) {
-    if (entries.isEmpty()) {
-        Text(
-            text = stringResource(R.string.stats_nothing_yet),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-        )
-        return
-    }
+internal fun DayBars(values: List<Long>, firstLabel: String, lastLabel: String, lastIsToday: Boolean) {
+    if (values.isEmpty()) return
+    Bars(
+        values = values,
+        height = 120.dp,
+        gap = 6.dp,
+        corner = 6.dp,
+        minBar = 6.dp,
+        highlight = if (lastIsToday) values.lastIndex else -1
+    )
+    AxisRow(listOf(firstLabel, lastLabel), spread = true)
+}
 
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        entries.forEachIndexed { index, entry ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
-            ) {
-                Text(
-                    text = "${index + 1}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(end = 12.dp)
-                )
-                Text(
-                    text = entry.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Clip,
-                    modifier = Modifier.weight(1f).scrollingTitle()
-                )
-                Text(
-                    text = valueLabel(entry.value),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+/** Plays by hour of the day, with the busiest hour in primary. */
+@Composable
+internal fun HourBars(values: List<Long>) {
+    if (values.isEmpty()) return
+    val peak = values.indices.maxByOrNull { values[it] }?.takeIf { values[it] > 0 } ?: -1
+    Bars(values = values, height = 110.dp, gap = 3.dp, corner = 4.dp, minBar = 4.dp, highlight = peak)
+    val locale = LocalConfiguration.current.locales[0]
+    val labels = remember(locale) {
+        // "j" asks for the locale's own hour format, so this reads "6 am" or "06" as the user expects.
+        val format = DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, "j"), locale)
+        listOf(0, 6, 12, 18).map { LocalTime.of(it, 0).format(format) }
+    }
+    AxisRow(labels, spread = false)
+}
+
+@Composable
+private fun Bars(values: List<Long>, height: Dp, gap: Dp, corner: Dp, minBar: Dp, highlight: Int) {
+    val colors = MaterialTheme.colorScheme
+    val secondary = MaterialTheme.extraColors.rankBarSecondary
+    val top = values.max().coerceAtLeast(1L)
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(gap),
+        verticalAlignment = Alignment.Bottom,
+        modifier = Modifier.fillMaxWidth().height(height)
+    ) {
+        values.forEachIndexed { index, value ->
+            val color: Color = when {
+                index == highlight -> colors.primary
+                value > 0 -> secondary
+                else -> colors.surfaceContainerHighest
             }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height((height * (value.toFloat() / top)).coerceAtLeast(minBar))
+                    .background(color, RoundedCornerShape(corner))
+            )
+        }
+    }
+}
+
+/** Two labels at the ends, or several in equal columns. */
+@Composable
+private fun AxisRow(labels: List<String>, spread: Boolean) {
+    val style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium)
+    val color = MaterialTheme.colorScheme.outline
+    Row(
+        horizontalArrangement = if (spread) Arrangement.SpaceBetween else Arrangement.Start,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        labels.forEach { label ->
+            Text(
+                text = label,
+                style = style,
+                color = color,
+                textAlign = TextAlign.Start,
+                modifier = if (spread) Modifier else Modifier.weight(1f)
+            )
         }
     }
 }
@@ -123,3 +145,4 @@ internal fun formatListeningTime(seconds: Long): String {
     val minutes = (seconds % 3600) / 60
     return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
 }
+

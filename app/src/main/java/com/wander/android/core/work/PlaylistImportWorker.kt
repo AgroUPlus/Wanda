@@ -8,6 +8,7 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.wander.android.R
 import com.wander.android.core.database.dao.PlaylistDao
+import com.wander.android.core.database.dao.SharedPlaylistDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.notification.WorkEta
@@ -15,6 +16,7 @@ import com.wander.android.core.notification.WorkProgressNotification
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.TrackMatcher
+import com.wander.android.data.repository.sharedplaylist.SharedPlaylistMirror
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
@@ -22,8 +24,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /**
- * Matches the [SourceType.UNRESOLVED] placeholders of an imported playlist to tracks in the user's
- * active sources, one at a time.
+ * Matches the [SourceType.UNRESOLVED] placeholders of an imported playlist — or of a shared one, whose
+ * tracks arrive from Agro as titles and artists — to tracks in the user's active sources, one at a
+ * time.
  *
  * Room is the checkpoint. Each match is written the moment it is found — the real track is
  * upserted, then the placeholder's id in the playlist is swapped for it — so the playlist screen
@@ -38,6 +41,7 @@ class PlaylistImportWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val playlistDao: PlaylistDao,
+    private val sharedPlaylistDao: SharedPlaylistDao,
     private val trackDao: TrackDao,
     private val trackMatcher: TrackMatcher,
     private val notifications: WorkProgressNotification
@@ -45,10 +49,9 @@ class PlaylistImportWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val playlistId = inputData.getString(KEY_PLAYLIST_ID) ?: return@withContext Result.failure()
-        // Deleted while queued: nothing left to resolve.
-        val playlist = playlistDao.getPlaylistById(playlistId) ?: return@withContext Result.success()
+        // Deleted or unfollowed while queued: nothing left to resolve.
+        val (name, ids) = contents(playlistId) ?: return@withContext Result.success()
 
-        val ids = playlist.trackIds.split(',').filter { it.isNotBlank() }
         val placeholders = trackDao.getTracksByIds(ids)
             .filter { it.source == SourceType.UNRESOLVED }
             .sortedBy { ids.indexOf(it.id) }
@@ -56,7 +59,7 @@ class PlaylistImportWorker @AssistedInject constructor(
 
         val total = placeholders.size
         val eta = WorkEta(System.currentTimeMillis())
-        showProgress(notifying(playlist.name, eta, 0, total))
+        showProgress(notifying(name, eta, 0, total))
 
         placeholders.forEachIndexed { index, placeholder ->
             val match = trackMatcher.match(placeholder.title, placeholder.artist, placeholder.durationMs)
@@ -64,7 +67,7 @@ class PlaylistImportWorker @AssistedInject constructor(
 
             val done = index + 1
             setProgress(workDataOf(KEY_DONE to done, KEY_TOTAL to total))
-            showProgress(notifying(playlist.name, eta, done, total))
+            showProgress(notifying(name, eta, done, total))
             // Politeness towards the search backends: a long playlist is hundreds of queries.
             delay(SEARCH_SPACING_MS)
         }
@@ -74,13 +77,27 @@ class PlaylistImportWorker @AssistedInject constructor(
         Result.success()
     }
 
+    /** The playlist's name and track ids in order: a Wanda playlist, or a followed one's copy. */
+    private suspend fun contents(playlistId: String): Pair<String, List<String>>? {
+        SharedPlaylistMirror.agroIdOf(playlistId)?.let { agroId ->
+            val copy = sharedPlaylistDao.get(agroId) ?: return null
+            return copy.title to sharedPlaylistDao.items(agroId).map { it.trackId }
+        }
+        val playlist = playlistDao.getPlaylistById(playlistId) ?: return null
+        return playlist.name to playlist.trackIds.split(',').filter { it.isNotBlank() }
+    }
+
     /**
      * The real track goes into Room before the playlist points at it, so a reader that lands
-     * between the two never sees an id with no row behind it.
+     * between the two never sees an id with no row behind it. A shared copy holding the same
+     * placeholder is swapped too, so a published playlist and its copy never disagree.
      */
     private suspend fun resolve(playlistId: String, placeholder: TrackEntity, match: UnifiedTrack) {
         trackDao.upsertTracks(listOf(TrackEntity.fromUnifiedTrack(match, isLibrary = true)))
-        playlistDao.replaceTrackId(playlistId, oldId = placeholder.id, newId = match.id)
+        if (SharedPlaylistMirror.agroIdOf(playlistId) == null) {
+            playlistDao.replaceTrackId(playlistId, oldId = placeholder.id, newId = match.id)
+        }
+        sharedPlaylistDao.replaceTrackId(oldId = placeholder.id, newId = match.id)
     }
 
     private fun notifying(name: String, eta: WorkEta, done: Int, total: Int) =

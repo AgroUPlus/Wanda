@@ -68,6 +68,8 @@ internal fun findBestMatch(
             SourceType.DEEZER, SourceType.PODCAST -> 0
             // A stub is what is being resolved; it can never be what it resolves to.
             SourceType.UNRESOLVED -> return@mapNotNull null
+            // Holds no tracks of its own, so nothing a search returns can come from it.
+            SourceType.AGRO -> return@mapNotNull null
         }
 
         when {

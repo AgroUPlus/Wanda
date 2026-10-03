@@ -71,14 +71,21 @@ fun TrackActionsSheet(
      */
     onOpenArtist: (() -> Unit)? = null,
     /** Forgets how far into an episode the listener got. Null for anything but a podcast episode. */
-    onResetProgress: (() -> Unit)? = null
+    onResetProgress: (() -> Unit)? = null,
+    /** What [onRemove] is called, when it removes from something other than the queue. */
+    removeLabel: String? = null,
+    /** Reorders a playlist the caller may rearrange; null at either end, or when it may not. */
+    onMoveUp: (() -> Unit)? = null,
+    onMoveDown: (() -> Unit)? = null
 ) {
     val playable = track.isPlayableNow()
     // Held here and flipped optimistically: callers pass the track as it was when the menu opened,
     // so their `isLiked` would never reflect a toggle made from inside it.
     var liked by remember(track.id) { mutableStateOf(isLiked) }
     val likeLabel = stringResource(R.string.menu_like)
-    val removeFromQueue = stringResource(R.string.action_remove_from_queue)
+    val removeFromQueue = removeLabel ?: stringResource(R.string.action_remove_from_queue)
+    val moveUp = stringResource(R.string.action_move_up)
+    val moveDown = stringResource(R.string.action_move_down)
     val deleteOffline = stringResource(R.string.common_delete_offline_file)
     val resetProgress = stringResource(R.string.podcasts_reset_progress)
 
@@ -177,7 +184,7 @@ fun TrackActionsSheet(
                         hasDropFriends = dropFriends.isNotEmpty(),
                         jamState = jamState
                     ),
-                    labels = TrackActionLabels(likeLabel, removeFromQueue, deleteOffline, resetProgress),
+                    labels = TrackActionLabels(likeLabel, removeFromQueue, deleteOffline, resetProgress, moveUp, moveDown),
                     callbacks = TrackActionCallbacks(
                         onPlayNext = onPlayNext,
                         onAddToQueue = onAddToQueue,
@@ -188,7 +195,9 @@ fun TrackActionsSheet(
                         onOpenArtist = onOpenArtist,
                         onRemove = onRemove,
                         onDeleteDownload = askDeleteDownload,
-                        onResetProgress = askResetProgress
+                        onResetProgress = askResetProgress,
+                        onMoveUp = onMoveUp,
+                        onMoveDown = onMoveDown
                     ),
                     jamViewModel = jamViewModel,
                     sheet = TrackActionSheetFlow(

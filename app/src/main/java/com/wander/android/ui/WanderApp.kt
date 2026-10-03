@@ -25,8 +25,8 @@ import androidx.navigation.compose.rememberNavController
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.ui.agro.AgroSessionViewModel
 import com.wander.android.ui.components.BackdropBlurController
-import com.wander.android.ui.components.JamBarHeight
-import com.wander.android.ui.components.ListenAlongBarHeight
+import com.wander.android.ui.components.attachedBarOf
+import com.wander.android.ui.components.height
 import com.wander.android.ui.components.LocalBackBlurEnabled
 import com.wander.android.ui.components.LocalBackdropBlur
 import com.wander.android.ui.components.LocalOfflinePlayback
@@ -41,6 +41,7 @@ import com.wander.android.ui.navigation.Routes
 import com.wander.android.ui.navigation.TopLevelDestination
 import com.wander.android.ui.navigation.wanderNavGraph
 import com.wander.android.ui.screens.social.JamViewModel
+import com.wander.android.ui.screens.social.ListenersViewModel
 import com.wander.android.ui.screens.social.SocialViewModel
 import com.wander.android.ui.theme.CoverTintedTheme
 import com.wander.android.ui.theme.rememberCoverSeedColor
@@ -102,7 +103,9 @@ fun WanderApp(
     val snackbarHostState = remember { SnackbarHostState() }
     val jamViewModel: JamViewModel = hiltViewModel()
     val jamState by jamViewModel.state.collectAsStateWithLifecycle()
-    val activeJam = jamState.jam
+    val listenersViewModel: ListenersViewModel = hiltViewModel()
+    val listeners by listenersViewModel.listeners.collectAsStateWithLifecycle()
+    val attachedBar = attachedBarOf(jamState.jam, listenAlongSession, listeners)
     AppEvents(
         viewModel = viewModel,
         playerConnection = playerConnection,
@@ -181,11 +184,8 @@ fun WanderApp(
                     // branch — and it is already animated, so routing through it here instead keeps
                     // this on the same spring rather than a second, un-animated one.
                     val extraBottom = when {
-                        !showChrome -> dockBottom + MiniPlayerShadowInset
-                        activeJam != null -> dockBottom + JamBarHeight + MiniPlayerShadowInset
-                        listenAlongSession != null ->
-                            dockBottom + ListenAlongBarHeight + MiniPlayerShadowInset
-                        else -> dockBottom + MiniPlayerShadowInset
+                        !showChrome || attachedBar == null -> dockBottom + MiniPlayerShadowInset
+                        else -> dockBottom + attachedBar.height + MiniPlayerShadowInset
                     }
                     val direction = LocalLayoutDirection.current
                     val contentPadding = remember(padding, extraBottom, direction) {
@@ -265,7 +265,7 @@ fun WanderApp(
                 }
 
                 WanderAppOverlays(
-                    viewModels = ShellViewModels(viewModel, agroViewModel, socialViewModel, jamViewModel),
+                    viewModels = ShellViewModels(viewModel, agroViewModel, socialViewModel, jamViewModel, listenersViewModel),
                     navController = navController,
                     sheetState = sheetState,
                     snackbarHostState = snackbarHostState,
@@ -274,8 +274,7 @@ fun WanderApp(
                         showChrome = showChrome,
                         isPlayingHere = isPlayingHere,
                         dockBottom = dockBottom,
-                        activeJam = activeJam,
-                        listenAlongSession = listenAlongSession
+                        attachedBar = attachedBar
                     )
                 )
             }

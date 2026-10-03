@@ -3,6 +3,8 @@ package com.wander.android.ui.components
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
+import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
@@ -30,7 +32,9 @@ internal class TrackActionLabels(
     val like: String,
     val removeFromQueue: String,
     val deleteOffline: String,
-    val resetProgress: String
+    val resetProgress: String,
+    val moveUp: String,
+    val moveDown: String
 )
 
 /** What each action does; a null callback means the caller does not offer that action. */
@@ -44,7 +48,9 @@ internal class TrackActionCallbacks(
     val onOpenArtist: (() -> Unit)?,
     val onRemove: (() -> Unit)?,
     val onDeleteDownload: (() -> Unit)?,
-    val onResetProgress: (() -> Unit)?
+    val onResetProgress: (() -> Unit)?,
+    val onMoveUp: (() -> Unit)? = null,
+    val onMoveDown: (() -> Unit)? = null
 )
 
 /** The sheet's own state changes an action can trigger. */
@@ -85,6 +91,8 @@ internal fun buildTrackActionsList(
     callbacks.onResetProgress?.let {
         add(MenuAction(Icons.Rounded.RestartAlt, labels.resetProgress, ActionEmphasis.ICON) { it() })
     }
+    callbacks.onMoveUp?.let { add(MenuAction(Icons.Rounded.ArrowUpward, labels.moveUp, ActionEmphasis.ICON) { it(); dismiss() }) }
+    callbacks.onMoveDown?.let { add(MenuAction(Icons.Rounded.ArrowDownward, labels.moveDown, ActionEmphasis.ICON) { it(); dismiss() }) }
     callbacks.onRemove?.let {
         add(MenuAction(Icons.Rounded.Delete, labels.removeFromQueue, ActionEmphasis.DANGER) { it(); dismiss() })
     }

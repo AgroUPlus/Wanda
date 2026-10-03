@@ -14,8 +14,10 @@ import com.wander.android.data.repository.PlaylistPublicationRepository
 import com.wander.android.data.repository.PlaylistWriteRepository
 import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.repository.UniversalPlaylistLink
+import com.wander.android.data.repository.sharedplaylist.SharedPlaylistRunner
 import com.wander.android.data.sources.ShareKind
 import com.wander.android.data.sources.ShareTarget
+import com.wander.android.data.sources.agro.EditAccess
 import com.wander.android.data.sources.agro.PlaylistVisibility
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -31,7 +33,7 @@ import java.net.URLDecoder
 import javax.inject.Inject
 
 /** Which of the playlist screen's sheets is open. */
-enum class PlaylistSheet { SHARE, VISIBILITY, CONVERT }
+enum class PlaylistSheet { SHARE, VISIBILITY, COLLABORATION, CONVERT }
 
 /**
  * Everything that sends a playlist somewhere else: a link, an `.m3u8` file, a copy on Agro and who
@@ -46,6 +48,7 @@ class PlaylistShareViewModel @Inject constructor(
     private val publications: PlaylistPublicationRepository,
     private val exporter: PlaylistFileExporter,
     private val playlistWrites: PlaylistWriteRepository,
+    private val runner: SharedPlaylistRunner,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -139,12 +142,24 @@ class PlaylistShareViewModel @Inject constructor(
     fun pickVisibility(visibility: PlaylistVisibility, playlist: UnifiedPlaylist, tracks: List<UnifiedTrack>) {
         dismiss()
         viewModelScope.launch {
-            if (publication.value != null) {
+            publication.value?.let { current ->
                 publications.changeVisibility(playlistId, visibility)
+                // The server counted that as a change; read the new revision back before the next edit.
+                runner.syncSoon(current.agroId)
                 return@launch
             }
             shareRepository.shareLocalPlaylist(playlist, tracks, visibility)
-                ?.let { agroId -> publications.record(playlistId, agroId, visibility) }
+                ?.let { agroId -> publications.record(playlistId, agroId, visibility, tracks) }
+        }
+    }
+
+    /** Lets friends edit the shared copy, or anyone who can open it add to it, or no one. */
+    fun pickEditAccess(access: EditAccess) {
+        dismiss()
+        val current = publication.value ?: return
+        viewModelScope.launch {
+            publications.changeEditAccess(playlistId, access)
+            runner.syncSoon(current.agroId)
         }
     }
 

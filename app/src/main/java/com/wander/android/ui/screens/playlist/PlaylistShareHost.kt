@@ -20,6 +20,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.data.importer.M3uWriter
+import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.PlaylistFileExporter
@@ -70,10 +71,12 @@ internal fun PlaylistShareHost(
                 onOriginal = { viewModel.shareOriginal(playlist) },
                 onLink = { viewModel.shareAsLink(playlist, tracks) },
                 onFile = { viewModel.shareAsFile(playlist, tracks) },
+                // A followed playlist is already on Agro, and is someone else's to share.
                 onPublish = { viewModel.open(PlaylistSheet.VISIBILITY) }
-                    .takeIf { viewModel.canPublishToAgro && publication == null },
+                    .takeIf { viewModel.canPublishToAgro && publication == null && playlist.source != SourceType.AGRO },
                 onResend = { viewModel.resendAgroLink(playlist, tracks) },
                 onChangeVisibility = { viewModel.open(PlaylistSheet.VISIBILITY) },
+                onChangeCollaboration = { viewModel.open(PlaylistSheet.COLLABORATION) },
                 onUnshare = {
                     viewModel.dismiss()
                     confirmingUnshare = true
@@ -86,6 +89,14 @@ internal fun PlaylistShareHost(
             onPick = { viewModel.pickVisibility(it, playlist, tracks) },
             onDismiss = viewModel::dismiss
         )
+        PlaylistSheet.COLLABORATION -> publication?.let { shared ->
+            PlaylistCollaborationSheet(
+                visibility = shared.visibility,
+                current = shared.editAccess,
+                onPick = viewModel::pickEditAccess,
+                onDismiss = viewModel::dismiss
+            )
+        }
         PlaylistSheet.CONVERT -> ConvertPlaylistSheet(
             sourceName = playlist.source.displayName,
             onConvert = { viewModel.convert(playlist, tracks) },

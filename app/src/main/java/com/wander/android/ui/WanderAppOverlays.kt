@@ -16,13 +16,14 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.wander.android.core.permissions.rememberLocalNetworkGate
-import com.wander.android.data.repository.ListenAlongSession
 import com.wander.android.data.repository.MoodPresets
-import com.wander.android.data.sources.agro.Jam
 import com.wander.android.ui.agro.AgroSessionViewModel
 import kotlinx.coroutines.launch
 import com.wander.android.ui.components.JamBar
 import com.wander.android.ui.components.ListenAlongBar
+import com.wander.android.ui.components.ListenersBar
+import com.wander.android.ui.components.AttachedBar
+import com.wander.android.ui.components.PlayerAttachedBarSlot
 import com.wander.android.ui.components.SyncOfferSheet
 import com.wander.android.ui.components.player.PlayerSheetState
 import com.wander.android.ui.components.player.PlayerSheetValue
@@ -31,7 +32,11 @@ import com.wander.android.ui.navigation.TopLevelDestination
 import com.wander.android.ui.navigation.navigateSettled
 import com.wander.android.ui.screens.home.MoodMatrixViewModel
 import com.wander.android.ui.screens.home.RadioMoodFab
+import com.wander.android.ui.screens.social.IncognitoOutcome
 import com.wander.android.ui.screens.social.JamViewModel
+import com.wander.android.ui.screens.social.ListenersViewModel
+import com.wander.android.ui.screens.settings.SettingsCategory
+import com.wander.android.R
 import com.wander.android.ui.screens.social.SocialViewModel
 
 /** The gap between the radio button and whatever is parked at the bottom edge. */
@@ -50,7 +55,8 @@ internal class ShellViewModels(
     val app: WanderAppViewModel,
     val agro: AgroSessionViewModel,
     val social: SocialViewModel,
-    val jam: JamViewModel
+    val jam: JamViewModel,
+    val listeners: ListenersViewModel
 )
 
 /** What the shell knows about the current screen and session that decides which overlays show. */
@@ -59,13 +65,13 @@ internal class ShellOverlayState(
     val showChrome: Boolean,
     val isPlayingHere: Boolean,
     val dockBottom: Dp,
-    val activeJam: Jam?,
-    val listenAlongSession: ListenAlongSession?
+    /** The card riding on top of the mini-player, if any — see [attachedBarOf]. */
+    val attachedBar: AttachedBar?
 )
 
 /**
  * Overlays and floating controls anchored to the app shell: the radio/mood FAB, bottom offers,
- * sync sheets, Jam bar, listen-along bar, and snackbar host.
+ * sync sheets, the bar attached to the mini-player, and snackbar host.
  */
 @Composable
 internal fun BoxScope.WanderAppOverlays(
@@ -83,8 +89,7 @@ internal fun BoxScope.WanderAppOverlays(
     val showChrome = shell.showChrome
     val isPlayingHere = shell.isPlayingHere
     val dockBottom = shell.dockBottom
-    val activeJam = shell.activeJam
-    val listenAlongSession = shell.listenAlongSession
+    val listenersViewModel = viewModels.listeners
     // Both bottom-anchored cards belong to the browsing surface, not to the player: floating
     // them over a full-screen Now Playing reads as a stray dialog.
     val sheetCollapsed = sheetState.targetValue == PlayerSheetValue.COLLAPSED
@@ -176,25 +181,43 @@ internal fun BoxScope.WanderAppOverlays(
         )
     }
 
-    activeJam?.takeIf { showChrome && sheetCollapsed }?.let { jam ->
-        JamBar(
-            jam = jam,
-            onOpenJam = { navController.navigate(Routes.JAM) },
-            onLeave = jamViewModel::leave,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = dockBottom)
-        )
+    val incognitoDone = androidx.compose.ui.res.stringResource(R.string.together_went_incognito)
+    androidx.compose.runtime.LaunchedEffect(listenersViewModel) {
+        listenersViewModel.outcomes.collect { outcome ->
+            val message = when (outcome) {
+                IncognitoOutcome.Done -> incognitoDone
+                is IncognitoOutcome.Failed -> outcome.message ?: return@collect
+            }
+            snackbarHostState.showSnackbar(message, withDismissAction = true)
+        }
     }
 
-    listenAlongSession?.takeIf { showChrome && sheetCollapsed }?.let { session ->
-        ListenAlongBar(
-            session = session,
-            onLeave = socialViewModel::stopListenAlong,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = dockBottom)
-        )
+    PlayerAttachedBarSlot(
+        bar = shell.attachedBar,
+        showChrome = showChrome,
+        sheetState = sheetState,
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(bottom = dockBottom)
+    ) { bar ->
+        when (bar) {
+            is AttachedBar.InJam -> JamBar(
+                jam = bar.jam,
+                onOpenJam = { navController.navigate(Routes.JAM) },
+                onLeave = jamViewModel::leave
+            )
+            is AttachedBar.Following -> ListenAlongBar(
+                session = bar.session,
+                onLeave = socialViewModel::stopListenAlong
+            )
+            is AttachedBar.Followed -> ListenersBar(
+                listeners = bar.listeners,
+                onGoIncognito = listenersViewModel::goIncognito,
+                onOpenPrivacy = {
+                    navController.navigateSettled(Routes.settingsCategory(SettingsCategory.PRIVACY.name))
+                }
+            )
+        }
     }
 
     SnackbarHost(

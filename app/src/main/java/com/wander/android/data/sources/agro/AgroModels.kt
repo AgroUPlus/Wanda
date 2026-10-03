@@ -166,6 +166,13 @@ internal sealed interface AgroLiveMessage {
     data object JamUpdated : AgroLiveMessage
 
     /**
+     * A shared playlist this account owns or follows changed; [revision] is null when it was
+     * deleted. Carries nothing else: the app fetches the playlist, and that fetch is where the
+     * server decides whether this account may still see it.
+     */
+    data class PlaylistUpdated(val id: String, val revision: Long?) : AgroLiveMessage
+
+    /**
      * The room moved to a new track.
      *
      * Decided by the server on its own clock, so this is an instruction rather than news: the
@@ -205,7 +212,14 @@ internal sealed interface AgroLiveMessage {
          * impossible — there is no uri and no hash to resolve — so the bar says so instead of
          * showing an empty line where a title should be.
          */
-        val isLocked: Boolean = false
+        val isLocked: Boolean = false,
+        /**
+         * Everyone now following this account, when the frame is about *you* being followed.
+         *
+         * The server sends it to a host whenever somebody starts or stops listening along. Null on
+         * every frame a follower receives, which is how the two kinds are told apart.
+         */
+        val listeners: List<String>? = null
     ) : AgroLiveMessage
 
     /**

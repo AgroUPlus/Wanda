@@ -46,7 +46,7 @@ internal fun NavGraphBuilder.settingsNavGraph(
     }
 
     tabDestination(motion, Routes.STATS) {
-        StatsScreen(contentPadding = contentPadding)
+        StatsScreen(contentPadding = contentPadding, onBack = navController::popBackStack)
     }
 
     tabDestination(motion, Routes.SETTINGS) {

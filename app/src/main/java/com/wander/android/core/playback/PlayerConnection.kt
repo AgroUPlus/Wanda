@@ -28,7 +28,8 @@ import kotlinx.coroutines.flow.asStateFlow
 class PlayerConnection @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val secureStorage: SecureStorage,
-    private val streamResolver: StreamResolver
+    private val streamResolver: StreamResolver,
+    private val jamSkipGate: JamSkipGate
 ) {
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private val queueManager = PlayerQueueManager()
@@ -176,7 +177,10 @@ class PlayerConnection @Inject constructor(
     }
 
     fun seekToIndex(index: Int) { if (!isFollowing) _controller.value?.let { skipManager.seekToIndex(it, index) } }
-    fun next() { if (!isFollowing) _controller.value?.let { skipManager.next(it) } }
+    fun next() {
+        if (isFollowing || jamSkipGate.tryVote()) return
+        _controller.value?.let { skipManager.next(it) }
+    }
     val restartsOnPrevious: Boolean get() = skipManager.restartsOnPrevious(_controller.value)
     fun previous() { if (!isFollowing) _controller.value?.let { skipManager.previous(it) } }
     fun previousTrack() { if (!isFollowing) _controller.value?.let { skipManager.previousTrack(it) } }

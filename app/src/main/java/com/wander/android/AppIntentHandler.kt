@@ -22,12 +22,14 @@ import com.wander.android.data.repository.AgroPlaylistLink
 import com.wander.android.data.repository.UniversalPlaylistLink
 import com.wander.android.data.sources.agro.AgroAuthError
 import com.wander.android.data.sources.agro.AgroClient
-import com.wander.android.data.sources.agro.AgroPlaylistApi
+import com.wander.android.data.repository.sharedplaylist.SharedPlaylistRepository
+import com.wander.android.data.sources.agro.AgroSharedPlaylistApi
 import com.wander.android.data.sources.agro.explain
 import com.wander.android.data.sources.ytmusic.YouTubeEntity
 import com.wander.android.data.sources.ytmusic.YouTubeEntityKind
 import com.wander.android.ui.navigation.DeepLinkRouter
 import com.wander.android.ui.navigation.Routes
+import com.wander.android.ui.screens.settings.SettingsCategory
 import com.wander.android.ui.navigation.TopLevelDestination
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -48,7 +50,8 @@ internal class AppIntentHandler @Inject constructor(
     private val linkRepository: LinkRepository,
     private val musicRepository: MusicRepository,
     private val playlistImporter: PlaylistImportRepository,
-    private val agroPlaylists: AgroPlaylistApi,
+    private val agroPlaylists: AgroSharedPlaylistApi,
+    private val sharedPlaylists: SharedPlaylistRepository,
     private val catalogRepository: CatalogRepository,
     private val shareLinkRewriter: ShareLinkRewriter,
     private val deepLinkRouter: DeepLinkRouter,
@@ -66,6 +69,10 @@ internal class AppIntentHandler @Inject constructor(
             uri.scheme == "agro" -> handleAgroPairing(scope, uri)
             uri.scheme == "wanda" && uri.host == "inbox" -> deepLinkRouter.request(Routes.ACTIVITY)
             uri.scheme == "wanda" && uri.host == "fingerprints" -> deepLinkRouter.request(Routes.FINGERPRINTS)
+            // From the listening-together notifications: the room, and where incognito lives.
+            uri.scheme == "wanda" && uri.host == "jam-room" -> deepLinkRouter.request(Routes.jam())
+            uri.scheme == "wanda" && uri.host == "privacy" ->
+                deepLinkRouter.request(Routes.settingsCategory(SettingsCategory.PRIVACY.name))
             uri.scheme == "wanda" && uri.host == "friend" -> handleFriendCode(scope, uri)
             isJamLink(uri) -> handleJamLink(uri)
             linkRepository.isPlaylistLink(uri) -> openSharedPlaylist(scope, uri)
@@ -144,7 +151,11 @@ internal class AppIntentHandler @Inject constructor(
         }
     }
 
-    /** A playlist on the Agro server this device is paired with, fetched by its id and saved like any other. */
+    /**
+     * A playlist on the Agro server this device is paired with: followed, so this device keeps a
+     * live copy that follows the owner's changes, rather than saved as a snapshot that never does.
+     * It can still be made into a Wanda playlist of its own from its screen.
+     */
     private fun openAgroPlaylist(scope: CoroutineScope, id: String?) {
         if (id == null) {
             Toast.makeText(context, R.string.link_playlist_invalid, Toast.LENGTH_LONG).show()
@@ -155,22 +166,8 @@ internal class AppIntentHandler @Inject constructor(
             return
         }
         scope.launch {
-            agroPlaylists.fetch(id).fold(
-                onSuccess = { shared ->
-                    val playlist = RawImportPlaylist(
-                        platform = PlatformType.PLAIN_TEXT,
-                        title = shared.title.ifBlank { "Shared playlist" },
-                        description = "Shared playlist",
-                        tracks = shared.tracks.map { RawImportTrack(it.title, it.artist, it.album, it.durationMs) }
-                    )
-                    playlistImporter.savePending(playlist).fold(
-                        onSuccess = { saved ->
-                            Toast.makeText(context, context.getString(R.string.link_playlist_saved, playlist.title), Toast.LENGTH_LONG).show()
-                            deepLinkRouter.request(Routes.playlist(saved))
-                        },
-                        onFailure = { Toast.makeText(context, it.message ?: context.getString(R.string.link_playlist_invalid), Toast.LENGTH_LONG).show() }
-                    )
-                },
+            sharedPlaylists.follow(id).fold(
+                onSuccess = { route -> deepLinkRouter.request(Routes.playlist(route)) },
                 onFailure = { Toast.makeText(context, context.getString(R.string.link_playlist_agro_failed, it.message), Toast.LENGTH_LONG).show() }
             )
         }

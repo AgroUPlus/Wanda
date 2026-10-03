@@ -26,6 +26,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -43,6 +46,7 @@ class PlaybackService : MediaSessionService() {
     @Inject internal lateinit var agroHandoffPublisher: AgroHandoffPublisher
     @Inject lateinit var secureStorage: com.wander.android.core.security.SecureStorage
     @Inject lateinit var sleepTimer: SleepTimer
+    @Inject lateinit var jamSkipGate: JamSkipGate
 
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private var mediaSession: MediaSession? = null
@@ -67,7 +71,14 @@ class PlaybackService : MediaSessionService() {
 
         val likeButton = NotificationLikeButton(player, musicRepository, scope)
 
-        mediaSession = MediaSession.Builder(this, player)
+        val sessionPlayer = JamSkipPlayer(player, jamSkipGate)
+        // Skipped while it still holds its first value: the player was built with that state.
+        jamSkipGate.active
+            .drop(1)
+            .onEach { sessionPlayer.onGateChanged() }
+            .launchIn(scope)
+
+        mediaSession = MediaSession.Builder(this, sessionPlayer)
             .setSessionActivity(sessionActivity)
             .setCallback(object : MediaSession.Callback {
                 override fun onConnect(

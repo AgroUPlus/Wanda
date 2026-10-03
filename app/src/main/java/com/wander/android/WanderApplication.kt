@@ -17,6 +17,7 @@ import com.wander.android.core.database.DatabaseCompatibility
 import com.wander.android.core.network.HttpClientFactory
 import com.wander.android.core.security.LegacyWebViewPurge
 import com.wander.android.core.sync.ScrobbleSyncScheduler
+import com.wander.android.core.sync.SharedPlaylistSyncScheduler
 import com.zemer.cipher.ZemerCipher
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -31,6 +32,7 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var downloadScheduler: DownloadScheduler
     @Inject lateinit var scrobbleSyncScheduler: ScrobbleSyncScheduler
+    @Inject lateinit var sharedPlaylistSyncScheduler: SharedPlaylistSyncScheduler
     @Inject lateinit var podcastSyncScheduler: com.wander.android.core.work.PodcastSyncScheduler
     @Inject lateinit var librarySyncScheduler: com.wander.android.core.sync.LibrarySyncScheduler
     @Inject lateinit var p2pServer: com.wander.android.core.sync.P2PServer
@@ -101,6 +103,7 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
         )
         // Cheap and self-gating: the worker does nothing until an Agro server is paired.
         scrobbleSyncScheduler.schedule()
+        sharedPlaylistSyncScheduler.schedule()
         // KEEP, and a pass with no subscriptions does nothing, so this is also what restores syncing
         // after a backup brings subscriptions back onto a fresh install.
         podcastSyncScheduler.enable()

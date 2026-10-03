@@ -127,6 +127,13 @@
         <receiver
             android:name=".core.notification.WorkActionReceiver"
             android:exported="false" />
+        <!--
+            "Go incognito" on a "someone is listening along" notification. Not exported, for the
+            same reason: only this app's own PendingIntent should be able to flip a privacy switch.
+        -->
+        <receiver
+            android:name=".core.notification.GoIncognitoReceiver"
+            android:exported="false" />
 
 
         <activity

@@ -47,7 +47,9 @@ internal fun NavGraphBuilder.socialNavGraph(
     ) {
         ProfileScreen(
             contentPadding = contentPadding,
-            onBack = navController::popBackStack
+            onBack = navController::popBackStack,
+            onOpenJam = { navController.navigateSettled(Routes.JAM) },
+            onOpenActivity = { navController.navigateSettled(Routes.ACTIVITY) }
         )
     }
 

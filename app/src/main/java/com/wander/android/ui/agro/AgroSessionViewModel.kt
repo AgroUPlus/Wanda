@@ -40,6 +40,7 @@ internal class AgroSessionViewModel @Inject constructor(
     private val playerConnection: PlayerConnection,
     private val socialRepository: SocialRepository,
     private val listenAlong: ListenAlongController,
+    private val listenerPresence: com.wander.android.data.repository.ListenerPresence,
     private val jamRepository: JamRepository,
     private val jamPlayback: JamPlaybackController,
     private val dropsRepository: DropsRepository,
@@ -47,7 +48,8 @@ internal class AgroSessionViewModel @Inject constructor(
     private val incognitoRepository: IncognitoRepository,
     private val identityKeyManager: com.wander.android.core.security.IdentityKeyManager,
     private val agroRelayClient: com.wander.android.data.sources.agro.AgroRelayClient,
-    private val p2pServer: com.wander.android.core.sync.P2PServer
+    private val p2pServer: com.wander.android.core.sync.P2PServer,
+    private val sharedPlaylists: com.wander.android.data.repository.sharedplaylist.SharedPlaylistRunner
 ) : ViewModel() {
 
     val devices: StateFlow<List<AgroNode>> = sessionRepository.devices
@@ -129,6 +131,7 @@ internal class AgroSessionViewModel @Inject constructor(
                     incognitoRepository.refresh()
                     socialRepository.refresh()
                     jamRepository.refresh()
+                    sharedPlaylists.syncAllSoon()
                     onLibraryChanged()
                 }
                 // Incognito is owned by the account, not by a device, so a switch flipped on
@@ -153,8 +156,14 @@ internal class AgroSessionViewModel @Inject constructor(
                         socialRepository.refresh()
                     }
                 }
-                is AgroLiveMessage.ListenAlong -> listenAlong.onFrame(message)
+                // A frame naming listeners is about this account being followed; every other one is
+                // about a host this device is following.
+                is AgroLiveMessage.ListenAlong -> message.listeners
+                    ?.let(listenerPresence::onListeners)
+                    ?: listenAlong.onFrame(message)
                 is AgroLiveMessage.JamUpdated -> jamRepository.refresh()
+                // Someone changed a playlist this account shares in; fetched only if it moved on.
+                is AgroLiveMessage.PlaylistUpdated -> sharedPlaylists.onRemoteChange(message.id, message.revision)
                 is AgroLiveMessage.JamNowPlayingFrame -> {
                     // Acted on immediately, and the queue re-read after: the frame is what decides
                     // playback, and waiting for a round trip would put this device behind the room.

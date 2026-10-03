@@ -1,19 +1,28 @@
 package com.wander.android.ui.screens.stats
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,145 +31,166 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.wander.android.R
 import com.wander.android.data.repository.TopSong
 import com.wander.android.data.sources.agro.StatsPeriod
-import com.wander.android.ui.components.ImmersiveHero
+import com.wander.android.ui.components.Artwork
+import com.wander.android.ui.theme.buttonSmall
+import com.wander.android.ui.theme.heroTitle
 
 /**
- * The top of the statistics screen: the one song the window was mostly about, at full width.
- *
- * The screen used to open on a headline, a subtitle and a scrolling row of five small tiles, which
- * is a dashboard — you read it rather than recognise it. A listening history is about music, and
- * the cover of what you actually had on is the fastest way to say what the last week was.
- *
- * The fade is the same idea as `ArtistHero`: the picture melts into `surface` at its foot and the
- * text sits in the opaque part, so it stays legible whatever the cover is instead of relying on a
- * scrim tuned for one kind of artwork.
+ * The top of the statistics screen: the one song the window was mostly about, full-bleed, with its
+ * name on a sheet that rises over the foot of the cover rather than printed on top of it — text on
+ * artwork is only legible for the artwork it was tuned against.
  *
  * [topSong] is null before anything has been played in the window, and then this is a plain
- * heading — an empty cover box with "Top song" written under it would be a promise the screen
- * cannot keep.
+ * heading: an empty cover with "Top song" under it would be a promise the screen cannot keep.
  */
 @Composable
 internal fun StatsHero(
     topSong: TopSong?,
     period: StatsPeriod,
     onPeriod: (StatsPeriod) -> Unit,
-    topInset: PaddingValues,
-    modifier: Modifier = Modifier
+    onBack: () -> Unit,
+    topInset: PaddingValues
 ) {
-    Box(modifier = modifier.fillMaxWidth()) {
-        if (topSong == null) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(topInset)
-                    .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 8.dp)
-            ) {
-                Text(text = stringResource(R.string.common_listening), style = MaterialTheme.typography.headlineLarge)
-                Text(
-                    text = stringResource(R.string.stats_nothing_played_period_yet),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            ImmersiveHero(
-                imageUrl = topSong.artworkUrl,
-                contentDescription = topSong.title,
-                aspect = CoverAspect,
-                captionAlignment = Alignment.Start
-            ) {
-                Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.stats_top_song),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = topSong.title,
-                            style = MaterialTheme.typography.headlineSmall,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(top = 2.dp)
-                        )
-                        if (topSong.artist.isNotBlank()) {
-                            Text(
-                                text = topSong.artist,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
+    if (topSong == null) {
+        Column {
+            HeroControls(period, onPeriod, onBack, topInset, overArt = false)
+            Text(
+                text = stringResource(R.string.common_listening),
+                style = MaterialTheme.typography.heroTitle,
+                modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 16.dp)
+            )
+            Text(
+                text = stringResource(R.string.stats_nothing_played_period_yet),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 6.dp)
+            )
+        }
+        return
+    }
 
-                    topSong.seconds?.let { seconds ->
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            modifier = Modifier.padding(start = 16.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.stats_listened_time),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.End
-                            )
-                            Text(
-                                text = formatListeningTime(seconds),
-                                style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
+    Column {
+        Box(modifier = Modifier.fillMaxWidth().height(ArtHeight)) {
+            Artwork(
+                url = topSong.artworkUrl,
+                contentDescription = topSong.title,
+                sizeDp = ArtHeight,
+                shape = RectangleShape,
+                modifier = Modifier.fillMaxWidth().height(ArtHeight)
+            )
+            HeroControls(period, onPeriod, onBack, topInset, overArt = true)
+        }
+        Surface(
+            shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp),
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.fillMaxWidth().riseBy(SheetOverlap)
+        ) {
+            Column(modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp)) {
+                Text(
+                    text = stringResource(R.string.stats_top_song),
+                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, letterSpacing = 0.4.sp),
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = topSong.title,
+                    style = MaterialTheme.typography.heroTitle,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+                if (topSong.artist.isNotBlank()) {
+                    Text(
+                        text = topSong.artist,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
                 }
             }
         }
+    }
+}
 
-        PeriodPicker(
-            period = period,
-            onPeriod = onPeriod,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(topInset)
-                .padding(end = 16.dp, top = 8.dp)
-        )
+/** How far the title sheet rises over the cover. */
+private val SheetOverlap = 40.dp
+
+/**
+ * Draws this [rise] higher *and* reports itself that much shorter, so what follows in the list moves
+ * up with it. A plain `offset` would move only the drawing and leave a gap of the same size below.
+ */
+private fun Modifier.riseBy(rise: Dp): Modifier = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints)
+    val px = rise.roundToPx()
+    layout(placeable.width, (placeable.height - px).coerceAtLeast(0)) { placeable.place(0, -px) }
+}
+
+@Composable
+private fun HeroControls(
+    period: StatsPeriod,
+    onPeriod: (StatsPeriod) -> Unit,
+    onBack: () -> Unit,
+    topInset: PaddingValues,
+    overArt: Boolean
+) {
+    Row(
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(topInset)
+            .padding(start = 8.dp, end = 16.dp, top = 8.dp)
+    ) {
+        FilledIconButton(
+            onClick = onBack,
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = if (overArt) {
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHigh
+                },
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ),
+            modifier = Modifier.size(48.dp)
+        ) {
+            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
+        }
+        PeriodPicker(period, onPeriod)
     }
 }
 
 /**
- * Which stretch of time the screen is about.
- *
- * A menu rather than the row of toggles this used to be: four periods in a scrolling button group
- * cost a full row of the screen to say one word, and the row scrolled horizontally *inside* a
- * vertically scrolling list, which is a gesture conflict for no gain.
+ * Which stretch of time the screen is about, as a menu: four periods in a row of toggles cost a
+ * full row of the screen to say one word.
  */
 @Composable
-private fun PeriodPicker(
-    period: StatsPeriod,
-    onPeriod: (StatsPeriod) -> Unit,
-    modifier: Modifier = Modifier
-) {
+private fun PeriodPicker(period: StatsPeriod, onPeriod: (StatsPeriod) -> Unit) {
     var open by remember { mutableStateOf(false) }
-
-    Box(modifier = modifier) {
-        FilledTonalButton(
+    Box {
+        Button(
             onClick = { open = true },
-            shapes = ButtonDefaults.shapes(),
-            contentPadding = PaddingValues(start = 16.dp, end = 10.dp, top = 8.dp, bottom = 8.dp)
+            shape = CircleShape,
+            contentPadding = PaddingValues(start = 16.dp, end = 10.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ),
+            modifier = Modifier.height(40.dp)
         ) {
-            Text(text = period.label, style = MaterialTheme.typography.labelLarge)
-            Icon(
-                Icons.Rounded.ArrowDropDown,
-                contentDescription = null,
-                modifier = Modifier.padding(start = 2.dp)
-            )
+            Text(text = period.label, style = MaterialTheme.typography.buttonSmall)
+            Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, modifier = Modifier.padding(start = 4.dp).size(20.dp))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             StatsPeriod.entries.forEach { entry ->
@@ -176,8 +206,4 @@ private fun PeriodPicker(
     }
 }
 
-/** Reads as a cover with room for two lines of title under it, not as a square with text on it. */
-private const val CoverAspect = 0.92f
-
-/** Shared by the hero's caption row and the quick-fact tiles. */
-internal val StatsGutter = 20.dp
+private val ArtHeight = 340.dp

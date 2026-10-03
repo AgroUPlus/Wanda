@@ -18,6 +18,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import java.io.IOException
 import javax.inject.Inject
@@ -68,8 +69,8 @@ class AgroGraphQl @Inject constructor(
             val json = runCatching {
                 HttpClientFactory.jsonConfig.parseToJsonElement(text).jsonObject
             }.getOrNull()
-            val firstError = (json?.get("errors") as? JsonArray)?.firstOrNull()
-                ?.jsonObject?.get("message")?.jsonPrimitive?.contentOrNull
+            val errorObject = (json?.get("errors") as? JsonArray)?.firstOrNull()?.jsonObject
+            val firstError = errorObject?.get("message")?.jsonPrimitive?.contentOrNull
 
             if (!response.status.isSuccess()) {
                 throw AgroAuthError.of(response.status.value, firstError)
@@ -77,12 +78,21 @@ class AgroGraphQl @Inject constructor(
             if (json == null) {
                 throw IOException("Agro did not answer with JSON")
             }
+            staleRevisionOrNull(errorObject)?.let { throw it }
             if (firstError != null) {
                 throw authErrorOrNull(firstError)
                     ?: IOException("Agro rejected the request: $firstError")
             }
             json["data"]?.jsonObject ?: throw IOException("Agro returned no data")
         }
+    }
+
+    /** An edit refused for being made against an old version, which the caller retries. */
+    private fun staleRevisionOrNull(error: JsonObject?): AgroStaleRevision? {
+        val extensions = error?.get("extensions") as? JsonObject ?: return null
+        if (extensions["code"]?.jsonPrimitive?.contentOrNull != STALE_REVISION) return null
+        val current = extensions["currentRevision"]?.jsonPrimitive?.longOrNull ?: return null
+        return AgroStaleRevision(current)
     }
 
     /**
@@ -101,6 +111,8 @@ class AgroGraphQl @Inject constructor(
     }
 
     companion object {
+        private const val STALE_REVISION = "STALE_REVISION"
+
         /** Phrasing a GraphQL server uses to reject a field or argument it does not define. */
         private val UNKNOWN_FIELD_PHRASES = listOf(
             "unknown argument",

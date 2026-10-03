@@ -22,6 +22,9 @@
     <string name="action_play_next">Play next</string>
     <string name="action_add_to_queue">Add to queue</string>
     <string name="action_remove_from_queue">Remove from queue</string>
+    <string name="action_remove_from_playlist">Remove from playlist</string>
+    <string name="action_move_up">Move up</string>
+    <string name="action_move_down">Move down</string>
     <string name="action_add_to_playlist">Add to playlist</string>
     <string name="menu_like">Like</string>
     <string name="menu_radio">Radio</string>
@@ -233,9 +236,43 @@
     <string name="playlist_unshare">Stop sharing</string>
     <string name="playlist_unshare_desc">Deletes the copy on Agro. Its link stops working.</string>
     <string name="playlist_unshare_confirm_title">Stop sharing “%1$s”?</string>
-    <string name="playlist_unshare_confirm_message">The copy on your Agro server is deleted and its link stops working for everyone. The playlist on this device is kept.</string>
+    <string name="playlist_unshare_confirm_message">The copy on your Agro server is deleted and its link stops working for everyone. People following it are told it\'s no longer shared. The playlist on this device is kept.</string>
     <string name="playlist_unshared">Stopped sharing. The link no longer opens.</string>
     <string name="playlist_unshare_failed">Couldn\'t stop sharing: %1$s</string>
+    <string name="playlist_collab_action">Who can edit it</string>
+    <string name="playlist_collab_title">Who can edit this playlist</string>
+    <string name="playlist_collab_off">Only you</string>
+    <string name="playlist_collab_off_desc">Everyone else can listen, but not change it.</string>
+    <string name="playlist_collab_friends">Friends</string>
+    <string name="playlist_collab_friends_desc">Your friends can add, remove and reorder tracks.</string>
+    <string name="playlist_collab_public">Friends, and anyone can add</string>
+    <string name="playlist_collab_public_desc">Friends edit freely. Anyone else who can open it can add tracks, and remove only their own.</string>
+    <string name="playlist_collab_needs_wider">Let more people open it first.</string>
+    <string name="playlist_collab_changed">Updated who can edit this playlist.</string>
+    <string name="playlist_collab_turned_off">Only you can edit this playlist now. It stays shared.</string>
+    <string name="playlist_collab_change_failed">Couldn\'t change who can edit it: %1$s</string>
+    <string name="shared_playlist_banner">%1$s · %2$s</string>
+    <string name="shared_playlist_synced">Synced</string>
+    <string name="shared_playlist_saving">Saving your changes…</string>
+    <string name="shared_playlist_syncing">Syncing…</string>
+    <string name="shared_playlist_out_of_sync">Out of sync</string>
+    <string name="shared_playlist_no_longer_shared">No longer shared with you</string>
+    <string name="shared_playlist_access_owner">Only you can edit</string>
+    <string name="shared_playlist_access_owner_friends">Friends can edit</string>
+    <string name="shared_playlist_access_owner_public">Friends edit, anyone adds</string>
+    <string name="shared_playlist_access_editor">You can edit</string>
+    <string name="shared_playlist_access_contributor">You can add tracks</string>
+    <string name="shared_playlist_access_viewer">View only</string>
+    <string name="shared_playlist_retry">Retry</string>
+    <string name="shared_playlist_unfollow">Unfollow</string>
+    <string name="shared_playlist_added_by">Added by %1$s</string>
+    <string name="shared_playlist_added">Added to “%1$s”.</string>
+    <string name="shared_playlist_removed">Removed from “%1$s”.</string>
+    <string name="shared_playlist_not_allowed">You can\'t make that change to this playlist.</string>
+    <string name="shared_playlist_wait_for_sync">That track is still being saved. Try again in a moment.</string>
+    <string name="shared_playlist_changed_meanwhile">The playlist changed in the meantime. Try again.</string>
+    <string name="shared_playlist_edits_dropped">Someone changed “%2$s” first, so %1$d of your changes no longer applied.</string>
+    <string name="shared_playlist_revoked">“%1$s” is no longer shared with you. You can still keep it as your own playlist.</string>
     <string name="playlist_share_link">As a link</string>
     <string name="playlist_share_link_desc">Lists the tracks. Anyone with Wanda can open it.</string>
     <string name="playlist_share_file">As a file</string>
@@ -552,7 +589,6 @@
     <string name="social_circle">Circle</string>
     <string name="social_circle_anthem">CIRCLE ANTHEM</string>
     <string name="social_circle_recap">Circle recap</string>
-    <string name="social_circle_s_rhythm_recap">Your circle\'s rhythm and recap</string>
     <string name="social_connect">Connect</string>
     <string name="social_copy_join_code">Copy the join code</string>
     <string name="social_decline">Decline</string>
@@ -570,7 +606,6 @@
     <string name="social_join">Join</string>
     <string name="social_lately_circle">Lately in your Circle</string>
     <string name="social_linked">Linked</string>
-    <string name="social_listen_along">Listen along</string>
     <string name="social_looking_phones_nearby">Looking for phones nearby…</string>
     <string name="social_my_listening">My listening</string>
     <string name="social_new_code">New code</string>
@@ -601,7 +636,6 @@
     <string name="social_share_off_grid">Share off-grid</string>
     <string name="social_start_jam">Start a jam</string>
     <string name="social_starts_need_most_name_not">Matches the start of a name, so type most of it, not just a fragment.</string>
-    <string name="social_stop_listening_along">Stop listening along</string>
     <string name="social_stop_sharing">Stop sharing</string>
     <string name="social_taste_compatibility">Taste Compatibility</string>
     <string name="social_taste_match">Taste match</string>
@@ -618,13 +652,33 @@
     <string name="stats_hour">By hour</string>
     <string name="stats_last_14_days">Last 14 days</string>
     <string name="stats_later">Later</string>
-    <string name="stats_listened_time">Listened time</string>
     <string name="stats_most_active_day">Most active day</string>
     <string name="stats_nothing_played_period_yet">Nothing played in this period yet.</string>
     <string name="stats_nothing_yet">Nothing yet.</string>
     <string name="stats_songs_played">Songs played</string>
     <string name="stats_top_song">Top song</string>
     <string name="stats_vs_previous_period">vs previous period</string>
+    <string name="stats_quick_facts">Quick facts</string>
+    <string name="stats_your_own_clock">Your own clock</string>
+    <string name="stats_by_device">By device</string>
+    <string name="stats_total_listened_time">Total listened time</string>
+    <string name="stats_average_per_day">Average per day</string>
+    <string name="stats_artists">Artists</string>
+    <string name="stats_today">Today</string>
+    <string name="stats_tab_artists">Artists</string>
+    <string name="stats_tab_albums">Albums</string>
+    <string name="stats_tab_tracks">Tracks</string>
+    <string name="stats_scope_fleet">Every device on your Agro account</string>
+    <string name="stats_scope_device">This device only. Pair with Agro to combine your devices</string>
+    <!-- %1$s is a play count. -->
+    <string name="stats_plays_count">%1$s plays</string>
+    <!-- The busiest day tile. %1$s is the play count, %2$s the day. -->
+    <string name="stats_busiest_day_value">%1$s plays · %2$s</string>
+    <!-- Under the average-per-day number. -->
+    <string name="stats_plays_word">plays</string>
+    <!-- A change against the previous period. %1$d is a percentage; the sign is part of it. -->
+    <string name="stats_change_up">+%1$d%%</string>
+    <string name="stats_change_down">%1$d%%</string>
 
     <!-- Welcome / onboarding -->
     <string name="welcome_already_have_backup">Already have a backup? Import it.</string>
@@ -669,14 +723,73 @@
     <string name="settings_plays_would_combine">%1$s plays would combine</string>
     <string name="settings_recognisable">%1$s of %2$s recognisable</string>
     <string name="settings_signed_as">Signed in as %1$s.</string>
-    <string name="social_added_by">%1$s · added by %2$s</string>
     <string name="social_first_discover_circle_s_top">First to discover %1$s of the circle\'s top tracks before anyone else</string>
-    <string name="social_match">%1$s%% Match</string>
     <string name="social_more_go">%1$s · %2$s more to go</string>
     <string name="social_plays_2">%1$s plays</string>
     <string name="social_s_jam">%1$s\'s jam</string>
     <string name="social_shown_instead_username_leave_it">Shown instead of your username. Leave it empty to just be @%1$s.</string>
     <string name="social_voted_skip">You voted to skip · %1$s/%2$s</string>
+    <string name="social_listening_now">Listening now</string>
+    <string name="social_all_friends">All friends</string>
+    <string name="social_jam_tagline">Listen in sync, everyone adds to the queue</string>
+    <string name="social_jam_start">Start</string>
+    <string name="social_jam_open">Open</string>
+    <!-- The Jam card's title while you are in one. %1$s is the jam's join code. -->
+    <string name="social_jam_with_code">Jam · %1$s</string>
+    <string name="social_not_listening">Not listening</string>
+    <!-- Short label on the pill that ends listening along with a friend. -->
+    <string name="social_stop_listening_short">Stop</string>
+    <string name="social_private_session">Private session</string>
+    <!-- A friend's status line. %1$s is the track, %2$s the artist. -->
+    <string name="social_track_by_artist">%1$s · %2$s</string>
+    <string name="social_activity_subtitle">Circle &amp; shared songs</string>
+    <string name="social_show_friend_code">Show my friend code</string>
+    <string name="social_wants_to_be_friends">Wants to be friends</string>
+    <string name="social_waiting_for_answer">Waiting for an answer</string>
+    <string name="social_lately">Lately</string>
+    <string name="social_invite_to_jam">Invite to Jam</string>
+    <string name="social_profile_more">More options</string>
+    <string name="social_no_such_account">No account by that name, or they are not visible to you.</string>
+    <!-- %1$s is the friend's display name. -->
+    <string name="social_their_listening">%1$s\'s listening</string>
+    <!-- %1$s is the friend's display name. -->
+    <string name="social_keeps_listening_private">%1$s keeps their listening private.</string>
+    <!-- %1$s is the friend's display name. -->
+    <string name="social_keeps_stats_private">%1$s keeps their statistics private.</string>
+    <!-- %1$s is the taste-match score, 0 to 100. -->
+    <string name="social_percent_in_common">%1$s%% in common</string>
+    <string name="jam_collapse">Close the jam</string>
+    <string name="jam_end">End jam</string>
+    <string name="jam_quit">Quit jam</string>
+    <string name="jam_end_confirm_title">End the jam for everyone?</string>
+    <string name="jam_end_confirm_message">Everyone in the room is sent back to their own music, and the join code stops working.</string>
+    <string name="jam_everyone_is_hearing">EVERYONE IS HEARING</string>
+    <string name="jam_between_tracks">BETWEEN TRACKS</string>
+    <!-- %1$s is the track the room is playing that this device cannot find. -->
+    <string name="jam_unresolvable">You don\'t have “%1$s”. The room is still playing it.</string>
+    <!-- Next to the skip button. %1$d is votes so far, %2$d how many are needed. -->
+    <string name="jam_skip_votes">%1$d/%2$d</string>
+    <string name="jam_join_code_overline">JOIN CODE</string>
+    <string name="jam_invite">Invite</string>
+    <string name="jam_anyone_can_add">Anyone in the room can add songs.</string>
+    <string name="jam_open_to_friends_on">Friends can join without a code.</string>
+    <string name="jam_open_to_friends_off">Only people you give the code to can join.</string>
+    <string name="jam_up_next">Up next</string>
+    <string name="jam_waiting_on_room">Waiting on the room</string>
+    <!-- %1$s is the jam link. -->
+    <string name="jam_share_text_link">Join my music Jam on Wanda! %1$s</string>
+    <!-- %1$s is the join code. -->
+    <string name="jam_share_text_code">Join my music Jam on Wanda! Use code: %1$s</string>
+    <string name="jam_share_chooser">Share Jam link</string>
+    <string name="circle_period_week">Week</string>
+    <string name="circle_period_month">Month</string>
+    <string name="circle_period_year">Year</string>
+    <string name="circle_period_all">All</string>
+    <!-- Two members of a circle whose tastes are compared. -->
+    <string name="circle_pair">%1$s &amp; %2$s</string>
+    <!-- A taste-match score. %1$d is 0 to 100. -->
+    <string name="circle_match_percent">%1$d%%</string>
+    <string name="circle_match_label">match</string>
 
     <!-- Welcome / onboarding -->
     <string name="welcome_skip_setup">Skip setup</string>
@@ -1020,4 +1133,48 @@
     <string name="podcasts_search_none">No podcasts found.</string>
     <string name="podcasts_search_failed">The search failed: %1$s</string>
     <string name="podcasts_subscribed">Subscribed</string>
+
+    <plurals name="jam_member_count">
+        <item quantity="one">%1$d member in room</item>
+        <item quantity="other">%1$d members in room</item>
+    </plurals>
+    <plurals name="jam_song_count">
+        <item quantity="one">%1$d song</item>
+        <item quantity="other">%1$d songs</item>
+    </plurals>
+    <plurals name="jam_votes_needed">
+        <item quantity="one">Suggestions need %1$d other person to agree.</item>
+        <item quantity="other">Suggestions need %1$d other people to agree.</item>
+    </plurals>
+    <plurals name="social_friend_count">
+        <item quantity="one">%1$d friend</item>
+        <item quantity="other">%1$d friends</item>
+    </plurals>
+    <plurals name="social_live_count">
+        <item quantity="one">%1$d live</item>
+        <item quantity="other">%1$d live</item>
+    </plurals>
+    <plurals name="social_unread_count">
+        <item quantity="one">%1$d unread</item>
+        <item quantity="other">%1$d unread</item>
+    </plurals>
+    <!-- Listening together: who has joined your jam, or is listening along with you. -->
+    <string name="together_channel_name">Listening together</string>
+    <string name="together_channel_description">When someone joins or leaves your Jam, or starts listening along with you</string>
+    <string name="together_listener_joined_title">%1$s is listening along</string>
+    <string name="together_listener_joined_body">They hear everything you play, as you play it.</string>
+    <string name="together_go_incognito">Go incognito</string>
+    <string name="together_jam_joined_title">%1$s joined the Jam</string>
+    <string name="together_jam_left_title">%1$s left the Jam</string>
+    <plurals name="together_jam_room_size">
+        <item quantity="one">%1$d listener in the room</item>
+        <item quantity="other">%1$d listeners in the room</item>
+    </plurals>
+    <string name="together_listeners_bar_single">%1$s is listening along</string>
+    <plurals name="together_listeners_bar_more">
+        <item quantity="one">%1$s and %2$d other are listening along</item>
+        <item quantity="other">%1$s and %2$d others are listening along</item>
+    </plurals>
+    <string name="together_listeners_bar_subtitle">Tap for privacy settings</string>
+    <string name="together_went_incognito">You\'re incognito — nobody is listening along any more</string>
 </resources>

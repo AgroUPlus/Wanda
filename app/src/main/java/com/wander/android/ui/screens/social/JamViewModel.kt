@@ -1,13 +1,13 @@
 package com.wander.android.ui.screens.social
 
-import android.database.SQLException
-import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.JamPlaybackController
+import com.wander.android.data.repository.JamMembershipWatcher
+import com.wander.android.data.repository.JamRadioTopUp
 import com.wander.android.data.repository.JamRepository
 import com.wander.android.data.sources.agro.FriendJam
 import com.wander.android.data.sources.agro.Jam
@@ -19,12 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import java.io.IOException
 import javax.inject.Inject
-
-import com.wander.android.data.repository.MusicRepository
-import com.wander.android.data.repository.ListenAlongResolver
-import com.wander.android.data.sources.agro.AgroFeedApi
 
 @Immutable
 internal data class JamUiState(
@@ -45,9 +40,8 @@ internal data class JamUiState(
 internal class JamViewModel @Inject constructor(
     private val repository: JamRepository,
     private val playback: JamPlaybackController,
-    private val feedApi: AgroFeedApi,
-    private val musicRepository: MusicRepository,
-    private val resolver: ListenAlongResolver,
+    private val radio: JamRadioTopUp,
+    private val membership: JamMembershipWatcher,
     private val secureStorage: SecureStorage
 ) : ViewModel() {
 
@@ -72,19 +66,19 @@ internal class JamViewModel @Inject constructor(
         return null
     }
 
-    private var toppingUp = false
-
     init {
+        // Both are app-wide singletons; this is merely the first place guaranteed to exist while
+        // a jam can — the shell holds one of these for the app's whole life.
+        radio.ensureRunning()
+        membership.ensureRunning()
         repository.jam
             .onEach { jam ->
                 _state.value = _state.value.copy(jam = jam)
-                checkAutoTopUpRadio(jam)
             }
             .launchIn(viewModelScope)
         repository.isJamRadioEnabled
             .onEach { enabled ->
                 _state.value = _state.value.copy(isRadioEnabled = enabled)
-                checkAutoTopUpRadio(_state.value.jam)
             }
             .launchIn(viewModelScope)
         secureStorage.agroConfigured
@@ -140,82 +134,6 @@ internal class JamViewModel @Inject constructor(
         repository.setJamRadioEnabled(enabled)
     }
 
-    private fun checkAutoTopUpRadio(jam: Jam?) {
-        if (jam == null || !repository.isJamRadioEnabled.value) {
-            repository.noteAutoRadioTrack(null)
-            return
-        }
-        // Only host or single user auto-proposes blend so we don't multiply proposals
-        if (!jam.isHost && jam.members.size > 1) return
-        if (jam.queue.isNotEmpty() || jam.proposals.isNotEmpty() || toppingUp) return
-
-        val now = jam.nowPlaying ?: return
-        toppingUp = true
-        viewModelScope.launch {
-            try {
-                // Multi-friend taste blend: combines Circle recap (shared top charts & anthem),
-                // recent friend activity events from each participant, and seed radio.
-                val candidateQueries = mutableListOf<Pair<String, String>>() // (title, artist)
-
-                // 1. Circle recap: combined top tracks and anthem across all circle members
-                val recap = feedApi.recap("MONTH").getOrNull()
-                recap?.anthem?.let { anthem ->
-                    candidateQueries.add(anthem.title to anthem.artist)
-                }
-                recap?.topTracks?.forEach { entry ->
-                    candidateQueries.add(entry.name to "")
-                }
-
-                // 2. Individual friends' activity: recent milestones and repeats from all friends
-                val activity = feedApi.friendActivity(days = 14, limit = 30).getOrNull().orEmpty()
-                for (item in activity) {
-                    val title = item.title
-                    if (!title.isNullOrBlank()) {
-                        candidateQueries.add(title to item.artist)
-                    } else if (item.artist.isNotBlank()) {
-                        candidateQueries.add("" to item.artist)
-                    }
-                }
-
-                // Shuffle candidates to create an even blend of everyone's tastes
-                val shuffledCandidates = candidateQueries.distinct().shuffled()
-                var added = false
-                for ((title, artist) in shuffledCandidates) {
-                    val resolved = resolver.resolve(title, artist)
-                    if (resolved != null && resolved.track.id != now.trackId &&
-                        repository.add(resolved.track).isSuccess
-                    ) {
-                        repository.noteAutoRadioTrack(resolved.track.id)
-                        added = true
-                        break
-                    }
-                }
-
-                // 3. Fallback to seed radio if circle history is still sparse
-                if (!added) {
-                    val resolvedNow = resolver.resolve(now.title, now.artist)
-                    if (resolvedNow != null) {
-                        val radio = musicRepository.generateRadio(resolvedNow.track, 1)
-                        if (radio.isNotEmpty()) {
-                            val track = radio.first()
-                            if (repository.add(track).isSuccess) repository.noteAutoRadioTrack(track.id)
-                        }
-                    }
-                }
-            } catch (e: IOException) {
-                // Topping the queue up is best-effort: the jam plays on with what it already has,
-                // and the next track change tries again. Surfacing this would put an error in
-                // front of someone whose music never stopped.
-                Log.d(TAG, "Auto top-up skipped", e)
-            } catch (e: SQLException) {
-                // Same reasoning, for the local library lookups the resolver and radio make.
-                Log.d(TAG, "Auto top-up skipped", e)
-            } finally {
-                toppingUp = false
-            }
-        }
-    }
-
     /**
      * Suggests a track chosen from this screen.
      *
@@ -247,9 +165,5 @@ internal class JamViewModel @Inject constructor(
                 error = result.exceptionOrNull()?.message
             )
         }
-    }
-
-    private companion object {
-        const val TAG = "JamViewModel"
     }
 }

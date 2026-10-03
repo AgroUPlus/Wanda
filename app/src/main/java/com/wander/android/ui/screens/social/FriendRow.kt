@@ -14,8 +14,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.sources.agro.AgroProfile
+import com.wander.android.ui.components.CuteAvatar
 
 /**
  * One person in a list, with whatever action fits where you stand with them.
@@ -62,4 +64,16 @@ internal fun FriendRow(
             }
         }
     }
+}
+
+/**
+ * A friend's picture, or a deterministic cute procedural avatar.
+ */
+@Composable
+internal fun Avatar(profile: AgroProfile, size: Dp) {
+    CuteAvatar(
+        seed = profile.username,
+        avatarUrl = profile.avatarUrl,
+        size = size
+    )
 }

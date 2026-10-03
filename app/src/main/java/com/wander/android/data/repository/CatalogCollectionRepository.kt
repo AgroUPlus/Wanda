@@ -144,7 +144,9 @@ internal class CatalogCollectionRepository(
         val type = SourceType.entries.firstOrNull { playlistId.startsWith(it.idPrefix) } ?: SourceType.LOCAL
         val tracks = sourceFor(type)?.getPlaylistTracks(playlistId)?.getOrDefault(emptyList()).orEmpty()
         if (tracks.isNotEmpty()) {
-            persist(tracks, true)
+            // A followed playlist's tracks are already in Room, and are someone else's picks:
+            // persisting them as library would put them in this user's own collection.
+            if (type != SourceType.AGRO) persist(tracks, true)
             return@withContext tracks
         }
         val localEntity = playlistDao.getPlaylistById(playlistId)

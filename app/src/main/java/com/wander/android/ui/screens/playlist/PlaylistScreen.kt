@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,7 +51,11 @@ fun PlaylistScreen(
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val importWork by viewModel.importWork.collectAsStateWithLifecycle()
-    var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
+    val sharedViewModel: SharedPlaylistViewModel = hiltViewModel()
+    val shared by sharedViewModel.state.collectAsStateWithLifecycle()
+    var actionsFor by remember { mutableStateOf<IndexedValue<UnifiedTrack>?>(null) }
+
+    LaunchedEffect(sharedViewModel) { sharedViewModel.left.collect { onBack() } }
 
     val listState = rememberLazyListState()
     val titleState = rememberCollapsingTitleState(listState)
@@ -59,7 +64,9 @@ fun PlaylistScreen(
 
     val shareActions = PlaylistShareHost(playlist, tracks, onOpenPlaylist)
 
-    actionsFor?.let { track ->
+    actionsFor?.let { (index, track) ->
+        val current = playlist
+        val movable = current != null && sharedViewModel.canMove(current) && !sharedViewModel.isPending(index)
         TrackActionsSheet(
             track = track,
             isLiked = track.isLiked,
@@ -67,7 +74,11 @@ fun PlaylistScreen(
             onAddToQueue = { viewModel.addToQueue(track) },
             onStartRadio = { viewModel.startRadio(track) },
             onToggleLike = { viewModel.toggleLike(track) },
-            onRemove = null,
+            onRemove = current?.takeIf { sharedViewModel.canRemove(it, index) }
+                ?.let { { sharedViewModel.remove(it, index, viewModel::refresh) } },
+            removeLabel = stringResource(R.string.action_remove_from_playlist),
+            onMoveUp = current?.takeIf { movable && index > 0 }?.let { { sharedViewModel.move(it, index, index - 1, viewModel::refresh) } },
+            onMoveDown = current?.takeIf { movable && index < tracks.lastIndex }?.let { { sharedViewModel.move(it, index, index + 1, viewModel::refresh) } },
             onOpenArtist = track.artist
                 .takeIf { it.isNotBlank() }
                 ?.let { artist -> { onOpenArtist(artist, track.artistId) } },
@@ -137,6 +148,16 @@ fun PlaylistScreen(
                         )
                     }
 
+                    shared?.let { state ->
+                        item(key = "shared-status", contentType = "shared-status") {
+                            SharedPlaylistBanner(
+                                state = state,
+                                onRetry = sharedViewModel::retry,
+                                onUnfollow = sharedViewModel::unfollow.takeIf { state.localPlaylistId == null }
+                            )
+                        }
+                    }
+
                     item(key = "import-status", contentType = "import-status") {
                         PlaylistImportBanner(
                             work = importWork,
@@ -151,11 +172,15 @@ fun PlaylistScreen(
                         contentType = { _, _ -> "track" }
                     ) { index, track ->
                         val unmatched = track.source == SourceType.UNRESOLVED
+                        // An unmatched track has nothing to play, but can still be taken out of a
+                        // playlist this account may edit.
+                        val removable = playlist?.let { sharedViewModel.canRemove(it, index) } == true
                         TrackRow(
                             track = track,
                             onPlay = { viewModel.play(index) },
-                            // Nothing in the actions sheet applies to a track that does not exist yet.
-                            onLongPress = { actionsFor = track }.takeUnless { unmatched },
+                            onLongPress = { actionsFor = IndexedValue(index, track) }.takeUnless { unmatched && !removable },
+                            trailingLabel = sharedViewModel.addedBy(index)
+                                ?.let { stringResource(R.string.shared_playlist_added_by, it) },
                             matchStatus = when {
                                 !unmatched -> null
                                 importWork.isRunning -> MatchStatus.MATCHING

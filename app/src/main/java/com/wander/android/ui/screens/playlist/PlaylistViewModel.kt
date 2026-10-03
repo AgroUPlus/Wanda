@@ -12,11 +12,13 @@ import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.ShareRepository
+import com.wander.android.data.repository.sharedplaylist.SharedPlaylistRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -30,6 +32,7 @@ class PlaylistViewModel @Inject constructor(
     private val playerConnection: PlayerConnection,
     private val playbackCoordinator: PlaybackCoordinator,
     private val importScheduler: PlaylistImportScheduler,
+    private val sharedPlaylists: SharedPlaylistRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -59,6 +62,11 @@ class PlaylistViewModel @Inject constructor(
         // reload. WorkManager reports progress after every track; reloading on that is event-driven,
         // where polling would not be.
         viewModelScope.launch { importWork.drop(1).collect { refresh() } }
+        // A shared playlist changes under this screen — an edit here, a collaborator's, a sync —
+        // and every one of those lands in its copy in Room first.
+        viewModelScope.launch {
+            sharedPlaylists.observeItems(playlistId).distinctUntilChanged().drop(1).collect { refresh() }
+        }
     }
 
     fun refresh() {
@@ -66,7 +74,7 @@ class PlaylistViewModel @Inject constructor(
             _isLoading.value = true
             val pl = musicRepository.getPlaylistById(playlistId)
             _playlist.value = pl
-            val list = musicRepository.getPlaylistTracksById(playlistId)
+            val list = sharedTracks() ?: musicRepository.getPlaylistTracksById(playlistId)
             _tracks.value = list
             if (pl != null && pl.coverArtUrl == null) {
                 val fallbackCover = list.firstNotNullOfOrNull { it.artworkUrl }
@@ -76,6 +84,16 @@ class PlaylistViewModel @Inject constructor(
             }
             _isLoading.value = false
         }
+    }
+
+    /**
+     * A shared playlist's tracks come from its copy, one per item, so a position on screen is
+     * always the position an edit names. Null when it is not shared, or its copy is not read yet.
+     */
+    private suspend fun sharedTracks(): List<UnifiedTrack>? {
+        val agroId = sharedPlaylists.agroIdFor(playlistId) ?: return null
+        return sharedPlaylists.tracks(agroId).map { it.track }
+            .takeIf { it.isNotEmpty() || playlistId.startsWith(SourceType.AGRO.idPrefix) }
     }
 
     /** What can actually be played: an import's still-unmatched placeholders have nothing behind them. */

@@ -4,17 +4,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Whatshot
-import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -24,19 +19,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
+import com.wander.android.ui.components.ConnectedToggleGroup
+import com.wander.android.ui.components.CuteAvatar
 import com.wander.android.ui.components.EmptyState
+import com.wander.android.ui.components.PersonShape
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
+import com.wander.android.ui.theme.screenTitle
 
 private val PERIODS = listOf("WEEK", "MONTH", "YEAR", "ALL")
 
 /**
- * Circle Tab — Material 3 Expressive recap, taste compatibility, and friend activity feed.
+ * The circle — you and the friends who share their statistics — as a recap: its anthem, who got
+ * there first, what it plays, and how alike its members are.
  */
 @Composable
 internal fun CircleScreen(
@@ -47,43 +46,15 @@ internal fun CircleScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .padding(contentPadding.headerInset())
-                .padding(start = 8.dp, end = 20.dp, top = 8.dp, bottom = 4.dp)
-                .fillMaxWidth()
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
-            }
-            Column(modifier = Modifier.weight(1f).padding(start = 4.dp)) {
-                Text(
-                    text = stringResource(R.string.social_circle),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = stringResource(R.string.social_circle_s_rhythm_recap),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+        CircleTopBar(contentPadding, members = state.recap?.members.orEmpty(), onBack = onBack)
 
-        ButtonGroup(
-            overflowIndicator = {},
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)
-        ) {
-            PERIODS.forEach { period ->
-                toggleableItem(
-                    checked = state.period == period,
-                    label = period.lowercase().replaceFirstChar { it.uppercase() },
-                    onCheckedChange = { viewModel.setPeriod(period) },
-                    weight = 1f
-                )
-            }
-        }
+        ConnectedToggleGroup(
+            options = PERIODS,
+            selected = state.period,
+            label = { stringResource(periodLabel(it)) },
+            onSelect = viewModel::setPeriod,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+        )
 
         if (state.feed.isEmpty() && state.recap == null && !state.loading) {
             EmptyState(
@@ -95,59 +66,56 @@ internal fun CircleScreen(
 
         LazyColumn(
             contentPadding = contentPadding.listInset(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)
+            modifier = Modifier.fillMaxSize()
         ) {
             state.recap?.let { recap ->
-                item(key = "recap_anthem") {
-                    recap.anthem?.let { AnthemHeroCard(it) }
-                }
-
-                item(key = "recap_trendsetter") {
-                    recap.trendsetter?.let { TrendsetterCard(it) }
-                }
-
+                recap.anthem?.let { anthem -> item(key = "anthem") { AnthemHeroCard(anthem) } }
+                recap.trendsetter?.let { trendsetter -> item(key = "trendsetter") { TrendsetterCard(trendsetter) } }
                 if (recap.topArtists.isNotEmpty() || recap.topTracks.isNotEmpty()) {
-                    item(key = "recap_charts") {
-                        CircleLeaderboards(
-                            topArtists = recap.topArtists,
-                            topTracks = recap.topTracks
-                        )
-                    }
+                    item(key = "charts") { CircleCharts(recap.topArtists, recap.topTracks) }
                 }
-
-                if (recap.matrix.isNotEmpty()) {
-                    item(key = "recap_matrix") {
-                        TasteMatrixSection(recap.matrix)
-                    }
-                }
+                if (recap.matrix.isNotEmpty()) tasteCompatibilitySection(recap.matrix)
             }
 
             if (state.feed.isNotEmpty()) {
-                item(key = "feed_header") {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                    ) {
-                        Icon(
-                            Icons.Rounded.Whatshot,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = stringResource(R.string.social_lately_circle),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
+                item(key = "feed_header") { SectionTitle(stringResource(R.string.social_lately_circle)) }
                 items(count = state.feed.size, key = { index -> "feed_$index" }) { index ->
-                    FeedItemCard(state.feed[index])
+                    FeedItemCard(state.feed[index], modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
                 }
             }
         }
     }
 }
+
+@Composable
+private fun CircleTopBar(contentPadding: PaddingValues, members: List<String>, onBack: () -> Unit) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .padding(contentPadding.headerInset())
+            .padding(start = 8.dp, end = 24.dp, top = 8.dp, bottom = 16.dp)
+            .fillMaxWidth()
+    ) {
+        IconButton(onClick = onBack) {
+            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
+        }
+        Text(
+            text = stringResource(R.string.social_circle),
+            style = MaterialTheme.typography.screenTitle,
+            modifier = Modifier.weight(1f)
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy((-6).dp)) {
+            members.take(MAX_FACES).forEach { CuteAvatar(seed = it, size = 32.dp, shape = PersonShape) }
+        }
+    }
+}
+
+private fun periodLabel(period: String): Int = when (period) {
+    "WEEK" -> R.string.circle_period_week
+    "MONTH" -> R.string.circle_period_month
+    "YEAR" -> R.string.circle_period_year
+    else -> R.string.circle_period_all
+}
+
+private const val MAX_FACES = 3

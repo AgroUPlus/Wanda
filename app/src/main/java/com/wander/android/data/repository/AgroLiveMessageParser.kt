@@ -43,6 +43,12 @@ internal object AgroLiveMessageParser {
         Json.parseToJsonElement(text).jsonObject["msg_type"]?.jsonPrimitive?.contentOrNull
     }.getOrNull()
 
+    /** A shared playlist's id and new revision; a null revision means it was deleted. */
+    fun playlistUpdated(payload: JsonObject?): AgroLiveMessage.PlaylistUpdated? {
+        val id = payload?.get("id")?.jsonPrimitive?.contentOrNull ?: return null
+        return AgroLiveMessage.PlaylistUpdated(id, payload["revision"]?.jsonPrimitive?.longOrNull)
+    }
+
     fun resumeFrame(after: Long): String = buildJsonObject {
         put("msg_type", "RESUME")
         put("payload", buildJsonObject { put("last_seq", after) })
@@ -102,6 +108,7 @@ internal object AgroLiveMessageParser {
                 )
             }
             "JAM_UPDATED" -> AgroLiveMessage.JamUpdated
+            "PLAYLIST_UPDATED" -> playlistUpdated(envelope["payload"] as? JsonObject)
             "JAM_NOW_PLAYING" -> {
                 val payload = envelope["payload"] as? JsonObject
                 val stopped = payload?.get("stopped")?.jsonPrimitive?.booleanOrNull ?: false
@@ -154,7 +161,9 @@ internal object AgroLiveMessageParser {
                     contentHash = opened.contentHash,
                     peerLanAddress = payload?.get("peerLanAddress")?.jsonPrimitive?.contentOrNull,
                     peerLanToken = payload?.get("peerLanToken")?.jsonPrimitive?.contentOrNull,
-                    isLocked = opened.isLocked
+                    isLocked = opened.isLocked,
+                    listeners = (payload?.get("listeners") as? JsonArray)
+                        ?.mapNotNull { it.jsonPrimitive.contentOrNull }
                 )
             }
             "TRACK_DROP" -> (envelope["payload"] as? JsonObject)?.let { payload ->

@@ -1,16 +1,20 @@
 package com.wander.android.ui.screens.social
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.Sensors
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,18 +23,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.ui.components.headerInset
+import com.wander.android.ui.theme.screenTitle
 
 /**
  * The top of the Friends tab: the tab's name, and the two things you do *to* the roster.
  *
- * It has been pared twice. It was three identical tonal circles — activity, find people, my profile
- * — which said nothing about which was which, and made the one that was *you* look like just
- * another action. Your face moved into the hero below, which is a better place to aim at and the
- * thing a hero is for; activity moved out entirely, because the tile under the hero already opens
- * it and says how much is unread, and a header button beside a tile for the same screen is the same
- * offer made twice.
- *
- * What is left is a title and the two actions that have nowhere else to be.
+ * Finding people is the screen's primary action, so it is the filled one and the squarer one;
+ * off-grid sharing is round and tonal beside it, so the pair no longer reads as two of the same.
  */
 @Composable
 internal fun SocialHeader(
@@ -40,33 +39,46 @@ internal fun SocialHeader(
     onFindPeople: () -> Unit
 ) {
     Row(
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .padding(contentPadding.headerInset())
-            .padding(start = 20.dp, end = 20.dp, top = 16.dp)
+            .padding(start = 24.dp, end = 16.dp, top = 20.dp, bottom = 16.dp)
             .fillMaxWidth()
     ) {
         Text(
             text = stringResource(R.string.nav_friends),
-            style = MaterialTheme.typography.headlineLarge,
+            style = MaterialTheme.typography.screenTitle,
             modifier = Modifier.weight(1f)
         )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // Outside the `isPaired` gate, unlike everything beside it. Off-grid sharing is the one
+        // thing on this tab that works with no server at all, so hiding it until an account exists
+        // would hide it from exactly the person it was built for.
+        Surface(
+            onClick = onOpenOffGrid,
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(HeaderButton)
         ) {
-            // Outside the `isPaired` gate, unlike everything beside it. Off-grid sharing is the one
-            // thing on this tab that works with no server at all, so hiding it until an account
-            // exists would hide it from exactly the person it was built for.
-            FilledTonalIconButton(onClick = onOpenOffGrid) {
-                Icon(Icons.Rounded.Sensors, contentDescription = stringResource(R.string.social_share_off_grid))
+            Box(contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Sensors, stringResource(R.string.social_share_off_grid))
             }
-            if (state.isPaired) {
-                FilledTonalIconButton(onClick = onFindPeople) {
-                    Icon(Icons.Rounded.PersonAdd, contentDescription = stringResource(R.string.common_find_people))
+        }
+        if (state.isPaired) {
+            Surface(
+                onClick = onFindPeople,
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.size(HeaderButton)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.PersonAdd, stringResource(R.string.common_find_people))
                 }
             }
         }
     }
 }
+
+private val HeaderButton = 48.dp

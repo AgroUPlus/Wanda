@@ -1,6 +1,5 @@
 package com.wander.android.data.sources.agro
 
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -9,7 +8,6 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import java.io.IOException
 import javax.inject.Inject
@@ -22,8 +20,6 @@ data class AgroPlaylistTrack(
     val album: String? = null,
     val durationMs: Long = 0L
 )
-
-data class AgroPlaylist(val title: String, val tracks: List<AgroPlaylistTrack>)
 
 /** Who on the server can open a published playlist. The owner always can. */
 enum class PlaylistVisibility { PRIVATE, FRIENDS, PUBLIC }
@@ -86,22 +82,6 @@ class AgroPlaylistApi @Inject constructor(private val graphQl: AgroGraphQl) {
                 }
             }
 
-    suspend fun fetch(id: String): Result<AgroPlaylist> =
-        graphQl.execute(FETCH, buildJsonObject { put("id", id) }).mapCatching { data ->
-            val playlist = data["playlist"]?.jsonObject ?: throw IOException("Agro has no such playlist")
-            AgroPlaylist(
-                title = playlist["title"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-                tracks = (playlist["items"] as? JsonArray).orEmpty().map { it.jsonObject.toTrack() }
-            )
-        }
-
-    private fun JsonObject.toTrack() = AgroPlaylistTrack(
-        title = this["title"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-        artist = this["artist"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-        album = this["album"]?.jsonPrimitive?.contentOrNull,
-        durationMs = this["durationMs"]?.jsonPrimitive?.longOrNull ?: 0L
-    )
-
     internal companion object {
         /**
          * Each aliased mutation costs the server two units of query complexity, and it refuses a
@@ -151,9 +131,6 @@ class AgroPlaylistApi @Inject constructor(private val graphQl: AgroGraphQl) {
                 error
             }
         private const val DELETE = "mutation(\$id: String!) { deletePlaylist(playlistId: \$id) }"
-        private const val FETCH =
-            "query(\$id: String!) { playlist(id: \$id) { title items { title artist album durationMs } } }"
-
         fun addTracksQuery(count: Int): String = buildString {
             append("mutation(\$id: String!")
             repeat(count) { append(", \$t").append(it).append(": PlaylistTrackInput!") }

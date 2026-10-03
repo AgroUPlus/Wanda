@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -42,7 +43,8 @@ internal fun CuteAvatar(
     avatarUrl: String? = null,
     size: Dp = 40.dp,
     showBorder: Boolean = false,
-    borderColor: Color = MaterialTheme.colorScheme.surface
+    borderColor: Color = MaterialTheme.colorScheme.surface,
+    shape: Shape = CircleShape
 ) {
     val cleanSeed = seed.trim()
 
@@ -50,10 +52,10 @@ internal fun CuteAvatar(
         modifier = modifier
             .size(size)
             .then(
-                if (showBorder) Modifier.border(2.dp, borderColor, CircleShape)
+                if (showBorder) Modifier.border(2.dp, borderColor, shape)
                 else Modifier
             )
-            .clip(CircleShape),
+            .clip(shape),
         contentAlignment = Alignment.Center
     ) {
         if (!avatarUrl.isNullOrBlank()) {
@@ -61,7 +63,7 @@ internal fun CuteAvatar(
                 model = avatarUrl,
                 contentDescription = cleanSeed,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.size(size).clip(CircleShape)
+                modifier = Modifier.size(size)
             )
         } else if (cleanSeed.isEmpty()) {
             PlaceholderAvatar(size = size)

@@ -32,6 +32,13 @@ enum class SourceType(
     PODCAST("Podcasts", "podcast:", priority = 4, isPersonalLibrary = false),
 
     /**
+     * A playlist someone shared through the paired Agro server and this account follows. Holds
+     * playlists only, never tracks: each of its tracks is matched to one of the sources above, or
+     * is [UNRESOLVED] until it is.
+     */
+    AGRO("Shared on Agro", "agro:", priority = 98, isPersonalLibrary = false, shortName = "Shared"),
+
+    /**
      * A track imported from a pasted playlist that no backend has been matched to yet. It has no
      * `IMusicSource`, is never playable and never a search candidate; `PlaylistImportWorker`
      * replaces it with the matched track.

@@ -485,7 +485,6 @@
     <string name="social_circle">Cercle</string>
     <string name="social_circle_anthem">HYMNE DU CERCLE</string>
     <string name="social_circle_recap">Récap du cercle</string>
-    <string name="social_circle_s_rhythm_recap">Le rythme et le récap de votre cercle</string>
     <string name="social_connect">Connecter</string>
     <string name="social_copy_join_code">Copier le code pour rejoindre</string>
     <string name="social_decline">Décliner</string>
@@ -503,7 +502,6 @@
     <string name="social_join">Rejoindre</string>
     <string name="social_lately_circle">Récémment dans votre cercle</string>
     <string name="social_linked">Lié</string>
-    <string name="social_listen_along">Écouter avec</string>
     <string name="social_looking_phones_nearby">Recherche de téléphones à proximité...</string>
     <string name="social_my_listening">Mon écoute</string>
     <string name="social_new_code">Nouveau code</string>
@@ -534,7 +532,6 @@
     <string name="social_share_off_grid">Partager hors-réseau</string>
     <string name="social_start_jam">Démarrer une jam</string>
     <string name="social_starts_need_most_name_not">Matches the start of a name, so type most of it, not just a fragment.</string>
-    <string name="social_stop_listening_along">Arrêter l\'écoute simultanée</string>
     <string name="social_stop_sharing">Arrêter le partage</string>
     <string name="social_taste_compatibility">Compatibilité des goûts</string>
     <string name="social_taste_match">Correspondance des goûts</string>
@@ -550,7 +547,6 @@
     <string name="stats_hour">Par heure</string>
     <string name="stats_last_14_days">14 derniers jours</string>
     <string name="stats_later">Après</string>
-    <string name="stats_listened_time">Temps d\'écoute</string>
     <string name="stats_most_active_day">Jour le plus actif</string>
     <string name="stats_nothing_played_period_yet">Rien n\'a été joué durant cette période.</string>
     <string name="stats_nothing_yet">Rien n\'a été joué pour le moment.</string>
@@ -599,9 +595,7 @@
     <string name="settings_plays_would_combine">%1$s écoutes seraient combinées</string>
     <string name="settings_recognisable">%1$s sur %2$s reconnaissables</string>
     <string name="settings_signed_as">Connecté en tant que %1$s.</string>
-    <string name="social_added_by">%1$s - ajouté via %2$s</string>
     <string name="social_first_discover_circle_s_top">Premier à découvrir %1$s dans les pistes populaires du cercle avant tout le monde</string>
-    <string name="social_match">%1$s%% Match</string>
     <string name="social_more_go">%1$s - %2$s restants</string>
     <string name="social_plays_2">%1$s écoutes</string>
     <string name="social_s_jam">Jam de %1$s</string>

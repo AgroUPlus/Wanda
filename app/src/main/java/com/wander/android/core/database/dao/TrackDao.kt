@@ -70,6 +70,7 @@ interface TrackDao : TrackLibraryQueries, TrackSyncQueries {
             SELECT 1 FROM local_playlists
             WHERE ',' || local_playlists.trackIds || ',' LIKE '%,' || tracks.id || ',%'
           )
+          AND NOT EXISTS (SELECT 1 FROM shared_playlist_items WHERE shared_playlist_items.trackId = tracks.id)
         """
     )
     suspend fun deleteUnreferencedUnresolved(): Int

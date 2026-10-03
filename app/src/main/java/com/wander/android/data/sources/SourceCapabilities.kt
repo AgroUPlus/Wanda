@@ -40,5 +40,11 @@ data class SourceCapabilities(
      * The backend serves a track's music video as its own stream, shown in place of the cover when
      * the player is in Video mode. Only YouTube Music files clips alongside songs.
      */
-    val videoClips: Boolean = false
+    val videoClips: Boolean = false,
+    /**
+     * The backend has tracks of its own. Every music backend does; the Agro playlist source does
+     * not — its playlists hold tracks from the others — so it is left out wherever the user picks
+     * which sources' tracks to see, where it could only ever filter down to nothing.
+     */
+    val holdsTracks: Boolean = true
 )

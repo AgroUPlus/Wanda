@@ -169,7 +169,8 @@ class MusicRepository @Inject constructor(
     suspend fun searchAlbums(query: String) = searchRepo.searchAlbums(query)
     suspend fun resolveTrack(id: String, title: String, artist: String) = searchRepo.resolveTrack(id, title, artist)
     suspend fun getRecentTracks(limit: Int = 30) = searchRepo.getRecentTracks(limit)
-    fun configuredSources(): List<SourceType> = activeSources().map { it.sourceType }
+    fun configuredSources(): List<SourceType> =
+        activeSources().filter { it.capabilities.holdsTracks }.map { it.sourceType }
 
     // ── Likes & History ─────────────────────────────────────────────────────────────────────
     val writeErrors: SharedFlow<String> = likesAndHistory.writeErrors

@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Group
 import androidx.compose.material.icons.rounded.Podcasts
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Smartphone
@@ -35,6 +36,7 @@ internal val SourceType.color: Color
         SourceType.DEEZER -> Color(0xFFA238FF)
         SourceType.PODCAST -> Color(0xFF2E9E8F)
         SourceType.UNRESOLVED -> Color(0xFF8A8F98)
+        SourceType.AGRO -> Color(0xFFD0BCFF)
     }
 
 /** A distinct outline per source, on top of the colour, so two badges are never told apart by hue
@@ -47,6 +49,7 @@ private val SourceType.badgeShape
         SourceType.DEEZER -> MaterialShapes.Pentagon
         SourceType.PODCAST -> MaterialShapes.Cookie6Sided
         SourceType.UNRESOLVED -> MaterialShapes.Diamond
+        SourceType.AGRO -> MaterialShapes.Clover4Leaf
     }.toShape()
 
 /**
@@ -89,6 +92,12 @@ fun SourceIcon(source: SourceType, modifier: Modifier = Modifier, size: Dp = 40.
             )
             SourceType.UNRESOLVED -> Icon(
                 imageVector = Icons.Rounded.Schedule,
+                contentDescription = null,
+                tint = hue,
+                modifier = Modifier.size(glyphSize)
+            )
+            SourceType.AGRO -> Icon(
+                imageVector = Icons.Rounded.Group,
                 contentDescription = null,
                 tint = hue,
                 modifier = Modifier.size(glyphSize)

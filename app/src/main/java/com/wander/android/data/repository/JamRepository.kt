@@ -1,11 +1,15 @@
 package com.wander.android.data.repository
 
+import android.content.Context
+import com.wander.android.R
+import com.wander.android.core.playback.JamSkipGate
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.agro.AgroJamApi
 import com.wander.android.data.sources.agro.FriendJam
 import com.wander.android.data.sources.agro.Jam
 import com.wander.android.data.sources.agro.JamMode
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -26,10 +30,12 @@ import javax.inject.Singleton
  */
 @Singleton
 internal class JamRepository @Inject constructor(
+    @param:ApplicationContext private val context: Context,
     private val api: AgroJamApi,
     private val playerConnection: PlayerConnection,
     private val playback: JamPlaybackController,
-    private val sharedTrackHash: com.wander.android.core.sync.SharedTrackHash
+    private val sharedTrackHash: com.wander.android.core.sync.SharedTrackHash,
+    private val skipGate: JamSkipGate
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -123,6 +129,17 @@ internal class JamRepository @Inject constructor(
         return api.addTrack(track, contentHash = sharedTrackHash.of(track.id)).store()
     }
 
+    /**
+     * Queues jam radio's pick, remembered as the placeholder a real choice displaces.
+     *
+     * Kept apart from [add] because radio must not displace *itself*: going through [add], each
+     * pick removed the previous one the moment the queue next emptied — the room playing a radio
+     * track, the next pick arriving, and the one already queued being pulled to make way for it.
+     */
+    suspend fun addAutoRadio(track: UnifiedTrack): Result<Unit> =
+        api.addTrack(track, contentHash = sharedTrackHash.of(track.id)).store()
+            .onSuccess { autoRadioTrackId = track.id }
+
     suspend fun approve(trackId: String): Result<Unit> = api.approve(trackId).store()
 
     suspend fun remove(trackId: String): Result<Unit> = api.removeTrack(trackId).store()
@@ -165,12 +182,32 @@ internal class JamRepository @Inject constructor(
     private fun wireJamProposal() {
         if (_jam.value == null) {
             playerConnection.setJamProposal(null)
+            skipGate.setVoter(null)
             return
         }
         playerConnection.setJamProposal { tracks, index ->
             tracks.getOrNull(index)?.let { track -> scope.launch { add(track) } }
         }
+        // Every skip control becomes a vote for as long as the jam lasts — see [JamSkipGate].
+        skipGate.setVoter { scope.launch { castSkipVote() } }
     }
+
+    /** A skip from the player's own controls, confirmed with the room's tally. */
+    private suspend fun castSkipVote() {
+        voteSkip()
+            .onSuccess {
+                val now = _jam.value?.nowPlaying ?: return@onSuccess
+                // A vote that carried the room has already moved it on; nothing to report.
+                if (now.youSkipped) {
+                    playerConnection.notify(
+                        context.getString(R.string.social_voted_skip, now.skipVotes.toString(), now.skipsNeeded.toString())
+                    )
+                }
+            }
+            // The server's refusal, verbatim — the same treatment the Jam screen gives it.
+            .onFailure { e -> e.message?.let(playerConnection::notify) }
+    }
+
 
     /**
      * Remembers the track auto-radio put in an empty queue, so a real choice can displace it.

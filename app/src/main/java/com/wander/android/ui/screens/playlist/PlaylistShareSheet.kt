@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Group
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Send
@@ -43,6 +44,7 @@ internal class PlaylistShareChoices(
     val onPublish: (() -> Unit)?,
     val onResend: () -> Unit,
     val onChangeVisibility: () -> Unit,
+    val onChangeCollaboration: () -> Unit,
     val onUnshare: () -> Unit
 )
 
@@ -86,6 +88,12 @@ internal fun PlaylistShareSheet(
                     title = stringResource(R.string.playlist_visibility_action),
                     description = visibility,
                     onClick = choices.onChangeVisibility
+                )
+                ShareOption(
+                    icon = Icons.Rounded.Group,
+                    title = stringResource(R.string.playlist_collab_action),
+                    description = stringResource(collaborationTitle(publication.editAccess)),
+                    onClick = choices.onChangeCollaboration
                 )
                 ShareOption(
                     icon = Icons.Rounded.CloudOff,

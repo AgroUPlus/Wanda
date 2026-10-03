@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
+import com.wander.android.core.permissions.rememberLocalNetworkGate
 import com.wander.android.ui.components.SkeletonRow
 import com.wander.android.ui.components.listInset
 
@@ -50,6 +51,9 @@ internal fun SocialScreen(
     // The badge reads the same cached count the Inbox screen does, so the two cannot disagree.
     val unread = hiltViewModel<InboxViewModel>().state.collectAsStateWithLifecycle().value.unread
     var searching by remember { mutableStateOf(false) }
+    // Asked at the tap that needs it, as on a profile: without local-network access the peer tier
+    // fails its probe and every track takes the relay. Joining goes ahead either way.
+    val localNetworkGate = rememberLocalNetworkGate()
 
     if (searching) {
         UserSearchSheet(
@@ -116,36 +120,25 @@ internal fun SocialScreen(
                 }
             }
 
-            item(key = "hero") {
-                FriendsHero(
-                    friends = state.friends,
-                    listeningNow = state.nowPlaying.size,
+            item(key = "me") {
+                MyProfileCard(
                     myUsername = state.myUsername,
                     myAvatarUrl = state.myAvatarUrl,
-                    onOpenMyProfile = onOpenMyProfile
+                    friendCount = state.friends.size,
+                    onOpenMyProfile = onOpenMyProfile,
+                    onShowCode = {
+                        searching = true
+                        if (!search.showingCode) viewModel.toggleFriendCode()
+                    }
                 )
             }
 
-            if (state.friends.isNotEmpty()) {
-                item(key = "friend_grid") {
-                    FriendGrid(
-                        friends = state.friends,
-                        listening = remember(state.nowPlaying) {
-                            state.nowPlaying.map { it.username.lowercase() }.toSet()
-                        },
-                        onOpenProfile = onOpenProfile,
-                        modifier = Modifier.padding(top = 14.dp, bottom = 12.dp)
-                    )
-                }
-            }
-
-            item(key = "destinations") {
-                SocialTiles(
-                    jamSubtitle = jam?.let { "Jam · ${it.code}" },
-                    activitySubtitle = if (unread > 0) "$unread unread" else "Circle & shared songs",
-                    onOpenJam = onOpenJam,
-                    onOpenActivity = onOpenActivity,
-                    modifier = Modifier.padding(vertical = 8.dp)
+            item(key = "jam") {
+                JamCard(
+                    jam = jam,
+                    people = jam?.members?.filterNot { it.equals(state.myUsername, ignoreCase = true) }
+                        ?: state.friends.map { it.username },
+                    onOpenJam = onOpenJam
                 )
             }
 
@@ -153,18 +146,44 @@ internal fun SocialScreen(
                 state.playing(profile.username)?.let { profile to it }
             }
             if (playing.isNotEmpty()) {
-                item(key = "listening_header") { SectionHeader("Listening now") }
-                item(key = "listening_row") {
-                    ListeningNowRow(
-                        playing = playing,
-                        isListeningAlong = { state.session?.host.equals(it, ignoreCase = true) },
-                        onOpenProfile = onOpenProfile
-                    )
+                item(key = "listening_header") { ListeningNowHeader(liveCount = playing.size) }
+                item(key = "listening_carousel") {
+                    ListeningNowCarousel(playing = playing, onOpenProfile = onOpenProfile)
                 }
             }
 
+            requestSection(
+                key = "incoming",
+                title = R.string.social_wants_to_be_friends,
+                profiles = state.incoming,
+                actionLabel = R.string.common_accept,
+                onAction = viewModel::accept,
+                onOpenProfile = onOpenProfile
+            )
+
+            if (state.friends.isNotEmpty()) {
+                allFriendsSection(
+                    friends = state.friends,
+                    playing = state::playing,
+                    isListeningAlong = { state.session?.host.equals(it, ignoreCase = true) },
+                    onOpenProfile = onOpenProfile,
+                    onJoin = { host -> localNetworkGate { viewModel.startListenAlong(host) } }
+                )
+            }
+
+            requestSection(
+                key = "outgoing",
+                title = R.string.social_waiting_for_answer,
+                profiles = state.outgoing,
+                actionLabel = R.string.common_cancel,
+                onAction = viewModel::remove,
+                onOpenProfile = onOpenProfile
+            )
+
+            activityRow(unread = unread, onOpenActivity = onOpenActivity)
+
             if (state.feed.isNotEmpty()) {
-                item(key = "feed_header") { SectionHeader("Lately") }
+                item(key = "feed_header") { SectionTitle(stringResource(R.string.social_lately)) }
                 items(
                     count = state.feed.size,
                     key = { index -> "feed_" + index }
@@ -172,7 +191,7 @@ internal fun SocialScreen(
                     FeedItemCard(
                         item = state.feed[index],
                         onOpenProfile = onOpenProfile,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                 }
                 if (state.feedLoadingMore) {
@@ -180,34 +199,8 @@ internal fun SocialScreen(
                         count = FEED_SKELETON_ROWS,
                         key = { index -> "feed_skeleton_" + index }
                     ) {
-                        FeedItemSkeleton(modifier = Modifier.padding(horizontal = 20.dp))
+                        FeedItemSkeleton(modifier = Modifier.padding(horizontal = 16.dp))
                     }
-                }
-            }
-
-            if (state.incoming.isNotEmpty()) {
-                item(key = "incoming_header") { SectionHeader("Wants to be friends") }
-                items(state.incoming, key = { "incoming_" + it.username }) { profile ->
-                    FriendRow(
-                        profile = profile,
-                        subtitle = "@" + profile.username,
-                        actionLabel = "Accept",
-                        onAction = { viewModel.accept(profile.username) },
-                        onClick = { onOpenProfile(profile.username) }
-                    )
-                }
-            }
-
-            if (state.outgoing.isNotEmpty()) {
-                item(key = "outgoing_header") { SectionHeader("Waiting for an answer") }
-                items(state.outgoing, key = { "outgoing_" + it.username }) { profile ->
-                    FriendRow(
-                        profile = profile,
-                        subtitle = "@" + profile.username,
-                        actionLabel = "Cancel",
-                        onAction = { viewModel.remove(profile.username) },
-                        onClick = { onOpenProfile(profile.username) }
-                    )
                 }
             }
 
