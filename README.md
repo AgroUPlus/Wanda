@@ -30,10 +30,10 @@ Wanda unifies **Navidrome / Subsonic**, **local device files**, **YouTube Music*
 
 Designed for digital sovereignty and hardened operating systems like GrapheneOS: zero telemetry, zero analytics, Keystore-backed secrets, application-layer HTTPS enforcement, and battery-first background audio.
 
-Seamlessly pairs with [Agro](https://github.com/AgroUPlus/Agro) for E2EE listen-along sessions, Jam rooms, off-grid local mesh playback, and real-time handoff with [Wander](https://github.com/AgroUPlus/Wander) on desktop.
+Wanda is a complete player on its own. Connect it to [Agro](https://github.com/AgroUPlus/Agro), the optional server, for Jam rooms, friends, E2EE listen-along and real-time handoff with [Wander](https://github.com/AgroUPlus/Wander) on desktop.
 
 <p align="center">
-  <img width="1600" height="1000" alt="Wanda Interface" src="https://github.com/user-attachments/assets/9f226e44-bf8b-4800-a497-593527fc0ade" />
+  <img width="1600" height="1000" alt="Wanda showing a Navidrome daily mix, an artist page and search across sources" src="docs/promo-wanda-sources.jpg" />
 </p>
 
 ---
@@ -61,7 +61,16 @@ Wanda always prioritizes the highest <b>Quality</b> available with the lowest la
 <details>
 <summary><b>I keep seeing "Agro" mentioned everywhere. What is that? Do I need to host a server?</b></summary>
 <br>
-You don't need a server! <a href="https://github.com/AgroUPlus/Agro">Agro</a> is our custom peer-to-peer (P2P) ecosystem built right into the app. Instead of relying on a centralized cloud, Agro connects your devices directly to each other. It’s what powers our syncing and makes our social features possible entirely off-the-grid.
+No. Wanda plays everything on its own. <a href="https://github.com/AgroUPlus/Agro">Agro</a> is a separate, optional server that connects your devices and your friends: handoff with <a href="https://github.com/AgroUPlus/Wander">Wander</a> on desktop, Jam rooms, friends, shared playlists and stats across devices. You can host it yourself or sign in to Agro Cloud.
+<br><br>
+Separately, Wanda can reach nearby phones over Bluetooth and Wi-Fi Direct with no server and no internet at all. That off-grid mode is part of Wanda, not Agro.
+<br><br>
+<table>
+<tr><th></th><th>What it is</th></tr>
+<tr><td><b>Wanda</b></td><td>This app: the Android player.</td></tr>
+<tr><td><b>Wander</b></td><td>The terminal player for Linux.</td></tr>
+<tr><td><b>Agro</b></td><td>The optional server both apps can connect to.</td></tr>
+</table>
 </details>
 
 <details>
@@ -71,7 +80,7 @@ Yes! Through Agro, Wanda has a native <b>Friends System</b> and <b>Jam Rooms</b>
 </details>
 
 <details>
-<summary><b>Is it safe to share my listening activity with friends over P2P?</b></summary>
+<summary><b>Is it safe to share my listening activity with friends?</b></summary>
 <br>
 Incredibly safe. Agro provides <b>End-to-End Encryption (E2EE)</b> for absolutely everything. It also uses a <b>Privacy Relay</b> system to mask network metadata. This means your communication, your social graph, and your listening habits are completely untraceable—even to your ISP.
 </details>
@@ -118,8 +127,8 @@ Every backend implements a single interface (`IMusicSource`) declaring explicit 
 
 ## Key Capabilities
 
-* **Agro E2EE Listen-Along & Jam Rooms**: Host or join synchronized listening sessions with friends over local Wi-Fi or secure Agro relays. Encrypted end-to-end, with zero tracking of your listening history.
-* **Off-Grid Local Mesh**: Discover nearby listeners and trade audio fingerprints peer-to-peer over local network transports without Internet connectivity.
+* **E2EE Listen-Along & Jam Rooms** (with Agro): Host or join synchronized listening sessions with friends over local Wi-Fi or secure Agro relays. Encrypted end-to-end, with zero tracking of your listening history.
+* **Off-Grid Local Mesh** (no server needed): Discover nearby listeners and trade audio fingerprints peer-to-peer over local network transports without Internet connectivity.
 * **Synced Lyrics**: Native source lyrics prioritized first (Navidrome structured formats), followed by optional, user-consented lookups via LRCLIB. Time-synced lines highlight smoothly and allow tap-to-seek.
 * **Acoustic Fingerprinting**: Embedded Chromaprint/fpcalc engine tracks audio signatures for cross-backend deduplication and seamless library matching.
 * **Smart Mixes & Infinite Radio**: Endless Radio, Forgotten Favorites, and Deep Cuts computed locally on-device from your listening graph.
@@ -127,7 +136,12 @@ Every backend implements a single interface (`IMusicSource`) declaring explicit 
 * **Material 3 Expressive UI**: Fluid spring animations, edge-to-edge window insets, predictive back gestures, cover-art dynamic color tinting, and pure OLED black theming.
 
 <p align="center">
-  <img width="1600" height="1000" alt="Wanda Details" src="https://github.com/user-attachments/assets/9d40cd8e-4cb6-4e2a-a7ee-5ca7a8be6c39" />
+  <img width="1600" height="1000" alt="Wanda importing a playlist, recognising a song and showing synced lyrics" src="docs/promo-wanda-discovery.jpg" />
+</p>
+
+<p align="center">
+  <img width="1600" height="1000" alt="With Agro: Wander on a desktop beside two Wanda phones, sharing playback and stats" src="docs/promo-agro-devices.jpg" />
+  <br><sub>With Agro: playback and stats shared between Wanda and Wander.</sub>
 </p>
 
 ---
