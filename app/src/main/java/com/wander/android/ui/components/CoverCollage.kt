@@ -15,10 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 
 /**
  * Up to four covers in one square, so an offer shows *what* is on offer rather than an icon.
@@ -77,10 +75,9 @@ internal fun CoverCollage(
 
 @Composable
 private fun Tile(url: String, modifier: Modifier) {
-    AsyncImage(
+    LoadingImage(
         model = url,
         contentDescription = null,
-        contentScale = ContentScale.Crop,
         modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest)
     )
 }

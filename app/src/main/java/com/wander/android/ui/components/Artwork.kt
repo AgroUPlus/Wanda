@@ -12,9 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
-import coil3.compose.AsyncImage
 
 /**
  * Album art with a themed placeholder.
@@ -39,18 +37,25 @@ fun Artwork(
         contentAlignment = Alignment.Center
     ) {
         if (url.isNullOrBlank()) {
-            Icon(
-                imageVector = Icons.Rounded.MusicNote,
-                contentDescription = contentDescription,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            NoArtwork(contentDescription)
         } else {
-            AsyncImage(
+            LoadingImage(
                 model = rememberArtworkRequest(url = url, sizeDp = sizeDp, crossfade = crossfade),
                 contentDescription = contentDescription,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                // A cover that would not load is a cover this track has none of, as far as the
+                // screen can tell — the same note as one that never had a URL.
+                error = { NoArtwork(contentDescription) }
             )
         }
     }
+}
+
+@Composable
+private fun NoArtwork(contentDescription: String?) {
+    Icon(
+        imageVector = Icons.Rounded.MusicNote,
+        contentDescription = contentDescription,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }

@@ -22,12 +22,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import kotlin.math.absoluteValue
 
 /**
@@ -59,11 +57,12 @@ internal fun CuteAvatar(
         contentAlignment = Alignment.Center
     ) {
         if (!avatarUrl.isNullOrBlank()) {
-            AsyncImage(
+            LoadingImage(
                 model = avatarUrl,
                 contentDescription = cleanSeed,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.size(size)
+                modifier = Modifier.size(size),
+                // A photo that would not load falls back to the drawn face rather than a hole.
+                error = { if (cleanSeed.isEmpty()) PlaceholderAvatar(size = size) else ProceduralCanvasAvatar(seed = cleanSeed, size = size) }
             )
         } else if (cleanSeed.isEmpty()) {
             PlaceholderAvatar(size = size)
