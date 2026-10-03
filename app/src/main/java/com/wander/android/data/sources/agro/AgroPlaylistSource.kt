@@ -14,7 +14,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * The playlists shared with this account through Agro that it follows — and nothing else.
+ * The Agro playlists that are not a Wanda playlist's copy: those shared with this account that it
+ * follows, and its own made in Agro's dashboard.
  *
  * A source in its own right so that a followed playlist is handled like a YouTube Music or Deezer
  * one: listed in the library, opened by id, and copied into a Wanda playlist by the same Convert
@@ -38,17 +39,26 @@ class AgroPlaylistSource @Inject constructor(
     override suspend fun getStreamInfo(trackId: String): Result<StreamInfo> =
         Result.failure(UnsupportedOperationException("$displayName holds playlists, not tracks"))
 
-    override suspend fun getPlaylists(): Result<List<UnifiedPlaylist>> = Result.success(shared.followed())
+    /**
+     * What Room holds, after picking up any playlist made in Agro's dashboard since the last
+     * look. Offline, the copies already kept are still listed; only with none at all is the
+     * failure to reach Agro the answer.
+     */
+    override suspend fun getPlaylists(): Result<List<UnifiedPlaylist>> {
+        val discovered = shared.discoverOwn()
+        val kept = shared.followed()
+        return discovered.exceptionOrNull()?.takeIf { kept.isEmpty() }?.let { Result.failure(it) } ?: Result.success(kept)
+    }
 
     override suspend fun getPlaylistTracks(playlistId: String): Result<List<UnifiedTrack>> {
         val agroId = SharedPlaylistMirror.agroIdOf(playlistId) ?: return Result.success(emptyList())
         return Result.success(shared.tracks(agroId).map { it.track })
     }
 
-    /** Unfollowing is the only way a followed playlist goes; only its owner can delete it. */
+    /** Deletes this account's own playlist from Agro; unfollows anyone else's. */
     override suspend fun deletePlaylist(playlistId: String): Result<Unit> {
         val agroId = SharedPlaylistMirror.agroIdOf(playlistId)
             ?: return Result.failure(IllegalArgumentException("Not a shared playlist"))
-        return shared.unfollow(agroId)
+        return shared.remove(agroId)
     }
 }

@@ -71,6 +71,18 @@ class AgroSharedPlaylistApi @Inject constructor(private val graphQl: AgroGraphQl
             buildJsonObject { put("ids", buildJsonArray { ids.forEach { add(JsonPrimitive(it)) } }) }
         ).mapCatching { AgroSharedPlaylistParsing.revisions(it["playlistRevisions"] as? JsonArray) }
 
+    /**
+     * The ids of the playlists this account owns on the server, however they were made — from
+     * Wanda, or from Agro's own dashboard, which Wanda would otherwise never hear about.
+     */
+    suspend fun ownedIds(): Result<List<String>> =
+        graphQl.execute("query { playlists { id userId } }", buildJsonObject {}).mapCatching { data ->
+            val listed = data["playlists"] as? JsonArray ?: throw IOException("Agro did not list its playlists")
+            listed.mapNotNull { it as? JsonObject }
+                .filter { it["userId"]?.jsonPrimitive?.contentOrNull.equals(me, ignoreCase = true) }
+                .mapNotNull { it["id"]?.jsonPrimitive?.contentOrNull }
+        }
+
     private fun idVariables(id: String) = buildJsonObject { put("id", id) }
 
     internal companion object {

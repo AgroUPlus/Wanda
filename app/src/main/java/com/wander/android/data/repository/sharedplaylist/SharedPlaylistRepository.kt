@@ -7,6 +7,7 @@ import com.wander.android.core.database.entity.SharedPlaylistItemEntity
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.sources.agro.AgroPlaylistApi
 import com.wander.android.data.sources.agro.AgroSharedPlaylistApi
 import com.wander.android.data.sources.agro.EditAccess
 import com.wander.android.data.sources.agro.PlaylistRole
@@ -47,6 +48,7 @@ data class SharedTrack(val item: SharedPlaylistItemEntity, val track: UnifiedTra
 @Singleton
 class SharedPlaylistRepository @Inject constructor(
     private val api: AgroSharedPlaylistApi,
+    private val agroPlaylists: AgroPlaylistApi,
     private val dao: SharedPlaylistDao,
     private val trackDao: TrackDao,
     private val mirror: SharedPlaylistMirror
@@ -60,6 +62,30 @@ class SharedPlaylistRepository @Inject constructor(
         return api.follow(agroId).map { server ->
             mirror.write(server, api.me, localPlaylistId = null, state = SharedSyncState.SYNCED)
             SharedPlaylistMirror.routeId(agroId)
+        }
+    }
+
+    /**
+     * Keeps a copy of every playlist this account owns on Agro that this device has never seen —
+     * one made in Agro's dashboard, say — so it is listed under Agro like a followed one. A
+     * playlist that fails to load is left for the next refresh; the list itself failing is the
+     * error, so being offline is not mistaken for having no playlists.
+     */
+    suspend fun discoverOwn(): Result<Unit> = api.ownedIds().map { ids ->
+        ids.filter { dao.get(it) == null }.forEach { id ->
+            api.fetch(id).onSuccess { mirror.write(it, api.me, localPlaylistId = null, state = SharedSyncState.SYNCED) }
+        }
+    }
+
+    /**
+     * Takes [agroId] out of this account's library: deleted from the server when this account
+     * owns it, since unfollowing your own playlist would leave it there; unfollowed otherwise.
+     */
+    suspend fun remove(agroId: String): Result<Unit> {
+        if (dao.get(agroId)?.myRole != PlaylistRole.OWNER.name) return unfollow(agroId)
+        return agroPlaylists.delete(agroId).onSuccess {
+            dao.forget(agroId)
+            trackDao.deleteUnreferencedUnresolved()
         }
     }
 
@@ -132,13 +158,15 @@ class SharedPlaylistRepository @Inject constructor(
     /** Whether [playlistId] is a Wanda playlist, the only kind kept in step with its Agro copy. */
     private fun isTiedToCopy(playlistId: String): Boolean = playlistId.startsWith(SourceType.LOCAL.idPrefix)
 
-    /** The followed playlists, for the library and for the source that serves them. */
-    suspend fun followed(): List<UnifiedPlaylist> =
-        dao.followed().filter { it.myRole != PlaylistRole.OWNER.name }.map { it.toPlaylist() }
+    /**
+     * The Agro playlists that are not a Wanda playlist's copy — followed ones, and this account's
+     * own made outside Wanda — for the library and for the source that serves them.
+     */
+    suspend fun followed(): List<UnifiedPlaylist> = dao.followed().map { it.toPlaylist() }
 
     /** Followed playlists this account may add to right now: the add-to-playlist sheet's extra targets. */
     suspend fun writableFollowed(): List<UnifiedPlaylist> =
-        dao.followed().filter { row -> row.toState().effectiveRole.canAdd && row.myRole != PlaylistRole.OWNER.name }
+        dao.followed().filter { row -> row.toState().effectiveRole.canAdd }
             .map { it.toPlaylist() }
 
     suspend fun followedPlaylist(agroId: String): UnifiedPlaylist? = dao.get(agroId)?.toPlaylist()
