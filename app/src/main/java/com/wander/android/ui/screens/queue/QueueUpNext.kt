@@ -56,14 +56,21 @@ internal fun QueueUpNext(
     val upcoming = entries.filter { it.role == QueueItemRole.UP_NEXT }
     var ordered by remember { mutableStateOf(upcoming) }
 
+    // `ordered` trails `entries`, so a track that has just started playing or finished is still
+    // in it while the card or the played section already shows it: two rows with one key, which
+    // the list refuses. Only the tracks that are still upcoming are kept.
+    val upcomingKeys = remember(upcoming) { upcoming.mapTo(HashSet()) { it.key } }
+    fun stillUpcoming() = ordered.filter { it.key in upcomingKeys }
+
     val reorderState = rememberReorderableLazyListState(listState) { from, to ->
         // Only upcoming tracks move, and only among themselves: the card and the section titles
         // are fixed points, not slots a track can be dropped into.
-        val fromIndex = ordered.indexOfFirst { it.key == from.key }
-        val toIndex = ordered.indexOfFirst { it.key == to.key }
+        val live = stillUpcoming()
+        val fromIndex = live.indexOfFirst { it.key == from.key }
+        val toIndex = live.indexOfFirst { it.key == to.key }
         if (fromIndex < 0 || toIndex < 0) return@rememberReorderableLazyListState
-        val first = ordered.first().queueIndex
-        ordered = ordered.toMutableList().apply { add(toIndex, removeAt(fromIndex)) }
+        val first = live.first().queueIndex
+        ordered = live.toMutableList().apply { add(toIndex, removeAt(fromIndex)) }
         onMove(first + fromIndex, first + toIndex)
     }
 
@@ -71,6 +78,7 @@ internal fun QueueUpNext(
     // Mid-drag echoes are skipped: each one reflects only the moves sent before it, and adopting
     // it would pull the row back a slot until the next one lands.
     LaunchedEffect(entries, dragging) { if (!dragging) ordered = upcoming }
+    val shown = if (dragging) stillUpcoming() else upcoming
 
     LazyColumn(
         state = listState,
@@ -88,14 +96,14 @@ internal fun QueueUpNext(
             }
         }
 
-        if (ordered.isNotEmpty()) {
+        if (shown.isNotEmpty()) {
             item(key = "up-next-title", contentType = "section-title") {
-                QueueSectionTitle(R.string.queue_section_up_next, ordered.size, Modifier.animateItem())
+                QueueSectionTitle(R.string.queue_section_up_next, shown.size, Modifier.animateItem())
             }
         }
-        itemsIndexed(ordered, key = { _, entry -> entry.key }, contentType = { _, _ -> "queue-track" }) { index, entry ->
+        itemsIndexed(shown, key = { _, entry -> entry.key }, contentType = { _, _ -> "queue-track" }) { index, entry ->
             ReorderableItem(reorderState, key = entry.key, enabled = canReorder) { isDragging ->
-                val shape = groupedItemShape(index, ordered.size)
+                val shape = groupedItemShape(index, shown.size)
                 QueueSwipeToRemove(
                     enabled = !isDragging,
                     shape = shape,
