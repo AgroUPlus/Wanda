@@ -9,6 +9,7 @@ import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.work.PlaylistImportScheduler
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.RecordingArtwork
 import com.wander.android.data.sources.agro.AgroSharedItem
 import com.wander.android.data.sources.agro.AgroSharedPlaylist
 import java.util.Locale
@@ -41,7 +42,8 @@ class SharedPlaylistMirror @Inject constructor(
     private val dao: SharedPlaylistDao,
     private val trackDao: TrackDao,
     private val playlistDao: PlaylistDao,
-    private val importScheduler: PlaylistImportScheduler
+    private val importScheduler: PlaylistImportScheduler,
+    private val artwork: RecordingArtwork
 ) {
     /**
      * Makes [server] the copy. [confirmed] are adds the server has just accepted from this device,
@@ -87,6 +89,7 @@ class SharedPlaylistMirror @Inject constructor(
 
         // Placeholders first, so no reader ever sees an item pointing at a track with no row.
         if (placeholders.isNotEmpty()) trackDao.upsertTracks(placeholders)
+        lendCovers(mapped.map { it.trackId } - placeholders.map { it.id }.toSet())
         dao.replaceItems(server.id, shown)
         dao.upsert(
             SharedPlaylistEntity(
@@ -116,16 +119,38 @@ class SharedPlaylistMirror @Inject constructor(
         playlistDao.updatePlaylist(local.copy(name = title, trackIds = trackIds, updatedAt = System.currentTimeMillis()))
     }
 
-    private fun placeholder(item: AgroSharedItem): TrackEntity = TrackEntity.fromUnifiedTrack(
-        UnifiedTrack(
-            id = SourceType.UNRESOLVED.idPrefix + UUID.randomUUID(),
-            source = SourceType.UNRESOLVED,
-            title = item.title,
-            artist = item.artist,
-            album = item.album?.takeIf { it.isNotBlank() },
-            durationMs = item.durationMs
+    /**
+     * The server sends no artwork, so a placeholder borrows the cover of the same song — or the
+     * same album — already in the library. `PlaylistImportWorker` swaps in the real track later.
+     */
+    private suspend fun placeholder(item: AgroSharedItem): TrackEntity {
+        val album = item.album?.takeIf { it.isNotBlank() }
+        return TrackEntity.fromUnifiedTrack(
+            UnifiedTrack(
+                id = SourceType.UNRESOLVED.idPrefix + UUID.randomUUID(),
+                source = SourceType.UNRESOLVED,
+                title = item.title,
+                artist = item.artist,
+                album = album,
+                durationMs = item.durationMs,
+                artworkUrl = artwork.coverFor(item.title, item.artist, album)
+            )
         )
-    )
+    }
+
+    /**
+     * Placeholders made before covers were borrowed, or before the library held the song, get one
+     * now. Only coverless placeholders are looked at, so a settled playlist costs one read.
+     */
+    private suspend fun lendCovers(trackIds: List<String>) {
+        val unresolved = trackIds.filter { it.startsWith(SourceType.UNRESOLVED.idPrefix) }
+        if (unresolved.isEmpty()) return
+        trackDao.getTracksByIds(unresolved)
+            .filter { it.artworkUrl.isNullOrBlank() }
+            .forEach { track ->
+                artwork.coverFor(track.title, track.artist, track.album)?.let { trackDao.setArtwork(track.id, it) }
+            }
+    }
 
     private fun MutableList<SharedPlaylistOp.Add>.takeMatching(item: AgroSharedItem, me: String): String? {
         if (!item.addedBy.equals(me, ignoreCase = true)) return null

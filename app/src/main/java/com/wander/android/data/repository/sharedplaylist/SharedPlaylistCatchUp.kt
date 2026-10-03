@@ -35,8 +35,10 @@ class SharedPlaylistCatchUp @Inject constructor(
         val server = api.fetch(entity.agroId).getOrElse { return behind(entity, it) }
         val local = entity.localPlaylistId?.let { playlistDao.getPlaylistById(it) }
         if (local == null) {
-            // The Wanda playlist was deleted; the server's copy is all there is, so keep it as it is.
-            mirror.write(server, api.me, null, SharedSyncState.SYNCED)
+            // No Wanda playlist to catch up from: it was deleted, or this was a backend's playlist
+            // shared as a snapshot. Keep the server's copy as it is, still linked, so it can be
+            // re-sent or unshared from where it was shared.
+            mirror.write(server, api.me, entity.localPlaylistId, SharedSyncState.SYNCED)
             return SyncOutcome.Synced(dropped = 0)
         }
 

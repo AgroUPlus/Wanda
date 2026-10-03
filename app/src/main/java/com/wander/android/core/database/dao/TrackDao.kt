@@ -106,6 +106,9 @@ interface TrackDao : TrackLibraryQueries, TrackSyncQueries {
     @Query("UPDATE tracks SET title = :title, artist = :artist, album = :album WHERE id = :trackId")
     suspend fun setDisplayMetadata(trackId: String, title: String, artist: String, album: String?)
 
+    @Query("UPDATE tracks SET artworkUrl = :artworkUrl WHERE id = :trackId")
+    suspend fun setArtwork(trackId: String, artworkUrl: String)
+
     @Query(
         "UPDATE tracks SET isDownloaded = :isDownloaded, localFilePath = :localPath, " +
             "downloadedAt = :downloadedAt WHERE id = :trackId"

@@ -172,10 +172,10 @@
     <string name="importer_edit_title">Éditer le titre</string>
     <string name="importer_import_playlist">Importer une playlist</string>
     <string name="link_playlist_saved">Saved “%1$s”. Matching its tracks to your sources…</string>
-    <string name="playlist_share_visibility_title">Who can open this playlist?</string>
-    <string name="playlist_visibility_friends">Friends only</string>
+    <string name="playlist_share_visibility_title">Who can open it</string>
+    <string name="playlist_visibility_friends">Friends</string>
     <string name="playlist_visibility_friends_desc">Only your Agro friends can open the link.</string>
-    <string name="playlist_visibility_public">Anyone on your server</string>
+    <string name="playlist_visibility_public">Everyone</string>
     <string name="playlist_visibility_public_desc">Every signed-in account on your Agro server can open it and find it in its playlist list.</string>
     <string name="playlist_visibility_private">Only me</string>
     <string name="playlist_visibility_private_desc">Only you can open it, for example on your other devices.</string>

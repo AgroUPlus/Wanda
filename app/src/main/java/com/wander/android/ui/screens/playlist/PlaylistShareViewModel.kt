@@ -1,6 +1,7 @@
 package com.wander.android.ui.screens.playlist
 
 import android.net.Uri
+import androidx.annotation.StringRes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -63,6 +64,11 @@ class PlaylistShareViewModel @Inject constructor(
     val publication: StateFlow<PlaylistPublication?> = publications.publication(playlistId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    private val _working = MutableStateFlow<Int?>(null)
+
+    /** What is being done on the server right now, as a label for the loading indicator; null when idle. */
+    val working: StateFlow<Int?> = _working.asStateFlow()
+
     private val _fileShares = MutableSharedFlow<Uri>(extraBufferCapacity = 1)
 
     /** An exported file ready for the share sheet, which needs an Activity to open. */
@@ -118,7 +124,7 @@ class PlaylistShareViewModel @Inject constructor(
     fun shareAsFile(playlist: UnifiedPlaylist, tracks: List<UnifiedTrack>) {
         dismiss()
         viewModelScope.launch {
-            exporter.shareableFile(playlist.name, tracks).fold(
+            working(R.string.playlist_working_file) { exporter.shareableFile(playlist.name, tracks) }.fold(
                 onSuccess = { _fileShares.tryEmit(it) },
                 onFailure = { publications.report(R.string.playlist_file_failed, it.message.orEmpty()) }
             )
@@ -138,27 +144,51 @@ class PlaylistShareViewModel @Inject constructor(
     /**
      * Publishes the playlist with [visibility], or, when it already has an Agro copy, changes who
      * can open that copy instead of making a second one.
+     *
+     * Only a Wanda playlist is published as it is. One that belongs to a backend is converted
+     * first and the copy published, because only a Wanda playlist is kept in step with Agro: the
+     * backend's own copy changes behind Wanda's back, and its edits belong on that backend.
      */
     fun pickVisibility(visibility: PlaylistVisibility, playlist: UnifiedPlaylist, tracks: List<UnifiedTrack>) {
         dismiss()
         viewModelScope.launch {
             publication.value?.let { current ->
-                publications.changeVisibility(playlistId, visibility)
+                working(R.string.playlist_working_updating) { publications.changeVisibility(playlistId, visibility) }
                 // The server counted that as a change; read the new revision back before the next edit.
                 runner.syncSoon(current.agroId)
                 return@launch
             }
-            shareRepository.shareLocalPlaylist(playlist, tracks, visibility)
-                ?.let { agroId -> publications.record(playlistId, agroId, visibility, tracks) }
+            working(R.string.playlist_working_sharing) {
+                if (playlist.source != SourceType.LOCAL) {
+                    convertAndPublish(playlist, tracks, visibility)
+                } else {
+                    shareRepository.shareLocalPlaylist(playlist, tracks, visibility)
+                        ?.let { agroId -> publications.record(playlistId, agroId, visibility, tracks) }
+                }
+            }
         }
     }
+
+    /** Makes a Wanda copy of a backend's playlist, publishes that, and opens it. */
+    private suspend fun convertAndPublish(playlist: UnifiedPlaylist, tracks: List<UnifiedTrack>, visibility: PlaylistVisibility) {
+        val keep = tracks.filter { it.source != SourceType.UNRESOLVED }
+        val copyId = playlistWrites.createPlaylist(SourceType.LOCAL, playlist.name, keep.map { it.id }, keep)
+            .getOrElse { return }
+        val copy = UnifiedPlaylist(id = copyId, source = SourceType.LOCAL, name = playlist.name, songCount = keep.size)
+        shareRepository.shareLocalPlaylist(copy, keep, visibility)
+            ?.let { agroId -> publications.record(copyId, agroId, visibility, keep) }
+        _converted.tryEmit(copyId)
+    }
+
+    /** Whether "Through Agro" shares this playlist as it is, or a Wanda copy of it. */
+    fun publishesACopy(playlist: UnifiedPlaylist) = playlist.source != SourceType.LOCAL
 
     /** Lets friends edit the shared copy, or anyone who can open it add to it, or no one. */
     fun pickEditAccess(access: EditAccess) {
         dismiss()
         val current = publication.value ?: return
         viewModelScope.launch {
-            publications.changeEditAccess(playlistId, access)
+            working(R.string.playlist_working_updating) { publications.changeEditAccess(playlistId, access) }
             runner.syncSoon(current.agroId)
         }
     }
@@ -173,7 +203,7 @@ class PlaylistShareViewModel @Inject constructor(
     /** Deletes the Agro copy; the screen has already asked. */
     fun unshare() {
         dismiss()
-        viewModelScope.launch { publications.unshare(playlistId) }
+        viewModelScope.launch { working(R.string.playlist_working_unsharing) { publications.unshare(playlistId) } }
     }
 
     /** Copies a backend's playlist into a Wanda playlist, which can then hold any source's tracks. */
@@ -183,6 +213,16 @@ class PlaylistShareViewModel @Inject constructor(
         viewModelScope.launch {
             playlistWrites.createPlaylist(SourceType.LOCAL, playlist.name, keep.map { it.id }, keep)
                 .onSuccess { _converted.tryEmit(it) }
+        }
+    }
+
+    /** Runs [block] with [label] on the loading indicator, cleared however it ends. */
+    private suspend fun <T> working(@StringRes label: Int, block: suspend () -> T): T {
+        _working.value = label
+        try {
+            return block()
+        } finally {
+            _working.value = null
         }
     }
 }

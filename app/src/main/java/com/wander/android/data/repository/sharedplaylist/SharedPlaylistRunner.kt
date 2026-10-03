@@ -2,10 +2,12 @@ package com.wander.android.data.repository.sharedplaylist
 
 import com.wander.android.R
 import com.wander.android.core.database.dao.SharedPlaylistDao
+import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.SharedPlaylistEntity
 import com.wander.android.core.sync.SharedPlaylistSyncScheduler
 import com.wander.android.data.repository.PlaylistPublicationRepository
 import com.wander.android.data.sources.agro.AgroSharedPlaylistApi
+import com.wander.android.data.sources.agro.PlaylistRole
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,6 +27,7 @@ import javax.inject.Singleton
 class SharedPlaylistRunner @Inject constructor(
     private val api: AgroSharedPlaylistApi,
     private val dao: SharedPlaylistDao,
+    private val trackDao: TrackDao,
     private val sync: SharedPlaylistSync,
     private val messages: PlaylistPublicationRepository,
     private val scheduler: SharedPlaylistSyncScheduler
@@ -92,6 +95,7 @@ class SharedPlaylistRunner @Inject constructor(
     }
 
     private suspend fun markRevoked(copy: SharedPlaylistEntity) {
+        if (isOwn(copy)) return letGo(copy)
         if (copy.syncState == SharedSyncState.REVOKED.name) return
         dao.setState(copy.agroId, SharedSyncState.REVOKED.name)
         messages.report(R.string.shared_playlist_revoked, copy.title)
@@ -104,11 +108,34 @@ class SharedPlaylistRunner @Inject constructor(
                 messages.report(R.string.shared_playlist_edits_dropped, outcome.dropped, title)
             }
             // Said once, when it happens, not on every later look at a copy already marked so.
-            SyncOutcome.Revoked -> if (!wasRevoked) messages.report(R.string.shared_playlist_revoked, title)
+            SyncOutcome.Revoked -> {
+                val copy = dao.get(agroId)
+                when {
+                    copy != null && isOwn(copy) -> letGo(copy)
+                    !wasRevoked -> messages.report(R.string.shared_playlist_revoked, title)
+                }
+            }
             // Being offline is not news; the indicator on the playlist already says it is behind.
             is SyncOutcome.Failed -> Unit
         }
     }
+
+    /**
+     * This account published [copy], and its owner can always open a playlist that exists — so the
+     * server not letting it means it was deleted, from Agro's own dashboard or another device. The
+     * Wanda playlist is untouched; what goes is the record of a copy that no longer exists, so the
+     * playlist reads as not shared and sharing it again makes a new copy rather than a dead link.
+     */
+    private suspend fun letGo(copy: SharedPlaylistEntity) {
+        dao.forget(copy.agroId)
+        trackDao.deleteUnreferencedUnresolved()
+        messages.report(R.string.playlist_unshared_from_agro, copy.title)
+    }
+
+    /** Owned by the account signed in now: a copy made under another account is not its to judge. */
+    private fun isOwn(copy: SharedPlaylistEntity): Boolean =
+        copy.myRole == PlaylistRole.OWNER.name &&
+            (copy.ownerId.isBlank() || copy.ownerId.equals(api.me, ignoreCase = true))
 
     private companion object {
         const val MAX_PASSES = 3

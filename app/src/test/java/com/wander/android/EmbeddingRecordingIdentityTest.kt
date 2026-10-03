@@ -139,6 +139,7 @@ class EmbeddingRecordingIdentityTest {
         override suspend fun markAsLibrary(trackIds: List<String>) {}
         override suspend fun setLiked(trackId: String, isLiked: Boolean) {}
         override suspend fun setDisplayMetadata(trackId: String, title: String, artist: String, album: String?) {}
+        override suspend fun setArtwork(trackId: String, artworkUrl: String) {}
         override suspend fun getFingerprintableTracks(): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override fun getFingerprintableTracksFlow(): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
         override suspend fun findLocalOrDownloadedCandidates(title: String, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()

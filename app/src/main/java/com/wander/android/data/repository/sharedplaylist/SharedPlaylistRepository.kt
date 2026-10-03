@@ -71,10 +71,17 @@ class SharedPlaylistRepository @Inject constructor(
         return told
     }
 
-    /** The shared state behind the playlist [playlistId] opens, whether followed or published. */
+    /**
+     * The shared state behind the playlist [playlistId] opens, whether followed or published.
+     *
+     * Only a Wanda playlist is tied to its copy. A backend's playlist published before it had to
+     * be converted first is a snapshot on Agro: its screen shows the backend, and its edits go
+     * there, so it has no shared state here — see [isTiedToCopy].
+     */
     fun observe(playlistId: String): Flow<SharedPlaylistState?> {
-        val rows = SharedPlaylistMirror.agroIdOf(playlistId)?.let(dao::observe) ?: dao.observeForLocal(playlistId)
-        return rows.map { it?.toState() }
+        SharedPlaylistMirror.agroIdOf(playlistId)?.let { agroId -> return dao.observe(agroId).map { it?.toState() } }
+        if (!isTiedToCopy(playlistId)) return flowOf(null)
+        return dao.observeForLocal(playlistId).map { it?.toState() }
     }
 
     /** The items behind [playlistId] in order, empty while it is not shared. */
@@ -85,7 +92,8 @@ class SharedPlaylistRepository @Inject constructor(
         }
 
     suspend fun agroIdFor(playlistId: String): String? =
-        SharedPlaylistMirror.agroIdOf(playlistId) ?: dao.forLocal(playlistId)?.agroId
+        SharedPlaylistMirror.agroIdOf(playlistId)
+            ?: dao.forLocal(playlistId)?.takeIf { isTiedToCopy(playlistId) }?.agroId
 
     /**
      * Where an edit to [playlistId] goes, when that is the shared copy. A published playlist whose
@@ -94,6 +102,7 @@ class SharedPlaylistRepository @Inject constructor(
      */
     suspend fun editTarget(playlistId: String): String? {
         SharedPlaylistMirror.agroIdOf(playlistId)?.let { return it }
+        if (!isTiedToCopy(playlistId)) return null
         val copy = dao.forLocal(playlistId) ?: return null
         return copy.agroId.takeIf { copy.revision != SharedPlaylistEntity.UNSYNCED }
     }
@@ -119,6 +128,9 @@ class SharedPlaylistRepository @Inject constructor(
             )
         }
     }
+
+    /** Whether [playlistId] is a Wanda playlist, the only kind kept in step with its Agro copy. */
+    private fun isTiedToCopy(playlistId: String): Boolean = playlistId.startsWith(SourceType.LOCAL.idPrefix)
 
     /** The followed playlists, for the library and for the source that serves them. */
     suspend fun followed(): List<UnifiedPlaylist> =

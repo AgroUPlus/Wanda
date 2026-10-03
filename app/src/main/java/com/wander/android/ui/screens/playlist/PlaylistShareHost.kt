@@ -47,6 +47,7 @@ internal fun PlaylistShareHost(
 ): PlaylistShareActions {
     val sheet by viewModel.sheet.collectAsStateWithLifecycle()
     val publication by viewModel.publication.collectAsStateWithLifecycle()
+    val working by viewModel.working.collectAsStateWithLifecycle()
     var confirmingUnshare by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
@@ -66,6 +67,7 @@ internal fun PlaylistShareHost(
     when (sheet) {
         PlaylistSheet.SHARE -> PlaylistShareSheet(
             originalSource = playlist.source.displayName.takeIf { viewModel.canShareOriginal(playlist) },
+            publishesACopy = viewModel.publishesACopy(playlist),
             publication = publication,
             choices = PlaylistShareChoices(
                 onOriginal = { viewModel.shareOriginal(playlist) },
@@ -76,7 +78,10 @@ internal fun PlaylistShareHost(
                     .takeIf { viewModel.canPublishToAgro && publication == null && playlist.source != SourceType.AGRO },
                 onResend = { viewModel.resendAgroLink(playlist, tracks) },
                 onChangeVisibility = { viewModel.open(PlaylistSheet.VISIBILITY) },
-                onChangeCollaboration = { viewModel.open(PlaylistSheet.COLLABORATION) },
+                // Only a Wanda playlist keeps up with its Agro copy, so only its owner would ever see
+                // what collaborators did; a backend's playlist shared before that rule stays read-only.
+                onChangeCollaboration = { viewModel.open(PlaylistSheet.COLLABORATION) }
+                    .takeIf { playlist.source == SourceType.LOCAL },
                 onUnshare = {
                     viewModel.dismiss()
                     confirmingUnshare = true
@@ -104,6 +109,8 @@ internal fun PlaylistShareHost(
         )
         null -> Unit
     }
+
+    working?.let { PlaylistWorkingDialog(label = it) }
 
     if (confirmingUnshare) {
         ConfirmDialog(
