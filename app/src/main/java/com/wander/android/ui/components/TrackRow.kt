@@ -13,12 +13,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Equalizer
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -85,15 +79,12 @@ fun TrackRow(
     // separately made the artwork and the text disagree about how unavailable the track was.
     val rowAlpha = if (enabled) 1f else DisabledAlpha
 
-    // The press answers on the artwork, not on the whole row.
-    //
-    // A row is mostly text and mostly empty space, and scaling all of it reads as the list itself
-    // flinching. Every card in the app already springs its picture under a finger via
-    // [rememberPressScale]; this is the same answer in the row-shaped places — the artist page's
-    // song lists among them, which had no press feedback at all.
+    // The whole row answers a press, the way a playlist row does: it shrinks under the finger,
+    // text and all, while its cover relaxes into a circle. Every list in the app is built from
+    // this row or one shaped like it, so they all answer a press the same way.
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    val artworkScale by rememberPressScale(interactionSource, label = "trackRowPress")
+    val pressScale by rememberPressScale(interactionSource, label = "trackRowPress")
     val artworkShape = rememberShelfArtworkShape(isPressed)
     val rowBackground by animateColorAsState(
         targetValue = if (isPlaying && showBackground) {
@@ -109,6 +100,7 @@ fun TrackRow(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
+            .scale(pressScale)
             .padding(horizontal = 8.dp, vertical = 2.dp)
             .background(rowBackground, MaterialTheme.shapes.medium)
             // Long press stays live while the tap does not: the actions sheet is still useful on
@@ -128,7 +120,6 @@ fun TrackRow(
             shape = artworkShape,
             modifier = Modifier
                 .size(52.dp)
-                .scale(artworkScale)
                 .graphicsLayer { alpha = rowAlpha }
         )
 
