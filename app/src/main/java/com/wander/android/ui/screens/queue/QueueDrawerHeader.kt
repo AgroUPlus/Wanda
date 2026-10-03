@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 
@@ -31,8 +30,7 @@ internal fun QueueDrawerHeader(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(R.string.action_queue),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.headlineSmallEmphasized
             )
             if (queueSize > 0) {
                 Text(

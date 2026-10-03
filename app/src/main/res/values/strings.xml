@@ -727,6 +727,12 @@
     <string name="queue_members_tap_open_jam">%1$s members · Tap to open Jam</string>
     <string name="queue_removed">Removed %1$s</string>
     <string name="queue_reorder">Reorder %1$s</string>
+    <string name="queue_now_playing">Now playing</string>
+    <string name="queue_section_up_next">Up next</string>
+    <string name="queue_section_played">Played</string>
+    <!-- Spoken by screen readers on a section that folds open and closed. -->
+    <string name="common_expanded">Expanded</string>
+    <string name="common_collapsed">Collapsed</string>
     <string name="queue_tracks">%1$s of %2$s tracks</string>
     <string name="queue_voted">Voted (%1$s)</string>
     <string name="search_nothing_found_connected_sources">Nothing found for \\"%1$s\\" in your connected sources.</string>
