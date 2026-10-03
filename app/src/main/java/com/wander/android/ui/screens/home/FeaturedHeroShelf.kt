@@ -1,13 +1,16 @@
 package com.wander.android.ui.screens.home
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,17 +67,22 @@ internal fun FeaturedHeroShelf(
             onLongPress = { onLongPress(hero) }
         )
 
+        // The strip spans the hero's full height, its rows sharing it equally — rows only as tall
+        // as their covers bunched at the top and left the bottom of the shelf empty.
         Column(
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.weight(1f)
+            verticalArrangement = Arrangement.spacedBy(StripGap),
+            modifier = Modifier.weight(1f).fillMaxHeight()
         ) {
             strip.forEachIndexed { stripIndex, track ->
                 StripRow(
                     track = track,
                     onPlay = { onPlay(stripIndex + 1) },
-                    onLongPress = { onLongPress(track) }
+                    onLongPress = { onLongPress(track) },
+                    modifier = Modifier.weight(1f)
                 )
             }
+            // A short strip keeps its rows the same size rather than stretching them to fill.
+            repeat(StripSize - strip.size) { Spacer(Modifier.weight(1f)) }
         }
     }
 }
@@ -129,31 +138,49 @@ private fun HeroCard(
     }
 }
 
-/** A single line of the strip beside the hero: small artwork, title and artist, nothing else. */
+/**
+ * A single line of the strip beside the hero: small artwork, title and artist, on a tonal tile
+ * that fills its share of the strip, so the whole tile is the target. Held, it answers like every
+ * row in the app — it shrinks, and its cover relaxes into a circle.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun StripRow(
     track: UnifiedTrack,
     onPlay: () -> Unit,
     onLongPress: () -> Unit,
+    modifier: Modifier = Modifier,
     enabled: Boolean = track.isPlayableNow()
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by rememberPressScale(interactionSource, label = "stripRowPress")
+    val artworkShape = rememberShelfArtworkShape(isPressed)
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
+        modifier = modifier
+            .fillMaxWidth()
+            .scale(scale)
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
             .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null,
                 onClick = { if (enabled) onPlay() },
                 onLongClick = onLongPress
             )
+            .padding(horizontal = 6.dp)
             .graphicsLayer { alpha = if (enabled) 1f else DisabledAlpha }
     ) {
         Artwork(
             url = track.artworkUrl,
             contentDescription = null,
             sizeDp = StripArtworkSize,
-            shape = MaterialTheme.shapes.small,
+            shape = artworkShape,
             modifier = Modifier.size(StripArtworkSize)
         )
-        Column(modifier = Modifier.padding(start = 10.dp)) {
+        Column(modifier = Modifier.padding(start = 10.dp, end = 6.dp)) {
             Text(
                 text = track.title,
                 style = MaterialTheme.typography.bodyMedium,
@@ -181,3 +208,4 @@ private const val DisabledAlpha = 0.38f
 private val HeroWidth = 168.dp
 private val HeroHeight = 236.dp
 private val StripArtworkSize = 44.dp
+private val StripGap = 6.dp
