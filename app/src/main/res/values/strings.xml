@@ -292,7 +292,7 @@
     <string name="shared_playlist_wait_for_sync">That track is still being saved. Try again in a moment.</string>
     <string name="shared_playlist_changed_meanwhile">The playlist changed in the meantime. Try again.</string>
     <string name="shared_playlist_edits_dropped">Someone changed “%2$s” first, so %1$d of your changes no longer applied.</string>
-    <string name="shared_playlist_revoked">“%1$s” is no longer shared with you. You can still keep it as your own playlist.</string>
+    <string name="shared_playlist_revoked">“%1$s” is no longer shared with you</string>
     <string name="playlist_share_link">As a link</string>
     <string name="playlist_share_link_desc">Lists the tracks. Anyone with Wanda can open it.</string>
     <string name="playlist_share_file">As a file</string>

@@ -44,7 +44,6 @@ class SharedPlaylistRunner @Inject constructor(
      * in flight are picked up by the next, a few at most.
      */
     suspend fun syncNow(agroId: String): SyncOutcome {
-        val wasRevoked = dao.get(agroId)?.syncState == SharedSyncState.REVOKED.name
         var outcome: SyncOutcome
         var passes = 0
         do {
@@ -53,7 +52,7 @@ class SharedPlaylistRunner @Inject constructor(
         } while (outcome is SyncOutcome.Synced && dao.ops(agroId).isNotEmpty() && passes < MAX_PASSES)
         // Edits made offline are not lost with the process: WorkManager sends them once it can.
         if (outcome is SyncOutcome.Failed && dao.ops(agroId).isNotEmpty()) scheduler.syncWhenOnline()
-        report(agroId, outcome, wasRevoked)
+        report(agroId, outcome)
         return outcome
     }
 
@@ -100,29 +99,19 @@ class SharedPlaylistRunner @Inject constructor(
         return true
     }
 
-    private suspend fun markRevoked(copy: SharedPlaylistEntity) {
-        if (copy.isBlend) return ended(copy)
-        if (isOwn(copy)) return letGo(copy)
-        if (copy.syncState == SharedSyncState.REVOKED.name) return
-        dao.setState(copy.agroId, SharedSyncState.REVOKED.name)
-        messages.report(R.string.shared_playlist_revoked, copy.title)
+    private suspend fun markRevoked(copy: SharedPlaylistEntity) = when {
+        copy.isBlend -> ended(copy)
+        isOwn(copy) -> letGo(copy)
+        else -> lost(copy)
     }
 
-    private suspend fun report(agroId: String, outcome: SyncOutcome, wasRevoked: Boolean) {
+    private suspend fun report(agroId: String, outcome: SyncOutcome) {
         val title = dao.get(agroId)?.title.orEmpty()
         when (outcome) {
             is SyncOutcome.Synced -> if (outcome.dropped > 0) {
                 messages.report(R.string.shared_playlist_edits_dropped, outcome.dropped, title)
             }
-            // Said once, when it happens, not on every later look at a copy already marked so.
-            SyncOutcome.Revoked -> {
-                val copy = dao.get(agroId)
-                when {
-                    copy != null && copy.isBlend -> ended(copy)
-                    copy != null && isOwn(copy) -> letGo(copy)
-                    !wasRevoked -> messages.report(R.string.shared_playlist_revoked, title)
-                }
-            }
+            SyncOutcome.Revoked -> dao.get(agroId)?.let { markRevoked(it) }
             // Being offline is not news; the indicator on the playlist already says it is behind.
             is SyncOutcome.Failed -> Unit
         }
@@ -138,6 +127,17 @@ class SharedPlaylistRunner @Inject constructor(
         dao.forget(copy.agroId)
         trackDao.deleteUnreferencedUnresolved()
         messages.report(R.string.playlist_unshared_from_agro, copy.title)
+    }
+
+    /**
+     * Someone else's playlist this account can no longer open: deleted, made private, or the
+     * friendship that shared it ended. The copy goes with the access — keeping one is what
+     * converting it into a Wanda playlist is for, and that playlist is its own and stays.
+     */
+    private suspend fun lost(copy: SharedPlaylistEntity) {
+        dao.forget(copy.agroId)
+        trackDao.deleteUnreferencedUnresolved()
+        messages.report(R.string.shared_playlist_revoked, copy.title)
     }
 
     /**
