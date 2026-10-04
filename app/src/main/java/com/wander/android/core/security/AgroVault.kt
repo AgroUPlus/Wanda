@@ -65,6 +65,7 @@ object AgroVault {
     const val INFO_SETTINGS = "agro/v1/settings"
     const val INFO_PRESENCE = "agro/v1/presence"
     const val INFO_P2P_RELAY = "agro/v1/p2p-relay"
+    const val INFO_BACKUP = "agro/v1/backup"
 
     /** Thrown when sealed data cannot be opened. Never swallowed: see [openSettings]. */
     class VaultException(message: String, cause: Throwable? = null) : Exception(message, cause)
@@ -160,6 +161,17 @@ object AgroVault {
     fun getSettingsKey(vaultKey: ByteArray): ByteArray = deriveSubkey(vaultKey, INFO_SETTINGS)
     fun getPresenceKey(vaultKey: ByteArray): ByteArray = deriveSubkey(vaultKey, INFO_PRESENCE)
     fun getP2pRelayKey(vaultKey: ByteArray): ByteArray = deriveSubkey(vaultKey, INFO_P2P_RELAY)
+    fun getBackupKey(vaultKey: ByteArray): ByteArray = deriveSubkey(vaultKey, INFO_BACKUP)
+
+    /**
+     * [sealPayload] without the base64: `nonce || ciphertext || tag` as bytes, for payloads that
+     * travel as a body rather than inside JSON, where encoding would only add a third.
+     */
+    fun sealBytes(plaintext: ByteArray, key: ByteArray): ByteArray = sealRaw(plaintext, key)
+
+    /** Opens what [sealBytes] made. @throws VaultException if the key is wrong or it was altered. */
+    fun openBytes(sealed: ByteArray, key: ByteArray, context: String = "payload"): ByteArray =
+        openRaw(sealed, key, context)
 
     /** Seals arbitrary byte payloads (presence envelopes, metadata) under a subkey. */
     fun sealPayload(plaintext: ByteArray, key: ByteArray): String = seal(plaintext, key)
@@ -170,7 +182,9 @@ object AgroVault {
 
     // ── AES-256-GCM, as `base64(nonce || ciphertext||tag)` ───────────────────────────────────
 
-    private fun seal(plaintext: ByteArray, key: ByteArray): String {
+    private fun seal(plaintext: ByteArray, key: ByteArray): String = encodeBase64(sealRaw(plaintext, key))
+
+    private fun sealRaw(plaintext: ByteArray, key: ByteArray): ByteArray {
         require(key.size == KEY_BYTES) { "a vault key is $KEY_BYTES bytes" }
         // A fresh nonce every time. GCM's failure mode for a repeated (key, nonce) pair is total,
         // so this is never derived from anything and never reused.
@@ -181,17 +195,20 @@ object AgroVault {
             SecretKeySpec(key, "AES"),
             GCMParameterSpec(TAG_BITS, nonce)
         )
-        val sealed = cipher.doFinal(plaintext)
-        return encodeBase64(nonce + sealed)
+        return nonce + cipher.doFinal(plaintext)
     }
 
     private fun open(encoded: String, key: ByteArray, what: String): ByteArray {
-        require(key.size == KEY_BYTES) { "a vault key is $KEY_BYTES bytes" }
         val raw = try {
             decodeBase64(encoded)
         } catch (e: IllegalArgumentException) {
             throw VaultException("the sealed $what is not valid base64", e)
         }
+        return openRaw(raw, key, what)
+    }
+
+    private fun openRaw(raw: ByteArray, key: ByteArray, what: String): ByteArray {
+        require(key.size == KEY_BYTES) { "a vault key is $KEY_BYTES bytes" }
         if (raw.size <= NONCE_BYTES) throw VaultException("the sealed $what is too short to be real")
         return try {
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")

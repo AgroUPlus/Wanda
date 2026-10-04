@@ -20,6 +20,9 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
     private val agroPrefs = SecureAgroPreferences(prefs)
     private val appPrefs = SecureAppPreferences(prefs)
 
+    /** The scrobbling services' accounts — see [SecureScrobblePreferences]. */
+    internal val scrobbling = SecureScrobblePreferences(prefs)
+
     // ── Display Preferences ─────────────────────────────────────────────────────────────────
     val isAmoledBlack: StateFlow<Boolean> = displayPrefs.isAmoledBlack
     fun setAmoledBlack(enabled: Boolean) = displayPrefs.setAmoledBlack(enabled)
@@ -179,6 +182,11 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
     val agroSyncSettings: StateFlow<Boolean> = agroPrefs.agroSyncSettings
     fun setAgroSyncSettings(enabled: Boolean) = agroPrefs.setAgroSyncSettings(enabled)
 
+    val cloudBackup: StateFlow<Boolean> = agroPrefs.cloudBackup
+    fun setCloudBackup(enabled: Boolean) = agroPrefs.setCloudBackup(enabled)
+    val cloudBackupAccounts: StateFlow<Boolean> = agroPrefs.cloudBackupAccounts
+    fun setCloudBackupAccounts(enabled: Boolean) = agroPrefs.setCloudBackupAccounts(enabled)
+
     var agroIdentityPrivateKey: String?
         get() = agroPrefs.agroIdentityPrivateKey
         set(value) { agroPrefs.agroIdentityPrivateKey = value }
@@ -258,6 +266,7 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
         accountPrefs.resetFlows()
         agroPrefs.resetFlows()
         appPrefs.resetFlows()
+        scrobbling.resetFlows()
     }
 
 

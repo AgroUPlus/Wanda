@@ -29,7 +29,9 @@ data class SharedPlaylistEntity(
     /** A `SharedSyncState` name. */
     val syncState: String,
     val lastSyncedAt: Long = 0L,
-    val publishedAt: Long = System.currentTimeMillis()
+    val publishedAt: Long = System.currentTimeMillis(),
+    /** Written by Agro from its members' listening (see `AgroBlendApi`); never edited here. */
+    val isBlend: Boolean = false
 ) {
     companion object {
         const val UNSYNCED = -1L

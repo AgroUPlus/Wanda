@@ -65,13 +65,13 @@ class LibraryViewModel @Inject constructor(
     val canCreatePlaylists: Boolean
         get() = SourceType.entries.any(playlistWriter::canWrite)
 
-    /** Creates an empty playlist, then refreshes so it appears in the list. */
-    fun createPlaylist(name: String) {
-        val target = SourceType.entries.firstOrNull(playlistWriter::canWrite) ?: return
-        viewModelScope.launch {
-            playlistWriter.createPlaylist(target, name, emptyList())
-            _playlists.value = musicRepository.getPlaylists()
-        }
+    /** Where a plain new playlist goes: the first source that can hold one, as it always has. */
+    val newPlaylistSource: SourceType
+        get() = SourceType.entries.firstOrNull(playlistWriter::canWrite) ?: SourceType.LOCAL
+
+    /** Re-reads the list, so a playlist the new-playlist sheet just made appears in it. */
+    fun refreshPlaylists() {
+        viewModelScope.launch { _playlists.value = musicRepository.getPlaylists() }
     }
 
     private val _tab = MutableStateFlow(LibraryTab.LIKED)

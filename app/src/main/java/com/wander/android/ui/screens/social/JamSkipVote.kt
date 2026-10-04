@@ -50,7 +50,7 @@ internal fun SkipVote(now: JamNowPlaying, onVoteSkip: () -> Unit) {
             onClick = onVoteSkip,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.onPrimary,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                contentColor = MaterialTheme.colorScheme.primary
             ),
             shape = CircleShape,
             contentPadding = PaddingValues(start = 20.dp, end = 24.dp),

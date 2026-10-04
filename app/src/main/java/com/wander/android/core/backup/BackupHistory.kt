@@ -72,5 +72,9 @@ internal fun BackupPlay.toEntity(): HistoryEntity = HistoryEntity(
     trackId = trackId,
     playedAt = playedAt,
     scrobbled = true,
-    agroSynced = true
+    agroSynced = true,
+    // A restored play happened on another device, which forwarded it if it was going to; sending
+    // it again from here would scrobble it twice.
+    listenBrainzSynced = true,
+    lastFmSynced = true
 )

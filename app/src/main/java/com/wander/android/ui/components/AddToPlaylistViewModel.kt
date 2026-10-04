@@ -29,6 +29,7 @@ class AddToPlaylistViewModel @Inject constructor(
     val target: StateFlow<UnifiedTrack?> = _target.asStateFlow()
 
     private val _targetTracks = MutableStateFlow<List<UnifiedTrack>>(emptyList())
+    val targetTracks: StateFlow<List<UnifiedTrack>> = _targetTracks.asStateFlow()
 
     private val _playlists = MutableStateFlow<List<UnifiedPlaylist>>(emptyList())
     val playlists: StateFlow<List<UnifiedPlaylist>> = _playlists.asStateFlow()
@@ -74,12 +75,10 @@ class AddToPlaylistViewModel @Inject constructor(
         viewModelScope.launch { playlistWriter.addToPlaylist(playlist, trackIds, tracks) }
     }
 
-    fun createWith(name: String) {
-        val tracks = _targetTracks.value.ifEmpty { listOfNotNull(_target.value) }
-        val trackIds = tracks.map { it.id }
-        val source = _target.value?.source?.takeIf { it == SourceType.LOCAL || it == SourceType.NAVIDROME } ?: SourceType.LOCAL
-        if (trackIds.isEmpty()) return
-        dismiss()
-        viewModelScope.launch { playlistWriter.createPlaylist(source, name, trackIds, tracks) }
-    }
+    /**
+     * Where a plain new playlist for these tracks lives: on Navidrome when they all came from it,
+     * universal otherwise, since a universal playlist holds tracks from any source.
+     */
+    val plainSource: SourceType
+        get() = _target.value?.source?.takeIf { it == SourceType.LOCAL || it == SourceType.NAVIDROME } ?: SourceType.LOCAL
 }

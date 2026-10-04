@@ -55,7 +55,9 @@ data class AgroSharedPlaylist(
     val myRole: PlaylistRole,
     val revision: Long,
     val isFollowing: Boolean,
-    val items: List<AgroSharedItem>
+    val items: List<AgroSharedItem>,
+    /** Written by Agro from its members' listening; nobody edits it by hand. */
+    val isBlend: Boolean = false
 )
 
 /** Where a playlist stands, without its tracks. [revision] is null when [accessible] is false. */
@@ -74,6 +76,16 @@ internal object AgroSharedPlaylistParsing {
     const val ITEM_FIELDS = "id title artist album durationMs addedBy addedAt"
     const val PLAYLIST_FIELDS =
         "id userId title description visibility editAccess myRole revision isFollowing items { $ITEM_FIELDS }"
+
+    /** The capability a server advertises once it knows what a blend is. */
+    const val BLENDS = "playlists.blends"
+
+    /**
+     * [PLAYLIST_FIELDS], plus `isBlend` when the server has it. Asked for unconditionally, a server
+     * from before blends would refuse every playlist query over the one unknown field.
+     */
+    fun playlistFields(serverHasBlends: Boolean): String =
+        if (serverHasBlends) "$PLAYLIST_FIELDS isBlend" else PLAYLIST_FIELDS
 
     private fun JsonObject.string(key: String): String? = this[key]?.jsonPrimitive?.contentOrNull
 
@@ -97,7 +109,8 @@ internal object AgroSharedPlaylistParsing {
             revision = json["revision"]?.jsonPrimitive?.longOrNull
                 ?: throw IOException("Agro returned a playlist without a revision"),
             isFollowing = json["isFollowing"]?.jsonPrimitive?.booleanOrNull == true,
-            items = (json["items"] as? JsonArray).orEmpty().map { item(it.jsonObject) }
+            items = (json["items"] as? JsonArray).orEmpty().map { item(it.jsonObject) },
+            isBlend = json["isBlend"]?.jsonPrimitive?.booleanOrNull == true
         )
     }
 

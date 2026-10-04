@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -34,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.core.permissions.rememberLocalNetworkGate
 import com.wander.android.data.sources.agro.Jam
+import com.wander.android.data.sources.agro.StoredJamRecap
 import com.wander.android.ui.components.ConfirmRequest
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.rememberConfirmState
@@ -84,10 +86,13 @@ internal fun JamScreen(
 
                 val jam = state.jam
                 if (jam == null) {
+                    // The jam just left goes first: that recap is what someone leaving came back to see.
+                    val (justLeft, earlier) = state.recaps.partition { it.id == state.justLeftRecap }
                     LazyColumn(
                         contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding() + 28.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
+                        items(justLeft, key = { "recap-${it.id}" }) { recap -> RecapItem(recap, state, viewModel) }
                         item(key = "start") {
                             StartOrJoin(
                                 onCreate = { mode -> withLocalNetwork { viewModel.create(mode) } },
@@ -101,15 +106,7 @@ internal fun JamScreen(
                         }
                         // Under the way in rather than above it: someone opening this screen is
                         // most often here to start a jam, and last night's can wait a scroll.
-                        items(state.recaps, key = { "recap-${it.id}" }) { recap ->
-                            JamRecapCard(
-                                stored = recap,
-                                saved = recap.id in state.savedRecaps,
-                                onSave = { title -> viewModel.saveRecap(recap, title) },
-                                onDismiss = { viewModel.dismissRecap(recap.id) },
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).animateItem()
-                            )
-                        }
+                        items(earlier, key = { "recap-${it.id}" }) { recap -> RecapItem(recap, state, viewModel) }
                     }
                     return@Column
                 }
@@ -118,6 +115,17 @@ internal fun JamScreen(
             }
         }
     }
+}
+
+@Composable
+private fun LazyItemScope.RecapItem(recap: StoredJamRecap, state: JamUiState, viewModel: JamViewModel) {
+    JamRecapCard(
+        stored = recap,
+        saved = recap.id in state.savedRecaps,
+        onSave = { title -> viewModel.saveRecap(recap, title) },
+        onDismiss = { viewModel.dismissRecap(recap.id) },
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).animateItem()
+    )
 }
 
 @Composable

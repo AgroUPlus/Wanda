@@ -29,7 +29,8 @@ data class SharedPlaylistState(
     val role: PlaylistRole,
     val syncState: SharedSyncState,
     /** Set when this account published it from that Wanda playlist; null when it is followed. */
-    val localPlaylistId: String?
+    val localPlaylistId: String?,
+    val isBlend: Boolean = false
 ) {
     val isCollaborative: Boolean get() = editAccess != EditAccess.OFF
 
@@ -51,7 +52,8 @@ class SharedPlaylistRepository @Inject constructor(
     private val agroPlaylists: AgroPlaylistApi,
     private val dao: SharedPlaylistDao,
     private val trackDao: TrackDao,
-    private val mirror: SharedPlaylistMirror
+    private val mirror: SharedPlaylistMirror,
+    private val blends: com.wander.android.data.sources.agro.AgroBlendApi
 ) {
     /**
      * Starts following [agroId] and keeps a copy, answering the id to open it by: the Wanda
@@ -72,9 +74,13 @@ class SharedPlaylistRepository @Inject constructor(
      * error, so being offline is not mistaken for having no playlists.
      */
     suspend fun discoverOwn(): Result<Unit> = api.ownedIds().map { ids ->
-        ids.filter { dao.get(it) == null }.forEach { id ->
-            api.fetch(id).onSuccess { mirror.write(it, api.me, localPlaylistId = null, state = SharedSyncState.SYNCED) }
-        }
+        ids.filter { dao.get(it) == null }.forEach { id -> keepOwn(id) }
+    }
+
+    /** Keeps a copy of [agroId], one of this account's own on Agro, answering the id to open it by. */
+    suspend fun keepOwn(agroId: String): Result<String> = api.fetch(agroId).map {
+        mirror.write(it, api.me, localPlaylistId = null, state = SharedSyncState.SYNCED)
+        SharedPlaylistMirror.routeId(agroId)
     }
 
     /**
@@ -82,6 +88,9 @@ class SharedPlaylistRepository @Inject constructor(
      * owns it, since unfollowing your own playlist would leave it there; unfollowed otherwise.
      */
     suspend fun remove(agroId: String): Result<Unit> {
+        // A blend is left rather than unfollowed or deleted: leaving takes this account's listening
+        // out of it, and its creator leaving ends it — see `AgroBlendApi.leave`.
+        if (dao.get(agroId)?.isBlend == true) return blends.leave(agroId).onSuccess { forget(agroId) }
         if (dao.get(agroId)?.myRole != PlaylistRole.OWNER.name) return unfollow(agroId)
         return agroPlaylists.delete(agroId).onSuccess {
             dao.forget(agroId)
@@ -92,9 +101,14 @@ class SharedPlaylistRepository @Inject constructor(
     /** Stops following and forgets the copy. Forgotten even when the server cannot be told. */
     suspend fun unfollow(agroId: String): Result<Unit> {
         val told = api.unfollow(agroId)
+        forget(agroId)
+        return told
+    }
+
+    /** Drops the copy of [agroId] and any placeholder tracks only it was holding. */
+    suspend fun forget(agroId: String) {
         dao.forget(agroId)
         trackDao.deleteUnreferencedUnresolved()
-        return told
     }
 
     /**
@@ -191,6 +205,7 @@ class SharedPlaylistRepository @Inject constructor(
         editAccess = EditAccess.entries.firstOrNull { it.name == editAccess } ?: EditAccess.OFF,
         role = PlaylistRole.entries.firstOrNull { it.name == myRole } ?: PlaylistRole.VIEWER,
         syncState = SharedSyncState.of(syncState),
-        localPlaylistId = localPlaylistId
+        localPlaylistId = localPlaylistId,
+        isBlend = isBlend
     )
 }

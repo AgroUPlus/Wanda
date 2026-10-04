@@ -59,9 +59,12 @@ class SharedPlaylistViewModel @Inject constructor(
         viewModelScope.launch { shared.agroIdFor(playlistId)?.let(runner::syncSoon) }
     }
 
-    /** Who added the track at [index], when that is worth showing: only once others can edit. */
+    /**
+     * Who added the track at [index], when that is worth showing: once others can edit, or in a
+     * blend, where it names whose listening chose it.
+     */
     fun addedBy(index: Int): String? =
-        items.value.getOrNull(index)?.addedBy?.takeIf { state.value?.isCollaborative == true }
+        items.value.getOrNull(index)?.addedBy?.takeIf { state.value?.let { it.isCollaborative || it.isBlend } == true }
 
     fun isPending(index: Int): Boolean = items.value.getOrNull(index)?.isPending == true
 

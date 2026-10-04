@@ -43,8 +43,10 @@ import com.wander.android.data.model.UnifiedPlaylist
 fun AddToPlaylistSheet(
     playlists: List<UnifiedPlaylist>,
     isLoading: Boolean,
+    tracks: List<com.wander.android.data.model.UnifiedTrack>,
+    plainSource: com.wander.android.data.model.SourceType,
     onSelect: (UnifiedPlaylist) -> Unit,
-    onCreate: (String) -> Unit,
+    onCreated: (playlistId: String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var namingNew by remember { mutableStateOf(false) }
@@ -101,12 +103,13 @@ fun AddToPlaylistSheet(
     }
 
     if (namingNew) {
-        NewPlaylistDialog(
-            onConfirm = { name ->
-                namingNew = false
-                onCreate(name)
-            },
-            onDismiss = { namingNew = false }
+        // The tracks go in at creation, so a Blend — whose songs Agro chooses — is not offered.
+        com.wander.android.ui.components.newplaylist.NewPlaylistSheet(
+            onCreated = onCreated,
+            onDismiss = { namingNew = false },
+            tracks = tracks,
+            plainSource = plainSource,
+            allowBlend = false
         )
     }
 }

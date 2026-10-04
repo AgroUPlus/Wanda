@@ -46,8 +46,10 @@ fun AddToPlaylistHost(): AddToPlaylistController {
         AddToPlaylistSheet(
             playlists = playlists,
             isLoading = isLoading,
+            tracks = viewModel.targetTracks.collectAsStateWithLifecycle().value,
+            plainSource = viewModel.plainSource,
             onSelect = viewModel::addToExisting,
-            onCreate = viewModel::createWith,
+            onCreated = { viewModel.dismiss() },
             onDismiss = viewModel::dismiss
         )
     }

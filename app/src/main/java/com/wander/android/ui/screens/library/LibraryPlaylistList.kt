@@ -41,7 +41,8 @@ import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.ui.components.AddToPlaylistController
 import com.wander.android.ui.components.EmptyState
-import com.wander.android.ui.components.NewPlaylistDialog
+import com.wander.android.ui.components.newplaylist.NewPlaylistSheet
+import com.wander.android.ui.screens.library.blend.BlendInvites
 import com.wander.android.ui.components.PlaylistActionsSheet
 import com.wander.android.ui.components.SkeletonRow
 import com.wander.android.ui.components.listInset
@@ -62,12 +63,13 @@ internal fun PlaylistList(
     var actionsForPlaylist by remember { mutableStateOf<UnifiedPlaylist?>(null) }
 
     if (naming) {
-        NewPlaylistDialog(
-            onConfirm = { name ->
-                naming = false
-                viewModel.createPlaylist(name)
+        NewPlaylistSheet(
+            onCreated = { id ->
+                viewModel.refreshPlaylists()
+                onOpenPlaylist(id)
             },
-            onDismiss = { naming = false }
+            onDismiss = { naming = false },
+            plainSource = viewModel.newPlaylistSource
         )
     }
 
@@ -92,6 +94,7 @@ internal fun PlaylistList(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                BlendInvites(onJoined = onOpenPlaylist, modifier = Modifier.padding(horizontal = 16.dp))
                 EmptyState(
                     title = stringResource(R.string.library_no_playlists),
                     message = stringResource(R.string.library_playlists_from_sources_imported_playlists)
@@ -146,31 +149,36 @@ internal fun PlaylistList(
         modifier = Modifier.fillMaxSize()
     ) {
         item(key = "playlist_actions", contentType = "action") {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
-            ) {
-                if (viewModel.canCreatePlaylists) {
+            // Invitations ride in the leading row rather than as rows of their own: the paging
+            // below counts exactly one item above the playlists.
+            Column {
+                BlendInvites(onJoined = onOpenPlaylist, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                ) {
+                    if (viewModel.canCreatePlaylists) {
+                        FilledTonalButton(
+                            onClick = { naming = true },
+                            modifier = Modifier.weight(1f),
+                            shapes = ButtonDefaults.shapes()
+                        ) {
+                            Icon(imageVector = Icons.Rounded.Add, contentDescription = null)
+                            Text(text =
+                                stringResource(R.string.common_new_playlist), modifier = Modifier.padding(start = 6.dp))
+                        }
+                    }
                     FilledTonalButton(
-                        onClick = { naming = true },
+                        onClick = onOpenImport,
                         modifier = Modifier.weight(1f),
                         shapes = ButtonDefaults.shapes()
                     ) {
-                        Icon(imageVector = Icons.Rounded.Add, contentDescription = null)
-                        Text(text =
-                            stringResource(R.string.common_new_playlist), modifier = Modifier.padding(start = 6.dp))
+                        Icon(imageVector = Icons.Rounded.Download, contentDescription = null)
+                        Text(text = stringResource(R.string.common_import), modifier = Modifier.padding(start = 6.dp))
                     }
-                }
-                FilledTonalButton(
-                    onClick = onOpenImport,
-                    modifier = Modifier.weight(1f),
-                    shapes = ButtonDefaults.shapes()
-                ) {
-                    Icon(imageVector = Icons.Rounded.Download, contentDescription = null)
-                    Text(text = stringResource(R.string.common_import), modifier = Modifier.padding(start = 6.dp))
                 }
             }
         }

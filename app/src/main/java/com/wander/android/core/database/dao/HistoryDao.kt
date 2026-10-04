@@ -92,6 +92,40 @@ interface HistoryDao {
     @Query("UPDATE history SET agroSynced = 1 WHERE historyId IN (:ids)")
     suspend fun markAgroSynced(ids: List<Long>)
 
+    /** Plays still to send to ListenBrainz, oldest first — the same shape as the Agro outbox. */
+    @Query(
+        """
+        SELECT h.historyId AS historyId, h.playedAt AS playedAt, t.title AS title,
+               t.artist AS artist, t.album AS album, t.genre AS genre, t.durationMs AS durationMs
+        FROM history h INNER JOIN tracks t ON t.id = h.trackId
+        WHERE h.listenBrainzSynced = 0 ORDER BY h.playedAt ASC LIMIT :limit
+        """
+    )
+    suspend fun getPendingListenBrainz(limit: Int): List<PendingScrobble>
+
+    @Query("UPDATE history SET listenBrainzSynced = 1 WHERE historyId IN (:ids)")
+    suspend fun markListenBrainzSynced(ids: List<Long>)
+
+    @Query(
+        """
+        SELECT h.historyId AS historyId, h.playedAt AS playedAt, t.title AS title,
+               t.artist AS artist, t.album AS album, t.genre AS genre, t.durationMs AS durationMs
+        FROM history h INNER JOIN tracks t ON t.id = h.trackId
+        WHERE h.lastFmSynced = 0 ORDER BY h.playedAt ASC LIMIT :limit
+        """
+    )
+    suspend fun getPendingLastFm(limit: Int): List<PendingScrobble>
+
+    @Query("UPDATE history SET lastFmSynced = 1 WHERE historyId IN (:ids)")
+    suspend fun markLastFmSynced(ids: List<Long>)
+
+    /** On connecting a service: what was played before is not sent to it. */
+    @Query("UPDATE history SET listenBrainzSynced = 1 WHERE listenBrainzSynced = 0")
+    suspend fun settleListenBrainz()
+
+    @Query("UPDATE history SET lastFmSynced = 1 WHERE lastFmSynced = 0")
+    suspend fun settleLastFm()
+
     /**
      * Every play inside a window, with what the track was.
      *

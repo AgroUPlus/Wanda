@@ -49,8 +49,16 @@ internal fun LazyListScope.externalTab(
         GroupedCard(items = sharingItems)
     }
 
+    item(key = "scrobbling") {
+        ScrobblingSection()
+    }
+
     item(key = "backup") {
         BackupSection()
+    }
+
+    item(key = "cloud_backup") {
+        CloudBackupSection()
     }
 
     item(key = "sec_notifications") { SettingsSection(stringResource(R.string.settings_section_notifications)) }

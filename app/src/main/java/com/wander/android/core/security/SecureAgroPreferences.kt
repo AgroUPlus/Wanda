@@ -138,6 +138,24 @@ internal class SecureAgroPreferences(private val prefs: SharedPreferences) {
         _agroSyncSettings.value = enabled
     }
 
+    /** Whether this device backs itself up to the Agro vault on its own, daily. Off until asked. */
+    private val _cloudBackup = MutableStateFlow(prefs.getBoolean(KEY_AGRO_CLOUD_BACKUP, false))
+    val cloudBackup: StateFlow<Boolean> = _cloudBackup.asStateFlow()
+
+    fun setCloudBackup(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_AGRO_CLOUD_BACKUP, enabled) }
+        _cloudBackup.value = enabled
+    }
+
+    /** Whether those backups carry the sign-ins too. Off until the user accepts what that means. */
+    private val _cloudBackupAccounts = MutableStateFlow(prefs.getBoolean(KEY_AGRO_CLOUD_BACKUP_ACCOUNTS, false))
+    val cloudBackupAccounts: StateFlow<Boolean> = _cloudBackupAccounts.asStateFlow()
+
+    fun setCloudBackupAccounts(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_AGRO_CLOUD_BACKUP_ACCOUNTS, enabled) }
+        _cloudBackupAccounts.value = enabled
+    }
+
     var agroIdentityPrivateKey: String?
         get() = prefs.getString(KEY_AGRO_IDENTITY_PRIV, null)
         set(value) = prefs.edit { putString(KEY_AGRO_IDENTITY_PRIV, value) }
@@ -161,13 +179,21 @@ internal class SecureAgroPreferences(private val prefs: SharedPreferences) {
             remove(KEY_CATALOG_CURSOR)
             remove(KEY_CATALOG_PUBLISHED_AT)
             remove(KEY_CATALOG_PUBLISHED_TRACK)
+            // Backing up to a server this device no longer belongs to is not something to resume
+            // silently on the next one; the choice is asked again.
+            remove(KEY_AGRO_CLOUD_BACKUP)
+            remove(KEY_AGRO_CLOUD_BACKUP_ACCOUNTS)
         }
         _agroConfigured.value = false
+        _cloudBackup.value = false
+        _cloudBackupAccounts.value = false
     }
 
     fun resetFlows() {
         _agroConfigured.value = false
         _agroSyncSettings.value = false
+        _cloudBackup.value = false
+        _cloudBackupAccounts.value = false
         _agroProxyEnabled.value = true
         _agroP2pSync.value = true
         _agroServerArchive.value = false
