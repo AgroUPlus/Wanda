@@ -72,40 +72,6 @@ class SharedPlaylistRepository @Inject constructor(
         }
     }
 
-    /**
-     * Brings the copies in line with what this account owns and follows on Agro, wherever that
-     * happened — a playlist made in the dashboard, one followed there or on another device, and
-     * one unfollowed elsewhere. A playlist that fails to load is left for the next look; either
-     * list failing is the error, so being offline is not mistaken for owning or following nothing.
-     */
-    suspend fun discover(): Result<Unit> = runCatching {
-        val owned = api.ownedIds().getOrThrow()
-        val followed = api.followedIds().getOrThrow()
-        (owned + followed.open).distinct().filter { dao.get(it) == null }.forEach { id -> keepOwn(id) }
-        dao.followed()
-            .filter { it.agroId !in followed.open && it.agroId !in followed.revoked && isFollowedCopy(it) }
-            .forEach { forget(it.agroId) }
-    }
-
-    /**
-     * A follow or unfollow made elsewhere, pushed by Agro: keep a copy of a playlist just followed,
-     * or let go of one just unfollowed.
-     */
-    suspend fun followedElsewhere(agroId: String, following: Boolean) {
-        val copy = dao.get(agroId)
-        when {
-            following && copy == null -> keepOwn(agroId)
-            !following && copy != null && isFollowedCopy(copy) -> forget(agroId)
-        }
-    }
-
-    /**
-     * A copy kept only because this account follows it. Not its own, which unfollowing would not
-     * remove, and not a blend, which is left rather than unfollowed.
-     */
-    private fun isFollowedCopy(copy: SharedPlaylistEntity): Boolean =
-        copy.localPlaylistId == null && !copy.isBlend && copy.myRole != PlaylistRole.OWNER.name
-
     /** Keeps a copy of [agroId], owned or followed on Agro, answering the id to open it by. */
     suspend fun keepOwn(agroId: String): Result<String> = api.fetch(agroId).map {
         mirror.write(it, api.me, localPlaylistId = null, state = SharedSyncState.SYNCED)
@@ -123,11 +89,8 @@ class SharedPlaylistRepository @Inject constructor(
         val copy = dao.get(agroId)
         if (copy?.isBlend == true && copy.syncState == SharedSyncState.REVOKED.name) return Result.success(forget(agroId))
         if (copy?.isBlend == true) return leaveBlend(agroId)
-        if (dao.get(agroId)?.myRole != PlaylistRole.OWNER.name) return unfollow(agroId)
-        return agroPlaylists.delete(agroId).onSuccess {
-            dao.forget(agroId)
-            trackDao.deleteUnreferencedUnresolved()
-        }
+        if (copy?.myRole != PlaylistRole.OWNER.name) return unfollow(agroId)
+        return orAlreadyGone(agroId, agroPlaylists.delete(agroId))
     }
 
     /**
@@ -135,11 +98,17 @@ class SharedPlaylistRepository @Inject constructor(
      * forgotten all the same: there is nothing left to leave. Any other failure, offline say,
      * stays an error, so a blend still running is never dropped here while still on the server.
      */
-    private suspend fun leaveBlend(agroId: String): Result<Unit> {
-        val left = blends.leave(agroId)
-        if (left.isSuccess) return left.onSuccess { forget(agroId) }
+    private suspend fun leaveBlend(agroId: String): Result<Unit> = orAlreadyGone(agroId, blends.leave(agroId))
+
+    /**
+     * Forgets [agroId] once [outcome] says the server let go of it — or when it refused because
+     * there was nothing left to let go of. Any other failure, offline say, stays an error, so a
+     * playlist still on the server is never dropped here while its followers keep it.
+     */
+    private suspend fun orAlreadyGone(agroId: String, outcome: Result<*>): Result<Unit> {
+        if (outcome.isSuccess) return Result.success(forget(agroId))
         val gone = api.revisions(listOf(agroId)).getOrNull()?.firstOrNull()?.accessible == false
-        return if (gone) Result.success(forget(agroId)) else left
+        return if (gone) Result.success(forget(agroId)) else Result.failure(checkNotNull(outcome.exceptionOrNull()))
     }
 
     /** Stops following and forgets the copy. Forgotten even when the server cannot be told. */

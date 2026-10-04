@@ -1,5 +1,6 @@
 package com.wander.android.data.repository
 
+import com.wander.android.data.repository.sharedplaylist.SharedPlaylistMirror
 import androidx.annotation.StringRes
 import com.wander.android.R
 import com.wander.android.core.database.dao.PlaylistDao
@@ -120,13 +121,21 @@ class PlaylistWriteRepository @Inject constructor(
     }
 
     suspend fun deletePlaylist(playlist: UnifiedPlaylist): Result<Unit> = withContext(Dispatchers.IO) {
-        val source = writableSource(playlist.source)
-            ?: return@withContext Result.failure(
-                IllegalStateException("${playlist.source} cannot delete playlists")
-            )
-        source.deletePlaylist(playlist.id)
+        deleting(playlist)
             .onSuccess { _messages.tryEmit("Deleted \"${playlist.name}\".") }
             .onFailure { _messages.tryEmit(it.message ?: "Couldn't delete that playlist.") }
+    }
+
+    private suspend fun deleting(playlist: UnifiedPlaylist): Result<Unit> {
+        // Agro's own playlists are unfollowed, left or deleted there, never through a source's
+        // playlist writing, which Agro does not claim — see `SharedPlaylistRepository.remove`.
+        SharedPlaylistMirror.agroIdOf(playlist.id)?.let { return shared.remove(it) }
+        val source = writableSource(playlist.source)
+            ?: return Result.failure(IllegalStateException("${playlist.source} cannot delete playlists"))
+        // A published Wanda playlist goes from Agro first, so its followers lose it too. Deleting
+        // only the playlist here left it on Agro, in their libraries, with no owner to remove it.
+        shared.agroIdFor(playlist.id)?.let { agroId -> shared.remove(agroId).onFailure { return Result.failure(it) } }
+        return source.deletePlaylist(playlist.id)
     }
 
     /** Removes the track at [index]. A shared playlist checks this account may; a Wanda one always may. */

@@ -277,6 +277,7 @@
     <string name="library_playlists_shared">Shared with me</string>
     <string name="shared_with_me_by">by \@%1$s</string>
     <string name="shared_with_me_in_library">In your library</string>
+    <string name="shared_with_me_blend">Blend</string>
     <string name="shared_with_me_empty">Nothing your friends have shared with you yet</string>
     <string name="shared_with_me_failed">Couldn\'t load what\'s shared with you: %1$s</string>
     <plurals name="shared_with_me_tracks">

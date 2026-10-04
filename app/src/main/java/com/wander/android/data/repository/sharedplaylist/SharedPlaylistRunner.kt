@@ -31,7 +31,7 @@ class SharedPlaylistRunner @Inject constructor(
     private val sync: SharedPlaylistSync,
     private val messages: PlaylistPublicationRepository,
     private val scheduler: SharedPlaylistSyncScheduler,
-    private val repository: SharedPlaylistRepository
+    private val discovery: SharedPlaylistDiscovery
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -72,9 +72,9 @@ class SharedPlaylistRunner @Inject constructor(
         }
     }
 
-    /** This account followed or unfollowed [agroId] elsewhere; see [SharedPlaylistRepository.followedElsewhere]. */
+    /** This account followed or unfollowed [agroId] elsewhere; see [SharedPlaylistDiscovery.followedElsewhere]. */
     fun onFollowChange(agroId: String, following: Boolean) {
-        scope.launch { repository.followedElsewhere(agroId, following) }
+        scope.launch { discovery.followedElsewhere(agroId, following) }
     }
 
     /**

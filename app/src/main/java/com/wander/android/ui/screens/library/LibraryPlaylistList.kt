@@ -92,7 +92,7 @@ internal fun PlaylistList(
             onShare = { viewModel.sharePlaylist(playlist) }
                 .takeIf { viewModel.canShare(playlist.source) },
             onDelete = { viewModel.deletePlaylist(playlist) }
-                .takeIf { playlist.source == SourceType.LOCAL || viewModel.canCreatePlaylists },
+                .takeIf { playlist.source == SourceType.LOCAL || playlist.source == SourceType.AGRO || viewModel.canCreatePlaylists },
             onDismiss = { actionsForPlaylist = null }
         )
     }

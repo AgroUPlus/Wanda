@@ -21,15 +21,15 @@ class SharedWithMeRepository @Inject constructor(
     val isAvailable: Boolean get() = api.isAvailable
 
     /**
-     * Friends' playlists this account can open, and anything it already follows. A stranger's
-     * public playlist is open to everyone on the server and shared with nobody in particular, so
-     * it is left out unless followed.
+     * Friends' playlists this account can open, every blend it is in, and anything it already
+     * follows. A stranger's public playlist is open to everyone on the server and shared with
+     * nobody in particular, so it is left out unless followed.
      */
     suspend fun list(): Result<List<AgroSharedListing>> {
         if (!api.isAvailable) return Result.success(emptyList())
         val friends = friendDao.friendUsernames().mapTo(HashSet()) { it.lowercase(Locale.ROOT) }
         return api.openToMe().map { all ->
-            all.filter { it.isFollowing || it.owner.lowercase(Locale.ROOT) in friends }
+            all.filter { it.isBlend || it.isFollowing || it.owner.lowercase(Locale.ROOT) in friends }
                 .sortedBy { it.title.lowercase(Locale.ROOT) }
         }
     }

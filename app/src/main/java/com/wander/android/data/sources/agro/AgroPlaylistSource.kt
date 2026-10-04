@@ -4,6 +4,7 @@ import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.sharedplaylist.SharedPlaylistDiscovery
 import com.wander.android.data.repository.sharedplaylist.SharedPlaylistMirror
 import com.wander.android.data.repository.sharedplaylist.SharedPlaylistRepository
 import com.wander.android.data.sources.IMusicSource
@@ -29,7 +30,8 @@ import javax.inject.Singleton
 @Singleton
 class AgroPlaylistSource @Inject constructor(
     secureStorage: SecureStorage,
-    private val shared: SharedPlaylistRepository
+    private val shared: SharedPlaylistRepository,
+    private val discovery: SharedPlaylistDiscovery
 ) : IMusicSource {
     override val sourceType = SourceType.AGRO
     override val displayName = SourceType.AGRO.displayName
@@ -47,7 +49,7 @@ class AgroPlaylistSource @Inject constructor(
      * failure to reach Agro the answer.
      */
     override suspend fun getPlaylists(): Result<List<UnifiedPlaylist>> {
-        val discovered = if (discoveryDue()) shared.discover() else Result.success(Unit)
+        val discovered = if (discoveryDue()) discovery.discover() else Result.success(Unit)
         val kept = shared.followed()
         return discovered.exceptionOrNull()?.takeIf { kept.isEmpty() }?.let { Result.failure(it) } ?: Result.success(kept)
     }

@@ -98,7 +98,7 @@ private fun SharedMessage(text: String, action: @Composable () -> Unit = {}) {
 @Composable
 private fun subtitleOf(listing: AgroSharedListing): String = listOfNotNull(
     stringResource(R.string.shared_with_me_by, listing.owner),
-    stringResource(
+    if (listing.isBlend) stringResource(R.string.shared_with_me_blend) else stringResource(
         when (listing.role) {
             PlaylistRole.OWNER, PlaylistRole.EDITOR -> R.string.shared_playlist_access_editor
             PlaylistRole.CONTRIBUTOR -> R.string.shared_playlist_access_contributor

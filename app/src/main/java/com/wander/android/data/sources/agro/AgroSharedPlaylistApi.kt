@@ -88,30 +88,42 @@ class AgroSharedPlaylistApi @Inject constructor(private val graphQl: AgroGraphQl
         }
 
     /**
-     * Every playlist this account can open that someone else owns, with what it may do there.
-     * Includes every public playlist on the server: narrowing it to friends is the caller's job.
+     * Every playlist this account can open that someone else owns, and every blend it is in, with
+     * what it may do there. Includes every public playlist on the server: narrowing it to friends
+     * is the caller's job.
+     *
+     * Two lists in one request. A blend is private to its members, so the general list never
+     * names it to anyone but its creator; a member follows it, so it is in what they follow.
      */
-    suspend fun openToMe(): Result<List<AgroSharedListing>> =
-        graphQl.execute(
-            "query { playlists { id userId title itemCount myRole isFollowing } }",
+    suspend fun openToMe(): Result<List<AgroSharedListing>> {
+        val blends = graphQl.serverSupports(AgroSharedPlaylistParsing.BLENDS)
+        val row = "id userId title itemCount myRole isFollowing" + if (blends) " isBlend" else ""
+        return graphQl.execute(
+            "query { playlists { $row } followedPlaylists { playlists { $row } } }",
             buildJsonObject {}
         ).mapCatching { data ->
             val listed = data["playlists"] as? JsonArray ?: throw IOException("Agro did not list its playlists")
-            listed.mapNotNull { it as? JsonObject }.mapNotNull { row ->
-                val id = row["id"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
-                val owner = row["userId"]?.jsonPrimitive?.contentOrNull.orEmpty()
-                if (owner.isBlank() || owner.equals(me, ignoreCase = true)) return@mapNotNull null
-                AgroSharedListing(
-                    id = id,
-                    title = row["title"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-                    owner = owner,
-                    itemCount = row["itemCount"]?.jsonPrimitive?.intOrNull ?: 0,
-                    role = PlaylistRole.entries.firstOrNull { it.name == row["myRole"]?.jsonPrimitive?.contentOrNull }
-                        ?: PlaylistRole.VIEWER,
-                    isFollowing = row["isFollowing"]?.jsonPrimitive?.booleanOrNull == true
-                )
-            }
+            val followed = ((data["followedPlaylists"] as? JsonObject)?.get("playlists") as? JsonArray).orEmpty()
+            (listed + followed).mapNotNull { (it as? JsonObject)?.toListing() }
+                .filter { !it.owner.equals(me, ignoreCase = true) || it.isBlend }
+                .distinctBy { it.id }
         }
+    }
+
+    private fun JsonObject.toListing(): AgroSharedListing? {
+        val id = this["id"]?.jsonPrimitive?.contentOrNull ?: return null
+        val owner = this["userId"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() } ?: return null
+        return AgroSharedListing(
+            id = id,
+            title = this["title"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            owner = owner,
+            itemCount = this["itemCount"]?.jsonPrimitive?.intOrNull ?: 0,
+            role = PlaylistRole.entries.firstOrNull { it.name == this["myRole"]?.jsonPrimitive?.contentOrNull }
+                ?: PlaylistRole.VIEWER,
+            isFollowing = this["isFollowing"]?.jsonPrimitive?.booleanOrNull == true,
+            isBlend = this["isBlend"]?.jsonPrimitive?.booleanOrNull == true
+        )
+    }
 
     /** What this account follows: the ids it can still open, and those it no longer can. */
     suspend fun followedIds(): Result<AgroFollowedIds> =
@@ -173,5 +185,6 @@ data class AgroSharedListing(
     val owner: String,
     val itemCount: Int,
     val role: PlaylistRole,
-    val isFollowing: Boolean
+    val isFollowing: Boolean,
+    val isBlend: Boolean = false
 )
