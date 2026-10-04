@@ -35,6 +35,15 @@ internal sealed interface ActivityItem {
     @Immutable
     data class Milestone(val item: AgroFeedItem) : ActivityItem {
         override val at: String get() = item.at
+
+        /**
+         * Everything the event is, not just who and when. One play can cross a milestone, put a
+         * track on repeat and make a new favourite all at once, and history imported at the hour
+         * stamps many plays with the same second — so a person and a time name several events.
+         */
+        val key: String
+            get() = listOf("m", item.username, item.kind, item.artist, item.title.orEmpty(), item.count, item.at)
+                .joinToString("\u0000")
     }
 
     /** A friend handed you a song. */
@@ -209,7 +218,8 @@ internal class ActivityViewModel @Inject constructor(
         incoming: List<AgroDrop>,
         releases: List<ActivityItem.Release>
     ): List<ActivityItem> =
-        (feed.map(ActivityItem::Milestone) +
+        // Distinct, because the same event reported twice would otherwise be two rows with one key.
+        (feed.distinct().map(ActivityItem::Milestone) +
             incoming.map(ActivityItem::Shared) +
             releases)
             .sortedByDescending { it.at }

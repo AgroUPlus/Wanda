@@ -80,7 +80,7 @@ internal fun ActivityScreen(
             items = visible,
             key = { item ->
                 when (item) {
-                    is ActivityItem.Milestone -> "m_" + item.item.username + "_" + item.at
+                    is ActivityItem.Milestone -> item.key
                     is ActivityItem.Shared -> "s_" + item.drop.id
                     is ActivityItem.Release -> "r_" + item.release.recordingId
                 }
