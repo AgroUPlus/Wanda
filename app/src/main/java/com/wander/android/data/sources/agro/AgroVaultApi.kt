@@ -63,9 +63,17 @@ class AgroVaultApi @Inject constructor(
         .readTimeout(2, java.util.concurrent.TimeUnit.MINUTES)
         .build()
 
+    /** Whether this device can back up to the vault, and if not, the first thing in the way. */
+    val access: VaultAccess
+        get() = when {
+            !graphQl.isConfigured -> VaultAccess.NOT_PAIRED
+            !graphQl.serverSupports(CAPABILITY) -> VaultAccess.SERVER_LACKS_VAULT
+            secureStorage.agroVaultKey == null -> VaultAccess.NO_VAULT_KEY
+            else -> VaultAccess.READY
+        }
+
     /** The server has the vault, and this device holds the key that seals for it. */
-    val isAvailable: Boolean
-        get() = graphQl.isConfigured && graphQl.serverSupports(CAPABILITY) && secureStorage.agroVaultKey != null
+    val isAvailable: Boolean get() = access == VaultAccess.READY
 
     private val base: String get() = secureStorage.agroServerUrl.trimEnd('/')
 
@@ -145,4 +153,13 @@ class AgroVaultApi @Inject constructor(
         private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
         private fun ByteArray.sha256(): String = MessageDigest.getInstance("SHA-256").digest(this).toHex()
     }
+}
+
+enum class VaultAccess {
+    NOT_PAIRED,
+    /** As of the last time this device registered, which is when it learns what the server can do. */
+    SERVER_LACKS_VAULT,
+    /** Paired by a link that did not carry the vault key; only the passphrase can recover it. */
+    NO_VAULT_KEY,
+    READY
 }

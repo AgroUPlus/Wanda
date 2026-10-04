@@ -106,7 +106,9 @@ internal class JamViewModel @Inject constructor(
 
         refresh()
         refreshFriendJams()
-        viewModelScope.launch { recapRepository.refresh() }
+        viewModelScope.launch {
+            recapRepository.refresh().onFailure { _state.value = _state.value.copy(error = it.message) }
+        }
     }
 
     fun refresh() = run { repository.refresh() }

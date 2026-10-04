@@ -18,6 +18,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
+import com.wander.android.data.sources.agro.VaultAccess
 import com.wander.android.data.sources.agro.VaultBackup
 import com.wander.android.ui.components.GroupedCard
 import com.wander.android.ui.components.ConfirmRequest
@@ -27,12 +28,42 @@ import java.time.format.DateTimeParseException
 
 /**
  * The Agro vault rows under Backup: the daily toggle, sign-ins in or out, back up now, and
- * restore. Only shown when the paired server has a vault and this device holds the vault key —
- * a row that could only fail is not offered.
+ * restore. Hidden only when Agro is not paired at all. Otherwise, when backing up cannot work yet,
+ * one row says why instead of the section quietly not being there — which read as a feature that
+ * had never been built.
  */
 @Composable
-internal fun CloudBackupSection(viewModel: CloudBackupViewModel = hiltViewModel()) {
-    if (!viewModel.isAvailable) return
+internal fun CloudBackupSection(onPair: () -> Unit, viewModel: CloudBackupViewModel = hiltViewModel()) {
+    val access by viewModel.access.collectAsStateWithLifecycle()
+    val unreachable by viewModel.unreachable.collectAsStateWithLifecycle()
+    when (access) {
+        VaultAccess.NOT_PAIRED -> return
+        VaultAccess.READY -> VaultRows(viewModel)
+        else -> Column {
+            SettingsSection(stringResource(R.string.cloud_backup_section))
+            GroupedCard(
+                items = listOf<@Composable () -> Unit>({
+                    SettingsRow(
+                        title = stringResource(R.string.cloud_backup_auto),
+                        subtitle = stringResource(
+                            when {
+                                access == null -> R.string.cloud_backup_checking
+                                access == VaultAccess.NO_VAULT_KEY -> R.string.cloud_backup_no_key
+                                unreachable -> R.string.cloud_backup_unreachable
+                                else -> R.string.cloud_backup_server_lacks
+                            }
+                        ),
+                        onClick = onPair.takeIf { access == VaultAccess.NO_VAULT_KEY },
+                        icon = Icons.Rounded.CloudSync
+                    )
+                })
+            )
+        }
+    }
+}
+
+@Composable
+private fun VaultRows(viewModel: CloudBackupViewModel) {
     val auto by viewModel.auto.collectAsStateWithLifecycle()
     val accounts by viewModel.includeAccounts.collectAsStateWithLifecycle()
     val backups by viewModel.backups.collectAsStateWithLifecycle()

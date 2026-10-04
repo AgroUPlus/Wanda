@@ -8,6 +8,8 @@ import com.wander.android.core.backup.CloudBackupScheduler
 import com.wander.android.core.backup.CloudBackupStore
 import com.wander.android.core.security.AgroVault
 import com.wander.android.core.security.SecureStorage
+import com.wander.android.data.sources.agro.AgroClient
+import com.wander.android.data.sources.agro.VaultAccess
 import com.wander.android.data.sources.agro.VaultBackup
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -28,10 +30,17 @@ internal class CloudBackupViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val store: CloudBackupStore,
     private val scheduler: CloudBackupScheduler,
-    private val secureStorage: SecureStorage
+    private val secureStorage: SecureStorage,
+    private val agroClient: AgroClient
 ) : ViewModel() {
 
-    val isAvailable: Boolean get() = store.isAvailable
+    /** Null while asking the server what it supports; see [checkAccess]. */
+    private val _access = MutableStateFlow<VaultAccess?>(store.access)
+    val access: StateFlow<VaultAccess?> = _access.asStateFlow()
+
+    /** The check itself could not reach Agro, so "the server has no vault" would be a guess. */
+    private val _unreachable = MutableStateFlow(false)
+    val unreachable: StateFlow<Boolean> = _unreachable.asStateFlow()
     val auto: StateFlow<Boolean> = secureStorage.cloudBackup
     val includeAccounts: StateFlow<Boolean> = secureStorage.cloudBackupAccounts
 
@@ -46,7 +55,24 @@ internal class CloudBackupViewModel @Inject constructor(
     val status: StateFlow<BackupStatus?> = _status.asStateFlow()
 
     init {
-        refresh()
+        checkAccess()
+    }
+
+    /**
+     * What the server supports is learnt when this device registers with it, so a server updated
+     * since then still reads as having no vault. Registering again is the only way to ask.
+     */
+    private fun checkAccess() {
+        if (store.access != VaultAccess.SERVER_LACKS_VAULT) {
+            refresh()
+            return
+        }
+        _access.value = null
+        viewModelScope.launch {
+            _unreachable.value = agroClient.registerNode().isFailure
+            _access.value = store.access
+            refresh()
+        }
     }
 
     fun refresh() {

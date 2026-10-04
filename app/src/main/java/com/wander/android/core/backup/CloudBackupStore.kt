@@ -6,6 +6,7 @@ import com.wander.android.core.security.AgroVault
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.sources.agro.AgroVaultApi
 import com.wander.android.data.sources.agro.VaultBackup
+import com.wander.android.data.sources.agro.VaultAccess
 import com.wander.android.data.sources.agro.VaultLabel
 import com.wander.android.data.sources.agro.VaultSection
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +33,7 @@ internal class CloudBackupStore @Inject constructor(
     private val secureStorage: SecureStorage
 ) {
     val isAvailable: Boolean get() = api.isAvailable
+    val access: VaultAccess get() = api.access
 
     /** What a backup made now carries. */
     fun sections(): Set<BackupSection> = BackupSection.entries

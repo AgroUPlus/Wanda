@@ -564,6 +564,19 @@
     <string name="settings_subtly_tint_app_colours_from">Subtly tint the app with colours from the album cover</string>
     <string name="settings_sweep_active_word_one_letter">Sweep the active word in one letter at a time, karaoke-style. Off highlights the whole line as it\'s sung.</string>
     <string name="settings_sync_now">Sync now</string>
+    <string name="settings_sync_summary_peer">Direct peer-to-peer sharing.</string>
+    <string name="settings_sync_summary_navidrome">Archived to Navidrome.</string>
+    <string name="settings_sync_summary_agro">Archived to Agro server.</string>
+    <string name="settings_sync_count_device">%1$d on this device</string>
+    <string name="settings_sync_count_server">%1$d on server</string>
+    <string name="settings_sync_count_pending">%1$d pending sync</string>
+    <string name="settings_sync_uploading">Uploading %1$s</string>
+    <string name="settings_sync_working">Working…</string>
+    <string name="settings_trade_nothing_yet">Nothing traded yet</string>
+    <plurals name="settings_trade_improved">
+        <item quantity="one">%1$d track improved so far</item>
+        <item quantity="other">%1$d tracks improved so far</item>
+    </plurals>
     <string name="settings_sync_settings_agro">Sync settings with Agro</string>
     <string name="settings_true_black">True black</string>
     <string name="settings_two_do_not_match">The two do not match</string>
@@ -863,6 +876,10 @@
     <string name="cloud_backup_last">Last backup %1$s, from %2$s</string>
     <string name="cloud_backup_none">No backup on Agro yet</string>
     <string name="cloud_backup_now">Back up now</string>
+    <string name="cloud_backup_checking">Checking whether your Agro server keeps backups…</string>
+    <string name="cloud_backup_unreachable">Couldn\'t reach Agro to check whether it keeps backups.</string>
+    <string name="cloud_backup_server_lacks">Your Agro server doesn\'t keep backups. Update Agro to turn this on.</string>
+    <string name="cloud_backup_no_key">This phone doesn\'t hold your vault key. Tap to pair again with your passphrase.</string>
     <string name="cloud_backup_accounts">Include sign-ins</string>
     <string name="cloud_backup_accounts_sub">Off: after restoring, you sign back into your sources.</string>
     <string name="cloud_backup_accounts_confirm_title">Include sign-ins in cloud backups?</string>
@@ -981,7 +998,7 @@
     <string name="settings_category_sub_devices_library_syncing_what_gets">Devices, library syncing and what gets shared</string>
     <string name="settings_category_sub_change_theme_colours_app">Change the theme and colours of the app</string>
     <string name="settings_category_sub_offline_mode_downloads_cache">Offline mode, downloads and the cache</string>
-    <string name="settings_category_sub_import_playlists_share_what_are">Import playlists and share what you are playing</string>
+    <string name="settings_category_sub_import_playlists_share_what_are">Import playlists, share what you are playing, and back up</string>
     <string name="settings_category_sub_incognito_visibility_what_leaves_this">Incognito, visibility and what leaves this device</string>
     <string name="settings_category_sub_version_updates_duplicates_links">Version, updates, duplicates and links</string>
 

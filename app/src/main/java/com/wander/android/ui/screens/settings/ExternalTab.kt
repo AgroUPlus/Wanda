@@ -58,7 +58,7 @@ internal fun LazyListScope.externalTab(
     }
 
     item(key = "cloud_backup") {
-        CloudBackupSection()
+        CloudBackupSection(onPair = actions.onAgroPair)
     }
 
     item(key = "sec_notifications") { SettingsSection(stringResource(R.string.settings_section_notifications)) }
