@@ -179,6 +179,11 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
     val agroSyncSettings: StateFlow<Boolean> = agroPrefs.agroSyncSettings
     fun setAgroSyncSettings(enabled: Boolean) = agroPrefs.setAgroSyncSettings(enabled)
 
+    val cloudBackup: StateFlow<Boolean> = agroPrefs.cloudBackup
+    fun setCloudBackup(enabled: Boolean) = agroPrefs.setCloudBackup(enabled)
+    val cloudBackupAccounts: StateFlow<Boolean> = agroPrefs.cloudBackupAccounts
+    fun setCloudBackupAccounts(enabled: Boolean) = agroPrefs.setCloudBackupAccounts(enabled)
+
     var agroIdentityPrivateKey: String?
         get() = agroPrefs.agroIdentityPrivateKey
         set(value) { agroPrefs.agroIdentityPrivateKey = value }

@@ -117,14 +117,15 @@ internal fun BackupSection(viewModel: BackupViewModel = hiltViewModel()) {
             )
         )
 
-        status?.let { Outcome(it) }
+        status?.let { BackupOutcome(it) }
     }
 }
 
 @Composable
-private fun Outcome(status: BackupStatus) {
+internal fun BackupOutcome(status: BackupStatus) {
     val (text, error) = when (status) {
         is BackupStatus.Exported -> stringResource(R.string.backup_exported_verified) to false
+        is BackupStatus.Done -> status.message to false
 
         is BackupStatus.Imported -> {
             // Restarting is not advice, it is required: every setting is read into a `StateFlow`

@@ -18,6 +18,8 @@ internal const val KEY_AGRO_VAULT_KEY = "key_agro_vault_key"
 internal const val KEY_AGRO_IDENTITY_PRIV = "key_agro_identity_priv"
 internal const val KEY_AGRO_IDENTITY_PUB = "key_agro_identity_pub"
 internal const val KEY_AGRO_SYNC_SETTINGS = "key_agro_sync_settings"
+internal const val KEY_AGRO_CLOUD_BACKUP = "key_agro_cloud_backup"
+internal const val KEY_AGRO_CLOUD_BACKUP_ACCOUNTS = "key_agro_cloud_backup_accounts"
 internal const val KEY_AGRO_DEVICE_ID = "key_agro_device_id"
 
 internal const val KEY_DEEZER_ARL = "key_deezer_arl"

@@ -98,6 +98,9 @@ private fun Throwable.readableMessage(): String = when (this) {
 internal sealed interface BackupStatus {
     data object Exported : BackupStatus
 
+    /** Something finished that says what it did in its own words — a cloud backup sent. */
+    data class Done(val message: String) : BackupStatus
+
     /**
      * [settings] is what was actually written, not what the file held: entries this build does not
      * understand are skipped, and reporting the file's own count would overstate the restore.
