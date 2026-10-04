@@ -2,9 +2,15 @@ package com.wander.android.ui.screens.settings
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.TrendingUp
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Fingerprint
+import androidx.compose.material.icons.rounded.SettingsSuggest
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
@@ -55,7 +61,8 @@ internal fun LazyListScope.syncTab(
                     subtitle = stringResource(R.string.settings_share_navidrome_address_between_devices),
                     checked = state.agroSyncSettings && !state.incognito,
                     onCheckedChange = actions.onSyncSettingsChange,
-                    enabled = !state.incognito
+                    enabled = !state.incognito,
+                    icon = Icons.Rounded.SettingsSuggest
                 )
             }
             add {
@@ -69,7 +76,8 @@ internal fun LazyListScope.syncTab(
                     subtitle = stringResource(R.string.settings_adds_play_counts_server_s),
                     checked = state.popularityContribution && !state.incognito,
                     onCheckedChange = actions.onPopularityChange,
-                    enabled = !state.incognito
+                    enabled = !state.incognito,
+                    icon = Icons.AutoMirrored.Rounded.TrendingUp
                 )
             }
             add {
@@ -82,7 +90,8 @@ internal fun LazyListScope.syncTab(
                     // lyrics text alongside the fingerprint under this same flag.
                     subtitle = stringResource(R.string.settings_sends_acoustic_fingerprints_lyrics_tracks),
                     checked = state.catalogTrade,
-                    onCheckedChange = actions.onCatalogTradeChange
+                    onCheckedChange = actions.onCatalogTradeChange,
+                    icon = Icons.Rounded.Fingerprint
                 )
             }
             if (state.catalogTrade) {
@@ -93,7 +102,8 @@ internal fun LazyListScope.syncTab(
                     SettingsRow(
                         modifier = Modifier.scale(rememberShelfEntranceScale(4)),
                         title = stringResource(R.string.settings_what_trade_has_done),
-                        subtitle = tradeTotals(state.fingerprintsShared, state.lyricsReceived)
+                        subtitle = tradeTotals(state.fingerprintsShared, state.lyricsReceived),
+                        icon = Icons.Rounded.AutoAwesome
                     )
                 }
             }
@@ -113,11 +123,11 @@ internal fun LazyListScope.syncTab(
         // your files, which is archiving — with archiving off, nothing is stored there at all and
         // the line was simply untrue.
         serverSummary = when {
-            !state.serverArchive -> "Direct peer-to-peer sharing."
+            !state.serverArchive -> R.string.settings_sync_summary_peer
             // `navidrome` is the "files land in Navidrome" condition: with a Navidrome connected,
             // the archive is that server rather than Agro's own storage.
-            state.navidrome -> "Archived to Navidrome."
-            else -> "Archived to Agro server."
+            state.navidrome -> R.string.settings_sync_summary_navidrome
+            else -> R.string.settings_sync_summary_agro
         }
     )
 }
@@ -128,9 +138,14 @@ internal fun LazyListScope.syncTab(
  * Says "nothing yet" rather than "0 · 0" before the first sync: the trade only runs on a charger
  * over Wi-Fi, so a freshly enabled toggle showing zeroes is the normal case and reads as broken.
  */
+@Composable
 private fun tradeTotals(shared: Int, received: Int): String {
     val total = shared + received
-    return if (total == 0) "Nothing traded yet" else "$total tracks improved so far"
+    return if (total == 0) {
+        stringResource(R.string.settings_trade_nothing_yet)
+    } else {
+        pluralStringResource(R.plurals.settings_trade_improved, total, total)
+    }
 }
 
 /**
