@@ -2,10 +2,6 @@ package com.wander.android.ui.screens.queue
  
 import kotlin.coroutines.cancellation.CancellationException
 import com.wander.android.ui.components.backResistance
-import com.wander.android.ui.components.bouncySpec
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -100,7 +96,7 @@ internal fun QueueDrawer(
     val snackbarHostState = remember { SnackbarHostState() }
     var itemGenerations by remember { mutableStateOf(mapOf<String, Int>()) }
 
-    val spec = remember { bouncySpec<Float>() }
+    val spec = remember { queueDrawerSpec<Float>() }
     val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLow
     val closeDrawer: () -> Unit = { scope.launch { drawer.close(spec) } }
 
@@ -175,12 +171,7 @@ internal fun QueueDrawer(
                 .fillMaxWidth()
                 .height(with(LocalDensity.current) { drawer.heightPx.toDp() })
                 .graphicsLayer {
-                    // Past 1 on purpose: the spring's overshoot lifts the drawer above its rest.
                     translationY = (1f - drawer.progress) * size.height
-                }
-                // Fills the gap the overshoot would open under the drawer's bottom edge.
-                .drawBehind {
-                    drawRect(surfaceColor, topLeft = Offset(0f, size.height), size = Size(size.width, size.height * OvershootFill))
                 }
                 .nestedScroll(nestedScroll)
                 .draggable(

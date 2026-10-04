@@ -2,6 +2,9 @@ package com.wander.android.ui.screens.queue
 
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -82,7 +85,9 @@ internal class QueueDrawerState {
         try {
             animate(progress, target, velocity, spec) { value, _ ->
                 if (generation != mine) throw Superseded
-                progress = value
+                // A hard fling can still carry a critically damped spring a hair past its target;
+                // the drawer stops at its edge rather than lifting off the bottom of the screen.
+                progress = value.coerceIn(0f, 1f)
             }
         } catch (_: Superseded) {
             // A drag or a newer animation took over; it owns `progress` now.
@@ -148,6 +153,13 @@ internal const val ScrimAlpha = 0.4f
 /** Tall enough to be the queue, short enough that the player is still visibly behind it. */
 internal const val QueueDrawerHeightFraction = 0.82f
 
-
-/** Of the drawer's height, how much surface is drawn below it to cover the spring's overshoot. */
-internal const val OvershootFill = 0.25f
+/**
+ * The drawer's settle. It used to share [com.wander.android.ui.components.bouncySpec], whose
+ * overshoot made a full-height surface wobble on every open and close. Critically damped instead,
+ * and stiffer, so it lands quickly and stays put — the release velocity [QueueDrawerState.settle]
+ * hands over is what keeps it feeling attached to the finger.
+ */
+internal fun <T> queueDrawerSpec(): FiniteAnimationSpec<T> = spring(
+    dampingRatio = Spring.DampingRatioNoBouncy,
+    stiffness = 700f
+)
