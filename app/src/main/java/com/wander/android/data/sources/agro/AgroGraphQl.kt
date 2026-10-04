@@ -43,6 +43,9 @@ class AgroGraphQl @Inject constructor(
     /** For the WebSocket, which authenticates with the same token as `/graphql`. */
     val apiKey: String get() = secureStorage.agroApiKey
 
+    /** Whether the paired server advertised [capability] when this device last registered. */
+    fun serverSupports(capability: String): Boolean = secureStorage.serverSupports(capability)
+
     /**
      * GraphQL answers a rejected or malformed mutation with HTTP 200 and an `errors` array, so a
      * status check alone reported every such failure as a successful sync. Both cases fail here,

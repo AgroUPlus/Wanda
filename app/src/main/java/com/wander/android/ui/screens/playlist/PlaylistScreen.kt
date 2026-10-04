@@ -150,7 +150,13 @@ fun PlaylistScreen(
                         )
                     }
 
-                    shared?.let { state ->
+                    shared?.takeIf { it.isBlend }?.let { state ->
+                        item(key = "blend", contentType = "blend") {
+                            com.wander.android.ui.screens.playlist.blend.BlendBanner(agroId = state.agroId, onLeft = onBack)
+                        }
+                    }
+
+                    shared?.takeIf { !it.isBlend }?.let { state ->
                         item(key = "shared-status", contentType = "shared-status") {
                             SharedPlaylistBanner(
                                 state = state,

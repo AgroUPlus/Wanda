@@ -33,6 +33,7 @@ internal class SettingsAccountCoordinator @Inject constructor(
     private val socialRepository: SocialRepository,
     private val dropsRepository: DropsRepository,
     private val jamRecaps: com.wander.android.data.repository.JamRecapRepository,
+    private val blends: com.wander.android.data.repository.BlendRepository,
     private val cacheManager: AudioCacheManager
 ) {
     private val _cacheBytes = MutableStateFlow(0L)
@@ -100,6 +101,7 @@ internal class SettingsAccountCoordinator @Inject constructor(
             runCatching { socialRepository.clear() }
             runCatching { dropsRepository.clear() }
             runCatching { jamRecaps.clear() }
+            blends.clear()
             onResetAgroPairing()
         }
     }

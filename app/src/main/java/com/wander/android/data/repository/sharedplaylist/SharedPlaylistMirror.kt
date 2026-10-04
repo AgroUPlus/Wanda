@@ -104,7 +104,8 @@ class SharedPlaylistMirror @Inject constructor(
                 revision = server.revision,
                 syncState = state.name,
                 lastSyncedAt = System.currentTimeMillis(),
-                publishedAt = dao.get(server.id)?.publishedAt ?: System.currentTimeMillis()
+                publishedAt = dao.get(server.id)?.publishedAt ?: System.currentTimeMillis(),
+                isBlend = server.isBlend
             )
         )
         if (reflect) localPlaylistId?.let { reflectInto(it, server.title, shown) }

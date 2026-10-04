@@ -42,7 +42,7 @@ internal class AgroSessionViewModel @Inject constructor(
     private val listenAlong: ListenAlongController,
     private val listenerPresence: com.wander.android.data.repository.ListenerPresence,
     private val jamRepository: JamRepository,
-    private val jamRecaps: com.wander.android.data.repository.JamRecapRepository,
+    private val inbox: com.wander.android.data.repository.AgroSideInbox,
     private val jamPlayback: JamPlaybackController,
     private val dropsRepository: DropsRepository,
     private val friendNotifier: FriendNotifier,
@@ -132,7 +132,7 @@ internal class AgroSessionViewModel @Inject constructor(
                     incognitoRepository.refresh()
                     socialRepository.refresh()
                     jamRepository.refresh()
-                    jamRecaps.refresh()
+                    inbox.refreshAll()
                     sharedPlaylists.syncAllSoon()
                     onLibraryChanged()
                 }
@@ -164,7 +164,7 @@ internal class AgroSessionViewModel @Inject constructor(
                     ?.let(listenerPresence::onListeners)
                     ?: listenAlong.onFrame(message)
                 is AgroLiveMessage.JamUpdated -> jamRepository.refresh()
-                is AgroLiveMessage.JamRecapWritten -> jamRecaps.refresh()
+                is AgroLiveMessage.JamRecapWritten, is AgroLiveMessage.BlendInvited -> inbox.onMessage(message)
                 // Someone changed a playlist this account shares in; fetched only if it moved on.
                 is AgroLiveMessage.PlaylistUpdated -> sharedPlaylists.onRemoteChange(message.id, message.revision)
                 is AgroLiveMessage.JamNowPlayingFrame -> {

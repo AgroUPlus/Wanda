@@ -1,6 +1,5 @@
 package com.wander.android.data.sources.agro
 
-import com.wander.android.data.sources.agro.AgroSharedPlaylistParsing.PLAYLIST_FIELDS
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -24,15 +23,18 @@ class AgroSharedPlaylistApi @Inject constructor(private val graphQl: AgroGraphQl
 
     val isAvailable: Boolean get() = graphQl.isConfigured
 
+    private val fields: String
+        get() = AgroSharedPlaylistParsing.playlistFields(graphQl.serverSupports(AgroSharedPlaylistParsing.BLENDS))
+
     /** The paired account's name, which is how an item says it was added by this account. */
     val me: String get() = graphQl.userId
 
     suspend fun fetch(id: String): Result<AgroSharedPlaylist> =
-        graphQl.execute("query(\$id: String!) { playlist(id: \$id) { $PLAYLIST_FIELDS } }", idVariables(id))
+        graphQl.execute("query(\$id: String!) { playlist(id: \$id) { $fields } }", idVariables(id))
             .mapCatching { AgroSharedPlaylistParsing.playlist(it["playlist"] as? JsonObject) }
 
     suspend fun follow(id: String): Result<AgroSharedPlaylist> =
-        graphQl.execute("mutation(\$id: String!) { followPlaylist(id: \$id) { $PLAYLIST_FIELDS } }", idVariables(id))
+        graphQl.execute("mutation(\$id: String!) { followPlaylist(id: \$id) { $fields } }", idVariables(id))
             .mapCatching { AgroSharedPlaylistParsing.playlist(it["followPlaylist"] as? JsonObject) }
 
     suspend fun unfollow(id: String): Result<Unit> =
@@ -42,7 +44,7 @@ class AgroSharedPlaylistApi @Inject constructor(private val graphQl: AgroGraphQl
     suspend fun applyEdits(id: String, baseRevision: Long, edits: List<AgroPlaylistEdit>): Result<AgroSharedPlaylist> =
         graphQl.execute(
             "mutation(\$id: String!, \$base: Int!, \$edits: [PlaylistEditInput!]!) { " +
-                "applyPlaylistEdits(playlistId: \$id, baseRevision: \$base, edits: \$edits) { $PLAYLIST_FIELDS } }",
+                "applyPlaylistEdits(playlistId: \$id, baseRevision: \$base, edits: \$edits) { $fields } }",
             buildJsonObject {
                 put("id", id)
                 put("base", baseRevision)

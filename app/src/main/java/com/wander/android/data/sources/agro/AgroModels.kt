@@ -168,6 +168,9 @@ internal sealed interface AgroLiveMessage {
     /** A jam this account was in wrote it a recap. Carries nothing; the list is re-read. */
     data object JamRecapWritten : AgroLiveMessage
 
+    /** Someone asked this account into a blend. Carries nothing; the invitations are re-read. */
+    data object BlendInvited : AgroLiveMessage
+
     /**
      * A shared playlist this account owns or follows changed; [revision] is null when it was
      * deleted. Carries nothing else: the app fetches the playlist, and that fetch is where the
