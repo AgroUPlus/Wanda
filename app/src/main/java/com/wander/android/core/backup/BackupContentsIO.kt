@@ -113,7 +113,6 @@ internal class BackupContentsIO @Inject constructor(
             }
         }
 
-        // Version 1 and 2 files hold sign-ins inside `entries`; version 3 keeps them apart.
         val values = (document.entries + document.accounts).toPreferenceValues()
         val replaceSettings = BackupSection.SETTINGS in sections
         val replaceAccounts = BackupSection.ACCOUNTS in sections

@@ -21,8 +21,9 @@ import kotlinx.serialization.Serializable
 
 /**
  * A track with its user state, carried whole so a play or playlist entry restored onto a fresh
- * install still resolves to a title before the library has synced. Download and cache flags are
- * not carried: the file behind them is not in the backup.
+ * install still resolves to a title before the library has synced. Download state — the flags and
+ * the file's path — is not carried: the file is not in the backup, and a restored path pointed
+ * playback at nothing.
  */
 @Serializable
 internal data class BackupTrack(
@@ -48,13 +49,6 @@ internal data class BackupTrack(
     val isEpisode: Boolean = false,
     val isLiked: Boolean = false,
     val isLibrary: Boolean = false,
-    /**
-     * Never written and never restored: it named this device's download, whose file is not in the
-     * backup, so a restored row pointed playback at a path that did not exist (ENOENT). Still
-     * declared because files written before that carry it, and their integrity digest is computed
-     * over the record exactly as it was encoded.
-     */
-    val localFilePath: String? = null,
     val contentHash: String? = null,
     val playCount: Int = 0,
     val lastPlayedTimestamp: Long? = null,

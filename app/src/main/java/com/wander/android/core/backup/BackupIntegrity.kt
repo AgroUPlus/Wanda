@@ -38,11 +38,9 @@ internal data class SectionDigest(val count: Int, val sha256: String)
 internal fun BackupDocument.sectionDigests(json: Json, sections: Set<BackupSection>): Map<String, SectionDigest> =
     sections.associate { it.name to digestOf(json, it) }
 
-/**
- * @throws IOException naming the first section that did not survive intact. Files from before
- * version 3 have no manifest and pass — GCM is the only check they ever had.
- */
+/** @throws IOException naming the first section that did not survive intact, or if none is listed. */
 internal fun BackupDocument.verifyIntegrity(json: Json) {
+    if (manifest.isEmpty()) throw IOException("The backup lists no sections, so none can be checked")
     manifest.forEach { (name, expected) ->
         val section = BackupSection.entries.firstOrNull { it.name == name }
             ?: throw IOException("The backup has a section this version does not know: $name")
@@ -52,13 +50,9 @@ internal fun BackupDocument.verifyIntegrity(json: Json) {
     }
 }
 
-/** Sections the file carries — every one on a version 1 or 2 file, which had no choice. */
+/** Sections the backup carries. */
 internal val BackupDocument.includedSections: Set<BackupSection>
-    get() = if (manifest.isEmpty()) {
-        BackupSection.entries.toSet()
-    } else {
-        manifest.keys.mapNotNull { name -> BackupSection.entries.firstOrNull { it.name == name } }.toSet()
-    }
+    get() = manifest.keys.mapNotNull { name -> BackupSection.entries.firstOrNull { it.name == name } }.toSet()
 
 private fun BackupDocument.digestOf(json: Json, section: BackupSection): SectionDigest = when (section) {
     BackupSection.SETTINGS -> digest(json, entryMap, entries, entries.size)

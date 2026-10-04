@@ -28,7 +28,7 @@ import com.wander.android.ui.screens.settings.BackupStatus
 import com.wander.android.ui.screens.settings.BackupViewModel
 
 /**
- * The escape hatch for someone who already has a `wanda-backup.json`, offered inline on
+ * The escape hatch for someone who already has a `wanda-backup.wvlt`, offered inline on
  * [WelcomeScreen]'s sources step: importing one replaces the "sign in again" dance above it with
  * whatever the backup already had configured. Reuses the same [BackupViewModel]/
  * [BackupPassphraseDialog] Settings' own backup screen uses — restoring is the same operation

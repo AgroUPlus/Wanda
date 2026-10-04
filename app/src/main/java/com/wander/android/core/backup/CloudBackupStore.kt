@@ -18,9 +18,8 @@ import javax.inject.Singleton
 /**
  * Backing this device up to the Agro vault, and restoring from it.
  *
- * The same document, manifest and restore as the file export ([SettingsBackupStore]) — only the
- * envelope differs: compressed, sealed under the vault key rather than a typed passphrase, and
- * kept on Agro rather than in a file. See [CloudBackupCodec].
+ * The same [BackupCodec] format, document and restore as the file export ([SettingsBackupStore]),
+ * locked with the vault key rather than a typed passphrase, and kept on Agro rather than in a file.
  *
  * Sign-ins travel only when [SecureStorage.cloudBackupAccounts] is on. Off, a restore on a new
  * phone brings everything back except them, and the sources are signed into again — which is the
@@ -49,13 +48,10 @@ internal class CloudBackupStore @Inject constructor(
     suspend fun backUpNow(): Result<String> = withContext(Dispatchers.IO) {
         runCatching {
             val document = contents.collect(sections())
-            val json = BackupJson.encodeToString(BackupDocument.serializer(), document).toByteArray(Charsets.UTF_8)
+            val json = document.toJsonBytes()
             val sealed = withBackupKey { key ->
-                CloudBackupCodec.pack(json, key).also { packed ->
-                    val reopened = BackupJson.decodeFromString(
-                        BackupDocument.serializer(),
-                        String(CloudBackupCodec.unpack(packed, key), Charsets.UTF_8)
-                    )
+                BackupCodec.sealWithVaultKey(json, key).also { packed ->
+                    val reopened = BackupCodec.openWithVaultKey(packed, key).toVerifiedDocument()
                     if (reopened.manifest != document.manifest) {
                         throw IOException("The backup did not open again as it was written")
                     }
@@ -65,7 +61,7 @@ internal class CloudBackupStore @Inject constructor(
                 deviceId = secureStorage.agroDeviceId,
                 deviceName = secureStorage.agroDevicePetname.ifBlank { Build.MODEL },
                 appVersion = BuildConfig.VERSION_NAME,
-                format = CloudBackupCodec.FORMAT,
+                format = BackupCodec.FORMAT,
                 plainBytes = json.size.toLong(),
                 sections = document.manifest.map { (name, digest) -> VaultSection(name, digest.count) }
             )
@@ -73,6 +69,19 @@ internal class CloudBackupStore @Inject constructor(
     }
 
     suspend fun list(): Result<List<VaultBackup>> = api.list()
+
+    /**
+     * Unlocks the vault on a device paired by QR or device token, which never carry the key: the
+     * sealed key comes from Agro, and [passphrase] opens it here. Kept, the passphrase is not.
+     *
+     * @throws AgroVault.VaultException when [passphrase] does not open it.
+     * @throws IOException when Agro cannot be asked, or no device has created a vault key yet.
+     */
+    suspend fun unlock(passphrase: String) = withContext(Dispatchers.Default) {
+        val envelope = api.keyEnvelope().getOrElse { throw it as? IOException ?: IOException(it.message, it) }
+            ?: throw IOException("Your account has no vault key yet. Pair once with your passphrase to create it.")
+        secureStorage.agroVaultKey = AgroVault.unwrapWithPassphrase(passphrase, envelope.salt, envelope.wrapped)
+    }
 
     suspend fun delete(id: String): Result<Unit> = api.delete(id)
 
@@ -85,11 +94,7 @@ internal class CloudBackupStore @Inject constructor(
      */
     suspend fun restore(id: String): BackupContents = withContext(Dispatchers.IO) {
         val packed = api.download(id).getOrElse { throw it as? IOException ?: IOException(it.message, it) }
-        val json = withBackupKey { CloudBackupCodec.unpack(packed, it) }
-        val document = runCatching { BackupJson.decodeFromString(BackupDocument.serializer(), String(json, Charsets.UTF_8)) }
-            .getOrElse { throw IOException("The backup's contents are damaged", it) }
-        document.verifyIntegrity(BackupJson)
-        contents.restore(document)
+        contents.restore(withBackupKey { BackupCodec.openWithVaultKey(packed, it) }.toVerifiedDocument())
     }
 
     /** Runs [block] with the backup subkey, wiped as soon as it is done. */

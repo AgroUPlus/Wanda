@@ -8,12 +8,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.IOException
-import java.util.Base64
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Writes and reads the backup file.
+ * Writes and reads the backup file — the same [BackupCodec] format as the Agro vault, locked with a
+ * passphrase instead of the vault key.
  *
  * ## Why it is encrypted, and not optional
  *
@@ -22,17 +22,6 @@ import javax.inject.Singleton
  * `EncryptedSharedPreferences` precisely so they are not readable at rest, and a plaintext export
  * would undo that with one tap — the file lands in Downloads, gets synced to a cloud drive, and the
  * account it protects is in it. So the passphrase is not a setting: there is no unencrypted path.
- *
- * ## The scheme
- *
- * Argon2id over the passphrase, then AES-256-GCM over the payload — both borrowed whole from
- * [AgroVault] rather than reimplemented, because this is the same problem it already solves: a
- * human-typed passphrase standing between an attacker and a file they hold. The salt is fresh per
- * export and stored beside the ciphertext; it is not a secret, and without it a passphrase cannot
- * be verified at all.
- *
- * GCM authenticates, so a wrong passphrase and a damaged file fail the same way — as a failure.
- * Neither is ever reported as an empty backup, which would restore nothing and look like success.
  *
  * Argon2id is deliberately slow (~64 MiB, three passes), so both calls are off the main thread.
  */
@@ -56,27 +45,10 @@ internal class SettingsBackupStore @Inject constructor(
         passphrase: String,
         sections: Set<BackupSection>
     ): BackupContents = withContext(Dispatchers.IO) {
-        // Not gzipped, deliberately. The payload being plain JSON is what lets an older build
-        // decrypt a newer file and restore the parts it understands; compression would turn that
-        // graceful degradation into "the backup's contents are damaged".
         val document = contents.collect(sections)
-        val salt = AgroVault.newSalt()
-        val key = AgroVault.deriveWrappingKey(passphrase, salt)
-        val envelope = try {
-            BackupEnvelope(
-                salt = Base64.getEncoder().encodeToString(salt),
-                payload = AgroVault.sealPayload(
-                    BackupJson.encodeToString(document).toByteArray(Charsets.UTF_8),
-                    key
-                )
-            )
-        } finally {
-            // The derived key has no other holder, so this actually shortens its life.
-            AgroVault.wipe(key)
-        }
-
+        val sealed = BackupCodec.sealWithPassphrase(document.toJsonBytes(), passphrase)
         context.contentResolver.openOutputStream(target, "wt")
-            ?.use { it.write(BackupJson.encodeToString(envelope).toByteArray(Charsets.UTF_8)) }
+            ?.use { it.write(sealed) }
             ?: throw IOException("Could not open the backup file for writing")
 
         val written = try {
@@ -103,33 +75,10 @@ internal class SettingsBackupStore @Inject constructor(
 
     /** Opens, decrypts, decodes and verifies — everything short of writing. */
     private fun read(source: Uri, passphrase: String): BackupDocument {
-        val raw = context.contentResolver.openInputStream(source)
-            ?.use { it.readBytes().toString(Charsets.UTF_8) }
+        val packed = context.contentResolver.openInputStream(source)
+            ?.use { it.readBytes() }
             ?: throw IOException("Could not open the backup file")
-
-        val envelope = runCatching { BackupJson.decodeFromString<BackupEnvelope>(raw) }
-            .getOrElse { throw IOException("That file is not a Wanda backup", it) }
-        if (envelope.format != BACKUP_FORMAT) {
-            throw IOException("That file is not a Wanda backup")
-        }
-
-        val salt = runCatching { Base64.getDecoder().decode(envelope.salt) }
-            .getOrElse { throw IOException("The backup's header is damaged", it) }
-
-        val key = AgroVault.deriveWrappingKey(passphrase, salt)
-        val plaintext = try {
-            // Throws `VaultException` on a wrong passphrase — GCM cannot tell that from tampering,
-            // and the caller must not treat either as an empty backup.
-            AgroVault.openPayload(envelope.payload, key, "settings backup")
-        } finally {
-            AgroVault.wipe(key)
-        }
-
-        val document = runCatching {
-            BackupJson.decodeFromString<BackupDocument>(String(plaintext, Charsets.UTF_8))
-        }.getOrElse { throw IOException("The backup's contents are damaged", it) }
-        document.verifyIntegrity(BackupJson)
-        return document
+        return BackupCodec.openWithPassphrase(packed, passphrase).toVerifiedDocument()
     }
 }
 
@@ -152,19 +101,3 @@ private fun BackupDocument.summary() = BackupContents(
     tracks = tracks.size,
     playlists = playlists.size
 )
-
-/**
- * The unencrypted header, so a file can be recognised — and rejected — before a passphrase is
- * derived, which costs hundreds of milliseconds.
- *
- * Nothing here is secret: a format name, a version, and the salt, which is public by construction.
- */
-@kotlinx.serialization.Serializable
-private data class BackupEnvelope(
-    val format: String = BACKUP_FORMAT,
-    val version: Int = BackupDocument.CURRENT_VERSION,
-    val salt: String,
-    val payload: String
-)
-
-private const val BACKUP_FORMAT = "wanda-backup"

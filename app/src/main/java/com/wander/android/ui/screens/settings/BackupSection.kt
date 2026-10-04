@@ -128,9 +128,7 @@ internal fun BackupOutcome(status: BackupStatus) {
         is BackupStatus.Done -> status.message to false
 
         is BackupStatus.Imported -> {
-            // Restarting is not advice, it is required: every setting is read into a `StateFlow`
-            // when `SecureStorage` is constructed, and those were built before this file was
-            // written. The app is showing the old values until the process restarts.
+            // Applied already: `SecureStorage.importAll` re-reads every setting's flow once written.
             val settings = pluralStringResource(
                 R.plurals.backup_restored_settings,
                 status.settings,
@@ -178,5 +176,5 @@ internal fun BackupOutcome(status: BackupStatus) {
 
 private data class PendingBackup(val uri: Uri, val mode: BackupPassphraseMode)
 
-private const val BACKUP_MIME = "application/json"
-private const val DEFAULT_FILE_NAME = "wanda-backup.json"
+private const val BACKUP_MIME = "application/octet-stream"
+private const val DEFAULT_FILE_NAME = "wanda-backup.wvlt"
