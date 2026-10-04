@@ -37,5 +37,14 @@ data class HistoryEntity(
      * whose columns differ from the ones it would have created.
      */
     @ColumnInfo(defaultValue = "1")
-    val agroSynced: Boolean = false
+    val agroSynced: Boolean = false,
+    /**
+     * Two more outboxes, for the scrobbling services. Same split default as [agroSynced], and for
+     * the same reason; on top of that, connecting a service marks every earlier play as sent, so
+     * only what is played from then on goes — Last.fm refuses plays over two weeks old anyway.
+     */
+    @ColumnInfo(defaultValue = "1")
+    val listenBrainzSynced: Boolean = false,
+    @ColumnInfo(defaultValue = "1")
+    val lastFmSynced: Boolean = false
 )

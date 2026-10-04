@@ -28,7 +28,8 @@ internal class LikesAndHistoryRepository(
     private val recordingRules: RecordingRulesRepository,
     private val secureStorage: SecureStorage,
     private val scrobbleSuppression: ScrobbleSuppression,
-    private val scrobbleSyncScheduler: ScrobbleSyncScheduler
+    private val scrobbleSyncScheduler: ScrobbleSyncScheduler,
+    private val scrobbleForwardScheduler: com.wander.android.core.sync.ScrobbleForwardScheduler
 ) {
     private val _writeErrors = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val writeErrors: SharedFlow<String> = _writeErrors.asSharedFlow()
@@ -84,6 +85,7 @@ internal class LikesAndHistoryRepository(
             ?.isSuccess == true
         if (scrobbled) historyDao.markScrobbled(listOf(entryId))
         scrobbleSyncScheduler.syncSoon()
+        scrobbleForwardScheduler.forwardSoon()
     }
 
     private suspend fun isLiked(track: UnifiedTrack): Boolean =

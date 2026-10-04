@@ -47,6 +47,7 @@ class PlaybackService : MediaSessionService() {
     @Inject lateinit var secureStorage: com.wander.android.core.security.SecureStorage
     @Inject lateinit var sleepTimer: SleepTimer
     @Inject lateinit var jamSkipGate: JamSkipGate
+    @Inject internal lateinit var scrobbleForwarding: com.wander.android.data.repository.ScrobbleForwarding
 
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private var mediaSession: MediaSession? = null
@@ -56,6 +57,7 @@ class PlaybackService : MediaSessionService() {
         val player = playerFactory.create()
         player.addListener(PlayCountRecorder(player))
         player.addListener(AgroHandoffReporter(player))
+        player.addListener(NowPlayingForwarder(player, scope, scrobbleForwarding))
         player.addListener(NextTrackPreloader(player))
         EpisodeSkipSilence(player, secureStorage.isSkipSilenceEnabled, scope)
         SleepTimerEnforcer(player, sleepTimer, scope)

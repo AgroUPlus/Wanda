@@ -45,6 +45,17 @@ android {
         val pickerLanguages = (listOf("en") + translatedLocaleQualifiers.map {
             it.substringBefore('-').substringBefore('+')
         }).distinct()
+        // Last.fm identifies an app by a key and a shared secret. They are not committed: a build
+        // takes them from `lastfmApiKey`/`lastfmApiSecret` (gradle.properties, ~/.gradle, or -P)
+        // or the CI environment, and one without them asks the user to paste their own — anyone
+        // can register a key at last.fm/api/account/create. Shipped in an APK, a secret can be
+        // extracted, as in every open-source Last.fm client; reaching an account still takes that
+        // user's own session key, which only their approval in the browser hands out.
+        fun secretFor(property: String, env: String) =
+            (project.findProperty(property) as String?) ?: System.getenv(env) ?: ""
+        buildConfigField("String", "LASTFM_API_KEY", "\"${secretFor("lastfmApiKey", "WANDA_LASTFM_API_KEY")}\"")
+        buildConfigField("String", "LASTFM_API_SECRET", "\"${secretFor("lastfmApiSecret", "WANDA_LASTFM_API_SECRET")}\"")
+
         buildConfigField(
             "String[]",
             "TRANSLATED_LANGUAGES",

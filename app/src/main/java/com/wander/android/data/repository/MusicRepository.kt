@@ -34,6 +34,7 @@ class MusicRepository @Inject constructor(
     private val secureStorage: SecureStorage,
     private val connectivity: ConnectivityObserver,
     private val scrobbleSyncScheduler: ScrobbleSyncScheduler,
+    private val scrobbleForwardScheduler: com.wander.android.core.sync.ScrobbleForwardScheduler,
     private val scrobbleSuppression: ScrobbleSuppression,
     private val recordingRules: RecordingRulesRepository,
     private val acousticFeatures: AcousticFeatureRepository,
@@ -114,7 +115,8 @@ class MusicRepository @Inject constructor(
         recordingRules = recordingRules,
         secureStorage = secureStorage,
         scrobbleSuppression = scrobbleSuppression,
-        scrobbleSyncScheduler = scrobbleSyncScheduler
+        scrobbleSyncScheduler = scrobbleSyncScheduler,
+        scrobbleForwardScheduler = scrobbleForwardScheduler
     )
 
     private val radioGenerator = SmartRadioGenerator(

@@ -27,11 +27,23 @@ internal const val KEY_DEEZER_ACCOUNT = "key_deezer_account"
 internal const val KEY_DEEZER_TIER = "key_deezer_tier"
 internal const val KEY_DEEZER_QUALITY = "key_deezer_quality"
 
+internal const val KEY_LISTENBRAINZ_TOKEN = "key_listenbrainz_token"
+internal const val KEY_LISTENBRAINZ_USER = "key_listenbrainz_user"
+internal const val KEY_LISTENBRAINZ_ENABLED = "key_listenbrainz_enabled"
+internal const val KEY_LASTFM_SESSION = "key_lastfm_session"
+internal const val KEY_LASTFM_USER = "key_lastfm_user"
+internal const val KEY_LASTFM_ENABLED = "key_lastfm_enabled"
+internal const val KEY_LASTFM_API_KEY = "key_lastfm_api_key"
+internal const val KEY_LASTFM_API_SECRET = "key_lastfm_api_secret"
+
 internal val ACCOUNT_KEYS = setOf(
     KEY_NAVIDROME_URL, KEY_NAVIDROME_USER, KEY_NAVIDROME_TOKEN, KEY_YTM_COOKIE,
     KEY_DEEZER_ARL, KEY_DEEZER_ACCOUNT, KEY_DEEZER_TIER, KEY_DEEZER_QUALITY,
     KEY_AGRO_URL, KEY_AGRO_USER, KEY_AGRO_KEY, KEY_AGRO_PETNAME, KEY_AGRO_VAULT_KEY,
-    KEY_AGRO_IDENTITY_PRIV, KEY_AGRO_IDENTITY_PUB, KEY_PODCASTINDEX_KEY, KEY_PODCASTINDEX_SECRET
+    KEY_AGRO_IDENTITY_PRIV, KEY_AGRO_IDENTITY_PUB, KEY_PODCASTINDEX_KEY, KEY_PODCASTINDEX_SECRET,
+    // Scrobbling services: a token or session is a sign-in, so it travels only with ACCOUNTS.
+    KEY_LISTENBRAINZ_TOKEN, KEY_LISTENBRAINZ_USER, KEY_LASTFM_SESSION, KEY_LASTFM_USER,
+    KEY_LASTFM_API_KEY, KEY_LASTFM_API_SECRET
 )
 
 internal const val KEY_AGRO_CATALOG_TRADE = "key_agro_catalog_trade"

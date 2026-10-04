@@ -63,7 +63,7 @@ import com.wander.android.core.database.converter.SourceTypeConverter
         com.wander.android.core.database.entity.SharedPlaylistOpEntity::class,
         com.wander.android.core.database.entity.JamRecapEntity::class
     ],
-    version = 43,
+    version = 44,
     exportSchema = true
 )
 @TypeConverters(SourceTypeConverter::class)

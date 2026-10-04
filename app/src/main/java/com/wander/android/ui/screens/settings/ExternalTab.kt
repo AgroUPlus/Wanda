@@ -49,6 +49,10 @@ internal fun LazyListScope.externalTab(
         GroupedCard(items = sharingItems)
     }
 
+    item(key = "scrobbling") {
+        ScrobblingSection()
+    }
+
     item(key = "backup") {
         BackupSection()
     }
