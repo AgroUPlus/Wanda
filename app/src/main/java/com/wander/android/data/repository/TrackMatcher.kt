@@ -1,5 +1,6 @@
 package com.wander.android.data.repository
 
+import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import javax.inject.Inject
@@ -35,15 +36,26 @@ internal const val MIN_MATCH_SCORE = 100
 @Singleton
 class TrackMatcher @Inject constructor(private val musicRepository: MusicRepository) {
 
-    /** The best match, or null when no active source has one — a normal outcome, not an error. */
+    /**
+     * The best match, or null when no active source has one — a normal outcome, not an error.
+     *
+     * Songs first, by artist and title and then by title alone. Only then videos: a play scrobbled
+     * from a music video — a live take, a cover on someone's channel — often has no song release
+     * under that name at all, and the clip is the only thing that is the same recording. Last,
+     * because where both exist the song is the better thing to hand back.
+     */
     suspend fun match(title: String, artist: String, durationMs: Long): UnifiedTrack? {
         val query = "${artist.cleanArtist()} ${title.cleanTitle()}".trim()
         findBestMatch(title, artist, durationMs, musicRepository.searchAllSources(query))
             ?.let { return it }
 
         val titleQuery = title.cleanTitle()
-        if (titleQuery.isBlank()) return null
-        return findBestMatch(title, artist, durationMs, musicRepository.searchAllSources(titleQuery))
+        if (titleQuery.isNotBlank()) {
+            findBestMatch(title, artist, durationMs, musicRepository.searchAllSources(titleQuery))
+                ?.let { return it }
+        }
+        if (query.isBlank()) return null
+        return findBestMatch(title, artist, durationMs, musicRepository.searchAllSources(query, kind = SearchKind.VIDEOS))
     }
 }
 
