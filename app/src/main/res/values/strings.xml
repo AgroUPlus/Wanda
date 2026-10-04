@@ -799,6 +799,33 @@
     <string name="jam_share_text_link">Join my music Jam on Wanda! %1$s</string>
     <!-- %1$s is the join code. -->
     <string name="jam_share_text_code">Join my music Jam on Wanda! Use code: %1$s</string>
+    <string name="jam_recap_badge">JAM RECAP</string>
+    <string name="jam_recap_together">%1$s together</string>
+    <plurals name="jam_recap_songs_with">
+        <item quantity="one">%1$d song with %2$s</item>
+        <item quantity="other">%1$d songs with %2$s</item>
+    </plurals>
+    <string name="jam_recap_top_dj">Top DJ</string>
+    <plurals name="jam_recap_top_dj_value">
+        <item quantity="one">\@%2$s · %1$d song</item>
+        <item quantity="other">\@%2$s · %1$d songs</item>
+    </plurals>
+    <string name="jam_recap_most_loved">Most loved</string>
+    <string name="jam_recap_most_skipped">Most skipped</string>
+    <string name="jam_recap_track_added_by">%1$s · added by @%2$s</string>
+    <plurals name="jam_recap_show_all">
+        <item quantity="one">Show the %1$d song</item>
+        <item quantity="other">Show all %1$d songs</item>
+    </plurals>
+    <string name="jam_recap_show_less">Show less</string>
+    <plurals name="jam_recap_omitted">
+        <item quantity="one">…and %1$d more song the recap didn\'t keep</item>
+        <item quantity="other">…and %1$d more songs the recap didn\'t keep</item>
+    </plurals>
+    <string name="jam_recap_save">Save as playlist</string>
+    <string name="jam_recap_saved">Saved to your playlists</string>
+    <string name="jam_recap_dismiss">Dismiss recap</string>
+    <string name="jam_recap_playlist_name">Jam · %1$s</string>
     <string name="jam_share_chooser">Share Jam link</string>
     <string name="circle_period_week">Week</string>
     <string name="circle_period_month">Month</string>

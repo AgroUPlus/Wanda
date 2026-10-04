@@ -22,7 +22,8 @@ internal class SettingsAgroCoordinator @Inject constructor(
     private val pairing: AgroPairingController,
     private val profileApi: AgroProfileApi,
     private val sessionApi: AgroSessionApi,
-    private val accountApi: AgroAccountApi
+    private val accountApi: AgroAccountApi,
+    private val jamRecaps: com.wander.android.data.repository.JamRecapRepository
 ) {
     internal val agroPairing: StateFlow<AgroPairingState> = pairing.state
     internal val agroConnection: StateFlow<AgroConnectionState> = pairing.connection
@@ -126,6 +127,7 @@ internal class SettingsAgroCoordinator @Inject constructor(
         scope.launch {
             runCatching { sessionApi.unregisterNode() }
             secureStorage.clearAgroCredentials()
+            jamRecaps.clear()
             resetAgroPairing()
         }
     }

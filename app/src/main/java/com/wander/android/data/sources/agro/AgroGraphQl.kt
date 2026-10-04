@@ -59,10 +59,12 @@ class AgroGraphQl @Inject constructor(
             put("query", query)
             put("variables", variables)
         }
+        val token = secureStorage.agroApiKey
+        AgroTokenGate.refusing(token)?.let { return@withContext Result.failure(it) }
         runCatching {
             val response = client.post("${secureStorage.agroServerUrl}/graphql") {
                 contentType(ContentType.Application.Json)
-                header("Authorization", "Bearer ${secureStorage.agroApiKey}")
+                header("Authorization", "Bearer $token")
                 setBody(body.toString())
             }
             val text = response.bodyAsText()
@@ -73,8 +75,14 @@ class AgroGraphQl @Inject constructor(
             val firstError = errorObject?.get("message")?.jsonPrimitive?.contentOrNull
 
             if (!response.status.isSuccess()) {
-                throw AgroAuthError.of(response.status.value, firstError)
+                val error = AgroAuthError.of(response.status.value, firstError)
+                // On this route a 401 or 403 only ever comes from the token check itself.
+                if (response.status.value == 401 || response.status.value == 403) {
+                    AgroTokenGate.record(token, error)
+                }
+                throw error
             }
+            AgroTokenGate.accepted(token)
             if (json == null) {
                 throw IOException("Agro did not answer with JSON")
             }

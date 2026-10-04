@@ -27,12 +27,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleFloatingActionButton
+import androidx.compose.material3.ToggleFloatingActionButtonDefaults
+import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
@@ -111,7 +114,11 @@ internal fun RadioMoodFab(
     }
 }
 
-/** The menu's trigger: its icon swaps between close and radio, and pulses while a radio is starting. */
+/**
+ * The menu's trigger: its icon swaps between close and radio, and pulses while a radio is starting.
+ * The medium container — Home's one primary action earns more than the stock 56dp — anchored at its
+ * bottom-end, so it grows into (and shrinks back toward) the screen corner instead of up and left.
+ */
 @Composable
 private fun RadioTrigger(expanded: Boolean, isStarting: Boolean, onToggle: (Boolean) -> Unit) {
     val pulseTransition = rememberInfiniteTransition(label = "radio-fab")
@@ -121,7 +128,16 @@ private fun RadioTrigger(expanded: Boolean, isStarting: Boolean, onToggle: (Bool
         animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
         label = "radio-pulse"
     )
-    ToggleFloatingActionButton(checked = expanded, onCheckedChange = onToggle) {
+    ToggleFloatingActionButton(
+        checked = expanded,
+        onCheckedChange = onToggle,
+        contentAlignment = Alignment.BottomEnd,
+        containerSize = ToggleFloatingActionButtonDefaults.containerSizeMedium()
+    ) {
+        val iconModifier = Modifier.animateIcon(
+            checkedProgress = { checkedProgress },
+            size = ToggleFloatingActionButtonDefaults.iconSizeMedium()
+        )
         val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
         val spatial = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
         AnimatedContent(
@@ -135,7 +151,8 @@ private fun RadioTrigger(expanded: Boolean, isStarting: Boolean, onToggle: (Bool
             if (isExpanded) {
                 Icon(
                     imageVector = Icons.Rounded.Close,
-                    contentDescription = stringResource(R.string.action_close)
+                    contentDescription = stringResource(R.string.action_close),
+                    modifier = iconModifier
                 )
             } else {
                 Icon(
@@ -143,7 +160,7 @@ private fun RadioTrigger(expanded: Boolean, isStarting: Boolean, onToggle: (Bool
                     contentDescription = stringResource(
                         if (isStarting) R.string.home_radio_starting else R.string.home_radio_open_picker
                     ),
-                    modifier = Modifier.graphicsLayer { alpha = if (isStarting) pulse else 1f }
+                    modifier = iconModifier.graphicsLayer { alpha = if (isStarting) pulse else 1f }
                 )
             }
         }

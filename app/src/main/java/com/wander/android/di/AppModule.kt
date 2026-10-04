@@ -49,6 +49,8 @@ object AppModule {
         db.episodeExtrasDao()
     @Provides fun provideSharedPlaylistDao(db: WanderDatabase): com.wander.android.core.database.dao.SharedPlaylistDao =
         db.sharedPlaylistDao()
+    @Provides fun provideJamRecapDao(db: WanderDatabase): com.wander.android.core.database.dao.JamRecapDao =
+        db.jamRecapDao()
     @Provides fun provideTrackDao(db: WanderDatabase): TrackDao = db.trackDao()
     @Provides fun provideAlbumDao(db: WanderDatabase): AlbumDao = db.albumDao()
     @Provides fun provideArtistDao(db: WanderDatabase): ArtistDao = db.artistDao()

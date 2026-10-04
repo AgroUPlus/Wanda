@@ -8,10 +8,12 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.JamPlaybackController
 import com.wander.android.data.repository.JamMembershipWatcher
 import com.wander.android.data.repository.JamRadioTopUp
+import com.wander.android.data.repository.JamRecapRepository
 import com.wander.android.data.repository.JamRepository
 import com.wander.android.data.sources.agro.FriendJam
 import com.wander.android.data.sources.agro.Jam
 import com.wander.android.data.sources.agro.JamMode
+import com.wander.android.data.sources.agro.StoredJamRecap
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,6 +35,10 @@ internal data class JamUiState(
     val friendJams: List<FriendJam> = emptyList(),
     /** This device is on the room's track but no longer with it — paused, or seeked away. */
     val outOfSync: Boolean = false,
+    /** Recaps of jams this account has left, newest first. Shown when not in a jam. */
+    val recaps: List<StoredJamRecap> = emptyList(),
+    /** Recaps already turned into a playlist this session, so the button says so. */
+    val savedRecaps: Set<String> = emptySet(),
     val error: String? = null
 )
 
@@ -42,7 +48,8 @@ internal class JamViewModel @Inject constructor(
     private val playback: JamPlaybackController,
     private val radio: JamRadioTopUp,
     private val membership: JamMembershipWatcher,
-    private val secureStorage: SecureStorage
+    private val secureStorage: SecureStorage,
+    private val recapRepository: JamRecapRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(JamUiState())
@@ -90,9 +97,13 @@ internal class JamViewModel @Inject constructor(
         playback.outOfSync
             .onEach { adrift -> _state.value = _state.value.copy(outOfSync = adrift) }
             .launchIn(viewModelScope)
+        recapRepository.recaps
+            .onEach { recaps -> _state.value = _state.value.copy(recaps = recaps) }
+            .launchIn(viewModelScope)
 
         refresh()
         refreshFriendJams()
+        viewModelScope.launch { recapRepository.refresh() }
     }
 
     fun refresh() = run { repository.refresh() }
@@ -103,7 +114,17 @@ internal class JamViewModel @Inject constructor(
 
     fun leave() = run {
         playback.reset()
-        repository.leave()
+        // The server writes the recap as part of leaving, so it is there to read straight after.
+        repository.leave().onSuccess { recapRepository.refresh() }
+    }
+
+    fun dismissRecap(id: String) = run { recapRepository.dismiss(id) }
+
+    /** Saves a recap's tracks as a universal playlist called [title]. */
+    fun saveRecap(recap: StoredJamRecap, title: String) = run {
+        recapRepository.saveAsPlaylist(recap.recap, title).map {
+            _state.value = _state.value.copy(savedRecaps = _state.value.savedRecaps + recap.id)
+        }
     }
 
     /** Accepts somebody's suggestion. */

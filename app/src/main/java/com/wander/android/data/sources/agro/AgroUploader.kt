@@ -118,9 +118,12 @@ class AgroUploader @Inject constructor(
             track.fileExtension?.let { put("extension", it) }
         }
 
+        // Called once per track, so a dead token here was a burst of refusals as long as the library.
+        val token = secureStorage.agroApiKey
+        AgroTokenGate.refusing(token)?.let { return Result.failure(it) }
         val request = Request.Builder()
             .url("$base/api/v1/library/upload")
-            .header("Authorization", "Bearer ${secureStorage.agroApiKey}")
+            .header("Authorization", "Bearer $token")
             .post(payload.toString().toRequestBody())
             .build()
 
@@ -128,6 +131,7 @@ class AgroUploader @Inject constructor(
             uploadClient.newCall(request).execute().use { response ->
                 val body = response.body.string()
                 if (!response.isSuccessful) {
+                    AgroTokenGate.recordRestStatus(token, response.code)
                     throw IOException("the server refused the upload (HTTP ${response.code})")
                 }
                 val json = HTTP_JSON.parseToJsonElement(body) as? JsonObject
@@ -170,9 +174,10 @@ class AgroUploader @Inject constructor(
         offset: Long,
         size: Long
     ): UploadOutcome {
+        val token = secureStorage.agroApiKey
         val request = Request.Builder()
             .url("$base/api/v1/library/upload/$uploadId")
-            .header("Authorization", "Bearer ${secureStorage.agroApiKey}")
+            .header("Authorization", "Bearer $token")
             .header("x-agro-offset", offset.toString())
             .put(ContentUriBody(uriString, offset, size))
             .build()
@@ -181,6 +186,7 @@ class AgroUploader @Inject constructor(
             uploadClient.newCall(request).execute().use { response ->
                 val body = response.body.string()
                 if (!response.isSuccessful) {
+                    AgroTokenGate.recordRestStatus(token, response.code)
                     return@use UploadOutcome.Failed("HTTP ${response.code}")
                 }
                 val json = HTTP_JSON.parseToJsonElement(body) as? JsonObject

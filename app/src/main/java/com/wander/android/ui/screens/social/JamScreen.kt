@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -83,15 +84,33 @@ internal fun JamScreen(
 
                 val jam = state.jam
                 if (jam == null) {
-                    StartOrJoin(
-                        onCreate = { mode -> withLocalNetwork { viewModel.create(mode) } },
-                        onJoin = { code -> withLocalNetwork { viewModel.join(code) } },
-                        friendJams = state.friendJams,
-                        onJoinFriendJam = { id -> withLocalNetwork { viewModel.joinFriendJam(id) } },
-                        error = state.error,
-                        initialCode = initialCode,
-                        modifier = Modifier.padding(24.dp)
-                    )
+                    LazyColumn(
+                        contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding() + 28.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        item(key = "start") {
+                            StartOrJoin(
+                                onCreate = { mode -> withLocalNetwork { viewModel.create(mode) } },
+                                onJoin = { code -> withLocalNetwork { viewModel.join(code) } },
+                                friendJams = state.friendJams,
+                                onJoinFriendJam = { id -> withLocalNetwork { viewModel.joinFriendJam(id) } },
+                                error = state.error,
+                                initialCode = initialCode,
+                                modifier = Modifier.padding(24.dp)
+                            )
+                        }
+                        // Under the way in rather than above it: someone opening this screen is
+                        // most often here to start a jam, and last night's can wait a scroll.
+                        items(state.recaps, key = { "recap-${it.id}" }) { recap ->
+                            JamRecapCard(
+                                stored = recap,
+                                saved = recap.id in state.savedRecaps,
+                                onSave = { title -> viewModel.saveRecap(recap, title) },
+                                onDismiss = { viewModel.dismissRecap(recap.id) },
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).animateItem()
+                            )
+                        }
+                    }
                     return@Column
                 }
 

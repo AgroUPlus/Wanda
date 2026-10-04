@@ -66,9 +66,11 @@ class AgroRelayClient @Inject constructor(
             if (!listenerKey.isNullOrBlank()) append(""","listenerPublicKey":"$listenerKey"""")
             append("}")
         }
+        val token = apiKey
+        AgroTokenGate.refusing(token)?.let { throw it }
         val req = Request.Builder()
             .url("$server/api/v1/relay/open")
-            .header("Authorization", "Bearer $apiKey")
+            .header("Authorization", "Bearer $token")
             .header("Content-Type", "application/json")
             .post(json.toRequestBody("application/json".toMediaType()))
             .build()
@@ -76,6 +78,7 @@ class AgroRelayClient @Inject constructor(
         val response = relayClient.newCall(req).execute()
         response.use { res ->
             if (!res.isSuccessful) {
+                AgroTokenGate.recordRestStatus(token, res.code)
                 throw IOException("Relay open refused: HTTP ${res.code}")
             }
             val bodyStr = res.body.string()

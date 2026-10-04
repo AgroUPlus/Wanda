@@ -108,6 +108,7 @@ internal object AgroLiveMessageParser {
                 )
             }
             "JAM_UPDATED" -> AgroLiveMessage.JamUpdated
+            "JAM_RECAP" -> AgroLiveMessage.JamRecapWritten
             "PLAYLIST_UPDATED" -> playlistUpdated(envelope["payload"] as? JsonObject)
             "JAM_NOW_PLAYING" -> {
                 val payload = envelope["payload"] as? JsonObject

@@ -165,6 +165,9 @@ internal sealed interface AgroLiveMessage {
     /** Somebody suggested, approved or removed something. The queue itself changed. */
     data object JamUpdated : AgroLiveMessage
 
+    /** A jam this account was in wrote it a recap. Carries nothing; the list is re-read. */
+    data object JamRecapWritten : AgroLiveMessage
+
     /**
      * A shared playlist this account owns or follows changed; [revision] is null when it was
      * deleted. Carries nothing else: the app fetches the playlist, and that fetch is where the
