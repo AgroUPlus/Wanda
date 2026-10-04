@@ -119,8 +119,9 @@ internal fun JamCard(
                     Button(
                         onClick = onOpenJam,
                         colors = ButtonDefaults.buttonColors(
+                            // The card's own pair, inverted: the only roles guaranteed to contrast.
                             containerColor = content,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            contentColor = container
                         ),
                         contentPadding = PaddingValues(horizontal = 24.dp),
                         shape = CircleShape,

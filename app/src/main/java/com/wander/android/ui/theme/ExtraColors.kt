@@ -50,7 +50,9 @@ private fun ColorScheme.extraColors(): ExtraColors {
         liveDot = if (dark) Color(0xFF7FD99F) else Color(0xFF1F8A4C),
         rankBarSecondary = lerp(primary, surfaceContainerHighest, 0.5f),
         primaryShapeAccent = lerp(primary, onPrimary, 0.1f),
-        primarySoftPanel = lerp(primary, onPrimaryContainer, 0.7f),
+        // From the card's own pair, so onPrimary text keeps reading on it. It used to lean on
+        // onPrimaryContainer, which no text on it uses: dark under dark text on some covers.
+        primarySoftPanel = lerp(primary, onPrimary, 0.14f),
         onPrimaryVariant = lerp(onPrimary, primary, 0.1f),
         onPrimaryTrack = lerp(primary, onPrimary, 0.2f)
     )

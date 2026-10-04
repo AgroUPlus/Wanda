@@ -8,11 +8,13 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.palette.graphics.Palette
@@ -128,9 +130,19 @@ fun extractSeedColor(bitmap: Bitmap): Color? {
 // Animated scoped theme
 // ---------------------------------------------------------------------------
 
+/** What the outermost [CoverTintedTheme] started from, for the ones nested inside it. */
+private class TintRoot(val untinted: ColorScheme, val seed: Color?, val amoled: Boolean)
+
+private val LocalTintRoot = staticCompositionLocalOf<TintRoot?> { null }
+
 /**
  * Wraps [content] in a [MaterialExpressiveTheme] whose colour scheme smoothly transitions to
  * one seeded from [seedColor] whenever the playing track changes.
+ *
+ * Nested inside another (the Jam screen and the player sit inside the app's), it tints from the
+ * same untinted scheme rather than [base]: tinting a tinted scheme again doubled the wash there,
+ * which is why those screens once looked so much more alive than everything else. With no seed
+ * of its own it keeps the outer one's, and it stays AMOLED black where the outer one is.
  */
 @Composable
 fun CoverTintedTheme(
@@ -140,25 +152,30 @@ fun CoverTintedTheme(
     amoled: Boolean,
     content: @Composable () -> Unit,
 ) {
+    val root = LocalTintRoot.current
+    val untinted = root?.untinted ?: base
+    val ownOrOuterSeed = seedColor ?: root?.seed
+    val black = amoled || root?.amoled == true
     val motion = MaterialTheme.motionScheme
     val seed by animateColorAsState(
-        seedColor ?: base.primary,
+        ownOrOuterSeed ?: untinted.primary,
         motion.slowEffectsSpec(),
         label = "coverSeed",
     )
     val strength by animateFloatAsState(
-        if (seedColor != null) 1f else 0f,
+        if (ownOrOuterSeed != null) 1f else 0f,
         motion.slowEffectsSpec(),
         label = "coverTintStrength",
     )
 
-    val scheme = base.tintedByCover(seed, strength, dark)
+    val scheme = untinted.tintedByCover(seed, strength, dark)
 
     MaterialExpressiveTheme(
-        colorScheme  = if (amoled && dark) scheme.toAmoled() else scheme,
+        colorScheme  = if (black && dark) scheme.toAmoled() else scheme,
         motionScheme = motion,
         shapes       = WandaShapes,
         typography   = WandaTypography,
-        content      = content,
-    )
+    ) {
+        CompositionLocalProvider(LocalTintRoot provides TintRoot(untinted, ownOrOuterSeed, black), content = content)
+    }
 }

@@ -14,8 +14,11 @@ import androidx.compose.ui.graphics.luminance
  * - **Accent roles** (primary/secondary/tertiary and their containers) are *derived* from the
  *   seed by tonal blending, so buttons, active states and highlights take the cover's colour.
  * - **Neutral roles** (surfaces, background, outlines, `onSurfaceVariant`) are only *washed*
- *   toward it by a few percent. That is what carries the tint across the rest of the interface —
+ *   toward it, by about a tenth. That is what carries the tint across the rest of the interface —
  *   text, dividers, sheets, cards — without turning the chrome into a second album cover.
+ *
+ * The wash strengths are what the Jam screen used to reach by tinting an already tinted scheme a
+ * second time; that look is now every screen's, from one pass (see [CoverTintedTheme]).
  */
 @Stable
 fun ColorScheme.tintedByCover(seed: Color, strength: Float, dark: Boolean): ColorScheme {
@@ -53,21 +56,21 @@ fun ColorScheme.tintedByCover(seed: Color, strength: Float, dark: Boolean): Colo
         tertiaryContainer    = newTertiaryContainer,
         onTertiaryContainer  = onContainer(newTertiaryContainer, onTertiaryContainer, if (dark) 0.88f else 0.12f),
 
-        background              = wash(background,              0.06f),
-        onBackground            = wash(onBackground,            0.05f),
-        surface                 = wash(surface,                 0.06f),
-        onSurface               = wash(onSurface,               0.05f),
-        surfaceVariant          = wash(surfaceVariant,          0.10f),
-        onSurfaceVariant        = wash(onSurfaceVariant,        0.12f),
-        surfaceDim              = wash(surfaceDim,              0.08f),
-        surfaceBright           = wash(surfaceBright,           0.08f),
-        surfaceContainerLowest  = wash(surfaceContainerLowest,  0.08f),
-        surfaceContainerLow     = wash(surfaceContainerLow,     0.08f),
-        surfaceContainer        = wash(surfaceContainer,        0.08f),
-        surfaceContainerHigh    = wash(surfaceContainerHigh,    0.08f),
-        surfaceContainerHighest = wash(surfaceContainerHighest, 0.08f),
-        outline                 = wash(outline,                 0.14f),
-        outlineVariant          = wash(outlineVariant,          0.12f),
+        background              = wash(background,              0.12f),
+        onBackground            = wash(onBackground,            0.10f),
+        surface                 = wash(surface,                 0.12f),
+        onSurface               = wash(onSurface,               0.10f),
+        surfaceVariant          = wash(surfaceVariant,          0.19f),
+        onSurfaceVariant        = wash(onSurfaceVariant,        0.23f),
+        surfaceDim              = wash(surfaceDim,              0.15f),
+        surfaceBright           = wash(surfaceBright,           0.15f),
+        surfaceContainerLowest  = wash(surfaceContainerLowest,  0.15f),
+        surfaceContainerLow     = wash(surfaceContainerLow,     0.15f),
+        surfaceContainer        = wash(surfaceContainer,        0.15f),
+        surfaceContainerHigh    = wash(surfaceContainerHigh,    0.15f),
+        surfaceContainerHighest = wash(surfaceContainerHighest, 0.15f),
+        outline                 = wash(outline,                 0.26f),
+        outlineVariant          = wash(outlineVariant,          0.23f),
         surfaceTint             = accent(surfaceTint,           if (dark) 0.60f else 0.50f),
     )
 }
