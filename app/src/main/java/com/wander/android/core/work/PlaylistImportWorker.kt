@@ -22,6 +22,7 @@ import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Matches the [SourceType.UNRESOLVED] placeholders of an imported playlist — or of a shared one, whose
@@ -62,10 +63,16 @@ class PlaylistImportWorker @AssistedInject constructor(
         // another. So the playlist is read again at the end, until nothing new is left to try.
         while (batch.isNotEmpty()) {
             total += batch.size
+            // Reported before anything else, so the screen can tell a run that has started from one
+            // still waiting to: "0 of 50" rather than an indefinite wait.
+            setProgress(workDataOf(KEY_DONE to done, KEY_TOTAL to total))
             showProgress(notifying(name, eta, done, total))
             batch.forEach { placeholder ->
                 tried += placeholder.id
-                val match = trackMatcher.match(placeholder.title, placeholder.artist, placeholder.durationMs)
+                // Bounded per track: one source that never answers must cost this track, not the run.
+                val match = withTimeoutOrNull(MATCH_TIMEOUT_MS) {
+                    trackMatcher.match(placeholder.title, placeholder.artist, placeholder.durationMs)
+                }
                 if (match != null) resolve(playlistId, placeholder, match)
 
                 done++
@@ -141,5 +148,8 @@ class PlaylistImportWorker @AssistedInject constructor(
         const val KEY_TOTAL = "total"
 
         private const val SEARCH_SPACING_MS = 250L
+
+        /** Up to three searches, each against every source, with room for a slow one. */
+        private const val MATCH_TIMEOUT_MS = 60_000L
     }
 }

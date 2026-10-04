@@ -44,10 +44,12 @@ internal fun PlaylistImportBanner(
                 LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
             Text(
-                text = if (work.total > 0) {
-                    stringResource(R.string.playlist_import_matching, work.done, work.total)
-                } else {
-                    stringResource(R.string.playlist_import_waiting)
+                text = when {
+                    work.total > 0 -> stringResource(R.string.playlist_import_matching, work.done, work.total)
+                    work.isStarted -> stringResource(R.string.playlist_import_starting)
+                    // Queued: Android has not let it run yet — no connection, or background work held
+                    // back for this app. Said plainly, because "waiting" alone looked like a hang.
+                    else -> stringResource(R.string.playlist_import_waiting)
                 },
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

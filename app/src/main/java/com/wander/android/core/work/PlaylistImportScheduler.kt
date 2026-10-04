@@ -5,6 +5,7 @@ import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.wander.android.core.notification.WorkProgressNotification
@@ -16,7 +17,10 @@ import kotlinx.coroutines.flow.map
 
 /** What the playlist screen needs to know about a playlist's background matching. */
 data class ImportWorkState(
+    /** Queued or running: anything short of finished. */
     val isRunning: Boolean = false,
+    /** Actually running. Queued and not yet started is Android's to decide, not this app's. */
+    val isStarted: Boolean = false,
     val done: Int = 0,
     val total: Int = 0
 )
@@ -54,6 +58,7 @@ class PlaylistImportScheduler @Inject constructor(
                     ?: return@map ImportWorkState()
                 ImportWorkState(
                     isRunning = true,
+                    isStarted = active.state == WorkInfo.State.RUNNING,
                     done = active.progress.getInt(PlaylistImportWorker.KEY_DONE, 0),
                     total = active.progress.getInt(PlaylistImportWorker.KEY_TOTAL, 0)
                 )

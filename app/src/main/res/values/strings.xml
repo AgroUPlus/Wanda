@@ -324,7 +324,8 @@
     <string name="notif_import_progress">%1$d of %2$d tracks</string>
     <string name="track_matching">Finding this track</string>
     <string name="track_not_found">Not found</string>
-    <string name="playlist_import_waiting">Waiting to match tracks…</string>
+    <string name="playlist_import_waiting">Queued: Android hasn’t started matching yet</string>
+    <string name="playlist_import_starting">Starting to match tracks…</string>
     <string name="playlist_import_matching">Matching %1$d of %2$d tracks</string>
     <plurals name="playlist_import_not_found">
         <item quantity="one">%1$d track wasn\'t found in your sources</item>
