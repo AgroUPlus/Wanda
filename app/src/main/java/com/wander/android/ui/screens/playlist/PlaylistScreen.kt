@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.sharedplaylist.SharedSyncState
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.CompactHeroTopBar
 import com.wander.android.ui.components.EmptyState
@@ -156,12 +157,14 @@ fun PlaylistScreen(
                         }
                     }
 
-                    shared?.takeIf { !it.isBlend }?.let { state ->
+                    // A blend's own banner says who is in it; this one is still needed when its copy
+                    // is behind, so an old version is never mistaken for the current one.
+                    shared?.takeIf { !it.isBlend || it.syncState != SharedSyncState.SYNCED }?.let { state ->
                         item(key = "shared-status", contentType = "shared-status") {
                             SharedPlaylistBanner(
                                 state = state,
                                 onRetry = sharedViewModel::retry,
-                                onUnfollow = sharedViewModel::unfollow.takeIf { state.localPlaylistId == null }
+                                onUnfollow = sharedViewModel::unfollow.takeIf { state.localPlaylistId == null && !state.isBlend }
                             )
                         }
                     }

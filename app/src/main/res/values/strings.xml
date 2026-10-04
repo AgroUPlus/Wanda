@@ -870,6 +870,7 @@
     <string name="blend_banner_pending">Fresh tracks as soon as it\'s opened</string>
     <string name="blend_banner_edit">Edit</string>
     <string name="blend_banner_leave">Leave</string>
+    <string name="blend_ended">“%1$s” has ended</string>
     <string name="blend_banner_end">End blend</string>
     <string name="blend_end_confirm_title">End this Blend for everyone?</string>
     <string name="blend_end_confirm_message">It disappears from every member\'s library.</string>

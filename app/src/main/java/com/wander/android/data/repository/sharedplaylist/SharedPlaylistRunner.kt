@@ -95,6 +95,7 @@ class SharedPlaylistRunner @Inject constructor(
     }
 
     private suspend fun markRevoked(copy: SharedPlaylistEntity) {
+        if (copy.isBlend) return ended(copy)
         if (isOwn(copy)) return letGo(copy)
         if (copy.syncState == SharedSyncState.REVOKED.name) return
         dao.setState(copy.agroId, SharedSyncState.REVOKED.name)
@@ -111,6 +112,7 @@ class SharedPlaylistRunner @Inject constructor(
             SyncOutcome.Revoked -> {
                 val copy = dao.get(agroId)
                 when {
+                    copy != null && copy.isBlend -> ended(copy)
                     copy != null && isOwn(copy) -> letGo(copy)
                     !wasRevoked -> messages.report(R.string.shared_playlist_revoked, title)
                 }
@@ -130,6 +132,17 @@ class SharedPlaylistRunner @Inject constructor(
         dao.forget(copy.agroId)
         trackDao.deleteUnreferencedUnresolved()
         messages.report(R.string.playlist_unshared_from_agro, copy.title)
+    }
+
+    /**
+     * A blend this account can no longer open has ended — its creator ended it, or this account
+     * left it on another device. Unlike a shared playlist there is nothing to keep: what it held
+     * was written from listening that is no longer being shared, so the copy goes everywhere.
+     */
+    private suspend fun ended(copy: SharedPlaylistEntity) {
+        dao.forget(copy.agroId)
+        trackDao.deleteUnreferencedUnresolved()
+        messages.report(R.string.blend_ended, copy.title)
     }
 
     /** Owned by the account signed in now: a copy made under another account is not its to judge. */

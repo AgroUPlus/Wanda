@@ -34,8 +34,12 @@ data class SharedPlaylistState(
 ) {
     val isCollaborative: Boolean get() = editAccess != EditAccess.OFF
 
-    /** What this account may do right now: nothing at all once it is no longer shared. */
-    val effectiveRole: PlaylistRole get() = if (syncState == SharedSyncState.REVOKED) PlaylistRole.VIEWER else role
+    /**
+     * What this account may do right now: nothing at all once it is no longer shared, and nothing
+     * to a blend ever — Agro writes it, and refuses every hand edit, its creator's included.
+     */
+    val effectiveRole: PlaylistRole
+        get() = if (syncState == SharedSyncState.REVOKED || isBlend) PlaylistRole.VIEWER else role
 }
 
 /** One track of a shared playlist and the item it is, so an edit can name the item. */
@@ -90,12 +94,27 @@ class SharedPlaylistRepository @Inject constructor(
     suspend fun remove(agroId: String): Result<Unit> {
         // A blend is left rather than unfollowed or deleted: leaving takes this account's listening
         // out of it, and its creator leaving ends it — see `AgroBlendApi.leave`.
-        if (dao.get(agroId)?.isBlend == true) return blends.leave(agroId).onSuccess { forget(agroId) }
+        // One already ended has nobody left to tell, so it is only forgotten.
+        val copy = dao.get(agroId)
+        if (copy?.isBlend == true && copy.syncState == SharedSyncState.REVOKED.name) return Result.success(forget(agroId))
+        if (copy?.isBlend == true) return leaveBlend(agroId)
         if (dao.get(agroId)?.myRole != PlaylistRole.OWNER.name) return unfollow(agroId)
         return agroPlaylists.delete(agroId).onSuccess {
             dao.forget(agroId)
             trackDao.deleteUnreferencedUnresolved()
         }
+    }
+
+    /**
+     * Leaves a blend. Refused because it has already ended — and the copy not yet told — it is
+     * forgotten all the same: there is nothing left to leave. Any other failure, offline say,
+     * stays an error, so a blend still running is never dropped here while still on the server.
+     */
+    private suspend fun leaveBlend(agroId: String): Result<Unit> {
+        val left = blends.leave(agroId)
+        if (left.isSuccess) return left.onSuccess { forget(agroId) }
+        val gone = api.revisions(listOf(agroId)).getOrNull()?.firstOrNull()?.accessible == false
+        return if (gone) Result.success(forget(agroId)) else left
     }
 
     /** Stops following and forgets the copy. Forgotten even when the server cannot be told. */

@@ -60,7 +60,11 @@ internal fun BlendBanner(agroId: String, onLeft: () -> Unit, viewModel: BlendBan
     var editing by remember { mutableStateOf(false) }
     val confirm = rememberConfirmState()
     val colors = MaterialTheme.colorScheme
-    val blend = info ?: return
+    val blend = info
+    if (blend == null) {
+        error?.let { BlendUnavailable(it, onLeave = { viewModel.leave(agroId) }) }
+        return
+    }
 
     if (editing) {
         EditBlendSheet(
@@ -125,6 +129,35 @@ internal fun BlendBanner(agroId: String, onLeft: () -> Unit, viewModel: BlendBan
                         color = colors.error
                     )
                 }
+            }
+        }
+    }
+}
+
+/**
+ * The blend's details would not load — most often because it has ended. Leave stays reachable
+ * here, since otherwise a copy nobody can open any more would have no way out of the library.
+ */
+@Composable
+private fun BlendUnavailable(error: String, onLeave: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp)
+        ) {
+            Text(
+                text = error,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.weight(1f)
+            )
+            OutlinedButton(onClick = onLeave, shapes = ButtonDefaults.shapes()) {
+                Text(stringResource(R.string.blend_banner_leave))
             }
         }
     }

@@ -111,8 +111,10 @@ class SharedPlaylistEditor @Inject constructor(
         }?.let { dao.deleteOp(it.seq) }
     }
 
+    /** A blend is Agro's to write, so nobody edits one by hand — see `refuse_generated` there. */
     private fun role(copy: SharedPlaylistEntity) =
-        PlaylistRole.entries.firstOrNull { it.name == copy.myRole } ?: PlaylistRole.VIEWER
+        if (copy.isBlend) PlaylistRole.VIEWER
+        else PlaylistRole.entries.firstOrNull { it.name == copy.myRole } ?: PlaylistRole.VIEWER
 
     private fun pendingId() = SharedPlaylistItemEntity.PENDING_PREFIX + UUID.randomUUID()
 }
