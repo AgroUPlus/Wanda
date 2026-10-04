@@ -23,6 +23,13 @@ import kotlinx.serialization.json.longOrNull
 internal fun JsonObject.str(key: String): String? =
     this[key]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
 
+/**
+ * A string that must be there but may be empty: a placeholder the protocol sends on purpose, such
+ * as the blank artist a private session publishes. [str] would read that as missing.
+ */
+internal fun JsonObject.textAllowingBlank(key: String): String? =
+    this[key]?.jsonPrimitive?.contentOrNull
+
 internal fun JsonObject.bool(key: String): Boolean =
     this[key]?.jsonPrimitive?.booleanOrNull ?: false
 

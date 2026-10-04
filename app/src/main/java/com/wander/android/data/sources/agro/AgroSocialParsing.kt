@@ -39,9 +39,11 @@ internal fun JsonObject.toProfile(): AgroProfile = AgroProfile(
 
 internal fun JsonObject.toNowPlaying(): AgroFriendNowPlaying = AgroFriendNowPlaying(
     username = str("username") ?: error("nowPlaying has no username"),
-    trackUri = str("trackUri") ?: error("nowPlaying has no trackUri"),
-    trackTitle = str("trackTitle") ?: error("nowPlaying has no trackTitle"),
-    artistName = str("artistName") ?: error("nowPlaying has no artistName"),
+    // Blank is legitimate here: a private session publishes an empty artist and track, the real
+    // ones sealed in `encryptedPresence`. Only an absent field is the server breaking its schema.
+    trackUri = textAllowingBlank("trackUri") ?: error("nowPlaying has no trackUri"),
+    trackTitle = textAllowingBlank("trackTitle") ?: error("nowPlaying has no trackTitle"),
+    artistName = textAllowingBlank("artistName") ?: error("nowPlaying has no artistName"),
     albumName = str("albumName"),
     artworkUrl = str("artworkUrl"),
     positionMs = long("positionMs"),

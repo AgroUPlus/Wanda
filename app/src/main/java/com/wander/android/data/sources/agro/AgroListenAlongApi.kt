@@ -57,7 +57,7 @@ internal class AgroListenAlongApi @Inject constructor(
         }
         """.trimIndent(),
         buildJsonObject { put("deviceId", secureStorage.agroDeviceId) }
-    ).map { data -> data.obj("listenAlong")?.toListenAlong()?.opened() }
+    ).mapCatching { data -> data.obj("listenAlong")?.toListenAlong()?.opened() }
 
     /**
      * Opens the session's sealed metadata, if it arrived sealed.
