@@ -61,9 +61,15 @@ class SharedPlaylistMirror @Inject constructor(
         remaining: List<SharedPlaylistOp> = emptyList(),
         reflect: Boolean = true
     ) {
-        val previous = dao.items(server.id).filterNot { it.isPending }.associateBy { it.itemId }
+        val before = dao.items(server.id).filterNot { it.isPending }
+        val previous = before.associateBy { it.itemId }
         val adds = confirmed.toMutableList()
-        val candidates = known.toMutableList()
+        // A blend is written afresh, every item under a new id, so an item that only changed id
+        // keeps the track it had by name. Placeholders included: one still being matched is
+        // swapped everywhere it is referenced once it is.
+        val kept = server.items.mapTo(HashSet()) { it.id }
+        val carried = before.filter { it.itemId !in kept }.map { KnownTrack(it.trackId, it.title, it.artist) }
+        val candidates = (known + carried).toMutableList()
         val placeholders = mutableListOf<TrackEntity>()
 
         val mapped = server.items.mapIndexed { index, item ->

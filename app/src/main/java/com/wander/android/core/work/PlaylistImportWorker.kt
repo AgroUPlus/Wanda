@@ -52,30 +52,41 @@ class PlaylistImportWorker @AssistedInject constructor(
         // Deleted or unfollowed while queued: nothing left to resolve.
         val (name, ids) = contents(playlistId) ?: return@withContext Result.success()
 
-        val placeholders = trackDao.getTracksByIds(ids)
-            .filter { it.source == SourceType.UNRESOLVED }
-            .sortedBy { ids.indexOf(it.id) }
-        if (placeholders.isEmpty()) return@withContext Result.success()
-
-        val total = placeholders.size
         val eta = WorkEta(System.currentTimeMillis())
-        showProgress(notifying(name, eta, 0, total))
-
-        placeholders.forEachIndexed { index, placeholder ->
-            val match = trackMatcher.match(placeholder.title, placeholder.artist, placeholder.durationMs)
-            if (match != null) resolve(playlistId, placeholder, match)
-
-            val done = index + 1
-            setProgress(workDataOf(KEY_DONE to done, KEY_TOTAL to total))
+        val tried = HashSet<String>()
+        var done = 0
+        var total = 0
+        var batch = placeholdersOf(ids, tried)
+        // A shared playlist can be rewritten while this runs — a blend is, whole — and its new
+        // placeholders arrive while this run still holds the unique name that would have started
+        // another. So the playlist is read again at the end, until nothing new is left to try.
+        while (batch.isNotEmpty()) {
+            total += batch.size
             showProgress(notifying(name, eta, done, total))
-            // Politeness towards the search backends: a long playlist is hundreds of queries.
-            delay(SEARCH_SPACING_MS)
+            batch.forEach { placeholder ->
+                tried += placeholder.id
+                val match = trackMatcher.match(placeholder.title, placeholder.artist, placeholder.durationMs)
+                if (match != null) resolve(playlistId, placeholder, match)
+
+                done++
+                setProgress(workDataOf(KEY_DONE to done, KEY_TOTAL to total))
+                showProgress(notifying(name, eta, done, total))
+                // Politeness towards the search backends: a long playlist is hundreds of queries.
+                delay(SEARCH_SPACING_MS)
+            }
+            batch = contents(playlistId)?.second?.let { placeholdersOf(it, tried) }.orEmpty()
         }
 
         // Placeholders swapped out above, and any whose playlist was deleted meanwhile.
         trackDao.deleteUnreferencedUnresolved()
         Result.success()
     }
+
+    /** The placeholders among [ids] not already tried by this run, in playlist order. */
+    private suspend fun placeholdersOf(ids: List<String>, tried: Set<String>): List<TrackEntity> =
+        trackDao.getTracksByIds(ids)
+            .filter { it.source == SourceType.UNRESOLVED && it.id !in tried }
+            .sortedBy { ids.indexOf(it.id) }
 
     /** The playlist's name and track ids in order: a Wanda playlist, or a followed one's copy. */
     private suspend fun contents(playlistId: String): Pair<String, List<String>>? {
