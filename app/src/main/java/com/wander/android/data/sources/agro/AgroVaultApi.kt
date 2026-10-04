@@ -68,6 +68,7 @@ class AgroVaultApi @Inject constructor(
         get() = when {
             !graphQl.isConfigured -> VaultAccess.NOT_PAIRED
             !graphQl.serverSupports(CAPABILITY) -> VaultAccess.SERVER_LACKS_VAULT
+            secureStorage.agroVaultKey == null && !graphQl.serverSupports(KEY_CAPABILITY) -> VaultAccess.KEYLESS_SERVER_TOO_OLD
             secureStorage.agroVaultKey == null -> VaultAccess.NO_VAULT_KEY
             else -> VaultAccess.READY
         }
@@ -117,6 +118,19 @@ class AgroVaultApi @Inject constructor(
         }
     }
 
+    /** The account's vault key sealed under its passphrase; null before any device enrolled one. */
+    suspend fun keyEnvelope(): Result<VaultKeyEnvelope?> = graphQl.execute(
+        "query { vaultKeyEnvelope { vaultSalt vaultKeyWrapped } }",
+        buildJsonObject { }
+    ).mapCatching { data ->
+        data.obj("vaultKeyEnvelope")?.let {
+            VaultKeyEnvelope(
+                salt = it.str("vaultSalt") ?: throw IOException("The vault key arrived without its salt"),
+                wrapped = it.str("vaultKeyWrapped") ?: throw IOException("The vault key arrived without its seal")
+            )
+        }
+    }
+
     suspend fun delete(id: String): Result<Unit> = graphQl.execute(
         "mutation(\$id: String!) { deleteVaultBackup(id: \$id) }",
         buildJsonObject { put("id", id) }
@@ -145,6 +159,7 @@ class AgroVaultApi @Inject constructor(
 
     companion object {
         const val CAPABILITY = "vault.backups"
+        const val KEY_CAPABILITY = "vault.keyEnvelope"
         private const val LABEL_HEADER = "X-Agro-Vault-Label"
         private const val SHA256_HEADER = "X-Agro-Vault-Sha256"
         private val OCTET = "application/octet-stream".toMediaType()
@@ -159,7 +174,12 @@ enum class VaultAccess {
     NOT_PAIRED,
     /** As of the last time this device registered, which is when it learns what the server can do. */
     SERVER_LACKS_VAULT,
-    /** Paired by a link that did not carry the vault key; only the passphrase can recover it. */
+    /** Paired by QR or device token, which never carry the vault key; the passphrase unlocks it. */
     NO_VAULT_KEY,
+    /** As [NO_VAULT_KEY], on a server too old to hand this device the sealed key to unlock. */
+    KEYLESS_SERVER_TOO_OLD,
     READY
 }
+
+/** The vault key as Agro keeps it: sealed under the account passphrase, which it never has. */
+class VaultKeyEnvelope(val salt: String, val wrapped: String)

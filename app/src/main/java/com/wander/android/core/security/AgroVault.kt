@@ -229,4 +229,26 @@ object AgroVault {
     fun encodeBase64(bytes: ByteArray): String = Base64.getEncoder().encodeToString(bytes)
 
     fun decodeBase64(value: String): ByteArray = Base64.getDecoder().decode(value)
+
+    /** The vault salt's form on the wire. */
+    fun decodeHex(hex: String): ByteArray {
+        val clean = hex.trim()
+        return ByteArray(clean.length / 2) { i ->
+            ((Character.digit(clean[i * 2], 16) shl 4) + Character.digit(clean[i * 2 + 1], 16)).toByte()
+        }
+    }
+
+    /**
+     * The vault key from the server's envelope and the account passphrase.
+     *
+     * @throws VaultException if the passphrase is wrong or the envelope is damaged.
+     */
+    fun unwrapWithPassphrase(passphrase: String, saltHex: String, wrapped: String): ByteArray {
+        val wrappingKey = deriveWrappingKey(passphrase, decodeHex(saltHex))
+        return try {
+            unwrapKey(wrapped, wrappingKey)
+        } finally {
+            wipe(wrappingKey)
+        }
+    }
 }

@@ -43,7 +43,7 @@ class AgroPairingCoordinator @Inject constructor(
         if (!vaultKeyParam.isNullOrBlank()) {
             val decodedKey = runCatching {
                 if (vaultKeyParam.length == 64 && vaultKeyParam.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) {
-                    hexToBytes(vaultKeyParam)
+                    AgroVault.decodeHex(vaultKeyParam)
                 } else {
                     AgroVault.decodeBase64(vaultKeyParam)
                 }
@@ -114,10 +114,7 @@ class AgroPairingCoordinator @Inject constructor(
     ) {
         if (!vaultSalt.isNullOrBlank() && !vaultKeyWrapped.isNullOrBlank()) {
             runCatching {
-                val salt = hexToBytes(vaultSalt)
-                val kek = AgroVault.deriveWrappingKey(passphrase, salt)
-                val vaultKey = AgroVault.unwrapKey(vaultKeyWrapped, kek)
-                secureStorage.agroVaultKey = vaultKey
+                secureStorage.agroVaultKey = AgroVault.unwrapWithPassphrase(passphrase, vaultSalt, vaultKeyWrapped)
             }
         } else {
             runCatching {
@@ -140,18 +137,6 @@ class AgroPairingCoordinator @Inject constructor(
                 secureStorage.agroVaultKey = vaultKey
             }
         }
-    }
-
-    private fun hexToBytes(hex: String): ByteArray {
-        val clean = hex.trim()
-        val len = clean.length
-        val data = ByteArray(len / 2)
-        var i = 0
-        while (i < len) {
-            data[i / 2] = ((Character.digit(clean[i], 16) shl 4) + Character.digit(clean[i + 1], 16)).toByte()
-            i += 2
-        }
-        return data
     }
 
     private fun bytesToHex(bytes: ByteArray): String =

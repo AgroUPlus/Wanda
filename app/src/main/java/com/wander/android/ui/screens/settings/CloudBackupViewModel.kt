@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.R
-import com.wander.android.core.backup.CloudBackupScheduler
 import com.wander.android.core.backup.CloudBackupStore
 import com.wander.android.core.security.AgroVault
 import com.wander.android.core.security.SecureStorage
@@ -29,7 +28,6 @@ import javax.inject.Inject
 internal class CloudBackupViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val store: CloudBackupStore,
-    private val scheduler: CloudBackupScheduler,
     private val secureStorage: SecureStorage,
     private val agroClient: AgroClient
 ) : ViewModel() {
@@ -63,7 +61,7 @@ internal class CloudBackupViewModel @Inject constructor(
      * since then still reads as having no vault. Registering again is the only way to ask.
      */
     private fun checkAccess() {
-        if (store.access != VaultAccess.SERVER_LACKS_VAULT) {
+        if (store.access !in RECHECKED) {
             refresh()
             return
         }
@@ -80,11 +78,34 @@ internal class CloudBackupViewModel @Inject constructor(
         viewModelScope.launch { store.list().onSuccess { _backups.value = it } }
     }
 
-    /** Turning it on also backs up now, so the first one is not a day away. */
+    /**
+     * Turning it on also backs up now, so the first one is not a day away. The daily job follows
+     * the setting itself — see `WanderApplication`.
+     */
     fun setAuto(enabled: Boolean) {
         secureStorage.setCloudBackup(enabled)
-        scheduler.apply(enabled)
         if (enabled) backUpNow()
+    }
+
+    /** Unlocks the vault on a QR-paired phone; the passphrase goes no further than this call. */
+    fun unlock(passphrase: String) {
+        if (_busy.value) return
+        _busy.value = true
+        _status.value = null
+        viewModelScope.launch {
+            _status.value = try {
+                store.unlock(passphrase)
+                _access.value = store.access
+                refresh()
+                null
+            } catch (_: AgroVault.VaultException) {
+                BackupStatus.Failed(context.getString(R.string.cloud_backup_unlock_failed, context.getString(R.string.cloud_backup_wrong_passphrase)))
+            } catch (e: IOException) {
+                BackupStatus.Failed(context.getString(R.string.cloud_backup_unlock_failed, e.message.orEmpty()))
+            } finally {
+                _busy.value = false
+            }
+        }
     }
 
     fun setIncludeAccounts(enabled: Boolean) = secureStorage.setCloudBackupAccounts(enabled)
@@ -119,5 +140,10 @@ internal class CloudBackupViewModel @Inject constructor(
                 _busy.value = false
             }
         }
+    }
+
+    private companion object {
+        /** States that may only reflect what the server could do when this device last registered. */
+        val RECHECKED = setOf(VaultAccess.SERVER_LACKS_VAULT, VaultAccess.KEYLESS_SERVER_TOO_OLD)
     }
 }

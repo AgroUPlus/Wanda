@@ -194,4 +194,18 @@ class AgroVaultTest {
             AgroVault.openPayload(sealed, key)
         }
     }
+
+    /** What a QR-paired phone does with the envelope `vaultKeyEnvelope` returns. */
+    @Test
+    fun thePassphraseOpensTheEnvelopeAndNothingElseDoes() {
+        val vaultKey = AgroVault.newVaultKey()
+        val salt = AgroVault.newSalt()
+        val saltHex = salt.joinToString("") { "%02x".format(it) }
+        val wrapped = AgroVault.wrapKey(vaultKey, AgroVault.deriveWrappingKey("correct horse", salt))
+
+        assertArrayEquals(vaultKey, AgroVault.unwrapWithPassphrase("correct horse", saltHex, wrapped))
+        assertThrows(AgroVault.VaultException::class.java) {
+            AgroVault.unwrapWithPassphrase("wrong horse", saltHex, wrapped)
+        }
+    }
 }

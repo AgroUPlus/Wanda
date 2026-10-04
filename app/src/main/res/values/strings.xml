@@ -541,6 +541,12 @@
     <string name="settings_section_notifications">Notifications</string>
     <string name="settings_section_devices">Devices</string>
     <string name="settings_section_device_library_sync">Device &amp; library sync</string>
+    <string name="settings_section_language">Language</string>
+    <string name="settings_section_colours">Colours</string>
+    <string name="settings_section_motion_effects">Motion &amp; effects</string>
+    <string name="settings_section_now_playing">Now playing</string>
+    <string name="settings_reduce_motion_already_off">Already off</string>
+    <string name="settings_reduce_motion_sub">Turn off springs, pops and transitions throughout the app</string>
     <string name="settings_see_which_songs_wanda_can">See which songs Wanda can recognise and hum-search, and which are still waiting.</string>
     <string name="settings_sends_acoustic_fingerprints_lyrics_tracks">Sends the acoustic fingerprints and lyrics of your tracks and takes everyone else\'s, so badly tagged music inherits good tags and lyrics. Other people on this server can see which recordings and lyrics you hold, not your listening. Recognition works either way.</string>
     <string name="settings_server">Server</string>
@@ -879,7 +885,15 @@
     <string name="cloud_backup_checking">Checking whether your Agro server keeps backups…</string>
     <string name="cloud_backup_unreachable">Couldn\'t reach Agro to check whether it keeps backups.</string>
     <string name="cloud_backup_server_lacks">Your Agro server doesn\'t keep backups. Update Agro to turn this on.</string>
-    <string name="cloud_backup_no_key">This phone doesn\'t hold your vault key. Tap to pair again with your passphrase.</string>
+    <string name="cloud_backup_no_key">Pairing by QR doesn\'t bring your vault key. Tap to unlock it with your passphrase.</string>
+    <string name="cloud_backup_no_key_old_server">Pairing by QR doesn\'t bring your vault key, and this Agro server can\'t send it. Update Agro, or tap to pair by typing your passphrase instead.</string>
+    <string name="cloud_backup_unlocking">Unlocking…</string>
+    <string name="cloud_backup_unlock_title">Unlock your vault</string>
+    <string name="cloud_backup_unlock_message">Your account passphrase opens the vault key on this phone. It isn\'t stored or sent anywhere.</string>
+    <string name="cloud_backup_unlock_field">Account passphrase</string>
+    <string name="cloud_backup_unlock_confirm">Unlock</string>
+    <string name="cloud_backup_unlock_failed">Couldn\'t unlock: %1$s</string>
+    <string name="cloud_backup_wrong_passphrase">that passphrase doesn\'t open your vault key</string>
     <string name="cloud_backup_accounts">Include sign-ins</string>
     <string name="cloud_backup_accounts_sub">Off: after restoring, you sign back into your sources.</string>
     <string name="cloud_backup_accounts_confirm_title">Include sign-ins in cloud backups?</string>
@@ -1047,8 +1061,8 @@
     <string name="replay_settings_subtitle">Your listening year, one card at a time</string>
 
     <plurals name="backup_restored_settings">
-        <item quantity="one">%1$d setting restored. Close and reopen Wanda to apply it.</item>
-        <item quantity="other">%1$d settings restored. Close and reopen Wanda to apply them.</item>
+        <item quantity="one">%1$d setting restored.</item>
+        <item quantity="other">%1$d settings restored.</item>
     </plurals>
     <plurals name="backup_restored_history">
         <item quantity="one">%1$d play and %2$d saved Replay came back too.</item>

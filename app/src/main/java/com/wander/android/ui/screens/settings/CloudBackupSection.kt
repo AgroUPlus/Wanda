@@ -39,26 +39,54 @@ internal fun CloudBackupSection(onPair: () -> Unit, viewModel: CloudBackupViewMo
     when (access) {
         VaultAccess.NOT_PAIRED -> return
         VaultAccess.READY -> VaultRows(viewModel)
-        else -> Column {
-            SettingsSection(stringResource(R.string.cloud_backup_section))
-            GroupedCard(
-                items = listOf<@Composable () -> Unit>({
-                    SettingsRow(
-                        title = stringResource(R.string.cloud_backup_auto),
-                        subtitle = stringResource(
-                            when {
-                                access == null -> R.string.cloud_backup_checking
-                                access == VaultAccess.NO_VAULT_KEY -> R.string.cloud_backup_no_key
-                                unreachable -> R.string.cloud_backup_unreachable
-                                else -> R.string.cloud_backup_server_lacks
-                            }
-                        ),
-                        onClick = onPair.takeIf { access == VaultAccess.NO_VAULT_KEY },
-                        icon = Icons.Rounded.CloudSync
-                    )
-                })
-            )
-        }
+        else -> VaultLocked(access, unreachable, onPair, viewModel)
+    }
+}
+
+/** One row saying why backing up cannot work yet, and the way past it where there is one. */
+@Composable
+private fun VaultLocked(access: VaultAccess?, unreachable: Boolean, onPair: () -> Unit, viewModel: CloudBackupViewModel) {
+    val busy by viewModel.busy.collectAsStateWithLifecycle()
+    val status by viewModel.status.collectAsStateWithLifecycle()
+    var unlocking by remember { mutableStateOf(false) }
+
+    if (unlocking) {
+        VaultUnlockDialog(
+            onUnlock = { passphrase ->
+                unlocking = false
+                viewModel.unlock(passphrase)
+            },
+            onDismiss = { unlocking = false }
+        )
+    }
+
+    Column {
+        SettingsSection(stringResource(R.string.cloud_backup_section))
+        GroupedCard(
+            items = listOf<@Composable () -> Unit>({
+                SettingsRow(
+                    title = stringResource(R.string.cloud_backup_auto),
+                    subtitle = stringResource(
+                        when {
+                            access == null -> R.string.cloud_backup_checking
+                            busy -> R.string.cloud_backup_unlocking
+                            access == VaultAccess.NO_VAULT_KEY -> R.string.cloud_backup_no_key
+                            access == VaultAccess.KEYLESS_SERVER_TOO_OLD -> R.string.cloud_backup_no_key_old_server
+                            unreachable -> R.string.cloud_backup_unreachable
+                            else -> R.string.cloud_backup_server_lacks
+                        }
+                    ),
+                    onClick = when (access) {
+                        VaultAccess.NO_VAULT_KEY -> { { unlocking = true } }
+                        VaultAccess.KEYLESS_SERVER_TOO_OLD -> onPair
+                        else -> null
+                    },
+                    enabled = !busy,
+                    icon = Icons.Rounded.CloudSync
+                )
+            })
+        )
+        status?.let { BackupOutcome(it) }
     }
 }
 
