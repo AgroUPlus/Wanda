@@ -122,10 +122,14 @@ class AgroStreamFetcher @Inject constructor(
             put("toDevice", secureStorage.agroDeviceId)
         }.toString().toRequestBody("application/json".toMediaType())
 
+        // Tried once per missing track, so a dead token must stop here rather than be refused for each.
+        val token = secureStorage.agroApiKey
+        if (AgroTokenGate.refusing(token) != null) return null
         android.util.Log.i("P2P", "Opening a relay session …")
         val openRes = relayClient.newCall(authorized("$base/api/v1/relay/open").post(openBody).build()).execute()
         android.util.Log.i("P2P", "Relay open answered HTTP ${openRes.code}")
         if (!openRes.isSuccessful) {
+            AgroTokenGate.recordRestStatus(token, openRes.code)
             android.util.Log.w("P2P", "Relay open refused: HTTP ${openRes.code}")
             openRes.close()
             return null
