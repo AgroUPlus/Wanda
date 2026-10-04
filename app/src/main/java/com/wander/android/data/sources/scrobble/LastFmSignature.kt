@@ -15,7 +15,8 @@ internal object LastFmSignature {
             .toSortedMap()
             .entries
             .joinToString("") { (name, value) -> name + value } + secret
-        return MessageDigest.getInstance("MD5").digest(text.toByteArray(Charsets.UTF_8))
+        return MessageDigest.getInstance("MD5") // NOSONAR: api_sig is defined by Last.fm as MD5; not used for integrity or passwords
+            .digest(text.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
     }
 }
