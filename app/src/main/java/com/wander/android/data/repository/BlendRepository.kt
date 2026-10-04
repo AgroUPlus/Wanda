@@ -31,12 +31,17 @@ internal class BlendRepository @Inject constructor(
     private val _invites = MutableStateFlow<List<BlendInfo>>(emptyList())
     val invites: StateFlow<List<BlendInfo>> = _invites.asStateFlow()
 
-    suspend fun refreshInvites(): Result<Unit> {
+    /** Re-reads the invitations, answering the ones that were not waiting before this read. */
+    suspend fun refreshInvites(): Result<List<BlendInfo>> {
         if (!api.isAvailable) {
             _invites.value = emptyList()
-            return Result.success(Unit)
+            return Result.success(emptyList())
         }
-        return api.invites().map { _invites.value = it }
+        return api.invites().map { fresh ->
+            val seen = _invites.value.mapTo(HashSet()) { it.playlistId }
+            _invites.value = fresh
+            fresh.filter { it.playlistId !in seen }
+        }
     }
 
     /** Makes a blend and keeps its copy, answering the id to open it by. */

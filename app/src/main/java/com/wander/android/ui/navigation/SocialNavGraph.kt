@@ -67,7 +67,8 @@ internal fun NavGraphBuilder.socialNavGraph(
             onOpenThread = { navController.navigateSettled(Routes.inbox(it)) },
             onOpenCircleRecap = { navController.navigateSettled(Routes.CIRCLE) },
             onOpenProfile = { navController.navigateSettled(Routes.profile(it)) },
-            onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) }
+            onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) },
+            onOpenPlaylist = { navController.navigateSettled(Routes.playlist(it)) }
         )
     }
 

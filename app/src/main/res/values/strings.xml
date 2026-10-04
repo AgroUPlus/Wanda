@@ -857,6 +857,7 @@
     <string name="blend_invite_with">With %1$s</string>
     <string name="blend_invite_join">Join</string>
     <string name="blend_invite_decline">Decline</string>
+    <string name="notif_blend_invite_title">Blend invite</string>
     <string name="blend_invite_consent">Joining lets the others hear what you listen to most, through the Blend.</string>
     <string name="blend_banner_badge">BLEND</string>
     <string name="blend_banner_with">With %1$s</string>

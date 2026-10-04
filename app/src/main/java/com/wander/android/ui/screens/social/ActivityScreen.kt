@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.ui.components.listInset
+import com.wander.android.ui.screens.library.blend.BlendInvites
+import com.wander.android.ui.screens.library.blend.BlendInvitesViewModel
 
 /**
  * Everything that has happened lately, in one place.
@@ -32,9 +34,14 @@ internal fun ActivityScreen(
     onOpenCircleRecap: () -> Unit,
     onOpenProfile: (String) -> Unit = {},
     onOpenArtist: (artist: String, artistId: String?) -> Unit = { _, _ -> },
-    viewModel: ActivityViewModel = hiltViewModel()
+    onOpenPlaylist: (String) -> Unit = {},
+    viewModel: ActivityViewModel = hiltViewModel(),
+    blendInvites: BlendInvitesViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val invites by blendInvites.invites.collectAsStateWithLifecycle()
+    // Being asked into a blend is something shared with you, so it sits with the drops.
+    val showInvites = invites.isNotEmpty() && (state.filter == ActivityFilter.ALL || state.filter == ActivityFilter.SHARED)
 
     LazyColumn(
         contentPadding = contentPadding.listInset(),
@@ -66,8 +73,18 @@ internal fun ActivityScreen(
             }
         }
 
+        if (showInvites) {
+            item(key = "blend_invites") {
+                BlendInvites(
+                    onJoined = onOpenPlaylist,
+                    viewModel = blendInvites,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
+        }
+
         val visible = state.visible
-        if (visible.isEmpty() && !state.loading) {
+        if (visible.isEmpty() && !state.loading && !showInvites) {
             item(key = "empty") {
                 ActivityEmptyState(
                     filter = state.filter,

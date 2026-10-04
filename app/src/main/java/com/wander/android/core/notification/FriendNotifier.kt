@@ -10,6 +10,7 @@ import androidx.core.app.NotificationCompat
 import com.wander.android.MainActivity
 import com.wander.android.R
 import com.wander.android.data.sources.agro.AgroDrop
+import com.wander.android.data.sources.agro.BlendInfo
 import com.wander.android.data.sources.agro.FriendEvent
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -90,6 +91,25 @@ internal class FriendNotifier @Inject constructor(
             .onFailure { android.util.Log.i(TAG, "could not post the drop notification") }
     }
 
+    /**
+     * Says out loud that someone asked you into a blend. Opens on Activity, where it can be
+     * answered. Keyed on the blend, so asking again replaces rather than stacks.
+     */
+    fun notifyBlendInvite(invite: BlendInfo) {
+        ensureChannel()
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setContentTitle(context.getString(R.string.notif_blend_invite_title))
+            .setContentText(context.getString(R.string.blend_invite_from, invite.createdBy, invite.title))
+            .setSmallIcon(R.drawable.ic_stat_sync)
+            .setAutoCancel(true)
+            .setContentIntent(inboxIntent())
+            .build()
+
+        runCatching { manager.notify(BLEND_ID_BASE + invite.playlistId.hashCode(), notification) }
+            .onFailure { android.util.Log.i(TAG, "could not post the blend notification") }
+    }
+
     /** One notification per person per kind, so repeated frames replace rather than stack up. */
     private fun notificationId(event: FriendEvent): Int = when (event) {
         is FriendEvent.Requested -> REQUEST_ID_BASE + event.from.hashCode()
@@ -139,6 +159,7 @@ internal class FriendNotifier @Inject constructor(
         const val REQUEST_ID_BASE = 41_000
         const val ACCEPT_ID_BASE = 42_000
         const val DROP_ID_BASE = 43_000
+        const val BLEND_ID_BASE = 47_000
         const val INBOX_REQUEST_CODE = 4301
         const val INBOX_URI = "wanda://inbox"
     }
