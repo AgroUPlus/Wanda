@@ -5,8 +5,11 @@ import androidx.core.content.edit
 
 /**
  * Handles exporting and importing preferences for backup operations.
+ *
+ * [reload] re-reads every setting's flow once an import is written. Without it the app went on
+ * showing what it loaded at startup, so a restore looked as though it had done nothing.
  */
-internal class SecureStorageBackup(private val prefs: SharedPreferences) {
+internal class SecureStorageBackup(private val prefs: SharedPreferences, private val reload: () -> Unit) {
 
     fun exportAll(): Map<String, Any?> = prefs.all.filterKeys { it != KEY_AGRO_DEVICE_ID }
 
@@ -28,5 +31,6 @@ internal class SecureStorageBackup(private val prefs: SharedPreferences) {
                 }
             }
         }
+        reload()
     }
 }

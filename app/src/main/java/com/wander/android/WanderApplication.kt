@@ -35,6 +35,7 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
     @Inject lateinit var sharedPlaylistSyncScheduler: SharedPlaylistSyncScheduler
     @Inject lateinit var podcastSyncScheduler: com.wander.android.core.work.PodcastSyncScheduler
     @Inject lateinit var librarySyncScheduler: com.wander.android.core.sync.LibrarySyncScheduler
+    @Inject internal lateinit var cloudBackupScheduler: com.wander.android.core.backup.CloudBackupScheduler
     @Inject lateinit var p2pServer: com.wander.android.core.sync.P2PServer
     @Inject lateinit var secureStorage: com.wander.android.core.security.SecureStorage
     @Inject lateinit var likedTrackCacheProtector: com.wander.android.data.repository.LikedTrackCacheProtector
@@ -110,6 +111,11 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
         likedTrackCacheProtector.start(applicationScope)
         if (secureStorage.agroCatalogTrade || secureStorage.agroP2pSync || secureStorage.agroServerArchive) {
             librarySyncScheduler.enablePeriodicSync()
+        }
+        // Follows the setting rather than the switch that sets it: a restore can turn it on too, and a
+        // fresh install restored from a backup has the setting but never had the daily job.
+        applicationScope.launch {
+            secureStorage.cloudBackup.collect { enabled -> cloudBackupScheduler.apply(enabled) }
         }
         // Embedded P2P server for direct high-speed LAN audio transfers.
         //

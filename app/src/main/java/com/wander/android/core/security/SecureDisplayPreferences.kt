@@ -76,15 +76,19 @@ internal class SecureDisplayPreferences(private val prefs: SharedPreferences) {
         _isCoverCarouselEnabled.value = enabled
     }
 
-    fun resetFlows() {
-        _isAmoledBlack.value = false
-        _isBackBlurEnabled.value = true
-        _isMonetDynamic.value = true
-        _isCoverArtThemeEnabled.value = true
-        _isReduceMotion.value = false
-        _isLetterByLetterLyricsEnabled.value = true
-        _isCoverCarouselEnabled.value = true
-        _isImmersivePlayer.value = false
+    /**
+     * Re-reads every value from storage. After a restore that is what the backup wrote; after the
+     * store is cleared it is each default, so signing out and restoring share this one path.
+     */
+    fun reloadFlows() {
+        _isAmoledBlack.value = prefs.getBoolean(KEY_AMOLED_BLACK, false)
+        _isBackBlurEnabled.value = prefs.getBoolean(KEY_BACK_BLUR, true)
+        _isMonetDynamic.value = prefs.getBoolean(KEY_MONET_DYNAMIC, true)
+        _isImmersivePlayer.value = prefs.getBoolean(KEY_IMMERSIVE_PLAYER, false)
+        _isCoverArtThemeEnabled.value = prefs.getBoolean(KEY_COVER_ART_THEME, true)
+        _isReduceMotion.value = prefs.getBoolean(KEY_REDUCE_MOTION, false)
+        _isLetterByLetterLyricsEnabled.value = prefs.getBoolean(KEY_LETTER_BY_LETTER_LYRICS, true)
+        _isCoverCarouselEnabled.value = prefs.getBoolean(KEY_COVER_CAROUSEL, true)
     }
 }
 

@@ -99,9 +99,14 @@ internal class SecureAppPreferences(private val prefs: SharedPreferences) {
         _shareDomain.value = host
     }
 
-    fun resetFlows() {
-        _hasCompletedSetup.value = false
-        _shareDomain.value = ""
-        _agroShareDomain.value = ""
+    /**
+     * Re-reads every value from storage. After a restore that is what the backup wrote; after the
+     * store is cleared it is each default, so signing out and restoring share this one path.
+     */
+    fun reloadFlows() {
+        _hasCompletedSetup.value = prefs.getBoolean(KEY_SETUP_DONE, false)
+        _shareDomain.value = prefs.getString(KEY_SHARE_DOMAIN, "").orEmpty()
+        _agroShareDomain.value = prefs.getString(KEY_AGRO_SHARE_DOMAIN, "").orEmpty()
+        workPausedFlows.forEach { (kind, flow) -> flow.value = prefs.getBoolean(workPausedKey(kind), false) }
     }
 }

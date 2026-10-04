@@ -78,9 +78,13 @@ internal class SecureScrobblePreferences(private val prefs: SharedPreferences) {
         _lastFm.value = ScrobbleAccount(null, false)
     }
 
-    fun resetFlows() {
-        _listenBrainz.value = ScrobbleAccount(null, false)
-        _lastFm.value = ScrobbleAccount(null, false)
+    /**
+     * Re-reads every value from storage. After a restore that is what the backup wrote; after the
+     * store is cleared it is each default, so signing out and restoring share this one path.
+     */
+    fun reloadFlows() {
+        _listenBrainz.value = read(KEY_LISTENBRAINZ_USER, KEY_LISTENBRAINZ_ENABLED)
+        _lastFm.value = read(KEY_LASTFM_USER, KEY_LASTFM_ENABLED)
     }
 
     private fun read(userKey: String, enabledKey: String): ScrobbleAccount {

@@ -116,18 +116,24 @@ internal class SecurePlaybackPreferences(private val prefs: SharedPreferences) {
         _isArtistReleaseNotificationEnabled.value = enabled
     }
 
-    fun resetFlows() {
-        _isOfflineMode.value = false
-        _isPreloadNextEnabled.value = true
-        _isSkipSilenceEnabled.value = false
-        _isIndexOnMobileDataEnabled.value = false
-        _isRadioMode.value = true
-        _isExternalLyricsEnabled.value = true
-        _isMusicBrainzLookupEnabled.value = false
-        _isPodcastIndexEnabled.value = false
-        _isAutoUpdateCheckEnabled.value = false
-        _isArtistReleaseNotificationEnabled.value = false
-        _preferredMediaType.value = PlaybackMediaType.SONG
+    /**
+     * Re-reads every value from storage. After a restore that is what the backup wrote; after the
+     * store is cleared it is each default, so signing out and restoring share this one path.
+     */
+    fun reloadFlows() {
+        _isOfflineMode.value = prefs.getBoolean(KEY_OFFLINE_MODE, false)
+        _isPreloadNextEnabled.value = prefs.getBoolean(KEY_PRELOAD_NEXT, true)
+        _isSkipSilenceEnabled.value = prefs.getBoolean(KEY_SKIP_SILENCE, false)
+        _isIndexOnMobileDataEnabled.value = prefs.getBoolean(KEY_INDEX_ON_MOBILE_DATA, false)
+        _isRadioMode.value = prefs.getBoolean(KEY_RADIO_MODE, true)
+        _isExternalLyricsEnabled.value = prefs.getBoolean(KEY_EXTERNAL_LYRICS, true)
+        _isMusicBrainzLookupEnabled.value = prefs.getBoolean(KEY_MUSICBRAINZ_LOOKUP, false)
+        _isPodcastIndexEnabled.value = prefs.getBoolean(KEY_PODCASTINDEX_ENABLED, false)
+        _isAutoUpdateCheckEnabled.value = prefs.getBoolean(KEY_AUTO_UPDATE_CHECK, false)
+        _isArtistReleaseNotificationEnabled.value = prefs.getBoolean(KEY_RELEASE_NOTIFICATIONS, false)
+        _preferredMediaType.value =
+            PlaybackMediaType.entries.firstOrNull { it.name == prefs.getString(KEY_PREFERRED_MEDIA_TYPE, null) }
+                ?: PlaybackMediaType.SONG
     }
 }
 

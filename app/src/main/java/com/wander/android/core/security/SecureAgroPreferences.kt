@@ -189,17 +189,21 @@ internal class SecureAgroPreferences(private val prefs: SharedPreferences) {
         _cloudBackupAccounts.value = false
     }
 
-    fun resetFlows() {
-        _agroConfigured.value = false
-        _agroSyncSettings.value = false
-        _cloudBackup.value = false
-        _cloudBackupAccounts.value = false
-        _agroProxyEnabled.value = true
-        _agroP2pSync.value = true
-        _agroServerArchive.value = false
-        _agroLibrarySync.value = true
-        _agroPopularityContribution.value = true
-        _agroCatalogTrade.value = false
+    /**
+     * Re-reads every value from storage. After a restore that is what the backup wrote; after the
+     * store is cleared it is each default, so signing out and restoring share this one path.
+     */
+    fun reloadFlows() {
+        _agroConfigured.value = hasAgroCredentials()
+        _agroP2pSync.value = prefs.getBoolean(KEY_AGRO_P2P_SYNC, true)
+        _agroPopularityContribution.value = prefs.getBoolean(KEY_AGRO_POPULARITY, true)
+        _agroCatalogTrade.value = prefs.getBoolean(KEY_AGRO_CATALOG_TRADE, false)
+        _agroServerArchive.value = prefs.getBoolean(KEY_AGRO_SERVER_ARCHIVE, false)
+        _agroLibrarySync.value = prefs.getBoolean(KEY_AGRO_LIBRARY_SYNC, true)
+        _agroProxyEnabled.value = prefs.getBoolean(KEY_AGRO_PROXY_ENABLED, true)
+        _agroSyncSettings.value = prefs.getBoolean(KEY_AGRO_SYNC_SETTINGS, false)
+        _cloudBackup.value = prefs.getBoolean(KEY_AGRO_CLOUD_BACKUP, false)
+        _cloudBackupAccounts.value = prefs.getBoolean(KEY_AGRO_CLOUD_BACKUP_ACCOUNTS, false)
     }
 
     private fun hasAgroCredentials() =

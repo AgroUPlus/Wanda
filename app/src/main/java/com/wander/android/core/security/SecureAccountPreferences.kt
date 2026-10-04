@@ -118,10 +118,14 @@ internal class SecureAccountPreferences(private val prefs: SharedPreferences) {
 
     private fun hasPodcastIndexCredentials() = podcastIndexKey.isNotBlank() && podcastIndexSecret.isNotBlank()
 
-    fun resetFlows() {
-        _podcastIndexConfigured.value = false
-        _navidromeConfigured.value = false
-        _ytMusicConfigured.value = false
-        _deezerConfigured.value = false
+    /**
+     * Re-reads every value from storage. After a restore that is what the backup wrote; after the
+     * store is cleared it is each default, so signing out and restoring share this one path.
+     */
+    fun reloadFlows() {
+        _navidromeConfigured.value = hasNavidromeCredentials()
+        _ytMusicConfigured.value = ytMusicAuthCookie.isNotBlank()
+        _deezerConfigured.value = deezerAuthArl.isNotBlank()
+        _podcastIndexConfigured.value = hasPodcastIndexCredentials()
     }
 }

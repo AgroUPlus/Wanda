@@ -247,7 +247,7 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
     fun setAgroShareSettings(domain: String, hosts: String) = appPrefs.setAgroShareSettings(domain, hosts)
     fun setShareDomain(domain: String) = appPrefs.setShareDomain(domain)
 
-    private val backupManager = SecureStorageBackup(prefs)
+    private val backupManager = SecureStorageBackup(prefs, ::reloadFlows)
 
     // ── Backup & Wipe ───────────────────────────────────────────────────────────────────────
     fun exportAll(): Map<String, Any?> = backupManager.exportAll()
@@ -261,12 +261,16 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
             clear()
             deviceId?.let { putString(KEY_AGRO_DEVICE_ID, it) }
         }
-        displayPrefs.resetFlows()
-        playbackPrefs.resetFlows()
-        accountPrefs.resetFlows()
-        agroPrefs.resetFlows()
-        appPrefs.resetFlows()
-        scrobbling.resetFlows()
+        reloadFlows()
+    }
+
+    private fun reloadFlows() {
+        displayPrefs.reloadFlows()
+        playbackPrefs.reloadFlows()
+        accountPrefs.reloadFlows()
+        agroPrefs.reloadFlows()
+        appPrefs.reloadFlows()
+        scrobbling.reloadFlows()
     }
 
 
