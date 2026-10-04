@@ -52,6 +52,8 @@ internal fun LazyListScope.syncTab(
 
     if (!state.agroPaired) return
 
+    item(key = "agro_unencrypted") { UnencryptedPresenceNotice(onPair = actions.onAgroPair) }
+
     item(key = "agro_toggles") {
         val toggleItems = buildList<@Composable () -> Unit> {
             add {

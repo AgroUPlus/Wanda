@@ -888,6 +888,9 @@
     <string name="cloud_backup_no_key">Pairing by QR doesn\'t bring your vault key. Tap to unlock it with your passphrase.</string>
     <string name="cloud_backup_no_key_old_server">Pairing by QR doesn\'t bring your vault key, and this Agro server can\'t send it. Update Agro, or tap to pair by typing your passphrase instead.</string>
     <string name="cloud_backup_unlocking">Unlocking…</string>
+    <string name="settings_presence_unencrypted">What you play isn\'t encrypted</string>
+    <string name="settings_presence_unencrypted_sub">This phone has no vault key, so Agro can read what it plays. Tap to unlock your vault with your passphrase.</string>
+    <string name="settings_presence_unencrypted_old_server">This phone has no vault key, so Agro can read what it plays, and this server can\'t send it. Update Agro, or tap to pair by typing your passphrase.</string>
     <string name="cloud_backup_unlock_title">Unlock your vault</string>
     <string name="cloud_backup_unlock_message">Your account passphrase opens the vault key on this phone. It isn\'t stored or sent anywhere.</string>
     <string name="cloud_backup_unlock_field">Account passphrase</string>
