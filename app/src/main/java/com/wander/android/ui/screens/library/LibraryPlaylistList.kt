@@ -33,6 +33,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -60,6 +63,12 @@ internal fun PlaylistList(
     onOpenImport: () -> Unit
 ) {
     var naming by remember { mutableStateOf(false) }
+    var scope by rememberSaveable { mutableStateOf(PlaylistScope.YOURS) }
+    val shared by viewModel.sharedWithMe.collectAsStateWithLifecycle()
+    val selectScope = { picked: PlaylistScope ->
+        scope = picked
+        if (picked == PlaylistScope.SHARED) viewModel.loadSharedWithMe()
+    }
     var actionsForPlaylist by remember { mutableStateOf<UnifiedPlaylist?>(null) }
 
     if (naming) {
@@ -88,7 +97,7 @@ internal fun PlaylistList(
         )
     }
 
-    if (playlists.isEmpty()) {
+    if (playlists.isEmpty() && scope == PlaylistScope.YOURS) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -118,6 +127,11 @@ internal fun PlaylistList(
                     ) {
                         Icon(Icons.Rounded.Download, contentDescription = null)
                         Text(stringResource(R.string.common_import), modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+                if (viewModel.canListShared) {
+                    TextButton(onClick = { selectScope(PlaylistScope.SHARED) }) {
+                        Text(stringResource(R.string.library_playlists_shared))
                     }
                 }
             }
@@ -153,6 +167,9 @@ internal fun PlaylistList(
             // below counts exactly one item above the playlists.
             Column {
                 BlendInvites(onJoined = onOpenPlaylist, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp))
+                if (viewModel.canListShared) {
+                    PlaylistScopeToggle(scope, selectScope, Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp))
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -181,6 +198,14 @@ internal fun PlaylistList(
                     }
                 }
             }
+        }
+        if (scope == PlaylistScope.SHARED) {
+            sharedWithMeItems(
+                state = shared,
+                onOpen = { listing -> viewModel.openShared(listing, onOpenPlaylist) },
+                onRetry = viewModel::loadSharedWithMe
+            )
+            return@LazyColumn
         }
         itemsIndexed(visiblePlaylists, key = { _, it -> it.id }, contentType = { _, _ -> "playlist" }) { index, playlist ->
             PlaylistRow(

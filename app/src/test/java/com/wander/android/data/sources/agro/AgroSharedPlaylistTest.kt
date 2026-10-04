@@ -76,4 +76,20 @@ class AgroSharedPlaylistTest {
         )
         assertNull(AgroLiveMessageParser.playlistUpdated(payload("""{"revision":4}""")))
     }
+
+    @Test
+    fun aFollowMadeElsewhereNamesThePlaylistAndTheDirection() {
+        fun payload(text: String) = Json.parseToJsonElement(text).jsonObject
+
+        assertEquals(
+            AgroLiveMessage.PlaylistFollow("p", true),
+            AgroLiveMessageParser.playlistFollow(payload("""{"id":"p","following":true}"""))
+        )
+        assertEquals(
+            AgroLiveMessage.PlaylistFollow("p", false),
+            AgroLiveMessageParser.playlistFollow(payload("""{"id":"p","following":false}"""))
+        )
+        // Without a direction there is nothing safe to do: neither keep nor forget a copy on a guess.
+        assertNull(AgroLiveMessageParser.playlistFollow(payload("""{"id":"p"}""")))
+    }
 }

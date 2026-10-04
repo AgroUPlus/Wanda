@@ -273,6 +273,16 @@
     <string name="shared_playlist_access_editor">You can edit</string>
     <string name="shared_playlist_access_contributor">You can add tracks</string>
     <string name="shared_playlist_access_viewer">View only</string>
+    <string name="library_playlists_yours">Yours</string>
+    <string name="library_playlists_shared">Shared with me</string>
+    <string name="shared_with_me_by">by \@%1$s</string>
+    <string name="shared_with_me_in_library">In your library</string>
+    <string name="shared_with_me_empty">Nothing your friends have shared with you yet</string>
+    <string name="shared_with_me_failed">Couldn\'t load what\'s shared with you: %1$s</string>
+    <plurals name="shared_with_me_tracks">
+        <item quantity="one">%1$d track</item>
+        <item quantity="other">%1$d tracks</item>
+    </plurals>
     <string name="shared_playlist_retry">Retry</string>
     <string name="shared_playlist_unfollow">Unfollow</string>
     <string name="shared_playlist_added_by">Added by %1$s</string>

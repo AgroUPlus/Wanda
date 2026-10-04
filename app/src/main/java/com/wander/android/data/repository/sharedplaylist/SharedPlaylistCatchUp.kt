@@ -1,5 +1,6 @@
 package com.wander.android.data.repository.sharedplaylist
 
+import com.wander.android.core.database.dao.getTracksByIdsChunked
 import com.wander.android.core.database.dao.PlaylistDao
 import com.wander.android.core.database.dao.SharedPlaylistDao
 import com.wander.android.core.database.dao.TrackDao
@@ -44,7 +45,7 @@ class SharedPlaylistCatchUp @Inject constructor(
 
         // Captured before anything is written: the order being sent is the one the user left.
         val order = local.trackIds.split(',').filter { it.isNotBlank() }
-        val byId = trackDao.getTracksByIds(order).associateBy { it.id }
+        val byId = trackDao.getTracksByIdsChunked(order).associateBy { it.id }
         val known = order.mapNotNull { id ->
             byId[id]?.let { KnownTrack(it.id, it.title, it.artist, it.album, it.durationMs) }
         }

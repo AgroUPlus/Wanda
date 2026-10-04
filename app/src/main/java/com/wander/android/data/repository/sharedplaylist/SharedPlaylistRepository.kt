@@ -1,5 +1,6 @@
 package com.wander.android.data.repository.sharedplaylist
 
+import com.wander.android.core.database.dao.getTracksByIdsChunked
 import com.wander.android.core.database.dao.SharedPlaylistDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.SharedPlaylistEntity
@@ -72,16 +73,40 @@ class SharedPlaylistRepository @Inject constructor(
     }
 
     /**
-     * Keeps a copy of every playlist this account owns on Agro that this device has never seen —
-     * one made in Agro's dashboard, say — so it is listed under Agro like a followed one. A
-     * playlist that fails to load is left for the next refresh; the list itself failing is the
-     * error, so being offline is not mistaken for having no playlists.
+     * Brings the copies in line with what this account owns and follows on Agro, wherever that
+     * happened — a playlist made in the dashboard, one followed there or on another device, and
+     * one unfollowed elsewhere. A playlist that fails to load is left for the next look; either
+     * list failing is the error, so being offline is not mistaken for owning or following nothing.
      */
-    suspend fun discoverOwn(): Result<Unit> = api.ownedIds().map { ids ->
-        ids.filter { dao.get(it) == null }.forEach { id -> keepOwn(id) }
+    suspend fun discover(): Result<Unit> = runCatching {
+        val owned = api.ownedIds().getOrThrow()
+        val followed = api.followedIds().getOrThrow()
+        (owned + followed.open).distinct().filter { dao.get(it) == null }.forEach { id -> keepOwn(id) }
+        dao.followed()
+            .filter { it.agroId !in followed.open && it.agroId !in followed.revoked && isFollowedCopy(it) }
+            .forEach { forget(it.agroId) }
     }
 
-    /** Keeps a copy of [agroId], one of this account's own on Agro, answering the id to open it by. */
+    /**
+     * A follow or unfollow made elsewhere, pushed by Agro: keep a copy of a playlist just followed,
+     * or let go of one just unfollowed.
+     */
+    suspend fun followedElsewhere(agroId: String, following: Boolean) {
+        val copy = dao.get(agroId)
+        when {
+            following && copy == null -> keepOwn(agroId)
+            !following && copy != null && isFollowedCopy(copy) -> forget(agroId)
+        }
+    }
+
+    /**
+     * A copy kept only because this account follows it. Not its own, which unfollowing would not
+     * remove, and not a blend, which is left rather than unfollowed.
+     */
+    private fun isFollowedCopy(copy: SharedPlaylistEntity): Boolean =
+        copy.localPlaylistId == null && !copy.isBlend && copy.myRole != PlaylistRole.OWNER.name
+
+    /** Keeps a copy of [agroId], owned or followed on Agro, answering the id to open it by. */
     suspend fun keepOwn(agroId: String): Result<String> = api.fetch(agroId).map {
         mirror.write(it, api.me, localPlaylistId = null, state = SharedSyncState.SYNCED)
         SharedPlaylistMirror.routeId(agroId)
@@ -172,7 +197,7 @@ class SharedPlaylistRepository @Inject constructor(
      */
     suspend fun tracks(agroId: String): List<SharedTrack> {
         val items = dao.items(agroId)
-        val byId = trackDao.getTracksByIds(items.map { it.trackId }).associateBy { it.id }
+        val byId = trackDao.getTracksByIdsChunked(items.map { it.trackId }).associateBy { it.id }
         return items.map { item ->
             SharedTrack(
                 item = item,
@@ -206,7 +231,10 @@ class SharedPlaylistRepository @Inject constructor(
 
     private suspend fun SharedPlaylistEntity.toPlaylist(): UnifiedPlaylist {
         val items = dao.items(agroId)
-        val cover = items.firstNotNullOfOrNull { trackDao.getTrackById(it.trackId)?.artworkUrl }
+        // One read for every track's cover rather than one per track until a cover turns up: a
+        // copy still being matched has no covers at all, and that walked the whole list.
+        val covers = trackDao.getTracksByIdsChunked(items.map { it.trackId }).associate { it.id to it.artworkUrl }
+        val cover = items.firstNotNullOfOrNull { covers[it.trackId]?.takeIf(String::isNotBlank) }
         return UnifiedPlaylist(
             id = SharedPlaylistMirror.routeId(agroId),
             source = SourceType.AGRO,

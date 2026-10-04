@@ -9,7 +9,9 @@ import com.wander.android.data.repository.sharedplaylist.SharedPlaylistRepositor
 import com.wander.android.data.sources.IMusicSource
 import com.wander.android.data.sources.SourceCapabilities
 import com.wander.android.data.sources.StreamInfo
+import android.os.SystemClock
 import kotlinx.coroutines.flow.StateFlow
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -45,10 +47,27 @@ class AgroPlaylistSource @Inject constructor(
      * failure to reach Agro the answer.
      */
     override suspend fun getPlaylists(): Result<List<UnifiedPlaylist>> {
-        val discovered = shared.discoverOwn()
+        val discovered = if (discoveryDue()) shared.discover() else Result.success(Unit)
         val kept = shared.followed()
         return discovered.exceptionOrNull()?.takeIf { kept.isEmpty() }?.let { Result.failure(it) } ?: Result.success(kept)
     }
+
+    /** Straight from the copy in Room: no discovery, and nothing else listed along the way. */
+    override suspend fun getPlaylist(playlistId: String): Result<UnifiedPlaylist?> =
+        Result.success(SharedPlaylistMirror.agroIdOf(playlistId)?.let { shared.followedPlaylist(it) })
+
+    /**
+     * Looking for playlists made or followed elsewhere asks Agro for every playlist this account can
+     * open, every public one on the server included. Worth doing now and then, not on every visit
+     * to the library — a playlist made elsewhere is rare, and the next look finds it.
+     */
+    private fun discoveryDue(): Boolean {
+        val now = SystemClock.elapsedRealtime()
+        val last = lastDiscovery.get()
+        return (last == 0L || now - last >= DISCOVERY_INTERVAL_MS) && lastDiscovery.compareAndSet(last, now)
+    }
+
+    private val lastDiscovery = AtomicLong(0L)
 
     override suspend fun getPlaylistTracks(playlistId: String): Result<List<UnifiedTrack>> {
         val agroId = SharedPlaylistMirror.agroIdOf(playlistId) ?: return Result.success(emptyList())
@@ -60,5 +79,9 @@ class AgroPlaylistSource @Inject constructor(
         val agroId = SharedPlaylistMirror.agroIdOf(playlistId)
             ?: return Result.failure(IllegalArgumentException("Not a shared playlist"))
         return shared.remove(agroId)
+    }
+
+    private companion object {
+        const val DISCOVERY_INTERVAL_MS = 10 * 60 * 1000L
     }
 }

@@ -49,6 +49,12 @@ internal object AgroLiveMessageParser {
         return AgroLiveMessage.PlaylistUpdated(id, payload["revision"]?.jsonPrimitive?.longOrNull)
     }
 
+    fun playlistFollow(payload: JsonObject?): AgroLiveMessage.PlaylistFollow? {
+        val id = payload?.get("id")?.jsonPrimitive?.contentOrNull ?: return null
+        val following = payload["following"]?.jsonPrimitive?.booleanOrNull ?: return null
+        return AgroLiveMessage.PlaylistFollow(id, following)
+    }
+
     fun resumeFrame(after: Long): String = buildJsonObject {
         put("msg_type", "RESUME")
         put("payload", buildJsonObject { put("last_seq", after) })
@@ -111,6 +117,7 @@ internal object AgroLiveMessageParser {
             "JAM_RECAP" -> AgroLiveMessage.JamRecapWritten
             "BLEND_INVITE" -> AgroLiveMessage.BlendInvited
             "PLAYLIST_UPDATED" -> playlistUpdated(envelope["payload"] as? JsonObject)
+            "PLAYLIST_FOLLOW" -> playlistFollow(envelope["payload"] as? JsonObject)
             "JAM_NOW_PLAYING" -> {
                 val payload = envelope["payload"] as? JsonObject
                 val stopped = payload?.get("stopped")?.jsonPrimitive?.booleanOrNull ?: false

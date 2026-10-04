@@ -1,5 +1,6 @@
 package com.wander.android.data.repository.sharedplaylist
 
+import com.wander.android.core.database.dao.getTracksByIdsChunked
 import com.wander.android.core.database.dao.PlaylistDao
 import com.wander.android.core.database.dao.SharedPlaylistDao
 import com.wander.android.core.database.dao.TrackDao
@@ -152,7 +153,7 @@ class SharedPlaylistMirror @Inject constructor(
     private suspend fun lendCovers(trackIds: List<String>) {
         val unresolved = trackIds.filter { it.startsWith(SourceType.UNRESOLVED.idPrefix) }
         if (unresolved.isEmpty()) return
-        trackDao.getTracksByIds(unresolved)
+        trackDao.getTracksByIdsChunked(unresolved)
             .filter { it.artworkUrl.isNullOrBlank() }
             .forEach { track ->
                 artwork.coverFor(track.title, track.artist, track.album)?.let { trackDao.setArtwork(track.id, it) }

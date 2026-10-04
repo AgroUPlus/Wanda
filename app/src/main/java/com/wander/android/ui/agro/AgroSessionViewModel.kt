@@ -167,6 +167,7 @@ internal class AgroSessionViewModel @Inject constructor(
                 is AgroLiveMessage.JamRecapWritten, is AgroLiveMessage.BlendInvited -> inbox.onMessage(message)
                 // Someone changed a playlist this account shares in; fetched only if it moved on.
                 is AgroLiveMessage.PlaylistUpdated -> sharedPlaylists.onRemoteChange(message.id, message.revision)
+                is AgroLiveMessage.PlaylistFollow -> sharedPlaylists.onFollowChange(message.id, message.following)
                 is AgroLiveMessage.JamNowPlayingFrame -> {
                     // Acted on immediately, and the queue re-read after: the frame is what decides
                     // playback, and waiting for a round trip would put this device behind the room.

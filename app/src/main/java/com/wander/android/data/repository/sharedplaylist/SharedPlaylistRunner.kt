@@ -30,7 +30,8 @@ class SharedPlaylistRunner @Inject constructor(
     private val trackDao: TrackDao,
     private val sync: SharedPlaylistSync,
     private val messages: PlaylistPublicationRepository,
-    private val scheduler: SharedPlaylistSyncScheduler
+    private val scheduler: SharedPlaylistSyncScheduler,
+    private val repository: SharedPlaylistRepository
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -70,6 +71,11 @@ class SharedPlaylistRunner @Inject constructor(
                 revision != copy.revision -> syncNow(agroId)
             }
         }
+    }
+
+    /** This account followed or unfollowed [agroId] elsewhere; see [SharedPlaylistRepository.followedElsewhere]. */
+    fun onFollowChange(agroId: String, following: Boolean) {
+        scope.launch { repository.followedElsewhere(agroId, following) }
     }
 
     /**

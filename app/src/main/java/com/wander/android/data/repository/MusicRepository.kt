@@ -148,7 +148,7 @@ class MusicRepository @Inject constructor(
     suspend fun importMissingAlbumTracks(limit: Int = CatalogCollectionRepository.ALBUM_IMPORT_BATCH) = catalogCollections.importMissingAlbumTracks(limit)
     suspend fun getAlbumTracks(album: UnifiedAlbum) = catalogCollections.getAlbumTracks(album)
     suspend fun getAlbumTracksById(albumId: String) = catalogCollections.getAlbumTracksById(albumId)
-    suspend fun getPlaylists() = catalogCollections.getPlaylists()
+    suspend fun getPlaylists(only: Set<SourceType>? = null) = catalogCollections.getPlaylists(only)
     suspend fun getPlaylistTracks(playlist: UnifiedPlaylist) = catalogCollections.getPlaylistTracks(playlist)
     suspend fun getPlaylistById(playlistId: String) = catalogCollections.getPlaylistById(playlistId)
     suspend fun getPlaylistTracksById(playlistId: String) = catalogCollections.getPlaylistTracksById(playlistId)

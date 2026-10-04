@@ -179,6 +179,12 @@ internal sealed interface AgroLiveMessage {
     data class PlaylistUpdated(val id: String, val revision: Long?) : AgroLiveMessage
 
     /**
+     * This account started or stopped following [id] somewhere else — the dashboard, another
+     * device — so this one keeps a copy of it, or lets its copy go, without waiting to look.
+     */
+    data class PlaylistFollow(val id: String, val following: Boolean) : AgroLiveMessage
+
+    /**
      * The room moved to a new track.
      *
      * Decided by the server on its own clock, so this is an instruction rather than news: the

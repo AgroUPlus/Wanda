@@ -1,5 +1,6 @@
 package com.wander.android.data.sources.local
 
+import com.wander.android.core.database.dao.getTracksByIdsChunked
 import android.content.Context
 import com.wander.android.core.database.dao.PlaylistDao
 import com.wander.android.core.database.dao.TrackDao
@@ -169,7 +170,7 @@ class LocalMusicSource @Inject constructor(
         val entity = playlistDao.getPlaylistById(playlistId) ?: return Result.success(emptyList())
         val ids = entity.trackIds.split(',').filter { it.isNotBlank() }
         if (ids.isEmpty()) return Result.success(emptyList())
-        val tracksById = trackDao.getTracksByIds(ids).associateBy { it.id }
+        val tracksById = trackDao.getTracksByIdsChunked(ids).associateBy { it.id }
         val tracks = ids.mapNotNull { id -> tracksById[id]?.toUnifiedTrack() }
         return Result.success(tracks)
     }

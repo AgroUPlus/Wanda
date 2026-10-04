@@ -1,5 +1,6 @@
 package com.wander.android.core.work
 
+import com.wander.android.core.database.dao.getTracksByIdsChunked
 import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
@@ -91,7 +92,7 @@ class PlaylistImportWorker @AssistedInject constructor(
 
     /** The placeholders among [ids] not already tried by this run, in playlist order. */
     private suspend fun placeholdersOf(ids: List<String>, tried: Set<String>): List<TrackEntity> =
-        trackDao.getTracksByIds(ids)
+        trackDao.getTracksByIdsChunked(ids)
             .filter { it.source == SourceType.UNRESOLVED && it.id !in tried }
             .sortedBy { ids.indexOf(it.id) }
 

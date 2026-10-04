@@ -11,6 +11,7 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.PlaylistWriteRepository
 import com.wander.android.data.repository.ShareRepository
+import com.wander.android.data.sources.agro.AgroSharedListing
 import com.wander.android.data.sources.ShareKind
 import com.wander.android.data.sources.ShareTarget
 import com.wander.android.data.sources.local.LocalMusicSource
@@ -41,25 +42,9 @@ class LibraryViewModel @Inject constructor(
     playbackCoordinator: PlaybackCoordinator,
     private val shareRepository: ShareRepository,
     private val playlistWriter: PlaylistWriteRepository,
-    private val libraryPlayback: LibraryPlaybackCoordinator
+    private val libraryPlayback: LibraryPlaybackCoordinator,
+    private val playlistsLoader: LibraryPlaylistsLoader
 ) : ViewModel() {
-
-    constructor(
-        musicRepository: MusicRepository,
-        localSource: LocalMusicSource,
-        playerConnection: PlayerConnection,
-        playbackCoordinator: PlaybackCoordinator,
-        shareRepository: ShareRepository,
-        playlistWriter: PlaylistWriteRepository
-    ) : this(
-        musicRepository = musicRepository,
-        localSource = localSource,
-        playerConnection = playerConnection,
-        playbackCoordinator = playbackCoordinator,
-        shareRepository = shareRepository,
-        playlistWriter = playlistWriter,
-        libraryPlayback = LibraryPlaybackCoordinator(playerConnection, playbackCoordinator, musicRepository)
-    )
 
     /** Whether any connected source can be written to. Drives the "New playlist" affordance. */
     val canCreatePlaylists: Boolean
@@ -71,7 +56,21 @@ class LibraryViewModel @Inject constructor(
 
     /** Re-reads the list, so a playlist the new-playlist sheet just made appears in it. */
     fun refreshPlaylists() {
-        viewModelScope.launch { _playlists.value = musicRepository.getPlaylists() }
+        viewModelScope.launch { playlistsLoader.refresh() }
+    }
+
+    /** Friends' playlists this account can open; see [LibraryPlaylistsLoader]. */
+    val sharedWithMe: StateFlow<SharedWithMe> = playlistsLoader.shared
+
+    val canListShared: Boolean get() = playlistsLoader.canListShared
+
+    fun loadSharedWithMe() {
+        viewModelScope.launch { playlistsLoader.loadShared() }
+    }
+
+    /** Opens a shared playlist, following it first when it is not in the library yet. */
+    fun openShared(listing: AgroSharedListing, onOpen: (String) -> Unit) {
+        viewModelScope.launch { playlistsLoader.open(listing).onSuccess(onOpen) }
     }
 
     private val _tab = MutableStateFlow(LibraryTab.LIKED)
@@ -116,8 +115,7 @@ class LibraryViewModel @Inject constructor(
     val albums: StateFlow<List<UnifiedAlbum>> = musicRepository.getAlbumsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    private val _playlists = MutableStateFlow<List<UnifiedPlaylist>>(emptyList())
-    val playlists: StateFlow<List<UnifiedPlaylist>> = _playlists.asStateFlow()
+    val playlists: StateFlow<List<UnifiedPlaylist>> = playlistsLoader.playlists
 
     /** A refresh the user asked for by pulling: the only one that shows the spinner. */
     private val _isRefreshing = MutableStateFlow(false)
@@ -132,19 +130,32 @@ class LibraryViewModel @Inject constructor(
     val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
     init {
+        playlistsLoader.start(viewModelScope)
         refresh(pulled = false)
     }
 
     fun refresh() = refresh(pulled = true)
 
+    /**
+     * Playlists and the rest side by side: the playlist tab used to wait behind a scan of the
+     * device's files and every source's albums before it showed anything at all.
+     *
+     * The scan and the album refresh are the slow half; see [CatalogueRefreshGate].
+     */
     private fun refresh(pulled: Boolean) {
         viewModelScope.launch {
             _isSyncing.value = true
             if (pulled) _isRefreshing.value = true
-            localSource.refresh()
-            musicRepository.refreshAlbums()
-            musicRepository.getRecentTracks(LIBRARY_TRACK_REFRESH)
-            _playlists.value = musicRepository.getPlaylists()
+            val playlists = launch { playlistsLoader.refresh() }
+            val catalogue = launch {
+                if (pulled || CatalogueRefreshGate.due()) {
+                    localSource.refresh()
+                    musicRepository.refreshAlbums()
+                    musicRepository.getRecentTracks(LIBRARY_TRACK_REFRESH)
+                }
+            }
+            playlists.join()
+            catalogue.join()
             _isRefreshing.value = false
             _isSyncing.value = false
             backfillAlbumTracks()
@@ -185,9 +196,8 @@ class LibraryViewModel @Inject constructor(
 
     fun deletePlaylist(playlist: UnifiedPlaylist) {
         viewModelScope.launch {
-            playlistWriter.deletePlaylist(playlist).onSuccess {
-                _playlists.value = musicRepository.getPlaylists()
-            }
+            // The list follows Room on its own; a backend's playlist is a network list, re-read here.
+            playlistWriter.deletePlaylist(playlist).onSuccess { playlistsLoader.refresh() }
         }
     }
 

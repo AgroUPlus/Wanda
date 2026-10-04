@@ -14,6 +14,10 @@ interface PlaylistDao {
     @Query("SELECT * FROM local_playlists ORDER BY updatedAt DESC")
     suspend fun getAllPlaylists(): List<PlaylistEntity>
 
+    /** Every Wanda playlist's id and when it last changed, again whenever one does. */
+    @Query("SELECT id || ':' || updatedAt FROM local_playlists")
+    fun observeVersions(): Flow<List<String>>
+
     @Query("SELECT * FROM local_playlists WHERE id = :id LIMIT 1")
     suspend fun getPlaylistById(id: String): PlaylistEntity?
 

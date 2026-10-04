@@ -33,6 +33,8 @@ fun PlaylistRow(
     index: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    /** In place of the source and track count, for a row that has something better to say. */
+    subtitle: String? = null,
     /** Long press handler for actions sheet. */
     onLongPress: (() -> Unit)? = null
 ) {
@@ -75,7 +77,7 @@ fun PlaylistRow(
                 modifier = Modifier.scrollingTitle()
             )
             Text(
-                text = remember(playlist) { playlist.subtitle() },
+                text = subtitle ?: remember(playlist) { playlist.subtitle() },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,

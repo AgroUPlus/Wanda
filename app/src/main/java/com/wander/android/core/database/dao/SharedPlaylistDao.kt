@@ -33,6 +33,10 @@ interface SharedPlaylistDao {
     @Query("SELECT * FROM shared_playlists")
     suspend fun all(): List<SharedPlaylistEntity>
 
+    /** Every copy, again whenever one is added, changed or forgotten: the library's cue to re-read. */
+    @Query("SELECT * FROM shared_playlists")
+    fun observeAll(): Flow<List<SharedPlaylistEntity>>
+
     @Upsert
     suspend fun upsert(playlist: SharedPlaylistEntity)
 

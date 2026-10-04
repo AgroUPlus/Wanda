@@ -7,6 +7,8 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
 import java.io.IOException
 import javax.inject.Inject
@@ -85,6 +87,46 @@ class AgroSharedPlaylistApi @Inject constructor(private val graphQl: AgroGraphQl
                 .mapNotNull { it["id"]?.jsonPrimitive?.contentOrNull }
         }
 
+    /**
+     * Every playlist this account can open that someone else owns, with what it may do there.
+     * Includes every public playlist on the server: narrowing it to friends is the caller's job.
+     */
+    suspend fun openToMe(): Result<List<AgroSharedListing>> =
+        graphQl.execute(
+            "query { playlists { id userId title itemCount myRole isFollowing } }",
+            buildJsonObject {}
+        ).mapCatching { data ->
+            val listed = data["playlists"] as? JsonArray ?: throw IOException("Agro did not list its playlists")
+            listed.mapNotNull { it as? JsonObject }.mapNotNull { row ->
+                val id = row["id"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+                val owner = row["userId"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                if (owner.isBlank() || owner.equals(me, ignoreCase = true)) return@mapNotNull null
+                AgroSharedListing(
+                    id = id,
+                    title = row["title"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                    owner = owner,
+                    itemCount = row["itemCount"]?.jsonPrimitive?.intOrNull ?: 0,
+                    role = PlaylistRole.entries.firstOrNull { it.name == row["myRole"]?.jsonPrimitive?.contentOrNull }
+                        ?: PlaylistRole.VIEWER,
+                    isFollowing = row["isFollowing"]?.jsonPrimitive?.booleanOrNull == true
+                )
+            }
+        }
+
+    /** What this account follows: the ids it can still open, and those it no longer can. */
+    suspend fun followedIds(): Result<AgroFollowedIds> =
+        graphQl.execute("query { followedPlaylists { playlists { id } revokedIds } }", buildJsonObject {})
+            .mapCatching { data ->
+                val followed = data["followedPlaylists"] as? JsonObject
+                    ?: throw IOException("Agro did not list what this account follows")
+                AgroFollowedIds(
+                    open = (followed["playlists"] as? JsonArray).orEmpty()
+                        .mapNotNull { (it as? JsonObject)?.get("id")?.jsonPrimitive?.contentOrNull },
+                    revoked = (followed["revokedIds"] as? JsonArray).orEmpty()
+                        .mapNotNull { it.jsonPrimitive.contentOrNull }
+                )
+            }
+
     private fun idVariables(id: String) = buildJsonObject { put("id", id) }
 
     internal companion object {
@@ -120,3 +162,16 @@ class AgroSharedPlaylistApi @Inject constructor(private val graphQl: AgroGraphQl
         }
     }
 }
+
+/** The playlists an account follows, split by whether it may still open them. */
+data class AgroFollowedIds(val open: List<String>, val revoked: List<String>)
+
+/** A playlist someone else owns that this account can open. */
+data class AgroSharedListing(
+    val id: String,
+    val title: String,
+    val owner: String,
+    val itemCount: Int,
+    val role: PlaylistRole,
+    val isFollowing: Boolean
+)

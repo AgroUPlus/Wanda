@@ -1,5 +1,6 @@
 package com.wander.android.data.repository
 
+import com.wander.android.core.database.dao.getTracksByIdsChunked
 import com.wander.android.core.database.dao.AlbumDao
 import com.wander.android.core.database.dao.PlaylistDao
 import com.wander.android.core.database.dao.TrackDao
@@ -105,9 +106,10 @@ internal class CatalogCollectionRepository(
         }
     }
 
-    suspend fun getPlaylists(): List<UnifiedPlaylist> = coroutineScope {
+    /** Every source's playlists, or only [only]'s: the library re-reads the local ones alone. */
+    suspend fun getPlaylists(only: Set<SourceType>? = null): List<UnifiedPlaylist> = coroutineScope {
         activeSources()
-            .filter { it.capabilities.playlists }
+            .filter { it.capabilities.playlists && (only == null || it.sourceType in only) }
             .map { source -> async { source.getPlaylists().getOrDefault(emptyList()) } }
             .flatMap { it.await() }
     }
@@ -124,7 +126,7 @@ internal class CatalogCollectionRepository(
 
     suspend fun getPlaylistById(playlistId: String): UnifiedPlaylist? = withContext(Dispatchers.IO) {
         val type = SourceType.entries.firstOrNull { playlistId.startsWith(it.idPrefix) }
-        val remote = type?.let(::sourceFor)?.getPlaylists()?.getOrNull()?.firstOrNull { it.id == playlistId }
+        val remote = type?.let(::sourceFor)?.getPlaylist(playlistId)?.getOrNull()
         if (remote != null) return@withContext remote
 
         val localEntity = playlistDao.getPlaylistById(playlistId)
@@ -152,7 +154,7 @@ internal class CatalogCollectionRepository(
         val localEntity = playlistDao.getPlaylistById(playlistId)
         if (localEntity != null) {
             val ids = localEntity.trackIds.split(',').filter { it.isNotBlank() }
-            val tracksById = trackDao.getTracksByIds(ids).associateBy { it.id }
+            val tracksById = trackDao.getTracksByIdsChunked(ids).associateBy { it.id }
             val baseTracks = ids.mapNotNull { id -> tracksById[id]?.toUnifiedTrack() }
             val downloadedTracks = trackDao.getOfflineTracksOnce().map(TrackEntity::toUnifiedTrack)
             val rules = recordingRules.current()

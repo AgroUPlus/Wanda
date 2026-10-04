@@ -137,6 +137,14 @@ interface IMusicSource {
         Result.failure(UnsupportedOperationException("$sourceType cannot expand artist shelves"))
 
     suspend fun getPlaylists(): Result<List<UnifiedPlaylist>> = Result.success(emptyList())
+
+    /**
+     * One playlist by id. The default reads the whole list, which is right for a backend that
+     * answers it in one call; a source that holds its playlists locally answers from there instead,
+     * since the playlist screen asks this on every change it shows.
+     */
+    suspend fun getPlaylist(playlistId: String): Result<UnifiedPlaylist?> =
+        getPlaylists().map { all -> all.firstOrNull { it.id == playlistId } }
     suspend fun getPlaylistTracks(playlistId: String): Result<List<UnifiedTrack>> =
         Result.success(emptyList())
 
