@@ -80,7 +80,7 @@ internal fun BlendBanner(agroId: String, onLeft: () -> Unit, viewModel: BlendBan
         onConfirm = { viewModel.leave(agroId) }
     )
     val joined = blend.members.filter { it.joined }.map { it.username }
-    val waiting = blend.members.count { !it.joined }
+    val waiting = blend.members.filterNot { it.joined }.map { it.username }
 
     Surface(
         shape = RoundedCornerShape(28.dp),
@@ -109,10 +109,17 @@ internal fun BlendBanner(agroId: String, onLeft: () -> Unit, viewModel: BlendBan
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
             )
             Text(
-                text = listOfNotNull(
-                    refreshLine(blend),
-                    waiting.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.blend_banner_invited, it, it) }
-                ).joinToString(" · "),
+                // Agro writes nothing until everyone asked has answered, so while anyone has not,
+                // that is the whole story: there is no next refresh to speak of yet.
+                text = if (waiting.isNotEmpty()) {
+                    pluralStringResource(
+                        R.plurals.blend_banner_waiting_on,
+                        waiting.size,
+                        waiting.joinToString { "@$it" }
+                    )
+                } else {
+                    refreshLine(blend)
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = colors.onSurfaceVariant
             )
