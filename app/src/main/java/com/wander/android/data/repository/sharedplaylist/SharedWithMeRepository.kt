@@ -1,6 +1,7 @@
 package com.wander.android.data.repository.sharedplaylist
 
 import com.wander.android.core.database.dao.FriendDao
+import com.wander.android.data.sources.agro.AgroBlendApi
 import com.wander.android.data.sources.agro.AgroSharedListing
 import com.wander.android.data.sources.agro.AgroSharedPlaylistApi
 import java.util.Locale
@@ -16,7 +17,8 @@ import javax.inject.Singleton
 class SharedWithMeRepository @Inject constructor(
     private val api: AgroSharedPlaylistApi,
     private val friendDao: FriendDao,
-    private val shared: SharedPlaylistRepository
+    private val shared: SharedPlaylistRepository,
+    private val blends: AgroBlendApi
 ) {
     val isAvailable: Boolean get() = api.isAvailable
 
@@ -38,5 +40,16 @@ class SharedWithMeRepository @Inject constructor(
     suspend fun open(listing: AgroSharedListing): Result<String> {
         if (shared.followedPlaylist(listing.id) != null) return Result.success(SharedPlaylistMirror.routeId(listing.id))
         return shared.follow(listing.id)
+    }
+
+    /**
+     * Takes [listing] out of this account's reach: leaves a blend — which ends it, for its creator
+     * — or unfollows a playlist. Works whether or not this device holds a copy, since a row here
+     * comes from Agro and can name one this device never kept, or one a copy was lost for.
+     */
+    suspend fun remove(listing: AgroSharedListing): Result<Unit> = when {
+        listing.isBlend -> blends.leave(listing.id).onSuccess { shared.forget(listing.id) }
+        listing.isFollowing -> shared.unfollow(listing.id)
+        else -> Result.failure(IllegalStateException("“${listing.title}” is not in your library"))
     }
 }

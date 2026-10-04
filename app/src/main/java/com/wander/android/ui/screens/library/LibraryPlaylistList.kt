@@ -40,6 +40,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
+import com.wander.android.ui.components.ConfirmDialog
+import com.wander.android.data.sources.agro.AgroSharedListing
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.ui.components.AddToPlaylistController
@@ -64,10 +67,19 @@ internal fun PlaylistList(
 ) {
     var naming by remember { mutableStateOf(false) }
     var scope by rememberSaveable { mutableStateOf(PlaylistScope.YOURS) }
-    val shared by viewModel.sharedWithMe.collectAsStateWithLifecycle()
+    val sharedViewModel: SharedWithMeViewModel = hiltViewModel()
+    val shared by sharedViewModel.state.collectAsStateWithLifecycle()
+    val sharedError by sharedViewModel.error.collectAsStateWithLifecycle()
+    var removing by remember { mutableStateOf<AgroSharedListing?>(null) }
     val selectScope = { picked: PlaylistScope ->
         scope = picked
-        if (picked == PlaylistScope.SHARED) viewModel.loadSharedWithMe()
+        if (picked == PlaylistScope.SHARED) sharedViewModel.load()
+    }
+    removing?.let { listing ->
+        ConfirmDialog(
+            request = removalRequest(listing) { sharedViewModel.remove(listing) },
+            onDismiss = { removing = null }
+        )
     }
     var actionsForPlaylist by remember { mutableStateOf<UnifiedPlaylist?>(null) }
 
@@ -129,7 +141,7 @@ internal fun PlaylistList(
                         Text(stringResource(R.string.common_import), modifier = Modifier.padding(start = 8.dp))
                     }
                 }
-                if (viewModel.canListShared) {
+                if (sharedViewModel.isAvailable) {
                     TextButton(onClick = { selectScope(PlaylistScope.SHARED) }) {
                         Text(stringResource(R.string.library_playlists_shared))
                     }
@@ -167,7 +179,7 @@ internal fun PlaylistList(
             // below counts exactly one item above the playlists.
             Column {
                 BlendInvites(onJoined = onOpenPlaylist, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp))
-                if (viewModel.canListShared) {
+                if (sharedViewModel.isAvailable) {
                     PlaylistScopeToggle(scope, selectScope, Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp))
                 }
                 Row(
@@ -202,8 +214,10 @@ internal fun PlaylistList(
         if (scope == PlaylistScope.SHARED) {
             sharedWithMeItems(
                 state = shared,
-                onOpen = { listing -> viewModel.openShared(listing, onOpenPlaylist) },
-                onRetry = viewModel::loadSharedWithMe
+                error = sharedError,
+                onOpen = { listing -> sharedViewModel.open(listing, onOpenPlaylist) },
+                onRemove = { removing = it },
+                onRetry = sharedViewModel::load
             )
             return@LazyColumn
         }

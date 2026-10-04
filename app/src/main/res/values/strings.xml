@@ -278,6 +278,8 @@
     <string name="shared_with_me_by">by \@%1$s</string>
     <string name="shared_with_me_in_library">In your library</string>
     <string name="shared_with_me_blend">Blend</string>
+    <string name="shared_with_me_unfollow_title">Unfollow “%1$s”?</string>
+    <string name="shared_with_me_unfollow_message">It leaves your library. It stays here while it\'s shared with you, so you can follow it again.</string>
     <string name="shared_with_me_empty">Nothing your friends have shared with you yet</string>
     <string name="shared_with_me_failed">Couldn\'t load what\'s shared with you: %1$s</string>
     <plurals name="shared_with_me_tracks">

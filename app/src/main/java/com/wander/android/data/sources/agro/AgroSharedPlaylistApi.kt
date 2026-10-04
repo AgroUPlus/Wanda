@@ -121,7 +121,8 @@ class AgroSharedPlaylistApi @Inject constructor(private val graphQl: AgroGraphQl
             role = PlaylistRole.entries.firstOrNull { it.name == this["myRole"]?.jsonPrimitive?.contentOrNull }
                 ?: PlaylistRole.VIEWER,
             isFollowing = this["isFollowing"]?.jsonPrimitive?.booleanOrNull == true,
-            isBlend = this["isBlend"]?.jsonPrimitive?.booleanOrNull == true
+            isBlend = this["isBlend"]?.jsonPrimitive?.booleanOrNull == true,
+            isMine = owner.equals(me, ignoreCase = true)
         )
     }
 
@@ -186,5 +187,10 @@ data class AgroSharedListing(
     val itemCount: Int,
     val role: PlaylistRole,
     val isFollowing: Boolean,
-    val isBlend: Boolean = false
-)
+    val isBlend: Boolean = false,
+    /** Made by this account: only a blend is listed so, and leaving one of these ends it. */
+    val isMine: Boolean = false
+) {
+    /** Whether there is anything to take away: a blend to leave, or a follow to undo. */
+    val isRemovable: Boolean get() = isBlend || isFollowing
+}

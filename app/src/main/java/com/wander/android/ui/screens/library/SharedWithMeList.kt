@@ -22,6 +22,7 @@ import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.sources.agro.AgroSharedListing
 import com.wander.android.data.sources.agro.PlaylistRole
+import com.wander.android.ui.components.ConfirmRequest
 import com.wander.android.ui.components.SkeletonRow
 import com.wander.android.ui.components.groupedListItem
 
@@ -53,9 +54,12 @@ internal fun PlaylistScopeToggle(scope: PlaylistScope, onSelect: (PlaylistScope)
  */
 internal fun LazyListScope.sharedWithMeItems(
     state: SharedWithMe,
+    error: String?,
     onOpen: (AgroSharedListing) -> Unit,
+    onRemove: (AgroSharedListing) -> Unit,
     onRetry: () -> Unit
 ) {
+    error?.let { item(key = "shared_error") { SharedMessage(it) } }
     when (state) {
         SharedWithMe.NotLoaded, SharedWithMe.Loading -> items(count = 3, key = { "shared_skeleton_$it" }) {
             SkeletonRow(leadingSize = 48.dp, leadingShape = MaterialTheme.shapes.extraSmall)
@@ -76,6 +80,8 @@ internal fun LazyListScope.sharedWithMeItems(
                     index = index,
                     subtitle = subtitleOf(listing),
                     onClick = { onOpen(listing) },
+                    // Long press to leave a blend, end one of your own, or unfollow.
+                    onLongPress = { onRemove(listing) }.takeIf { listing.isRemovable },
                     modifier = Modifier.animateItem().groupedListItem(index, state.items.size)
                 )
             }
@@ -115,3 +121,26 @@ private fun AgroSharedListing.asPlaylist() = UnifiedPlaylist(
     name = title,
     songCount = itemCount
 )
+
+/** What taking [listing] away means, said before it is done: ending a blend is for everyone. */
+@Composable
+internal fun removalRequest(listing: AgroSharedListing, onConfirm: () -> Unit) = when {
+    listing.isBlend && listing.isMine -> ConfirmRequest(
+        title = stringResource(R.string.blend_end_confirm_title),
+        message = stringResource(R.string.blend_end_confirm_message),
+        confirmLabel = stringResource(R.string.blend_banner_end),
+        onConfirm = onConfirm
+    )
+    listing.isBlend -> ConfirmRequest(
+        title = stringResource(R.string.blend_leave_confirm_title),
+        message = stringResource(R.string.blend_leave_confirm_message),
+        confirmLabel = stringResource(R.string.blend_banner_leave),
+        onConfirm = onConfirm
+    )
+    else -> ConfirmRequest(
+        title = stringResource(R.string.shared_with_me_unfollow_title, listing.title),
+        message = stringResource(R.string.shared_with_me_unfollow_message),
+        confirmLabel = stringResource(R.string.shared_playlist_unfollow),
+        onConfirm = onConfirm
+    )
+}

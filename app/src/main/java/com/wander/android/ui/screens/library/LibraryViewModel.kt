@@ -11,7 +11,6 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.PlaylistWriteRepository
 import com.wander.android.data.repository.ShareRepository
-import com.wander.android.data.sources.agro.AgroSharedListing
 import com.wander.android.data.sources.ShareKind
 import com.wander.android.data.sources.ShareTarget
 import com.wander.android.data.sources.local.LocalMusicSource
@@ -57,20 +56,6 @@ class LibraryViewModel @Inject constructor(
     /** Re-reads the list, so a playlist the new-playlist sheet just made appears in it. */
     fun refreshPlaylists() {
         viewModelScope.launch { playlistsLoader.refresh() }
-    }
-
-    /** Friends' playlists this account can open; see [LibraryPlaylistsLoader]. */
-    val sharedWithMe: StateFlow<SharedWithMe> = playlistsLoader.shared
-
-    val canListShared: Boolean get() = playlistsLoader.canListShared
-
-    fun loadSharedWithMe() {
-        viewModelScope.launch { playlistsLoader.loadShared() }
-    }
-
-    /** Opens a shared playlist, following it first when it is not in the library yet. */
-    fun openShared(listing: AgroSharedListing, onOpen: (String) -> Unit) {
-        viewModelScope.launch { playlistsLoader.open(listing).onSuccess(onOpen) }
     }
 
     private val _tab = MutableStateFlow(LibraryTab.LIKED)
