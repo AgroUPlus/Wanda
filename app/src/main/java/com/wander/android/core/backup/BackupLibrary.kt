@@ -48,6 +48,12 @@ internal data class BackupTrack(
     val isEpisode: Boolean = false,
     val isLiked: Boolean = false,
     val isLibrary: Boolean = false,
+    /**
+     * Never written and never restored: it named this device's download, whose file is not in the
+     * backup, so a restored row pointed playback at a path that did not exist (ENOENT). Still
+     * declared because files written before that carry it, and their integrity digest is computed
+     * over the record exactly as it was encoded.
+     */
     val localFilePath: String? = null,
     val contentHash: String? = null,
     val playCount: Int = 0,
@@ -90,7 +96,7 @@ internal fun TrackEntity.toBackup(): BackupTrack = BackupTrack(
     durationMs = durationMs, artworkUrl = artworkUrl, streamUri = streamUri,
     trackNumber = trackNumber, discNumber = discNumber, year = year, genre = genre,
     bitRateKbps = bitRateKbps, format = format, isLive = isLive, isEpisode = isEpisode, isLiked = isLiked,
-    isLibrary = isLibrary, localFilePath = localFilePath, contentHash = contentHash,
+    isLibrary = isLibrary, contentHash = contentHash,
     playCount = playCount, lastPlayedTimestamp = lastPlayedTimestamp,
     addedTimestamp = addedTimestamp
 )
@@ -104,7 +110,7 @@ internal fun BackupTrack.toEntity(): TrackEntity? {
         durationMs = durationMs, artworkUrl = artworkUrl, streamUri = streamUri,
         trackNumber = trackNumber, discNumber = discNumber, year = year, genre = genre,
         bitRateKbps = bitRateKbps, format = format, isLive = isLive, isEpisode = isEpisode, isLiked = isLiked,
-        isLibrary = isLibrary, localFilePath = localFilePath, albumArtist = albumArtist,
+        isLibrary = isLibrary, albumArtist = albumArtist,
         contentHash = contentHash, playCount = playCount,
         lastPlayedTimestamp = lastPlayedTimestamp, addedTimestamp = addedTimestamp
     )

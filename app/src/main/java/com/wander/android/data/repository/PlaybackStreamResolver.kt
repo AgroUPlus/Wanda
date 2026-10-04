@@ -9,6 +9,7 @@ import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.isOneShotTrackId
 import com.wander.android.data.sources.IMusicSource
 import com.wander.android.data.sources.StreamInfo
+import java.io.File
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
@@ -56,13 +57,24 @@ internal class PlaybackStreamResolver(
 
     /** Tier 1: Internal / Downloaded local file, or a local copy of the same recording. */
     private suspend fun localStreamFor(cached: TrackEntity?): StreamInfo? {
-        cached?.localFilePath?.takeIf { it.isNotBlank() }?.let { path ->
-            return StreamInfo(uri = path, isDirectFile = true)
-        }
+        downloadedFileOf(cached)?.let { path -> return StreamInfo(uri = path, isDirectFile = true) }
         if (cached == null || cached.effectiveSource == SourceType.LOCAL || cached.effectiveSource == SourceType.PODCAST) return null
         val localMatch = sameRecordingAs(cached, trackDao.findLocalOrDownloadedCandidates(cached.title, TITLE_CANDIDATES))
-        val localPath = localMatch?.localFilePath?.takeIf { it.isNotBlank() } ?: localMatch?.streamUri
+        val localPath = downloadedFileOf(localMatch) ?: localMatch?.streamUri
         return localPath?.takeIf { it.isNotBlank() }?.let { StreamInfo(uri = it, isDirectFile = true) }
+    }
+
+    /**
+     * The track's downloaded file, if it is really there. A row can name a file that is gone — the
+     * user cleared app storage, or an older backup restored another install's path — and handing
+     * that to the player fails with ENOENT instead of streaming. The stale claim is cleared so the
+     * track reads as not downloaded everywhere else too.
+     */
+    private suspend fun downloadedFileOf(track: TrackEntity?): String? {
+        val path = track?.localFilePath?.takeIf { it.isNotBlank() } ?: return null
+        if (File(path).exists()) return path
+        trackDao.setDownloaded(track.id, isDownloaded = false, localPath = null)
+        return null
     }
 
     /** Tier 2: Navidrome (Personal Server), within a time budget so a slow server can't stall playback. */
