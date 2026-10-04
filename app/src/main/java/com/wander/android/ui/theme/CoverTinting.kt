@@ -31,20 +31,27 @@ fun ColorScheme.tintedByCover(seed: Color, strength: Float, dark: Boolean): Colo
     val newPrimary = accent(primary, if (dark) 0.60f else 0.50f)
     val newSecondary = accent(secondary, 0.40f)
     val newTertiary = accent(tertiary, if (dark) 0.50f else 0.60f)
+    val newPrimaryContainer = accent(primaryContainer, if (dark) 0.25f else 0.90f)
+    val newSecondaryContainer = accent(secondaryContainer, if (dark) 0.20f else 0.85f)
+    val newTertiaryContainer = accent(tertiaryContainer, if (dark) 0.30f else 0.88f)
+    // The seed-derived text colour where it stays readable on its container, black or white where
+    // a bright or dull cover would have left it washed out against it.
+    fun onContainer(container: Color, from: Color, factor: Float) =
+        lerp(from, seed.harmonise(factor, dark).readableOn(container), strength)
 
     return copy(
         primary              = newPrimary,
         onPrimary            = lerp(onPrimary, newPrimary.contrastingOnColor(), strength),
-        primaryContainer     = accent(primaryContainer,     if (dark) 0.25f else 0.90f),
-        onPrimaryContainer   = accent(onPrimaryContainer,   if (dark) 0.90f else 0.10f),
+        primaryContainer     = newPrimaryContainer,
+        onPrimaryContainer   = onContainer(newPrimaryContainer, onPrimaryContainer, if (dark) 0.90f else 0.10f),
         secondary            = newSecondary,
         onSecondary          = lerp(onSecondary, newSecondary.contrastingOnColor(), strength),
-        secondaryContainer   = accent(secondaryContainer,   if (dark) 0.20f else 0.85f),
-        onSecondaryContainer = accent(onSecondaryContainer, if (dark) 0.85f else 0.15f),
+        secondaryContainer   = newSecondaryContainer,
+        onSecondaryContainer = onContainer(newSecondaryContainer, onSecondaryContainer, if (dark) 0.85f else 0.15f),
         tertiary             = newTertiary,
         onTertiary           = lerp(onTertiary, newTertiary.contrastingOnColor(), strength),
-        tertiaryContainer    = accent(tertiaryContainer,    if (dark) 0.30f else 0.88f),
-        onTertiaryContainer  = accent(onTertiaryContainer,  if (dark) 0.88f else 0.12f),
+        tertiaryContainer    = newTertiaryContainer,
+        onTertiaryContainer  = onContainer(newTertiaryContainer, onTertiaryContainer, if (dark) 0.88f else 0.12f),
 
         background              = wash(background,              0.06f),
         onBackground            = wash(onBackground,            0.05f),
@@ -68,9 +75,29 @@ fun ColorScheme.tintedByCover(seed: Color, strength: Float, dark: Boolean): Colo
 /**
  * Black or white text for [this] background, picked from what the colour actually turned out to
  * be rather than assumed from the theme's own dark/light mode.
+ *
+ * The switch sits where black and white contrast equally, not at mid-grey: a background at 30%
+ * luminance gives white only 3:1 but black 7:1, and those mid-bright covers are the common case.
  */
 private fun Color.contrastingOnColor(): Color =
-    if (luminance() > 0.5f) Color.Black else Color.White
+    if (luminance() > EQUAL_CONTRAST_LUMINANCE) Color.Black else Color.White
+
+/** sqrt(1.05 × 0.05) − 0.05: the luminance at which black and white text contrast equally. */
+private const val EQUAL_CONTRAST_LUMINANCE = 0.179f
+
+/**
+ * [this] where it reaches WCAG AA body-text contrast (4.5:1) against [background], otherwise
+ * whichever of black or white does.
+ */
+private fun Color.readableOn(background: Color): Color =
+    if (contrastRatio(this, background) >= MIN_TEXT_CONTRAST) this else background.contrastingOnColor()
+
+private fun contrastRatio(a: Color, b: Color): Float {
+    val (light, dark) = listOf(a.luminance(), b.luminance()).sortedDescending()
+    return (light + 0.05f) / (dark + 0.05f)
+}
+
+private const val MIN_TEXT_CONTRAST = 4.5f
 
 /**
  * Blends [this] colour toward white (light) or black (dark) by [factor] to produce a tonal

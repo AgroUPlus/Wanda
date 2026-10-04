@@ -18,6 +18,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -39,6 +40,8 @@ internal data class JamUiState(
     val recaps: List<StoredJamRecap> = emptyList(),
     /** Recaps already turned into a playlist this session, so the button says so. */
     val savedRecaps: Set<String> = emptySet(),
+    /** The recap written when this screen's user just left, shown first rather than under the fold. */
+    val justLeftRecap: String? = null,
     val error: String? = null
 )
 
@@ -115,7 +118,13 @@ internal class JamViewModel @Inject constructor(
     fun leave() = run {
         playback.reset()
         // The server writes the recap as part of leaving, so it is there to read straight after.
-        repository.leave().onSuccess { recapRepository.refresh() }
+        val known = _state.value.recaps.mapTo(mutableSetOf()) { it.id }
+        repository.leave()
+            .mapCatching { recapRepository.refresh().getOrThrow() }
+            .onSuccess {
+                val fresh = recapRepository.recaps.first().firstOrNull { it.id !in known }
+                _state.value = _state.value.copy(justLeftRecap = fresh?.id)
+            }
     }
 
     fun dismissRecap(id: String) = run { recapRepository.dismiss(id) }
