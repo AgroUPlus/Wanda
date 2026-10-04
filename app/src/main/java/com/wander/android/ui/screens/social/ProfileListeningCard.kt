@@ -73,20 +73,18 @@ internal fun ProfileListeningCard(
             ListeningLabel(live = now != null)
             if (now != null) {
                 Text(
-                    text = if (now.isLocked) stringResource(R.string.social_private_session) else now.trackTitle,
+                    text = now.trackTitle,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (!now.isLocked) {
-                    Text(
-                        text = now.artistName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                Text(
+                    text = now.artistName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             } else {
                 Text(
                     text = idleReason(profile),
@@ -96,7 +94,7 @@ internal fun ProfileListeningCard(
                 )
             }
         }
-        if (now != null && !now.isLocked) {
+        if (now != null) {
             if (isListeningAlong) {
                 RowActionButton(stringResource(R.string.social_stop_listening_short), onStopListeningAlong)
             } else {

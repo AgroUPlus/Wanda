@@ -46,8 +46,7 @@ internal fun LazyListScope.allFriendsSection(
             onClick = { onOpenProfile(profile.username) },
             leading = { FriendFace(profile) },
             trailing = {
-                // A sealed session that would not open has nothing this device could follow.
-                if (now != null && !now.isLocked && !isListeningAlong(profile.username)) {
+                if (now != null && !isListeningAlong(profile.username)) {
                     RowActionButton(stringResource(R.string.social_join)) { onJoin(profile.username) }
                 } else {
                     ListChevron()
@@ -116,11 +115,7 @@ private fun FriendFace(profile: AgroProfile) {
 
 @Composable
 private fun statusLine(now: AgroFriendNowPlaying): String =
-    if (now.isLocked) {
-        stringResource(R.string.social_private_session)
-    } else {
-        stringResource(R.string.social_track_by_artist, now.trackTitle, now.artistName)
-    }
+    stringResource(R.string.social_track_by_artist, now.trackTitle, now.artistName)
 
 private fun Modifier.groupedRow(index: Int): Modifier =
     padding(start = 16.dp, end = 16.dp, top = if (index == 0) 0.dp else SegmentGap)

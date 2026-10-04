@@ -778,7 +778,6 @@
     <string name="social_not_listening">Not listening</string>
     <!-- Short label on the pill that ends listening along with a friend. -->
     <string name="social_stop_listening_short">Stop</string>
-    <string name="social_private_session">Private session</string>
     <!-- A friend's status line. %1$s is the track, %2$s the artist. -->
     <string name="social_track_by_artist">%1$s · %2$s</string>
     <string name="social_activity_subtitle">Circle &amp; shared songs</string>

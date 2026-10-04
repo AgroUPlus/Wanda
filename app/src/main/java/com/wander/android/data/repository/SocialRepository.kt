@@ -8,6 +8,7 @@ import com.wander.android.data.sources.agro.AgroFeedApi
 import com.wander.android.data.sources.agro.AgroFeedItem
 import com.wander.android.data.sources.agro.AgroFriend
 import com.wander.android.data.sources.agro.AgroFriendNowPlaying
+import com.wander.android.data.sources.agro.isReadable
 import com.wander.android.data.sources.agro.AgroFriendsApi
 import com.wander.android.data.sources.agro.AgroProfile
 import com.wander.android.data.sources.agro.AgroProfileApi
@@ -182,8 +183,9 @@ internal class SocialRepository @Inject constructor(
         _nowPlaying.value = _nowPlaying.value
             .filterNot { it.username.equals(update.username, ignoreCase = true) }
             .plus(update)
-            // A friend who paused is still present; one playing nothing at all is not.
-            .filter { it.trackTitle.isNotBlank() }
+            // A friend who paused is still present; one playing nothing at all is not, and nor is
+            // one whose session this device cannot read — the update still replaces what was shown.
+            .filter { it.trackTitle.isNotBlank() && it.isReadable }
     }
 
     suspend fun tasteMatch(username: String): Result<AgroTasteMatch> =

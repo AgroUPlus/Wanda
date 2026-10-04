@@ -31,6 +31,7 @@ import com.wander.android.R
 import com.wander.android.data.repository.ListenAlongSession
 import com.wander.android.data.repository.ResolvedFrom
 import com.wander.android.data.sources.agro.Jam
+import com.wander.android.data.sources.agro.isReadable
 import com.wander.android.ui.theme.LiveIndicator
 
 /**
@@ -110,7 +111,7 @@ internal fun ListenAlongSession.statusLine(): String {
     // Sealed to a key this device does not hold. Without this the line renders the server's
     // placeholder against an empty artist — a blank half-line that reads as a bug rather than as
     // the one thing it actually means.
-    if (track.isLocked) return "Private session — you can't open this one"
+    if (!track.isReadable) return "Can't see what they're playing on this device"
     // The transport used to be spelled out here as well; it is the badge's job now, and repeating
     // it cost the half of the line that says what is actually playing.
     return "${track.trackTitle} — ${track.artistName}"

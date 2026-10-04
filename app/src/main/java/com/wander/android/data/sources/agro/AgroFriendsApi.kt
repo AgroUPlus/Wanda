@@ -41,7 +41,7 @@ internal class AgroFriendsApi @Inject constructor(
     ).mapCatching { data ->
         (data["friends"] as? JsonArray).orEmpty().map { entry ->
             val friend = entry.jsonObject.toFriend()
-            friend.copy(nowPlaying = friend.nowPlaying?.openIfSealed(identityKeyManager))
+            friend.copy(nowPlaying = friend.nowPlaying?.openIfSealed(identityKeyManager)?.takeIf { it.isReadable })
         }
     }
 
@@ -69,9 +69,9 @@ internal class AgroFriendsApi @Inject constructor(
         """.trimIndent(),
         buildJsonObject { put("deviceId", secureStorage.agroDeviceId) }
     ).mapCatching { data ->
-        (data["friendsNowPlaying"] as? JsonArray).orEmpty().map {
-            it.jsonObject.toNowPlaying().openIfSealed(identityKeyManager)
-        }
+        (data["friendsNowPlaying"] as? JsonArray).orEmpty()
+            .map { it.jsonObject.toNowPlaying().openIfSealed(identityKeyManager) }
+            .filter { it.isReadable }
     }
 
     /**

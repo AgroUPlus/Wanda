@@ -114,4 +114,16 @@ class PresenceUnsealingTest {
 
         assertEquals("already-known", opened.contentHash)
     }
+
+    @Test
+    fun onlyAPresenceThisDeviceCanReadIsShown() {
+        // A copy that would not open, and a placeholder that came with no copy at all: neither is a
+        // track, and neither may reach a screen as "Private Session".
+        assertFalse(placeholder().withSealedMetadata(null).isReadable)
+        assertFalse(placeholder(sealed = null).isReadable)
+
+        val opened = placeholder().withSealedMetadata("""{"trackTitle":"Kid A","artistName":"Radiohead"}""")
+        assertTrue(opened.isReadable)
+        assertTrue(placeholder(sealed = null).copy(trackTitle = "Windowlicker", artistName = "Aphex Twin").isReadable)
+    }
 }

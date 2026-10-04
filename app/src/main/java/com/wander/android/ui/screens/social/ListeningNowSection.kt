@@ -157,24 +157,20 @@ private fun CarouselItemScope.PresenceCard(
                     // whether or not it opened, the same badge the drops inbox uses for that fact.
                     if (now.encryptedPresence != null) EncryptedThreadLock()
                     Text(
-                        // A session that would not open: this device knows a friend is playing but
-                        // not what, and the server's placeholder is not a title.
-                        text = if (now.isLocked) stringResource(R.string.social_private_session) else now.trackTitle,
+                        text = now.trackTitle,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                if (!now.isLocked) {
-                    Text(
-                        text = now.artistName,
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                Text(
+                    text = now.artistName,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

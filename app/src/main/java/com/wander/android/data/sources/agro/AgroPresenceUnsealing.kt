@@ -29,6 +29,18 @@ internal fun AgroFriendNowPlaying.openIfSealed(
 }
 
 /**
+ * Whether this device can say what the friend is playing.
+ *
+ * Not when the envelope would not open, and not when what arrived is the placeholder a sealed
+ * session leaves in the plaintext fields — which happens when no copy was sealed to this device,
+ * or the copy and the update travel in different frames. Either way "Private Session" is not a
+ * title, and showing it, even for the moment until the next frame, says something nobody wrote.
+ * Such a presence is treated as nothing playing.
+ */
+internal val AgroFriendNowPlaying.isReadable: Boolean
+    get() = !isLocked && !(trackTitle == AgroClient.PRIVATE_SESSION_TITLE && artistName.isBlank())
+
+/**
  * Applies an opened envelope, or marks the session locked when there was not one.
  *
  * Separated from the unsealing above because this half is where the decisions are — which fields

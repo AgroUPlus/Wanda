@@ -53,7 +53,13 @@ class ListenAlongStatusLineTest {
         val line = session(track("Private Session", "", locked = true)).statusLine()
 
         assertTrue("the placeholder leaked into the line: $line", !line.endsWith("— "))
-        assertEquals("Private session — you can't open this one", line)
+        assertEquals("Can't see what they're playing on this device", line)
+    }
+
+    @Test
+    fun aPlaceholderThatCameWithNoSealedCopyIsNotShownAsATitle() {
+        val line = session(track("Private Session", "")).statusLine()
+        assertEquals("Can't see what they're playing on this device", line)
     }
 
     @Test
