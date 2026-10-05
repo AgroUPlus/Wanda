@@ -84,6 +84,7 @@ internal class CatalogSyncRepository @Inject constructor(
             return@withContext Result.success(SyncOutcome.NOT_TRADING)
         }
         runCatching {
+            rereadCatalogueIfKeptDifferently()
             val published = publisher.publishLocal()
             val received = pullCatalogue()
             val corrected = canonicalMetadata.applyToLibrary()
@@ -91,6 +92,19 @@ internal class CatalogSyncRepository @Inject constructor(
         }.onFailure { error ->
             Log.w(TAG, "Catalogue sync did not complete: ${error.message}")
         }
+    }
+
+    /**
+     * Starts the catalogue over once per [INDEX_VERSION].
+     *
+     * The cursor only moves forward, so an entry read while recordings were not yet kept was
+     * applied to the library and never offered again. Reading from the beginning once is the only
+     * way those come back; the marker makes it once, not on every update.
+     */
+    private fun rereadCatalogueIfKeptDifferently() {
+        if (secureStorage.catalogIndexVersion >= INDEX_VERSION) return
+        secureStorage.catalogCursor = 0L
+        secureStorage.catalogIndexVersion = INDEX_VERSION
     }
 
     /**
@@ -227,6 +241,9 @@ internal class CatalogSyncRepository @Inject constructor(
 
     internal companion object {
         const val TAG = "CatalogSync"
+
+        /** Raised whenever what is kept of an entry changes, so every device reads the catalogue again. */
+        const val INDEX_VERSION = 1
 
         /** Entries per catalogue read; the server's own default. */
         const val PULL_PAGE = 200

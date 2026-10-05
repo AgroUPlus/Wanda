@@ -25,6 +25,11 @@ internal class SecureAgroPreferences(private val prefs: SharedPreferences) {
         get() = prefs.getLong(KEY_CATALOG_CURSOR, 0L)
         set(value) = prefs.edit { putLong(KEY_CATALOG_CURSOR, value) }
 
+    /** Which way of keeping the catalogue this cursor was read under — see `CatalogSyncRepository`. */
+    var catalogIndexVersion: Int
+        get() = prefs.getInt(KEY_CATALOG_INDEX_VERSION, 0)
+        set(value) = prefs.edit { putInt(KEY_CATALOG_INDEX_VERSION, value) }
+
     var catalogLastPublishedAt: Long
         get() = prefs.getLong(KEY_CATALOG_PUBLISHED_AT, 0L)
         set(value) = prefs.edit { putLong(KEY_CATALOG_PUBLISHED_AT, value) }

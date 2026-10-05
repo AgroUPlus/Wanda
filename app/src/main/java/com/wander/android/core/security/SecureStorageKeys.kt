@@ -48,6 +48,7 @@ internal val ACCOUNT_KEYS = setOf(
 
 internal const val KEY_AGRO_CATALOG_TRADE = "key_agro_catalog_trade"
 const val KEY_CATALOG_CURSOR = "catalog_cursor"
+const val KEY_CATALOG_INDEX_VERSION = "catalog_index_version"
 const val KEY_CATALOG_PUBLISHED_AT = "catalog_published_at"
 const val KEY_CATALOG_PUBLISHED_TRACK = "catalog_published_track"
 internal const val KEY_AGRO_CAPABILITIES = "key_agro_capabilities"

@@ -135,6 +135,10 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
         get() = agroPrefs.catalogCursor
         set(value) { agroPrefs.catalogCursor = value }
 
+    var catalogIndexVersion: Int
+        get() = agroPrefs.catalogIndexVersion
+        set(value) { agroPrefs.catalogIndexVersion = value }
+
     var catalogLastPublishedAt: Long
         get() = agroPrefs.catalogLastPublishedAt
         set(value) { agroPrefs.catalogLastPublishedAt = value }
