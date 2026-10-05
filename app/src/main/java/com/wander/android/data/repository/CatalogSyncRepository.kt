@@ -2,8 +2,10 @@ package com.wander.android.data.repository
 
 import android.util.Log
 import com.wander.android.core.audio.fingerprint.AudioEmbedder
+import com.wander.android.core.database.dao.CatalogRecordingDao
 import com.wander.android.core.database.dao.TrackEmbeddingDao
 import com.wander.android.core.database.dao.TrackLyricsDao
+import com.wander.android.core.database.entity.CatalogRecordingEntity
 import com.wander.android.core.database.entity.TrackLyricsEntity
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.sources.agro.AgroCatalogApi
@@ -33,6 +35,7 @@ internal class CatalogSyncRepository @Inject constructor(
     private val recordingIdentity: RecordingIdentityRepository,
     private val embeddingDao: TrackEmbeddingDao,
     private val trackLyricsDao: TrackLyricsDao,
+    private val catalogDao: CatalogRecordingDao,
     private val secureStorage: SecureStorage,
     private val publisher: CatalogPublisher
 ) {
@@ -44,6 +47,7 @@ internal class CatalogSyncRepository @Inject constructor(
         recordingIdentity: RecordingIdentityRepository,
         embeddingDao: TrackEmbeddingDao,
         trackLyricsDao: TrackLyricsDao,
+        catalogDao: CatalogRecordingDao,
         secureStorage: SecureStorage
     ) : this(
         catalogApi = catalogApi,
@@ -52,6 +56,7 @@ internal class CatalogSyncRepository @Inject constructor(
         recordingIdentity = recordingIdentity,
         embeddingDao = embeddingDao,
         trackLyricsDao = trackLyricsDao,
+        catalogDao = catalogDao,
         secureStorage = secureStorage,
         publisher = CatalogPublisher(catalogApi, musicRepository, embeddingDao, trackLyricsDao, secureStorage)
     )
@@ -121,8 +126,17 @@ internal class CatalogSyncRepository @Inject constructor(
             return 0
         }
         val vectors = unpackHex(entry.embeddingHex, entry.dim) ?: return 0
+        keep(entry, vectors)
         var applied = 0
-        for (match in recordingIdentity.matchesForEmbedding(vectors, entry.durationMs)) {
+        val matches = recordingIdentity.matchesForEmbedding(vectors, entry.durationMs)
+        // A track nobody here has played has no fingerprint to match on, and the entry is read
+        // once and never again — so lyrics also reach tracks the catalogue merely names.
+        if (!entry.lyrics.isNullOrBlank()) {
+            val named = trackLyricsDao.trackIdsNamed(entry.title.orEmpty(), entry.artist.orEmpty())
+                .filter { id -> matches.none { it.trackId == id } }
+            for (trackId in named) saveLyrics(trackId, entry.lyrics, entry.lyricsSource)
+        }
+        for (match in matches) {
             if (canonicalMetadata.record(
                     trackId = match.trackId,
                     recordingId = entry.recordingId,
@@ -142,25 +156,57 @@ internal class CatalogSyncRepository @Inject constructor(
     private suspend fun saveLyrics(trackId: String, lyrics: String, source: String?) {
         val isSynced = lyrics.startsWith("[")
         val existing = trackLyricsDao.getLyricsForTrack(trackId)
-        if (existing != null && !(existing.syncedLyrics.isNullOrBlank() && isSynced)) return
-        val plain = if (isSynced) {
-            lyrics.lineSequence()
-                .map { it.replace(Regex("""^\[\d{2}:\d{2}\.\d{2,3}\]"""), "").trim() }
-                .filter { it.isNotBlank() }
-                .joinToString("\n")
-        } else {
-            lyrics
-        }
+        // A row recording that a lookup found nothing holds no text, and is what the fleet is for.
+        val hasText = existing != null && existing.absentSince == null
+        if (hasText && !(existing!!.syncedLyrics.isNullOrBlank() && isSynced)) return
         trackLyricsDao.saveLyricsWithFts(
             TrackLyricsEntity(
                 trackId = trackId,
-                plainLyrics = plain,
+                plainLyrics = plainOf(lyrics),
                 syncedLyrics = if (isSynced) lyrics else null,
                 source = source?.takeIf { it.isNotBlank() } ?: "Agro",
                 viaCatalog = true
             )
         )
     }
+
+    /**
+     * Records the entry whether or not any local track matches it, so a recording this library
+     * lacks can still be found by its lyrics or by ear. The cursor never returns to it.
+     */
+    private suspend fun keep(entry: AgroCatalogEntry, vectors: Array<FloatArray>) {
+        if (entry.dim != AudioEmbedder.EMBED_DIM) return
+        catalogDao.save(
+            CatalogRecordingEntity(
+                recordingId = entry.recordingId,
+                title = entry.title.orEmpty(),
+                artist = entry.artist.orEmpty(),
+                album = entry.album,
+                durationMs = entry.durationMs,
+                vector = AudioEmbedder.pack(vectors),
+                centroid = AudioEmbedder.pack(EmbeddingScorer.summaryOf(AudioEmbedder.flatten(vectors))),
+                dim = entry.dim,
+                model = entry.model,
+                version = entry.version,
+                plainLyrics = entry.lyrics?.takeIf { it.isNotBlank() }?.let(::plainOf),
+                syncedLyrics = entry.lyrics?.takeIf { it.startsWith("[") },
+                lyricsSource = entry.lyricsSource?.takeIf { it.isNotBlank() && !entry.lyrics.isNullOrBlank() },
+                sources = entry.sources.joinToString("\n"),
+                updatedAt = entry.updatedAt
+            )
+        )
+    }
+
+    /** Lyrics as plain lines: an LRC's timestamps stripped, anything else left as it is. */
+    private fun plainOf(lyrics: String): String =
+        if (!lyrics.startsWith("[")) {
+            lyrics
+        } else {
+            lyrics.lineSequence()
+                .map { it.replace(Regex("""^\[\d{2}:\d{2}\.\d{2,3}\]"""), "").trim() }
+                .filter { it.isNotBlank() }
+                .joinToString("\n")
+        }
 
     /** What one sync did. */
     data class SyncOutcome(

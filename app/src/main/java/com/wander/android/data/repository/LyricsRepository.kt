@@ -4,6 +4,7 @@ import com.wander.android.core.database.dao.TrackLyricsDao
 import com.wander.android.core.database.entity.TrackLyricsEntity
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.LyricLine
+import com.wander.android.core.database.dao.CatalogRecordingDao
 import com.wander.android.data.model.LyricMatch
 import com.wander.android.data.model.LyricsData
 import com.wander.android.data.model.LyricsState
@@ -38,6 +39,7 @@ data class LrclibResponse(
 class LyricsRepository @Inject constructor(
     private val sources: Set<@JvmSuppressWildcards IMusicSource>,
     private val trackLyricsDao: TrackLyricsDao,
+    private val catalogDao: CatalogRecordingDao,
     private val client: HttpClient,
     private val secureStorage: SecureStorage
 ) {
@@ -245,10 +247,22 @@ class LyricsRepository @Inject constructor(
                     source = "LyricsFTS"
                 )
             }
+            // Recordings the catalogue knows and the library lacks. Their tracks are stubs, which
+            // the caller resolves; sorting by priority puts them behind any copy that is held.
+            val fromCatalogue = catalogDao.searchByLyrics(ftsQuery, limit).map { hit ->
+                val (line, ts) = findMatchingLine(hit.recording.plainLyrics.orEmpty(), hit.recording.syncedLyrics, query)
+                LyricMatch(
+                    track = hit.recording.toStubTrack(),
+                    matchedLine = line,
+                    snippet = hit.snippet,
+                    timestampMs = ts,
+                    source = "Agro"
+                )
+            }
             // Deduplicate across sources (Local > Navidrome > YTM) using canonical recordingKey
             val seenKeys = mutableSetOf<String>()
             val deduplicated = mutableListOf<LyricMatch>()
-            for (match in matches.sortedBy { it.track.source.priority }) {
+            for (match in (matches + fromCatalogue).sortedBy { it.track.source.priority }) {
                 val key = TrackDeduplicator.recordingKey(match.track)
                 if (seenKeys.add(key)) {
                     deduplicated.add(match)
@@ -260,32 +274,6 @@ class LyricsRepository @Inject constructor(
             Log.w(TAG, "Lyric search query failed: ${e.message}")
             emptyList()
         }
-    }
-
-    private fun findMatchingLine(
-        plainLyrics: String,
-        syncedLyrics: String?,
-        query: String
-    ): Pair<String, Long?> {
-        val cleanQuery = query.trim().lowercase()
-        if (!syncedLyrics.isNullOrBlank()) {
-            val lines = parseLrc(syncedLyrics)
-            val match = lines.firstOrNull { it.text.lowercase().contains(cleanQuery) }
-                ?: lines.firstOrNull { l ->
-                    val lineWords = l.text.lowercase().split(Regex("\\W+"))
-                    cleanQuery.split(Regex("\\W+")).all { w -> lineWords.contains(w) }
-                }
-            if (match != null) {
-                return Pair(match.text, match.timestampMs)
-            }
-        }
-        val plainLine = plainLyrics.lineSequence().firstOrNull { it.lowercase().contains(cleanQuery) }
-            ?: plainLyrics.lineSequence().firstOrNull { l ->
-                val lineWords = l.lowercase().split(Regex("\\W+"))
-                cleanQuery.split(Regex("\\W+")).all { w -> lineWords.contains(w) }
-            }
-            ?: plainLyrics.lineSequence().firstOrNull() ?: ""
-        return Pair(plainLine.trim(), null)
     }
 
     fun parseLrc(lrcContent: String): List<LyricLine> = LrcParser.parse(lrcContent)

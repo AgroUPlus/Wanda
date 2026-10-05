@@ -41,6 +41,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.data.repository.IndexReadiness
+import com.wander.android.data.model.SourceType
 import com.wander.android.data.repository.Recognition
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.listen.ListenState
@@ -183,7 +184,11 @@ private fun MatchedView(recognition: Recognition, onPlay: () -> Unit) {
         maxLines = 1,
         overflow = TextOverflow.Ellipsis
     )
-    Button(onClick = onPlay, shapes = ButtonDefaults.shapes()) {
+    Button(
+        onClick = onPlay,
+        enabled = recognition.track.source != SourceType.UNRESOLVED,
+        shapes = ButtonDefaults.shapes()
+    ) {
         Text(stringResource(R.string.action_play))
     }
 }

@@ -5,6 +5,7 @@ import android.util.Log
 import com.wander.android.core.audio.fingerprint.AudioEmbedder
 import com.wander.android.core.audio.fingerprint.EmbeddingModelManager
 import com.wander.android.core.audio.fingerprint.SegmentVectors
+import com.wander.android.core.database.dao.CatalogRecordingDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.dao.TrackEmbeddingDao
 import com.wander.android.core.database.entity.TrackEmbeddingEntity
@@ -27,9 +28,10 @@ class EmbeddingRepository @Inject constructor(
     private val embeddingDao: TrackEmbeddingDao,
     private val embedder: AudioEmbedder,
     private val trackDao: TrackDao,
-    private val recordingRules: RecordingRulesRepository
+    private val recordingRules: RecordingRulesRepository,
+    private val catalogDao: CatalogRecordingDao
 ) {
-    private val matcher = EmbeddingMatcher(context, embeddingDao, embedder, trackDao, recordingRules)
+    private val matcher = EmbeddingMatcher(context, embeddingDao, embedder, trackDao, recordingRules, catalogDao)
 
     val indexedTrackCount: Flow<Int> =
         embeddingDao.indexedTrackCountFlow(AudioEmbedder.MODEL_NAME, AudioEmbedder.EMBEDDER_VERSION)

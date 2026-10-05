@@ -13,6 +13,9 @@ import com.wander.android.data.repository.ShareRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +27,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import com.wander.android.data.model.LyricMatch
+import com.wander.android.data.repository.CatalogTrackResolver
 import com.wander.android.data.repository.LyricsRepository
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -43,7 +47,8 @@ class SearchViewModel @Inject constructor(
     private val playerConnection: PlayerConnection,
     private val playbackCoordinator: PlaybackCoordinator,
     private val shareRepository: ShareRepository,
-    private val queryHolder: SearchQueryHolder
+    private val queryHolder: SearchQueryHolder,
+    private val catalogTracks: CatalogTrackResolver
 ) : ViewModel() {
 
     /**
@@ -118,7 +123,7 @@ class SearchViewModel @Inject constructor(
                 emit(SearchUiState(isSearching = true, hasQuery = true))
                 val tracks = musicRepository.searchAllSources(query, sources, kind)
                 val lyricMatches = if (kind == SearchKind.TRACKS) {
-                    lyricsRepository.searchByLyrics(query)
+                    resolveCatalogue(lyricsRepository.searchByLyrics(query))
                 } else {
                     emptyList()
                 }
@@ -147,6 +152,22 @@ class SearchViewModel @Inject constructor(
             }
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState())
+
+    /**
+     * Gives the catalogue's matches a track that plays. A recording nobody here holds is looked for
+     * in the active sources; one none of them has is dropped, since a result that cannot be played
+     * is not an answer. Capped, because each lookup is a network search.
+     */
+    private suspend fun resolveCatalogue(matches: List<LyricMatch>): List<LyricMatch> {
+        val (stubs, held) = matches.partition { it.track.source == SourceType.UNRESOLVED }
+        val resolved = coroutineScope {
+            stubs.take(MAX_CATALOGUE_LOOKUPS)
+                .map { match -> async { catalogTracks.playable(match.track)?.let { match.copy(track = it) } } }
+                .awaitAll()
+                .filterNotNull()
+        }
+        return held + resolved
+    }
 
     fun toggleSource(source: SourceType) {
         val current = selectedSources.value
@@ -195,5 +216,6 @@ class SearchViewModel @Inject constructor(
 
     private companion object {
         const val DEBOUNCE_MS = 350L
+        const val MAX_CATALOGUE_LOOKUPS = 5
     }
 }

@@ -38,6 +38,15 @@ interface TrackLyricsDao {
     )
     suspend fun findLyricsForTrackOrMetadata(trackId: String, title: String, artist: String): TrackLyricsEntity?
 
+    /** Tracks in the library carrying exactly this title and artist, whatever their source. */
+    @Query(
+        """
+        SELECT id FROM tracks
+        WHERE title <> '' AND artist <> '' AND LOWER(title) = LOWER(:title) AND LOWER(artist) = LOWER(:artist)
+        """
+    )
+    suspend fun trackIdsNamed(title: String, artist: String): List<String>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLyrics(lyrics: TrackLyricsEntity)
 

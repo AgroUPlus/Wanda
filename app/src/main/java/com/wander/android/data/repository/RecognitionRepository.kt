@@ -1,6 +1,8 @@
 package com.wander.android.data.repository
 
 import com.wander.android.core.audio.fingerprint.MicRecorder
+import com.wander.android.core.audio.fingerprint.AudioEmbedder
+import com.wander.android.core.database.dao.CatalogRecordingDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.UnifiedTrack
@@ -81,7 +83,9 @@ sealed interface IndexReadiness {
 class RecognitionRepository @Inject constructor(
     private val trackDao: TrackDao,
     private val micRecorder: MicRecorder,
-    private val embeddingSearch: EmbeddingRepository
+    private val embeddingSearch: EmbeddingRepository,
+    private val catalogDao: CatalogRecordingDao,
+    private val catalogTracks: CatalogTrackResolver
 ) {
 
     /**
@@ -94,9 +98,15 @@ class RecognitionRepository @Inject constructor(
      */
     val indexedTrackCount: Flow<Int> = embeddingSearch.indexedTrackCount
 
-    /** [indexedTrackCount] and the reason it might be zero, as one thing the sheet can render. */
-    val indexReadiness: Flow<IndexReadiness> =
-        combine(embeddingSearch.modelReady, embeddingSearch.indexedTrackCount, IndexReadiness::of)
+    /**
+     * [indexedTrackCount] plus the catalogue's recordings, and the reason it might be zero, as one
+     * thing the sheet can render. The catalogue counts: it names songs this library never held.
+     */
+    val indexReadiness: Flow<IndexReadiness> = combine(
+        embeddingSearch.modelReady,
+        embeddingSearch.indexedTrackCount,
+        catalogDao.countFlow(AudioEmbedder.MODEL_NAME, AudioEmbedder.EMBEDDER_VERSION)
+    ) { ready, library, catalogue -> IndexReadiness.of(ready, library + catalogue) }
 
     /** Real-time microphone audio volume level `[0f, 1f]` during active capture. */
     val audioLevel: StateFlow<Float> get() = micRecorder.audioLevel
@@ -169,10 +179,10 @@ class RecognitionRepository @Inject constructor(
             embeddingSearch.match(samples)
         }
         match?.let { recognised ->
-            val entity = withContext(Dispatchers.IO) { trackDao.getTrackById(recognised.trackId) }
-            if (entity != null) {
+            val track = trackFor(recognised.trackId)
+            if (track != null) {
                 return Recognition(
-                    track = entity.toUnifiedTrack(),
+                    track = track,
                     positionSeconds = recognised.positionSeconds.coerceAtLeast(0),
                     score = (recognised.similarity * EMBEDDING_SCORE_SCALE).toInt(),
                     engine = RecognitionEngine.EMBEDDING
@@ -181,6 +191,20 @@ class RecognitionRepository @Inject constructor(
         }
 
         return null
+    }
+
+    /**
+     * The track a match names. A catalogue recording is looked for in the active sources; one none
+     * of them has is still named — [SourceType.UNRESOLVED] says it cannot be played yet.
+     */
+    private suspend fun trackFor(id: String): UnifiedTrack? {
+        if (!id.startsWith(CatalogRecordingDao.PREFIX)) {
+            return withContext(Dispatchers.IO) { trackDao.getTrackById(id)?.toUnifiedTrack() }
+        }
+        val recording = withContext(Dispatchers.IO) { catalogDao.byId(id.removePrefix(CatalogRecordingDao.PREFIX)) }
+            ?: return null
+        val stub = recording.toStubTrack()
+        return catalogTracks.playable(stub) ?: stub
     }
 
     /**

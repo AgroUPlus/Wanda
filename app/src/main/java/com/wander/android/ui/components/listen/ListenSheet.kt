@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.ui.components.WandaSheet
 import com.wander.android.R
 import com.wander.android.data.repository.IndexReadiness
+import com.wander.android.data.model.SourceType
 import com.wander.android.data.repository.Recognition
 import com.wander.android.data.repository.RecognitionEngine
 import com.wander.android.ui.components.Artwork
@@ -189,7 +190,11 @@ private fun Matched(recognition: Recognition, onPlay: () -> Unit) {
         maxLines = 1,
         overflow = TextOverflow.Ellipsis
     )
-    Button(onClick = onPlay, shapes = ButtonDefaults.shapes()) {
+    Button(
+        onClick = onPlay,
+        enabled = recognition.track.source != SourceType.UNRESOLVED,
+        shapes = ButtonDefaults.shapes()
+    ) {
         // Says where it will start, because it is not the beginning — picking the song up where
         // the room has reached is the point, and a plain "Play" would look like a bug.
         Text(stringResource(R.string.common_play_from, formatPosition(recognition.positionSeconds)))
