@@ -172,16 +172,26 @@ internal class EmbeddingMatcher(
         candidates: List<SegmentVectors>,
         candidateIds: List<String>
     ): List<EmbeddingRepository.Match> {
+        // A catalogue recording is stored at half the density, so it is scored against the clip
+        // at the same density; otherwise its hop and the clip's would disagree.
+        val thinQuery = EmbeddingScorer.decimate(query)
+        fun queryFor(id: String) = if (id.startsWith(CatalogRecordingDao.PREFIX)) thinQuery else query
         val coarse = EmbeddingScorer.coarseQuery(query)
+        val thinCoarse = EmbeddingScorer.coarseQuery(thinQuery)
         val coarseScores = FloatArray(candidates.size) {
-            EmbeddingScorer.score(coarse, candidates[it], candidateIds[it]).similarity
+            val id = candidateIds[it]
+            EmbeddingScorer.score(if (queryFor(id) === query) coarse else thinCoarse, candidates[it], id).similarity
         }
         val survivors = candidates.indices
             .sortedByDescending { coarseScores[it] }
             .take(EmbeddingScorer.COARSE_KEEP)
 
         val scored = survivors.mapTo(ArrayList(survivors.size)) {
-            EmbeddingScorer.score(query, candidates[it], candidateIds[it])
+            val id = candidateIds[it]
+            val match = EmbeddingScorer.score(queryFor(id), candidates[it], id)
+            // Positions are counted in the stored hop, which is longer for a catalogue recording.
+            if (queryFor(id) === query) match
+            else match.copy(positionSeconds = match.positionSeconds * EmbeddingScorer.CATALOG_DECIMATION)
         }
         scored.sortByDescending { it.similarity }
         return scored

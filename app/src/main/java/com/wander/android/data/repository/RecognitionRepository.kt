@@ -203,6 +203,7 @@ class RecognitionRepository @Inject constructor(
         }
         val recording = withContext(Dispatchers.IO) { catalogDao.byId(id.removePrefix(CatalogRecordingDao.PREFIX)) }
             ?: return null
+        withContext(Dispatchers.IO) { catalogDao.touch(recording.recordingId, System.currentTimeMillis()) }
         val stub = recording.toStubTrack()
         return catalogTracks.playable(stub) ?: stub
     }

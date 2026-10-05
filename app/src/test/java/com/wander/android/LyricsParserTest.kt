@@ -5,6 +5,7 @@ import com.wander.android.core.database.dao.CatalogLyricHit
 import com.wander.android.core.database.dao.CatalogRecordingDao
 import com.wander.android.core.database.dao.CatalogVector
 import com.wander.android.core.database.dao.Centroid
+import com.wander.android.core.database.dao.Evictable
 import com.wander.android.core.database.dao.TrackLyricsDao
 import com.wander.android.core.database.entity.CatalogRecordingEntity
 import com.wander.android.core.database.entity.TrackLyricsEntity
@@ -77,6 +78,10 @@ class LyricsParserTest {
             override fun countFlow(model: String, version: Int): Flow<Int> = flowOf(0)
             override suspend fun vectors(ids: List<String>, model: String, version: Int): List<CatalogVector> = emptyList()
             override suspend fun searchByLyrics(query: String, limit: Int): List<CatalogLyricHit> = emptyList()
+            override suspend fun touch(recordingId: String, at: Long) {}
+            override suspend fun vectorBytes(): Long = 0L
+            override suspend fun evictionOrder(limit: Int): List<Evictable> = emptyList()
+            override suspend fun dropFingerprints(ids: List<String>) {}
         }
         val repo = LyricsRepository(emptySet(), cachedDao, noCatalogue, HttpClientFactory.ktorClient, fakeSecureStorage())
         val state = repo.getLyrics("track_123", "Title", "Artist")

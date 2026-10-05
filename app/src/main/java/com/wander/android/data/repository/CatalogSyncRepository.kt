@@ -87,6 +87,7 @@ internal class CatalogSyncRepository @Inject constructor(
             rereadCatalogueIfKeptDifferently()
             val published = publisher.publishLocal()
             val received = pullCatalogue()
+            catalogDao.trimTo()
             val corrected = canonicalMetadata.applyToLibrary()
             SyncOutcome(published = published, received = received, corrected = corrected)
         }.onFailure { error ->
@@ -190,6 +191,11 @@ internal class CatalogSyncRepository @Inject constructor(
      */
     private suspend fun keep(entry: AgroCatalogEntry, vectors: Array<FloatArray>) {
         if (entry.dim != AudioEmbedder.EMBED_DIM) return
+        val existing = catalogDao.byId(entry.recordingId)
+        // A fingerprint let go to stay within budget is not brought back by being read again.
+        val dropped = existing != null && existing.vector.isEmpty()
+        val full = AudioEmbedder.flatten(vectors)
+        val thinned = EmbeddingScorer.decimate(full)
         catalogDao.save(
             CatalogRecordingEntity(
                 recordingId = entry.recordingId,
@@ -197,8 +203,8 @@ internal class CatalogSyncRepository @Inject constructor(
                 artist = entry.artist.orEmpty(),
                 album = entry.album,
                 durationMs = entry.durationMs,
-                vector = AudioEmbedder.pack(vectors),
-                centroid = AudioEmbedder.pack(EmbeddingScorer.summaryOf(AudioEmbedder.flatten(vectors))),
+                vector = if (dropped) ByteArray(0) else thinned.values,
+                centroid = if (dropped) ByteArray(0) else AudioEmbedder.pack(EmbeddingScorer.summaryOf(full)),
                 dim = entry.dim,
                 model = entry.model,
                 version = entry.version,
@@ -206,7 +212,8 @@ internal class CatalogSyncRepository @Inject constructor(
                 syncedLyrics = entry.lyrics?.takeIf { it.startsWith("[") },
                 lyricsSource = entry.lyricsSource?.takeIf { it.isNotBlank() && !entry.lyrics.isNullOrBlank() },
                 sources = entry.sources.joinToString("\n"),
-                updatedAt = entry.updatedAt
+                updatedAt = entry.updatedAt,
+                lastUsedAt = existing?.lastUsedAt ?: 0L
             )
         )
     }
@@ -243,7 +250,7 @@ internal class CatalogSyncRepository @Inject constructor(
         const val TAG = "CatalogSync"
 
         /** Raised whenever what is kept of an entry changes, so every device reads the catalogue again. */
-        const val INDEX_VERSION = 1
+        const val INDEX_VERSION = 2
 
         /** Entries per catalogue read; the server's own default. */
         const val PULL_PAGE = 200

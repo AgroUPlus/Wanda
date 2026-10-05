@@ -65,7 +65,7 @@ import com.wander.android.core.database.converter.SourceTypeConverter
         com.wander.android.core.database.entity.CatalogRecordingEntity::class,
         com.wander.android.core.database.entity.CatalogLyricsFtsEntity::class
     ],
-    version = 45,
+    version = 46,
     exportSchema = true
 )
 @TypeConverters(SourceTypeConverter::class)

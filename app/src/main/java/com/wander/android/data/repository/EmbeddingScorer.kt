@@ -35,6 +35,9 @@ internal object EmbeddingScorer {
     /** Milliseconds of track each stored segment advances — `HOP_SAMPLES` at the sample rate. */
     const val SEGMENT_HOP_MS = AudioEmbedder.HOP_SAMPLES * 1_000 / AudioFormat.SAMPLE_RATE
 
+    /** A catalogue recording keeps one segment in this many: 1 s apart instead of 0.5 s. */
+    const val CATALOG_DECIMATION = 2
+
     /** How far short of a track's declared duration its vectors may stop and still count. */
     const val COVERAGE_TOLERANCE_MS = 5_000
 
@@ -74,6 +77,17 @@ internal object EmbeddingScorer {
             val until = if (c == chunks - 1) vectors.segments else from + SUMMARY_CHUNK_SEGMENTS
             meanOf(vectors, from, until)
         }
+    }
+
+    /** Every [factor]th segment — a fingerprint at a [factor] times longer hop. */
+    fun decimate(vectors: SegmentVectors, factor: Int = CATALOG_DECIMATION): SegmentVectors {
+        val kept = (vectors.segments + factor - 1) / factor
+        val out = ByteArray(kept * AudioEmbedder.EMBED_DIM)
+        for (i in 0 until kept) {
+            val from = i * factor * AudioEmbedder.EMBED_DIM
+            vectors.values.copyInto(out, i * AudioEmbedder.EMBED_DIM, from, from + AudioEmbedder.EMBED_DIM)
+        }
+        return SegmentVectors(out, kept)
     }
 
     fun coarseQuery(query: SegmentVectors): SegmentVectors {

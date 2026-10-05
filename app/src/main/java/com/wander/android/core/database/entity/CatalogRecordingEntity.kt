@@ -1,5 +1,6 @@
 package com.wander.android.core.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -14,6 +15,11 @@ import androidx.room.PrimaryKey
  *
  * [vector] and [centroid] are packed like `TrackEmbeddingEntity`'s, so the matcher scores both
  * with the same code. Only entries from the embedder this build runs are stored.
+ *
+ * [vector] keeps one segment per second, half the density of a library track's: Google's
+ * on-device Now Playing fingerprints at that rate. [centroid] is taken from the full-density
+ * vectors first. Both are empty once the store has outgrown its budget and let this recording's
+ * fingerprint go; its title, artist and lyrics stay, so lyric search still finds it.
  */
 @Entity(tableName = "catalog_recordings")
 data class CatalogRecordingEntity(
@@ -32,7 +38,9 @@ data class CatalogRecordingEntity(
     val lyricsSource: String?,
     /** Namespaced ids known to hold this audio, one per line. Never a `local:` id. */
     val sources: String,
-    val updatedAt: Long
+    val updatedAt: Long,
+    /** When recognition last matched this recording, or 0 if it never has. */
+    @ColumnInfo(defaultValue = "0") val lastUsedAt: Long = 0L
 ) {
     // Room generates neither for a ByteArray field; a row is the same row when its id and stamp are.
     override fun equals(other: Any?): Boolean =
