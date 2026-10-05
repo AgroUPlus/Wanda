@@ -141,7 +141,8 @@ internal fun AlbumGrid(
                 album = album,
                 index = index,
                 onClick = { onOpenAlbum(album.id) },
-                onLongClick = { onAlbumLongPress(album) }
+                onLongClick = { onAlbumLongPress(album) },
+                modifier = Modifier.animateItem()
             )
         }
         if (hasMoreAlbums) {

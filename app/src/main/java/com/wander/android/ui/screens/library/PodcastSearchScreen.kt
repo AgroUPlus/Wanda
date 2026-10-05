@@ -24,6 +24,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
@@ -116,6 +121,7 @@ internal fun PodcastSearchScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun SearchBody(
     state: PodcastSearchState,
@@ -123,16 +129,24 @@ private fun SearchBody(
     onSubscribe: (PodcastHit) -> Unit,
     contentPadding: PaddingValues
 ) {
-    when (state) {
+    val motion = MaterialTheme.motionScheme
+    AnimatedContent(
+        targetState = state,
+        contentKey = { it.javaClass },
+        transitionSpec = { fadeIn(motion.defaultEffectsSpec()) togetherWith fadeOut(motion.fastEffectsSpec()) },
+        label = "podcastSearchBody"
+    ) { shown ->
+    // Keyed by the kind of state, so a new set of results does not re-run the transition.
+    when (shown) {
         PodcastSearchState.Searching -> Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
             LoadingIndicator()
         }
-        is PodcastSearchState.Failed -> Message(stringResource(R.string.podcasts_search_failed, state.reason))
-        is PodcastSearchState.Results -> if (state.hits.isEmpty()) {
+        is PodcastSearchState.Failed -> Message(stringResource(R.string.podcasts_search_failed, shown.reason))
+        is PodcastSearchState.Results -> if (shown.hits.isEmpty()) {
             Message(stringResource(R.string.podcasts_search_none))
         } else {
             LazyColumn(contentPadding = contentPadding.listInset(), modifier = Modifier.fillMaxSize()) {
-                itemsIndexed(state.hits, key = { _, hit -> hit.feedUrl }) { index, hit ->
+                itemsIndexed(shown.hits, key = { _, hit -> hit.feedUrl }) { index, hit ->
                     HitRow(
                         hit,
                         isSubscribed = hit.feedUrl in subscribed,
@@ -143,6 +157,7 @@ private fun SearchBody(
             }
         }
         else -> Unit
+    }
     }
 }
 

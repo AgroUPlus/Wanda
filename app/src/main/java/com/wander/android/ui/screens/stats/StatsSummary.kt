@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 import com.wander.android.R
 import com.wander.android.data.repository.ListeningReport
 import com.wander.android.ui.components.SunnyShape
@@ -143,7 +145,10 @@ internal fun QuickFactTiles(report: ListeningReport) {
                     style = MaterialTheme.typography.displayStatTime,
                     color = colors.onPrimaryContainer,
                     maxLines = 1,
-                    softWrap = false
+                    softWrap = false,
+                    // Hours and minutes share the tile with its icon; a long total steps down to fit.
+                    autoSize = TextAutoSize.StepBased(minFontSize = 20.sp, maxFontSize = 38.sp),
+                    modifier = Modifier.fillMaxWidth()
                 )
                 Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 6.dp)) {
                     Text(stringResource(R.string.stats_total_listened_time), style = label, color = colors.onPrimaryContainer)

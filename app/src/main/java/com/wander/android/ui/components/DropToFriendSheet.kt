@@ -106,6 +106,7 @@ internal fun DropToFriendSheet(
                             )
                         },
                         modifier = Modifier
+                            .animateItem()
                             .fillMaxWidth()
                             // Disabled while a send is in flight, so a double tap cannot send the
                             // same track to two people by accident.

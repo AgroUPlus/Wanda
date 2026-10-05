@@ -59,20 +59,20 @@ internal fun LazyListScope.sharedWithMeItems(
     onRemove: (AgroSharedListing) -> Unit,
     onRetry: () -> Unit
 ) {
-    error?.let { item(key = "shared_error") { SharedMessage(it) } }
+    error?.let { item(key = "shared_error") { SharedMessage(it, Modifier.animateItem()) } }
     when (state) {
         SharedWithMe.NotLoaded, SharedWithMe.Loading -> items(count = 3, key = { "shared_skeleton_$it" }) {
-            SkeletonRow(leadingSize = 48.dp, leadingShape = MaterialTheme.shapes.extraSmall)
+            SkeletonRow(leadingSize = 48.dp, leadingShape = MaterialTheme.shapes.extraSmall, modifier = Modifier.animateItem())
         }
 
         is SharedWithMe.Failed -> item(key = "shared_failed") {
-            SharedMessage(stringResource(R.string.shared_with_me_failed, state.message)) {
+            SharedMessage(stringResource(R.string.shared_with_me_failed, state.message), Modifier.animateItem()) {
                 TextButton(onClick = onRetry) { Text(stringResource(R.string.common_try_again)) }
             }
         }
 
         is SharedWithMe.Loaded -> if (state.items.isEmpty()) {
-            item(key = "shared_empty") { SharedMessage(stringResource(R.string.shared_with_me_empty)) }
+            item(key = "shared_empty") { SharedMessage(stringResource(R.string.shared_with_me_empty), Modifier.animateItem()) }
         } else {
             itemsIndexed(state.items, key = { _, it -> "shared_${it.id}" }, contentType = { _, _ -> "playlist" }) { index, listing ->
                 PlaylistRow(
@@ -90,11 +90,11 @@ internal fun LazyListScope.sharedWithMeItems(
 }
 
 @Composable
-private fun SharedMessage(text: String, action: @Composable () -> Unit = {}) {
+private fun SharedMessage(text: String, modifier: Modifier = Modifier, action: @Composable () -> Unit = {}) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 32.dp)
+        modifier = modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 32.dp)
     ) {
         Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         action()

@@ -94,7 +94,8 @@ fun AddToPlaylistSheet(
                         PickerRow(
                             label = playlist.name,
                             icon = false,
-                            onClick = { onSelect(playlist) }
+                            onClick = { onSelect(playlist) },
+                            modifier = Modifier.animateItem()
                         )
                     }
                 }
@@ -118,12 +119,13 @@ fun AddToPlaylistSheet(
 private fun PickerRow(
     label: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     icon: Boolean = true
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(20.dp),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 24.dp, vertical = 14.dp)

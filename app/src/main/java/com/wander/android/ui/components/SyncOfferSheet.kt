@@ -126,7 +126,7 @@ internal fun SyncOfferSheet(
                     }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().animateItem()
                     ) {
                         // A fixed-width slot, so titles stay aligned whether or not a row has a
                         // mark against it.

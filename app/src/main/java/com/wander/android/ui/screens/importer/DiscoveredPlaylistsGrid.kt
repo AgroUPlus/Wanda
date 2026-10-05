@@ -79,7 +79,8 @@ fun DiscoveredPlaylistsGrid(
         items(playlists, key = { it.id }) { item ->
             DiscoveredPlaylistCard(
                 summary = item,
-                onClick = { onSelectPlaylist(item) }
+                onClick = { onSelectPlaylist(item) },
+                modifier = Modifier.animateItem()
             )
         }
     }
@@ -183,7 +184,8 @@ private fun ExpressiveConnectedBanner(
 @Composable
 private fun DiscoveredPlaylistCard(
     summary: RawUserPlaylistSummary,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -196,7 +198,7 @@ private fun DiscoveredPlaylistCard(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .scale(scale)
             .clickable(

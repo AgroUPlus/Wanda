@@ -115,7 +115,8 @@ internal fun FingerprintsScreen(
                         // Not playable from here: this is a report, and a tap that started music
                         // while someone is auditing their index would be a surprise.
                         enabled = false,
-                        fingerprintStatus = row.status
+                        fingerprintStatus = row.status,
+                        modifier = Modifier.animateItem()
                     )
                 }
             }
