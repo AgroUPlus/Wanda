@@ -215,14 +215,20 @@ class HomeViewModel @Inject constructor(
 
     fun playMix(mix: SmartMix) = playerConnection.play(mix.tracks)
 
-    fun play(tracks: List<UnifiedTrack>, index: Int) = playerConnection.play(tracks, index)
-
     fun playNext(track: UnifiedTrack) = playerConnection.playNext(listOf(track))
 
     fun addToQueue(track: UnifiedTrack) = playerConnection.addToQueue(listOf(track))
 
-    /** Plays the track, then fills the queue behind it with its source's radio. */
+    /**
+     * Plays the track, then fills the queue behind it with its source's radio.
+     *
+     * Episodes and livestreams have no station to build, so they play alone.
+     */
     fun startRadio(track: UnifiedTrack) {
+        if (track.isEpisode || track.isLive) {
+            playerConnection.play(listOf(track))
+            return
+        }
         viewModelScope.launch { playbackCoordinator.startRadio(track) }
     }
 

@@ -69,7 +69,7 @@ internal fun LazyListScope.homeSection(
             QuickPicksHeader(
                 title = section.title,
                 tracks = section.tracks,
-                onPlay = { index -> viewModel.play(section.tracks, index) },
+                onPlay = { index -> viewModel.startRadio(section.tracks[index]) },
                 onLongPress = onLongPress
             )
         } else {
@@ -116,7 +116,7 @@ internal fun LazyListScope.homeSection(
                     HorizontalTrackCard(
                         track = track,
                         index = index,
-                        onPlay = { viewModel.play(section.tracks, index) },
+                        onPlay = { viewModel.startRadio(section.tracks[index]) },
                         onLongPress = { onLongPress(track) },
                         progress = section.progress[track.id]
                     )
@@ -132,7 +132,7 @@ internal fun LazyListScope.homeSection(
                 tracks = section.tracks,
                 sectionId = section.id,
                 gridState = states.grids.getOrPut(section.id) { LazyGridState() },
-                onPlay = { index -> viewModel.play(section.tracks, index) },
+                onPlay = { index -> viewModel.startRadio(section.tracks[index]) },
                 onLongPress = onLongPress
             )
         }
@@ -144,7 +144,7 @@ internal fun LazyListScope.homeSection(
             TrackPagerShelf(
                 tracks = section.tracks,
                 pagerState = states.pager(section.id, pageCountFor(section.tracks.size)),
-                onPlay = { index -> viewModel.play(section.tracks, index) },
+                onPlay = { index -> viewModel.startRadio(section.tracks[index]) },
                 onLongPress = onLongPress
             )
         }
@@ -156,7 +156,7 @@ internal fun LazyListScope.homeSection(
             FeaturedHeroShelf(
                 tracks = section.tracks,
                 sectionId = section.id,
-                onPlay = { index -> viewModel.play(section.tracks, index) },
+                onPlay = { index -> viewModel.startRadio(section.tracks[index]) },
                 onLongPress = onLongPress
             )
         }
@@ -167,7 +167,7 @@ internal fun LazyListScope.homeSection(
         ) {
             FavoritesCarouselShelf(
                 tracks = section.tracks,
-                onPlay = { index -> viewModel.play(section.tracks, index) },
+                onPlay = { index -> viewModel.startRadio(section.tracks[index]) },
                 onLongPress = onLongPress
             )
         }
@@ -178,7 +178,7 @@ internal fun LazyListScope.homeSection(
         ) {
             HeroCarouselShelf(
                 tracks = section.tracks,
-                onPlay = { index -> viewModel.play(section.tracks, index) },
+                onPlay = { index -> viewModel.startRadio(section.tracks[index]) },
                 onLongPress = onLongPress
             )
         }
@@ -190,7 +190,7 @@ internal fun LazyListScope.homeSection(
             DiscoverMasonryShelf(
                 tracks = section.tracks,
                 sectionId = section.id,
-                onPlay = { index -> viewModel.play(section.tracks, index) },
+                onPlay = { index -> viewModel.startRadio(section.tracks[index]) },
                 onLongPress = onLongPress
             )
         }
@@ -202,7 +202,7 @@ internal fun LazyListScope.homeSection(
         ) { index, track ->
             TrackRow(
                 track = track,
-                onPlay = { viewModel.play(section.tracks, index) },
+                onPlay = { viewModel.startRadio(section.tracks[index]) },
                 onLongPress = { onLongPress(track) }
             )
         }
