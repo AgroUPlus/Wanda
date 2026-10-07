@@ -25,7 +25,9 @@ internal data class PlayerResponse(
     /** Set for a livestream: play this manifest directly, no signature or nonce to resolve. */
     val hlsManifestUrl: String? = null,
     /** The video-only stream shown in place of the cover in Video mode; see [bestVideoFormat]. */
-    val videoFormat: JsonObject? = null
+    val videoFormat: JsonObject? = null,
+    /** Why a better identity was passed over to reach this one; surfaced by debug mode only. */
+    val fallbackNote: String? = null
 )
 
 /**
@@ -56,15 +58,24 @@ internal class InnerTubePlayerResolver @Inject constructor(
         client = InnerTubeVariant.WEB_REMIX
     ).getOrNull()?.visitorData()
 
+    /**
+     * Cheapest identity that works, in order: the headset (plain URL, no token), the Vision Pro
+     * (plain URL too, and the only one that serves a livestream manifest), then the web client,
+     * which needs a PO Token and the signature cipher and so comes last.
+     *
+     * A livestream never reaches the web client: the Vision Pro answers it.
+     */
     suspend fun resolvePlayer(videoId: String): Result<PlayerResponse> {
         val vr = playerAs(videoId, InnerTubeVariant.ANDROID_VR)
         vr.getOrNull()?.takeIf { it.hlsManifestUrl == null }?.let { return Result.success(it) }
 
-        val web = playerAs(videoId, InnerTubeVariant.WEB_REMIX)
-        web.getOrNull()?.takeIf { it.hlsManifestUrl == null }?.let { return Result.success(it) }
+        val vision = playerAs(videoId, InnerTubeVariant.VISIONOS)
+        vision.getOrNull()?.let { return Result.success(it.skipping("ANDROID_VR" to vr)) }
 
-        val live = playerAs(videoId, InnerTubeVariant.VISIONOS)
-        live.getOrNull()?.let { return Result.success(it) }
+        val web = playerAs(videoId, InnerTubeVariant.WEB_REMIX)
+        web.getOrNull()?.takeIf { it.hlsManifestUrl == null }?.let {
+            return Result.success(it.skipping("ANDROID_VR" to vr, "VISIONOS" to vision))
+        }
 
         vr.getOrNull()?.let { return Result.success(it) }
         web.getOrNull()?.let { return Result.success(it) }
@@ -73,10 +84,16 @@ internal class InnerTubePlayerResolver @Inject constructor(
             IOException(
                 "ANDROID_VR: ${vr.exceptionOrNull()?.message ?: "failed"} | " +
                     "WEB_REMIX: ${web.exceptionOrNull()?.message ?: "failed"} | " +
-                    "VISIONOS: ${live.exceptionOrNull()?.message ?: "failed"}"
+                    "VISIONOS: ${vision.exceptionOrNull()?.message ?: "failed"}"
             )
         )
     }
+
+    private fun PlayerResponse.skipping(vararg passedOver: Pair<String, Result<PlayerResponse>>) =
+        copy(fallbackNote = passedOver.joinToString(" | ") { (name, result) -> "$name: ${result.failureReason()}" })
+
+    private fun Result<PlayerResponse>.failureReason(): String =
+        exceptionOrNull()?.message ?: "returned a livestream manifest"
 
     private suspend fun playerAs(videoId: String, variant: InnerTubeVariant): Result<PlayerResponse> {
         val isWeb = variant == InnerTubeVariant.WEB_REMIX
@@ -148,12 +165,19 @@ internal class InnerTubePlayerResolver @Inject constructor(
             visitorIdOverride = if (isWeb) sessionId else visitorId
         ).mapCatching { body ->
             val hls = body.hlsManifestUrl()
-            if (hls != null) {
-                PlayerResponse(null, variant, poToken?.streamingDataPoToken, hls)
-            } else {
-                val format = body.bestAudioFormat()
+            val broadcasting = body.path("videoDetails", "isLive").text() == "true"
+            // The Vision Pro hands a manifest out for ordinary uploads too, so a manifest alone
+            // does not make something live: only a real broadcast has no format list worth using.
+            val format = when {
+                hls != null && broadcasting -> null
+                hls != null -> runCatching { body.bestAudioFormat() }.getOrNull()
+                else -> body.bestAudioFormat()
                     ?: throw IOException("YouTube Music returned no playable audio for this track")
+            }
+            if (format != null) {
                 PlayerResponse(format, variant, poToken?.streamingDataPoToken, videoFormat = body.bestVideoFormat())
+            } else {
+                PlayerResponse(null, variant, poToken?.streamingDataPoToken, hls)
             }
         }
     }

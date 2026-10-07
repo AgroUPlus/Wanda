@@ -79,7 +79,10 @@ class StreamResolver @Inject constructor(
         val trackId = dataSpec.uri.wandaTrackId() ?: return carryLiveIdentity(dataSpec)
 
         val streamInfo = runBlocking { musicRepository.getStreamInfo(trackId) }
-            .getOrElse { throw IOException("Could not resolve stream for track", it) }
+            .getOrElse { failure ->
+                _resolvedStreams.update { it.withBound(trackId, StreamDebug(null, null, null, 0, null, error = failure.message)) }
+                throw IOException("Could not resolve stream for track", failure)
+            }
 
         // Remembered for any YouTube stream (manifest, segments, ranges). Dropped as soon as a
         // non-YouTube track resolves, so one source's identity is never sent with another's.
@@ -90,10 +93,10 @@ class StreamResolver @Inject constructor(
             emptyMap()
         }
 
-        _resolvedStreams.update { known ->
-            val entry = StreamDebug(streamInfo.route, streamInfo.client, streamInfo.format, streamInfo.bitRateKbps, host)
-            (if (known.size >= MAX_DEBUG_STREAMS) emptyMap() else known) + (trackId to entry)
-        }
+        val entry = StreamDebug(
+            streamInfo.route, streamInfo.client, streamInfo.format, streamInfo.bitRateKbps, host, streamInfo.note
+        )
+        _resolvedStreams.update { it.withBound(trackId, entry) }
 
         if (streamInfo.format == MimeTypes.APPLICATION_M3U8) {
             _resolvedLive.update { if (trackId in it) it else it + trackId }
@@ -171,3 +174,6 @@ internal fun carriesLiveIdentity(host: String?): Boolean {
 private val YOUTUBE_DOMAINS = listOf("googlevideo.com", "youtube.com", "ytimg.com")
 
 private const val MAX_DEBUG_STREAMS = 32
+
+private fun Map<String, StreamDebug>.withBound(trackId: String, entry: StreamDebug) =
+    (if (size >= MAX_DEBUG_STREAMS) emptyMap() else this) + (trackId to entry)

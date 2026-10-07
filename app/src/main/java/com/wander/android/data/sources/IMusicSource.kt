@@ -19,7 +19,9 @@ data class StreamInfo(
     val headers: Map<String, String> = emptyMap(),
     val route: StreamRoute = StreamRoute.SOURCE,
     /** The InnerTube identity that minted this stream, for YouTube Music only. */
-    val client: String? = null
+    val client: String? = null,
+    /** Why a preferred client was skipped; debug mode only. */
+    val note: String? = null
 )
 
 /**

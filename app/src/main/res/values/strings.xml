@@ -1386,6 +1386,8 @@
     <string name="debug_track">Track: %1$s · %2$s</string>
     <string name="debug_live">Livestream</string>
     <string name="debug_unresolved">Stream not resolved yet (cached, or still loading)</string>
+    <string name="debug_error">Error: %1$s</string>
+    <string name="debug_note">Skipped: %1$s</string>
     <string name="debug_route">Playing from: %1$s</string>
     <string name="debug_client">YouTube client: %1$s</string>
     <string name="debug_host">Host: %1$s</string>

@@ -63,7 +63,13 @@ class YTMusicStreamResolver @Inject constructor(
     ): StreamInfo {
         // The web variant hands back a scrambled signature and a throttled URL; both are fixed
         // here. The headset variants arrive ready to fetch.
-        val rawUrl = streamUrlResolver.resolve(format, videoId, response.variant)
+        val rawUrl = try {
+            streamUrlResolver.resolve(format, videoId, response.variant)
+        } catch (e: IOException) {
+            // The cause chain keeps the original message for the user-facing translation; this one
+            // adds why a better identity was skipped, which only debug mode ever shows.
+            throw IOException(listOfNotNull(e.message, response.fallbackNote).joinToString(" · "), e)
+        }
         // googlevideo separately checks the PO Token that authorized the /player call which
         // minted this URL, when one was used — it has to travel with the fetch too.
         val url = response.streamingPoToken?.let { "$rawUrl&pot=${URLEncoder.encode(it, "UTF-8")}" }
@@ -75,7 +81,8 @@ class YTMusicStreamResolver @Inject constructor(
             format = mime,
             bitRateKbps = bitrateKbps,
             headers = mapOf("User-Agent" to response.variant.userAgent),
-            client = response.variant.name
+            client = response.variant.name,
+            note = response.fallbackNote
         )
     }
 }
