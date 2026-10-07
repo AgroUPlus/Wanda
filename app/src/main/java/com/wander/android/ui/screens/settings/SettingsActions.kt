@@ -70,6 +70,7 @@ internal data class SettingsActions(
     // About
     val onArtistReleaseNotificationsChange: (Boolean) -> Unit,
     val onAutoUpdateCheckChange: (Boolean) -> Unit,
+    val onDebugModeChange: (Boolean) -> Unit,
     val onCheckForUpdate: () -> Unit,
     /**
      * Opens a link in the browser. The release-notes row and the credits rows used to take two

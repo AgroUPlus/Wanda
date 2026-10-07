@@ -70,6 +70,11 @@ class StreamResolver @Inject constructor(
      */
     val resolvedLive: StateFlow<Set<String>> = _resolvedLive.asStateFlow()
 
+    private val _resolvedStreams = MutableStateFlow<Map<String, StreamDebug>>(emptyMap())
+
+    /** The last resolve of each recently played track, for the debug overlay. Bounded. */
+    val resolvedStreams: StateFlow<Map<String, StreamDebug>> = _resolvedStreams.asStateFlow()
+
     override fun resolveDataSpec(dataSpec: DataSpec): DataSpec {
         val trackId = dataSpec.uri.wandaTrackId() ?: return carryLiveIdentity(dataSpec)
 
@@ -83,6 +88,11 @@ class StreamResolver @Inject constructor(
             streamInfo.headers
         } else {
             emptyMap()
+        }
+
+        _resolvedStreams.update { known ->
+            val entry = StreamDebug(streamInfo.route, streamInfo.client, streamInfo.format, streamInfo.bitRateKbps, host)
+            (if (known.size >= MAX_DEBUG_STREAMS) emptyMap() else known) + (trackId to entry)
         }
 
         if (streamInfo.format == MimeTypes.APPLICATION_M3U8) {
@@ -159,3 +169,5 @@ internal fun carriesLiveIdentity(host: String?): Boolean {
 }
 
 private val YOUTUBE_DOMAINS = listOf("googlevideo.com", "youtube.com", "ytimg.com")
+
+private const val MAX_DEBUG_STREAMS = 32

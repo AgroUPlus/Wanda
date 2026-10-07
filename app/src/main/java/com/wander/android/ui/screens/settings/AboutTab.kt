@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.settings
 
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Celebration
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Favorite
@@ -111,6 +112,16 @@ internal fun LazyListScope.aboutTab(
                         checked = state.autoUpdateCheckEnabled,
                         onCheckedChange = actions.onAutoUpdateCheckChange,
                         icon = Icons.Rounded.Update
+                    )
+                },
+                {
+                    SettingsToggle(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(5)),
+                        title = stringResource(R.string.settings_debug_mode_title),
+                        subtitle = stringResource(R.string.settings_debug_mode_subtitle),
+                        checked = state.debugMode,
+                        onCheckedChange = actions.onDebugModeChange,
+                        icon = Icons.Rounded.BugReport
                     )
                 }
             )

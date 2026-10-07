@@ -99,12 +99,22 @@ internal class SecureAppPreferences(private val prefs: SharedPreferences) {
         _shareDomain.value = host
     }
 
+    /** Off until turned on in Settings → About: shows where the playing track comes from. */
+    private val _isDebugMode = MutableStateFlow(prefs.getBoolean(KEY_DEBUG_MODE, false))
+    val isDebugMode: StateFlow<Boolean> = _isDebugMode.asStateFlow()
+
+    fun setDebugMode(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_DEBUG_MODE, enabled) }
+        _isDebugMode.value = enabled
+    }
+
     /**
      * Re-reads every value from storage. After a restore that is what the backup wrote; after the
      * store is cleared it is each default, so signing out and restoring share this one path.
      */
     fun reloadFlows() {
         _hasCompletedSetup.value = prefs.getBoolean(KEY_SETUP_DONE, false)
+        _isDebugMode.value = prefs.getBoolean(KEY_DEBUG_MODE, false)
         _shareDomain.value = prefs.getString(KEY_SHARE_DOMAIN, "").orEmpty()
         _agroShareDomain.value = prefs.getString(KEY_AGRO_SHARE_DOMAIN, "").orEmpty()
         workPausedFlows.forEach { (kind, flow) -> flow.value = prefs.getBoolean(workPausedKey(kind), false) }

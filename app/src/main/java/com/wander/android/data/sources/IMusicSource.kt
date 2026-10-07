@@ -16,7 +16,10 @@ data class StreamInfo(
     val format: String = "audio/opus",
     val bitRateKbps: Int = 160,
     val isDirectFile: Boolean = false,
-    val headers: Map<String, String> = emptyMap()
+    val headers: Map<String, String> = emptyMap(),
+    val route: StreamRoute = StreamRoute.SOURCE,
+    /** The InnerTube identity that minted this stream, for YouTube Music only. */
+    val client: String? = null
 )
 
 /**

@@ -18,7 +18,7 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
     private val playbackPrefs = SecurePlaybackPreferences(prefs)
     private val accountPrefs = SecureAccountPreferences(prefs)
     private val agroPrefs = SecureAgroPreferences(prefs)
-    private val appPrefs = SecureAppPreferences(prefs)
+    internal val appPrefs = SecureAppPreferences(prefs)
 
     /** The scrobbling services' accounts — see [SecureScrobblePreferences]. */
     internal val scrobbling = SecureScrobblePreferences(prefs)

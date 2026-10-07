@@ -15,19 +15,31 @@ import javax.inject.Singleton
 /**
  * Turns a `/player` audio format into a URL googlevideo will actually serve.
  *
- * Two transforms, both delegated to zemer-cipher's WebView-backed player-JS runner:
+ * Two transforms, both delegated to zemer-cipher's WebView-backed player-JS runner, and both
+ * only for the web identity [InnerTubeVariant.WEB_REMIX]:
  *
- * - **signature**: web clients (`WEB_EMBEDDED`, `WEB_REMIX`) return a `signatureCipher` blob
- *   instead of a `url`. Only YouTube's obfuscated player JS can unscramble it.
- * - **`n` param**: every googlevideo URL carries a throttling nonce. Left untransformed the
- *   stream still connects, then trickles at a few kB/s — a stall that looks like a slow network
- *   rather than a bug, so it is applied unconditionally.
+ * - **signature**: web clients return a `signatureCipher` blob instead of a `url`. Only
+ *   YouTube's obfuscated player JS can unscramble it.
+ * - **`n` param**: a web URL carries a throttling nonce. Left untransformed the stream still
+ *   connects, then trickles at a few kB/s — a stall that looks like a slow network rather than a
+ *   bug, so it is applied to every web URL.
+ *
+ * The headset identities (`ANDROID_VR`, `VISIONOS`) are served a plain `url` that needs neither,
+ * so they never touch the cipher: a rotated player must not be able to stop them playing.
  */
 @Singleton
 class StreamUrlResolver @Inject constructor() {
 
-    suspend fun resolve(format: JsonObject, videoId: String): String = withContext(Dispatchers.IO) {
+    suspend fun resolve(
+        format: JsonObject,
+        videoId: String,
+        variant: InnerTubeVariant
+    ): String = withContext(Dispatchers.IO) {
         val direct = format["url"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+        if (variant != InnerTubeVariant.WEB_REMIX) {
+            return@withContext direct
+                ?: throw IOException("YouTube Music returned no playable audio for this track")
+        }
         val signed = direct ?: deobfuscate(format, videoId)
 
         // A failed n-transform is not fatal on its own — the URL plays, just throttled — but

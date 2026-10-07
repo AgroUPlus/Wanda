@@ -82,6 +82,10 @@ internal class SettingsViewModel @Inject constructor(
 
     fun setAutoUpdateCheckEnabled(enabled: Boolean) = secureStorage.setAutoUpdateCheckEnabled(enabled)
 
+    val isDebugMode: StateFlow<Boolean> = secureStorage.appPrefs.isDebugMode
+
+    fun setDebugMode(enabled: Boolean) = secureStorage.appPrefs.setDebugMode(enabled)
+
     // ── Accounts (delegated to SettingsAccountCoordinator) ─────────────────────────────────
 
     val navidromeConnected: StateFlow<Boolean> = accountCoordinator.navidromeConnected

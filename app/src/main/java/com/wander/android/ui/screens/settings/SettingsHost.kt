@@ -145,6 +145,7 @@ internal fun rememberSettingsHost(
             onForgetEverything = { dialogs.confirmForgetEverything = true },
             onArtistReleaseNotificationsChange = viewModel::setArtistReleaseNotificationEnabled,
             onAutoUpdateCheckChange = viewModel::setAutoUpdateCheckEnabled,
+            onDebugModeChange = viewModel::setDebugMode,
             onCheckForUpdate = viewModel::checkForUpdate,
             onOpenUrl = uriHandler::openUri,
             onOpenMergePreview = navigation.onOpenMergePreview,

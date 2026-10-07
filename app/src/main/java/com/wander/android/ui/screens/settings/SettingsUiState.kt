@@ -80,6 +80,7 @@ internal data class SettingsUiState(
     val updateCheck: UpdateCheckResult?,
     val isCheckingForUpdate: Boolean,
     val autoUpdateCheckEnabled: Boolean,
+    val debugMode: Boolean,
     val artistReleaseNotificationsEnabled: Boolean
 ) {
     /**
@@ -146,6 +147,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val updateCheck by viewModel.updateCheck.collectAsStateWithLifecycle()
     val isCheckingForUpdate by viewModel.isCheckingForUpdate.collectAsStateWithLifecycle()
     val autoUpdateCheckEnabled by viewModel.isAutoUpdateCheckEnabled.collectAsStateWithLifecycle()
+    val debugMode by viewModel.isDebugMode.collectAsStateWithLifecycle()
     val artistReleaseNotificationsEnabled by
         viewModel.isArtistReleaseNotificationEnabled.collectAsStateWithLifecycle()
 
@@ -208,6 +210,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         updateCheck = updateCheck,
         isCheckingForUpdate = isCheckingForUpdate,
         autoUpdateCheckEnabled = autoUpdateCheckEnabled,
+        debugMode = debugMode,
         artistReleaseNotificationsEnabled = artistReleaseNotificationsEnabled
     )
 }

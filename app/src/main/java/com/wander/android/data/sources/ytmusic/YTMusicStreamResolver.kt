@@ -26,7 +26,8 @@ class YTMusicStreamResolver @Inject constructor(
                     uri = manifest,
                     format = MimeTypes.APPLICATION_M3U8,
                     bitRateKbps = 0,
-                    headers = mapOf("User-Agent" to response.variant.userAgent)
+                    headers = mapOf("User-Agent" to response.variant.userAgent),
+                    client = response.variant.name
                 )
             }
             val format = response.format
@@ -60,9 +61,9 @@ class YTMusicStreamResolver @Inject constructor(
         mime: String,
         bitrateKbps: Int
     ): StreamInfo {
-        // Web variants hand back a scrambled signature rather than a URL, and every variant's
-        // URL carries a throttling nonce — both are resolved here.
-        val rawUrl = streamUrlResolver.resolve(format, videoId)
+        // The web variant hands back a scrambled signature and a throttled URL; both are fixed
+        // here. The headset variants arrive ready to fetch.
+        val rawUrl = streamUrlResolver.resolve(format, videoId, response.variant)
         // googlevideo separately checks the PO Token that authorized the /player call which
         // minted this URL, when one was used — it has to travel with the fetch too.
         val url = response.streamingPoToken?.let { "$rawUrl&pot=${URLEncoder.encode(it, "UTF-8")}" }
@@ -73,7 +74,8 @@ class YTMusicStreamResolver @Inject constructor(
             uri = url,
             format = mime,
             bitRateKbps = bitrateKbps,
-            headers = mapOf("User-Agent" to response.variant.userAgent)
+            headers = mapOf("User-Agent" to response.variant.userAgent),
+            client = response.variant.name
         )
     }
 }

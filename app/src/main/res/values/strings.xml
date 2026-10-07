@@ -1381,4 +1381,19 @@
     </plurals>
     <string name="together_listeners_bar_subtitle">Tap for privacy settings</string>
     <string name="together_went_incognito">You\'re incognito — nobody is listening along any more</string>
+    <string name="settings_debug_mode_title">Debug mode</string>
+    <string name="settings_debug_mode_subtitle">Show where the playing track comes from over the player</string>
+    <string name="debug_track">Track: %1$s · %2$s</string>
+    <string name="debug_live">Livestream</string>
+    <string name="debug_unresolved">Stream not resolved yet (cached, or still loading)</string>
+    <string name="debug_route">Playing from: %1$s</string>
+    <string name="debug_client">YouTube client: %1$s</string>
+    <string name="debug_host">Host: %1$s</string>
+    <string name="debug_format">Format: %1$s · %2$d kbps</string>
+    <string name="debug_route_download">downloaded file</string>
+    <string name="debug_route_local_copy">local copy of the same recording</string>
+    <string name="debug_route_navidrome">Navidrome server</string>
+    <string name="debug_route_source">the track\'s own source</string>
+    <string name="debug_route_ephemeral">one-off stream (peer)</string>
+    <string name="debug_route_podcast">podcast episode</string>
 </resources>

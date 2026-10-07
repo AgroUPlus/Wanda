@@ -36,7 +36,8 @@ internal class NowPlayingViewModel @Inject constructor(
     jamRepository: JamRepository,
     private val secureStorage: com.wander.android.core.security.SecureStorage,
     private val sleepTimer: com.wander.android.core.playback.SleepTimer,
-    private val mediaForms: MediaFormController
+    private val mediaForms: MediaFormController,
+    streamResolver: com.wander.android.core.playback.StreamResolver
 ) : ViewModel() {
 
     val sleepTimerState = sleepTimer.state
@@ -45,6 +46,16 @@ internal class NowPlayingViewModel @Inject constructor(
     fun cancelSleepTimer() = sleepTimer.cancel()
 
     val isCoverArtThemeEnabled: StateFlow<Boolean> = secureStorage.isCoverArtThemeEnabled
+
+    /** Null unless debug mode is on; also null for a track that has not been resolved yet. */
+    val streamDebug: StateFlow<com.wander.android.core.playback.StreamDebug?> = combine(
+        secureStorage.appPrefs.isDebugMode,
+        playerConnection.state.map { it.currentTrack?.id }.distinctUntilChanged(),
+        streamResolver.resolvedStreams
+    ) { enabled, trackId, streams -> if (enabled) trackId?.let(streams::get) else null }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val isDebugMode: StateFlow<Boolean> = secureStorage.appPrefs.isDebugMode
     val isLetterByLetterLyricsEnabled: StateFlow<Boolean> = secureStorage.isLetterByLetterLyricsEnabled
 
     /** What has been measured about the playing track — only to schedule it below; nothing draws it. */

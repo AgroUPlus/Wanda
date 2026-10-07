@@ -98,6 +98,8 @@ internal fun NowPlayingScreen(
     // what lets reopening the lyrics find them exactly where they were left.
     val lyricsListState = androidx.compose.foundation.lazy.rememberLazyListState()
     val track = state.currentTrack
+    val isDebugMode by viewModel.isDebugMode.collectAsStateWithLifecycle()
+    val streamDebug by viewModel.streamDebug.collectAsStateWithLifecycle()
     val mediaToggle by viewModel.mediaToggle.collectAsStateWithLifecycle()
     // Composed only while the full player is out: lets the toggle look for the other form.
     DisposableEffect(viewModel) { viewModel.setPlayerOpen(true); onDispose { viewModel.setPlayerOpen(false) } }
@@ -110,6 +112,7 @@ internal fun NowPlayingScreen(
     var episodePanel by remember { mutableStateOf<EpisodePanel?>(null) }
 
     KeepScreenOn(keepAwake = showLyrics)
+    if (isDebugMode) PlaybackDebugOverlay(track, streamDebug)
 
     // Extract the dominant colour from the cover art and use it to tint the player surface,
     // if enabled in Settings -> Appearance. Until it arrives or if disabled, base scheme is used.

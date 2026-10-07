@@ -9,6 +9,7 @@ import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.isOneShotTrackId
 import com.wander.android.data.sources.IMusicSource
 import com.wander.android.data.sources.StreamInfo
+import com.wander.android.data.sources.StreamRoute
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
@@ -39,7 +40,7 @@ internal class PlaybackStreamResolver(
     private fun sourceFor(type: SourceType) = sources.firstOrNull { it.sourceType == type }
 
     suspend fun getStreamInfo(trackId: String): Result<StreamInfo> = withContext(Dispatchers.IO) {
-        ephemeralStreams[trackId]?.let { return@withContext Result.success(it) }
+        ephemeralStreams[trackId]?.let { return@withContext Result.success(it.copy(route = StreamRoute.EPHEMERAL)) }
 
         if (isOneShotTrackId(trackId)) {
             trackDao.deleteOneShotTrackRows()
@@ -57,11 +58,11 @@ internal class PlaybackStreamResolver(
 
     /** Tier 1: Internal / Downloaded local file, or a local copy of the same recording. */
     private suspend fun localStreamFor(cached: TrackEntity?): StreamInfo? {
-        downloadedFileOf(cached)?.let { path -> return StreamInfo(uri = path, isDirectFile = true) }
+        downloadedFileOf(cached)?.let { path -> return StreamInfo(uri = path, isDirectFile = true, route = StreamRoute.DOWNLOAD) }
         if (cached == null || cached.effectiveSource == SourceType.LOCAL || cached.effectiveSource == SourceType.PODCAST) return null
         val localMatch = sameRecordingAs(cached, trackDao.findLocalOrDownloadedCandidates(cached.title, TITLE_CANDIDATES))
         val localPath = downloadedFileOf(localMatch) ?: localMatch?.streamUri
-        return localPath?.takeIf { it.isNotBlank() }?.let { StreamInfo(uri = it, isDirectFile = true) }
+        return localPath?.takeIf { it.isNotBlank() }?.let { StreamInfo(uri = it, isDirectFile = true, route = StreamRoute.LOCAL_COPY) }
     }
 
     /**
@@ -83,6 +84,7 @@ internal class PlaybackStreamResolver(
         if (cached == null || cached.effectiveSource == SourceType.NAVIDROME || cached.effectiveSource == SourceType.PODCAST) return null
         if (sourceFor(SourceType.NAVIDROME)?.isConfigured?.value != true) return null
         return withTimeoutOrNull(SUBSTITUTION_BUDGET_MS) { navidromeSubstituteFor(cached) }
+            ?.copy(route = StreamRoute.NAVIDROME)
     }
 
     /** Tier 3: Original Source / YouTube Music. */
@@ -117,7 +119,7 @@ internal class PlaybackStreamResolver(
     private fun podcastStream(cached: TrackEntity?): Result<StreamInfo> {
         val uri = cached?.streamUri?.takeIf { it.isNotBlank() }
             ?: return Result.failure(IllegalStateException("This episode has no audio URL"))
-        return Result.success(StreamInfo(uri = uri, format = cached.format ?: MimeTypes.AUDIO_MPEG))
+        return Result.success(StreamInfo(uri = uri, format = cached.format ?: MimeTypes.AUDIO_MPEG, route = StreamRoute.PODCAST))
     }
 
     private suspend fun navidromeSubstituteFor(cached: TrackEntity): StreamInfo? {
