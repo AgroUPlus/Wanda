@@ -1,27 +1,28 @@
 package com.wander.android.ui.components
 
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.ButtonGroup
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.data.model.SourceType
 
+private val ChipIconSize = 18.dp
+
 /**
  * Which backends a search actually queries — several at once, not one at a time.
  *
- * Expressive connected ButtonGroup where members squash and expand dynamically.
- *
+ * The same connected toggle buttons as every other choice row, with several allowed on at once.
  * "All" is a shortcut, not a state: it selects everything, and clears to the default when
  * everything is already on.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SourceToggleChips(
     sources: List<SourceType>,
@@ -31,33 +32,27 @@ fun SourceToggleChips(
     modifier: Modifier = Modifier
 ) {
     val allSelected = selected.containsAll(sources)
-    // Resolved here, not at the call: ButtonGroup's toggleableItem is a scope function rather
-    // than a composable, so a stringResource() in its arguments has no composition to read from.
-    val allLabel = stringResource(R.string.common_all)
+    val options = remember(sources) { listOf<SourceType?>(null) + sources }
 
-    ButtonGroup(
-        overflowIndicator = {},
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
     ) {
-        toggleableItem(
-            checked = allSelected,
-            label = allLabel,
-            onCheckedChange = { onSelectAll() }
-        )
-        sources.forEach { source ->
-            val isOn = source in selected
-            toggleableItem(
-                checked = isOn,
-                label = source.displayName,
-                onCheckedChange = {
-                    if (!isOn || selected.size > 1) {
-                        onToggle(source)
-                    }
+        ConnectedToggleButtons(
+            options = options,
+            isChecked = { if (it == null) allSelected else it in selected },
+            role = Role.Checkbox,
+            label = { it?.displayName ?: stringResource(R.string.common_all) },
+            onSelect = { source ->
+                when {
+                    source == null -> onSelectAll()
+                    source !in selected || selected.size > 1 -> onToggle(source)
                 }
-            )
-        }
+            },
+            equalWidth = false,
+            leadingIcon = { source -> source?.let { SourceIcon(it, size = ChipIconSize) } }
+        )
     }
 }

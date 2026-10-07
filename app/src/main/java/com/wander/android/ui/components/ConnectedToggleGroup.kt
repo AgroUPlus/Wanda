@@ -43,9 +43,10 @@ import androidx.compose.ui.unit.sp
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-internal fun <T> ConnectedToggleGroup(
+internal fun <T> ConnectedToggleButtons(
     options: List<T>,
-    selected: T,
+    isChecked: (T) -> Boolean,
+    role: Role,
     label: @Composable (T) -> String,
     onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
@@ -61,7 +62,7 @@ internal fun <T> ConnectedToggleGroup(
         modifier = if (equalWidth) modifier.fillMaxWidth() else modifier
     ) {
         options.forEachIndexed { index, option ->
-            val checked = option == selected
+            val checked = isChecked(option)
             ToggleButton(
                 checked = checked,
                 onCheckedChange = { onSelect(option) },
@@ -79,7 +80,7 @@ internal fun <T> ConnectedToggleGroup(
                 ),
                 modifier = (if (equalWidth) Modifier.weight(1f) else Modifier)
                     .height(48.dp)
-                    .semantics { role = Role.RadioButton }
+                    .semantics { this.role = role }
             ) {
                 AnimatedVisibility(visible = checked) {
                     Icon(
@@ -108,3 +109,21 @@ internal fun <T> ConnectedToggleGroup(
         }
     }
 }
+
+/** One option chosen at a time. */
+@Composable
+internal fun <T> ConnectedToggleGroup(
+    options: List<T>,
+    selected: T,
+    label: @Composable (T) -> String,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier,
+    uncheckedContainer: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    checkIconGap: Dp = 6.dp,
+    equalWidth: Boolean = true,
+    enabled: Boolean = true,
+    leadingIcon: (@Composable (T) -> Unit)? = null
+) = ConnectedToggleButtons(
+    options, { it == selected }, Role.RadioButton, label, onSelect, modifier,
+    uncheckedContainer, checkIconGap, equalWidth, enabled, leadingIcon
+)

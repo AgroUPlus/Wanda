@@ -3,6 +3,8 @@ package com.wander.android.ui.components
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,9 +20,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -53,21 +58,31 @@ fun LyricMatchRow(
         "%d:%02d".format(min, sec)
     }
 
+    // The press feel and the cover's shape come from the same helpers `TrackRow` uses, so a lyric
+    // match answers a touch exactly the way the song rows around it do.
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by rememberPressScale(interactionSource, label = "lyricMatchPress")
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
+            .scale(pressScale)
+            .padding(horizontal = 8.dp, vertical = 2.dp)
             .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null,
                 onClick = onPlay,
                 onLongClick = onLongPress
             )
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {
         Artwork(
             url = track.artworkUrl,
             contentDescription = null,
             sizeDp = 52.dp,
-            shape = MaterialTheme.shapes.small,
+            shape = rememberShelfArtworkShape(isPressed),
             modifier = Modifier.size(52.dp)
         )
 
