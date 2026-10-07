@@ -27,7 +27,7 @@ import com.wander.android.data.sources.StreamRoute
  * swallowing a touch outside its own bounds.
  */
 @Composable
-internal fun PlaybackDebugOverlay(track: UnifiedTrack, debug: StreamDebug?) {
+internal fun PlaybackDebugOverlay(track: UnifiedTrack, debug: StreamDebug?, playerDurationMs: Long) {
     Popup(
         alignment = Alignment.TopCenter,
         properties = PopupProperties(focusable = false, clippingEnabled = false)
@@ -45,6 +45,7 @@ internal fun PlaybackDebugOverlay(track: UnifiedTrack, debug: StreamDebug?) {
             val lines = buildList {
                 add(stringResource(R.string.debug_track, track.source.name, track.id))
                 if (track.isLive) add(stringResource(R.string.debug_live))
+                add(stringResource(R.string.debug_duration, playerDurationMs, track.durationMs))
                 if (debug == null) {
                     add(stringResource(R.string.debug_unresolved))
                 } else {

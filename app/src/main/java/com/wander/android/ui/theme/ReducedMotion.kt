@@ -75,8 +75,7 @@ fun rememberSystemAnimationsDisabled(): Boolean {
  * it is the shortest duration that is still a real curve rather than a single point.
  *
  * The few animations that hand-roll their own spec instead of reading the theme — `CardMotion.kt`'s
- * entrance pop, `TravelingHighlight.kt`'s glide — don't go through this and check
- * [LocalReducedMotion] directly.
+ * entrance pop — don't go through this and check [LocalReducedMotion] directly.
  */
 internal object NoMotionScheme : MotionScheme {
     private fun <T> instant(): FiniteAnimationSpec<T> = tween(durationMillis = 1)

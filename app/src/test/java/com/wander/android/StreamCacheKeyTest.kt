@@ -39,5 +39,9 @@ class StreamCacheKeyTest {
         assertNotEquals(webm, streamCacheKey("yt:abc", "audio/mp4", 160))
         assertNotEquals(webm, streamCacheKey("yt:abc", "audio/webm", 256))
         assertNotEquals(webm, streamCacheKey("yt:abc", MimeTypes.APPLICATION_M3U8, 0))
+        assertNotEquals(
+            streamCacheKey("yt:abc", "audio/webm", 160, "ANDROID_VR"),
+            streamCacheKey("yt:abc", "audio/webm", 160, "VISIONOS")
+        )
     }
 }

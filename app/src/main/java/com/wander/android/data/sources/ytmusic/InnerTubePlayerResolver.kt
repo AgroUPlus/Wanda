@@ -90,7 +90,12 @@ internal class InnerTubePlayerResolver @Inject constructor(
     }
 
     private fun PlayerResponse.skipping(vararg passedOver: Pair<String, Result<PlayerResponse>>) =
-        copy(fallbackNote = passedOver.joinToString(" | ") { (name, result) -> "$name: ${result.failureReason()}" })
+        copy(
+            fallbackNote = (
+                listOfNotNull(fallbackNote) +
+                    passedOver.map { (name, result) -> "$name: ${result.failureReason()}" }
+                ).joinToString(" | ")
+        )
 
     private fun Result<PlayerResponse>.failureReason(): String =
         exceptionOrNull()?.message ?: "returned a livestream manifest"

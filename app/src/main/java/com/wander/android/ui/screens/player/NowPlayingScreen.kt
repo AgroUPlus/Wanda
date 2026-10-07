@@ -112,7 +112,7 @@ internal fun NowPlayingScreen(
     var episodePanel by remember { mutableStateOf<EpisodePanel?>(null) }
 
     KeepScreenOn(keepAwake = showLyrics)
-    if (isDebugMode) PlaybackDebugOverlay(track, streamDebug)
+    if (isDebugMode) PlaybackDebugOverlay(track, streamDebug, state.durationMs)
 
     // Extract the dominant colour from the cover art and use it to tint the player surface,
     // if enabled in Settings -> Appearance. Until it arrives or if disabled, base scheme is used.

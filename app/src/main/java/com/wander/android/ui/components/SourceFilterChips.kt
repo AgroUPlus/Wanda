@@ -1,36 +1,24 @@
 package com.wander.android.ui.components
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.data.model.SourceType
 
-/** Stable key for "All" — a fresh object every recomposition would break bounds tracking. */
-private const val AllSourcesKey = "__all_sources__"
-
 private val ChipIconSize = 18.dp
 
-/** "All" plus one chip per connected backend, with a highlight that glides between them. */
+/**
+ * "All" plus one button per connected backend, as a connected toggle group that scrolls sideways
+ * when the backends do not all fit. Choosing the chosen backend again goes back to "All".
+ */
 @Composable
 fun SourceFilterChips(
     sources: List<SourceType>,
@@ -42,7 +30,7 @@ fun SourceFilterChips(
     /** Home passes `SourceType::shortName` — the row is narrower there and can't spare the width. */
     label: (SourceType) -> String = SourceType::displayName
 ) {
-    val highlightState = rememberTravelingHighlightState()
+    val options = remember(sources) { listOf<SourceType?>(null) + sources }
 
     Box(
         modifier = modifier
@@ -50,84 +38,14 @@ fun SourceFilterChips(
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
     ) {
-        TravelingHighlight(state = highlightState, selectedKey = selected ?: AllSourcesKey)
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SelectableChip(
-                label = stringResource(R.string.common_all),
-                selected = selected == null,
-                onClick = { onSelect(null) },
-                highlightState = highlightState,
-                key = AllSourcesKey,
-                enabled = enabled
-            )
-            sources.forEach { source ->
-                SelectableChip(
-                    label = label(source),
-                    selected = selected == source,
-                    onClick = { onSelect(if (selected == source) null else source) },
-                    highlightState = highlightState,
-                    key = source,
-                    enabled = enabled,
-                    leadingIcon = { SourceIcon(source, size = ChipIconSize) }
-                )
-            }
-        }
-    }
-}
-
-/** One pill in a [TravelingHighlight]-backed row — the visible label, the highlight is drawn behind it. */
-@Composable
-internal fun SelectableChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    highlightState: TravelingHighlightState,
-    key: Any,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    leadingIcon: (@Composable () -> Unit)? = null
-) {
-    val haptics = rememberHaptics()
-    val contentColor by animateColorAsState(
-        targetValue = if (selected) {
-            MaterialTheme.colorScheme.onSecondaryContainer
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
-        },
-        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-        label = "chipContentColor"
-    )
-
-    // Scale, not ripple, for press feedback — the same M3 Expressive answer `TrackRow`'s artwork
-    // gives a press, applied here so every enum-chip row in the app (this one, `SearchKindToggle`,
-    // and Home's source filter once it moved onto this component) bounces identically.
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressScale by rememberPressScale(interactionSource, label = "chipPress")
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        // `Center`, not the plain even-spacing overload: a plain `SelectableChip` (no width
-        // constraint from its caller) never has leftover space so this is a no-op there, but
-        // `SearchKindToggle` gives each chip `Modifier.weight(1f)` to split the row evenly, and
-        // without centering the label sat flush left in the extra width that left.
-        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-        modifier = modifier
-            .scale(pressScale)
-            .recordHighlightBounds(highlightState, key)
-            .clip(MaterialTheme.shapes.extraLarge)
-            .clickable(interactionSource = interactionSource, indication = null, enabled = enabled) {
-                haptics.toggled(!selected)
-                onClick()
-            }
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        leadingIcon?.invoke()
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            color = contentColor
+        ConnectedToggleGroup(
+            options = options,
+            selected = selected,
+            label = { it?.let(label) ?: stringResource(R.string.common_all) },
+            onSelect = { onSelect(if (it == selected) null else it) },
+            equalWidth = false,
+            enabled = enabled,
+            leadingIcon = { source -> source?.let { SourceIcon(it, size = ChipIconSize) } }
         )
     }
 }

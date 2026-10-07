@@ -105,7 +105,7 @@ class StreamResolver @Inject constructor(
         return dataSpec
             .buildUpon()
             .setUri(streamInfo.uri.toUri())
-            .setKey(streamCacheKey(trackId, streamInfo.format, streamInfo.bitRateKbps))
+            .setKey(streamCacheKey(trackId, streamInfo.format, streamInfo.bitRateKbps, streamInfo.client))
             .setHttpRequestHeaders(dataSpec.httpRequestHeaders + streamInfo.headers)
             // A borrowed track is never cached, and this is where that gets decided.
             //
@@ -154,9 +154,14 @@ class StreamResolver @Inject constructor(
  * A YouTube track can resolve to a different rendition on a later play, and serving webm out of the
  * cache for an mp4 request would be a corrupt stream rather than a miss. Navidrome reports one
  * constant format and bitrate, so its keys are stable — which is the case that was broken.
+ *
+ * So is the [client] that minted a YouTube stream: two identities answer the same track with the
+ * same mime type and near-identical bitrate but files of different length. Sharing a key let the
+ * cache splice one identity's bytes onto the other's, and a song then ended where the shorter file
+ * did, while audio was still playing.
  */
-internal fun streamCacheKey(trackId: String, format: String, bitRateKbps: Int): String =
-    "$trackId|$format|$bitRateKbps"
+internal fun streamCacheKey(trackId: String, format: String, bitRateKbps: Int, client: String? = null): String =
+    "$trackId|$format|$bitRateKbps" + client?.let { "|$it" }.orEmpty()
 
 /**
  * Whether a host is one of YouTube's, and so one the live identity belongs to.

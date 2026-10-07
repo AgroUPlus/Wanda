@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,6 +36,10 @@ import androidx.compose.ui.unit.sp
  *
  * Every switch on the social and statistics screens is one of these, so choosing between two lists
  * looks and moves the same everywhere.
+ *
+ * With [equalWidth] the buttons split the row and shrink their labels to fit. Without it each takes
+ * the width of its own content, for a row that may be wider than the screen and is scrolled by its
+ * caller — the source filter, whose length depends on how many backends are connected.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -45,17 +50,22 @@ internal fun <T> ConnectedToggleGroup(
     onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
     uncheckedContainer: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    checkIconGap: Dp = 6.dp
+    checkIconGap: Dp = 6.dp,
+    equalWidth: Boolean = true,
+    enabled: Boolean = true,
+    /** Drawn before the label while the option is not chosen; the check takes its place when it is. */
+    leadingIcon: (@Composable (T) -> Unit)? = null
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
-        modifier = modifier.fillMaxWidth()
+        modifier = if (equalWidth) modifier.fillMaxWidth() else modifier
     ) {
         options.forEachIndexed { index, option ->
             val checked = option == selected
             ToggleButton(
                 checked = checked,
                 onCheckedChange = { onSelect(option) },
+                enabled = enabled,
                 shapes = when (index) {
                     0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
                     options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
@@ -67,8 +77,7 @@ internal fun <T> ConnectedToggleGroup(
                     checkedContainerColor = MaterialTheme.colorScheme.primary,
                     checkedContentColor = MaterialTheme.colorScheme.onPrimary
                 ),
-                modifier = Modifier
-                    .weight(1f)
+                modifier = (if (equalWidth) Modifier.weight(1f) else Modifier)
                     .height(48.dp)
                     .semantics { role = Role.RadioButton }
             ) {
@@ -79,6 +88,9 @@ internal fun <T> ConnectedToggleGroup(
                         modifier = Modifier.padding(end = checkIconGap).size(18.dp)
                     )
                 }
+                if (leadingIcon != null && !checked) {
+                    Box(Modifier.padding(end = checkIconGap)) { leadingIcon(option) }
+                }
                 // One line: a label too long for its share of the row steps down instead of being cut.
                 val style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 BasicText(
@@ -86,7 +98,11 @@ internal fun <T> ConnectedToggleGroup(
                     style = style.copy(color = LocalContentColor.current),
                     maxLines = 1,
                     softWrap = false,
-                    autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = style.fontSize)
+                    autoSize = if (equalWidth) {
+                        TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = style.fontSize)
+                    } else {
+                        null
+                    }
                 )
             }
         }
