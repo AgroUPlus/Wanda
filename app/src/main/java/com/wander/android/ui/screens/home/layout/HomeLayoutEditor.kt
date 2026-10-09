@@ -41,6 +41,9 @@ internal object HomeLayoutEditor {
     fun toggleLanguage(configs: List<ShelfConfig>, id: String, code: String) =
         update(configs, id) { it.copy(languages = it.languages.toggled(code)) }
 
+    fun toggleSource(configs: List<ShelfConfig>, id: String, source: String) =
+        update(configs, id) { it.copy(sources = it.sources.toggled(source)) }
+
     private fun List<String>.toggled(value: String) = if (value in this) this - value else this + value
 
     private fun update(configs: List<ShelfConfig>, id: String, change: (ShelfConfig) -> ShelfConfig) =
