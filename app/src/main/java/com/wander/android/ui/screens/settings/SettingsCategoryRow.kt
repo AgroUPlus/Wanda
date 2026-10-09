@@ -31,6 +31,7 @@ import androidx.compose.material3.MaterialShapes
 import com.wander.android.ui.components.rememberHaptics
 import com.wander.android.ui.components.rememberPressMorphShape
 import com.wander.android.ui.components.rememberPressScale
+import com.wander.android.ui.components.instantPress
 
 /**
  * One category on the settings hub: a coloured badge, a title, and a sentence saying what is inside.
@@ -88,6 +89,7 @@ internal fun SettingsCategoryRow(
         modifier = modifier
             .fillMaxWidth()
             .scale(scale)
+            .instantPress(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
