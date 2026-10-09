@@ -29,7 +29,6 @@ import com.wander.android.ui.components.rememberPressScale
 import com.wander.android.ui.components.rememberShelfArtworkShape
 import com.wander.android.ui.components.rememberShelfEntranceScale
 import com.wander.android.ui.components.scrollingTitle
-import com.wander.android.ui.components.instantPress
 
 /**
  * Spotify-style horizontal media card for carousels (Heavy Rotation, Recently Played) — except
@@ -64,7 +63,6 @@ fun HorizontalTrackCard(
             .graphicsLayer { alpha = if (enabled) 1f else DisabledAlpha }
             // Deliberately no clip on the card: rounding the whole Column cropped the corners off
             // the title and artist underneath. The artwork rounds itself via its own shape.
-            .instantPress(interactionSource)
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
