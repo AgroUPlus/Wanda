@@ -17,6 +17,7 @@ import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.repository.RecommendationRepository
 import com.wander.android.ui.screens.home.layout.HomeLayoutActions
 import com.wander.android.ui.screens.home.layout.HomeLayoutStore
+import com.wander.android.ui.screens.home.layout.ShelfUsageStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -43,6 +44,7 @@ class HomeViewModel @Inject constructor(
     private val playerConnection: PlayerConnection,
     private val playbackCoordinator: PlaybackCoordinator,
     private val layoutStore: HomeLayoutStore,
+    val shelfUsage: ShelfUsageStore,
     christianShelf: ChristianShelfRepository,
     friendPicks: FriendPicksRepository,
     episodeProgress: EpisodeProgressRepository,
