@@ -12,17 +12,21 @@ import javax.inject.Singleton
 
 /**
  * The songs friends sent, as playable tracks. A drop is only a title and an artist, so each is
- * looked up on the connected sources and kept only if a result has the same title. A song already
+ * refreshed from Agro first, then looked up on the connected sources and kept only if a result has the same title. A song already
  * resolved this session is not searched again.
  */
 @Singleton
-class FriendPicksRepository @Inject constructor(
+class FriendPicksRepository @Inject internal constructor(
+    private val dropsRepository: DropsRepository,
     private val drops: DropDao,
     private val music: MusicRepository
 ) {
     private val resolved = ConcurrentHashMap<String, UnifiedTrack>()
 
     suspend fun tracks(limit: Int): List<UnifiedTrack> {
+        // Drops are only cached once the inbox has been opened, so ask the server first. Offline
+        // or failing, the cached copy is what there is.
+        dropsRepository.refresh()
         val recent = drops.recentIncoming(limit).distinctBy { it.trackTitle.lowercase() to it.artistName.lowercase() }
         return withTimeoutOrNull(SEARCH_TIMEOUT_MILLIS) {
             coroutineScope { recent.map { drop -> async { resolve(drop) } }.map { it.await() } }
