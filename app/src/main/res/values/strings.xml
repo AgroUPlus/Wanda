@@ -228,6 +228,8 @@
     <string name="home_shelf_categories">Categories</string>
     <string name="home_shelf_languages">Languages</string>
     <string name="home_shelf_empty">Nothing to show yet. Tap to set it up.</string>
+    <string name="home_shelf_empty_friends">No songs from friends yet. Once a friend sends you one it shows up here.</string>
+    <string name="home_shelf_empty_categories">Tap to choose the categories this shelf is made of.</string>
     <string name="shelf_genre">Genre shelf</string>
     <string name="shelf_genre_summary">Pick the categories you want, Christian music included</string>
     <string name="shelf_christian">Christian</string>
