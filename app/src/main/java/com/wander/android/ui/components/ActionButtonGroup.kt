@@ -165,6 +165,8 @@ private fun RowScope.ActionButton(action: MenuAction, baseWeight: Float, isHero:
         modifier = Modifier
             .weight(weight)
             .fillMaxHeight()
+            // Pressed from the moment a finger lands, not after a click's own short delay.
+            .instantPress(interaction)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
