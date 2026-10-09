@@ -39,6 +39,8 @@ import com.wander.android.ui.components.rememberPressMorph
 import com.wander.android.ui.components.trackPress
 import com.wander.android.ui.screens.home.ExtraShelf
 import com.wander.android.ui.screens.home.HomeSection
+import com.wander.android.ui.screens.home.ShelfOrigin
+import com.wander.android.ui.screens.home.shelfOrigin
 
 /** One row of the sheet. */
 private class AddOption(
@@ -46,6 +48,7 @@ private class AddOption(
     val title: String,
     val summary: String?,
     val icon: ImageVector,
+    val origin: ShelfOrigin,
     val onPick: () -> Unit
 )
 
@@ -65,12 +68,12 @@ internal fun AddShelfSheet(
     onDismiss: () -> Unit
 ) {
     val create = listOf(
-        AddOption("genre", stringResource(R.string.shelf_genre), stringResource(R.string.shelf_genre_summary), Icons.Rounded.Category, onCreateGenre)
+        AddOption("genre", stringResource(R.string.shelf_genre), stringResource(R.string.shelf_genre_summary), Icons.Rounded.Category, ShelfOrigin.LIBRARY, onCreateGenre)
     )
     val more = extras.map {
-        AddOption(it.id, stringResource(it.title), stringResource(it.summary), it.icon()) { onAddExtra(it.id) }
+        AddOption(it.id, stringResource(it.title), stringResource(it.summary), it.icon(), shelfOrigin(it.id)) { onAddExtra(it.id) }
     }
-    val restore = removed.map { AddOption(it.id, it.title, null, Icons.Rounded.Restore) { onRestore(it.id) } }
+    val restore = removed.map { AddOption(it.id, it.title, null, Icons.Rounded.Restore, shelfOrigin(it.id)) { onRestore(it.id) } }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         LazyColumn(
@@ -97,10 +100,10 @@ private fun ExtraShelf.icon(): ImageVector = when (this) {
     ExtraShelf.FRESH -> Icons.Rounded.NewReleases
     ExtraShelf.LATE_NIGHT -> Icons.Rounded.Bedtime
     ExtraShelf.RANDOM -> Icons.Rounded.Shuffle
+    ExtraShelf.FRIENDS -> Icons.Rounded.People
 }
 
 private fun LazyListScope.group(label: Int, prefix: String, options: List<AddOption>) {
-    ExtraShelf.FRIENDS -> Icons.Rounded.People
     if (options.isEmpty()) return
     item(key = "$prefix-label") {
         Text(
@@ -130,7 +133,7 @@ private fun AddShelfRow(option: AddOption, index: Int, count: Int, modifier: Mod
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.size(40.dp)) {
+            Surface(shape = CircleShape, color = option.origin.accent(), modifier = Modifier.size(40.dp)) {
                 Icon(option.icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.padding(10.dp))
             }
             Column(modifier = Modifier.weight(1f)) {
