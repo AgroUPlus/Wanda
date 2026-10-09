@@ -275,6 +275,9 @@
     <string name="home_edit_reset_title">Reset Home?</string>
     <string name="home_edit_reset_message">Every shelf goes back to the default order and layout, and shelves you added are removed.</string>
     <string name="home_edit_reset_confirm">Reset</string>
+    <string name="home_edit_suggestion">Nothing played from %1$s lately. Remove or replace them?</string>
+    <string name="home_shelf_rarely_used">Rarely used</string>
+    <string name="home_shelf_played">Songs played from this shelf: %1$d</string>
     <string name="home_sessions_other_devices">Sessions on other devices</string>
 
     <!-- Importer -->
