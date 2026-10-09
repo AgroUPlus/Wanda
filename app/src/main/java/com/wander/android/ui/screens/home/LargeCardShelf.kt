@@ -33,6 +33,7 @@ import com.wander.android.ui.components.rememberPressScale
 import com.wander.android.ui.components.rememberShelfArtworkShape
 import com.wander.android.ui.components.rememberShelfEntranceScale
 import com.wander.android.ui.components.scrollingTitle
+import com.wander.android.ui.components.instantPress
 
 /**
  * Two rows of oversized cards that scroll sideways as one block.
@@ -94,6 +95,7 @@ private fun LargeTrackCard(
             .width(CardWidth)
             .scale(scale * entranceScale)
             .graphicsLayer { alpha = if (enabled) 1f else DisabledAlpha }
+            .instantPress(interactionSource)
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
