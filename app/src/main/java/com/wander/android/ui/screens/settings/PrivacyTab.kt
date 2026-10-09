@@ -13,10 +13,12 @@ import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Speaker
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.ui.components.GroupedCard
+import com.wander.android.ui.components.rememberShelfEntranceScale
 
 /**
  * What this device records, and what other people are allowed to see.
@@ -36,6 +38,7 @@ internal fun LazyListScope.privacyTab(
         GroupedCard(
             items = listOf<@Composable () -> Unit>({
                 SettingsToggle(
+                    modifier = Modifier.scale(rememberShelfEntranceScale(0)),
                     title = stringResource(R.string.settings_incognito),
                     subtitle = stringResource(R.string.settings_stop_recording_plays_stop_telling),
                     checked = state.incognito,
@@ -58,6 +61,7 @@ internal fun LazyListScope.privacyTab(
             items = listOf<@Composable () -> Unit>(
                 {
                     SettingsToggle(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(7)),
                         title = stringResource(R.string.settings_online_lyrics_lookup),
                         subtitle = stringResource(R.string.settings_query_lrclib_when_no_local_or_server_lyrics),
                         checked = state.externalLyricsEnabled,
@@ -67,6 +71,7 @@ internal fun LazyListScope.privacyTab(
                 },
                 {
                     SettingsToggle(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(8)),
                         title = stringResource(R.string.settings_musicbrainz_lookup),
                         subtitle = stringResource(R.string.settings_query_musicbrainz_for_accurate_artist_id),
                         checked = state.musicBrainzLookupEnabled,
@@ -76,6 +81,7 @@ internal fun LazyListScope.privacyTab(
                 },
                 {
                     SettingsToggle(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(9)),
                         title = stringResource(R.string.settings_podcast_search),
                         subtitle = stringResource(R.string.settings_podcast_search_subtitle),
                         checked = state.podcastIndexEnabled,
@@ -101,6 +107,7 @@ internal fun LazyListScope.privacyTab(
                 if (state.incognito) {
                     add {
                         SettingsRow(
+                            modifier = Modifier.scale(rememberShelfEntranceScale(1)),
                             subtitle = stringResource(R.string.settings_incognito_so_none_being_shared),
                             title = stringResource(R.string.settings_paused_incognito)
                         )
@@ -108,6 +115,7 @@ internal fun LazyListScope.privacyTab(
                 }
                 add {
                     SettingsToggle(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(2)),
                         title = stringResource(R.string.settings_show_what_i_m_playing),
                         subtitle = stringResource(R.string.settings_friends_see_current_track_can),
                         checked = state.agroVisibility.showNowPlaying && !state.incognito,
@@ -120,6 +128,7 @@ internal fun LazyListScope.privacyTab(
                 }
                 add {
                     SettingsToggle(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(3)),
                         title = stringResource(R.string.settings_share_my_listening_stats),
                         subtitle = stringResource(R.string.settings_friends_see_top_artists_how),
                         checked = state.agroVisibility.showStats && !state.incognito,
@@ -130,6 +139,7 @@ internal fun LazyListScope.privacyTab(
                 }
                 add {
                     SettingsToggle(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(4)),
                         title = stringResource(R.string.settings_let_people_find_me),
                         subtitle = stringResource(R.string.settings_username_appears_when_someone_searches),
                         checked = state.agroVisibility.discoverable && !state.incognito,
@@ -149,6 +159,7 @@ internal fun LazyListScope.privacyTab(
                 modifier = Modifier.padding(top = 16.dp),
                 items = listOf<@Composable () -> Unit>({
                     SettingsToggle(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(5)),
                         title = stringResource(R.string.settings_agro_privacy_relay),
                         subtitle = stringResource(R.string.settings_route_metadata_lyric_requests_through),
                         checked = state.agroProxyEnabled,
@@ -165,6 +176,7 @@ internal fun LazyListScope.privacyTab(
             modifier = Modifier.padding(top = 16.dp),
             items = listOf<@Composable () -> Unit>({
                 SettingsRow(
+                    modifier = Modifier.scale(rememberShelfEntranceScale(6)),
                     title = stringResource(R.string.settings_forget_all_credentials),
                     subtitle = stringResource(R.string.settings_signs_out_every_source_erases),
                     onClick = actions.onForgetEverything,
