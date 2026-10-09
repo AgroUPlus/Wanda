@@ -206,6 +206,23 @@
     <string name="home_connect_navidrome_youtube_music_settings">Connect Navidrome or YouTube Music in Settings, or grant access to music stored on this device.</string>
     <string name="home_nothing_here_yet">Nothing here yet</string>
     <string name="home_nothing_play_yet">Nothing to play yet</string>
+    <string name="home_edit_open">Customize Home</string>
+    <string name="home_edit_title">Customize Home</string>
+    <string name="home_edit_done">Done</string>
+    <string name="home_edit_reset">Reset</string>
+    <string name="home_shelf_show">Show %1$s</string>
+    <string name="home_shelf_settings">%1$s settings</string>
+    <string name="home_shelf_layout">Layout</string>
+    <string name="home_shelf_length">Length</string>
+    <string name="home_shelf_default">Default</string>
+    <string name="home_style_carousel">Carousel</string>
+    <string name="home_style_list">List</string>
+    <string name="home_style_grid">Grid</string>
+    <string name="home_style_hero">Hero</string>
+    <string name="home_shelf_add">Add shelf</string>
+    <string name="home_shelf_add_title">Add a genre shelf</string>
+    <string name="home_shelf_add_empty">Genres appear once your library has songs tagged with one.</string>
+    <string name="home_shelf_remove">Remove shelf</string>
     <string name="home_sessions_other_devices">Sessions on other devices</string>
 
     <!-- Importer -->

@@ -2,6 +2,8 @@ package com.wander.android.ui.screens.home
 
 import androidx.compose.runtime.Immutable
 import com.wander.android.data.model.SourceType
+import com.wander.android.ui.screens.home.layout.HomeLayoutApplier
+import com.wander.android.ui.screens.home.layout.ShelfConfig
 
 @Immutable
 data class HomeUiState(
@@ -17,7 +19,11 @@ data class HomeUiState(
     val allSections: List<HomeSection> = emptyList(),
     /** The backends actually configured, for the filter row. */
     val sources: List<SourceType> = emptyList(),
-    val selectedSource: SourceType? = null
+    val selectedSource: SourceType? = null,
+    /** The user's order, visibility and styles; empty until they customise Home. */
+    val layout: List<ShelfConfig> = emptyList(),
+    /** The customizer is open: Home shows every shelf, hidden ones included, with edit controls. */
+    val editing: Boolean = false
 ) {
     /**
      * What Home draws. Filtering happens here rather than in the load path so clearing the filter
@@ -25,13 +31,20 @@ data class HomeUiState(
      * were instead of rebuilding them.
      */
     val sections: List<HomeSection> by lazy {
-        when (selectedSource) {
+        val filtered = when (selectedSource) {
             null -> allSections
             else -> allSections
                 .map { section -> section.copy(tracks = section.tracks.filter { it.source == selectedSource }) }
                 .filterNot(HomeSection::isEmpty)
         }
+        HomeLayoutApplier.apply(filtered, layout)
     }
+
+    /**
+     * What the customizer draws: every shelf in the user's order, hidden ones included, and never
+     * narrowed by the source filter — hiding a shelf must not depend on which chip is selected.
+     */
+    val editorSections: List<HomeSection> by lazy { HomeLayoutApplier.apply(allSections, layout, includeHidden = true) }
 
     /** Nothing to show for the current filter — may still have music under a different source. */
     val isEmpty: Boolean get() = !isLoading && sections.isEmpty()

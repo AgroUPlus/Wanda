@@ -13,6 +13,9 @@ internal const val SectionLiked = "liked"
 internal const val SectionDiscover = "discover"
 internal const val SectionBecause = "because_you_listened"
 
+/** A shelf of one genre the user added; the genre is the rest of the id. */
+internal const val GenreShelfPrefix = "genre:"
+
 /**
  * YouTube Music's own "Listen again" feed shelf (see `shelfId`). Dropped: Wanda's own Recently
  * Played covers every source's history, so this one was a second, YTM-only copy of it.

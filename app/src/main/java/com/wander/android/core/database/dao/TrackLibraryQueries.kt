@@ -158,6 +158,20 @@ interface TrackLibraryQueries {
     )
     suspend fun getForgottenFavorites(thresholdTimestamp: Long, limit: Int = 30): List<TrackEntity>
 
+    /** Genres worth a shelf: tagged on at least three songs, biggest first. */
+    @Query(
+        """
+        SELECT genre FROM tracks
+        WHERE isEpisode = 0 AND genre IS NOT NULL AND TRIM(genre) != ''
+        GROUP BY genre COLLATE NOCASE HAVING COUNT(*) >= 3
+        ORDER BY COUNT(*) DESC LIMIT 40
+        """
+    )
+    fun observeGenres(): Flow<List<String>>
+
+    @Query("SELECT * FROM tracks WHERE isEpisode = 0 AND genre = :genre COLLATE NOCASE ORDER BY RANDOM() LIMIT :limit")
+    suspend fun getTracksByGenre(genre: String, limit: Int): List<TrackEntity>
+
     @Query("SELECT * FROM tracks WHERE playCount = 0 AND isEpisode = 0 ORDER BY addedTimestamp DESC LIMIT :limit")
     suspend fun getNeverPlayedTracks(limit: Int = 30): List<TrackEntity>
 

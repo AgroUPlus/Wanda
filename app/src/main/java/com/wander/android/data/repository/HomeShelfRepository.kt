@@ -6,6 +6,7 @@ import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -61,6 +62,13 @@ class HomeShelfRepository @Inject constructor(
     }
 
     /** In the library but never listened to. */
+    /** Genres in the library with enough songs to fill a shelf. */
+    val genres: Flow<List<String>> = trackDao.observeGenres()
+
+    suspend fun getGenreTracks(genre: String, limit: Int): List<UnifiedTrack> = withContext(Dispatchers.IO) {
+        trackDao.getTracksByGenre(genre, limit).map(TrackEntity::toUnifiedTrack)
+    }
+
     suspend fun getNeverPlayed(limit: Int = 20): List<UnifiedTrack> = withContext(Dispatchers.IO) {
         trackDao.getNeverPlayedTracks(limit).map(TrackEntity::toUnifiedTrack)
     }

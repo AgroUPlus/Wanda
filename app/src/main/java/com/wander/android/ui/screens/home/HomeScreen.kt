@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,6 +43,11 @@ import com.wander.android.ui.components.ExpressiveRefreshIndicator
 import com.wander.android.ui.components.SessionSheet
 import com.wander.android.ui.components.SourceFilterChips
 import com.wander.android.ui.components.TrackActionsSheet
+import com.wander.android.ui.screens.home.customize.HomeEditBar
+import com.wander.android.ui.screens.home.customize.HomeEditorAddSheet
+import com.wander.android.ui.screens.home.customize.HomeEditorSettingsSheet
+import com.wander.android.ui.screens.home.customize.homeEditorShelves
+import com.wander.android.ui.screens.home.customize.rememberHomeEditor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,6 +102,9 @@ fun HomeScreen(
     // See [HomeShelfStates].
     val shelfStates = remember { HomeShelfStates() }
     val listState = rememberLazyListState()
+    val editor = rememberHomeEditor(state, viewModel, listState)
+    HomeEditorSettingsSheet(editor, state, viewModel)
+    HomeEditorAddSheet(editor, state, viewModel)
 
     // The same long-press menu Library and Search use, so a track offers the same actions
     // wherever it is shown. Held here rather than per shelf: only one can be open at a time.
@@ -168,16 +177,21 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     item(key = "header", contentType = "header") {
-                        HomeHeader(
-                            greeting = state.greeting,
-                            hasSession = session != null,
-                            onOpenSessions = { showSessionSheet = true },
-                            onOpenSettings = onOpenSettings
-                        )
+                        if (state.editing) {
+                            HomeEditBar(onReset = viewModel.layoutActions::reset, onDone = viewModel.layoutActions::stop)
+                        } else {
+                            HomeHeader(
+                                greeting = state.greeting,
+                                hasSession = session != null,
+                                onOpenSessions = { showSessionSheet = true },
+                                onCustomize = viewModel.layoutActions::start,
+                                onOpenSettings = onOpenSettings
+                            )
+                        }
                     }
 
                     // Only earns its row when there is more than one backend to choose between.
-                    if (state.sources.size > 1) {
+                    if (state.sources.size > 1 && !state.editing) {
                         item(key = "sources", contentType = "source-chips") {
                             SourceFilterChips(
                                 sources = state.sources,
@@ -189,7 +203,9 @@ fun HomeScreen(
                         }
                     }
 
-                    if (state.isEmpty) {
+                    if (state.editing) {
+                        homeEditorShelves(editor, state.layout, viewModel)
+                    } else if (state.isEmpty) {
                         item(key = "filtered_empty", contentType = "empty") {
                             EmptyState(
                                 title = stringResource(R.string.home_nothing_here_yet),
@@ -216,6 +232,7 @@ private fun HomeHeader(
     greeting: String,
     hasSession: Boolean,
     onOpenSessions: () -> Unit,
+    onCustomize: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
     Row(
@@ -238,6 +255,9 @@ private fun HomeHeader(
             IconButton(onClick = onOpenSessions) {
                 Icon(Icons.Rounded.Devices, contentDescription = stringResource(R.string.home_sessions_other_devices))
             }
+        }
+        IconButton(onClick = onCustomize) {
+            Icon(Icons.Rounded.Tune, contentDescription = stringResource(R.string.home_edit_open))
         }
         IconButton(onClick = onOpenSettings) {
             Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.nav_settings))
