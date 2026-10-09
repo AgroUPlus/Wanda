@@ -47,7 +47,7 @@ fun Modifier.groupedListItem(index: Int, count: Int, horizontalInset: Dp = 16.dp
     return this
         .padding(horizontal = horizontalInset)
         .padding(top = if (index == 0) 0.dp else GroupedItemGap)
-        .trackPress(morph)
+        .trackPress(morph, ListPressDelayMillis)
         .clip(morph.shape(index, count))
         .background(MaterialTheme.colorScheme.surfaceContainer)
 }
