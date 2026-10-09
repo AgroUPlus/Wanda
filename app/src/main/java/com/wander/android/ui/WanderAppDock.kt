@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.wander.android.core.permissions.hasPermission
@@ -34,7 +35,10 @@ import com.wander.android.ui.components.dockSpec
 import com.wander.android.ui.components.listen.ListenSheet
 import com.wander.android.ui.components.player.MiniPlayerGap
 import com.wander.android.ui.components.player.PlayerSheetState
+import com.wander.android.ui.navigation.DockItem
+import com.wander.android.ui.navigation.NavLayoutViewModel
 import com.wander.android.ui.navigation.TopLevelDestination
+import com.wander.android.ui.navigation.navigateSettled
 import com.wander.android.ui.navigation.WanderDock
 
 import androidx.compose.foundation.layout.WindowInsets
@@ -133,6 +137,7 @@ internal fun rememberWanderDockState(
         )
     }
 
+    val dockItems by hiltViewModel<NavLayoutViewModel>().dockItems.collectAsStateWithLifecycle()
     val openLibrary = { navController.switchTab(TopLevelDestination.LIBRARY) }
     val onQueryChange: (String) -> Unit = { value ->
         if (value.isNotBlank() && dockRoute != TopLevelDestination.LIBRARY.route) {
@@ -160,8 +165,15 @@ internal fun rememberWanderDockState(
             WanderDock(
                 currentRoute = dockRoute,
                 query = searchQuery,
+                items = dockItems,
+                onOpenItem = { item ->
+                    when (item) {
+                        DockItem.LIBRARY -> navController.switchTab(TopLevelDestination.LIBRARY)
+                        DockItem.FRIENDS -> navController.switchTab(TopLevelDestination.FRIENDS)
+                        else -> navController.navigateSettled(item.route)
+                    }
+                },
                 onOpenLibrary = openLibrary,
-                onOpenFriends = { navController.switchTab(TopLevelDestination.FRIENDS) },
                 onQueryChange = onQueryChange,
                 onSearch = openLibrary,
                 onListen = onListen,
