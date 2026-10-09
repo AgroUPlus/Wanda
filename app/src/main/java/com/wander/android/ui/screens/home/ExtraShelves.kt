@@ -17,7 +17,7 @@ internal enum class ExtraShelf(
     val style: HomeSectionStyle
 ) {
     REDISCOVER(ExtraShelfPrefix + "rediscover", R.string.shelf_rediscover, R.string.shelf_rediscover_summary, HomeSectionStyle.TRACK_CAROUSEL),
-    HEAVY_ROTATION(ExtraShelfPrefix + "heavy_rotation", R.string.shelf_heavy_rotation, R.string.shelf_heavy_rotation_summary, HomeSectionStyle.FAVORITES_CAROUSEL),
+    HEAVY_ROTATION(ExtraShelfPrefix + "heavy_rotation", R.string.shelf_heavy_rotation, R.string.shelf_heavy_rotation_summary, HomeSectionStyle.HERO_CAROUSEL),
     FRESH(ExtraShelfPrefix + "fresh", R.string.shelf_fresh, R.string.shelf_fresh_summary, HomeSectionStyle.HERO_CAROUSEL),
     LATE_NIGHT(ExtraShelfPrefix + "late_night", R.string.shelf_late_night, R.string.shelf_late_night_summary, HomeSectionStyle.TRACK_CAROUSEL),
     RANDOM(ExtraShelfPrefix + "random", R.string.shelf_random, R.string.shelf_random_summary, HomeSectionStyle.DISCOVER_MASONRY);
