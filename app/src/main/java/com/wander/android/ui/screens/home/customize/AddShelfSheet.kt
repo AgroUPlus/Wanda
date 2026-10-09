@@ -18,6 +18,7 @@ import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.NewReleases
+import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -99,6 +100,7 @@ private fun ExtraShelf.icon(): ImageVector = when (this) {
 }
 
 private fun LazyListScope.group(label: Int, prefix: String, options: List<AddOption>) {
+    ExtraShelf.FRIENDS -> Icons.Rounded.People
     if (options.isEmpty()) return
     item(key = "$prefix-label") {
         Text(
