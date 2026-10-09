@@ -1,6 +1,12 @@
 package com.wander.android.ui.screens.home.customize
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -44,16 +50,23 @@ internal fun ShelfCategoriesPicker(
             )
         }
     }
-    if (ChristianCategory in config.categories) {
-        Text(stringResource(R.string.home_shelf_languages), style = MaterialTheme.typography.labelLarge)
-        ConnectedToggleButtons(
-            options = ChristianArtists.languages,
-            // No language picked means all of them.
-            isChecked = { it.code in config.languages },
-            role = Role.Checkbox,
-            label = { it.label() },
-            onSelect = { onLanguage(it.code) }
-        )
+    // The languages belong to Christian music, so they unfold from the chips when it is chosen.
+    AnimatedVisibility(
+        visible = ChristianCategory in config.categories,
+        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(MaterialTheme.motionScheme.fastEffectsSpec())
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(stringResource(R.string.home_shelf_languages), style = MaterialTheme.typography.labelLarge)
+            ConnectedToggleButtons(
+                options = ChristianArtists.languages,
+                // No language picked means all of them.
+                isChecked = { it.code in config.languages },
+                role = Role.Checkbox,
+                label = { it.label() },
+                onSelect = { onLanguage(it.code) }
+            )
+        }
     }
 }
 
