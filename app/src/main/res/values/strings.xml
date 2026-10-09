@@ -244,6 +244,8 @@
     <string name="shelf_late_night_summary">What you listen to after dark</string>
     <string name="shelf_random">Random picks</string>
     <string name="shelf_random_summary">A different handful from your library each time</string>
+    <string name="shelf_friends">From your friends</string>
+    <string name="shelf_friends_summary">Songs your friends sent you, ready to play</string>
     <string name="home_shelf_edit">Edit %1$s</string>
     <string name="home_shelf_move_up">Move up</string>
     <string name="home_shelf_move_down">Move down</string>
