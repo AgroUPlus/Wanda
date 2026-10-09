@@ -58,8 +58,9 @@ private val AloneCorner = 32.dp
 fun WanderDock(
     currentRoute: String?,
     query: String,
+    items: List<DockItem>,
+    onOpenItem: (DockItem) -> Unit,
     onOpenLibrary: () -> Unit,
-    onOpenFriends: () -> Unit,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
     onListen: () -> Unit,
@@ -96,8 +97,9 @@ fun WanderDock(
         WanderDockRow(
             currentRoute = currentRoute,
             query = query,
+            items = items,
+            onOpenItem = onOpenItem,
             onOpenLibrary = onOpenLibrary,
-            onOpenFriends = onOpenFriends,
             onQueryChange = onQueryChange,
             onSearch = onSearch,
             onListen = onListen
