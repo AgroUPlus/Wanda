@@ -37,7 +37,8 @@ data class HomeUiState(
                 .map { section -> section.copy(tracks = section.tracks.filter { it.source == selectedSource }) }
                 .filterNot(HomeSection::isEmpty)
         }
-        HomeLayoutApplier.apply(filtered, layout)
+        // A shelf limited to sources it has no songs from has nothing to draw.
+        HomeLayoutApplier.apply(filtered, layout).filterNot(HomeSection::isEmpty)
     }
 
     /**
