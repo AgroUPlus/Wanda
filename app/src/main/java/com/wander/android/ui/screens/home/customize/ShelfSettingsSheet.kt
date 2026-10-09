@@ -22,8 +22,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -35,6 +33,7 @@ import com.wander.android.R
 import com.wander.android.data.model.SourceType
 import com.wander.android.ui.components.ConnectedToggleButtons
 import com.wander.android.ui.components.ConnectedToggleGroup
+import com.wander.android.ui.components.WandaSheet
 import com.wander.android.ui.screens.home.GenreShelfPrefix
 import com.wander.android.ui.screens.home.HomeSection
 import com.wander.android.ui.screens.home.HomeSectionStyle
@@ -62,7 +61,7 @@ internal fun ShelfSettingsSheet(
     onRemove: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    WandaSheet(onDismissRequest = onDismiss) {
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier
