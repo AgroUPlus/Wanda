@@ -17,8 +17,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.LibraryMusic
-import androidx.compose.material.icons.outlined.People
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -26,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -64,8 +63,9 @@ val DockRowHeight = DockControlSize + DockInset * 2
 fun WanderDockRow(
     currentRoute: String?,
     query: String,
+    items: List<DockItem>,
+    onOpenItem: (DockItem) -> Unit,
     onOpenLibrary: () -> Unit,
-    onOpenFriends: () -> Unit,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
     onListen: () -> Unit,
@@ -112,20 +112,18 @@ fun WanderDockRow(
             ) + fadeOut() + scaleOut(targetScale = 0.7f)
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(DockInset)) {
-                DockIconButton(
-                    icon = Icons.Outlined.LibraryMusic,
-                    contentDescription = stringResource(R.string.nav_library),
-                    selected = currentRoute == TopLevelDestination.LIBRARY.route,
-                    label = "library",
-                    onClick = onOpenLibrary
-                )
-                DockIconButton(
-                    icon = Icons.Outlined.People,
-                    contentDescription = stringResource(R.string.nav_friends),
-                    selected = currentRoute == TopLevelDestination.FRIENDS.route,
-                    label = "friends",
-                    onClick = onOpenFriends
-                )
+                items.forEach { item ->
+                    // Keyed so a shortcut keeps its own animation state when the order changes.
+                    key(item) {
+                        DockIconButton(
+                            icon = item.icon,
+                            contentDescription = stringResource(item.label),
+                            selected = currentRoute == item.route,
+                            label = item.name.lowercase(),
+                            onClick = { onOpenItem(item) }
+                        )
+                    }
+                }
             }
         }
     }

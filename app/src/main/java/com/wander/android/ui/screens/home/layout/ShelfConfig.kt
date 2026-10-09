@@ -23,12 +23,18 @@ data class ShelfConfig(
     /** A genre shelf's categories: library genre tags, or the Christian category. */
     val categories: List<String> = emptyList(),
     /** For the Christian category: the language codes to draw artists from. Empty means all. */
-    val languages: List<String> = emptyList()
+    val languages: List<String> = emptyList(),
+    /** Source type names the shelf is limited to. Empty means every source. */
+    val sources: List<String> = emptyList()
 )
 
 /** The stored layout is a JSON list in order; an empty list means "never customised". */
 internal object ShelfConfigCodec {
-    private val json = Json { ignoreUnknownKeys = true }
+    // A style name this build no longer has reads as "the shelf's default" rather than failing the whole layout.
+    private val json = Json {
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+    }
     private val serializer = ListSerializer(ShelfConfig.serializer())
 
     fun encode(configs: List<ShelfConfig>): String = json.encodeToString(serializer, configs)

@@ -57,6 +57,7 @@ fun LibraryScreen(
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val tab by viewModel.tab.collectAsStateWithLifecycle()
+    val tabs by viewModel.tabs.collectAsStateWithLifecycle()
     // The same instance the Podcasts page resolves: both sit under this destination.
     val podcastsViewModel: PodcastsViewModel = hiltViewModel()
     val sourceFilter by viewModel.sourceFilter.collectAsStateWithLifecycle()
@@ -123,19 +124,21 @@ fun LibraryScreen(
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
 
     val pagerState = rememberPagerState(
-        initialPage = tab.ordinal,
-        pageCount = { LibraryTab.entries.size }
+        initialPage = tabs.indexOf(tab).coerceAtLeast(0),
+        pageCount = { tabs.size }
     )
 
     // The pager is the source of truth while a swipe is in flight; the ViewModel catches up once
     // it settles. Driving it the other way during a drag would fight the user's finger.
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.settledPage }.collect { page ->
-            viewModel.selectTab(LibraryTab.entries[page])
+            tabs.getOrNull(page)?.let(viewModel::selectTab)
         }
     }
-    LaunchedEffect(tab) {
-        if (tab.ordinal != pagerState.currentPage) pagerState.animateScrollToPage(tab.ordinal)
+    LaunchedEffect(tab, tabs) {
+        // A section that was hidden has no page; the pager keeps whatever page it is on.
+        val target = tabs.indexOf(tab)
+        if (target >= 0 && target != pagerState.currentPage) pagerState.animateScrollToPage(target)
     }
 
     // Read through derivedStateOf: pagerState.currentPage changes on every frame of a swipe, and
@@ -187,7 +190,7 @@ fun LibraryScreen(
                 )
             }
         ) {
-            LibraryTab.entries.forEachIndexed { index, entry ->
+            tabs.forEachIndexed { index, entry ->
                 val isSelected = index == selectedPage
                 Tab(
                     selected = isSelected,
@@ -208,7 +211,7 @@ fun LibraryScreen(
 
         HorizontalPager(
             state = pagerState,
-            key = { LibraryTab.entries[it] },
+            key = { tabs[it] },
             modifier = Modifier
                 .weight(1f)
                 .padding(top = 4.dp)
@@ -229,7 +232,7 @@ fun LibraryScreen(
                 },
                 modifier = Modifier.fillMaxSize()
             ) {
-                when (val pageTab = LibraryTab.entries[page]) {
+                when (val pageTab = tabs[page]) {
                     LibraryTab.ALBUMS ->
                         AlbumGrid(
                             albums = albums,
@@ -270,7 +273,7 @@ fun LibraryScreen(
 
         // Outside the Column, inside the Box: the pill floats over the list rather than taking a
         // row at the bottom of it, which is the reason the Box was wrapped around this at all.
-        val currentTab = LibraryTab.entries[selectedPage]
+        val currentTab = tabs.getOrElse(selectedPage) { tabs.first() }
         val activeTracks = when (currentTab) {
             LibraryTab.LIKED -> likedTracks
             LibraryTab.DOWNLOADS -> downloadedTracks

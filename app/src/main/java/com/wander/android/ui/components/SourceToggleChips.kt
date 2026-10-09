@@ -14,8 +14,6 @@ import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.data.model.SourceType
 
-private val ChipIconSize = 18.dp
-
 /**
  * Which backends a search actually queries — several at once, not one at a time.
  *
@@ -51,8 +49,7 @@ fun SourceToggleChips(
                     source !in selected || selected.size > 1 -> onToggle(source)
                 }
             },
-            equalWidth = false,
-            leadingIcon = { source -> source?.let { SourceIcon(it, size = ChipIconSize) } }
+            equalWidth = false
         )
     }
 }

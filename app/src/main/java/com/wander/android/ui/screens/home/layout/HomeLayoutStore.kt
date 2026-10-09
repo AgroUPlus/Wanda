@@ -31,6 +31,19 @@ class HomeLayoutStore @Inject constructor(private val storage: SecureStorage) {
         _editing.value = on
     }
 
+    private val _editRequested = MutableStateFlow(false)
+
+    /** Settings asked for the customizer; Home opens it as soon as it can and clears this. */
+    val editRequested: StateFlow<Boolean> = _editRequested.asStateFlow()
+
+    fun requestEditing() {
+        _editRequested.value = true
+    }
+
+    fun clearEditRequest() {
+        _editRequested.value = false
+    }
+
     fun save(configs: List<ShelfConfig>) =
         storage.displayPrefs.setHomeLayout(ShelfConfigCodec.encode(configs))
 }

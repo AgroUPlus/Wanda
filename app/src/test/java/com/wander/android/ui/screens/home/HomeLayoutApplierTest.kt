@@ -3,6 +3,8 @@ package com.wander.android.ui.screens.home
 import com.wander.android.ui.screens.home.layout.HomeLayoutApplier
 import com.wander.android.ui.screens.home.layout.ShelfConfig
 import com.wander.android.ui.screens.home.layout.ShelfConfigCodec
+import com.wander.android.data.model.SourceType
+import com.wander.android.data.model.UnifiedTrack
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test
@@ -56,5 +58,28 @@ class HomeLayoutApplierTest {
         assertEquals(configs, ShelfConfigCodec.decode(ShelfConfigCodec.encode(configs)))
         assertEquals(emptyList<ShelfConfig>(), ShelfConfigCodec.decode("{not json"))
         assertEquals(emptyList<ShelfConfig>(), ShelfConfigCodec.decode(null))
+    }
+
+    @Test
+    fun `a style this build no longer has reads as the default`() {
+        val raw = """[{"id":"liked","style":"FAVORITES_CAROUSEL","count":6},{"id":"discover"}]"""
+        val decoded = ShelfConfigCodec.decode(raw)
+        assertEquals(listOf("liked", "discover"), decoded.map { it.id })
+        assertEquals(null, decoded[0].style)
+        assertEquals(6, decoded[0].count)
+    }
+
+    @Test
+    fun `a shelf limited to a source keeps only that source's songs`() {
+        val mixed = HomeSection(
+            "a", "a", HomeSectionStyle.TRACK_CAROUSEL,
+            tracks = listOf(
+                UnifiedTrack(id = "1", source = SourceType.YTMUSIC, title = "t1", artist = "x"),
+                UnifiedTrack(id = "2", source = SourceType.NAVIDROME, title = "t2", artist = "x")
+            )
+        )
+        val limited = HomeLayoutApplier.apply(listOf(mixed), listOf(ShelfConfig("a", sources = listOf("NAVIDROME"))))
+        assertEquals(listOf("2"), limited.single().tracks.map { it.id })
+        assertEquals(2, HomeLayoutApplier.apply(listOf(mixed), listOf(ShelfConfig("a"))).single().tracks.size)
     }
 }

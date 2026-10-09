@@ -62,6 +62,15 @@ internal fun LazyListScope.homeSection(
     states: HomeShelfStates,
     onLongPress: (UnifiedTrack) -> Unit
 ) {
+    // Starting a song from a shelf is counted per shelf, on this device, so the customizer can
+    // suggest replacing the ones that are never used.
+    val play: (Int) -> Unit = { index ->
+        // The customizer draws live shelves; a tap there is for editing, never for playing.
+        if (!viewModel.uiState.value.editing) {
+            viewModel.shelfUsage.record(section.id)
+            viewModel.startRadio(section.tracks[index])
+        }
+    }
     item(key = "${section.id}-title", contentType = "section-title") {
         if (section.style == HomeSectionStyle.TRACK_PAGER) {
             // The lead shelf is the one worth starting from a tap, and the one worth a header
@@ -69,7 +78,7 @@ internal fun LazyListScope.homeSection(
             QuickPicksHeader(
                 title = section.title,
                 tracks = section.tracks,
-                onPlay = { index -> viewModel.startRadio(section.tracks[index]) },
+                onPlay = { index -> play(index) },
                 onLongPress = onLongPress
             )
         } else {
@@ -92,7 +101,12 @@ internal fun LazyListScope.homeSection(
                     key = { _, mix -> "${section.id}-${mix.id}" },
                     contentType = { _, _ -> "mix-card" }
                 ) { _, mix ->
-                    SmartMixCard(mix = mix, onPlay = { viewModel.playMix(mix) })
+                    SmartMixCard(mix = mix, onPlay = {
+                        if (!viewModel.uiState.value.editing) {
+                            viewModel.shelfUsage.record(section.id)
+                            viewModel.playMix(mix)
+                        }
+                    })
                 }
             }
         }
@@ -116,7 +130,7 @@ internal fun LazyListScope.homeSection(
                     HorizontalTrackCard(
                         track = track,
                         index = index,
-                        onPlay = { viewModel.startRadio(section.tracks[index]) },
+                        onPlay = { play(index) },
                         onLongPress = { onLongPress(track) },
                         progress = section.progress[track.id]
                     )
@@ -132,7 +146,7 @@ internal fun LazyListScope.homeSection(
                 tracks = section.tracks,
                 sectionId = section.id,
                 gridState = states.grids.getOrPut(section.id) { LazyGridState() },
-                onPlay = { index -> viewModel.startRadio(section.tracks[index]) },
+                onPlay = { index -> play(index) },
                 onLongPress = onLongPress
             )
         }
@@ -144,7 +158,7 @@ internal fun LazyListScope.homeSection(
             TrackPagerShelf(
                 tracks = section.tracks,
                 pagerState = states.pager(section.id, pageCountFor(section.tracks.size)),
-                onPlay = { index -> viewModel.startRadio(section.tracks[index]) },
+                onPlay = { index -> play(index) },
                 onLongPress = onLongPress
             )
         }
@@ -156,18 +170,7 @@ internal fun LazyListScope.homeSection(
             FeaturedHeroShelf(
                 tracks = section.tracks,
                 sectionId = section.id,
-                onPlay = { index -> viewModel.startRadio(section.tracks[index]) },
-                onLongPress = onLongPress
-            )
-        }
-
-        HomeSectionStyle.FAVORITES_CAROUSEL -> item(
-            key = "${section.id}-row",
-            contentType = "favorites-carousel"
-        ) {
-            FavoritesCarouselShelf(
-                tracks = section.tracks,
-                onPlay = { index -> viewModel.startRadio(section.tracks[index]) },
+                onPlay = { index -> play(index) },
                 onLongPress = onLongPress
             )
         }
@@ -178,7 +181,7 @@ internal fun LazyListScope.homeSection(
         ) {
             HeroCarouselShelf(
                 tracks = section.tracks,
-                onPlay = { index -> viewModel.startRadio(section.tracks[index]) },
+                onPlay = { index -> play(index) },
                 onLongPress = onLongPress
             )
         }
@@ -190,7 +193,7 @@ internal fun LazyListScope.homeSection(
             DiscoverMasonryShelf(
                 tracks = section.tracks,
                 sectionId = section.id,
-                onPlay = { index -> viewModel.startRadio(section.tracks[index]) },
+                onPlay = { index -> play(index) },
                 onLongPress = onLongPress
             )
         }
@@ -202,7 +205,7 @@ internal fun LazyListScope.homeSection(
         ) { index, track ->
             TrackRow(
                 track = track,
-                onPlay = { viewModel.startRadio(section.tracks[index]) },
+                onPlay = { play(index) },
                 onLongPress = { onLongPress(track) }
             )
         }

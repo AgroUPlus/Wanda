@@ -42,6 +42,7 @@ import com.wander.android.R
 import com.wander.android.data.importer.PlatformType
 import com.wander.android.ui.components.rememberPressMorphShape
 import com.wander.android.ui.components.rememberPressScale
+import com.wander.android.ui.components.instantPress
 import com.wander.android.ui.screens.importer.PlatformIcon
 
 private val HeroCardShape = RoundedCornerShape(
@@ -87,6 +88,7 @@ internal fun PlaylistImportHeroCard(
             .clip(HeroCardShape)
             .border(borderStroke, HeroCardShape)
             .background(containerBrush)
+            .instantPress(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,

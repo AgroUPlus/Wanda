@@ -50,6 +50,7 @@ import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.rememberPressScale
 import com.wander.android.ui.components.rememberShelfArtworkShape
 import com.wander.android.ui.components.scrollingTitle
+import com.wander.android.ui.components.instantPress
 
 @Composable
 fun DiscoveredPlaylistsGrid(
@@ -201,6 +202,7 @@ private fun DiscoveredPlaylistCard(
         modifier = modifier
             .fillMaxWidth()
             .scale(scale)
+            .instantPress(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,

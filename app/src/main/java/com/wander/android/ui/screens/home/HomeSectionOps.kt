@@ -1,6 +1,7 @@
 package com.wander.android.ui.screens.home
 
 import com.wander.android.data.model.UnifiedTrack
+import java.time.LocalTime
 
 // Pure list operations on Home's shelves, shared by [HomeViewModel].
 
@@ -39,4 +40,11 @@ internal fun List<HomeSection>.withSection(section: HomeSection): List<HomeSecti
     val rank = SectionOrder.indexOf(section.id).takeIf { it >= 0 } ?: return this + section
     val at = indexOfFirst { SectionOrder.indexOf(it.id) > rank }
     return if (at < 0) this + section else toMutableList().also { it.add(at, section) }
+}
+
+/** Time of day the user is most likely reading this. */
+internal fun greeting(time: LocalTime): String = when (time.hour) {
+    in 5..11 -> "Good morning"
+    in 12..17 -> "Good afternoon"
+    else -> "Good evening"
 }

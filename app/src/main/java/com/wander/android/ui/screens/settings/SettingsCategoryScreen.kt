@@ -16,12 +16,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import com.wander.android.R
+import com.wander.android.ui.components.NoIndication
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
 
@@ -52,7 +55,8 @@ internal fun SettingsCategoryScreen(
     onOpenImport: () -> Unit,
     onOpenMergePreview: () -> Unit,
     onOpenReplay: () -> Unit,
-    onOpenFingerprints: () -> Unit
+    onOpenFingerprints: () -> Unit,
+    onCustomizeHome: () -> Unit
 ) {
     val host = rememberSettingsHost(
         SettingsNavigation(
@@ -62,7 +66,8 @@ internal fun SettingsCategoryScreen(
             onOpenImport = onOpenImport,
             onOpenMergePreview = onOpenMergePreview,
             onOpenReplay = onOpenReplay,
-            onOpenFingerprints = onOpenFingerprints
+            onOpenFingerprints = onOpenFingerprints,
+            onCustomizeHome = onCustomizeHome
         )
     )
 
@@ -93,19 +98,23 @@ internal fun SettingsCategoryScreen(
             scrollBehavior = scrollBehavior
         )
 
-        LazyColumn(
-            state = listState,
-            contentPadding = contentPadding.listInset(),
-            modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection)
-        ) {
-            when (category) {
-                SettingsCategory.CONNECTIONS -> connectionsTab(host.state, host.actions)
-                SettingsCategory.SYNC -> syncTab(host.state, host.actions, host.devices)
-                SettingsCategory.APPEARANCE -> appearanceTab(host.state, host.actions)
-                SettingsCategory.PLAYBACK -> playbackStorageTab(host.state, host.actions)
-                SettingsCategory.EXTERNAL -> externalTab(host.state, host.actions)
-                SettingsCategory.PRIVACY -> privacyTab(host.state, host.actions)
-                SettingsCategory.ABOUT -> aboutTab(host.state, host.actions)
+        // No ripple on the settings rows: they already round off and shrink under the finger, and
+        // the water-drop wave on top of that was one effect too many.
+        CompositionLocalProvider(LocalIndication provides NoIndication) {
+            LazyColumn(
+                state = listState,
+                contentPadding = contentPadding.listInset(),
+                modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection)
+            ) {
+                when (category) {
+                    SettingsCategory.CONNECTIONS -> connectionsTab(host.state, host.actions)
+                    SettingsCategory.SYNC -> syncTab(host.state, host.actions, host.devices)
+                    SettingsCategory.APPEARANCE -> appearanceTab(host.state, host.actions)
+                    SettingsCategory.PLAYBACK -> playbackStorageTab(host.state, host.actions)
+                    SettingsCategory.EXTERNAL -> externalTab(host.state, host.actions)
+                    SettingsCategory.PRIVACY -> privacyTab(host.state, host.actions)
+                    SettingsCategory.ABOUT -> aboutTab(host.state, host.actions)
+                }
             }
         }
     }

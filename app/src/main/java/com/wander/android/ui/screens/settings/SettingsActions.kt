@@ -55,6 +55,7 @@ internal data class SettingsActions(
     val onDownloadLiked: () -> Unit,
     val onIndexFingerprints: () -> Unit,
     val onOpenFingerprints: () -> Unit,
+    val onCustomizeHome: () -> Unit,
     val onClearCache: () -> Unit,
     // External
     val onOpenImport: () -> Unit,

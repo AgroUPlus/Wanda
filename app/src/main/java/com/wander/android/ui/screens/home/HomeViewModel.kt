@@ -10,12 +10,15 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.R
 import com.wander.android.data.christian.ChristianShelfRepository
 import com.wander.android.data.repository.EpisodeProgressRepository
+import com.wander.android.data.repository.FriendPicksRepository
 import com.wander.android.data.repository.HomeShelfRepository
+import com.wander.android.data.repository.ServiceShelvesRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.repository.RecommendationRepository
 import com.wander.android.ui.screens.home.layout.HomeLayoutActions
 import com.wander.android.ui.screens.home.layout.HomeLayoutStore
+import com.wander.android.ui.screens.home.layout.ShelfUsageStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -42,7 +45,10 @@ class HomeViewModel @Inject constructor(
     private val playerConnection: PlayerConnection,
     private val playbackCoordinator: PlaybackCoordinator,
     private val layoutStore: HomeLayoutStore,
+    val shelfUsage: ShelfUsageStore,
     christianShelf: ChristianShelfRepository,
+    friendPicks: FriendPicksRepository,
+    serviceShelves: ServiceShelvesRepository,
     episodeProgress: EpisodeProgressRepository,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
@@ -50,7 +56,10 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    private val extras = ExtraShelves(homeShelfRepository, christianShelf, context)
+    private val extras = ExtraShelves(homeShelfRepository, christianShelf, friendPicks, serviceShelves, context)
+
+    /** Why a Popular on Agro or YouTube Music shelf has nothing to show, for the customizer to say. */
+    val shelfProblems = extras.problems
 
     /** The customizer's actions; see [HomeLayoutActions]. */
     internal val layoutActions = HomeLayoutActions(layoutStore, _uiState)
@@ -91,6 +100,13 @@ class HomeViewModel @Inject constructor(
             layoutStore.editing.collect { editing -> _uiState.update { it.copy(editing = editing) } }
         }
         viewModelScope.launch {
+            layoutStore.editRequested.collect { requested ->
+                if (!requested) return@collect
+                layoutActions.start()
+                layoutStore.clearEditRequest()
+            }
+        }
+        viewModelScope.launch {
             layoutStore.layout.collect { layout ->
                 _uiState.update { it.copy(layout = layout) }
                 // Shelves the user added have no tracks until they are read, or after their settings change.
@@ -124,7 +140,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(
                         allSections = state.allSections.withSection(
-                            shelf(SectionLiked, "Your Favorites", HomeSectionStyle.FAVORITES_CAROUSEL, liked.take(CarouselSize))
+                            shelf(SectionLiked, "Your Favorites", HomeSectionStyle.HERO_CAROUSEL, liked.take(CarouselSize))
                         )
                     )
                 }
@@ -162,7 +178,7 @@ class HomeViewModel @Inject constructor(
                     add(shelf(SectionOnRepeat, "Quick picks", HomeSectionStyle.TRACK_PAGER, onRepeat.await()))
                     add(shelf(SectionRecentlyPlayed, "Recently Played", HomeSectionStyle.HERO_CAROUSEL, recentlyPlayed.await()))
                     add(continueListening.value)
-                    add(shelf(SectionLiked, "Your Favorites", HomeSectionStyle.FAVORITES_CAROUSEL, liked.await()))
+                    add(shelf(SectionLiked, "Your Favorites", HomeSectionStyle.HERO_CAROUSEL, liked.await()))
                     add(shelf(SectionDiscover, "Discover", HomeSectionStyle.DISCOVER_MASONRY, discover.await()))
                     addAll(extras.sync(layoutStore.layout.first(), emptyList(), force = true).sections)
                 }.filterNot(HomeSection::isEmpty)
@@ -172,7 +188,7 @@ class HomeViewModel @Inject constructor(
             _uiState.value = HomeUiState(
                 isLoading = false,
                 isRefreshing = false,
-                greeting = greeting(),
+                greeting = greeting(LocalTime.now()),
                 layout = _uiState.value.layout,
                 editing = _uiState.value.editing,
                 allSections = localSections.withLikes(likedTrackIds.value),
@@ -191,12 +207,8 @@ class HomeViewModel @Inject constructor(
                             val seed = homeShelfRepository.getRecentlyPlayed(1).firstOrNull()
                             seed to seed?.let { musicRepository.generateRadio(it, CarouselSize) }.orEmpty()
                         }
-                        // Music videos have no video surface in this player — see `SearchKind` —
-                        // so a shelf built entirely around promoting them ("New music videos",
-                        // "Music videos") is a dead end here, not a discovery opportunity. Dropped
-                        // by title rather than by some upstream flag: YouTube Music's own feed is
-                        // the only source of these, and it names them, not tags them.
-                        val feed = feedDeferred.await().filterNot { it.id == FeedListenAgain || it.title.contains("video", ignoreCase = true) }
+                        // Only the shelves that are a kind of music; see `RecommendedShelf.isGeneric`.
+                        val feed = feedDeferred.await().filter { it.isGeneric }
                         val (seed, suggestions) = recommendedDeferred.await()
 
                         if (feed.isNotEmpty() || (seed != null && suggestions.isNotEmpty())) {
@@ -277,12 +289,5 @@ class HomeViewModel @Inject constructor(
     /** Narrows Home to one backend, or back to all of them. Filters; never refetches. */
     fun selectSource(source: SourceType?) {
         _uiState.update { it.copy(selectedSource = source) }
-    }
-
-    /** Time of day the user is most likely reading this. */
-    private fun greeting(): String = when (LocalTime.now().hour) {
-        in 5..11 -> "Good morning"
-        in 12..17 -> "Good afternoon"
-        else -> "Good evening"
     }
 }

@@ -52,6 +52,7 @@ import com.wander.android.ui.screens.home.customize.HomeEditorAddSheet
 import com.wander.android.ui.screens.home.customize.HomeEditorSettingsSheet
 import com.wander.android.ui.screens.home.customize.homeEditorShelves
 import com.wander.android.ui.screens.home.customize.rememberHomeEditor
+import com.wander.android.ui.screens.home.customize.secondFingerScroll
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -180,7 +181,9 @@ fun HomeScreen(
                     state = listState,
                     contentPadding = contentPadding,
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize().then(
+                        if (state.editing) Modifier.secondFingerScroll(listState) else Modifier
+                    )
                 ) {
                     item(key = "header", contentType = "header") {
                         AnimatedContent(
@@ -189,13 +192,20 @@ fun HomeScreen(
                             label = "homeHeader"
                         ) { editing ->
                             if (editing) {
-                                HomeEditBar(onReset = viewModel.layoutActions::reset, onDone = viewModel.layoutActions::stop)
+                                HomeEditBar(
+                                    onReset = viewModel.layoutActions::reset,
+                                    onDone = viewModel.layoutActions::stop,
+                                    onAddShelf = { editor.setAddingShelf(true) },
+                                    suggestion = editor.rarelyUsed.takeIf { it.isNotEmpty() }?.let { ids ->
+                                        val titles = ids.mapNotNull { id -> editor.order.firstOrNull { it.id == id }?.title?.takeIf(String::isNotEmpty) }
+                                        stringResource(R.string.home_edit_suggestion, titles.joinToString())
+                                    }
+                                )
                             } else {
                                 HomeHeader(
                                     greeting = state.greeting,
                                     hasSession = session != null,
                                     onOpenSessions = { showSessionSheet = true },
-                                    onCustomize = viewModel.layoutActions::start,
                                     onOpenSettings = onOpenSettings
                                 )
                             }

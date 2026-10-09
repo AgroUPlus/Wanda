@@ -6,6 +6,9 @@ import javax.inject.Inject
 
 /** Lets the app shell know the Home customizer is open. */
 @HiltViewModel
-class HomeEditingViewModel @Inject constructor(store: HomeLayoutStore) : ViewModel() {
-    val editing = store.editing
+class HomeEditingViewModel @Inject constructor(private val layoutStore: HomeLayoutStore) : ViewModel() {
+    val editing = layoutStore.editing
+
+    /** From Settings: open Home in the customizer. */
+    fun requestEditing() = layoutStore.requestEditing()
 }

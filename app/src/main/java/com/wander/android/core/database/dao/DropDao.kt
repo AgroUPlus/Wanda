@@ -15,6 +15,10 @@ interface DropDao {
     @Query("SELECT * FROM drops WHERE incoming = 1 AND archived = 0 ORDER BY createdAt DESC")
     fun observeInbox(): Flow<List<DropEntity>>
 
+    /** What friends sent, newest first, archived or not: a one-shot read for the Home shelf. */
+    @Query("SELECT * FROM drops WHERE incoming = 1 ORDER BY createdAt DESC LIMIT :limit")
+    suspend fun recentIncoming(limit: Int): List<DropEntity>
+
     @Query("SELECT * FROM drops WHERE incoming = 0 ORDER BY createdAt DESC")
     fun observeSent(): Flow<List<DropEntity>>
 

@@ -1,6 +1,7 @@
 package com.wander.android.ui.components
 
 import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,6 +11,7 @@ import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -80,9 +82,14 @@ fun WandaSheet(
             }
         }
 
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            content = { content(animatedDismiss) }
-        )
+        // No stretch overscroll inside a sheet. A list pulled down at its top stretches first and
+        // only then lets the sheet move, so the first swipe to close did nothing and the second
+        // worked. Without it the drag goes straight to the sheet.
+        CompositionLocalProvider(LocalOverscrollFactory provides null) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                content = { content(animatedDismiss) }
+            )
+        }
     }
 }

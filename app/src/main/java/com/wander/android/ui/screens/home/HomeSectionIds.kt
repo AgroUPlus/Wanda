@@ -25,12 +25,6 @@ internal const val ChristianCategory = "@christian"
 /** Shelves that are not part of the default Home: added by the user, and gone when removed. */
 internal fun isAddedShelf(id: String) = id.startsWith(GenreShelfPrefix) || id.startsWith(ExtraShelfPrefix)
 
-/**
- * YouTube Music's own "Listen again" feed shelf (see `shelfId`). Dropped: Wanda's own Recently
- * Played covers every source's history, so this one was a second, YTM-only copy of it.
- */
-internal const val FeedListenAgain = "ytm_listen_again"
-
 /** Per-source shelves are unlisted, so they sort after these and before the closing list. */
 internal val SectionOrder = listOf(
     SectionOnRepeat,

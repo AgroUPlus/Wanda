@@ -55,6 +55,8 @@ internal class HomeLayoutActions(
 
     fun toggleCategory(id: String, category: String) = edit { HomeLayoutEditor.toggleCategory(it, id, category) }
 
+    fun toggleSource(id: String, source: String) = edit { HomeLayoutEditor.toggleSource(it, id, source) }
+
     fun toggleLanguage(id: String, code: String) = edit { HomeLayoutEditor.toggleLanguage(it, id, code) }
 
     /**

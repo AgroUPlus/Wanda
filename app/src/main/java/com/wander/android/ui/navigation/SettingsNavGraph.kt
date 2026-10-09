@@ -14,6 +14,8 @@ import com.wander.android.ui.screens.login.YouTubeLoginScreen
 import com.wander.android.ui.screens.replay.ReplayStoryScreen
 import com.wander.android.ui.screens.settings.FingerprintsScreen
 import com.wander.android.ui.screens.settings.MergePreviewScreen
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.wander.android.ui.screens.home.layout.HomeEditingViewModel
 import com.wander.android.ui.screens.settings.SettingsCategory
 import com.wander.android.ui.screens.settings.SettingsCategoryScreen
 import com.wander.android.ui.screens.settings.SettingsScreen
@@ -65,6 +67,7 @@ internal fun NavGraphBuilder.settingsNavGraph(
         if (category == null) {
             navController.popBackStack()
         } else {
+            val homeEditing = hiltViewModel<HomeEditingViewModel>()
             SettingsCategoryScreen(
                 category = category,
                 contentPadding = contentPadding,
@@ -79,7 +82,13 @@ internal fun NavGraphBuilder.settingsNavGraph(
                         Routes.replay(ReplayAvailability.yearOnDemand(LocalDate.now()))
                     )
                 },
-                onOpenFingerprints = { navController.navigateSettled(Routes.FINGERPRINTS) }
+                onOpenFingerprints = { navController.navigateSettled(Routes.FINGERPRINTS) },
+                onCustomizeHome = {
+                    homeEditing.requestEditing()
+                    if (!navController.popBackStack(TopLevelDestination.HOME.route, inclusive = false)) {
+                        navController.navigate(TopLevelDestination.HOME.route)
+                    }
+                }
             )
         }
     }

@@ -130,7 +130,7 @@ private fun CarouselItemScope.CoverItem(
             url = track.artworkUrl,
             contentDescription = track.title,
             sizeDp = MorphArtworkSize,
-            // `maskClip` above already shapes the item; see FavoritesCarouselShelf.
+            // `maskClip` above already shapes the item; see TrackCarouselCard.
             shape = RectangleShape,
             crossfade = false,
             modifier = Modifier.fillMaxSize()
