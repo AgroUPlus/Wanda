@@ -257,6 +257,12 @@
     <string name="settings_section_home">Home</string>
     <string name="settings_customize_home">Customize Home</string>
     <string name="settings_customize_home_sub">Rearrange, add and remove shelves, and choose how each looks</string>
+    <string name="settings_section_navigation">Navigation</string>
+    <string name="settings_dock_title">Bottom bar</string>
+    <string name="settings_dock_none">Search only</string>
+    <string name="settings_dock_hint">Pick up to %1$d shortcuts to sit beside search. Hold one to change its order.</string>
+    <string name="settings_library_sections">Library sections</string>
+    <string name="settings_library_sections_hint">Choose the sections the Library shows. Hold one to change its order.</string>
     <string name="home_shelf_edit">Edit %1$s</string>
     <string name="home_shelf_move_up">Move up</string>
     <string name="home_shelf_move_down">Move down</string>
