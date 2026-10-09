@@ -6,6 +6,7 @@ import com.wander.android.R
 import com.wander.android.data.christian.ChristianLanguage
 import com.wander.android.data.christian.ChristianShelfRepository
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.FriendPicksRepository
 import com.wander.android.data.repository.HomeShelfRepository
 import com.wander.android.ui.screens.home.layout.ShelfConfig
 
@@ -20,7 +21,8 @@ internal enum class ExtraShelf(
     HEAVY_ROTATION(ExtraShelfPrefix + "heavy_rotation", R.string.shelf_heavy_rotation, R.string.shelf_heavy_rotation_summary, HomeSectionStyle.HERO_CAROUSEL),
     FRESH(ExtraShelfPrefix + "fresh", R.string.shelf_fresh, R.string.shelf_fresh_summary, HomeSectionStyle.HERO_CAROUSEL),
     LATE_NIGHT(ExtraShelfPrefix + "late_night", R.string.shelf_late_night, R.string.shelf_late_night_summary, HomeSectionStyle.TRACK_CAROUSEL),
-    RANDOM(ExtraShelfPrefix + "random", R.string.shelf_random, R.string.shelf_random_summary, HomeSectionStyle.DISCOVER_MASONRY);
+    RANDOM(ExtraShelfPrefix + "random", R.string.shelf_random, R.string.shelf_random_summary, HomeSectionStyle.DISCOVER_MASONRY),
+    FRIENDS(ExtraShelfPrefix + "friends", R.string.shelf_friends, R.string.shelf_friends_summary, HomeSectionStyle.TRACK_CAROUSEL);
 
     companion object {
         fun of(id: String): ExtraShelf? = entries.firstOrNull { it.id == id }
@@ -41,6 +43,7 @@ internal class ShelfChanges(val sections: List<HomeSection>, val removed: Set<St
 internal class ExtraShelves(
     private val shelves: HomeShelfRepository,
     private val christian: ChristianShelfRepository,
+    private val friends: FriendPicksRepository,
     private val context: Context
 ) {
     private val builtFrom = HashMap<String, ShelfConfig>()
@@ -70,6 +73,7 @@ internal class ExtraShelves(
                 ExtraShelf.FRESH -> shelves.getRecentlyAdded(CarouselSize)
                 ExtraShelf.LATE_NIGHT -> shelves.getLateNight(CarouselSize)
                 ExtraShelf.RANDOM -> shelves.getRandom(CarouselSize)
+                ExtraShelf.FRIENDS -> friends.tracks(CarouselSize)
             }
             return shelf(config.id, context.getString(extra.title), extra.style, tracks)
         }
