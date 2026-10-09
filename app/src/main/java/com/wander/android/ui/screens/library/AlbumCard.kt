@@ -24,7 +24,6 @@ import com.wander.android.ui.components.rememberPressScale
 import com.wander.android.ui.components.rememberShelfArtworkShape
 import com.wander.android.ui.components.rememberShelfEntranceScale
 import com.wander.android.ui.components.scrollingTitle
-import com.wander.android.ui.components.instantPress
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -52,7 +51,6 @@ fun AlbumCard(
     Column(
         modifier = modifier
             .scale(scale * entranceScale)
-            .instantPress(interactionSource)
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
