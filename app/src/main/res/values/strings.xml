@@ -286,7 +286,10 @@
     <string name="home_edit_reset_confirm">Reset</string>
     <string name="home_edit_suggestion">Nothing played from %1$s lately. Remove or replace them?</string>
     <string name="home_shelf_rarely_used">Rarely used</string>
-    <string name="home_shelf_played">Songs played from this shelf: %1$d</string>
+    <plurals name="home_shelf_plays">
+        <item quantity="one">%1$d play</item>
+        <item quantity="other">%1$d plays</item>
+    </plurals>
     <string name="home_sessions_other_devices">Sessions on other devices</string>
 
     <!-- Importer -->
