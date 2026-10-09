@@ -15,12 +15,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.ui.components.GroupedCard
-import com.wander.android.ui.components.rememberShelfEntranceScale
 
 /**
  * Library sync in Settings.
@@ -37,7 +35,6 @@ internal fun LazyListScope.librarySyncSection(
     item(key = "library_sync_section") {
         SettingsSection(
             stringResource(R.string.settings_section_device_library_sync),
-            modifier = Modifier.scale(rememberShelfEntranceScale(0))
         )
     }
 
@@ -87,7 +84,7 @@ internal fun LazyListScope.librarySyncSection(
                 }
             }
         }
-        GroupedCard(modifier = Modifier.scale(rememberShelfEntranceScale(1)), items = rows)
+        GroupedCard(items = rows)
     }
 
     if ((!state.p2pSync && !state.serverArchive) || state.incognito) return
@@ -96,7 +93,6 @@ internal fun LazyListScope.librarySyncSection(
 
     item(key = "library_sync_now") {
         GroupedCard(
-            modifier = Modifier.scale(rememberShelfEntranceScale(2)),
             items = listOf<@Composable () -> Unit>({
                 SettingsRow(
                     title = stringResource(R.string.settings_sync_now),
