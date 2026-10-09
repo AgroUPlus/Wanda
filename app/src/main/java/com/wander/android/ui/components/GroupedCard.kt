@@ -1,6 +1,7 @@
 package com.wander.android.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -47,7 +48,8 @@ fun GroupedCard(
                     shape = morph.shape(index, items.size),
                     modifier = Modifier.fillMaxWidth().trackPress(morph)
                 ) {
-                    item()
+                    // The content shrinks as the corners round, the way track rows and cards do.
+                    Box(Modifier.pressShrink(morph)) { item() }
                 }
             }
         }
