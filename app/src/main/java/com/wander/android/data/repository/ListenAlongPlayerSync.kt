@@ -1,5 +1,6 @@
 package com.wander.android.data.repository
 
+import android.os.SystemClock
 import android.util.Log
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.sources.agro.AgroFriendNowPlaying
@@ -29,12 +30,14 @@ internal class ListenAlongPlayerSync @Inject constructor(
 
     suspend fun syncPlayback(
         now: AgroFriendNowPlaying,
+        receivedAtMs: Long,
         onSessionUpdated: (resolvedFrom: ResolvedFrom?, unresolvable: String?) -> Unit,
         onStop: () -> Unit
     ) {
-        val key = now.artistName + " " + now.trackTitle
+        // The id is part of the identity: a song and its video share title and artist.
+        val key = now.trackUri + "|" + now.artistName + " " + now.trackTitle
         if (key == playingKey) {
-            correctDrift(now)
+            correctDrift(now, receivedAtMs)
             matchTransport(now)
             return
         }
@@ -59,21 +62,31 @@ internal class ListenAlongPlayerSync @Inject constructor(
         onSessionUpdated(resolved.from, null)
         withContext(Dispatchers.Main) {
             playerConnection.setFollowing(false)
-            playerConnection.play(listOf(resolved.track), startPositionMs = now.positionMs)
+            // Resolving can take seconds, and the host kept playing meanwhile.
+            playerConnection.play(listOf(resolved.track), startPositionMs = hostPositionMs(now, receivedAtMs))
             playerConnection.setFollowing(true) { onStop() }
             playerConnection.followerSetPlaying(now.isPlaying)
         }
     }
 
-    private suspend fun correctDrift(now: AgroFriendNowPlaying) = withContext(Dispatchers.Main) {
+    private suspend fun correctDrift(now: AgroFriendNowPlaying, receivedAtMs: Long) = withContext(Dispatchers.Main) {
         if (playerConnection.state.value.isBuffering) return@withContext
         val here = playerConnection.controller.value?.currentPosition ?: return@withContext
-        if (abs(here - now.positionMs) > DRIFT_TOLERANCE_MS) {
-            playerConnection.followerSeek(now.positionMs)
+        val target = hostPositionMs(now, receivedAtMs)
+        if (abs(here - target) > DRIFT_TOLERANCE_MS) {
+            playerConnection.followerSeek(target)
         }
     }
+
+    /** Where the host is now: the reported position plus the time since the frame arrived. */
+    private fun hostPositionMs(now: AgroFriendNowPlaying, receivedAtMs: Long): Long =
+        estimateHostPosition(now.positionMs, now.isPlaying, SystemClock.elapsedRealtime() - receivedAtMs)
 
     private suspend fun matchTransport(now: AgroFriendNowPlaying) = withContext(Dispatchers.Main) {
         playerConnection.followerSetPlaying(now.isPlaying)
     }
 }
+
+/** A paused host has not moved since the frame; a playing one has moved on by the frame's age. */
+internal fun estimateHostPosition(positionMs: Long, isPlaying: Boolean, ageMs: Long): Long =
+    if (isPlaying) positionMs + ageMs.coerceAtLeast(0L) else positionMs

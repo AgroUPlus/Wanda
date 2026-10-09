@@ -20,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.core.permissions.rememberLocalNetworkGate
@@ -45,6 +47,9 @@ internal fun SocialScreen(
     viewModel: SocialViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    // Also fires on first composition. Coming back from another app does not recreate the
+    // ViewModel, so without this the roster stays as it was when the app was left.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh(showIndicator = false) }
     val search by viewModel.search.collectAsStateWithLifecycle()
     val jamViewModel: JamViewModel = hiltViewModel()
     val jam = jamViewModel.state.collectAsStateWithLifecycle().value.jam

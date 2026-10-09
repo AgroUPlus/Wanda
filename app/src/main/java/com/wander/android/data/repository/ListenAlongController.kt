@@ -1,5 +1,6 @@
 package com.wander.android.data.repository
 
+import android.os.SystemClock
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.sources.agro.AgroFriendNowPlaying
 import com.wander.android.data.sources.agro.AgroListenAlongApi
@@ -34,7 +35,7 @@ internal class ListenAlongController @Inject constructor(
     val session: StateFlow<ListenAlongSession?> = _session.asStateFlow()
 
     private val followMutex = Mutex()
-    private var pending: AgroFriendNowPlaying? = null
+    private var pending: Pair<AgroFriendNowPlaying, Long>? = null
 
     suspend fun start(host: String): Result<Unit> = api.startListenAlong(host).map { state ->
         suppression.set(true)
@@ -82,12 +83,12 @@ internal class ListenAlongController @Inject constructor(
     }
 
     private fun submit(now: AgroFriendNowPlaying) {
-        pending = now
+        pending = now to SystemClock.elapsedRealtime()
         scope.launch {
             followMutex.withLock {
-                val target = pending ?: return@withLock
+                val (target, receivedAtMs) = pending ?: return@withLock
                 pending = null
-                follow(target)
+                follow(target, receivedAtMs)
             }
         }
     }
@@ -128,10 +129,11 @@ internal class ListenAlongController @Inject constructor(
         )
     }
 
-    private suspend fun follow(now: AgroFriendNowPlaying) {
+    private suspend fun follow(now: AgroFriendNowPlaying, receivedAtMs: Long) {
         _session.value = _session.value?.copy(nowPlaying = now)
         playerSync.syncPlayback(
             now = now,
+            receivedAtMs = receivedAtMs,
             onSessionUpdated = { resolvedFrom, unresolvable ->
                 _session.value = _session.value?.copy(
                     resolvedFrom = resolvedFrom,
