@@ -49,14 +49,20 @@ class YTMusicCatalogLoader @Inject constructor(
                 .take(count)
         }
 
+    /**
+     * The home feed and the discovery pages. A page that fails is skipped; if every page fails the
+     * result is that failure, so a caller can tell a broken connection from a feed with no shelves.
+     */
     suspend fun getRecommendations(): Result<List<RecommendedShelf>> = coroutineScope {
-        val home = async { innerTube.home().map { it.homeShelves() }.getOrDefault(emptyList()) }
+        val home = async { innerTube.home().map { it.homeShelves() } }
         val discovery = DISCOVERY_BROWSE_IDS.map { browseId ->
-            async { innerTube.browse(browseId).map { it.homeShelves() }.getOrDefault(emptyList()) }
+            async { innerTube.browse(browseId).map { it.homeShelves() } }
         }
 
-        val shelves = (listOf(home) + discovery).flatMap { it.await() }
-        Result.success(shelves.distinctBy { it.id })
+        val pages = (listOf(home) + discovery).map { it.await() }
+        val shelves = pages.flatMap { it.getOrDefault(emptyList()) }
+        val failure = pages.firstOrNull { it.isFailure }?.exceptionOrNull()
+        if (shelves.isEmpty() && failure != null) Result.failure(failure) else Result.success(shelves.distinctBy { it.id })
     }
 
     suspend fun createShareLink(target: ShareTarget): Result<String> {
