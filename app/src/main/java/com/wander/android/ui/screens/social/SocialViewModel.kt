@@ -95,12 +95,16 @@ internal class SocialViewModel @Inject constructor(
                 }
             }
         }
-
-        refresh()
     }
 
-    fun refresh() {
-        _state.value = _state.value.copy(isRefreshing = true)
+    /**
+     * Re-reads the graph, the feed and who is playing what.
+     *
+     * [showIndicator] is false for the resume refresh: the cached roster is already on screen, so
+     * a spinner would only announce work the user did not ask for.
+     */
+    fun refresh(showIndicator: Boolean = true) {
+        if (showIndicator) _state.value = _state.value.copy(isRefreshing = true)
         viewModelScope.launch {
             val result = repository.refresh()
             _state.value = _state.value.copy(

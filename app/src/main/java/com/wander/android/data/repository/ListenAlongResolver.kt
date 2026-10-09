@@ -61,9 +61,17 @@ internal class ListenAlongResolver @Inject constructor(
         }
 
         // 3. YouTube Music streaming
-        val ytmMatches = musicRepository
-            .searchAllSources(query, onlySources = setOf(SourceType.YTMUSIC), kind = SearchKind.TRACKS)
-        val bestYtm = ytmMatches.bestMatch(title, artist)
+        val ytm = setOf(SourceType.YTMUSIC)
+        val ytmMatches = musicRepository.searchAllSources(query, onlySources = ytm, kind = SearchKind.TRACKS)
+        // The host's own id wins over a title match: YouTube Music files a song and its video under
+        // separate ids, and the video runs longer, so the wrong form lands the follower out of step.
+        val exactId = hostTrackId?.takeIf { it.isNotBlank() }
+        val exact = exactId?.let { id ->
+            ytmMatches.firstOrNull { it.id == id }
+                ?: musicRepository.searchAllSources(query, onlySources = ytm, kind = SearchKind.VIDEOS)
+                    .firstOrNull { it.id == id }
+        }
+        val bestYtm = exact ?: ytmMatches.bestMatch(title, artist)
         if (bestYtm != null) {
             return ResolvedTrack(bestYtm, ResolvedFrom.YOUTUBE_MUSIC)
         }
