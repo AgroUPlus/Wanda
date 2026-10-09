@@ -10,6 +10,7 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.R
 import com.wander.android.data.christian.ChristianShelfRepository
 import com.wander.android.data.repository.EpisodeProgressRepository
+import com.wander.android.data.repository.FriendPicksRepository
 import com.wander.android.data.repository.HomeShelfRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.ShareRepository
@@ -43,6 +44,7 @@ class HomeViewModel @Inject constructor(
     private val playbackCoordinator: PlaybackCoordinator,
     private val layoutStore: HomeLayoutStore,
     christianShelf: ChristianShelfRepository,
+    friendPicks: FriendPicksRepository,
     episodeProgress: EpisodeProgressRepository,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
@@ -50,7 +52,7 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    private val extras = ExtraShelves(homeShelfRepository, christianShelf, context)
+    private val extras = ExtraShelves(homeShelfRepository, christianShelf, friendPicks, context)
 
     /** The customizer's actions; see [HomeLayoutActions]. */
     internal val layoutActions = HomeLayoutActions(layoutStore, _uiState)
