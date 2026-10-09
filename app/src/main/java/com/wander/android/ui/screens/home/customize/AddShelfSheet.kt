@@ -24,8 +24,6 @@ import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.ui.components.GroupedItemGap
+import com.wander.android.ui.components.WandaSheet
 import com.wander.android.ui.components.pressShrink
 import com.wander.android.ui.components.rememberPressMorph
 import com.wander.android.ui.components.trackPress
@@ -80,7 +79,7 @@ internal fun AddShelfSheet(
     val youtube = restorable.filter { it.origin == ShelfOrigin.YOUTUBE_MUSIC }
     val agro = restorable.filter { it.origin == ShelfOrigin.AGRO }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    WandaSheet(onDismissRequest = onDismiss) {
         LazyColumn(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(GroupedItemGap)
