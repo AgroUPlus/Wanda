@@ -4,8 +4,10 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -13,8 +15,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -27,6 +32,8 @@ import com.wander.android.ui.screens.home.HomeSection
 import com.wander.android.ui.screens.home.HomeShelfStates
 import com.wander.android.ui.screens.home.HomeViewModel
 import com.wander.android.ui.screens.home.LocalHomeEditing
+import com.wander.android.ui.screens.home.ShelfOrigin
+import com.wander.android.ui.screens.home.shelfOrigin
 import com.wander.android.ui.screens.home.layout.ShelfConfig
 
 private const val LiftedScale = 1.03f
@@ -54,8 +61,10 @@ internal fun ShelfEditFrame(
     val motion = MaterialTheme.motionScheme
     val scale by animateFloatAsState(if (isDragging) LiftedScale else 1f, motion.fastSpatialSpec(), label = "shelfLift")
     val lift by animateDpAsState(if (isDragging) 16.dp else 0.dp, motion.fastSpatialSpec(), label = "shelfShadow")
+    val origin = shelfOrigin(section.id)
+    val resting = origin.tint(MaterialTheme.colorScheme.surfaceContainer)
     val container by animateColorAsState(
-        if (isDragging) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainer,
+        if (isDragging) origin.tint(MaterialTheme.colorScheme.surfaceContainerHighest) else resting,
         motion.fastEffectsSpec(),
         label = "shelfColor"
     )
@@ -87,15 +96,18 @@ internal fun ShelfEditFrame(
                 )
             }
     ) {
-        CompositionLocalProvider(
-            LocalHomeEditing provides true,
-            LocalViewConfiguration provides rememberHeldNeverConfiguration()
-        ) {
-            if (section.isEmpty) {
-                EmptyShelf(name)
-            } else {
-                ShelfBody(section, viewModel, states, Modifier.padding(vertical = 14.dp))
+        Box {
+            CompositionLocalProvider(
+                LocalHomeEditing provides true,
+                LocalViewConfiguration provides rememberHeldNeverConfiguration()
+            ) {
+                if (section.isEmpty) {
+                    EmptyShelf(name)
+                } else {
+                    ShelfBody(section, viewModel, states, Modifier.padding(vertical = 14.dp))
+                }
             }
+            OriginBadge(origin, Modifier.align(Alignment.TopEnd).padding(10.dp))
         }
     }
 }
@@ -112,3 +124,40 @@ private fun EmptyShelf(name: String) {
         )
     }
 }
+
+/** The tint a shelf's frame takes from where its songs come from; the library keeps the neutral [base]. */
+@Composable
+internal fun ShelfOrigin.tint(base: Color): Color = when (this) {
+    ShelfOrigin.LIBRARY -> base
+    ShelfOrigin.YOUTUBE_MUSIC -> lerp(base, MaterialTheme.colorScheme.tertiaryContainer, TintStrength)
+    ShelfOrigin.AGRO -> lerp(base, MaterialTheme.colorScheme.primaryContainer, TintStrength)
+    ShelfOrigin.FRIENDS -> lerp(base, MaterialTheme.colorScheme.secondaryContainer, TintStrength)
+}
+
+@Composable
+internal fun ShelfOrigin.accent(): Color = when (this) {
+    ShelfOrigin.LIBRARY -> MaterialTheme.colorScheme.secondaryContainer
+    ShelfOrigin.YOUTUBE_MUSIC -> MaterialTheme.colorScheme.tertiaryContainer
+    ShelfOrigin.AGRO -> MaterialTheme.colorScheme.primaryContainer
+    ShelfOrigin.FRIENDS -> MaterialTheme.colorScheme.secondaryContainer
+}
+
+/** A small label for shelves that come from somewhere other than the library. */
+@Composable
+private fun OriginBadge(origin: ShelfOrigin, modifier: Modifier = Modifier) {
+    val label = when (origin) {
+        ShelfOrigin.LIBRARY -> return
+        ShelfOrigin.YOUTUBE_MUSIC -> R.string.origin_youtube_music
+        ShelfOrigin.AGRO -> R.string.origin_agro
+        ShelfOrigin.FRIENDS -> R.string.origin_friends
+    }
+    Surface(shape = CircleShape, color = origin.accent(), modifier = modifier) {
+        Text(
+            text = stringResource(label),
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+    }
+}
+
+private const val TintStrength = 0.55f
