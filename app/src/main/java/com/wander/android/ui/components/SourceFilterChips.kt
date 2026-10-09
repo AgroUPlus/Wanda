@@ -13,8 +13,6 @@ import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.data.model.SourceType
 
-private val ChipIconSize = 18.dp
-
 /**
  * "All" plus one button per connected backend, as a connected toggle group that scrolls sideways
  * when the backends do not all fit. Choosing the chosen backend again goes back to "All".
@@ -44,8 +42,7 @@ fun SourceFilterChips(
             label = { it?.let(label) ?: stringResource(R.string.common_all) },
             onSelect = { onSelect(if (it == selected) null else it) },
             equalWidth = false,
-            enabled = enabled,
-            leadingIcon = { source -> source?.let { SourceIcon(it, size = ChipIconSize) } }
+            enabled = enabled
         )
     }
 }
