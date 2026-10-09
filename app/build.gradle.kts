@@ -29,7 +29,7 @@ android {
         applicationId = "com.wander.android"
         minSdk = 26
         targetSdk = 37
-        versionCode = 60
+        versionCode = 61
         versionName = "1.5.12"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
