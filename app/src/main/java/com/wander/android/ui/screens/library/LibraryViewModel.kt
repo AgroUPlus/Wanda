@@ -18,6 +18,7 @@ import com.wander.android.ui.components.AddToPlaylistController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import com.wander.android.ui.navigation.NavLayoutStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -42,7 +43,8 @@ class LibraryViewModel @Inject constructor(
     private val shareRepository: ShareRepository,
     private val playlistWriter: PlaylistWriteRepository,
     private val libraryPlayback: LibraryPlaybackCoordinator,
-    private val playlistsLoader: LibraryPlaylistsLoader
+    private val playlistsLoader: LibraryPlaylistsLoader,
+    navLayout: NavLayoutStore
 ) : ViewModel() {
 
     /** Whether any connected source can be written to. Drives the "New playlist" affordance. */
@@ -57,6 +59,10 @@ class LibraryViewModel @Inject constructor(
     fun refreshPlaylists() {
         viewModelScope.launch { playlistsLoader.refresh() }
     }
+
+    /** The sections the user chose to show, in their order. */
+    val tabs: StateFlow<List<LibraryTab>> =
+        navLayout.libraryTabs.stateIn(viewModelScope, SharingStarted.Eagerly, LibraryTab.entries)
 
     private val _tab = MutableStateFlow(LibraryTab.LIKED)
     val tab: StateFlow<LibraryTab> = _tab.asStateFlow()
