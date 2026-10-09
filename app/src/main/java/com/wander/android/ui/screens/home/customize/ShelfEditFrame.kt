@@ -35,6 +35,7 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
+import com.wander.android.data.repository.ServiceProblem
 import com.wander.android.ui.screens.home.HomeSection
 import com.wander.android.ui.screens.home.HomeShelfStates
 import com.wander.android.ui.screens.home.HomeViewModel
@@ -58,6 +59,7 @@ internal fun ShelfEditFrame(
     config: ShelfConfig,
     isDragging: Boolean,
     rarelyUsed: Boolean,
+    problem: ServiceProblem?,
     viewModel: HomeViewModel,
     states: HomeShelfStates,
     onTap: () -> Unit,
@@ -108,7 +110,7 @@ internal fun ShelfEditFrame(
                 LocalViewConfiguration provides rememberHeldNeverConfiguration()
             ) {
                 if (section.isEmpty) {
-                    EmptyShelf(name, emptyShelfMessage(config))
+                    EmptyShelf(name, emptyShelfMessage(config, problem))
                 } else {
                     // A new layout fades and grows in over the old one, and the card follows the
                     // size change on the same spring, so changing a shelf's look reads as one motion.
