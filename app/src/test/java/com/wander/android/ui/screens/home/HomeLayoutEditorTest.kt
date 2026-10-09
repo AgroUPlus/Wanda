@@ -63,4 +63,11 @@ class HomeLayoutEditorTest {
         assertEquals("Christian · Rock", genreShelfTitle(listOf("@christian", "Rock"), "Christian", "x"))
         assertEquals("Rock · Jazz +1", genreShelfTitle(listOf("Rock", "Jazz", "Pop"), "Christian", "x"))
     }
+
+    @Test
+    fun `sources toggle on and off`() {
+        val on = HomeLayoutEditor.toggleSource(configs, "c", "YTMUSIC")
+        assertEquals(listOf("YTMUSIC"), on[2].sources)
+        assertEquals(emptyList<String>(), HomeLayoutEditor.toggleSource(on, "c", "YTMUSIC")[2].sources)
+    }
 }
