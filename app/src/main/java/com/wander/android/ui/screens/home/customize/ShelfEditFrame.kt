@@ -42,7 +42,7 @@ private const val LiftedScale = 1.03f
  * One shelf in the customizer: the shelf itself, drawn as on Home, in a tonal card. Hold it to pick
  * it up and drag; tap it to edit it. Nothing else is drawn — the whole card is the control.
  *
- * [dragModifier] is the list's long-press-to-drag handle. [onMoveUp] and [onMoveDown] are the same
+ * The list's long-press-to-drag handle arrives in [modifier]. [onMoveUp] and [onMoveDown] are the same
  * reorder offered to accessibility services, which cannot long-press and drag.
  */
 @Composable
@@ -55,7 +55,6 @@ internal fun ShelfEditFrame(
     onTap: () -> Unit,
     onMoveUp: (() -> Unit)?,
     onMoveDown: (() -> Unit)?,
-    dragModifier: Modifier,
     modifier: Modifier = Modifier
 ) {
     val motion = MaterialTheme.motionScheme
@@ -84,7 +83,6 @@ internal fun ShelfEditFrame(
                 scaleY = scale
             }
             .shelfTap(onTap)
-            .then(dragModifier)
             .semantics(mergeDescendants = true) {
                 onClick(label = editLabel) {
                     onTap()
