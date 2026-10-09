@@ -110,6 +110,8 @@ internal fun RowScope.HeroActionButton(
         modifier = Modifier
             .weight(weight)
             .fillMaxHeight()
+            // Pressed from the moment a finger lands, not after a click's own short delay.
+            .instantPress(interaction)
     ) {
         Row(
             horizontalArrangement = Arrangement.Center,
