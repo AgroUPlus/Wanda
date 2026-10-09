@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.RelatedArtist
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.rememberPressScale
-import com.wander.android.ui.components.instantPress
 
 /**
  * One suggestion from the "Fans might also like" shelf.
@@ -47,7 +46,6 @@ internal fun RelatedArtistCard(
         modifier = modifier
             .width(104.dp)
             .scale(scale)
-            .instantPress(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
