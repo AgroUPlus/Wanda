@@ -30,6 +30,7 @@ import com.wander.android.ui.components.rememberPressScale
 import com.wander.android.ui.components.rememberShelfArtworkShape
 import com.wander.android.ui.components.rememberShelfEntranceScale
 import com.wander.android.ui.components.scrollingTitle
+import com.wander.android.ui.components.instantPress
 
 /**
  * Two even rows, scrolling sideways. For "Discover" — unranked, mixed-provenance suggestions where
@@ -92,6 +93,7 @@ private fun MasonryCard(
             .width(CardWidth)
             .scale(scale * entranceScale)
             .graphicsLayer { alpha = if (enabled) 1f else DisabledAlpha }
+            .instantPress(interactionSource)
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
