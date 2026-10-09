@@ -8,6 +8,7 @@ import com.wander.android.data.model.SmartMix
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.R
+import com.wander.android.data.christian.ChristianShelfRepository
 import com.wander.android.data.repository.EpisodeProgressRepository
 import com.wander.android.data.repository.HomeShelfRepository
 import com.wander.android.data.repository.MusicRepository
@@ -41,12 +42,15 @@ class HomeViewModel @Inject constructor(
     private val playerConnection: PlayerConnection,
     private val playbackCoordinator: PlaybackCoordinator,
     private val layoutStore: HomeLayoutStore,
+    christianShelf: ChristianShelfRepository,
     episodeProgress: EpisodeProgressRepository,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    private val extras = ExtraShelves(homeShelfRepository, christianShelf, context)
 
     /** The customizer's actions; see [HomeLayoutActions]. */
     internal val layoutActions = HomeLayoutActions(layoutStore, _uiState)
@@ -89,11 +93,9 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             layoutStore.layout.collect { layout ->
                 _uiState.update { it.copy(layout = layout) }
-                // A genre shelf added in the customizer has no tracks until they are read.
-                val have = _uiState.value.allSections.mapTo(HashSet()) { it.id }
-                homeShelfRepository.genreSections(layout, have).forEach { shelf ->
-                    _uiState.update { it.copy(allSections = it.allSections.withSection(shelf)) }
-                }
+                // Shelves the user added have no tracks until they are read, or after their settings change.
+                val changes = extras.sync(layout, _uiState.value.allSections)
+                _uiState.update { it.copy(allSections = changes.applyTo(it.allSections)) }
             }
         }
     }
@@ -162,7 +164,7 @@ class HomeViewModel @Inject constructor(
                     add(continueListening.value)
                     add(shelf(SectionLiked, "Your Favorites", HomeSectionStyle.FAVORITES_CAROUSEL, liked.await()))
                     add(shelf(SectionDiscover, "Discover", HomeSectionStyle.DISCOVER_MASONRY, discover.await()))
-                    addAll(homeShelfRepository.genreSections(layoutStore.layout.first()))
+                    addAll(extras.sync(layoutStore.layout.first(), emptyList(), force = true).sections)
                 }.filterNot(HomeSection::isEmpty)
             }
 

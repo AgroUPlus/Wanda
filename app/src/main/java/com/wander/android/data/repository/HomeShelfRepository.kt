@@ -65,8 +65,26 @@ class HomeShelfRepository @Inject constructor(
     /** Genres in the library with enough songs to fill a shelf. */
     val genres: Flow<List<String>> = trackDao.observeGenres()
 
-    suspend fun getGenreTracks(genre: String, limit: Int): List<UnifiedTrack> = withContext(Dispatchers.IO) {
-        trackDao.getTracksByGenre(genre, limit).map(TrackEntity::toUnifiedTrack)
+    suspend fun getGenreTracks(genres: List<String>, limit: Int): List<UnifiedTrack> = withContext(Dispatchers.IO) {
+        if (genres.isEmpty()) return@withContext emptyList()
+        trackDao.getTracksByGenres(genres.map { it.lowercase() }, limit).map(TrackEntity::toUnifiedTrack)
+    }
+
+    suspend fun getForgottenFavorites(limit: Int): List<UnifiedTrack> = withContext(Dispatchers.IO) {
+        val cutoff = System.currentTimeMillis() - FORGOTTEN_AFTER_MILLIS
+        trackDao.getForgottenFavorites(cutoff, limit).map(TrackEntity::toUnifiedTrack)
+    }
+
+    suspend fun getRecentlyAdded(limit: Int): List<UnifiedTrack> = withContext(Dispatchers.IO) {
+        trackDao.getRecentlyAddedTracks(limit * OVERFETCH).map(TrackEntity::toUnifiedTrack).filterNot { it.isEpisode }.take(limit)
+    }
+
+    suspend fun getLateNight(limit: Int): List<UnifiedTrack> = withContext(Dispatchers.IO) {
+        historyDao.getLateNightTracks(limit).map(TrackEntity::toUnifiedTrack)
+    }
+
+    suspend fun getRandom(limit: Int): List<UnifiedTrack> = withContext(Dispatchers.IO) {
+        trackDao.getRandomTracks(limit).map(TrackEntity::toUnifiedTrack)
     }
 
     suspend fun getNeverPlayed(limit: Int = 20): List<UnifiedTrack> = withContext(Dispatchers.IO) {
@@ -112,5 +130,8 @@ class HomeShelfRepository @Inject constructor(
     private companion object {
         /** How much wider to cast the net before collapsing copies down to recordings. */
         const val OVERFETCH = 3
+
+        /** A favourite not played for this long is "forgotten". */
+        const val FORGOTTEN_AFTER_MILLIS = 30L * 24 * 60 * 60 * 1000
     }
 }

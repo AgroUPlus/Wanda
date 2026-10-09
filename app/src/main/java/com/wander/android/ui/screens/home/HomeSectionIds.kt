@@ -13,8 +13,17 @@ internal const val SectionLiked = "liked"
 internal const val SectionDiscover = "discover"
 internal const val SectionBecause = "because_you_listened"
 
-/** A shelf of one genre the user added; the genre is the rest of the id. */
-internal const val GenreShelfPrefix = "genre:"
+/** A genre shelf the user added. Its categories live in its `ShelfConfig`; the rest of the id only tells shelves apart. */
+internal const val GenreShelfPrefix = "genres:"
+
+/** The shelves offered under "More shelves"; see `ExtraShelf`. */
+internal const val ExtraShelfPrefix = "extra:"
+
+/** The curated Christian music category of a genre shelf, as opposed to a genre tag from the library. */
+internal const val ChristianCategory = "@christian"
+
+/** Shelves that are not part of the default Home: added by the user, and gone when removed. */
+internal fun isAddedShelf(id: String) = id.startsWith(GenreShelfPrefix) || id.startsWith(ExtraShelfPrefix)
 
 /**
  * YouTube Music's own "Listen again" feed shelf (see `shelfId`). Dropped: Wanda's own Recently

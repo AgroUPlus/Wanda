@@ -45,7 +45,9 @@ internal class HomeEditor(
     val settingsFor: String?,
     val openSettings: (String?) -> Unit,
     val addingShelf: Boolean,
-    val setAddingShelf: (Boolean) -> Unit
+    val setAddingShelf: (Boolean) -> Unit,
+    /** Opens a new shelf's settings once the saved layout has caught up with it. */
+    val openWhenSaved: (String) -> Unit
 )
 
 @Composable
@@ -69,12 +71,23 @@ internal fun rememberHomeEditor(state: HomeUiState, viewModel: HomeViewModel, li
 
     var settingsFor by rememberSaveable { mutableStateOf<String?>(null) }
     var addingShelf by rememberSaveable { mutableStateOf(false) }
-    return HomeEditor(order, reorderState, settingsFor, { settingsFor = it }, addingShelf, { addingShelf = it })
+    // The layout reaches this screen a beat after it is saved, and a settings sheet for a shelf it
+    // does not know yet would close itself, so a new shelf's sheet waits for the layout.
+    var pending by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(pending, state.layout) {
+        val id = pending ?: return@LaunchedEffect
+        if (state.layout.any { it.id == id }) {
+            settingsFor = id
+            pending = null
+        }
+    }
+    return HomeEditor(order, reorderState, settingsFor, { settingsFor = it }, addingShelf, { addingShelf = it }, { pending = it })
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 internal fun LazyListScope.homeEditorShelves(
     editor: HomeEditor,
+    state: HomeUiState,
     viewModel: HomeViewModel,
     states: HomeShelfStates
 ) {
@@ -85,6 +98,7 @@ internal fun LazyListScope.homeEditorShelves(
         ReorderableItem(editor.reorderState, key = section.id) { isDragging ->
             ShelfEditFrame(
                 section = section,
+                config = state.layout.firstOrNull { it.id == section.id } ?: ShelfConfig(section.id),
                 isDragging = isDragging,
                 viewModel = viewModel,
                 states = states,
@@ -126,6 +140,9 @@ internal fun HomeEditorSettingsSheet(editor: HomeEditor, state: HomeUiState, vie
         config = state.layout.firstOrNull { it.id == id } ?: ShelfConfig(id),
         onStyle = { viewModel.layoutActions.setStyle(id, it) },
         onCount = { viewModel.layoutActions.setCount(id, it) },
+        libraryGenres = viewModel.genres.collectAsStateWithLifecycle().value,
+        onCategory = { viewModel.layoutActions.toggleCategory(id, it) },
+        onLanguage = { viewModel.layoutActions.toggleLanguage(id, it) },
         onRemove = {
             viewModel.layoutActions.remove(id)
             editor.openSettings(null)
@@ -137,13 +154,15 @@ internal fun HomeEditorSettingsSheet(editor: HomeEditor, state: HomeUiState, vie
 @Composable
 internal fun HomeEditorAddSheet(editor: HomeEditor, state: HomeUiState, viewModel: HomeViewModel) {
     if (!editor.addingShelf) return
-    val genres by viewModel.genres.collectAsStateWithLifecycle()
-    val onHome = state.layout.filter { it.enabled }.mapTo(HashSet()) { it.id }
     AddShelfSheet(
         removed = state.removedSections,
-        genres = genres.filter { com.wander.android.ui.screens.home.GenreShelfPrefix + it !in onHome },
+        extras = state.availableExtras,
         onRestore = viewModel.layoutActions::restore,
-        onAddGenre = viewModel.layoutActions::addGenre,
+        onAddExtra = viewModel.layoutActions::addExtra,
+        onCreateGenre = {
+            editor.openWhenSaved(viewModel.layoutActions.addGenreShelf())
+            editor.setAddingShelf(false)
+        },
         onDismiss = { editor.setAddingShelf(false) }
     )
 }

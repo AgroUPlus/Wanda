@@ -34,6 +34,15 @@ internal object HomeLayoutEditor {
     fun setCount(configs: List<ShelfConfig>, id: String, count: Int?) =
         update(configs, id) { it.copy(count = count) }
 
+    /** Selects the category if it is not selected, and unselects it if it is. */
+    fun toggleCategory(configs: List<ShelfConfig>, id: String, category: String) =
+        update(configs, id) { it.copy(categories = it.categories.toggled(category)) }
+
+    fun toggleLanguage(configs: List<ShelfConfig>, id: String, code: String) =
+        update(configs, id) { it.copy(languages = it.languages.toggled(code)) }
+
+    private fun List<String>.toggled(value: String) = if (value in this) this - value else this + value
+
     private fun update(configs: List<ShelfConfig>, id: String, change: (ShelfConfig) -> ShelfConfig) =
         configs.map { if (it.id == id) change(it) else it }
 }

@@ -44,9 +44,22 @@ data class HomeUiState(
      * What the customizer draws: the shelves on Home in the user's order, never narrowed by the
      * source filter — removing a shelf must not depend on which chip is selected.
      */
-    val editorSections: List<HomeSection> by lazy { HomeLayoutApplier.apply(allSections, layout) }
+    val editorSections: List<HomeSection> by lazy {
+        // A shelf the user added that has nothing to show still needs a card, or it could not be
+        // set up or removed. It is empty, and the card says so.
+        val empty = layout
+            .filter { it.enabled && isAddedShelf(it.id) && allSections.none { s -> s.id == it.id } }
+            .map { HomeSection(it.id, "", HomeSectionStyle.TRACK_CAROUSEL) }
+        HomeLayoutApplier.apply(allSections + empty, layout)
+    }
 
-    /** Shelves the user removed, for the Add shelf sheet to offer back. */
+    /** Optional shelves not on Home, for the Add shelf sheet to offer. */
+    internal val availableExtras: List<ExtraShelf> by lazy {
+        val onHome = layout.filter { it.enabled }.mapTo(HashSet()) { it.id }
+        ExtraShelf.entries.filter { it.id !in onHome }
+    }
+
+    /** Default shelves the user removed, for the Add shelf sheet to offer back. */
     val removedSections: List<HomeSection> by lazy {
         val removed = layout.filterNot { it.enabled }.mapTo(HashSet()) { it.id }
         allSections.filter { it.id in removed }

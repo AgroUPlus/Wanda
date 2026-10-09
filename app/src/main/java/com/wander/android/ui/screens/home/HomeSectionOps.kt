@@ -1,8 +1,6 @@
 package com.wander.android.ui.screens.home
 
 import com.wander.android.data.model.UnifiedTrack
-import com.wander.android.data.repository.HomeShelfRepository
-import com.wander.android.ui.screens.home.layout.ShelfConfig
 
 // Pure list operations on Home's shelves, shared by [HomeViewModel].
 
@@ -42,18 +40,3 @@ internal fun List<HomeSection>.withSection(section: HomeSection): List<HomeSecti
     val at = indexOfFirst { SectionOrder.indexOf(it.id) > rank }
     return if (at < 0) this + section else toMutableList().also { it.add(at, section) }
 }
-
-/**
- * The genre shelves the layout asks for that [have] does not hold yet. A genre with nothing in it
- * comes back absent, like any other empty shelf.
- */
-internal suspend fun HomeShelfRepository.genreSections(
-    layout: List<ShelfConfig>,
-    have: Set<String> = emptySet()
-): List<HomeSection> = layout
-    .filter { it.id.startsWith(GenreShelfPrefix) && it.id !in have }
-    .map { config ->
-        val genre = config.id.removePrefix(GenreShelfPrefix)
-        carousel(config.id, genre, getGenreTracks(genre, CarouselSize))
-    }
-    .filterNot(HomeSection::isEmpty)

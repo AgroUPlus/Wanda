@@ -3,10 +3,13 @@ package com.wander.android.ui.screens.home.customize
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -24,6 +27,7 @@ import com.wander.android.ui.screens.home.HomeSection
 import com.wander.android.ui.screens.home.HomeShelfStates
 import com.wander.android.ui.screens.home.HomeViewModel
 import com.wander.android.ui.screens.home.LocalHomeEditing
+import com.wander.android.ui.screens.home.layout.ShelfConfig
 
 private const val LiftedScale = 1.03f
 
@@ -37,6 +41,7 @@ private const val LiftedScale = 1.03f
 @Composable
 internal fun ShelfEditFrame(
     section: HomeSection,
+    config: ShelfConfig,
     isDragging: Boolean,
     viewModel: HomeViewModel,
     states: HomeShelfStates,
@@ -54,7 +59,8 @@ internal fun ShelfEditFrame(
         motion.fastEffectsSpec(),
         label = "shelfColor"
     )
-    val editLabel = stringResource(R.string.home_shelf_edit, section.title)
+    val name = shelfName(section, config)
+    val editLabel = stringResource(R.string.home_shelf_edit, name)
     val moveUp = stringResource(R.string.home_shelf_move_up)
     val moveDown = stringResource(R.string.home_shelf_move_down)
 
@@ -85,7 +91,24 @@ internal fun ShelfEditFrame(
             LocalHomeEditing provides true,
             LocalViewConfiguration provides rememberHeldNeverConfiguration()
         ) {
-            ShelfBody(section, viewModel, states, Modifier.padding(vertical = 14.dp))
+            if (section.isEmpty) {
+                EmptyShelf(name)
+            } else {
+                ShelfBody(section, viewModel, states, Modifier.padding(vertical = 14.dp))
+            }
         }
+    }
+}
+
+/** A shelf that has nothing to show yet: its name and what to do about it. */
+@Composable
+private fun EmptyShelf(name: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
+        Text(name, style = MaterialTheme.typography.titleLarge)
+        Text(
+            text = stringResource(R.string.home_shelf_empty),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

@@ -19,7 +19,11 @@ data class ShelfConfig(
     val id: String,
     val enabled: Boolean = true,
     val style: HomeSectionStyle? = null,
-    val count: Int? = null
+    val count: Int? = null,
+    /** A genre shelf's categories: library genre tags, or the Christian category. */
+    val categories: List<String> = emptyList(),
+    /** For the Christian category: the language codes to draw artists from. Empty means all. */
+    val languages: List<String> = emptyList()
 )
 
 /** The stored layout is a JSON list in order; an empty list means "never customised". */

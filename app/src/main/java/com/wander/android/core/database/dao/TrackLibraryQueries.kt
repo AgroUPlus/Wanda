@@ -169,8 +169,12 @@ interface TrackLibraryQueries {
     )
     fun observeGenres(): Flow<List<String>>
 
-    @Query("SELECT * FROM tracks WHERE isEpisode = 0 AND genre = :genre COLLATE NOCASE ORDER BY RANDOM() LIMIT :limit")
-    suspend fun getTracksByGenre(genre: String, limit: Int): List<TrackEntity>
+    /** [genres] must already be lower-case. */
+    @Query("SELECT * FROM tracks WHERE isEpisode = 0 AND LOWER(genre) IN (:genres) ORDER BY RANDOM() LIMIT :limit")
+    suspend fun getTracksByGenres(genres: List<String>, limit: Int): List<TrackEntity>
+
+    @Query("SELECT * FROM tracks WHERE isEpisode = 0 ORDER BY RANDOM() LIMIT :limit")
+    suspend fun getRandomTracks(limit: Int): List<TrackEntity>
 
     @Query("SELECT * FROM tracks WHERE playCount = 0 AND isEpisode = 0 ORDER BY addedTimestamp DESC LIMIT :limit")
     suspend fun getNeverPlayedTracks(limit: Int = 30): List<TrackEntity>

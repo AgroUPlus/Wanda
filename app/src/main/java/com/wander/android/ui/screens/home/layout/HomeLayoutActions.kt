@@ -1,6 +1,7 @@
 package com.wander.android.ui.screens.home.layout
 
 import com.wander.android.ui.screens.home.GenreShelfPrefix
+import com.wander.android.ui.screens.home.isAddedShelf
 import com.wander.android.ui.screens.home.HomeSectionStyle
 import com.wander.android.ui.screens.home.HomeUiState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +29,7 @@ internal class HomeLayoutActions(
      * layout is re-seeded rather than cleared.
      */
     fun reset() {
-        val builtIn = state.value.allSections.filterNot { it.id.startsWith(GenreShelfPrefix) }
+        val builtIn = state.value.allSections.filterNot { isAddedShelf(it.id) }
         store.save(HomeLayoutApplier.seed(builtIn, emptyList()))
         state.update { it.copy(allSections = builtIn) }
     }
@@ -41,18 +42,27 @@ internal class HomeLayoutActions(
 
     fun setCount(id: String, count: Int?) = edit { HomeLayoutEditor.setCount(it, id, count) }
 
-    /** Adds a genre shelf at the end; the view model builds its tracks when the layout arrives. */
-    fun addGenre(genre: String) = edit { configs ->
-        val id = GenreShelfPrefix + genre
-        if (configs.any { it.id == id }) configs else configs + ShelfConfig(id)
+    /** Adds an empty genre shelf at the end and returns its id, for the caller to open its settings. */
+    fun addGenreShelf(): String {
+        val next = state.value.layout.mapNotNull { it.id.removePrefix(GenreShelfPrefix).toIntOrNull() }.maxOrNull() ?: 0
+        val id = GenreShelfPrefix + (next + 1)
+        edit { it + ShelfConfig(id) }
+        return id
     }
 
+    /** Adds one of the optional shelves at the end; the view model builds its tracks when the layout arrives. */
+    fun addExtra(id: String) = edit { configs -> if (configs.any { it.id == id }) configs else configs + ShelfConfig(id) }
+
+    fun toggleCategory(id: String, category: String) = edit { HomeLayoutEditor.toggleCategory(it, id, category) }
+
+    fun toggleLanguage(id: String, code: String) = edit { HomeLayoutEditor.toggleLanguage(it, id, code) }
+
     /**
-     * Takes a shelf off Home. An added genre shelf is deleted outright; a built-in one is kept in
-     * the layout as removed, so [restore] can bring it back from the Add shelf sheet.
+     * Takes a shelf off Home. A shelf the user added is deleted outright and can be added again; a
+     * default one is kept in the layout as removed, so [restore] can bring it back.
      */
     fun remove(id: String) {
-        if (!id.startsWith(GenreShelfPrefix)) return setEnabled(id, false)
+        if (!isAddedShelf(id)) return setEnabled(id, false)
         edit { configs -> configs.filterNot { it.id == id } }
         state.update { it.copy(allSections = it.allSections.filterNot { s -> s.id == id }) }
     }

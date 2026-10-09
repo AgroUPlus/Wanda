@@ -47,4 +47,20 @@ class HomeLayoutEditorTest {
         assertEquals(null, HomeLayoutEditor.setStyle(styled, "c", null)[2].style)
         assertEquals(6, HomeLayoutEditor.setCount(configs, "a", 6)[0].count)
     }
+
+    @Test
+    fun `categories and languages toggle on and off`() {
+        val on = HomeLayoutEditor.toggleCategory(configs, "a", "Rock")
+        assertEquals(listOf("Rock"), on[0].categories)
+        assertEquals(listOf("Rock", "@christian"), HomeLayoutEditor.toggleCategory(on, "a", "@christian")[0].categories)
+        assertEquals(emptyList<String>(), HomeLayoutEditor.toggleCategory(on, "a", "Rock")[0].categories)
+        assertEquals(listOf("pt"), HomeLayoutEditor.toggleLanguage(configs, "b", "pt")[1].languages)
+    }
+
+    @Test
+    fun `genre shelf titles shorten past two categories`() {
+        assertEquals("Fallback", genreShelfTitle(emptyList(), "Christian", "Fallback"))
+        assertEquals("Christian · Rock", genreShelfTitle(listOf("@christian", "Rock"), "Christian", "x"))
+        assertEquals("Rock · Jazz +1", genreShelfTitle(listOf("Rock", "Jazz", "Pop"), "Christian", "x"))
+    }
 }

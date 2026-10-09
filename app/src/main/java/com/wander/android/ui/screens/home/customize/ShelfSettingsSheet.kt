@@ -2,6 +2,8 @@ package com.wander.android.ui.screens.home.customize
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -21,6 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.ui.components.ConnectedToggleGroup
+import com.wander.android.ui.screens.home.GenreShelfPrefix
 import com.wander.android.ui.screens.home.HomeSection
 import com.wander.android.ui.screens.home.HomeSectionStyle
 import com.wander.android.ui.screens.home.layout.ShelfConfig
@@ -33,7 +36,7 @@ private val StyleChoices = listOf(
     HomeSectionStyle.LARGE_GRID,
     HomeSectionStyle.FEATURED_HERO
 )
-private val CountChoices = listOf(null, 6, 12, 20)
+private val CountChoices = listOf(null, 4, 6, 8)
 
 /**
  * How a shelf looks and how long it is, and the only way to take it off Home. The shelf behind the
@@ -46,15 +49,23 @@ internal fun ShelfSettingsSheet(
     config: ShelfConfig,
     onStyle: (HomeSectionStyle?) -> Unit,
     onCount: (Int?) -> Unit,
+    libraryGenres: List<String>,
+    onCategory: (String) -> Unit,
+    onLanguage: (String) -> Unit,
     onRemove: () -> Unit,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 24.dp)
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(start = 20.dp, end = 20.dp, bottom = 24.dp)
         ) {
-            Text(section.title, style = MaterialTheme.typography.titleLarge)
+            Text(shelfName(section, config), style = MaterialTheme.typography.titleLarge)
+            if (config.id.startsWith(GenreShelfPrefix)) {
+                ShelfCategoriesPicker(config, libraryGenres, onCategory, onLanguage)
+            }
             if (section.mixes.isEmpty()) {
                 Text(stringResource(R.string.home_shelf_layout), style = MaterialTheme.typography.labelLarge)
                 ConnectedToggleGroup(

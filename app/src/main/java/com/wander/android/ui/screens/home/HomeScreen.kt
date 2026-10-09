@@ -216,7 +216,7 @@ fun HomeScreen(
                     }
 
                     if (state.editing) {
-                        homeEditorShelves(editor, viewModel, shelfStates)
+                        homeEditorShelves(editor, state, viewModel, shelfStates)
                     } else if (state.isEmpty) {
                         item(key = "filtered_empty", contentType = "empty") {
                             EmptyState(
