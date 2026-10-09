@@ -52,11 +52,15 @@ jobs:
       - name: Compress R8 mapping
         run: gzip -c app/build/outputs/mapping/release/mapping.txt > "mapping-${{ github.event.release.tag_name }}.txt.gz"
 
+      # Tags are already "vX.Y.Z", so the asset reads "Wanda-vX.Y.Z.apk".
+      - name: Rename APK
+        run: mv app/build/outputs/apk/release/app-release.apk "Wanda-${{ github.event.release.tag_name }}.apk"
+
       - name: Upload APK and mapping to release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            app/build/outputs/apk/release/*.apk
+            Wanda-*.apk
             mapping-*.txt.gz
 
 
