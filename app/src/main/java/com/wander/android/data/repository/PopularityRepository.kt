@@ -45,14 +45,18 @@ class PopularityRepository @Inject constructor(
      * shorter shelf. It does mean the shelf only ever shows music the user already has, which is
      * the honest limit of building it from an id-less total.
      */
-    suspend fun popularTracks(limit: Int = 20): List<UnifiedTrack> = withContext(Dispatchers.IO) {
-        if (secureStorage.agroServerUrl.isBlank()) return@withContext emptyList()
+    suspend fun popularTracks(limit: Int = 20): List<UnifiedTrack> =
+        (popularOutcome(limit) as? PopularOutcome.Tracks)?.tracks.orEmpty()
+
+    /** [popularTracks], and when there is nothing to show, why. */
+    suspend fun popularOutcome(limit: Int = 20): PopularOutcome = withContext(Dispatchers.IO) {
+        if (secureStorage.agroServerUrl.isBlank()) return@withContext PopularOutcome.NotPaired
 
         val entries = popularityApi.popularTracks(limit = limit * OVERFETCH).getOrElse {
             Log.w(TAG, "popular tracks unavailable: ${it.message}")
-            return@withContext emptyList()
+            return@withContext PopularOutcome.Unreachable
         }
-        if (entries.isEmpty()) return@withContext emptyList()
+        if (entries.isEmpty()) return@withContext PopularOutcome.NoData
 
         val localByKey = trackDao.getAllTracksOnce()
             .map(TrackEntity::toUnifiedTrack)
@@ -73,7 +77,9 @@ class PopularityRepository @Inject constructor(
             // held more than once.
             localByKey[key]?.minByOrNull { it.source.priority }
         }.distinctBy { it.id }.take(limit)
+            .let { if (it.isEmpty()) PopularOutcome.NothingInLibrary else PopularOutcome.Tracks(it) }
     }
+
 
     /**
      * Adds a batch of plays to the shared totals, if the user has opted in.
@@ -148,3 +154,20 @@ private fun PendingScrobble.recordingKey(): String = TrackDeduplicator.recording
         durationMs = durationMs
     )
 )
+
+/** What asking Agro for its popular songs came to. */
+sealed interface PopularOutcome {
+    data class Tracks(val tracks: List<UnifiedTrack>) : PopularOutcome
+
+    /** No Agro server is set up on this device. */
+    data object NotPaired : PopularOutcome
+
+    /** The server did not answer, or answered with an error. */
+    data object Unreachable : PopularOutcome
+
+    /** The server answered with nothing: no one has played anything yet. */
+    data object NoData : PopularOutcome
+
+    /** The server has popular songs, but this library holds none of them. */
+    data object NothingInLibrary : PopularOutcome
+}
