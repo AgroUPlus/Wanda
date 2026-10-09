@@ -56,7 +56,7 @@ internal class ExtraShelves(
         builtFrom.keys.retainAll(wantedIds)
 
         val built = wanted.mapNotNull { config ->
-            val source = config.copy(enabled = true, style = null, count = null)
+            val source = config.copy(enabled = true, style = null, count = null, sources = emptyList())
             val upToDate = !force && builtFrom[config.id] == source && current.any { it.id == config.id }
             if (upToDate) return@mapNotNull null
             builtFrom[config.id] = source
