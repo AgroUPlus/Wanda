@@ -40,7 +40,11 @@ internal fun LazyListScope.appearanceTab(
         }
     }
 
-    lookSection(key = "language", title = R.string.settings_section_language, index = 1) {
+    lookSection(key = "navigation", title = R.string.settings_section_navigation, index = 1) {
+        listOf({ DockLayoutRow() }, { LibrarySectionsRow() })
+    }
+
+    lookSection(key = "language", title = R.string.settings_section_language, index = 2) {
         listOf {
             LanguageSetting(
                 currentTag = state.languageTag,
@@ -50,7 +54,7 @@ internal fun LazyListScope.appearanceTab(
         }
     }
 
-    lookSection(key = "colours", title = R.string.settings_section_colours, index = 2) {
+    lookSection(key = "colours", title = R.string.settings_section_colours, index = 3) {
         listOf(
             {
                 SettingsToggle(
@@ -82,7 +86,7 @@ internal fun LazyListScope.appearanceTab(
         )
     }
 
-    lookSection(key = "motion", title = R.string.settings_section_motion_effects, index = 3) {
+    lookSection(key = "motion", title = R.string.settings_section_motion_effects, index = 4) {
         listOf(
             {
                 SettingsToggle(
@@ -108,7 +112,7 @@ internal fun LazyListScope.appearanceTab(
         )
     }
 
-    lookSection(key = "now_playing", title = R.string.settings_section_now_playing, index = 4) {
+    lookSection(key = "now_playing", title = R.string.settings_section_now_playing, index = 5) {
         listOf(
             {
                 SettingsToggle(
