@@ -17,6 +17,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -28,14 +29,6 @@ import com.wander.android.ui.screens.home.HomeSection
 import com.wander.android.ui.screens.home.HomeSectionStyle
 import com.wander.android.ui.screens.home.layout.ShelfConfig
 
-/** null = the shelf's own default. */
-private val StyleChoices = listOf(
-    null,
-    HomeSectionStyle.TRACK_CAROUSEL,
-    HomeSectionStyle.TRACK_LIST,
-    HomeSectionStyle.LARGE_GRID,
-    HomeSectionStyle.FEATURED_HERO
-)
 private val CountChoices = listOf(null, 4, 6, 8)
 
 /**
@@ -68,12 +61,10 @@ internal fun ShelfSettingsSheet(
             }
             if (section.mixes.isEmpty()) {
                 Text(stringResource(R.string.home_shelf_layout), style = MaterialTheme.typography.labelLarge)
-                ConnectedToggleGroup(
-                    options = StyleChoices,
-                    selected = config.style,
-                    label = { it.label() },
-                    onSelect = onStyle
-                )
+                ShelfStylePicker(selected = section.style, onSelect = onStyle)
+                if (config.style != null) {
+                    TextButton(onClick = { onStyle(null) }) { Text(stringResource(R.string.home_style_use_default)) }
+                }
                 Text(stringResource(R.string.home_shelf_length), style = MaterialTheme.typography.labelLarge)
                 ConnectedToggleGroup(
                     options = CountChoices,
@@ -97,14 +88,3 @@ internal fun ShelfSettingsSheet(
         }
     }
 }
-
-@Composable
-private fun HomeSectionStyle?.label(): String = stringResource(
-    when (this) {
-        HomeSectionStyle.TRACK_CAROUSEL -> R.string.home_style_carousel
-        HomeSectionStyle.TRACK_LIST -> R.string.home_style_list
-        HomeSectionStyle.LARGE_GRID -> R.string.home_style_grid
-        HomeSectionStyle.FEATURED_HERO -> R.string.home_style_hero
-        else -> R.string.home_shelf_default
-    }
-)
