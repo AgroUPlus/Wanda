@@ -144,6 +144,8 @@ internal fun HomeEditorSettingsSheet(editor: HomeEditor, state: HomeUiState, vie
         libraryGenres = viewModel.genres.collectAsStateWithLifecycle().value,
         onCategory = { viewModel.layoutActions.toggleCategory(id, it) },
         onLanguage = { viewModel.layoutActions.toggleLanguage(id, it) },
+        sources = state.sources,
+        onSource = { viewModel.layoutActions.toggleSource(id, it) },
         onRemove = {
             viewModel.layoutActions.remove(id)
             editor.openSettings(null)
