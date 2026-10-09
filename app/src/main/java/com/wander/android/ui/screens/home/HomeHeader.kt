@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -23,7 +22,6 @@ internal fun HomeHeader(
     greeting: String,
     hasSession: Boolean,
     onOpenSessions: () -> Unit,
-    onCustomize: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
     Row(
@@ -46,9 +44,6 @@ internal fun HomeHeader(
             IconButton(onClick = onOpenSessions) {
                 Icon(Icons.Rounded.Devices, contentDescription = stringResource(R.string.home_sessions_other_devices))
             }
-        }
-        IconButton(onClick = onCustomize) {
-            Icon(Icons.Rounded.Tune, contentDescription = stringResource(R.string.home_edit_open))
         }
         IconButton(onClick = onOpenSettings) {
             Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.nav_settings))
