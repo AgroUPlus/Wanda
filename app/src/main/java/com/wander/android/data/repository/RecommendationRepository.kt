@@ -123,7 +123,7 @@ class RecommendationRepository @Inject constructor(
         }
     }
 
-    private companion object {
+    internal companion object {
         /**
          * How long a cached feed stays good. Long enough that the front page is the same across a
          * day's launches, short enough that "fresh" still means something.
