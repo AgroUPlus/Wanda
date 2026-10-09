@@ -105,7 +105,6 @@ fun TrackRow(
             .background(rowBackground, MaterialTheme.shapes.medium)
             // Long press stays live while the tap does not: the actions sheet is still useful on
             // an unplayable track — it is where "download" and "add to playlist" live.
-            .instantPress(interactionSource)
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
