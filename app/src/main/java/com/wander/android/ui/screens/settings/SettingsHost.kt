@@ -41,7 +41,8 @@ internal class SettingsNavigation(
     val onOpenImport: () -> Unit,
     val onOpenMergePreview: () -> Unit,
     val onOpenReplay: () -> Unit,
-    val onOpenFingerprints: () -> Unit
+    val onOpenFingerprints: () -> Unit,
+    val onCustomizeHome: () -> Unit
 )
 
 @Composable
@@ -133,6 +134,7 @@ internal fun rememberSettingsHost(
             onDownloadLiked = viewModel::downloadLikedNow,
             onIndexFingerprints = viewModel::indexFingerprintsNow,
             onOpenFingerprints = navigation.onOpenFingerprints,
+            onCustomizeHome = navigation.onCustomizeHome,
             onClearCache = { dialogs.confirmClearCache = true },
             onOpenImport = navigation.onOpenImport,
             onEditShareDomain = { dialogs.showShareDomainDialog = true },
