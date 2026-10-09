@@ -1,5 +1,10 @@
 package com.wander.android.ui.screens.home.customize
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,7 +36,7 @@ import com.wander.android.R
 /** Replaces Home's greeting while the customizer is open. Reset asks first; it undoes every edit. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-internal fun HomeEditBar(onReset: () -> Unit, onDone: () -> Unit, modifier: Modifier = Modifier) {
+internal fun HomeEditBar(onReset: () -> Unit, onDone: () -> Unit, suggestion: String?, modifier: Modifier = Modifier) {
     var confirmingReset by rememberSaveable { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, top = 12.dp)) {
@@ -55,6 +60,18 @@ internal fun HomeEditBar(onReset: () -> Unit, onDone: () -> Unit, modifier: Modi
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp)
         )
+        AnimatedVisibility(
+            visible = suggestion != null,
+            enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+            exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(MaterialTheme.motionScheme.fastEffectsSpec())
+        ) {
+            Text(
+                text = suggestion.orEmpty(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
     }
 
     if (confirmingReset) {
