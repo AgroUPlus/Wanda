@@ -244,6 +244,9 @@
     <string name="home_shelf_edit">Edit %1$s</string>
     <string name="home_shelf_move_up">Move up</string>
     <string name="home_shelf_move_down">Move down</string>
+    <string name="settings_section_home">Home</string>
+    <string name="settings_customize_home">Customize Home</string>
+    <string name="settings_customize_home_sub">Rearrange, add and remove shelves, and choose how each looks</string>
     <string name="home_shelf_add_removed">Removed shelves</string>
     <string name="home_edit_hint">Hold a shelf to move it. Tap it to edit.</string>
     <string name="home_edit_reset_title">Reset Home?</string>
