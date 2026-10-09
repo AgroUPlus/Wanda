@@ -195,7 +195,6 @@ fun HomeScreen(
                                     greeting = state.greeting,
                                     hasSession = session != null,
                                     onOpenSessions = { showSessionSheet = true },
-                                    onCustomize = viewModel.layoutActions::start,
                                     onOpenSettings = onOpenSettings
                                 )
                             }
