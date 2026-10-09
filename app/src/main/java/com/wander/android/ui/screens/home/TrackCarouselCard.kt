@@ -6,15 +6,11 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.carousel.CarouselItemScope
-import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
-import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,40 +25,6 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.isPlayableNow
 import com.wander.android.ui.components.scrollingTitle
-
-/**
- * "Your Favorites" as an M3 Expressive carousel — the item under your thumb sits large, its
- * neighbours are compressed toward the edges, and scrolling continuously re-balances which one
- * is which. Replaces the hand-rolled overlapping-stack look, which had no motion of its own and
- * showed no title at all.
- */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-internal fun FavoritesCarouselShelf(
-    tracks: List<UnifiedTrack>,
-    onPlay: (Int) -> Unit,
-    onLongPress: (UnifiedTrack) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val carouselState = rememberCarouselState { tracks.size }
-    HorizontalMultiBrowseCarousel(
-        state = carouselState,
-        preferredItemWidth = PreferredItemWidth,
-        itemSpacing = 8.dp,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(CarouselHeight)
-            .padding(horizontal = 20.dp)
-    ) { index ->
-        val track = tracks[index]
-        TrackCarouselCard(
-            track = track,
-            artworkSize = PreferredItemWidth,
-            onPlay = { onPlay(index) },
-            onLongPress = { onLongPress(track) }
-        )
-    }
-}
 
 /**
  * One masked carousel item: artwork under a scrim, title over it, and optionally the artist.
@@ -140,6 +102,3 @@ internal fun CarouselItemScope.TrackCarouselCard(
 private const val DisabledAlpha = 0.38f
 private const val ScrimAlpha = 0.65f
 private const val ArtistAlpha = 0.8f
-
-private val PreferredItemWidth = 160.dp
-private val CarouselHeight = 200.dp
