@@ -34,6 +34,8 @@ import com.wander.android.ui.screens.home.HomeShelfStates
 import com.wander.android.ui.screens.home.HomeUiState
 import com.wander.android.ui.screens.home.HomeViewModel
 import com.wander.android.ui.screens.home.layout.ShelfConfig
+import com.wander.android.ui.screens.home.layout.ShelfSuggestions
+import com.wander.android.ui.screens.home.layout.ShelfUsage
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.ReorderableLazyListState
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -47,7 +49,11 @@ internal class HomeEditor(
     val addingShelf: Boolean,
     val setAddingShelf: (Boolean) -> Unit,
     /** Opens a new shelf's settings once the saved layout has caught up with it. */
-    val openWhenSaved: (String) -> Unit
+    val openWhenSaved: (String) -> Unit,
+    /** How often songs were played from each shelf; see [ShelfUsageStore]. */
+    val usage: ShelfUsage,
+    /** The shelves on Home that nothing has been played from, once there is enough history to say. */
+    val rarelyUsed: List<String>
 )
 
 @Composable
@@ -81,7 +87,11 @@ internal fun rememberHomeEditor(state: HomeUiState, viewModel: HomeViewModel, li
             pending = null
         }
     }
-    return HomeEditor(order, reorderState, settingsFor, { settingsFor = it }, addingShelf, { addingShelf = it }, { pending = it })
+    val usage by viewModel.shelfUsage.usage.collectAsStateWithLifecycle(ShelfUsage())
+    val rarelyUsed = remember(order, usage) {
+        ShelfSuggestions.rarelyUsed(order.map { it.id }, usage, System.currentTimeMillis())
+    }
+    return HomeEditor(order, reorderState, settingsFor, { settingsFor = it }, addingShelf, { addingShelf = it }, { pending = it }, usage, rarelyUsed)
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -102,6 +112,7 @@ internal fun LazyListScope.homeEditorShelves(
                 isDragging = isDragging,
                 viewModel = viewModel,
                 states = states,
+                rarelyUsed = section.id in editor.rarelyUsed,
                 onTap = { editor.openSettings(section.id) },
                 onMoveUp = previous?.let { { viewModel.layoutActions.move(section.id, it.id) } },
                 onMoveDown = next?.let { { viewModel.layoutActions.move(section.id, it.id) } },
@@ -144,6 +155,7 @@ internal fun HomeEditorSettingsSheet(editor: HomeEditor, state: HomeUiState, vie
         libraryGenres = viewModel.genres.collectAsStateWithLifecycle().value,
         onCategory = { viewModel.layoutActions.toggleCategory(id, it) },
         onLanguage = { viewModel.layoutActions.toggleLanguage(id, it) },
+        plays = editor.usage.takeIf { it.since != 0L }?.playsFrom(id),
         sources = state.sources,
         onSource = { viewModel.layoutActions.toggleSource(id, it) },
         onRemove = {
