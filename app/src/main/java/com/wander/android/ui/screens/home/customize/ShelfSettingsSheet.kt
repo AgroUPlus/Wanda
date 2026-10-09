@@ -6,6 +6,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
@@ -28,8 +29,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
+import com.wander.android.data.model.SourceType
+import com.wander.android.ui.components.ConnectedToggleButtons
 import com.wander.android.ui.components.ConnectedToggleGroup
 import com.wander.android.ui.screens.home.GenreShelfPrefix
 import com.wander.android.ui.screens.home.HomeSection
@@ -52,6 +56,8 @@ internal fun ShelfSettingsSheet(
     libraryGenres: List<String>,
     onCategory: (String) -> Unit,
     onLanguage: (String) -> Unit,
+    sources: List<SourceType>,
+    onSource: (String) -> Unit,
     onRemove: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -76,6 +82,20 @@ internal fun ShelfSettingsSheet(
                     exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(MaterialTheme.motionScheme.fastEffectsSpec())
                 ) {
                     TextButton(onClick = { onStyle(null) }) { Text(stringResource(R.string.home_style_use_default)) }
+                }
+                // Only worth asking with more than one backend to choose between.
+                if (sources.size > 1) {
+                    Text(stringResource(R.string.home_shelf_sources), style = MaterialTheme.typography.labelLarge)
+                    ConnectedToggleButtons(
+                        options = sources,
+                        // Nothing picked means every source.
+                        isChecked = { it.name in config.sources },
+                        role = Role.Checkbox,
+                        label = { it.displayName },
+                        onSelect = { onSource(it.name) },
+                        equalWidth = false,
+                        modifier = Modifier.horizontalScroll(rememberScrollState())
+                    )
                 }
                 Text(stringResource(R.string.home_shelf_length), style = MaterialTheme.typography.labelLarge)
                 ConnectedToggleGroup(
