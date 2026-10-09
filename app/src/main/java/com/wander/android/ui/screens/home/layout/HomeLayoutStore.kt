@@ -2,6 +2,9 @@ package com.wander.android.ui.screens.home.layout
 
 import com.wander.android.core.security.SecureStorage
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -18,6 +21,15 @@ class HomeLayoutStore @Inject constructor(private val storage: SecureStorage) {
     val layout: Flow<List<ShelfConfig>> = storage.displayPrefs.homeLayout
         .map(ShelfConfigCodec::decode)
         .distinctUntilChanged()
+
+    private val _editing = MutableStateFlow(false)
+
+    /** The customizer is open. Shared so the radio button, which lives in the app shell, can step aside. */
+    val editing: StateFlow<Boolean> = _editing.asStateFlow()
+
+    fun setEditing(on: Boolean) {
+        _editing.value = on
+    }
 
     fun save(configs: List<ShelfConfig>) =
         storage.displayPrefs.setHomeLayout(ShelfConfigCodec.encode(configs))

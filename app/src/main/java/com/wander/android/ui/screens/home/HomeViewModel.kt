@@ -84,6 +84,9 @@ class HomeViewModel @Inject constructor(
     /** The user's shelf layout; Home re-derives its sections when it changes. */
     private fun observeLayout() {
         viewModelScope.launch {
+            layoutStore.editing.collect { editing -> _uiState.update { it.copy(editing = editing) } }
+        }
+        viewModelScope.launch {
             layoutStore.layout.collect { layout ->
                 _uiState.update { it.copy(layout = layout) }
                 // A genre shelf added in the customizer has no tracks until they are read.

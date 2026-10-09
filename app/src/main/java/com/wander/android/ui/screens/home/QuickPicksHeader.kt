@@ -64,21 +64,23 @@ internal fun QuickPicksHeader(
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             QuickPicksTitle(title = title, modifier = Modifier.weight(1f))
 
-            FilledIconButton(
-                onClick = { onPlay(0) },
-                enabled = tracks.isNotEmpty(),
-                shapes = IconButtonDefaults.shapes(),
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                modifier = Modifier.size(PlayButtonSize)
-            ) {
-                Icon(
-                    Icons.Rounded.PlayArrow,
-                    contentDescription = stringResource(R.string.common_play_all),
-                    modifier = Modifier.size(40.dp)
-                )
+            if (!LocalHomeEditing.current) {
+                FilledIconButton(
+                    onClick = { onPlay(0) },
+                    enabled = tracks.isNotEmpty(),
+                    shapes = IconButtonDefaults.shapes(),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                    modifier = Modifier.size(PlayButtonSize)
+                ) {
+                    Icon(
+                        Icons.Rounded.PlayArrow,
+                        contentDescription = stringResource(R.string.common_play_all),
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
             }
         }
 

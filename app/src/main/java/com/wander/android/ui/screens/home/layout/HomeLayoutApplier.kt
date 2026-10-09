@@ -12,23 +12,20 @@ import com.wander.android.ui.screens.home.HomeSectionStyle
 internal object HomeLayoutApplier {
 
     /**
-     * @param includeHidden keeps disabled shelves (in their place) so the editor can show them dimmed.
-     *
      * With no [configs] the shelves come back untouched, so Home is unchanged until customised.
      * A shelf with no config (a feed shelf that appeared since the last edit) sorts after the
      * configured ones, in the order it arrived.
      */
     fun apply(
         sections: List<HomeSection>,
-        configs: List<ShelfConfig>,
-        includeHidden: Boolean = false
+        configs: List<ShelfConfig>
     ): List<HomeSection> {
         if (configs.isEmpty()) return sections
         val byId = configs.associateBy { it.id }
         val rank = configs.withIndex().associate { (index, config) -> config.id to index }
         return sections
             .sortedBy { rank[it.id] ?: Int.MAX_VALUE }
-            .filter { includeHidden || byId[it.id]?.enabled != false }
+            .filter { byId[it.id]?.enabled != false }
             .map { section -> byId[section.id]?.let { section.styledBy(it) } ?: section }
     }
 

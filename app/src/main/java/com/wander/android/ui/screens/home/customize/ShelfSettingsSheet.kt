@@ -1,12 +1,20 @@
 package com.wander.android.ui.screens.home.customize
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -27,39 +35,53 @@ private val StyleChoices = listOf(
 )
 private val CountChoices = listOf(null, 6, 12, 20)
 
-/** How a shelf looks and how long it is. The preview behind the sheet updates as you pick. */
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * How a shelf looks and how long it is, and the only way to take it off Home. The shelf behind the
+ * sheet changes as you pick. Mix shelves only draw mix cards, so they get just the remove button.
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun ShelfSettingsSheet(
     section: HomeSection,
     config: ShelfConfig,
     onStyle: (HomeSectionStyle?) -> Unit,
     onCount: (Int?) -> Unit,
-    onRemove: (() -> Unit)?,
+    onRemove: () -> Unit,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
-            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 24.dp)
         ) {
             Text(section.title, style = MaterialTheme.typography.titleLarge)
-            Text(stringResource(R.string.home_shelf_layout), style = MaterialTheme.typography.labelLarge)
-            ConnectedToggleGroup(
-                options = StyleChoices,
-                selected = config.style,
-                label = { it.label() },
-                onSelect = onStyle
-            )
-            Text(stringResource(R.string.home_shelf_length), style = MaterialTheme.typography.labelLarge)
-            ConnectedToggleGroup(
-                options = CountChoices,
-                selected = config.count,
-                label = { count -> count?.toString() ?: stringResource(R.string.home_shelf_default) },
-                onSelect = onCount
-            )
-            onRemove?.let { remove ->
-                TextButton(onClick = remove) { Text(stringResource(R.string.home_shelf_remove)) }
+            if (section.mixes.isEmpty()) {
+                Text(stringResource(R.string.home_shelf_layout), style = MaterialTheme.typography.labelLarge)
+                ConnectedToggleGroup(
+                    options = StyleChoices,
+                    selected = config.style,
+                    label = { it.label() },
+                    onSelect = onStyle
+                )
+                Text(stringResource(R.string.home_shelf_length), style = MaterialTheme.typography.labelLarge)
+                ConnectedToggleGroup(
+                    options = CountChoices,
+                    selected = config.count,
+                    label = { count -> count?.toString() ?: stringResource(R.string.home_shelf_default) },
+                    onSelect = onCount
+                )
+            }
+            FilledTonalButton(
+                onClick = onRemove,
+                shapes = ButtonDefaults.shapes(),
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                ),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+            ) {
+                Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                Text(stringResource(R.string.home_shelf_remove), modifier = Modifier.padding(start = ButtonDefaults.IconSpacing))
             }
         }
     }

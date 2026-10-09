@@ -26,13 +26,9 @@ class HomeLayoutApplierTest {
     }
 
     @Test
-    fun `hidden shelves are dropped unless the editor asks for them`() {
+    fun `removed shelves are dropped`() {
         val configs = listOf(ShelfConfig("a"), ShelfConfig("b", enabled = false), ShelfConfig("c"))
         assertEquals(listOf("a", "c"), HomeLayoutApplier.apply(sections, configs).map { it.id })
-        assertEquals(
-            listOf("a", "b", "c"),
-            HomeLayoutApplier.apply(sections, configs, includeHidden = true).map { it.id }
-        )
     }
 
     @Test

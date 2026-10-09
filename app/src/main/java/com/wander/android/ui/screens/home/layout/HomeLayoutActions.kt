@@ -18,10 +18,10 @@ internal class HomeLayoutActions(
     fun start() {
         val current = state.value
         store.save(HomeLayoutApplier.seed(current.allSections, current.layout))
-        state.update { it.copy(editing = true) }
+        store.setEditing(true)
     }
 
-    fun stop() = state.update { it.copy(editing = false) }
+    fun stop() = store.setEditing(false)
 
     /**
      * Back to the default order, hiding nothing and dropping added shelves. Still editable, so the
@@ -47,11 +47,17 @@ internal class HomeLayoutActions(
         if (configs.any { it.id == id }) configs else configs + ShelfConfig(id)
     }
 
-    /** Drops a shelf the user added. Built-in shelves are hidden, never removed. */
+    /**
+     * Takes a shelf off Home. An added genre shelf is deleted outright; a built-in one is kept in
+     * the layout as removed, so [restore] can bring it back from the Add shelf sheet.
+     */
     fun remove(id: String) {
+        if (!id.startsWith(GenreShelfPrefix)) return setEnabled(id, false)
         edit { configs -> configs.filterNot { it.id == id } }
         state.update { it.copy(allSections = it.allSections.filterNot { s -> s.id == id }) }
     }
+
+    fun restore(id: String) = edit { HomeLayoutEditor.restore(it, id) }
 
     private fun edit(change: (List<ShelfConfig>) -> List<ShelfConfig>) = store.save(change(state.value.layout))
 }

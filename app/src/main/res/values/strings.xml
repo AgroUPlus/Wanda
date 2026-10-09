@@ -210,8 +210,6 @@
     <string name="home_edit_title">Customize Home</string>
     <string name="home_edit_done">Done</string>
     <string name="home_edit_reset">Reset</string>
-    <string name="home_shelf_show">Show %1$s</string>
-    <string name="home_shelf_settings">%1$s settings</string>
     <string name="home_shelf_layout">Layout</string>
     <string name="home_shelf_length">Length</string>
     <string name="home_shelf_default">Default</string>
@@ -223,6 +221,15 @@
     <string name="home_shelf_add_title">Add a genre shelf</string>
     <string name="home_shelf_add_empty">Genres appear once your library has songs tagged with one.</string>
     <string name="home_shelf_remove">Remove shelf</string>
+    <string name="home_shelf_edit">Edit %1$s</string>
+    <string name="home_shelf_move_up">Move up</string>
+    <string name="home_shelf_move_down">Move down</string>
+    <string name="home_shelf_add_removed">Removed shelves</string>
+    <string name="home_shelf_add_genres">Genres</string>
+    <string name="home_edit_hint">Hold a shelf to move it. Tap it to edit.</string>
+    <string name="home_edit_reset_title">Reset Home?</string>
+    <string name="home_edit_reset_message">Every shelf goes back to the default order and layout, and shelves you added are removed.</string>
+    <string name="home_edit_reset_confirm">Reset</string>
     <string name="home_sessions_other_devices">Sessions on other devices</string>
 
     <!-- Importer -->

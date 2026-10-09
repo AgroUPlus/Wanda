@@ -1,108 +1,91 @@
 package com.wander.android.ui.screens.home.customize
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.DragHandle
-import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.ui.screens.home.HomeSection
-import com.wander.android.ui.screens.home.layout.ShelfConfig
+import com.wander.android.ui.screens.home.HomeShelfStates
+import com.wander.android.ui.screens.home.HomeViewModel
+import com.wander.android.ui.screens.home.LocalHomeEditing
 
-private const val HiddenAlpha = 0.38f
+private const val LiftedScale = 1.03f
 
 /**
- * One shelf in the customizer: its title, a show/hide switch, a settings button and the drag grip,
- * over a live preview of its tracks. A hidden shelf stays in place, dimmed, so it can be brought back.
+ * One shelf in the customizer: the shelf itself, drawn as on Home, in a tonal card. Hold it to pick
+ * it up and drag; tap it to edit it. Nothing else is drawn — the whole card is the control.
  *
- * [dragHandle] is the reorder grip supplied by the list, as in the queue. [onOpenSettings] is null
- * for a shelf with nothing to configure.
+ * [dragModifier] is the list's long-press-to-drag handle. [onMoveUp] and [onMoveDown] are the same
+ * reorder offered to accessibility services, which cannot long-press and drag.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun ShelfEditFrame(
     section: HomeSection,
-    config: ShelfConfig,
     isDragging: Boolean,
-    onToggle: (Boolean) -> Unit,
-    onOpenSettings: (() -> Unit)?,
-    dragHandle: Modifier.() -> Modifier,
+    viewModel: HomeViewModel,
+    states: HomeShelfStates,
+    onTap: () -> Unit,
+    onMoveUp: (() -> Unit)?,
+    onMoveDown: (() -> Unit)?,
+    dragModifier: Modifier,
     modifier: Modifier = Modifier
 ) {
+    val motion = MaterialTheme.motionScheme
+    val scale by animateFloatAsState(if (isDragging) LiftedScale else 1f, motion.fastSpatialSpec(), label = "shelfLift")
+    val lift by animateDpAsState(if (isDragging) 16.dp else 0.dp, motion.fastSpatialSpec(), label = "shelfShadow")
     val container by animateColorAsState(
-        targetValue = if (isDragging) {
-            MaterialTheme.colorScheme.surfaceContainerHighest
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        },
-        label = "shelfFrameColor"
+        if (isDragging) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainer,
+        motion.fastEffectsSpec(),
+        label = "shelfColor"
     )
-    val toggleLabel = stringResource(R.string.home_shelf_show, section.title)
+    val editLabel = stringResource(R.string.home_shelf_edit, section.title)
+    val moveUp = stringResource(R.string.home_shelf_move_up)
+    val moveDown = stringResource(R.string.home_shelf_move_down)
+
     Surface(
         shape = MaterialTheme.shapes.extraLarge,
         color = container,
-        tonalElevation = if (isDragging) 6.dp else 0.dp,
-        shadowElevation = if (isDragging) 6.dp else 0.dp,
-        modifier = modifier.fillMaxWidth()
+        shadowElevation = lift,
+        modifier = modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .shelfTap(onTap)
+            .then(dragModifier)
+            .semantics(mergeDescendants = true) {
+                onClick(label = editLabel) {
+                    onTap()
+                    true
+                }
+                customActions = listOfNotNull(
+                    onMoveUp?.let { CustomAccessibilityAction(moveUp) { it(); true } },
+                    onMoveDown?.let { CustomAccessibilityAction(moveDown) { it(); true } }
+                )
+            }
     ) {
-        Column {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(start = 20.dp, end = 4.dp, top = 4.dp)
-            ) {
-                Text(
-                    text = section.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-                Switch(
-                    checked = config.enabled,
-                    onCheckedChange = onToggle,
-                    modifier = Modifier.semantics { contentDescription = toggleLabel }
-                )
-                if (onOpenSettings != null) {
-                    IconButton(onClick = onOpenSettings, shapes = IconButtonDefaults.shapes()) {
-                        Icon(
-                            Icons.Rounded.Tune,
-                            contentDescription = stringResource(R.string.home_shelf_settings, section.title)
-                        )
-                    }
-                }
-                IconButton(onClick = {}, shapes = IconButtonDefaults.shapes(), modifier = Modifier.dragHandle()) {
-                    Icon(
-                        Icons.Rounded.DragHandle,
-                        contentDescription = stringResource(R.string.queue_reorder, section.title),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            Box(modifier = Modifier.alpha(if (config.enabled) 1f else HiddenAlpha).padding(bottom = 16.dp)) {
-                ShelfPreview(section)
-            }
+        CompositionLocalProvider(
+            LocalHomeEditing provides true,
+            LocalViewConfiguration provides rememberHeldNeverConfiguration()
+        ) {
+            ShelfBody(section, viewModel, states, Modifier.padding(vertical = 14.dp))
         }
     }
 }

@@ -1,4 +1,8 @@
 package com.wander.android.ui.screens.home
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -157,6 +161,8 @@ fun HomeScreen(
             // dead-end screen with no way back to "All" short of restarting the app.
             else -> {
                 val refreshState = rememberPullToRefreshState()
+                val fadeInSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+                val fadeOutSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
                 PullToRefreshBox(
                 isRefreshing = state.isRefreshing,
                 onRefresh = viewModel::pullToRefresh,
@@ -177,16 +183,22 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     item(key = "header", contentType = "header") {
-                        if (state.editing) {
-                            HomeEditBar(onReset = viewModel.layoutActions::reset, onDone = viewModel.layoutActions::stop)
-                        } else {
-                            HomeHeader(
-                                greeting = state.greeting,
-                                hasSession = session != null,
-                                onOpenSessions = { showSessionSheet = true },
-                                onCustomize = viewModel.layoutActions::start,
-                                onOpenSettings = onOpenSettings
-                            )
+                        AnimatedContent(
+                            targetState = state.editing,
+                            transitionSpec = { fadeIn(fadeInSpec) togetherWith fadeOut(fadeOutSpec) },
+                            label = "homeHeader"
+                        ) { editing ->
+                            if (editing) {
+                                HomeEditBar(onReset = viewModel.layoutActions::reset, onDone = viewModel.layoutActions::stop)
+                            } else {
+                                HomeHeader(
+                                    greeting = state.greeting,
+                                    hasSession = session != null,
+                                    onOpenSessions = { showSessionSheet = true },
+                                    onCustomize = viewModel.layoutActions::start,
+                                    onOpenSettings = onOpenSettings
+                                )
+                            }
                         }
                     }
 
@@ -204,7 +216,7 @@ fun HomeScreen(
                     }
 
                     if (state.editing) {
-                        homeEditorShelves(editor, state.layout, viewModel)
+                        homeEditorShelves(editor, viewModel, shelfStates)
                     } else if (state.isEmpty) {
                         item(key = "filtered_empty", contentType = "empty") {
                             EmptyState(
@@ -224,43 +236,5 @@ fun HomeScreen(
             }
         }
 
-    }
-}
-
-@Composable
-private fun HomeHeader(
-    greeting: String,
-    hasSession: Boolean,
-    onOpenSessions: () -> Unit,
-    onCustomize: () -> Unit,
-    onOpenSettings: () -> Unit
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 20.dp, end = 8.dp, top = 12.dp)
-    ) {
-        // The greeting is the header. The app's own name told the user nothing they didn't
-        // already know from having opened it.
-        Text(
-            text = greeting,
-            style = MaterialTheme.typography.headlineLarge,
-            modifier = Modifier.weight(1f)
-        )
-        // Only present when there is somewhere to hand off from, so the header stays quiet the
-        // rest of the time. No live badge: the icon's presence already says a session exists, and
-        // the sheet behind it is where "still playing" actually means something.
-        if (hasSession) {
-            IconButton(onClick = onOpenSessions) {
-                Icon(Icons.Rounded.Devices, contentDescription = stringResource(R.string.home_sessions_other_devices))
-            }
-        }
-        IconButton(onClick = onCustomize) {
-            Icon(Icons.Rounded.Tune, contentDescription = stringResource(R.string.home_edit_open))
-        }
-        IconButton(onClick = onOpenSettings) {
-            Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.nav_settings))
-        }
     }
 }

@@ -17,6 +17,12 @@ internal object HomeLayoutEditor {
         return configs.toMutableList().apply { add(to, removeAt(from)) }
     }
 
+    /** Brings a removed shelf back, at the end where it is easy to find. */
+    fun restore(configs: List<ShelfConfig>, id: String): List<ShelfConfig> {
+        val config = configs.firstOrNull { it.id == id } ?: return configs
+        return configs.filterNot { it.id == id } + config.copy(enabled = true)
+    }
+
     fun setEnabled(configs: List<ShelfConfig>, id: String, enabled: Boolean) =
         update(configs, id) { it.copy(enabled = enabled) }
 

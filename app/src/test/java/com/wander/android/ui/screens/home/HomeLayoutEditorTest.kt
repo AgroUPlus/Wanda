@@ -30,6 +30,15 @@ class HomeLayoutEditorTest {
     }
 
     @Test
+    fun `restore re-enables a removed shelf at the end`() {
+        val removed = HomeLayoutEditor.setEnabled(configs, "b", false)
+        val restored = HomeLayoutEditor.restore(removed, "b")
+        assertEquals(listOf("a", "c", "d", "b"), ids(restored))
+        assertEquals(true, restored.last().enabled)
+        assertSame(removed, HomeLayoutEditor.restore(removed, "zzz"))
+    }
+
+    @Test
     fun `field edits touch only the named shelf`() {
         val hidden = HomeLayoutEditor.setEnabled(configs, "b", false)
         assertEquals(listOf(true, false, true, true), hidden.map { it.enabled })

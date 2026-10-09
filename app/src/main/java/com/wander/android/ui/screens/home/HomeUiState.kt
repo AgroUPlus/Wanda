@@ -41,10 +41,16 @@ data class HomeUiState(
     }
 
     /**
-     * What the customizer draws: every shelf in the user's order, hidden ones included, and never
-     * narrowed by the source filter — hiding a shelf must not depend on which chip is selected.
+     * What the customizer draws: the shelves on Home in the user's order, never narrowed by the
+     * source filter — removing a shelf must not depend on which chip is selected.
      */
-    val editorSections: List<HomeSection> by lazy { HomeLayoutApplier.apply(allSections, layout, includeHidden = true) }
+    val editorSections: List<HomeSection> by lazy { HomeLayoutApplier.apply(allSections, layout) }
+
+    /** Shelves the user removed, for the Add shelf sheet to offer back. */
+    val removedSections: List<HomeSection> by lazy {
+        val removed = layout.filterNot { it.enabled }.mapTo(HashSet()) { it.id }
+        allSections.filter { it.id in removed }
+    }
 
     /** Nothing to show for the current filter — may still have music under a different source. */
     val isEmpty: Boolean get() = !isLoading && sections.isEmpty()

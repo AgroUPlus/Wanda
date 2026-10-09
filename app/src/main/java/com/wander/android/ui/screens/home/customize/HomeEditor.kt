@@ -1,23 +1,22 @@
 package com.wander.android.ui.screens.home.customize
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.wander.android.R
-import com.wander.android.ui.screens.home.GenreShelfPrefix
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,9 +24,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.ui.components.rememberHaptics
 import com.wander.android.ui.screens.home.HomeSection
+import com.wander.android.ui.screens.home.HomeShelfStates
 import com.wander.android.ui.screens.home.HomeUiState
 import com.wander.android.ui.screens.home.HomeViewModel
 import com.wander.android.ui.screens.home.layout.ShelfConfig
@@ -69,27 +72,29 @@ internal fun rememberHomeEditor(state: HomeUiState, viewModel: HomeViewModel, li
     return HomeEditor(order, reorderState, settingsFor, { settingsFor = it }, addingShelf, { addingShelf = it })
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 internal fun LazyListScope.homeEditorShelves(
     editor: HomeEditor,
-    layout: List<ShelfConfig>,
-    viewModel: HomeViewModel
+    viewModel: HomeViewModel,
+    states: HomeShelfStates
 ) {
-    items(editor.order, key = { it.id }, contentType = { "editable-shelf" }) { section ->
+    itemsIndexed(editor.order, key = { _, section -> section.id }, contentType = { _, _ -> "editable-shelf" }) { index, section ->
         val haptics = rememberHaptics()
+        val previous = editor.order.getOrNull(index - 1)
+        val next = editor.order.getOrNull(index + 1)
         ReorderableItem(editor.reorderState, key = section.id) { isDragging ->
             ShelfEditFrame(
                 section = section,
-                config = layout.firstOrNull { it.id == section.id } ?: ShelfConfig(section.id),
                 isDragging = isDragging,
-                onToggle = { viewModel.layoutActions.setEnabled(section.id, it) },
-                // Mix shelves only draw mix cards, so there is no layout or length to change.
-                onOpenSettings = if (section.mixes.isEmpty()) ({ editor.openSettings(section.id) }) else null,
-                dragHandle = {
-                    draggableHandle(
-                        onDragStarted = { haptics.heldDown() },
-                        onDragStopped = { haptics.settled() }
-                    )
-                },
+                viewModel = viewModel,
+                states = states,
+                onTap = { editor.openSettings(section.id) },
+                onMoveUp = previous?.let { { viewModel.layoutActions.move(section.id, it.id) } },
+                onMoveDown = next?.let { { viewModel.layoutActions.move(section.id, it.id) } },
+                dragModifier = Modifier.longPressDraggableHandle(
+                    onDragStarted = { haptics.heldDown() },
+                    onDragStopped = { haptics.settled() }
+                ),
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
         }
@@ -97,10 +102,11 @@ internal fun LazyListScope.homeEditorShelves(
     item(key = "add-shelf", contentType = "add-shelf") {
         FilledTonalButton(
             onClick = { editor.setAddingShelf(true) },
-            modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth()
+            shapes = ButtonDefaults.shapes(),
+            modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth().heightIn(min = 56.dp).animateItem()
         ) {
-            Icon(Icons.Rounded.Add, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
+            Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
             Text(stringResource(R.string.home_shelf_add))
         }
     }
@@ -120,12 +126,10 @@ internal fun HomeEditorSettingsSheet(editor: HomeEditor, state: HomeUiState, vie
         config = state.layout.firstOrNull { it.id == id } ?: ShelfConfig(id),
         onStyle = { viewModel.layoutActions.setStyle(id, it) },
         onCount = { viewModel.layoutActions.setCount(id, it) },
-        onRemove = if (id.startsWith(GenreShelfPrefix)) {
-            {
-                viewModel.layoutActions.remove(id)
-                editor.openSettings(null)
-            }
-        } else null,
+        onRemove = {
+            viewModel.layoutActions.remove(id)
+            editor.openSettings(null)
+        },
         onDismiss = { editor.openSettings(null) }
     )
 }
@@ -134,13 +138,12 @@ internal fun HomeEditorSettingsSheet(editor: HomeEditor, state: HomeUiState, vie
 internal fun HomeEditorAddSheet(editor: HomeEditor, state: HomeUiState, viewModel: HomeViewModel) {
     if (!editor.addingShelf) return
     val genres by viewModel.genres.collectAsStateWithLifecycle()
-    val added = state.layout.mapTo(HashSet()) { it.id }
+    val onHome = state.layout.filter { it.enabled }.mapTo(HashSet()) { it.id }
     AddShelfSheet(
-        genres = genres.filter { GenreShelfPrefix + it !in added },
-        onAdd = {
-            viewModel.layoutActions.addGenre(it)
-            editor.setAddingShelf(false)
-        },
+        removed = state.removedSections,
+        genres = genres.filter { com.wander.android.ui.screens.home.GenreShelfPrefix + it !in onHome },
+        onRestore = viewModel.layoutActions::restore,
+        onAddGenre = viewModel.layoutActions::addGenre,
         onDismiss = { editor.setAddingShelf(false) }
     )
 }
