@@ -6,11 +6,9 @@ import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
 import com.wander.android.R
 import com.wander.android.ui.components.GroupedCard
-import com.wander.android.ui.components.rememberShelfEntranceScale
 
 internal fun LazyListScope.externalTab(
     state: SettingsUiState,
@@ -25,7 +23,6 @@ internal fun LazyListScope.externalTab(
             if (state.incognito) {
                 add {
                     SettingsRow(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(0)),
                         title = stringResource(R.string.settings_sharing_paused_incognito),
                         subtitle = stringResource(R.string.settings_custom_sharing_links_off_while)
                     )
@@ -33,7 +30,6 @@ internal fun LazyListScope.externalTab(
             }
             add {
                 SettingsRow(
-                    modifier = Modifier.scale(rememberShelfEntranceScale(1)),
                     title = stringResource(R.string.settings_custom_share_domain),
                     subtitle = when {
                         state.agroShareDomain.isNotBlank() -> "${state.agroShareDomain}/listen"
@@ -66,7 +62,6 @@ internal fun LazyListScope.externalTab(
         GroupedCard(
             items = listOf<@Composable () -> Unit>({
                 SettingsToggle(
-                    modifier = Modifier.scale(rememberShelfEntranceScale(2)),
                     title = stringResource(R.string.settings_new_music_from_artists_follow),
                     subtitle = stringResource(R.string.settings_checks_every_few_hours_wi),
                     checked = state.artistReleaseNotificationsEnabled,
