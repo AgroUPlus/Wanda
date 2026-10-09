@@ -213,9 +213,13 @@
     <string name="home_shelf_length">Length</string>
     <string name="home_shelf_default">Default</string>
     <string name="home_style_carousel">Carousel</string>
+    <string name="home_style_cards">Cards</string>
+    <string name="home_style_spotlight">Spotlight</string>
+    <string name="home_style_mosaic">Mosaic</string>
+    <string name="home_style_pages">Pages</string>
+    <string name="home_style_use_default">Use the default layout</string>
     <string name="home_style_list">List</string>
     <string name="home_style_grid">Grid</string>
-    <string name="home_style_hero">Hero</string>
     <string name="home_shelf_add">Add shelf</string>
     <string name="home_shelf_add_title">Add a shelf</string>
     <string name="home_shelf_remove">Remove shelf</string>
