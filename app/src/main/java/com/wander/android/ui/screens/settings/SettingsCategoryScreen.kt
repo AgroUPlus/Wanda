@@ -52,7 +52,8 @@ internal fun SettingsCategoryScreen(
     onOpenImport: () -> Unit,
     onOpenMergePreview: () -> Unit,
     onOpenReplay: () -> Unit,
-    onOpenFingerprints: () -> Unit
+    onOpenFingerprints: () -> Unit,
+    onCustomizeHome: () -> Unit
 ) {
     val host = rememberSettingsHost(
         SettingsNavigation(
@@ -62,7 +63,8 @@ internal fun SettingsCategoryScreen(
             onOpenImport = onOpenImport,
             onOpenMergePreview = onOpenMergePreview,
             onOpenReplay = onOpenReplay,
-            onOpenFingerprints = onOpenFingerprints
+            onOpenFingerprints = onOpenFingerprints,
+            onCustomizeHome = onCustomizeHome
         )
     )
 
