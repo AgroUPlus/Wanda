@@ -211,6 +211,7 @@
     <string name="home_edit_reset">Reset</string>
     <string name="home_shelf_layout">Layout</string>
     <string name="home_shelf_length">Length</string>
+    <string name="home_shelf_sources">Only from</string>
     <string name="home_shelf_default">Default</string>
     <string name="home_style_carousel">Carousel</string>
     <string name="home_style_cards">Cards</string>
