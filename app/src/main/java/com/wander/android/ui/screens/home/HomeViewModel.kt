@@ -181,7 +181,7 @@ class HomeViewModel @Inject constructor(
             _uiState.value = HomeUiState(
                 isLoading = false,
                 isRefreshing = false,
-                greeting = greeting(),
+                greeting = greeting(LocalTime.now()),
                 layout = _uiState.value.layout,
                 editing = _uiState.value.editing,
                 allSections = localSections.withLikes(likedTrackIds.value),
@@ -286,12 +286,5 @@ class HomeViewModel @Inject constructor(
     /** Narrows Home to one backend, or back to all of them. Filters; never refetches. */
     fun selectSource(source: SourceType?) {
         _uiState.update { it.copy(selectedSource = source) }
-    }
-
-    /** Time of day the user is most likely reading this. */
-    private fun greeting(): String = when (LocalTime.now().hour) {
-        in 5..11 -> "Good morning"
-        in 12..17 -> "Good afternoon"
-        else -> "Good evening"
     }
 }
