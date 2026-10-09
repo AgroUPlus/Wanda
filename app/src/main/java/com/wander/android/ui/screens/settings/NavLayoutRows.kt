@@ -1,14 +1,21 @@
 package com.wander.android.ui.screens.settings
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.DownloadForOffline
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.LibraryMusic
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Podcasts
+import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -35,7 +42,7 @@ internal fun DockLayoutRow() {
         OrderedChoiceSheet(
             title = stringResource(R.string.settings_dock_title),
             hint = stringResource(R.string.settings_dock_hint, DockItem.MaxShown),
-            all = DockItem.entries.map { Choice(it, stringResource(it.label)) },
+            all = DockItem.entries.map { Choice(it, stringResource(it.label), it.icon) },
             selected = items,
             minSelected = 0,
             maxSelected = DockItem.MaxShown,
@@ -63,7 +70,7 @@ internal fun LibrarySectionsRow() {
         OrderedChoiceSheet(
             title = stringResource(R.string.settings_library_sections),
             hint = stringResource(R.string.settings_library_sections_hint),
-            all = LibraryTab.entries.map { Choice(it, stringResource(it.label)) },
+            all = LibraryTab.entries.map { Choice(it, stringResource(it.label), it.icon()) },
             selected = tabs,
             minSelected = 1,
             maxSelected = LibraryTab.entries.size,
@@ -71,4 +78,13 @@ internal fun LibrarySectionsRow() {
             onDismiss = { open = false }
         )
     }
+}
+
+private fun LibraryTab.icon(): ImageVector = when (this) {
+    LibraryTab.LIKED -> Icons.Rounded.Favorite
+    LibraryTab.TRACKS -> Icons.Rounded.MusicNote
+    LibraryTab.ALBUMS -> Icons.Rounded.Album
+    LibraryTab.PLAYLISTS -> Icons.Rounded.QueueMusic
+    LibraryTab.PODCASTS -> Icons.Rounded.Podcasts
+    LibraryTab.DOWNLOADS -> Icons.Rounded.DownloadForOffline
 }
