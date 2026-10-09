@@ -15,9 +15,11 @@ import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Subtitles
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
 import com.wander.android.R
 import com.wander.android.ui.components.GroupedCard
+import com.wander.android.ui.components.rememberShelfEntranceScale
 
 /**
  * Look and feel, in titled sections — one heading and one card each, so a new kind of setting
@@ -27,7 +29,7 @@ internal fun LazyListScope.appearanceTab(
     state: SettingsUiState,
     actions: SettingsActions
 ) {
-    lookSection(key = "home", title = R.string.settings_section_home) {
+    lookSection(key = "home", title = R.string.settings_section_home, index = 0) {
         listOf {
             SettingsRow(
                 title = stringResource(R.string.settings_customize_home),
@@ -38,11 +40,11 @@ internal fun LazyListScope.appearanceTab(
         }
     }
 
-    lookSection(key = "navigation", title = R.string.settings_section_navigation) {
+    lookSection(key = "navigation", title = R.string.settings_section_navigation, index = 1) {
         listOf({ DockLayoutRow() }, { LibrarySectionsRow() })
     }
 
-    lookSection(key = "language", title = R.string.settings_section_language) {
+    lookSection(key = "language", title = R.string.settings_section_language, index = 2) {
         listOf {
             LanguageSetting(
                 currentTag = state.languageTag,
@@ -52,7 +54,7 @@ internal fun LazyListScope.appearanceTab(
         }
     }
 
-    lookSection(key = "colours", title = R.string.settings_section_colours) {
+    lookSection(key = "colours", title = R.string.settings_section_colours, index = 3) {
         listOf(
             {
                 SettingsToggle(
@@ -84,7 +86,7 @@ internal fun LazyListScope.appearanceTab(
         )
     }
 
-    lookSection(key = "motion", title = R.string.settings_section_motion_effects) {
+    lookSection(key = "motion", title = R.string.settings_section_motion_effects, index = 4) {
         listOf(
             {
                 SettingsToggle(
@@ -110,7 +112,7 @@ internal fun LazyListScope.appearanceTab(
         )
     }
 
-    lookSection(key = "now_playing", title = R.string.settings_section_now_playing) {
+    lookSection(key = "now_playing", title = R.string.settings_section_now_playing, index = 5) {
         listOf(
             {
                 SettingsToggle(
@@ -138,10 +140,11 @@ internal fun LazyListScope.appearanceTab(
 private fun LazyListScope.lookSection(
     key: String,
     @StringRes title: Int,
+    index: Int,
     rows: @Composable () -> List<@Composable () -> Unit>
 ) {
     item(key = "look_$key") {
-        Column {
+        Column(modifier = Modifier.scale(rememberShelfEntranceScale(index))) {
             SettingsSection(stringResource(title))
             GroupedCard(items = rows())
         }
