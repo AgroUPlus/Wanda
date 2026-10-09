@@ -57,4 +57,13 @@ class HomeLayoutApplierTest {
         assertEquals(emptyList<ShelfConfig>(), ShelfConfigCodec.decode("{not json"))
         assertEquals(emptyList<ShelfConfig>(), ShelfConfigCodec.decode(null))
     }
+
+    @Test
+    fun `a style this build no longer has reads as the default`() {
+        val raw = """[{"id":"liked","style":"FAVORITES_CAROUSEL","count":6},{"id":"discover"}]"""
+        val decoded = ShelfConfigCodec.decode(raw)
+        assertEquals(listOf("liked", "discover"), decoded.map { it.id })
+        assertEquals(null, decoded[0].style)
+        assertEquals(6, decoded[0].count)
+    }
 }
