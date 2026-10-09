@@ -161,17 +161,6 @@ internal fun LazyListScope.homeSection(
             )
         }
 
-        HomeSectionStyle.FAVORITES_CAROUSEL -> item(
-            key = "${section.id}-row",
-            contentType = "favorites-carousel"
-        ) {
-            FavoritesCarouselShelf(
-                tracks = section.tracks,
-                onPlay = { index -> viewModel.startRadio(section.tracks[index]) },
-                onLongPress = onLongPress
-            )
-        }
-
         HomeSectionStyle.HERO_CAROUSEL -> item(
             key = "${section.id}-row",
             contentType = "hero-carousel"
