@@ -56,6 +56,7 @@ internal fun ShelfSettingsSheet(
     libraryGenres: List<String>,
     onCategory: (String) -> Unit,
     onLanguage: (String) -> Unit,
+    plays: Int?,
     sources: List<SourceType>,
     onSource: (String) -> Unit,
     onRemove: () -> Unit,
@@ -70,6 +71,14 @@ internal fun ShelfSettingsSheet(
                 .padding(start = 20.dp, end = 20.dp, bottom = 24.dp)
         ) {
             Text(shelfName(section, config), style = MaterialTheme.typography.titleLarge)
+            // Only once counting has begun; before that there is nothing true to say.
+            plays?.let {
+                Text(
+                    text = stringResource(R.string.home_shelf_played, it),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             if (config.id.startsWith(GenreShelfPrefix)) {
                 ShelfCategoriesPicker(config, libraryGenres, onCategory, onLanguage)
             }
