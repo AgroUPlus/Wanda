@@ -44,7 +44,7 @@ class ServiceShelvesRepository @Inject constructor(
         val youtube = music.activeSources().firstOrNull { it.sourceType == SourceType.YTMUSIC }
             ?: return ServiceShelfResult(emptyList(), ServiceProblem.YOUTUBE_NOT_CONNECTED)
 
-        val shelves = recommendations.getShelves().filter { it.id.startsWith(YOUTUBE_SHELF_PREFIX) }
+        val shelves = recommendations.getShelves().filter { it.id.startsWith(YOUTUBE_SHELF_PREFIX) && it.isGeneric }
         if (shelves.isNotEmpty()) {
             return ServiceShelfResult(shelves.flatMap { it.tracks }.distinctBy { it.id }.shuffled().take(limit))
         }
