@@ -131,7 +131,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(
                         allSections = state.allSections.withSection(
-                            shelf(SectionLiked, "Your Favorites", HomeSectionStyle.FAVORITES_CAROUSEL, liked.take(CarouselSize))
+                            shelf(SectionLiked, "Your Favorites", HomeSectionStyle.HERO_CAROUSEL, liked.take(CarouselSize))
                         )
                     )
                 }
@@ -169,7 +169,7 @@ class HomeViewModel @Inject constructor(
                     add(shelf(SectionOnRepeat, "Quick picks", HomeSectionStyle.TRACK_PAGER, onRepeat.await()))
                     add(shelf(SectionRecentlyPlayed, "Recently Played", HomeSectionStyle.HERO_CAROUSEL, recentlyPlayed.await()))
                     add(continueListening.value)
-                    add(shelf(SectionLiked, "Your Favorites", HomeSectionStyle.FAVORITES_CAROUSEL, liked.await()))
+                    add(shelf(SectionLiked, "Your Favorites", HomeSectionStyle.HERO_CAROUSEL, liked.await()))
                     add(shelf(SectionDiscover, "Discover", HomeSectionStyle.DISCOVER_MASONRY, discover.await()))
                     addAll(extras.sync(layoutStore.layout.first(), emptyList(), force = true).sections)
                 }.filterNot(HomeSection::isEmpty)
