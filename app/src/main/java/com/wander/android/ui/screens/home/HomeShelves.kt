@@ -65,8 +65,11 @@ internal fun LazyListScope.homeSection(
     // Starting a song from a shelf is counted per shelf, on this device, so the customizer can
     // suggest replacing the ones that are never used.
     val play: (Int) -> Unit = { index ->
-        viewModel.shelfUsage.record(section.id)
-        viewModel.startRadio(section.tracks[index])
+        // The customizer draws live shelves; a tap there is for editing, never for playing.
+        if (!viewModel.uiState.value.editing) {
+            viewModel.shelfUsage.record(section.id)
+            viewModel.startRadio(section.tracks[index])
+        }
     }
     item(key = "${section.id}-title", contentType = "section-title") {
         if (section.style == HomeSectionStyle.TRACK_PAGER) {
@@ -99,8 +102,10 @@ internal fun LazyListScope.homeSection(
                     contentType = { _, _ -> "mix-card" }
                 ) { _, mix ->
                     SmartMixCard(mix = mix, onPlay = {
-                        viewModel.shelfUsage.record(section.id)
-                        viewModel.playMix(mix)
+                        if (!viewModel.uiState.value.editing) {
+                            viewModel.shelfUsage.record(section.id)
+                            viewModel.playMix(mix)
+                        }
                     })
                 }
             }
