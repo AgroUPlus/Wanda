@@ -195,6 +195,7 @@ fun HomeScreen(
                                 HomeEditBar(
                                     onReset = viewModel.layoutActions::reset,
                                     onDone = viewModel.layoutActions::stop,
+                                    onAddShelf = { editor.setAddingShelf(true) },
                                     suggestion = editor.rarelyUsed.takeIf { it.isNotEmpty() }?.let { ids ->
                                         val titles = ids.mapNotNull { id -> editor.order.firstOrNull { it.id == id }?.title?.takeIf(String::isNotEmpty) }
                                         stringResource(R.string.home_edit_suggestion, titles.joinToString())
