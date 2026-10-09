@@ -34,6 +34,7 @@ import com.wander.android.ui.components.rememberPressScale
 import com.wander.android.ui.components.rememberShelfArtworkShape
 import com.wander.android.ui.components.rememberShelfEntranceScale
 import com.wander.android.ui.components.scrollingTitle
+import com.wander.android.ui.components.instantPress
 
 /**
  * One oversized hero card, and a short strip of related tracks beside it.
@@ -106,6 +107,7 @@ private fun HeroCard(
             .width(HeroWidth)
             .scale(scale * entranceScale)
             .graphicsLayer { alpha = if (enabled) 1f else DisabledAlpha }
+            .instantPress(interactionSource)
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -164,6 +166,7 @@ private fun StripRow(
             .scale(scale)
             .clip(MaterialTheme.shapes.large)
             .background(MaterialTheme.colorScheme.surfaceContainer)
+            .instantPress(interactionSource)
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
