@@ -13,14 +13,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Category
-import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.LocalFireDepartment
-import androidx.compose.material.icons.rounded.NewReleases
-import androidx.compose.material.icons.rounded.People
-import androidx.compose.material.icons.rounded.Restore
-import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -71,13 +64,14 @@ internal fun AddShelfSheet(
     val create = listOf(
         AddOption("genre", stringResource(R.string.shelf_genre), stringResource(R.string.shelf_genre_summary), Icons.Rounded.Category, ShelfOrigin.LIBRARY, onCreateGenre)
     )
-    val more = extras.map {
+    val extraOptions = extras.map {
         AddOption(it.id, stringResource(it.title), stringResource(it.summary), it.icon(), shelfOrigin(it.id)) { onAddExtra(it.id) }
     }
-    val restorable = removed.map { AddOption(it.id, it.title, null, Icons.Rounded.Restore, shelfOrigin(it.id)) { onRestore(it.id) } }
-    val restore = restorable.filter { it.origin == ShelfOrigin.LIBRARY }
-    val youtube = restorable.filter { it.origin == ShelfOrigin.YOUTUBE_MUSIC }
-    val agro = restorable.filter { it.origin == ShelfOrigin.AGRO }
+    val restorable = removed.map { AddOption(it.id, it.title, null, shelfIcon(it.id), shelfOrigin(it.id)) { onRestore(it.id) } }
+    val all = extraOptions + restorable
+    fun from(origin: ShelfOrigin) = all.filter { it.origin == origin }
+    val library = extraOptions.filter { it.origin == ShelfOrigin.LIBRARY || it.origin == ShelfOrigin.FRIENDS }
+    val removedLibrary = restorable.filter { it.origin == ShelfOrigin.LIBRARY }
 
     WandaSheet(onDismissRequest = onDismiss) {
         LazyColumn(
@@ -92,27 +86,16 @@ internal fun AddShelfSheet(
                 )
             }
             group(R.string.home_shelf_add_create, "create", create)
-            group(R.string.home_shelf_add_more, "more", more)
-            // These shelves come from a service rather than the library, so when none is on offer the
-            // sheet says why instead of leaving the group out and the question unanswered.
-            group(R.string.home_shelf_add_youtube, "youtube", youtube, R.string.home_shelf_add_youtube_hint)
-            group(R.string.home_shelf_add_agro, "agro", agro, R.string.home_shelf_add_agro_hint)
-            group(R.string.home_shelf_add_removed, "removed", restore)
+            group(R.string.home_shelf_add_more, "more", library)
+            group(R.string.home_shelf_add_youtube, "youtube", from(ShelfOrigin.YOUTUBE_MUSIC))
+            group(R.string.home_shelf_add_agro, "agro", from(ShelfOrigin.AGRO))
+            group(R.string.home_shelf_add_removed, "removed", removedLibrary)
         }
     }
 }
 
-private fun ExtraShelf.icon(): ImageVector = when (this) {
-    ExtraShelf.REDISCOVER -> Icons.Rounded.History
-    ExtraShelf.HEAVY_ROTATION -> Icons.Rounded.LocalFireDepartment
-    ExtraShelf.FRESH -> Icons.Rounded.NewReleases
-    ExtraShelf.LATE_NIGHT -> Icons.Rounded.Bedtime
-    ExtraShelf.RANDOM -> Icons.Rounded.Shuffle
-    ExtraShelf.FRIENDS -> Icons.Rounded.People
-}
-
-private fun LazyListScope.group(label: Int, prefix: String, options: List<AddOption>, emptyHint: Int? = null) {
-    if (options.isEmpty() && emptyHint == null) return
+private fun LazyListScope.group(label: Int, prefix: String, options: List<AddOption>) {
+    if (options.isEmpty()) return
     item(key = "$prefix-label") {
         Text(
             text = stringResource(label),
@@ -120,16 +103,6 @@ private fun LazyListScope.group(label: Int, prefix: String, options: List<AddOpt
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 4.dp).animateItem()
         )
-    }
-    if (options.isEmpty() && emptyHint != null) {
-        item(key = "$prefix-hint") {
-            Text(
-                text = stringResource(emptyHint),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp).animateItem()
-            )
-        }
     }
     itemsIndexed(options, key = { _, option -> "$prefix-${option.key}" }) { index, option ->
         AddShelfRow(option, index, options.size, Modifier.animateItem())
