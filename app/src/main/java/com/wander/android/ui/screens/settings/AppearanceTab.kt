@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.BlurOn
 import androidx.compose.material.icons.rounded.Contrast
+import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.MotionPhotosOff
@@ -28,7 +29,18 @@ internal fun LazyListScope.appearanceTab(
     state: SettingsUiState,
     actions: SettingsActions
 ) {
-    lookSection(key = "language", title = R.string.settings_section_language, index = 0) {
+    lookSection(key = "home", title = R.string.settings_section_home, index = 0) {
+        listOf {
+            SettingsRow(
+                title = stringResource(R.string.settings_customize_home),
+                subtitle = stringResource(R.string.settings_customize_home_sub),
+                onClick = actions.onCustomizeHome,
+                icon = Icons.Rounded.Dashboard
+            )
+        }
+    }
+
+    lookSection(key = "language", title = R.string.settings_section_language, index = 1) {
         listOf {
             LanguageSetting(
                 currentTag = state.languageTag,
@@ -38,7 +50,7 @@ internal fun LazyListScope.appearanceTab(
         }
     }
 
-    lookSection(key = "colours", title = R.string.settings_section_colours, index = 1) {
+    lookSection(key = "colours", title = R.string.settings_section_colours, index = 2) {
         listOf(
             {
                 SettingsToggle(
@@ -70,7 +82,7 @@ internal fun LazyListScope.appearanceTab(
         )
     }
 
-    lookSection(key = "motion", title = R.string.settings_section_motion_effects, index = 2) {
+    lookSection(key = "motion", title = R.string.settings_section_motion_effects, index = 3) {
         listOf(
             {
                 SettingsToggle(
@@ -96,7 +108,7 @@ internal fun LazyListScope.appearanceTab(
         )
     }
 
-    lookSection(key = "now_playing", title = R.string.settings_section_now_playing, index = 3) {
+    lookSection(key = "now_playing", title = R.string.settings_section_now_playing, index = 4) {
         listOf(
             {
                 SettingsToggle(
