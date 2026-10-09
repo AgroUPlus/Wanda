@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
@@ -72,20 +73,44 @@ internal fun Modifier.pressShrink(morph: PressMorph): Modifier = graphicsLayer {
 }
 
 /**
+ * How long a touch on a list item holds before it shows it is pressed — the same beat a click waits
+ * before showing its own press feedback. In a list, a finger that lands to scroll should not make
+ * every row it crosses round off and shrink.
+ */
+internal const val ListPressDelayMillis = 100L
+
+/**
  * Feeds [morph] from touches on this row. It listens before the row's own children do and consumes
  * nothing, so clicks, long presses, swipes and scrolling behave exactly as before. A touch that
  * turns into a scroll or drag stops counting as a press.
+ *
+ * With a [delayMillis] the press only shows once the finger has held that long, so a tap or a
+ * scroll that starts sooner shows nothing. Settings and buttons use none: they respond at once.
  */
-internal fun Modifier.trackPress(morph: PressMorph): Modifier = pointerInput(morph) {
+internal fun Modifier.trackPress(morph: PressMorph, delayMillis: Long = 0L): Modifier = pointerInput(morph, delayMillis) {
     val slop = viewConfiguration.touchSlop
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-        morph.tracker.pressed = true
-        while (true) {
+
+        // True once the finger lifts or slides off, false while it is still holding.
+        suspend fun AwaitPointerEventScope.released(): Boolean {
             val change = awaitPointerEvent(PointerEventPass.Initial).changes
-                .firstOrNull { it.id == down.id } ?: break
-            if (!change.pressed || (change.position - down.position).getDistance() > slop) break
+                .firstOrNull { it.id == down.id } ?: return true
+            return !change.pressed || (change.position - down.position).getDistance() > slop
         }
-        morph.tracker.pressed = false
+
+        val endedEarly = if (delayMillis > 0) {
+            withTimeoutOrNull(delayMillis) {
+                while (!released()) Unit
+                true
+            }
+        } else {
+            null
+        }
+        if (endedEarly == null) {
+            morph.tracker.pressed = true
+            while (!released()) Unit
+            morph.tracker.pressed = false
+        }
     }
 }
