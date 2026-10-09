@@ -6,7 +6,7 @@ import com.wander.android.data.model.UnifiedTrack
 
 /** How a shelf is laid out on Home. */
 enum class HomeSectionStyle {
-    /** A row of square cards. The default shelf. */
+    /** A row of compact square cards ("Cards"). */
     TRACK_CAROUSEL,
     MIX_CAROUSEL,
     /** Full-width rows, straight down the page. */
@@ -17,9 +17,7 @@ enum class HomeSectionStyle {
     LARGE_GRID,
     /** One oversized hero card leading a small strip of related tracks beside it. */
     FEATURED_HERO,
-    /** An M3 Expressive carousel: the focused item is large, its neighbours compress toward it. */
-    FAVORITES_CAROUSEL,
-    /** An M3 Expressive hero carousel: one oversized centred item, slivers of its neighbours. */
+    /** The "Carousel": an M3 Expressive hero carousel, one oversized centred item with slivers of its neighbours. */
     HERO_CAROUSEL,
     /** Two rows of cards at alternating heights, scrolling sideways as a broken grid. */
     DISCOVER_MASONRY
