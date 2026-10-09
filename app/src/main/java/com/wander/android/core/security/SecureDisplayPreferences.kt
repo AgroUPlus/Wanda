@@ -40,6 +40,14 @@ internal class SecureDisplayPreferences(private val prefs: SharedPreferences) {
     private val _homeLayout = MutableStateFlow(prefs.getString(KEY_HOME_LAYOUT, null))
     val homeLayout: StateFlow<String?> = _homeLayout.asStateFlow()
 
+    /** The bottom bar's shortcuts as comma-separated names, in order; null until the user chooses. */
+    private val _dockItems = MutableStateFlow(prefs.getString(KEY_DOCK_ITEMS, null))
+    val dockItems: StateFlow<String?> = _dockItems.asStateFlow()
+
+    /** The Library's visible sections as comma-separated names, in order; null until the user chooses. */
+    private val _libraryTabs = MutableStateFlow(prefs.getString(KEY_LIBRARY_TABS, null))
+    val libraryTabs: StateFlow<String?> = _libraryTabs.asStateFlow()
+
     fun setAmoledBlack(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_AMOLED_BLACK, enabled) }
         _isAmoledBlack.value = enabled
@@ -80,6 +88,16 @@ internal class SecureDisplayPreferences(private val prefs: SharedPreferences) {
         _isCoverCarouselEnabled.value = enabled
     }
 
+    fun setDockItems(names: String) {
+        prefs.edit { putString(KEY_DOCK_ITEMS, names) }
+        _dockItems.value = names
+    }
+
+    fun setLibraryTabs(names: String) {
+        prefs.edit { putString(KEY_LIBRARY_TABS, names) }
+        _libraryTabs.value = names
+    }
+
     fun setHomeLayout(json: String) {
         prefs.edit { putString(KEY_HOME_LAYOUT, json) }
         _homeLayout.value = json
@@ -99,6 +117,8 @@ internal class SecureDisplayPreferences(private val prefs: SharedPreferences) {
         _isLetterByLetterLyricsEnabled.value = prefs.getBoolean(KEY_LETTER_BY_LETTER_LYRICS, true)
         _isCoverCarouselEnabled.value = prefs.getBoolean(KEY_COVER_CAROUSEL, true)
         _homeLayout.value = prefs.getString(KEY_HOME_LAYOUT, null)
+        _dockItems.value = prefs.getString(KEY_DOCK_ITEMS, null)
+        _libraryTabs.value = prefs.getString(KEY_LIBRARY_TABS, null)
     }
 }
 
