@@ -28,7 +28,11 @@ data class ShelfConfig(
 
 /** The stored layout is a JSON list in order; an empty list means "never customised". */
 internal object ShelfConfigCodec {
-    private val json = Json { ignoreUnknownKeys = true }
+    // A style name this build no longer has reads as "the shelf's default" rather than failing the whole layout.
+    private val json = Json {
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+    }
     private val serializer = ListSerializer(ShelfConfig.serializer())
 
     fun encode(configs: List<ShelfConfig>): String = json.encodeToString(serializer, configs)
