@@ -251,6 +251,17 @@
     <string name="shelf_random_summary">A different handful from your library each time</string>
     <string name="shelf_friends">From your friends</string>
     <string name="shelf_friends_summary">Songs your friends sent you, ready to play</string>
+    <string name="shelf_popular_agro">Popular on Agro</string>
+    <string name="shelf_popular_agro_summary">What everyone on your Agro server is playing, from songs you have</string>
+    <string name="shelf_youtube_music">YouTube Music picks</string>
+    <string name="shelf_youtube_music_summary">A mix of what YouTube Music\'s front page offers</string>
+    <string name="problem_agro_not_paired">Agro is not set up. Pair this device in Settings under Connections.</string>
+    <string name="problem_agro_unreachable">Your Agro server did not answer. It may be offline or need updating.</string>
+    <string name="problem_agro_no_data">Agro has no popularity data yet. It fills in as people play.</string>
+    <string name="problem_agro_nothing_in_library">Agro has popular songs, but none of them are in your library.</string>
+    <string name="problem_youtube_not_connected">YouTube Music is not connected. Sign in under Settings, Connections.</string>
+    <string name="problem_youtube_unreachable">YouTube Music did not answer. Try again in a moment.</string>
+    <string name="problem_youtube_no_shelves">YouTube Music answered, but with no shelves.</string>
     <string name="origin_youtube_music">YouTube Music</string>
     <string name="origin_agro">Agro</string>
     <string name="origin_friends">Friends</string>
@@ -268,9 +279,7 @@
     <string name="home_shelf_move_down">Move down</string>
     <string name="home_shelf_add_removed">Removed shelves</string>
     <string name="home_shelf_add_youtube">From YouTube Music</string>
-    <string name="home_shelf_add_youtube_hint">Shelves from your YouTube Music home that you removed appear here. None yet: they are all on Home, or YouTube Music is not signed in.</string>
     <string name="home_shelf_add_agro">From Agro</string>
-    <string name="home_shelf_add_agro_hint">Agro shelves such as Popular on Agro that you removed appear here. None yet: they are on Home, or Agro is not paired or has nothing to show.</string>
     <string name="home_edit_hint">Hold a shelf to move it. Tap it to edit.</string>
     <string name="home_edit_reset_title">Reset Home?</string>
     <string name="home_edit_reset_message">Every shelf goes back to the default order and layout, and shelves you added are removed.</string>
