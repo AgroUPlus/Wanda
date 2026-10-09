@@ -7,7 +7,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -27,11 +26,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
-import com.wander.android.ui.components.ExpressiveButton
+import com.wander.android.ui.components.HeroActionButton
+import com.wander.android.ui.components.HeroActionIconSize
+import com.wander.android.ui.components.HeroActionRow
+import com.wander.android.ui.components.HeroActionTint
+import com.wander.android.ui.components.HeroPlayIconSize
+import com.wander.android.ui.components.HeroSecondaryRowHeight
+import com.wander.android.ui.components.HeroTransportRowHeight
 
 /**
- * Replaces Home's greeting while the customizer is open: a title, then Reset and Done side by side,
- * then a big Add shelf. Reset asks first; it undoes every edit.
+ * Replaces Home's greeting while the customizer is open: a title, then Reset and Done, then a big
+ * Add shelf. They are the same buttons the artist and album pages use — round at rest, tightening
+ * and widening under the finger while their neighbour gives way. Reset asks first; it undoes
+ * every edit.
  */
 @Composable
 internal fun HomeEditBar(
@@ -45,10 +52,10 @@ internal fun HomeEditBar(
     val motion = MaterialTheme.motionScheme
 
     Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 12.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = modifier.fillMaxWidth().padding(top = 12.dp)
     ) {
-        Column(modifier = Modifier.padding(horizontal = 4.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp)) {
             Text(stringResource(R.string.home_edit_title), style = MaterialTheme.typography.headlineMedium)
             Text(
                 text = stringResource(R.string.home_edit_hint),
@@ -70,35 +77,41 @@ internal fun HomeEditBar(
             }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            ExpressiveButton(
-                text = stringResource(R.string.home_edit_reset),
+        HeroActionRow(height = HeroSecondaryRowHeight) {
+            HeroActionButton(
                 onClick = { confirmingReset = true },
-                container = MaterialTheme.colorScheme.surfaceContainerHigh,
-                content = MaterialTheme.colorScheme.onSurface,
+                contentDescription = null,
                 icon = Icons.Rounded.Restore,
-                modifier = Modifier.weight(1f)
+                baseWeight = 1f,
+                iconSize = HeroActionIconSize,
+                rowHeight = HeroSecondaryRowHeight,
+                tint = HeroActionTint.NEUTRAL,
+                label = stringResource(R.string.home_edit_reset)
             )
-            ExpressiveButton(
-                text = stringResource(R.string.home_edit_done),
+            HeroActionButton(
                 onClick = onDone,
-                container = MaterialTheme.colorScheme.primary,
-                content = MaterialTheme.colorScheme.onPrimary,
+                contentDescription = null,
                 icon = Icons.Rounded.Check,
-                modifier = Modifier.weight(1f)
+                baseWeight = 1f,
+                iconSize = HeroActionIconSize,
+                rowHeight = HeroSecondaryRowHeight,
+                tint = HeroActionTint.PRIMARY_SOLID,
+                label = stringResource(R.string.home_edit_done)
             )
         }
 
-        ExpressiveButton(
-            text = stringResource(R.string.home_shelf_add),
-            onClick = onAddShelf,
-            container = MaterialTheme.colorScheme.primaryContainer,
-            content = MaterialTheme.colorScheme.onPrimaryContainer,
-            icon = Icons.Rounded.Add,
-            height = 72.dp,
-            textStyle = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.fillMaxWidth()
-        )
+        HeroActionRow(height = HeroTransportRowHeight) {
+            HeroActionButton(
+                onClick = onAddShelf,
+                contentDescription = null,
+                icon = Icons.Rounded.Add,
+                baseWeight = 1f,
+                iconSize = HeroPlayIconSize,
+                rowHeight = HeroTransportRowHeight,
+                tint = HeroActionTint.PRIMARY_CONTAINER,
+                label = stringResource(R.string.home_shelf_add)
+            )
+        }
     }
 
     if (confirmingReset) {
