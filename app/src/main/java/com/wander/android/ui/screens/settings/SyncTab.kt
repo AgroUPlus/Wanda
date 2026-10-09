@@ -9,11 +9,13 @@ import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.SettingsSuggest
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.ui.components.GroupedCard
+import com.wander.android.ui.components.rememberShelfEntranceScale
 
 /**
  * Everything Agro: the pairing itself, then the two things a pairing buys — settings shared between
@@ -31,6 +33,7 @@ internal fun LazyListScope.syncTab(
         GroupedCard(
             items = listOf<@Composable () -> Unit>({
                 SettingsRow(
+                    modifier = Modifier.scale(rememberShelfEntranceScale(0)),
                     title = stringResource(R.string.settings_agro_device),
                     subtitle = state.agroConnection.describe(state.agroDevicePetname, state.agroPaired),
                     // A rejected token cannot be unpaired from — there is nothing on the server
@@ -55,6 +58,7 @@ internal fun LazyListScope.syncTab(
         val toggleItems = buildList<@Composable () -> Unit> {
             add {
                 SettingsToggle(
+                    modifier = Modifier.scale(rememberShelfEntranceScale(1)),
                     title = stringResource(R.string.settings_sync_settings_agro),
                     subtitle = stringResource(R.string.settings_share_navidrome_address_between_devices),
                     checked = state.agroSyncSettings && !state.incognito,
@@ -65,6 +69,7 @@ internal fun LazyListScope.syncTab(
             }
             add {
                 SettingsToggle(
+                    modifier = Modifier.scale(rememberShelfEntranceScale(2)),
                     title = stringResource(R.string.settings_contribute_u201cpopular_agro_u201d),
                     // Says what leaves the device and who ends up able to see it. "Anonymous"
                     // alone would be the sort of reassurance that is technically true and still
@@ -79,6 +84,7 @@ internal fun LazyListScope.syncTab(
             }
             add {
                 SettingsToggle(
+                    modifier = Modifier.scale(rememberShelfEntranceScale(3)),
                     title = stringResource(R.string.settings_improve_agro),
                     // Names both directions and who ends up able to see it. The catalogue has no
                     // account column, so publishing is a disclosure to everyone on the server,
@@ -96,6 +102,7 @@ internal fun LazyListScope.syncTab(
                 // because a pair of zeroes under an off switch explains nothing.
                 add {
                     SettingsRow(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(4)),
                         title = stringResource(R.string.settings_what_trade_has_done),
                         subtitle = tradeTotals(state.fingerprintsShared, state.lyricsReceived),
                         icon = Icons.Rounded.AutoAwesome
