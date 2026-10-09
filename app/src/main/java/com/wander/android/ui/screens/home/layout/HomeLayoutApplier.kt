@@ -32,7 +32,8 @@ internal object HomeLayoutApplier {
     private fun HomeSection.styledBy(config: ShelfConfig): HomeSection {
         // Mix shelves only know how to draw mix cards, so a track layout cannot be forced on them.
         val style = config.style?.takeIf { mixes.isEmpty() } ?: style
-        val shown = config.count?.let { tracks.take(it) } ?: tracks
+        val fromSources = if (config.sources.isEmpty()) tracks else tracks.filter { it.source.name in config.sources }
+        val shown = config.count?.let { fromSources.take(it) } ?: fromSources
         return copy(style = style, tracks = shown)
     }
 
