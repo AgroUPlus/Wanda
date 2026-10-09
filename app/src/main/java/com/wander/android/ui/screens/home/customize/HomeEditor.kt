@@ -105,11 +105,12 @@ internal fun LazyListScope.homeEditorShelves(
                 onTap = { editor.openSettings(section.id) },
                 onMoveUp = previous?.let { { viewModel.layoutActions.move(section.id, it.id) } },
                 onMoveDown = next?.let { { viewModel.layoutActions.move(section.id, it.id) } },
-                dragModifier = Modifier.longPressDraggableHandle(
-                    onDragStarted = { haptics.heldDown() },
-                    onDragStopped = { haptics.settled() }
-                ),
-                modifier = Modifier.padding(horizontal = 16.dp)
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .longPressDraggableHandle(
+                        onDragStarted = { haptics.heldDown() },
+                        onDragStopped = { haptics.settled() }
+                    )
             )
         }
     }
