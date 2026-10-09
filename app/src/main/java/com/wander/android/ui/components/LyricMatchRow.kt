@@ -70,7 +70,6 @@ fun LyricMatchRow(
             .fillMaxWidth()
             .scale(pressScale)
             .padding(horizontal = 8.dp, vertical = 2.dp)
-            .instantPress(interactionSource)
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
