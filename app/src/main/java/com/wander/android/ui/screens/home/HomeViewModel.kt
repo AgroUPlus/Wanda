@@ -207,12 +207,8 @@ class HomeViewModel @Inject constructor(
                             val seed = homeShelfRepository.getRecentlyPlayed(1).firstOrNull()
                             seed to seed?.let { musicRepository.generateRadio(it, CarouselSize) }.orEmpty()
                         }
-                        // Music videos have no video surface in this player — see `SearchKind` —
-                        // so a shelf built entirely around promoting them ("New music videos",
-                        // "Music videos") is a dead end here, not a discovery opportunity. Dropped
-                        // by title rather than by some upstream flag: YouTube Music's own feed is
-                        // the only source of these, and it names them, not tags them.
-                        val feed = feedDeferred.await().filterNot { it.id == FeedListenAgain || it.title.contains("video", ignoreCase = true) }
+                        // Only the shelves that are a kind of music; see `RecommendedShelf.isGeneric`.
+                        val feed = feedDeferred.await().filter { it.isGeneric }
                         val (seed, suggestions) = recommendedDeferred.await()
 
                         if (feed.isNotEmpty() || (seed != null && suggestions.isNotEmpty())) {
