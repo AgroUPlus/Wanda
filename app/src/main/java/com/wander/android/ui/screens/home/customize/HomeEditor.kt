@@ -28,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
+import com.wander.android.data.repository.ServiceProblem
 import com.wander.android.ui.components.rememberHaptics
 import com.wander.android.ui.screens.home.HomeSection
 import com.wander.android.ui.screens.home.HomeShelfStates
@@ -52,6 +53,8 @@ internal class HomeEditor(
     val openWhenSaved: (String) -> Unit,
     /** How often songs were played from each shelf; see [ShelfUsageStore]. */
     val usage: ShelfUsage,
+    /** Why each service shelf that has nothing to show is empty. */
+    val problems: Map<String, ServiceProblem>,
     /** The shelves on Home that nothing has been played from, once there is enough history to say. */
     val rarelyUsed: List<String>
 )
@@ -91,7 +94,8 @@ internal fun rememberHomeEditor(state: HomeUiState, viewModel: HomeViewModel, li
     val rarelyUsed = remember(order, usage) {
         ShelfSuggestions.rarelyUsed(order.map { it.id }, usage, System.currentTimeMillis())
     }
-    return HomeEditor(order, reorderState, settingsFor, { settingsFor = it }, addingShelf, { addingShelf = it }, { pending = it }, usage, rarelyUsed)
+    val problems by viewModel.shelfProblems.collectAsStateWithLifecycle()
+    return HomeEditor(order, reorderState, settingsFor, { settingsFor = it }, addingShelf, { addingShelf = it }, { pending = it }, usage, problems, rarelyUsed)
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -113,6 +117,7 @@ internal fun LazyListScope.homeEditorShelves(
                 viewModel = viewModel,
                 states = states,
                 rarelyUsed = section.id in editor.rarelyUsed,
+                problem = editor.problems[section.id],
                 onTap = { editor.openSettings(section.id) },
                 onMoveUp = previous?.let { { viewModel.layoutActions.move(section.id, it.id) } },
                 onMoveDown = next?.let { { viewModel.layoutActions.move(section.id, it.id) } },
