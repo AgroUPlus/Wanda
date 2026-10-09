@@ -1,6 +1,7 @@
 package com.wander.android.ui.screens.home.customize
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
@@ -56,6 +57,7 @@ internal fun ShelfEditFrame(
     section: HomeSection,
     config: ShelfConfig,
     isDragging: Boolean,
+    rarelyUsed: Boolean,
     viewModel: HomeViewModel,
     states: HomeShelfStates,
     onTap: () -> Unit,
@@ -123,6 +125,16 @@ internal fun ShelfEditFrame(
                 }
             }
             OriginBadge(origin, Modifier.align(Alignment.TopEnd).padding(10.dp))
+            AnimatedVisibility(visible = rarelyUsed, modifier = Modifier.align(Alignment.BottomEnd).padding(10.dp)) {
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.errorContainer) {
+                    Text(
+                        text = stringResource(R.string.home_shelf_rarely_used),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
         }
     }
 }
