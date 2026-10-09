@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
 import com.wander.android.ui.components.GroupedItemGap
+import com.wander.android.ui.components.pressShrink
 import com.wander.android.ui.components.rememberHaptics
 import com.wander.android.ui.components.rememberPressMorph
 import com.wander.android.ui.components.trackPress
@@ -140,7 +142,10 @@ private fun ChoiceRow(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(start = 20.dp, end = 8.dp, top = 6.dp, bottom = 6.dp)
+            modifier = Modifier
+                .pressShrink(morph)
+                .heightIn(min = 72.dp)
+                .padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 12.dp)
         ) {
             Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
             Checkbox(checked = shown, onCheckedChange = null, enabled = enabled)
