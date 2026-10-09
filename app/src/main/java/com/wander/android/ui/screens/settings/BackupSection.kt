@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -24,6 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.core.backup.BackupSection
 import com.wander.android.ui.components.GroupedCard
+import com.wander.android.ui.components.rememberShelfEntranceScale
 
 /**
  * Export and restore everything this device remembers.
@@ -84,6 +86,7 @@ internal fun BackupSection(viewModel: BackupViewModel = hiltViewModel()) {
             items = listOf<@Composable () -> Unit>(
                 {
                     SettingsRow(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(0)),
                         title = stringResource(R.string.settings_export_everything),
                         subtitle = stringResource(R.string.settings_settings_customization_sign_ins_one),
                         onClick = {
@@ -96,6 +99,7 @@ internal fun BackupSection(viewModel: BackupViewModel = hiltViewModel()) {
                 },
                 {
                     SettingsRow(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(1)),
                         title = stringResource(R.string.settings_import_from_backup),
                         subtitle = stringResource(R.string.settings_replaces_settings_device_ones_file),
                         onClick = {
