@@ -8,7 +8,14 @@ import com.wander.android.data.christian.ChristianShelfRepository
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.FriendPicksRepository
 import com.wander.android.data.repository.HomeShelfRepository
+import com.wander.android.data.repository.ServiceProblem
+import com.wander.android.data.repository.ServiceShelfResult
+import com.wander.android.data.repository.ServiceShelvesRepository
 import com.wander.android.ui.screens.home.layout.ShelfConfig
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 /** Shelves that are not on Home until the user adds them. [id] is what the saved layout stores. */
 internal enum class ExtraShelf(
@@ -22,7 +29,9 @@ internal enum class ExtraShelf(
     FRESH(ExtraShelfPrefix + "fresh", R.string.shelf_fresh, R.string.shelf_fresh_summary, HomeSectionStyle.HERO_CAROUSEL),
     LATE_NIGHT(ExtraShelfPrefix + "late_night", R.string.shelf_late_night, R.string.shelf_late_night_summary, HomeSectionStyle.TRACK_CAROUSEL),
     RANDOM(ExtraShelfPrefix + "random", R.string.shelf_random, R.string.shelf_random_summary, HomeSectionStyle.DISCOVER_MASONRY),
-    FRIENDS(ExtraShelfPrefix + "friends", R.string.shelf_friends, R.string.shelf_friends_summary, HomeSectionStyle.TRACK_CAROUSEL);
+    FRIENDS(ExtraShelfPrefix + "friends", R.string.shelf_friends, R.string.shelf_friends_summary, HomeSectionStyle.TRACK_CAROUSEL),
+    POPULAR_AGRO(ExtraShelfPrefix + "popular_agro", R.string.shelf_popular_agro, R.string.shelf_popular_agro_summary, HomeSectionStyle.TRACK_CAROUSEL),
+    YOUTUBE_MUSIC(ExtraShelfPrefix + "youtube_music", R.string.shelf_youtube_music, R.string.shelf_youtube_music_summary, HomeSectionStyle.HERO_CAROUSEL);
 
     companion object {
         fun of(id: String): ExtraShelf? = entries.firstOrNull { it.id == id }
@@ -44,9 +53,15 @@ internal class ExtraShelves(
     private val shelves: HomeShelfRepository,
     private val christian: ChristianShelfRepository,
     private val friends: FriendPicksRepository,
+    private val services: ServiceShelvesRepository,
     private val context: Context
 ) {
     private val builtFrom = HashMap<String, ShelfConfig>()
+
+    private val _problems = MutableStateFlow<Map<String, ServiceProblem>>(emptyMap())
+
+    /** Why a service shelf is empty, by shelf id. A shelf with songs, or not on Home, has no entry. */
+    val problems: StateFlow<Map<String, ServiceProblem>> = _problems.asStateFlow()
 
     /** [force] rebuilds everything, as a refresh does. */
     suspend fun sync(layout: List<ShelfConfig>, current: List<HomeSection>, force: Boolean = false): ShelfChanges {
@@ -54,6 +69,7 @@ internal class ExtraShelves(
         val wantedIds = wanted.mapTo(HashSet()) { it.id }
         val gone = current.map { it.id }.filter { isAddedShelf(it) && it !in wantedIds }.toSet()
         builtFrom.keys.retainAll(wantedIds)
+        _problems.update { it.filterKeys { id -> id in wantedIds } }
 
         val built = wanted.mapNotNull { config ->
             val source = config.copy(enabled = true, style = null, count = null, sources = emptyList())
@@ -74,12 +90,19 @@ internal class ExtraShelves(
                 ExtraShelf.LATE_NIGHT -> shelves.getLateNight(CarouselSize)
                 ExtraShelf.RANDOM -> shelves.getRandom(CarouselSize)
                 ExtraShelf.FRIENDS -> friends.tracks(CarouselSize)
+                ExtraShelf.POPULAR_AGRO -> fromService(extra, services.agroPopular(CarouselSize))
+                ExtraShelf.YOUTUBE_MUSIC -> fromService(extra, services.youtubePicks(CarouselSize))
             }
             return shelf(config.id, context.getString(extra.title), extra.style, tracks)
         }
         val tracks = genreTracks(config)
         val title = genreShelfTitle(config.categories, context.getString(R.string.shelf_christian), context.getString(R.string.shelf_genre))
         return carousel(config.id, title, tracks)
+    }
+
+    private fun fromService(extra: ExtraShelf, result: ServiceShelfResult): List<UnifiedTrack> {
+        _problems.update { if (result.problem == null) it - extra.id else it + (extra.id to result.problem) }
+        return result.tracks
     }
 
     private suspend fun genreTracks(config: ShelfConfig): List<UnifiedTrack> {
