@@ -20,3 +20,11 @@ internal fun shelfName(section: HomeSection, config: ShelfConfig): String = when
         genreShelfTitle(config.categories, stringResource(R.string.shelf_christian), stringResource(R.string.shelf_genre))
     else -> ExtraShelf.of(config.id)?.let { stringResource(it.title) }.orEmpty()
 }
+
+/** Why a shelf has nothing to show, and what to do about it. */
+@Composable
+internal fun emptyShelfMessage(config: ShelfConfig): String = when {
+    config.id == ExtraShelf.FRIENDS.id -> stringResource(R.string.home_shelf_empty_friends)
+    config.id.startsWith(GenreShelfPrefix) && config.categories.isEmpty() -> stringResource(R.string.home_shelf_empty_categories)
+    else -> stringResource(R.string.home_shelf_empty)
+}

@@ -106,7 +106,7 @@ internal fun ShelfEditFrame(
                 LocalViewConfiguration provides rememberHeldNeverConfiguration()
             ) {
                 if (section.isEmpty) {
-                    EmptyShelf(name)
+                    EmptyShelf(name, emptyShelfMessage(config))
                 } else {
                     // A new layout fades and grows in over the old one, and the card follows the
                     // size change on the same spring, so changing a shelf's look reads as one motion.
@@ -129,11 +129,11 @@ internal fun ShelfEditFrame(
 
 /** A shelf that has nothing to show yet: its name and what to do about it. */
 @Composable
-private fun EmptyShelf(name: String) {
+private fun EmptyShelf(name: String, message: String) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
         Text(name, style = MaterialTheme.typography.titleLarge)
         Text(
-            text = stringResource(R.string.home_shelf_empty),
+            text = message,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
