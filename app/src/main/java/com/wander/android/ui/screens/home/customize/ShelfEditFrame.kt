@@ -1,6 +1,12 @@
 package com.wander.android.ui.screens.home.customize
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -102,7 +108,18 @@ internal fun ShelfEditFrame(
                 if (section.isEmpty) {
                     EmptyShelf(name)
                 } else {
-                    ShelfBody(section, viewModel, states, Modifier.padding(vertical = 14.dp))
+                    // A new layout fades and grows in over the old one, and the card follows the
+                    // size change on the same spring, so changing a shelf's look reads as one motion.
+                    AnimatedContent(
+                        targetState = section.style,
+                        transitionSpec = {
+                            (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), initialScale = 0.94f)) togetherWith
+                                fadeOut(motion.fastEffectsSpec()) using SizeTransform(clip = false) { _, _ -> motion.defaultSpatialSpec() }
+                        },
+                        label = "shelfLayout"
+                    ) { style ->
+                        ShelfBody(section.copy(style = style), viewModel, states, Modifier.padding(vertical = 14.dp))
+                    }
                 }
             }
             OriginBadge(origin, Modifier.align(Alignment.TopEnd).padding(10.dp))
