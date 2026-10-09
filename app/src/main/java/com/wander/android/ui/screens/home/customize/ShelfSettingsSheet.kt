@@ -1,5 +1,11 @@
 package com.wander.android.ui.screens.home.customize
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
@@ -16,6 +22,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -48,11 +55,12 @@ internal fun ShelfSettingsSheet(
     onRemove: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
+                .animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec())
                 .padding(start = 20.dp, end = 20.dp, bottom = 24.dp)
         ) {
             Text(shelfName(section, config), style = MaterialTheme.typography.titleLarge)
@@ -62,7 +70,11 @@ internal fun ShelfSettingsSheet(
             if (section.mixes.isEmpty()) {
                 Text(stringResource(R.string.home_shelf_layout), style = MaterialTheme.typography.labelLarge)
                 ShelfStylePicker(selected = section.style, onSelect = onStyle)
-                if (config.style != null) {
+                AnimatedVisibility(
+                    visible = config.style != null,
+                    enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+                    exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut(MaterialTheme.motionScheme.fastEffectsSpec())
+                ) {
                     TextButton(onClick = { onStyle(null) }) { Text(stringResource(R.string.home_style_use_default)) }
                 }
                 Text(stringResource(R.string.home_shelf_length), style = MaterialTheme.typography.labelLarge)
