@@ -91,6 +91,13 @@ class HomeViewModel @Inject constructor(
             layoutStore.editing.collect { editing -> _uiState.update { it.copy(editing = editing) } }
         }
         viewModelScope.launch {
+            layoutStore.editRequested.collect { requested ->
+                if (!requested) return@collect
+                layoutActions.start()
+                layoutStore.clearEditRequest()
+            }
+        }
+        viewModelScope.launch {
             layoutStore.layout.collect { layout ->
                 _uiState.update { it.copy(layout = layout) }
                 // Shelves the user added have no tracks until they are read, or after their settings change.
