@@ -16,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 
@@ -50,9 +49,6 @@ internal class PressMorph internal constructor(
         val bottom = lerp(if (index == count - 1) GroupedOuterRadius else GroupedInnerRadius, PressedRadius, round)
         return RoundedCornerShape(topStart = top, topEnd = top, bottomStart = bottom, bottomEnd = bottom)
     }
-
-    /** A standalone control's shape: [rest] at rest, [pressed] at full press. */
-    fun shape(rest: Dp, pressed: Dp): RoundedCornerShape = RoundedCornerShape(lerp(rest, pressed, progress.value))
 
     internal val scale: Float get() = 1f - (1f - PressedScale) * progress.value
 }
