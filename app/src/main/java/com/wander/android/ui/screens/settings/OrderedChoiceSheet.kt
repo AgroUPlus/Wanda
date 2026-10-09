@@ -13,10 +13,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
 import com.wander.android.ui.components.GroupedItemGap
+import com.wander.android.ui.components.WandaSheet
 import com.wander.android.ui.components.pressShrink
 import com.wander.android.ui.components.rememberHaptics
 import com.wander.android.ui.components.rememberPressMorph
@@ -72,7 +71,7 @@ internal fun <T : Any> OrderedChoiceSheet(
     val labels = all.associate { it.value to it.label }
     val haptics = rememberHaptics()
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    WandaSheet(onDismissRequest = onDismiss) {
         LazyColumn(
             state = listState,
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
