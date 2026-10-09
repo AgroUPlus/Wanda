@@ -12,11 +12,9 @@ import androidx.compose.material.icons.rounded.Podcasts
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
 import com.wander.android.R
 import com.wander.android.ui.components.GroupedCard
-import com.wander.android.ui.components.rememberShelfEntranceScale
 
 internal fun LazyListScope.playbackStorageTab(
     state: SettingsUiState,
@@ -28,7 +26,6 @@ internal fun LazyListScope.playbackStorageTab(
             items = listOf<@Composable () -> Unit>(
                 {
                     SettingsToggle(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(0)),
                         title = stringResource(R.string.settings_offline_mode),
                         // Worth saying, because the app now flips this for you if you agree:
                         // without the second sentence the toggle looks like it moved on its own.
@@ -40,7 +37,6 @@ internal fun LazyListScope.playbackStorageTab(
                 },
                 {
                     SettingsToggle(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(1)),
                         title = stringResource(R.string.settings_ready_next_track),
                         // Said plainly: it is a real cost and the honest reason to turn it off.
                         subtitle = stringResource(R.string.settings_fetch_first_couple_seconds_ahead),
@@ -51,7 +47,6 @@ internal fun LazyListScope.playbackStorageTab(
                 },
                 {
                     SettingsToggle(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(2)),
                         title = stringResource(R.string.settings_skip_silence),
                         subtitle = stringResource(R.string.settings_skip_silence_summary),
                         checked = state.skipSilence,
@@ -69,7 +64,6 @@ internal fun LazyListScope.playbackStorageTab(
             items = listOf<@Composable () -> Unit>(
                 {
                     SettingsRow(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(2)),
                         title = stringResource(R.string.settings_measure_library_now),
                         // Named for what it produces rather than for the machinery.
                         // "Fingerprint" means nothing to most people; recognising a song and
@@ -81,7 +75,6 @@ internal fun LazyListScope.playbackStorageTab(
                 },
                 {
                     SettingsToggle(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(3)),
                         title = stringResource(R.string.settings_measure_over_mobile_data),
                         // The cost stated in the units it is actually paid in. "Uses data" is
                         // not something anyone can weigh; "a minute per song" is.
@@ -93,7 +86,6 @@ internal fun LazyListScope.playbackStorageTab(
                 },
                 {
                     SettingsRow(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(4)),
                         title = stringResource(R.string.settings_what_has_been_measured),
                         // Pause/resume of a running pass lives on the progress notification, not
                         // here: it is an action on work in flight, and the notification is where
@@ -114,7 +106,6 @@ internal fun LazyListScope.playbackStorageTab(
             items = listOf<@Composable () -> Unit>(
                 {
                     SettingsRow(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(5)),
                         title = stringResource(R.string.settings_download_liked_tracks_now),
                         subtitle = stringResource(R.string.settings_otherwise_happens_wi_fi_while),
                         onClick = actions.onDownloadLiked,
@@ -123,7 +114,6 @@ internal fun LazyListScope.playbackStorageTab(
                 },
                 {
                     SettingsRow(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(6)),
                         title = stringResource(R.string.settings_clear_streaming_cache),
                         subtitle = formatBytes(state.cacheBytes) + " in use",
                         onClick = actions.onClearCache,
@@ -135,7 +125,7 @@ internal fun LazyListScope.playbackStorageTab(
     }
 
     item(key = "storage_butler") {
-        StorageButlerSection(modifier = Modifier.scale(rememberShelfEntranceScale(7)))
+        StorageButlerSection()
     }
 }
 
