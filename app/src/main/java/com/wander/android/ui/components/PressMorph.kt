@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
@@ -51,7 +52,7 @@ internal class PressMorph {
 internal fun rememberPressMorph(): PressMorph = remember { PressMorph() }
 
 /**
- * Feeds [morph] from touches on this row. It listens before the row's own children do and consumes
+ * Feeds [morph] from touches on this row, after the same short hold a click waits before it shows it is pressed. It listens before the row's own children do and consumes
  * nothing, so clicks, long presses, swipes and scrolling behave exactly as before. A touch that
  * turns into a scroll or drag stops counting as a press.
  */
@@ -59,12 +60,28 @@ internal fun Modifier.trackPress(morph: PressMorph): Modifier = pointerInput(mor
     val slop = viewConfiguration.touchSlop
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-        morph.pressed = true
-        while (true) {
+
+        // True once the finger lifts or slides off, false while it is still holding.
+        suspend fun AwaitPointerEventScope.released(): Boolean {
             val change = awaitPointerEvent(PointerEventPass.Initial).changes
-                .firstOrNull { it.id == down.id } ?: break
-            if (!change.pressed || (change.position - down.position).getDistance() > slop) break
+                .firstOrNull { it.id == down.id } ?: return true
+            return !change.pressed || (change.position - down.position).getDistance() > slop
         }
-        morph.pressed = false
+
+        // Clicks show their own press feedback only after a short hold, so a tap that is over
+        // sooner shows none. The frame waits the same beat, or it would round off alone on a tap
+        // while the row's content stayed put.
+        val ended = withTimeoutOrNull(PressFeedbackDelayMillis) {
+            while (!released()) Unit
+            true
+        }
+        if (ended == null) {
+            morph.pressed = true
+            while (!released()) Unit
+            morph.pressed = false
+        }
     }
 }
+
+/** How long a touch must hold before a click shows it is pressed; the same beat Compose's own click feedback waits. */
+private const val PressFeedbackDelayMillis = 100L
