@@ -9,5 +9,7 @@ internal fun shelfOrigin(id: String): ShelfOrigin = when {
     id.startsWith("ytm_") -> ShelfOrigin.YOUTUBE_MUSIC
     id == RecommendationRepository.PopularShelfId -> ShelfOrigin.AGRO
     id == ExtraShelf.FRIENDS.id -> ShelfOrigin.FRIENDS
+    id == ExtraShelf.POPULAR_AGRO.id -> ShelfOrigin.AGRO
+    id == ExtraShelf.YOUTUBE_MUSIC.id -> ShelfOrigin.YOUTUBE_MUSIC
     else -> ShelfOrigin.LIBRARY
 }
