@@ -36,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.ui.components.GroupedItemGap
+import com.wander.android.ui.components.pressShrink
 import com.wander.android.ui.components.rememberPressMorph
 import com.wander.android.ui.components.trackPress
 import com.wander.android.ui.screens.home.ExtraShelf
@@ -149,7 +150,7 @@ private fun AddShelfRow(option: AddOption, index: Int, count: Int, modifier: Mod
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+            modifier = Modifier.pressShrink(morph).padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
             Surface(shape = CircleShape, color = option.origin.accent(), modifier = Modifier.size(40.dp)) {
                 Icon(option.icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.padding(10.dp))
