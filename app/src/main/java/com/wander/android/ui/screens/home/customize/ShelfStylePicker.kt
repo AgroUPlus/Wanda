@@ -1,6 +1,7 @@
 package com.wander.android.ui.screens.home.customize
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,11 +61,16 @@ private fun StyleTile(style: HomeSectionStyle, selected: Boolean, onClick: () ->
         motion.fastEffectsSpec(),
         label = "tileColor"
     )
-    val ink = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    val ink by animateColorAsState(
+        if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+        motion.fastEffectsSpec(),
+        label = "tileInk"
+    )
+    val corner by animateDpAsState(if (selected) 28.dp else 16.dp, motion.fastSpatialSpec(), label = "tileCorner")
     Surface(
         onClick = onClick,
         selected = selected,
-        shape = RoundedCornerShape(if (selected) 28.dp else 16.dp),
+        shape = RoundedCornerShape(corner),
         color = container,
         modifier = Modifier.width(88.dp)
     ) {
