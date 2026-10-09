@@ -192,7 +192,14 @@ fun HomeScreen(
                             label = "homeHeader"
                         ) { editing ->
                             if (editing) {
-                                HomeEditBar(onReset = viewModel.layoutActions::reset, onDone = viewModel.layoutActions::stop)
+                                HomeEditBar(
+                                    onReset = viewModel.layoutActions::reset,
+                                    onDone = viewModel.layoutActions::stop,
+                                    suggestion = editor.rarelyUsed.takeIf { it.isNotEmpty() }?.let { ids ->
+                                        val titles = ids.mapNotNull { id -> editor.order.firstOrNull { it.id == id }?.title?.takeIf(String::isNotEmpty) }
+                                        stringResource(R.string.home_edit_suggestion, titles.joinToString())
+                                    }
+                                )
                             } else {
                                 HomeHeader(
                                     greeting = state.greeting,
