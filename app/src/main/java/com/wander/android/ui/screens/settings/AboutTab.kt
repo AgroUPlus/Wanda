@@ -14,12 +14,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
 import com.wander.android.R
 import com.wander.android.core.update.UpdateCheckResult
 import com.wander.android.ui.components.GroupedCard
-import com.wander.android.ui.components.rememberShelfEntranceScale
 
 /**
  * App identity and the manual update check.
@@ -38,7 +36,6 @@ internal fun LazyListScope.aboutTab(
             items = listOf<@Composable () -> Unit>(
                 {
                     SettingsRow(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(0)),
                         title = stringResource(R.string.replay_title),
                         subtitle = stringResource(R.string.replay_settings_subtitle),
                         onClick = actions.onOpenReplay,
@@ -47,7 +44,6 @@ internal fun LazyListScope.aboutTab(
                 },
                 {
                     SettingsRow(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(1)),
                         title = stringResource(R.string.common_duplicate_recordings),
                         subtitle = stringResource(R.string.settings_review_which_tracks_same_recording),
                         onClick = actions.onOpenMergePreview,
@@ -59,7 +55,6 @@ internal fun LazyListScope.aboutTab(
                     // I current?" and the check is the answer, so splitting them made the user
                     // tap two rows to learn one thing.
                     SettingsRow(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(2)),
                         title = stringResource(R.string.settings_version),
                         subtitle = when {
                             state.isCheckingForUpdate -> stringResource(R.string.settings_update_checking, state.appVersion)
@@ -89,7 +84,6 @@ internal fun LazyListScope.aboutTab(
             items = listOf<@Composable () -> Unit>(
                 {
                     SettingsRow(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(2)),
                         title = stringResource(R.string.settings_agrouplus),
                         subtitle = stringResource(R.string.settings_wanda_agro_built_here_source),
                         onClick = { actions.onOpenUrl(ORG_URL) }
@@ -97,7 +91,6 @@ internal fun LazyListScope.aboutTab(
                 },
                 {
                     SettingsRow(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(3)),
                         title = stringResource(R.string.settings_made_in_france_title),
                         subtitle = stringResource(R.string.settings_made_in_france_subtitle),
                         onClick = { showSovereigntyDialog = true },
@@ -106,7 +99,6 @@ internal fun LazyListScope.aboutTab(
                 },
                 {
                     SettingsToggle(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(4)),
                         title = stringResource(R.string.settings_check_updates_launch),
                         subtitle = stringResource(R.string.settings_finds_latest_release_automatically_tells),
                         checked = state.autoUpdateCheckEnabled,
@@ -116,7 +108,6 @@ internal fun LazyListScope.aboutTab(
                 },
                 {
                     SettingsToggle(
-                        modifier = Modifier.scale(rememberShelfEntranceScale(5)),
                         title = stringResource(R.string.settings_debug_mode_title),
                         subtitle = stringResource(R.string.settings_debug_mode_subtitle),
                         checked = state.debugMode,
