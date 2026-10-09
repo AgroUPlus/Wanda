@@ -13,9 +13,9 @@ import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.UnifiedTrack
 
 /**
- * "Recently Played" as an M3 Expressive hero carousel: one oversized, centred card with slivers of
- * its neighbours either side. Taller and single-focus where [FavoritesCarouselShelf] browses
- * several at once, so the shelf right under Quick Picks stands out as the one to resume from.
+ * The "Carousel" layout: an M3 Expressive hero carousel with one oversized, centred card and
+ * slivers of its neighbours either side. It is the look of Recently Played and Your Favorites, and
+ * the one every shelf gets when it is set to Carousel.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
