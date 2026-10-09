@@ -1,8 +1,5 @@
 package com.wander.android.ui.screens.home.customize
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,7 +11,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Bedtime
@@ -31,22 +27,17 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.lerp
 import com.wander.android.R
-import com.wander.android.ui.components.GroupedInnerRadius
 import com.wander.android.ui.components.GroupedItemGap
-import com.wander.android.ui.components.GroupedOuterRadius
+import com.wander.android.ui.components.rememberPressMorph
+import com.wander.android.ui.components.trackPress
 import com.wander.android.ui.screens.home.ExtraShelf
 import com.wander.android.ui.screens.home.HomeSection
-
-private val PressedRadius = 28.dp
 
 /** One row of the sheet. */
 private class AddOption(
@@ -124,18 +115,13 @@ private fun LazyListScope.group(label: Int, prefix: String, options: List<AddOpt
 
 @Composable
 private fun AddShelfRow(option: AddOption, index: Int, count: Int, modifier: Modifier = Modifier) {
-    val interactions = remember { MutableInteractionSource() }
-    val pressed by interactions.collectIsPressedAsState()
-    val round by animateFloatAsState(if (pressed) 1f else 0f, MaterialTheme.motionScheme.fastSpatialSpec(), label = "rowRound")
-    val top = lerp(if (index == 0) GroupedOuterRadius else GroupedInnerRadius, PressedRadius, round)
-    val bottom = lerp(if (index == count - 1) GroupedOuterRadius else GroupedInnerRadius, PressedRadius, round)
+    val morph = rememberPressMorph()
 
     Surface(
         onClick = option.onPick,
-        interactionSource = interactions,
-        shape = RoundedCornerShape(topStart = top, topEnd = top, bottomStart = bottom, bottomEnd = bottom),
+        shape = morph.shape(index, count),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth().trackPress(morph)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

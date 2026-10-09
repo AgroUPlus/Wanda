@@ -41,8 +41,13 @@ val GroupedItemGap = 2.dp
  * container already insets its content, as the Home pager does through its content padding.
  */
 @Composable
-fun Modifier.groupedListItem(index: Int, count: Int, horizontalInset: Dp = 16.dp): Modifier = this
-    .padding(horizontal = horizontalInset)
-    .padding(top = if (index == 0) 0.dp else GroupedItemGap)
-    .clip(groupedItemShape(index, count))
-    .background(MaterialTheme.colorScheme.surfaceContainer)
+fun Modifier.groupedListItem(index: Int, count: Int, horizontalInset: Dp = 16.dp): Modifier {
+    // The row rounds off under the finger; see [PressMorph].
+    val morph = rememberPressMorph()
+    return this
+        .padding(horizontal = horizontalInset)
+        .padding(top = if (index == 0) 0.dp else GroupedItemGap)
+        .trackPress(morph)
+        .clip(morph.shape(index, count))
+        .background(MaterialTheme.colorScheme.surfaceContainer)
+}

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -38,12 +39,16 @@ fun GroupedCard(
             .padding(horizontal = horizontalPadding, vertical = 6.dp)
     ) {
         items.forEachIndexed { index, item ->
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                shape = groupedItemShape(index, items.size),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                item()
+            // Each row rounds off under the finger, whatever it holds; see [PressMorph].
+            key(index) {
+                val morph = rememberPressMorph()
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shape = morph.shape(index, items.size),
+                    modifier = Modifier.fillMaxWidth().trackPress(morph)
+                ) {
+                    item()
+                }
             }
         }
     }
