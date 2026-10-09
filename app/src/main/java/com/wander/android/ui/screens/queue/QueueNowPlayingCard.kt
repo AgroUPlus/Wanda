@@ -28,6 +28,7 @@ import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.KineticEqualizer
 import com.wander.android.ui.components.rememberPressMorphShape
 import com.wander.android.ui.components.rememberPressScale
+import com.wander.android.ui.components.instantPress
 import com.wander.android.ui.theme.heroOverline
 
 /**
@@ -60,6 +61,7 @@ internal fun QueueNowPlayingCard(
         modifier = modifier
             .fillMaxWidth()
             .scale(scale)
+            .instantPress(interactionSource)
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
