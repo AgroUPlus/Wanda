@@ -1,0 +1,114 @@
+package com.wander.android.ui.screens.home.customize
+
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import com.wander.android.R
+import com.wander.android.ui.screens.home.HomeSection
+import com.wander.android.ui.screens.home.HomeShelfStates
+import com.wander.android.ui.screens.home.HomeViewModel
+import com.wander.android.ui.screens.home.LocalHomeEditing
+import com.wander.android.ui.screens.home.layout.ShelfConfig
+
+private const val LiftedScale = 1.03f
+
+/**
+ * One shelf in the customizer: the shelf itself, drawn as on Home, in a tonal card. Hold it to pick
+ * it up and drag; tap it to edit it. Nothing else is drawn — the whole card is the control.
+ *
+ * [dragModifier] is the list's long-press-to-drag handle. [onMoveUp] and [onMoveDown] are the same
+ * reorder offered to accessibility services, which cannot long-press and drag.
+ */
+@Composable
+internal fun ShelfEditFrame(
+    section: HomeSection,
+    config: ShelfConfig,
+    isDragging: Boolean,
+    viewModel: HomeViewModel,
+    states: HomeShelfStates,
+    onTap: () -> Unit,
+    onMoveUp: (() -> Unit)?,
+    onMoveDown: (() -> Unit)?,
+    dragModifier: Modifier,
+    modifier: Modifier = Modifier
+) {
+    val motion = MaterialTheme.motionScheme
+    val scale by animateFloatAsState(if (isDragging) LiftedScale else 1f, motion.fastSpatialSpec(), label = "shelfLift")
+    val lift by animateDpAsState(if (isDragging) 16.dp else 0.dp, motion.fastSpatialSpec(), label = "shelfShadow")
+    val container by animateColorAsState(
+        if (isDragging) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainer,
+        motion.fastEffectsSpec(),
+        label = "shelfColor"
+    )
+    val name = shelfName(section, config)
+    val editLabel = stringResource(R.string.home_shelf_edit, name)
+    val moveUp = stringResource(R.string.home_shelf_move_up)
+    val moveDown = stringResource(R.string.home_shelf_move_down)
+
+    Surface(
+        shape = MaterialTheme.shapes.extraLarge,
+        color = container,
+        shadowElevation = lift,
+        modifier = modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .shelfTap(onTap)
+            .then(dragModifier)
+            .semantics(mergeDescendants = true) {
+                onClick(label = editLabel) {
+                    onTap()
+                    true
+                }
+                customActions = listOfNotNull(
+                    onMoveUp?.let { CustomAccessibilityAction(moveUp) { it(); true } },
+                    onMoveDown?.let { CustomAccessibilityAction(moveDown) { it(); true } }
+                )
+            }
+    ) {
+        CompositionLocalProvider(
+            LocalHomeEditing provides true,
+            LocalViewConfiguration provides rememberHeldNeverConfiguration()
+        ) {
+            if (section.isEmpty) {
+                EmptyShelf(name)
+            } else {
+                ShelfBody(section, viewModel, states, Modifier.padding(vertical = 14.dp))
+            }
+        }
+    }
+}
+
+/** A shelf that has nothing to show yet: its name and what to do about it. */
+@Composable
+private fun EmptyShelf(name: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
+        Text(name, style = MaterialTheme.typography.titleLarge)
+        Text(
+            text = stringResource(R.string.home_shelf_empty),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}

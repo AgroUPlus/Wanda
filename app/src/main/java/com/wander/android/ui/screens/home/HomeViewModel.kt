@@ -8,11 +8,14 @@ import com.wander.android.data.model.SmartMix
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.R
+import com.wander.android.data.christian.ChristianShelfRepository
 import com.wander.android.data.repository.EpisodeProgressRepository
 import com.wander.android.data.repository.HomeShelfRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.repository.RecommendationRepository
+import com.wander.android.ui.screens.home.layout.HomeLayoutActions
+import com.wander.android.ui.screens.home.layout.HomeLayoutStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -23,6 +26,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -37,12 +41,23 @@ class HomeViewModel @Inject constructor(
     private val shareRepository: ShareRepository,
     private val playerConnection: PlayerConnection,
     private val playbackCoordinator: PlaybackCoordinator,
+    private val layoutStore: HomeLayoutStore,
+    christianShelf: ChristianShelfRepository,
     episodeProgress: EpisodeProgressRepository,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    private val extras = ExtraShelves(homeShelfRepository, christianShelf, context)
+
+    /** The customizer's actions; see [HomeLayoutActions]. */
+    internal val layoutActions = HomeLayoutActions(layoutStore, _uiState)
+
+    /** Genres the library has enough songs in to offer as a shelf. */
+    val genres: StateFlow<List<String>> = homeShelfRepository.genres
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**
      * Shelves are one-shot reads, so the tracks they hold keep whatever `isLiked` was true when
@@ -67,6 +82,22 @@ class HomeViewModel @Inject constructor(
         refresh()
         observeLibrary()
         observeLikes()
+        observeLayout()
+    }
+
+    /** The user's shelf layout; Home re-derives its sections when it changes. */
+    private fun observeLayout() {
+        viewModelScope.launch {
+            layoutStore.editing.collect { editing -> _uiState.update { it.copy(editing = editing) } }
+        }
+        viewModelScope.launch {
+            layoutStore.layout.collect { layout ->
+                _uiState.update { it.copy(layout = layout) }
+                // Shelves the user added have no tracks until they are read, or after their settings change.
+                val changes = extras.sync(layout, _uiState.value.allSections)
+                _uiState.update { it.copy(allSections = changes.applyTo(it.allSections)) }
+            }
+        }
     }
 
     private fun observeLikes() {
@@ -76,10 +107,6 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { it.copy(allSections = updated) }
             }
         }
-    }
-
-    private fun List<HomeSection>.withLikes(liked: Set<String>): List<HomeSection> = map { section ->
-        section.copy(tracks = section.tracks.map { it.copy(isLiked = it.id in liked) })
     }
 
     /**
@@ -137,6 +164,7 @@ class HomeViewModel @Inject constructor(
                     add(continueListening.value)
                     add(shelf(SectionLiked, "Your Favorites", HomeSectionStyle.FAVORITES_CAROUSEL, liked.await()))
                     add(shelf(SectionDiscover, "Discover", HomeSectionStyle.DISCOVER_MASONRY, discover.await()))
+                    addAll(extras.sync(layoutStore.layout.first(), emptyList(), force = true).sections)
                 }.filterNot(HomeSection::isEmpty)
             }
 
@@ -145,6 +173,8 @@ class HomeViewModel @Inject constructor(
                 isLoading = false,
                 isRefreshing = false,
                 greeting = greeting(),
+                layout = _uiState.value.layout,
+                editing = _uiState.value.editing,
                 allSections = localSections.withLikes(likedTrackIds.value),
                 sources = sources,
                 // A filter survives a refresh: it is how the user is looking at Home, not a
@@ -247,39 +277,6 @@ class HomeViewModel @Inject constructor(
     /** Narrows Home to one backend, or back to all of them. Filters; never refetches. */
     fun selectSource(source: SourceType?) {
         _uiState.update { it.copy(selectedSource = source) }
-    }
-
-    private fun carousel(id: String, title: String, tracks: List<UnifiedTrack>) =
-        shelf(id, title, HomeSectionStyle.TRACK_CAROUSEL, tracks)
-
-    private fun shelf(
-        id: String,
-        title: String,
-        style: HomeSectionStyle,
-        tracks: List<UnifiedTrack>
-    ) = HomeSection(id = id, title = title, style = style, tracks = tracks)
-
-    /**
-     * Replaces a shelf in place, adding it if it wasn't there and dropping it once it empties.
-     *
-     * Deliberately does **not** re-sort the whole list. It used to, by [SectionOrder] — which
-     * silently rearranged Home the first time a like landed, because the recommendation shelves
-     * and the per-source shelves are not in that list and all sorted to the end together. The
-     * order [refresh] built is the order Home keeps.
-     */
-    private fun List<HomeSection>.withSection(section: HomeSection): List<HomeSection> {
-        val existing = indexOfFirst { it.id == section.id }
-        if (existing >= 0) {
-            return if (section.isEmpty) filterIndexed { index, _ -> index != existing }
-            else toMutableList().also { it[existing] = section }
-        }
-        if (section.isEmpty) return this
-
-        // New shelf: slot it in ahead of the first shelf it is meant to precede, so it does not
-        // simply appear at the bottom of the screen.
-        val rank = SectionOrder.indexOf(section.id).takeIf { it >= 0 } ?: return this + section
-        val at = indexOfFirst { SectionOrder.indexOf(it.id) > rank }
-        return if (at < 0) this + section else toMutableList().also { it.add(at, section) }
     }
 
     /** Time of day the user is most likely reading this. */

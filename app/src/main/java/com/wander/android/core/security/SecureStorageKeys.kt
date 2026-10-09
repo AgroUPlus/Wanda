@@ -77,6 +77,7 @@ internal const val KEY_LETTER_BY_LETTER_LYRICS = "key_letter_by_letter_lyrics"
 internal const val KEY_IMMERSIVE_PLAYER = "key_immersive_player"
 internal const val KEY_COVER_ART_THEME = "key_cover_art_theme"
 internal const val KEY_COVER_CAROUSEL = "key_cover_carousel"
+internal const val KEY_HOME_LAYOUT = "key_home_layout"
 
 internal const val KEY_AUTO_UPDATE_CHECK = "key_auto_update_check"
 internal const val KEY_RELEASE_NOTIFICATIONS = "key_release_notifications"

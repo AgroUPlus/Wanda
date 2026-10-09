@@ -1,4 +1,8 @@
 package com.wander.android.ui.screens.home
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,6 +47,11 @@ import com.wander.android.ui.components.ExpressiveRefreshIndicator
 import com.wander.android.ui.components.SessionSheet
 import com.wander.android.ui.components.SourceFilterChips
 import com.wander.android.ui.components.TrackActionsSheet
+import com.wander.android.ui.screens.home.customize.HomeEditBar
+import com.wander.android.ui.screens.home.customize.HomeEditorAddSheet
+import com.wander.android.ui.screens.home.customize.HomeEditorSettingsSheet
+import com.wander.android.ui.screens.home.customize.homeEditorShelves
+import com.wander.android.ui.screens.home.customize.rememberHomeEditor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,6 +106,9 @@ fun HomeScreen(
     // See [HomeShelfStates].
     val shelfStates = remember { HomeShelfStates() }
     val listState = rememberLazyListState()
+    val editor = rememberHomeEditor(state, viewModel, listState)
+    HomeEditorSettingsSheet(editor, state, viewModel)
+    HomeEditorAddSheet(editor, state, viewModel)
 
     // The same long-press menu Library and Search use, so a track offers the same actions
     // wherever it is shown. Held here rather than per shelf: only one can be open at a time.
@@ -148,6 +161,8 @@ fun HomeScreen(
             // dead-end screen with no way back to "All" short of restarting the app.
             else -> {
                 val refreshState = rememberPullToRefreshState()
+                val fadeInSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+                val fadeOutSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
                 PullToRefreshBox(
                 isRefreshing = state.isRefreshing,
                 onRefresh = viewModel::pullToRefresh,
@@ -168,16 +183,27 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     item(key = "header", contentType = "header") {
-                        HomeHeader(
-                            greeting = state.greeting,
-                            hasSession = session != null,
-                            onOpenSessions = { showSessionSheet = true },
-                            onOpenSettings = onOpenSettings
-                        )
+                        AnimatedContent(
+                            targetState = state.editing,
+                            transitionSpec = { fadeIn(fadeInSpec) togetherWith fadeOut(fadeOutSpec) },
+                            label = "homeHeader"
+                        ) { editing ->
+                            if (editing) {
+                                HomeEditBar(onReset = viewModel.layoutActions::reset, onDone = viewModel.layoutActions::stop)
+                            } else {
+                                HomeHeader(
+                                    greeting = state.greeting,
+                                    hasSession = session != null,
+                                    onOpenSessions = { showSessionSheet = true },
+                                    onCustomize = viewModel.layoutActions::start,
+                                    onOpenSettings = onOpenSettings
+                                )
+                            }
+                        }
                     }
 
                     // Only earns its row when there is more than one backend to choose between.
-                    if (state.sources.size > 1) {
+                    if (state.sources.size > 1 && !state.editing) {
                         item(key = "sources", contentType = "source-chips") {
                             SourceFilterChips(
                                 sources = state.sources,
@@ -189,7 +215,9 @@ fun HomeScreen(
                         }
                     }
 
-                    if (state.isEmpty) {
+                    if (state.editing) {
+                        homeEditorShelves(editor, state, viewModel, shelfStates)
+                    } else if (state.isEmpty) {
                         item(key = "filtered_empty", contentType = "empty") {
                             EmptyState(
                                 title = stringResource(R.string.home_nothing_here_yet),
@@ -208,39 +236,5 @@ fun HomeScreen(
             }
         }
 
-    }
-}
-
-@Composable
-private fun HomeHeader(
-    greeting: String,
-    hasSession: Boolean,
-    onOpenSessions: () -> Unit,
-    onOpenSettings: () -> Unit
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 20.dp, end = 8.dp, top = 12.dp)
-    ) {
-        // The greeting is the header. The app's own name told the user nothing they didn't
-        // already know from having opened it.
-        Text(
-            text = greeting,
-            style = MaterialTheme.typography.headlineLarge,
-            modifier = Modifier.weight(1f)
-        )
-        // Only present when there is somewhere to hand off from, so the header stays quiet the
-        // rest of the time. No live badge: the icon's presence already says a session exists, and
-        // the sheet behind it is where "still playing" actually means something.
-        if (hasSession) {
-            IconButton(onClick = onOpenSessions) {
-                Icon(Icons.Rounded.Devices, contentDescription = stringResource(R.string.home_sessions_other_devices))
-            }
-        }
-        IconButton(onClick = onOpenSettings) {
-            Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.nav_settings))
-        }
     }
 }

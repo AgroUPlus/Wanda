@@ -6,6 +6,7 @@ import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -61,6 +62,31 @@ class HomeShelfRepository @Inject constructor(
     }
 
     /** In the library but never listened to. */
+    /** Genres in the library with enough songs to fill a shelf. */
+    val genres: Flow<List<String>> = trackDao.observeGenres()
+
+    suspend fun getGenreTracks(genres: List<String>, limit: Int): List<UnifiedTrack> = withContext(Dispatchers.IO) {
+        if (genres.isEmpty()) return@withContext emptyList()
+        trackDao.getTracksByGenres(genres.map { it.lowercase() }, limit).map(TrackEntity::toUnifiedTrack)
+    }
+
+    suspend fun getForgottenFavorites(limit: Int): List<UnifiedTrack> = withContext(Dispatchers.IO) {
+        val cutoff = System.currentTimeMillis() - FORGOTTEN_AFTER_MILLIS
+        trackDao.getForgottenFavorites(cutoff, limit).map(TrackEntity::toUnifiedTrack)
+    }
+
+    suspend fun getRecentlyAdded(limit: Int): List<UnifiedTrack> = withContext(Dispatchers.IO) {
+        trackDao.getRecentlyAddedTracks(limit * OVERFETCH).map(TrackEntity::toUnifiedTrack).filterNot { it.isEpisode }.take(limit)
+    }
+
+    suspend fun getLateNight(limit: Int): List<UnifiedTrack> = withContext(Dispatchers.IO) {
+        historyDao.getLateNightTracks(limit).map(TrackEntity::toUnifiedTrack)
+    }
+
+    suspend fun getRandom(limit: Int): List<UnifiedTrack> = withContext(Dispatchers.IO) {
+        trackDao.getRandomTracks(limit).map(TrackEntity::toUnifiedTrack)
+    }
+
     suspend fun getNeverPlayed(limit: Int = 20): List<UnifiedTrack> = withContext(Dispatchers.IO) {
         trackDao.getNeverPlayedTracks(limit).map(TrackEntity::toUnifiedTrack)
     }
@@ -104,5 +130,8 @@ class HomeShelfRepository @Inject constructor(
     private companion object {
         /** How much wider to cast the net before collapsing copies down to recordings. */
         const val OVERFETCH = 3
+
+        /** A favourite not played for this long is "forgotten". */
+        const val FORGOTTEN_AFTER_MILLIS = 30L * 24 * 60 * 60 * 1000
     }
 }

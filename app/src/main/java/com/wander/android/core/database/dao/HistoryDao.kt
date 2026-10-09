@@ -76,6 +76,16 @@ interface HistoryDao {
      * holds. `INNER JOIN` because a play whose track has since been deleted from the library has
      * nothing to report about.
      */
+    /** What is played after dark (10 pm to 5 am, local time), most played first. */
+    @Query(
+        """
+        SELECT t.* FROM history h INNER JOIN tracks t ON t.id = h.trackId
+        WHERE CAST(strftime('%H', h.playedAt / 1000, 'unixepoch', 'localtime') AS INTEGER) NOT BETWEEN 5 AND 21
+        GROUP BY t.id ORDER BY COUNT(*) DESC LIMIT :limit
+        """
+    )
+    suspend fun getLateNightTracks(limit: Int): List<TrackEntity>
+
     @Query(
         """
         SELECT h.historyId AS historyId, h.playedAt AS playedAt, t.title AS title,

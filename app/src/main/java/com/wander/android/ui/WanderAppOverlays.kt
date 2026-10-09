@@ -32,6 +32,7 @@ import com.wander.android.ui.navigation.TopLevelDestination
 import com.wander.android.ui.navigation.navigateSettled
 import com.wander.android.ui.screens.home.MoodMatrixViewModel
 import com.wander.android.ui.screens.home.RadioMoodFab
+import com.wander.android.ui.screens.home.layout.HomeEditingViewModel
 import com.wander.android.ui.screens.social.IncognitoOutcome
 import com.wander.android.ui.screens.social.JamViewModel
 import com.wander.android.ui.screens.social.ListenersViewModel
@@ -133,9 +134,12 @@ internal fun BoxScope.WanderAppOverlays(
         agroViewModel.clearError()
     }
 
+    // Home's customizer shows the page as it is, minus its buttons.
+    val homeEditing by hiltViewModel<HomeEditingViewModel>().editing.collectAsStateWithLifecycle()
+
     RadioMoodFab(
         isStarting = isStartingRadio,
-        visible = playerDocked && currentRoute == TopLevelDestination.HOME.route,
+        visible = playerDocked && currentRoute == TopLevelDestination.HOME.route && !homeEditing,
         moods = MoodPresets,
         playingMoodKey = moodState.playingKey,
         onInstantRadio = viewModel::startInstantRadio,

@@ -36,6 +36,10 @@ internal class SecureDisplayPreferences(private val prefs: SharedPreferences) {
     private val _isCoverCarouselEnabled = MutableStateFlow(prefs.getBoolean(KEY_COVER_CAROUSEL, true))
     val isCoverCarouselEnabled: StateFlow<Boolean> = _isCoverCarouselEnabled.asStateFlow()
 
+    /** The Home shelf layout as JSON; null until the user customises it. Decoded by `ShelfConfigCodec`. */
+    private val _homeLayout = MutableStateFlow(prefs.getString(KEY_HOME_LAYOUT, null))
+    val homeLayout: StateFlow<String?> = _homeLayout.asStateFlow()
+
     fun setAmoledBlack(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_AMOLED_BLACK, enabled) }
         _isAmoledBlack.value = enabled
@@ -76,6 +80,11 @@ internal class SecureDisplayPreferences(private val prefs: SharedPreferences) {
         _isCoverCarouselEnabled.value = enabled
     }
 
+    fun setHomeLayout(json: String) {
+        prefs.edit { putString(KEY_HOME_LAYOUT, json) }
+        _homeLayout.value = json
+    }
+
     /**
      * Re-reads every value from storage. After a restore that is what the backup wrote; after the
      * store is cleared it is each default, so signing out and restoring share this one path.
@@ -89,6 +98,7 @@ internal class SecureDisplayPreferences(private val prefs: SharedPreferences) {
         _isReduceMotion.value = prefs.getBoolean(KEY_REDUCE_MOTION, false)
         _isLetterByLetterLyricsEnabled.value = prefs.getBoolean(KEY_LETTER_BY_LETTER_LYRICS, true)
         _isCoverCarouselEnabled.value = prefs.getBoolean(KEY_COVER_CAROUSEL, true)
+        _homeLayout.value = prefs.getString(KEY_HOME_LAYOUT, null)
     }
 }
 
