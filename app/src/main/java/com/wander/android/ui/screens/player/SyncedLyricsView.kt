@@ -143,7 +143,8 @@ fun SyncedLyricsView(
 
     // Off the moment a finger touches the list, not when a drag threshold is crossed — a tap that
     // turns into a fling should not fight the sync a beat later than the touch that started it.
-    var autoScrollEnabled by remember { mutableStateOf(true) }
+    // Keyed on the lyrics so a new song always starts in sync, whatever was touched in the last one.
+    var autoScrollEnabled by remember(lyrics) { mutableStateOf(true) }
 
     // Tapping a line to seek is itself a touch, so the pointer-down handler below has already
     // turned auto-scroll off by the time this fires — leaving the view stuck out of sync after
@@ -174,7 +175,8 @@ fun SyncedLyricsView(
                     // Compose's own drag-start would let one more `animateScrollToItem` frame run
                     // first, which is exactly the frame that fought the finger and made the list
                     // feel like it was resisting the touch.
-                    .pointerInput(Unit) {
+                    // Keyed on the lyrics because the flags it writes are: a new song makes new ones.
+                    .pointerInput(lyrics) {
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)
                             autoScrollEnabled = false
