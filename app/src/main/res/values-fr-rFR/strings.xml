@@ -72,7 +72,6 @@
     <string name="lyrics_absent">Pas de paroles trouvées pour cette musique.</string>
     <string name="lyrics_instrumental">Cet enregistrement est instrumental.</string>
     <string name="lyrics_unreachable">Impossible de chercher des paroles. Vérifier la connexion et réessayer.</string>
-    <string name="lyrics_sync_back">Synchroniser</string>
     <!-- Mood picker (Home) -->
     <string name="mood_preset_late_night_chill">Nuit calme</string>
     <string name="mood_preset_focus_flow">Concentration</string>
