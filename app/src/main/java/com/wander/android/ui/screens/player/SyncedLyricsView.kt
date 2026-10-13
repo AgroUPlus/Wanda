@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -38,6 +39,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import com.wander.android.R
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.rememberPlaybackPosition
@@ -46,6 +49,9 @@ import com.wander.android.data.model.LyricsSyncType
 
 /** Distance from the top the active line settles at, so upcoming lines stay visible below it. */
 private val ACTIVE_LINE_OFFSET = 96.dp
+
+/** How long the list stays where the user left it, once they let go, before following again. */
+private const val RESUME_SYNC_DELAY_MS = 3_000L
 
 /**
  * Synced lyrics that follow playback and let the user tap a line to jump to it. Falls back to
@@ -145,6 +151,7 @@ fun SyncedLyricsView(
     // turns into a fling should not fight the sync a beat later than the touch that started it.
     // Keyed on the lyrics so a new song always starts in sync, whatever was touched in the last one.
     var autoScrollEnabled by remember(lyrics) { mutableStateOf(true) }
+    var userTouching by remember { mutableStateOf(false) }
 
     // Tapping a line to seek is itself a touch, so the pointer-down handler below has already
     // turned auto-scroll off by the time this fires — leaving the view stuck out of sync after
@@ -153,6 +160,20 @@ fun SyncedLyricsView(
     val onSeekAndResync: (Long) -> Unit = { positionMs ->
         autoScrollEnabled = true
         onSeek(positionMs)
+    }
+
+    // Taking over is temporary. Once the finger is up and any fling has settled, the list waits a
+    // moment for reading and then follows the playhead again on its own — there is no button to
+    // find, and a stray touch can no longer leave the lyrics drifting out of sync for good.
+    LaunchedEffect(autoScrollEnabled) {
+        if (autoScrollEnabled) return@LaunchedEffect
+        snapshotFlow { userTouching || listState.isScrollInProgress }
+            .collectLatest { busy ->
+                if (!busy) {
+                    delay(RESUME_SYNC_DELAY_MS)
+                    autoScrollEnabled = true
+                }
+            }
     }
 
     val offsetPx = with(LocalDensity.current) { -ACTIVE_LINE_OFFSET.roundToPx() }
@@ -180,7 +201,12 @@ fun SyncedLyricsView(
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)
                             autoScrollEnabled = false
-                            waitForUpOrCancellation()
+                            userTouching = true
+                            try {
+                                waitForUpOrCancellation()
+                            } finally {
+                                userTouching = false
+                            }
                         }
                     }
             ) {
