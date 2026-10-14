@@ -3,6 +3,7 @@ agp = "9.3.1"
 kotlin = "2.3.21"
 ksp = "2.3.11"
 hilt = "2.60.1"
+kover = "0.9.11"
 androidxHilt = "1.4.0"
 
 coreKtx = "1.19.0"
@@ -123,3 +124,4 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
