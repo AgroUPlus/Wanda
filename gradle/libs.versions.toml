@@ -4,6 +4,8 @@ kotlin = "2.3.21"
 ksp = "2.3.11"
 hilt = "2.60.1"
 kover = "0.9.11"
+# 2.0 is still alpha. alpha.3 is the last one built against Kotlin 2.3.x, which this project is on.
+detekt = "2.0.0-alpha.3"
 androidxHilt = "1.4.0"
 
 coreKtx = "1.19.0"
@@ -125,3 +127,4 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
+detekt = { id = "dev.detekt", version.ref = "detekt" }
