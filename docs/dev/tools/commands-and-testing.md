@@ -23,6 +23,15 @@ ktlint --baseline=ktlint-baseline.xml --relative -F "app/src/**/*.kt"         # 
 Shrink the baseline by fixing a rule's violations and regenerating it with `--baseline=...` on a
 clean run (delete `ktlint-baseline.xml` first, since an existing file is only read, never rewritten).
 
+## Coverage Floor (Kover)
+
+```bash
+./gradlew :app:koverHtmlReportDebug   # app/build/reports/kover/htmlDebug/index.html
+./gradlew :app:koverVerifyDebug       # fails below the floor in app/build.gradle.kts
+```
+
+Line coverage was 5.3% when the floor was set to 5. Raise `minBound` whenever coverage rises, never lower it.
+
 ## 3. Agro Contract
 
 `app/src/test/resources/agro-schema.graphql` is a copy of Agro's `docs/api/schema.graphql`, and
