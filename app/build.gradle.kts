@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.kover)
 }
 
 // Release signing is read from local.properties (never committed). Absent -> unsigned release.
@@ -263,4 +264,15 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
+}
+
+// Coverage ratchet: the floor sits just under today's line coverage, so it can only be raised.
+kover {
+    reports {
+        verify {
+            rule {
+                minBound(5)
+            }
+        }
+    }
 }
