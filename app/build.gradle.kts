@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.kover)
+    alias(libs.plugins.detekt)
 }
 
 // Release signing is read from local.properties (never committed). Absent -> unsigned release.
@@ -275,4 +276,11 @@ kover {
             }
         }
     }
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    // Existing findings are frozen so only new ones fail; regenerate with `detektBaseline`.
+    baseline = file("detekt-baseline.xml")
+    source.setFrom("src/main/java", "src/test/java")
 }
