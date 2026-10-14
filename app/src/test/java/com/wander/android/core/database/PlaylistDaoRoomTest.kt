@@ -20,7 +20,7 @@ import org.robolectric.annotation.Config
  * (installed by [KeystoreRobolectricRunner]).
  */
 @RunWith(KeystoreRobolectricRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [35])
 class PlaylistDaoRoomTest {
 
     private lateinit var db: WanderDatabase

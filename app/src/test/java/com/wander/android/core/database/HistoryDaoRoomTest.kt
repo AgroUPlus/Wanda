@@ -15,7 +15,7 @@ import org.robolectric.annotation.Config
 
 /** The scrobble outbox: a play waits here until a service has been told about it. */
 @RunWith(KeystoreRobolectricRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [35])
 class HistoryDaoRoomTest {
     private lateinit var db: WanderDatabase
 
