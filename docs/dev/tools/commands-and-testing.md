@@ -42,20 +42,31 @@ Kotlin 2.3.x; move to a newer alpha only together with a Kotlin upgrade.
 
 Line coverage was 5.3% when the floor was set to 5. Raise `minBound` whenever coverage rises, never lower it.
 
-## Startup Profile (device required)
+## Startup Profile
 
-`:baselineprofile` is a self-instrumenting macrobenchmark module that targets the app's `fastDebug`
-build (optimised like release, debug-signed). Nothing here runs without a physical device or
-emulator on API 28+.
+`app/src/main/baseline-prof.txt` is the recorded cold-start profile (27k rules, source names); it is
+compiled into the ART profile for release-like builds (`:app:compileFastDebugArtProfile` checks it)
+and installed at runtime by `profileinstaller`.
+
+`:baselineprofile` is a self-instrumenting macrobenchmark module. It needs a device or emulator on
+API 28+. Record against the `nonMinified` build, never `fastDebug` or `release`: a minified build
+records R8's renamed classes (`La0;`), which match nothing.
 
 ```bash
-./gradlew :baselineprofile:connectedFastDebugAndroidTest   # StartupBenchmark: cold start with and without the profile
+# Re-record (an emulator is fine; allow ~5 minutes):
+gradlew.bat :baselineprofile:connectedNonMinifiedAndroidTest ^
+  -Pandroid.testInstrumentationRunnerArguments.class=com.wander.android.baselineprofile.BaselineProfileGenerator ^
+  -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR
+# Then copy baselineprofile/build/outputs/connected_android_test_additional_output/nonMinified/connected/<device>/BaselineProfileGenerator_generate-startup-prof.txt
+# to app/src/main/baseline-prof.txt
+
+# Timing (physical phone only; an emulator's numbers are meaningless):
+gradlew.bat :baselineprofile:connectedFastDebugAndroidTest
 ```
 
-`BaselineProfileGenerator` records the cold-start journey. Pull the profile it writes from the
-device's benchmark output directory into `app/src/main/baseline-prof.txt`; `profileinstaller` then
-installs it. The Baseline Profile Gradle plugin is not used: its generated variants fail under this
-project's pre-AGP-9 KSP setup (`kspBenchmarkReleaseKotlin`).
+The Baseline Profile Gradle plugin is not used: its generated variants fail under this project's
+pre-AGP-9 KSP setup (`kspBenchmarkReleaseKotlin`). The profile covers only the first screen so far;
+add journeys (search, playback, the queue) to `BaselineProfileGenerator` and re-record.
 
 ## 3. Agro Contract
 
