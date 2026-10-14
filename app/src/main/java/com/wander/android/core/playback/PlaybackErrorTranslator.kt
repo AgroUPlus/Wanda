@@ -18,9 +18,12 @@ internal object PlaybackErrorTranslator {
             cause.message?.takeIf { it.isNotBlank() }?.let { best = it }
             cause = cause.cause
         }
-        val raw = best ?: return "Playback failed (${exception.errorCodeName})."
-        return raw.asActionableMessage()
+        return fromMessage(best, exception.errorCodeName)
     }
+
+    /** The mapping itself, apart from the exception it is read from, so it needs no player classes. */
+    fun fromMessage(raw: String?, errorCodeName: String): String =
+        raw?.asActionableMessage() ?: "Playback failed ($errorCodeName)."
 
     private fun String.asActionableMessage(): String = when {
         contains("YouTube Music refused", ignoreCase = true) &&
