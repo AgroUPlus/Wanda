@@ -24,6 +24,6 @@ class BaselineProfileGenerator {
     }
 
     private companion object {
-        const val TARGET_PACKAGE = "com.wander.android"
+        const val TARGET_PACKAGE = "com.wander.android.debug"
     }
 }
