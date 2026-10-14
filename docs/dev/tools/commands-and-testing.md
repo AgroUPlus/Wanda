@@ -42,6 +42,21 @@ Kotlin 2.3.x; move to a newer alpha only together with a Kotlin upgrade.
 
 Line coverage was 5.3% when the floor was set to 5. Raise `minBound` whenever coverage rises, never lower it.
 
+## Startup Profile (device required)
+
+`:baselineprofile` is a self-instrumenting macrobenchmark module that targets the app's `fastDebug`
+build (optimised like release, debug-signed). Nothing here runs without a physical device or
+emulator on API 28+.
+
+```bash
+./gradlew :baselineprofile:connectedFastDebugAndroidTest   # StartupBenchmark: cold start with and without the profile
+```
+
+`BaselineProfileGenerator` records the cold-start journey. Pull the profile it writes from the
+device's benchmark output directory into `app/src/main/baseline-prof.txt`; `profileinstaller` then
+installs it. The Baseline Profile Gradle plugin is not used: its generated variants fail under this
+project's pre-AGP-9 KSP setup (`kspBenchmarkReleaseKotlin`).
+
 ## 3. Agro Contract
 
 `app/src/test/resources/agro-schema.graphql` is a copy of Agro's `docs/api/schema.graphql`, and
