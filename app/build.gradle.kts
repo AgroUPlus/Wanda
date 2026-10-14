@@ -119,6 +119,17 @@ android {
             signingConfig = signingConfigs.getByName("debug")
             matchingFallbacks += listOf("release")
         }
+        // For recording a baseline profile only. Same code as release but with R8's renaming and
+        // shrinking off, so the profile names classes and methods as written in the source; R8
+        // maps those names onto its output when the profile is compiled into a real build.
+        create("nonMinified") {
+            initWith(getByName("release"))
+            isMinifyEnabled = false
+            isShrinkResources = false
+            applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
 
     // The debug icon, ribbon and app name, so the two debug-identity builds look alike.
