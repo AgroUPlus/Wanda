@@ -21,7 +21,7 @@ ktlint --baseline=ktlint-baseline.xml --relative -F "app/src/**/*.kt"         # 
 ```
 
 Shrink the baseline by fixing a rule's violations and regenerating it with `--baseline=...` on a
-clean run.
+clean run (delete `ktlint-baseline.xml` first, since an existing file is only read, never rewritten).
 
 ## 3. Testing Layers
 
