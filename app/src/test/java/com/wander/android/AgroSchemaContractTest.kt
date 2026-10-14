@@ -1,8 +1,8 @@
 package com.wander.android
 
+import java.io.File
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * Every GraphQL operation Wanda sends must name a root field Agro's committed schema has.
