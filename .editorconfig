@@ -1,0 +1,17 @@
+root = true
+
+[*.{kt,kts}]
+ktlint_code_style = android_studio
+max_line_length = 120
+# Compose composables are PascalCase functions.
+ktlint_function_naming_ignore_when_annotated_with = Composable
+# Wrapping rules the codebase has never followed; the baseline would otherwise be most of the repo.
+ktlint_standard_function-signature = disabled
+ktlint_standard_class-signature = disabled
+ktlint_standard_argument-list-wrapping = disabled
+ktlint_standard_parameter-list-wrapping = disabled
+ktlint_standard_blank-line-between-when-conditions = disabled
+ktlint_standard_statement-wrapping = disabled
+ktlint_standard_binary-expression-wrapping = disabled
+ktlint_standard_trailing-comma-on-call-site = disabled
+ktlint_standard_trailing-comma-on-declaration-site = disabled
