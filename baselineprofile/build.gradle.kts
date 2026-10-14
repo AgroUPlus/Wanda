@@ -22,6 +22,12 @@ android {
             signingConfig = signingConfigs.getByName("debug")
             matchingFallbacks += listOf("release")
         }
+        // Pairs with the app's `nonMinified` build, which profiles are recorded against.
+        create("nonMinified") {
+            isDebuggable = true
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
 
     targetProjectPath = ":app"
