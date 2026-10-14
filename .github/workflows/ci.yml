@@ -39,6 +39,9 @@ jobs:
           chmod +x ktlint
           ./ktlint --baseline=ktlint-baseline.xml --relative "app/src/**/*.kt"
 
+      - name: Static Analysis (detekt)
+        run: ./gradlew :app:detekt
+
       - name: Run Unit Tests
         run: ./gradlew :app:testDebugUnitTest
 
