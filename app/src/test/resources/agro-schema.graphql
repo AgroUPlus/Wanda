@@ -1,0 +1,2601 @@
+"""
+An account as its owner sees it.
+
+Carries **no credential**. It used to return `apiKey` and `passphrase` in cleartext, which meant
+a revocable device token could be traded for the permanent account passphrase just by asking —
+the escalation that made revoking a device pointless. A credential is shown once, by the
+mutation that mints it, and never again.
+"""
+type AccountPayload {
+	id: String!
+	username: String!
+	role: String!
+	state: String!
+	quotaBytes: Int!
+	canArchive: Boolean!
+	connectionUrl: String!
+}
+
+"""
+One recording's measured vector.
+
+All six axes are `0..1`, except the key pair which is `-1..1`. Out-of-range values are clamped
+rather than rejected: a batch is a background contribution, and failing the whole request over
+one bad row would lose the good ones with it.
+"""
+input AcousticVectorInput {
+	title: String!
+	artist: String!
+	tempo: Float!
+	energy: Float!
+	brightness: Float!
+	danceability: Float!
+	keyX: Float!
+	keyY: Float!
+}
+
+input AddEditInput {
+	track: PlaylistTrackInput!
+	"""
+	Inserted after this item; at the end when absent.
+	"""
+	afterItemId: String
+}
+
+type AgroPlugin {
+	id: String!
+	name: String!
+	description: String!
+	version: String!
+	category: String!
+	target: String!
+	isEnabled: Boolean!
+	isConnected: Boolean!
+	"""
+	Whether an admin can switch it. The client connectors describe what is connected; there is
+	nothing on the server to turn off, so offering a switch would be offering a fake one.
+	"""
+	toggleable: Boolean!
+	latencyMs: Int
+	endpoint: String
+	metadata: [PluginMetaItem!]!
+}
+
+type AgroWrappedPayload {
+	year: Int!
+	month: Int
+	totalMinutes: Int!
+	totalPlays: Int!
+	topArtists: [StatEntry!]!
+	topTracks: [StatEntry!]!
+	topAlbums: [StatEntry!]!
+	topGenres: [StatEntry!]!
+	topHourUtc: Int
+	"""
+	The peak hour in the caller's own offset. `null` when there were no plays at all.
+	"""
+	topHourLocal: Int
+	"""
+	The longest run of *consecutive* days with a play.
+	"""
+	longestStreakDays: Int!
+	"""
+	Days with any play at all, which is a different and usually much larger number.
+	"""
+	activeDaysCount: Int!
+	newArtistsCount: Int!
+	"""
+	Distinct artists in the period. `topArtists` is a top ten, so its length says nothing.
+	"""
+	totalArtists: Int!
+	"""
+	Plays per calendar month, January first. Always twelve entries.
+	"""
+	byMonth: [Int!]!
+	"""
+	Plays per hour of the caller's local day, index 0 = midnight. Always twenty-four entries.
+	"""
+	byHour: [Int!]!
+	"""
+	Plays per device, most-played first. The one figure only a fleet-wide server can answer.
+	"""
+	byDevice: [StatEntry!]!
+	firstPlay: String
+	lastPlay: String
+}
+
+type AnthemPayload {
+	title: String!
+	artist: String!
+	"""
+	Plays across the whole circle.
+	"""
+	plays: Int!
+	"""
+	Who played it, and how often each. The interesting half of an anthem.
+	"""
+	byMember: [StatEntry!]!
+}
+
+"""
+An app password as it is listed back. The token itself is deliberately absent: a credential is
+shown once, when it is created, and is not recoverable afterwards.
+"""
+type AppPassword {
+	"""
+	Stable handle for this one credential. Labels repeat; this does not.
+	"""
+	id: Int!
+	label: String!
+	createdAt: String!
+	lastUsedAt: String
+}
+
+"""
+The one time a token is returned. Shown once, at creation.
+"""
+type AppPasswordCreated {
+	label: String!
+	token: String!
+}
+
+"""
+Something a subscribed artist has put out since the client last looked.
+"""
+type ArtistRelease {
+	recordingId: String!
+	artistId: String!
+	artist: String!
+	title: String
+	album: String
+	"""
+	The catalogue position this was published at. The highest one seen is the next watermark.
+	"""
+	updatedAt: Int!
+}
+
+"""
+An artist somebody can subscribe to.
+"""
+type ArtistSubscription {
+	artistId: String!
+	"""
+	The spelling to show — the first one the catalogue saw.
+	"""
+	displayName: String!
+	"""
+	What the name normalises to. The identity two spellings share; exposed so a client can tell
+	that the artist it is looking at is one it already follows without asking again.
+	"""
+	normName: String!
+	"""
+	A namespaced id at the source it came from, such as `ytm:UC…`, when one is known.
+	"""
+	externalId: String
+}
+
+type BlendMemberPayload {
+	username: String!
+	"""
+	False while they have been asked and not yet answered.
+	"""
+	joined: Boolean!
+}
+
+type BlendPayload {
+	playlistId: String!
+	title: String!
+	createdBy: String!
+	isCreator: Boolean!
+	members: [BlendMemberPayload!]!
+	size: Int!
+	mix: Int!
+	window: BlendWindow!
+	refresh: BlendRefresh!
+	refreshedAt: String
+	"""
+	When it rewrites itself next. Absent when frozen or not written yet.
+	"""
+	nextRefreshAt: String
+}
+
+"""
+How often it is written again on its own.
+"""
+enum BlendRefresh {
+	DAILY
+	WEEKLY
+	"""
+	Only when someone joins or leaves, or the recipe changes.
+	"""
+	FROZEN
+}
+
+"""
+How far back a member's listening is read.
+"""
+enum BlendWindow {
+	FOUR_WEEKS
+	SIX_MONTHS
+	ALL_TIME
+}
+
+"""
+One recording as the catalogue knows it, on its way to a client.
+"""
+type CatalogEntry {
+	recordingId: String!
+	"""
+	The embedding, hex-encoded int8. Clients compare it themselves rather than trusting the
+	server's match — the same audio has to look the same to both ends or a pull is worthless.
+	"""
+	embedding: String!
+	"""
+	Values per vector, so a client can split the blob into segments.
+	"""
+	dim: Int!
+	"""
+	Which embedder produced it. A client ignores an entry from a model it does not run.
+	"""
+	model: String!
+	version: Int!
+	durationMs: Int!
+	title: String
+	artist: String
+	album: String
+	lyrics: String
+	"""
+	What supplied [`lyrics`] — `LRCLIB`, `Native`, and so on.
+	
+	Null for anything published before the catalogue recorded this, which cannot be filled in
+	after the fact: the row remembers the text, not who sent it. A client that cares where its
+	lyrics came from can decide what to do with an unattributed one.
+	"""
+	lyricsSource: String
+	"""
+	Namespaced ids known to hold this audio — `ytm:…`, `navidrome:…`. Never a `local:` id:
+	those are filesystem paths from somebody's phone, and this list goes to every account.
+	"""
+	sources: [String!]!
+	"""
+	This entry's position in the catalogue's order. The highest one seen is the next cursor.
+	"""
+	updatedAt: Int!
+}
+
+type CircleRecapPayload {
+	"""
+	Echoed back, because a client that asked for `MONTH` and a server that defaulted to `WEEK`
+	would otherwise disagree silently.
+	"""
+	period: String!
+	"""
+	Who is actually in it. Friends who have their statistics closed are absent, not listed
+	empty — being in someone's recap is a thing you opt into.
+	"""
+	members: [String!]!
+	anthem: AnthemPayload
+	topTracks: [StatEntry!]!
+	topArtists: [StatEntry!]!
+	trendsetter: TrendsetterPayload
+	matrix: [TasteMatrixEntry!]!
+}
+
+"""
+The outcome of deleting a link.
+"""
+type DeleteLinkPayload {
+	deleted: Boolean!
+	"""
+	True when the link pointed at a Subsonic-server share that Agro cannot revoke on the user's
+	behalf.
+	
+	Agro holds a music-server address and username but deliberately never the password — see the
+	encrypted fields on `synced_settings`, and the "the password stays on each device" rule the
+	clients are built around. Revoking a share needs that password, so the honest answer is to
+	remove Agro's own record and say plainly that the share still exists on the music server,
+	rather than to start storing a credential the whole design avoids.
+	
+	The field keeps its original name: renaming it would break clients already in use.
+	"""
+	navidromeCleanupRequired: Boolean!
+}
+
+"""
+One sealed copy of a note, as the client sends and reads it.
+"""
+input DeviceCiphertextInput {
+	deviceId: String!
+	ciphertext: String!
+}
+
+"""
+One sealed copy of a note, as the client sends and reads it.
+"""
+type DeviceCiphertextPayload {
+	deviceId: String!
+	ciphertext: String!
+}
+
+"""
+One device's published identity key.
+
+The device id is opaque to the server and meaningful only within the account — it exists so a
+sender can seal one copy per device and a device can recognise its own copy on the way back.
+"""
+type DeviceKeyPayload {
+	deviceId: String!
+	publicKey: String!
+}
+
+type DropPayload {
+	id: String!
+	fromUser: String!
+	toUser: String!
+	trackTitle: String!
+	artistName: String!
+	albumName: String
+	artworkUrl: String
+	"""
+	Present when the sender's copy is in this server's index, so a client can offer to fetch the
+	file rather than only naming it.
+	"""
+	contentHash: String
+	trackUri: String
+	note: String
+	"""
+	The recipient's sealed copy, duplicated out of `noteCiphertexts`.
+	
+	Kept for clients that predate the per-device list. A client that understands
+	`noteCiphertexts` should read that instead — this field cannot carry the sender's own copy.
+	"""
+	noteCiphertext: String
+	"""
+	Every sealed copy of the note, by device — the recipient's devices and the sender's own.
+	"""
+	noteCiphertexts: [DeviceCiphertextPayload!]!
+	isEncrypted: Boolean!
+	createdAt: String!
+	"""
+	Null while unread. Only ever populated on the recipient's own view; see `sentDrops`.
+	"""
+	readAt: String
+	archived: Boolean!
+	"""
+	The recipient's one-emoji reply, or null if they have not reacted.
+	
+	Unlike `read_at`, this *is* shown to the sender. A read receipt is something the server
+	observed about the recipient; a reaction is something they chose to send back.
+	"""
+	reaction: String
+}
+
+enum EditAccess {
+	OFF
+	FRIENDS
+	PUBLIC
+}
+
+"""
+An identity provider account linked to an Agro account.
+"""
+type FederatedIdentity {
+	issuer: String!
+	"""
+	The provider's stable identifier for the person. The only value treated as identity.
+	"""
+	subject: String!
+	linkedAt: String!
+}
+
+type FeedItemPayload {
+	username: String!
+	"""
+	RFC3339, from the play that caused it — not the time this was read.
+	"""
+	at: String!
+	"""
+	`MILESTONE`, `ON_REPEAT` or `NEW_FAVOURITE`. A discriminator rather than a union, so a
+	client that meets a kind it does not know can still render the summary line.
+	"""
+	kind: String!
+	"""
+	A ready-made sentence. Sent so that every client says the same thing rather than each
+	reimplementing the phrasing and disagreeing about it.
+	"""
+	summary: String!
+	artist: String!
+	title: String
+	"""
+	Plays for a milestone or a repeat; distinct tracks for a new favourite.
+	"""
+	count: Int!
+}
+
+type FollowedPlaylists {
+	"""
+	The followed playlists the caller can still open.
+	"""
+	playlists: [PlaylistPayload!]!
+	"""
+	Followed playlists the caller can no longer open: made private, or a friendship ended. A
+	deleted playlist is in neither list.
+	"""
+	revokedIds: [String!]!
+}
+
+"""
+A friend code as a client renders it.
+
+[`ttl_seconds`] is sent rather than left for the client to derive from [`expires_at`], because
+the client's clock is not the server's and a QR panel that re-mints on a drifting timer would
+either show a dead code or thrash. It counts down from *now* on the device that asked.
+"""
+type FriendCodePayload {
+	code: String!
+	expiresAt: String!
+	ttlSeconds: Int!
+}
+
+type FriendEdgePayload {
+	profile: ProfilePayload!
+	nowPlaying: FriendNowPlaying
+}
+
+"""
+A friend's jam, as it appears before you are in it.
+
+Deliberately thin: the code is not here, and neither is the queue. Being able to see that a
+friend has a jam open is not the same as being in it.
+"""
+type FriendJamPayload {
+	id: String!
+	host: String!
+	mode: String!
+	members: [String!]!
+	"""
+	What they are playing, so it is worth deciding about.
+	"""
+	nowPlayingTitle: String
+}
+
+"""
+What a friend is playing, projected from the one handoff row their account already keeps.
+
+Presence needs no storage of its own: the handoff a device publishes so its *owner* can pick a
+session up elsewhere is the same fact a friend is being shown.
+"""
+type FriendNowPlaying {
+	username: String!
+	trackUri: String!
+	trackTitle: String!
+	artistName: String!
+	albumName: String
+	artworkUrl: String
+	positionMs: Int!
+	isPlaying: Boolean!
+	updatedAt: String!
+	"""
+	Which of the host's devices is playing it.
+	
+	A listener needs this to ask for the audio at all: both the direct transfer and the relay
+	address one device, not an account.
+	"""
+	deviceId: String!
+	"""
+	SHA-256 of the file the host is playing, when they have one. `None` for anything streamed,
+	which is what sends a listener back to matching by name.
+	"""
+	contentHash: String
+	"""
+	Where to reach the host's device directly, and the token to present when doing so.
+	
+	Both are `Some` only when the two devices look like they share a local network *and* the
+	viewer is allowed to see this account at all. Neither is the authorisation on its own — see
+	[`crate::ws::WsHub::same_network`] for why the address is a hint and the token is the gate.
+	"""
+	peerLanAddress: String
+	peerLanToken: String
+	"""
+	This session's real metadata, sealed to the asking device's key.
+	
+	Pairwise, like the two fields above, and for a stronger reason: a copy is sealed to one
+	device's public key, so handing it to anyone else is handing over bytes they cannot open.
+	`None` whenever the question was asked without naming a device, when the host sealed
+	nothing, or when the host has not sealed anything to *this* device yet — a friend who has
+	published no key, or a device added since the last track change.
+	
+	When this is set, the plaintext `track_title` and `artist_name` above are a placeholder and
+	the viewer is expected to open this instead. The server cannot tell the difference; it has
+	never held the key.
+	"""
+	encryptedPresence: String
+}
+
+input HandoffInput {
+	userId: String!
+	"""
+	Optional so an older client is still a valid sender; omitted reads as "did not say", which
+	leaves whatever length is already stored alone.
+	"""
+	durationMs: Int
+	trackUri: String!
+	trackTitle: String!
+	artistName: String!
+	albumName: String
+	artworkUrl: String
+	positionMs: Int!
+	isPlaying: Boolean!
+	deviceId: String!
+	"""
+	Optional so a heartbeat can refresh position without re-sending the whole queue; when it is
+	omitted the stored queue is kept as-is.
+	"""
+	queue: [HandoffTrackInput!]
+	queueIndex: Int
+	"""
+	SHA-256 of the file being played, when this device has one and has hashed it.
+	
+	Optional for the same reason `duration_ms` is: an older client is still a valid sender, and
+	omitting it leaves whatever hash the track change already established alone rather than
+	erasing it on every heartbeat.
+	"""
+	contentHash: String
+	"""
+	End-to-end encrypted envelope containing sealed metadata (track_uri, title, artist, album).
+	When present, Agro acts purely as a blind forwarder over WebSocket without logging or learning the music.
+	"""
+	encryptedPayload: String
+	"""
+	The same session sealed once per friend device, so friends can still see it.
+	
+	`encrypted_payload` is sealed to this account's own vault key and no friend can open it, so
+	a sealed session showed up in the social feed as a placeholder. These are the copies that
+	fix that: one per device key published by a friend, each openable only by that device.
+	
+	Three states, and they are not interchangeable. Omitted means *leave the stored copies
+	alone* — a heartbeat repeats metadata that has not changed, and re-sealing it per device
+	ten times a minute is work with no result. Empty means *drop them*: the session ended, or
+	stopped being sealed. Non-empty replaces the set, which is what a track change sends.
+	"""
+	presenceCiphertexts: [PresenceCiphertextInput!]
+}
+
+type HandoffState {
+	trackUri: String!
+	"""
+	How long the track is. 0 when the sender did not say, or when it is a livestream — both
+	want a running clock rather than a progress bar that finishes at the wrong moment.
+	"""
+	durationMs: Int!
+	trackTitle: String!
+	artistName: String!
+	albumName: String
+	artworkUrl: String
+	positionMs: Int!
+	isPlaying: Boolean!
+	deviceId: String!
+	updatedAt: String!
+	"""
+	The rest of the session: every track in the queue, so picking it up on another device
+	continues the listening rather than playing one song and stopping.
+	"""
+	queue: [HandoffTrack!]!
+	"""
+	Where `queue` was playing. -1 when the sender reported no queue at all.
+	"""
+	queueIndex: Int!
+	"""
+	Present only for a sealed session: an authenticated envelope the server forwards without
+	opening. A client with the account's vault key unseals the real metadata; everything else
+	shows the session as private.
+	"""
+	encryptedPayload: String
+}
+
+"""
+One entry of a handed-over queue. `track_uri` is the sending client's own id for it — a
+receiving client resolves it against its own backends, falling back to title and artist when
+the two devices do not share that source.
+"""
+type HandoffTrack {
+	trackUri: String!
+	trackTitle: String!
+	artistName: String!
+	albumName: String
+	artworkUrl: String
+}
+
+input HandoffTrackInput {
+	trackUri: String!
+	trackTitle: String!
+	artistName: String!
+	albumName: String
+	artworkUrl: String
+}
+
+"""
+What a device reports it holds. Metadata travels with it so the server can index a file it has
+never been sent — an index-only library still answers "who has what".
+"""
+input HoldingInput {
+	contentHash: String!
+	title: String!
+	artist: String!
+	album: String
+	albumArtist: String
+	trackNo: Int
+	discNo: Int
+	year: Int
+	genre: String
+	durationMs: Int!
+	sizeBytes: Int!
+	format: String
+	bitrateKbps: Int
+	"""
+	The device's own handle for the file. Stored opaquely and never interpreted.
+	"""
+	localRef: String
+}
+
+type InvitePayload {
+	code: String!
+	createdBy: String!
+	createdAt: String!
+	expiresAt: String
+	maxUses: Int!
+	usedCount: Int!
+	revoked: Boolean!
+}
+
+"""
+The one thing the whole room is hearing.
+"""
+type JamNowPlayingPayload {
+	trackId: String!
+	title: String!
+	artist: String!
+	artworkUrl: String
+	durationMs: Int!
+	startedAt: String!
+	"""
+	How far in the room is *now*, worked out here from `started_at`. A client seeks to this
+	rather than starting from zero, which is what lets somebody join late and land in step.
+	"""
+	positionMs: Int!
+	"""
+	The member who queued it, the device of theirs that holds it, and the bytes it names.
+	
+	`content_hash` is `None` for anything queued from a streaming source, which is what sends
+	the rest of the room back to matching the track by name.
+	"""
+	addedBy: String!
+	deviceId: String
+	contentHash: String
+	"""
+	Where to reach that device on this network, and the token to present. Set only when the
+	server judged the two devices to share one — see [`crate::ws::WsHub::same_network`].
+	"""
+	peerLanAddress: String
+	peerLanToken: String
+	"""
+	Votes to skip this track so far.
+	"""
+	skipVotes: Int!
+	"""
+	How many are needed. More than half the room, everybody counted.
+	"""
+	skipsNeeded: Int!
+	"""
+	Whether *you* have voted to skip it, so the control shows its state.
+	"""
+	youSkipped: Boolean!
+}
+
+type JamPayload {
+	id: String!
+	"""
+	What you give someone so they can join. Shown to members only.
+	"""
+	code: String!
+	host: String!
+	"""
+	`open` or `democracy`.
+	"""
+	mode: String!
+	isHost: Boolean!
+	members: [String!]!
+	"""
+	Accepted tracks, in the order they were added.
+	"""
+	queue: [JamTrackPayload!]!
+	"""
+	Suggested tracks the room has not accepted yet. Always empty in `open` mode.
+	"""
+	proposals: [JamTrackPayload!]!
+	"""
+	What everyone is hearing, or null between tracks.
+	"""
+	nowPlaying: JamNowPlayingPayload
+	"""
+	Approvals a suggestion needs here, so the UI can say "2 to go" without guessing.
+	"""
+	approvalsNeeded: Int!
+	"""
+	`code` or `friends` — who can find this jam without being handed the code.
+	"""
+	visibility: String!
+}
+
+type JamRecap {
+	startedAt: String!
+	endedAt: String!
+	"""
+	Wall-clock time the reader spent in the room, not the sum of track lengths: a skipped track
+	did not last its duration.
+	"""
+	durationMs: Int!
+	"""
+	Everyone who was in the room or put something in it, sorted.
+	"""
+	people: [String!]!
+	"""
+	In the order they played.
+	"""
+	tracks: [RecapTrack!]!
+	tracksOmitted: Int!
+	topContributor: RecapContributor
+	"""
+	The played track with the most approvals. `None` when nothing was approved by anyone.
+	"""
+	mostLoved: RecapTrack
+	"""
+	The played track with the most skip votes. `None` when nobody voted to skip anything.
+	"""
+	mostSkipped: RecapTrack
+}
+
+type JamRecapPayload {
+	id: String!
+	createdAt: String!
+	recap: JamRecap!
+}
+
+type JamTrackPayload {
+	id: String!
+	addedBy: String!
+	trackUri: String!
+	title: String!
+	artist: String!
+	artworkUrl: String
+	durationMs: Int!
+	"""
+	Approvals so far, excluding the person who suggested it.
+	"""
+	approvals: Int!
+	"""
+	Whether *you* have approved it, so the control can show its state.
+	"""
+	approved: Boolean!
+	"""
+	How many more approvals it needs. Sent rather than derived, so a client never has to
+	reimplement the rule and disagree with the server about it.
+	"""
+	stillNeeded: Int!
+}
+
+type LibraryAlbumPayload {
+	id: String!
+	title: String!
+	artist: String!
+	"""
+	Fetch artwork from `/api/v1/cover/{coverKey}`.
+	"""
+	coverKey: String
+	year: Int
+	totalDurationMs: Int!
+	tracks: [LibraryAlbumTrack!]!
+}
+
+type LibraryAlbumTrack {
+	id: String!
+	title: String!
+	artist: String!
+	trackNo: Int
+	discNo: Int
+	durationMs: Int!
+}
+
+"""
+What `libraryBrowse` is listing.
+"""
+enum LibraryBrowseKind {
+	ARTIST
+	ALBUM
+	TRACK
+}
+
+"""
+One tile in the library view.
+"""
+type LibraryItem {
+	id: String!
+	title: String!
+	subtitle: String!
+	"""
+	Fetch artwork from `/api/v1/cover/{coverKey}`. Null for artists, and for albums with none.
+	"""
+	coverKey: String
+	trackCount: Int!
+	"""
+	False when the selected device is missing this. Null-ish only in the sense that with no
+	device selected everything reports true — there is nothing to be missing from.
+	"""
+	presentOnDevice: Boolean!
+	sourceCount: Int!
+}
+
+type LibraryStatsPayload {
+	trackCount: Int!
+	archivedCount: Int!
+	totalBytes: Int!
+	spoolBytes: Int!
+}
+
+"""
+One file in the shared library index, as the clients see it.
+"""
+type LibraryTrackPayload {
+	"""
+	SHA-256 of the file's bytes — the identity everything here keys on.
+	"""
+	contentHash: String!
+	title: String!
+	artist: String!
+	album: String
+	albumArtist: String
+	trackNo: Int
+	discNo: Int
+	year: Int
+	genre: String
+	durationMs: Int!
+	sizeBytes: Int!
+	format: String
+	bitrateKbps: Int
+	"""
+	Where the server filed it, relative to the library root. Null when the server holds only
+	the index entry — which is the whole of index-only mode, and of a track that lives on a
+	peer.
+	"""
+	archivedPath: String
+	"""
+	Peer devices that currently hold this track.
+	"""
+	peerSources: [PeerSourcePayload!]!
+}
+
+type ListenAlongPayload {
+	host: String!
+	listeners: [String!]!
+	nowPlaying: FriendNowPlaying
+}
+
+"""
+Listening statistics for one account, across every device that reports to it.
+"""
+type ListeningStats {
+	"""
+	The last 24 hours, not since midnight — there is no one timezone across a fleet.
+	"""
+	secsToday: Int!
+	secsWeek: Int!
+	secsTotal: Int!
+	playsTotal: Int!
+	streak: Int!
+	topArtists: [StatEntry!]!
+	topAlbums: [StatEntry!]!
+	topTracks: [StatEntry!]!
+	topGenres: [StatEntry!]!
+	"""
+	Seconds per day for the last fourteen days, oldest first.
+	"""
+	byDay: [Int!]!
+	"""
+	Seconds per day for the last eight weeks, oldest first.
+	"""
+	heatmap: [Int!]!
+	"""
+	Seconds per hour of the day, UTC, index 0 = midnight.
+	"""
+	byHour: [Int!]!
+	"""
+	Seconds per device, most-listened first.
+	"""
+	byDevice: [StatEntry!]!
+	"""
+	When the earliest play in the period happened, Unix seconds; null when there is none.
+	How long ALL actually is, so a client can average over it.
+	"""
+	firstPlayedAt: Int
+}
+
+type LyricsAndCoverPayload {
+	syncedLrc: String!
+	coverArtUrl: String!
+	isSynced: Boolean!
+}
+
+input MoveEditInput {
+	itemId: String!
+	"""
+	Placed after this item; first when absent.
+	"""
+	afterItemId: String
+}
+
+type Mutation {
+	"""
+	Approves, suspends or restores an account.
+	"""
+	setAccountState(username: String!, state: String!): AccountPayload!
+	"""
+	Sets how much spool a guest may occupy, in bytes. `0` means unlimited.
+	"""
+	setAccountQuota(username: String!, quotaBytes: Int!): AccountPayload!
+	"""
+	Allows or disallows a user from permanently saving music into the server's archive.
+	"""
+	setCanArchive(username: String!, canArchive: Boolean!): AccountPayload!
+	"""
+	Deletes an account with its nodes, session, settings and app passwords.
+	
+	Irreversible, and it can lock you out: deleting the last account puts the server back into
+	first-run, where anyone who can reach it may create the next one. The caller confirms.
+	Removes an account and everything belonging to it.
+	
+	An administrator may remove anyone; anyone else may only remove themselves. Only the first
+	half of that used to be true — the check was `authorize`, which compares the caller to the
+	named account, so the admin could delete nobody but themselves and a guest account could
+	never be got rid of at all.
+	
+	The last administrator is protected. Deleting them would leave a server whose accounts
+	nobody can administer, and which no setup token can recover: one is only minted for a
+	database with *no* accounts, and the guests would still be there.
+	"""
+	deleteAccount(username: String!): Boolean!
+	"""
+	Issues a credential for one client, so that client can be revoked on its own rather than
+	by rotating the account passphrase every other device is using.
+	"""
+	createAppPassword(userId: String!, label: String!): AppPasswordCreated!
+	"""
+	Revokes one credential by the id `appPasswords` reported.
+	
+	Deliberately not by label. A label is a human note, chosen by the client and freely
+	repeated — a client that re-logs in on every launch leaves a row each time, all of them
+	named the same thing. Revoking by label signed out every one of them at once, which is
+	precisely the opposite of the per-device revocation these credentials exist to provide.
+	"""
+	revokeAppPassword(userId: String!, id: Int!): Boolean!
+	updateHandoff(input: HandoffInput!): Boolean!
+	"""
+	Records what a device holds.
+	
+	Batched and idempotent, so a client sends its whole library once and only deltas after —
+	re-sending everything is wasteful but never wrong.
+	
+	Each entry also indexes the track, so the server knows about files it has never been sent.
+	That is what makes index-only mode work: the diff needs metadata, not bytes.
+	"""
+	reportHoldings(userId: String!, deviceId: String!, tracks: [HoldingInput!]!): Int!
+	"""
+	Forgets holdings a device no longer has — deleted locally, or moved to the server and
+	removed. The index entry survives: another device may still hold it.
+	"""
+	forgetHoldings(userId: String!, deviceId: String!, hashes: [String!]!): Int!
+	"""
+	Removes a track from the library entirely. It will disappear from all views.
+	"""
+	deleteLibraryItem(userId: String!, kind: LibraryBrowseKind!, id: String!): Boolean!
+	"""
+	Recomputes the normalised matching columns from the metadata already stored.
+	
+	The columns are derived in Rust at insert time, so changing `norm.rs` leaves every existing
+	row on the old convention and no amount of SQL can repair them. This is the entry point that
+	can — run it after any deploy that touches normalisation.
+	
+	Admin-only, and not because the data is sensitive: it is a write across the whole index, and
+	nobody should be able to schedule that from an ordinary account. It reads nothing about who
+	listened to what — these columns are facts about titles.
+	
+	Bounded per call. Keep calling while `done` is false.
+	"""
+	reindexNormalisation(batch: Int! = 500): ReindexPayload!
+	"""
+	Creates a short UID for a share URL. Returns the short link UID (e.g. "aB3x9Q"), or the
+	account's existing open-ended link to the same target — see `db_short_links`.
+	
+	`source` records which backend minted the underlying share — `"navidrome"` or `"subsonic"` when the
+	link points at a share on the music server, so deleting it later can also revoke it there.
+	"""
+	createShortLink(userId: String!, targetUrl: String!, source: String, expiresAt: Int): String!
+	"""
+	Removes a link so it stops resolving.
+	
+	`kind` is the discriminator from `links` — `SHORT` or `EPHEMERAL`. Deleting is scoped to the
+	owning account inside the statement itself, so a link belonging to somebody else is a
+	not-found rather than a deletion.
+	"""
+	deleteLink(userId: String!, id: String!, kind: String!): DeleteLinkPayload!
+	createEphemeralShare(userId: String!, trackTitle: String!, artistName: String!, albumName: String, audioUrl: String!, ttlHours: Int): SharePayload!
+	"""
+	Looks a track's lyrics up at LRCLIB.
+	
+	Authenticated, and the inputs are bounded. This took no token at all and made an outbound
+	HTTP request per call with strings the caller chose — an unauthenticated amplification
+	primitive pointed at someone else's server.
+	"""
+	fetchLyricsAndCover(artist: String!, title: String!): LyricsAndCoverPayload!
+	registerNode(userId: String!, deviceId: String!, clientType: String!, deviceName: String, lanAddress: String, version: String, currentTrack: String): NodePayload!
+	unregisterNode(userId: String!, deviceId: String!): Boolean!
+	"""
+	Renames a device.
+	
+	Scoped to devices the caller owns. A name is what makes a device list usable, and until now
+	the only way to change one was to make the client send a different `deviceName` — which for
+	a name the *server* invented meant there was no way at all.
+	"""
+	renameNode(userId: String!, deviceId: String!, petname: String!): Boolean!
+	"""
+	Mints a device token and returns it as a scannable pairing payload.
+	
+	The pairing QR used to be built from the account passphrase, so photographing it once handed
+	over the account permanently. Each scan now gets its own revocable credential, which is why
+	this is a mutation: it creates something.
+	"""
+	pairDevice(userId: String!, label: String): PairingPayload!
+	"""
+	Enables or disables a plugin. Administrators only: `plugins_state` has no user column, so
+	this writes server-global configuration and every account sees the result.
+	"""
+	togglePlugin(pluginId: String!, isEnabled: Boolean!): Boolean!
+	"""
+	Ingests a batch of plays from one device.
+	
+	Batched because clients hold an outbox and drain it when they next have a connection — a
+	phone that spent a day on aeroplane mode sends a day of listening in one request. Idempotent
+	on (account, artist, title, time), so a client unsure whether its last upload landed can
+	simply send it again. Returns how many rows were genuinely new.
+	"""
+	recordScrobbles(userId: String!, deviceName: String!, clientType: String, entries: [ScrobbleInput!]!): Int!
+	"""
+	Purges listening history (scrobbles) for the account, optionally restricted by year or cutoff.
+	
+	Useful for wiping past listening data after viewing a Rewind or on demand.
+	"""
+	purgeScrobbles(userId: String!, year: Int, before: String): PurgeScrobblesPayload!
+	"""
+	Registers this account's vault key, sealed by the client under the account passphrase.
+	
+	The server takes two opaque strings and can do nothing with either: unwrapping needs the
+	passphrase, and it keeps only an Argon2 hash of that. What it is storing is the means for
+	the *user* to recover their settings on a new device, not the means for this machine to read
+	them.
+	
+	Enrolment is once per account. A second attempt returns `false` rather than erroring —
+	two devices racing to set up the same account is an ordinary thing to happen, and the loser
+	should fetch the winner's envelope and unwrap it, not treat the race as a failure.
+	"""
+	enrolVaultKey(userId: String!, vaultSalt: String!, vaultKeyWrapped: String!): Boolean!
+	"""
+	Removes a linked SSO identity from the caller's account.
+	
+	Refuses when it would remove the last way in — an account created through SSO has a
+	passphrase it has never been shown, so unlinking without setting one first is a lockout.
+	"""
+	unlinkFederatedIdentity(userId: String!, issuer: String!, subject: String!): Boolean!
+	"""
+	Changes the caller's passphrase, re-sealing the settings vault under the new one.
+	
+	The client does the sealing: it unwraps the vault key with the old passphrase, wraps it
+	again with the new one, and sends both halves. The server never sees either passphrase in a
+	form it could keep, and never sees the vault key at all — the same property the vault had
+	before this mutation existed.
+	
+	**Every device is signed out, including the caller's.** A passphrase is changed because it
+	may have leaked, and the tokens bought with it are the thing being invalidated.
+	"""
+	changePassphrase(userId: String!, currentPassphrase: String!, newPassphrase: String!, newVaultSalt: String, newVaultKeyWrapped: String): Boolean!
+	"""
+	Signs out every other device on the account.
+	
+	The blunt instrument that per-device revocation does not cover: a passphrase that may have
+	leaked has already been traded for tokens, and revoking them one at a time from a list means
+	noticing every one of them. This spares only the device making the call — by token hash, not
+	by label, for the same reason `revokeAppPassword` refuses to work by label.
+	
+	Returns how many were revoked.
+	"""
+	revokeAllDevices(userId: String!): Int!
+	updateSyncedSettings(input: SyncedSettingsInput!): SyncedSettingsPayload!
+	"""
+	Nudges one device to look at what it is missing.
+	
+	Addressed to that device alone rather than broadcast, so the other devices on the account
+	are not prompted about a library that is not theirs.
+	"""
+	offerSync(userId: String!, deviceId: String!): Int!
+	"""
+	Edits the caller's own profile. Fields left out are left alone rather than blanked.
+	"""
+	updateProfile(displayName: String, bio: String, avatarUrl: String): ProfilePayload!
+	"""
+	Publishes or withdraws one device's identity key.
+	
+	`device_id` names which of the caller's devices this key belongs to, and only that entry is
+	touched. Omitting it writes the `legacy` entry — which is what a client that predates the
+	registry is doing whether it knows it or not, and it is the behaviour those clients already
+	had: one key for the account.
+	
+	`users.public_key` is still written, because older clients read it and nothing else. It is
+	last-writer-wins, so it will hold whichever device published most recently; that is
+	tolerable now only because nothing that seals a note reads it any more.
+	"""
+	setPublicKey(publicKey: String, deviceId: String): ProfilePayload!
+	"""
+	The switches that decide what a friend can see, whether strangers can find you, and whether
+	your plays feed the fleet-wide Popular on Agro chart.
+	
+	One mutation rather than one per switch, so the privacy screen writes what the user sees in
+	a single round trip and cannot land half-applied. Each switch is optional and one left out is
+	left alone.
+	
+	This matters more than it looks: the flags are independent decisions, and requiring all of
+	them on every call means a client flipping one has to resend its idea of the rest. Two
+	devices doing that concurrently silently undo each other — a switch turned on over here gets
+	reverted by a stale copy sent from over there.
+	"""
+	setVisibility(showNowPlaying: Boolean, showStats: Boolean, discoverable: Boolean, shareLibrary: Boolean, showActivity: Boolean, popularOptIn: Boolean): ProfilePayload!
+	"""
+	Goes quiet, or stops being quiet.
+	
+	Its own mutation rather than a sixth flag on `set_visibility`, because it is a different
+	kind of thing: the others are standing consents, this is a temporary override of all of
+	them. Bundling it would mean leaving incognito had to restore the rest from a client's idea
+	of what they were, and a stale copy would silently turn a privacy switch back on.
+	
+	The server is the authority. Every client reads this value rather than keeping its own, so
+	one device going quiet takes the whole account quiet — a phone still announcing the account
+	from a pocket is exactly the failure a device-local incognito has.
+	"""
+	setIncognito(incognito: Boolean!): Boolean!
+	"""
+	Begins enrolling a second factor for the caller.
+	
+	Writes a secret that is not yet binding: nothing enforces it until `confirmTotp` has seen a
+	code computed from it. That ordering is deliberate — the failure mode of a second factor is
+	always lockout, so the recoverable sequence is the only one on offer.
+	"""
+	beginTotp: TotpEnrolmentPayload!
+	"""
+	Confirms the pending enrolment with a code from the authenticator.
+	
+	**This signs out every other device**, and returns how many. Whoever held the passphrase
+	before this moment has already traded it for tokens, and those tokens do not carry a second
+	factor — leaving them alive would make enrolling change nothing for the attacker it is meant
+	to shut out. The device doing the enrolling is spared, so the user is not signed out of the
+	screen they are standing on.
+	"""
+	confirmTotp(code: String!): TotpConfirmedPayload!
+	"""
+	Turns the second factor off. Requires a current code, or a recovery code.
+	
+	The proof is the entire point. Without it, a stolen device token — which by construction did
+	not pass a second factor — could remove the second factor, and the feature would protect
+	nothing but itself. An administrator on a server that requires 2FA cannot disable it at all.
+	"""
+	disableTotp(code: String!): Boolean!
+	"""
+	Issues a fresh set of recovery codes, invalidating the old ones. Requires a current code.
+	"""
+	regenerateRecoveryCodes(code: String!): [String!]!
+	"""
+	Asks to be someone's friend.
+	
+	Answers `true` for a request that was recorded and `false` for one that was not, without
+	saying which of the several reasons applied — an existing edge, a block, or no such account
+	all look the same from here, and telling them apart would let this be used to probe for
+	accounts that chose not to be listed.
+	"""
+	sendFriendRequest(username: String!): Boolean!
+	acceptFriendRequest(username: String!): Boolean!
+	"""
+	Mints a short-lived code for adding the caller as a friend in person.
+	
+	For the case the username search cannot serve: two people in the same room, one of whom is
+	not `discoverable` and should not have to become so just to be added once. The code stands
+	in for the search, not for the consent — redeeming it still produces the same friend edge
+	the ordinary flow does.
+	
+	Any previous code for this account is dropped when a new one is minted, so only the code
+	currently on screen works. Clients are expected to re-mint every few minutes while the
+	panel is open and to call `revokeFriendCode` when it closes.
+	"""
+	createFriendCode: FriendCodePayload!
+	"""
+	Drops the caller's outstanding code, for a panel being closed or the app going away.
+	"""
+	revokeFriendCode: Boolean!
+	"""
+	Spends a code and becomes friends with whoever minted it.
+	
+	Both directions at once, not a request to be accepted: the two people were standing
+	together and one of them showed the other a screen, so the consent has already happened in
+	a way a notification cannot improve on.
+	
+	Returns the username on success and null for every failure — unknown, expired, already
+	spent, or the caller's own code. Distinguishing them would turn this into an oracle for
+	which codes have existed.
+	"""
+	redeemFriendCode(code: String!): String
+	"""
+	Declines a request, or ends a friendship. The same operation on the data either way.
+	"""
+	removeFriend(username: String!): Boolean!
+	blockUser(username: String!): Boolean!
+	unblockUser(username: String!): Boolean!
+	"""
+	Tunes the caller in to a friend's playback.
+	
+	Gated on the host's now-playing flag, because following someone's playback is a strictly
+	larger thing than seeing it, and there is no sensible reading in which the smaller one is
+	closed and the larger one is open.
+	"""
+	startListenAlong(host: String!, deviceId: String): ListenAlongPayload!
+	stopListenAlong: Boolean!
+	createInvite(maxUses: Int, ttlHours: Int): InvitePayload!
+	"""
+	Deletes an invite outright.
+	
+	Revoking and deleting are different acts: revoking stops a code working the moment you
+	realise it has escaped, and keeps the record. Deleting is the tidying-up afterwards, once a
+	code is spent or dead and is only taking up room on screen.
+	"""
+	deleteInvite(code: String!): Boolean!
+	revokeInvite(code: String!): Boolean!
+	"""
+	Opens a jam with this account as its host.
+	
+	Leaves whatever jam you were in first: being in two at once would make "the queue" and
+	"your vote" ambiguous, and there is no interface in which that reads well.
+	"""
+	createJam(mode: String): JamPayload!
+	"""
+	Joins a jam by its code.
+	"""
+	joinJam(code: String!): JamPayload!
+	"""
+	Joins a friend's jam by its id, with no code.
+	
+	The code is not bypassed so much as unnecessary: the jam has been opened to friends, and
+	this checks that you are one. A jam that has *not* been opened is refused in the same words
+	as one that does not exist, so this cannot be used to discover rooms.
+	"""
+	joinFriendJam(jamId: String!): JamPayload!
+	"""
+	Opens the jam to friends, or shuts it back to code-only. The creator decides.
+	"""
+	setJamVisibility(visibility: String!): JamPayload!
+	"""
+	Leaves the jam, and deletes it once nobody is left.
+	
+	The creator leaving ends it for everyone — a room with no one to govern it cannot change
+	mode or be wound up — and the rows go with it. A jam is a room, not a document: keeping a
+	dead one means every client has to keep deciding whether it still counts.
+	"""
+	leaveJam: Boolean!
+	"""
+	Switches between `open` and `democracy`. Host only — it is the rule everyone else plays by.
+	"""
+	setJamMode(mode: String!): JamPayload!
+	"""
+	Votes to skip whatever is playing.
+	
+	One vote per person per track, and the votes die with the track — a skip is about *this*
+	song, not a standing objection. Once more than half the room has asked, the track is retired
+	immediately rather than at the end of its duration, and the clock takes the next one.
+	"""
+	voteSkipJamTrack: JamPayload!
+	"""
+	Suggests a track.
+	
+	In `open` mode it joins the queue immediately. In `democracy` it waits as a proposal until a
+	majority of the *other* members accept it — which is what voting is for here. It sorts
+	nothing: a track that has been accepted takes its place by when it was added, like any
+	other.
+	
+	`durationMs` matters more than it looks: the server advances the room on that number, so a
+	track without one would be skipped past the moment it started.
+	"""
+	addJamTrack(trackUri: String!, title: String!, artist: String!, artworkUrl: String, durationMs: Int, isLive: Boolean, deviceId: String, contentHash: String): JamPayload!
+	"""
+	Accepts somebody's suggestion.
+	
+	One-way, unlike the toggle this replaces. Taking an approval back could drop a track out of
+	the queue after the room had already accepted it — possibly while it was playing — so
+	somebody who changes their mind removes the track rather than un-approving it.
+	
+	Approving your own suggestion is accepted and recorded but never counts. The rule lives here
+	rather than in each client's decision about whether to show a button.
+	"""
+	approveJamTrack(trackId: String!): JamPayload!
+	"""
+	Removes a track. Your own, or anyone's if you are the host.
+	"""
+	removeJamTrack(trackId: String!): JamPayload!
+	"""
+	Forgets one of your recaps. `false` when there was no such recap of yours.
+	
+	Not behind the jams switch: an operator turning jams off must not stop anyone deleting
+	what is already kept about them.
+	"""
+	dismissJamRecap(id: String!): Boolean!
+	"""
+	Makes a blend of you and up to seven accepted friends, who are asked rather than added.
+	"""
+	createBlend(title: String!, members: [String!]!, size: Int!, mix: Int!, window: BlendWindow!, refresh: BlendRefresh!): BlendPayload!
+	"""
+	Joins or declines a blend you were asked to. `false` when there was no such invitation.
+	"""
+	answerBlendInvite(playlistId: String!, accept: Boolean!): Boolean!
+	"""
+	Leaves a blend; it is rewritten without you. Its creator leaving ends it for everyone.
+	"""
+	leaveBlend(playlistId: String!): Boolean!
+	"""
+	Changes a blend's title and recipe. Its creator only; it is rewritten at once.
+	"""
+	updateBlend(playlistId: String!, title: String!, size: Int!, mix: Int!, window: BlendWindow!, refresh: BlendRefresh!): BlendPayload!
+	"""
+	Deletes one of your backups. Not behind the feature switch: turning backups off must not
+	stop anyone removing what is already kept.
+	"""
+	deleteVaultBackup(id: String!): Boolean!
+	"""
+	Hands a track to an accepted friend.
+	
+	Refuses with the same opaque error the rest of the social layer uses, for the same reason:
+	"not your friend", "blocked you" and "no such account" must be indistinguishable, or this
+	mutation becomes the account directory that `discoverable` exists to opt out of.
+	"""
+	dropTrack(to: String!, trackTitle: String!, artistName: String!, albumName: String, artworkUrl: String, contentHash: String, trackUri: String, note: String, noteCiphertext: String, noteCiphertexts: [DeviceCiphertextInput!], isEncrypted: Boolean): DropPayload!
+	"""
+	Reacts to a drop the caller received, replacing any reaction already on it.
+	
+	Recipient-only, enforced in the statement: reacting to your own message is not a thing, and
+	allowing it would let a sender fabricate a response to themselves. A null or blank
+	`emoji` clears the reaction, so tapping the same one twice undoes it.
+	
+	The emoji is stored as sent but capped in length. There is no allowlist: which characters
+	count as "one emoji" is a moving target across Unicode versions and platforms, and a server
+	that guesses would reject perfectly ordinary ones. The cap is what stops the field being
+	used as a second, unrated message body.
+	"""
+	reactToDrop(id: String!, emoji: String): Boolean!
+	"""
+	Marks one of the caller's own drops read. A drop addressed to somebody else is a not-found.
+	"""
+	markDropRead(id: String!): Boolean!
+	"""
+	Takes a drop out of the inbox. The row survives, so the sender's record of having sent it
+	does too.
+	"""
+	archiveDrop(id: String!): Boolean!
+	"""
+	Creates a new source-agnostic playlist.
+	"""
+	createPlaylist(title: String!, description: String, isPublic: Boolean, visibility: PlaylistVisibility): PlaylistPayload!
+	"""
+	Adds an abstract track to the end of a playlist. Owner only, and not revision-checked: this
+	is how a playlist is first filled. Anyone else edits through `applyPlaylistEdits`.
+	"""
+	addTrackToPlaylist(playlistId: String!, track: PlaylistTrackInput!): PlaylistItemPayload!
+	"""
+	Removes a track from a playlist by item ID. Owner only; see `addTrackToPlaylist`.
+	"""
+	removeTrackFromPlaylist(playlistId: String!, itemId: String!): Boolean!
+	"""
+	Sets who can open a playlist: `visibility`, or the older `isPublic` boolean. Owner only.
+	Narrowing it narrows who can edit it too.
+	"""
+	updatePlaylistVisibility(playlistId: String!, isPublic: Boolean, visibility: PlaylistVisibility): Boolean!
+	"""
+	Deletes a playlist. Followers are told it is gone, with no revision.
+	"""
+	deletePlaylist(playlistId: String!): Boolean!
+	"""
+	Imports a public playlist, album, or track from Spotify, Deezer, Apple Music, or YouTube
+	and saves it as an Agro playlist.
+	"""
+	importExternalPlaylist(url: String!, titleOverride: String, isPublic: Boolean, visibility: PlaylistVisibility): PlaylistPayload!
+	"""
+	Applies `edits` in order, all or none, provided the playlist is still at `baseRevision`.
+	Otherwise fails with `extensions.code = "STALE_REVISION"` and `currentRevision`.
+	"""
+	applyPlaylistEdits(playlistId: String!, baseRevision: Int!, edits: [PlaylistEditInput!]!): PlaylistPayload!
+	"""
+	Renames a playlist or rewrites its description. Owner only, revision-checked.
+	"""
+	updatePlaylistDetails(playlistId: String!, baseRevision: Int!, title: String!, description: String): PlaylistPayload!
+	"""
+	Sets who besides the owner may edit. Narrowed to what the visibility allows; the answer
+	says what was actually stored.
+	"""
+	updatePlaylistEditAccess(playlistId: String!, editAccess: EditAccess!): EditAccess!
+	"""
+	Starts following a playlist the caller may open, and answers it. Following one's own
+	playlist is allowed and changes nothing an owner would notice.
+	"""
+	followPlaylist(id: String!): PlaylistPayload!
+	unfollowPlaylist(id: String!): Boolean!
+	"""
+	Publishes one embedding, merging it into an existing recording if it matches one.
+	
+	Returns the recording id the audio now sits under, which may be one another client
+	created: that is the whole point, and it is how two encodings of one performance stop
+	being two recordings.
+	"""
+	publishRecording(embedding: String!, dim: Int!, model: String!, version: Int!, durationMs: Int!, title: String, artist: String, album: String, sourceUri: String, lyrics: String = null, lyricsSource: String = null): String!
+	"""
+	Publishes a batch of embeddings, answering for each in turn.
+	
+	One request instead of one per recording. A client that has just measured its library has
+	hundreds to file, and each was a separate round trip — on a phone, a separate wake of the
+	radio.
+	
+	Each entry is matched and merged exactly as [`Self::publish_recording`] does, one at a time
+	and each under its own lock. The batch is not a transaction: holding the database for the
+	length of twenty sequence comparisons would stall every other request on the server, and a
+	half-applied batch is not a problem here — an entry that did not land is republished on the
+	next sync, and re-publishing one that did is what the catalogue already handles by merging.
+	"""
+	publishRecordings(entries: [PublishRecordingInput!]!): [PublishResult!]!
+	"""
+	Follows an artist, creating the row for them if the catalogue has never seen the name.
+	
+	Returns null for a name that normalises to nothing — punctuation, whitespace — rather than
+	erroring: there is no artist to have followed, and nothing went wrong.
+	"""
+	subscribeArtist(userId: String!, artist: String!, externalId: String): ArtistSubscription
+	"""
+	Unfollows. False when there was nothing to unfollow, which is not an error either.
+	"""
+	unsubscribeArtist(userId: String!, artistId: String!): Boolean!
+	"""
+	Adds a batch of plays to today's counters. Returns how many entries were counted.
+	
+	Takes no `userId`, unlike `recordScrobbles` next door, and that difference is the feature:
+	scrobbles are the caller's own history and are theirs to read and purge, while these are
+	contributions to a shared total that nothing can attribute afterwards. The authenticated
+	account is checked here and then deliberately discarded — it is never passed to the store.
+	
+	Not idempotent, and cannot be: a repeated submission is indistinguishable from listening to
+	something twice, precisely because nothing identifies the submitter. Clients must therefore
+	clear their pending counts on success and accept losing a batch on a failed request. Losing
+	a few counts costs a shelf a little accuracy; the alternative is a per-client submission id,
+	which is an identifier, which is the one thing this table must not hold.
+	"""
+	submitPlayCounts(entries: [PlayCountInput!]!): Int!
+	"""
+	Contributes measured vectors. Returns how many entries were folded in.
+	
+	Takes no `userId`, like `submitPlayCounts` next door and for the same reason: these are
+	contributions to a shared average that nothing can attribute afterwards. The authenticated
+	account is checked here and then discarded — it is never passed to the store.
+	
+	Re-submitting is harmless rather than idempotent. A repeat is one more observation of the
+	same recording, which moves a settled average by very little and stops moving it at all
+	past `MAX_OBSERVATIONS`; a submission id to make it exactly idempotent would be an
+	identifier, which is the one thing this table must not hold.
+	"""
+	submitAcousticVectors(entries: [AcousticVectorInput!]!): Int!
+}
+
+type NodePayload {
+	deviceId: String!
+	userId: String!
+	petname: String!
+	clientType: String!
+	lanAddress: String
+	"""
+	The *client's* version, as the client reported it. Echoed back, never set here.
+	"""
+	version: String
+	currentTrack: String
+	lastSeenAt: String!
+	isOnline: Boolean!
+	"""
+	This server's version.
+	
+	Distinct from [`version`], which is whatever the client said about itself. Nothing here
+	described the server at all before, so a client had no way to find out what it was talking
+	to except by trying something and reading the error.
+	"""
+	serverVersion: String!
+	"""
+	What this server can do that an older one could not.
+	
+	Named rather than inferred from [`server_version`]: a client that has to map version
+	numbers to features carries a table that goes stale, and a fork or a partial deployment
+	makes the mapping wrong anyway. A client looks for the name it needs and falls back when it
+	is missing.
+	"""
+	capabilities: [String!]!
+}
+
+"""
+Everything a newly created account needs, shown exactly once.
+A scannable pairing payload, shown once.
+"""
+type PairingPayload {
+	qrData: String!
+	token: String!
+	label: String!
+}
+
+type PeerSourcePayload {
+	deviceId: String!
+	petname: String!
+	lanAddress: String
+	isOnline: Boolean!
+	isServerArchive: Boolean!
+}
+
+"""
+One recording's plays since the client last reported.
+"""
+input PlayCountInput {
+	title: String!
+	artist: String!
+	album: String
+	count: Int!
+}
+
+"""
+One change. Exactly one of the fields is given.
+"""
+input PlaylistEditInput @oneOf {
+	add: AddEditInput
+	remove: String
+	move: MoveEditInput
+}
+
+type PlaylistItemPayload {
+	id: String!
+	playlistId: String!
+	position: Int!
+	title: String!
+	artist: String!
+	album: String
+	durationMs: Int
+	normArtist: String!
+	normTitle: String!
+	artworkUrl: String
+	originUri: String
+	"""
+	Who added it. Only meaningful to show once others can edit, but always sent.
+	"""
+	addedBy: String
+	addedAt: String
+	"""
+	The album's cover on this server, when it has one: fetch `/api/v1/cover/{coverKey}`. Most
+	items carry no artwork of their own, so this is what lets a playlist show any.
+	"""
+	coverKey: String
+}
+
+type PlaylistPayload {
+	id: String!
+	userId: String!
+	title: String!
+	description: String
+	isPublic: Boolean!
+	"""
+	Who can open it. `isPublic` stays for clients that predate the three levels.
+	"""
+	visibility: PlaylistVisibility!
+	createdAt: String!
+	updatedAt: String!
+	itemCount: Int!
+	items: [PlaylistItemPayload!]!
+	"""
+	The version an edit must name to be accepted.
+	"""
+	revision: Int!
+	"""
+	Who besides the owner may edit it.
+	"""
+	editAccess: EditAccess!
+	"""
+	What the caller may do with it.
+	"""
+	myRole: PlaylistRole!
+	isFollowing: Boolean!
+	totalDurationMs: Int!
+	"""
+	Written by Agro from its members' listening (see `blend`); nobody edits it by hand.
+	"""
+	isBlend: Boolean!
+}
+
+"""
+Where a followed playlist stands, without its tracks.
+"""
+type PlaylistRevision {
+	id: String!
+	"""
+	Absent whenever `accessible` is false, so a refused id reveals nothing about the playlist.
+	"""
+	revision: Int
+	"""
+	False when it is gone or the caller may no longer open it — the two are not told apart.
+	"""
+	accessible: Boolean!
+}
+
+enum PlaylistRole {
+	OWNER
+	EDITOR
+	CONTRIBUTOR
+	VIEWER
+	"""
+	Cannot open it at all.
+	"""
+	NONE
+}
+
+input PlaylistTrackInput {
+	title: String!
+	artist: String!
+	album: String
+	durationMs: Int
+	artworkUrl: String
+	originUri: String
+}
+
+"""
+Private is the owner alone. Friends adds the owner's accepted friends. Public is every
+signed-in account on this server.
+"""
+enum PlaylistVisibility {
+	PRIVATE
+	FRIENDS
+	PUBLIC
+}
+
+type PluginMetaItem {
+	key: String!
+	value: String!
+}
+
+"""
+One recording the fleet has been playing.
+"""
+type PopularTrackEntry {
+	title: String!
+	artist: String!
+	album: String
+	"""
+	Plays across the whole window, from everyone, attributed to nobody.
+	"""
+	count: Int!
+}
+
+"""
+One copy of a sealed session, and the friend device it was sealed to.
+"""
+input PresenceCiphertextInput {
+	recipientUserId: String!
+	recipientDeviceId: String!
+	ciphertext: String!
+}
+
+type ProfilePayload {
+	username: String!
+	displayName: String
+	bio: String
+	avatarUrl: String
+	createdAt: String!
+	"""
+	`none`, `pending`, `accepted` or `blocked`, from the viewer's side.
+	"""
+	friendState: String!
+	"""
+	True when it was the viewer who sent an unanswered request. Meaningless unless
+	`friend_state` is `pending`.
+	"""
+	outgoing: Boolean!
+	showNowPlaying: Boolean!
+	showStats: Boolean!
+	discoverable: Boolean!
+	shareLibrary: Boolean!
+	showActivity: Boolean!
+	incognito: Boolean!
+	"""
+	Public identity key for E2EE track drops and communications.
+	"""
+	publicKey: String
+	"""
+	Whether this account's plays count toward the fleet-wide Popular on Agro chart.
+	"""
+	popularOptIn: Boolean!
+}
+
+"""
+One recording on its way *into* the catalogue.
+
+Exists for [`CatalogMutation::publish_recordings`], which cannot take eleven positional
+arguments per entry the way the single-shot mutation does.
+"""
+input PublishRecordingInput {
+	embedding: String!
+	dim: Int!
+	model: String!
+	version: Int!
+	durationMs: Int!
+	title: String
+	artist: String
+	album: String
+	sourceUri: String
+	lyrics: String
+	lyricsSource: String
+}
+
+"""
+What became of one entry in a batch.
+
+Positional: the nth result describes the nth entry sent. A rejected entry carries [`error`] and
+an empty [`recording_id`], because one malformed embedding among twenty good ones should cost
+the client that one entry and not the other nineteen — the same position the acoustic and
+popularity batches take.
+"""
+type PublishResult {
+	recordingId: String!
+	error: String
+}
+
+"""
+The outcome of actively purging listening history.
+"""
+type PurgeScrobblesPayload {
+	purgedCount: Int!
+	success: Boolean!
+}
+
+"""
+The schema roots, merged from one object per subject.
+
+`MergedObject` lets each subject's resolvers live in their own file — under `schema/`, or in a
+`schema_*` file beside this one — without becoming a separate top-level field that clients would
+have to reach through.
+"""
+type Query {
+	health: String!
+	"""
+	Every account on the server. Administrators only — this is the guest list, and a guest
+	enumerating the other guests is the first step of anything else they might try.
+	"""
+	users: [AccountPayload!]!
+	"""
+	Looks an account up. **Does not create one** — it used to, through `get_or_create_user`,
+	which made a read-only-looking query mint accounts as a side effect: opening the dashboard
+	recreated a deleted account, with a new passphrase, and closed the first-run setup window
+	behind it. Accounts come from `createAccount` and nowhere else.
+	The caller's own account. `username` is optional and defaults to whoever is asking.
+	
+	It has to be optional, because a client's first question is "who am I?" and it cannot name
+	itself to ask. The dashboard used to guess — it started from a hard-coded `alpha` and asked
+	`me(username: "alpha")` — so signing in as anyone else produced a refused query, no
+	correction, and a page that went on displaying somebody else's name.
+	"""
+	me(username: String): AccountPayload
+	"""
+	Everything this server holds about the caller, as a JSON string.
+	
+	Self-scoped like everything else — an administrator cannot use this to read someone's
+	listening history, because `authorize` compares the caller to the named account and an admin
+	is not exempt from it.
+	"""
+	exportMyData(userId: String!): String!
+	appPasswords(userId: String!): [AppPassword!]!
+	"""
+	Where the account left off.
+	
+	`excludeDevice` asks the question a client asks about *the rest of* its fleet: give me the
+	latest session that is not mine. Optional, so a client that only wants "where was I" —
+	which is most of them — is unchanged.
+	"""
+	playbackHandoff(userId: String!, excludeDevice: String): HandoffState
+	"""
+	Every content hash a device has reported, for reconciling against what it actually holds.
+	"""
+	deviceHoldings(userId: String!, deviceId: String!): [String!]!
+	"""
+	Tracks this device could delete without losing them: the server holds a filed copy.
+	
+	Both the index *and* the disk are consulted. An `archived_path` pointing at a file that is
+	no longer there would otherwise talk a device into deleting its only copy — the index is a
+	record of what this server did, not proof of what is on the disk now.
+	
+	The size is checked rather than the hash. Re-hashing every candidate would read the whole
+	library on every call; a size mismatch catches the truncated and half-restored cases, and
+	the bytes were already verified against the declared hash when they were archived.
+	"""
+	reclaimable(userId: String!, deviceId: String!, limit: Int): [LibraryTrackPayload!]!
+	"""
+	The account's library, page by page, for looking at rather than syncing.
+	
+	`deviceId` picks whose shelf is being compared against: every item comes back with
+	`presentOnDevice`, which is what lets the view grey out what that device is missing. Omit it
+	and everything reads as present, because there is nothing to be missing from.
+	"""
+	libraryBrowse(userId: String!, kind: LibraryBrowseKind!, deviceId: String, search: String, limit: Int, offset: Int): [LibraryItem!]!
+	"""
+	The album `id` (as `libraryBrowse` hands it out) in `userId`'s library. Who may look is the
+	same as for `libraryBrowse`; null when the library holds none of it.
+	"""
+	libraryAlbum(userId: String!, id: String!): LibraryAlbumPayload
+	"""
+	How much this account's library holds, and how much of it the server has the bytes for.
+	"""
+	libraryStats(userId: String!): LibraryStatsPayload!
+	"""
+	What this account has used of its storage allowance.
+	
+	Derived from `effective_quota` and `spool_bytes_for` — the same two the upload path checks
+	against — so the bar a client draws cannot disagree with the answer an upload gets.
+	"""
+	storageUsage(userId: String!): StorageUsagePayload!
+	"""
+	Looks up the target URL for a short link UID.
+	
+	Authenticated: the public half of this lives at `/listen`, which is the capability URL
+	people without an account open. This resolver is the dashboard's, and took no token, so any
+	caller could walk other accounts' links.
+	"""
+	resolveShortLink(id: String!): String
+	"""
+	Every link this account has minted, newest first.
+	
+	Both mechanisms in one list: the user made "a link", and which table it landed in is an
+	implementation detail they should not have to know to find it again.
+	"""
+	links(userId: String!): [ShareLink!]!
+	activeNodes(userId: String!): [NodePayload!]!
+	"""
+	The plugin registry. Administrators only, and described from the caller's own account:
+	`plugin_context` used to read whichever account owned the first registered node, so this
+	answered with a stranger's settings.
+	"""
+	plugins: [AgroPlugin!]!
+	"""
+	Which server features are on, for any signed-in account.
+	
+	Clients read this to hide what the operator has switched off, rather than offering a screen
+	whose every call will be refused with `FEATURE_DISABLED`.
+	"""
+	serverFeatures: [ServerFeature!]!
+	"""
+	The SSO identities linked to an account. Self-scoped.
+	"""
+	federatedIdentities(userId: String!): [FederatedIdentity!]!
+	"""
+	The security log for one account, or — for an administrator passing no `userId` — the whole
+	server.
+	
+	Self-scoped through `authorize`, so this is not a way to read anyone else's sign-in history:
+	naming another account is refused exactly as it is everywhere else. The server-wide view is
+	separately gated on `require_admin`, because "no `userId`" must not read as "any user".
+	"""
+	securityEvents(userId: String, limit: Int): [SecurityEventPayload!]!
+	syncedSettings(userId: String!): SyncedSettingsPayload
+	"""
+	The account's listening, aggregated across every device that reports to it.
+	
+	`period` is DAY, WEEK, MONTH, YEAR or ALL. `deviceName` narrows it to one device's plays,
+	which is how a client answers "what did *I* listen to" while still holding the fleet total.
+	"""
+	listeningStats(userId: String!, period: String, deviceName: String): ListeningStats!
+	"""
+	Computes a private Year / Month in Review recap for the account.
+	
+	`utc_offset_minutes` is the listener's offset from UTC. It defaults to zero, which is what
+	this query did before the argument existed, so an older client keeps the answer it used to
+	get. A recap that omits it buckets by UTC hours and days — see [`crate::stats_wrapped`] for
+	why that is wrong for everyone who does not live on the meridian.
+	"""
+	agroWrapped(userId: String!, year: Int!, month: Int, utcOffsetMinutes: Int): AgroWrappedPayload!
+	"""
+	Tracks another of this account's devices holds that this one does not.
+	
+	Matched on the recording rather than the bytes, so owning a different rip of the same song
+	counts as having it — see `Db::missing_on_device`.
+	"""
+	missingOnDevice(userId: String!, deviceId: String!, limit: Int): [LibraryTrackPayload!]!
+	"""
+	How this account should sync — the one answer both clients branch on.
+	
+	Derived rather than configured: a deployment that archives and has a music-server address on
+	file is a streaming setup whether or not anyone said so, and a deployment with no library
+	root cannot be anything but index-only.
+	"""
+	syncMode(userId: String!): SyncMode!
+	"""
+	Whether the signed-in account is currently quiet.
+	
+	Only ever answered for the caller. There is deliberately no version of this question about
+	somebody else: an incognito account is not returned to anyone at all, and saying "they have
+	gone quiet" would be exactly the disclosure incognito exists to prevent. A friend meets the
+	same refusal a stranger does.
+	
+	Needed because [`Mutation::set_incognito`] returns the new value but nothing could *read*
+	it — a client that has just launched has no way to learn the account is already quiet, and
+	would carry on recording until someone touched the switch.
+	"""
+	incognito: Boolean!
+	"""
+	The state of the caller's second factor.
+	"""
+	totpStatus: TotpStatus!
+	"""
+	Whether the signed-in account has active 2FA / TOTP configured.
+	"""
+	hasTotp: Boolean!
+	"""
+	One account, as the caller is allowed to see it.
+	
+	Not gated by [`require_visible`]: the card itself — name, bio, avatar — is what someone
+	needs in order to decide whether to send a request, so it is readable by any signed-in
+	account for any discoverable or already-connected profile. What the flags gate is the
+	*contents*: now playing and stats have their own resolvers and their own checks.
+	"""
+	profile(username: String!): ProfilePayload
+	"""
+	Every identity key `username` has published, one per device.
+	
+	Gated on friendship with the same refusal `dropTrack` uses, and for the same reason: a key
+	list that answered differently for a stranger and for an account that does not exist would
+	be a way to probe for accounts. Reading your own list is always allowed — a client needs it
+	to seal a copy to its own other devices.
+	
+	A sender seals one copy per entry here. An account with no entries is one whose devices
+	have never published a key, and the caller should fall back to sending the note in clear or
+	not at all — never to sealing it to nobody.
+	"""
+	deviceKeys(username: String!): [DeviceKeyPayload!]!
+	"""
+	The public directory. Only accounts that asked to be listed appear in it.
+	"""
+	searchUsers(query: String!, limit: Int): [ProfilePayload!]!
+	"""
+	Accounts waiting to be let in. The approval queue, for the dashboard.
+	"""
+	pendingAccounts: [ProfilePayload!]!
+	invites: [InvitePayload!]!
+	"""
+	Accepted friends, each with what they are playing when they allow that to be seen.
+	`device_id` carries the same meaning it does on [`Self::friends_now_playing`]: the sealed
+	copy of a session is addressed to one device's key, so it can only be picked once the asking
+	device is named.
+	
+	It matters here and not only there because this query *seeds the presence feed* — a client
+	refreshing the graph gets each friend's session in the same answer. Without a device id the
+	sessions in that answer are placeholders, and a sealed friend would show as "Private
+	Session" from every foreground refresh until a socket frame happened to replace it.
+	"""
+	friends(deviceId: String): [FriendEdgePayload!]!
+	"""
+	Requests in both directions: ones to answer, and ones already sent.
+	"""
+	friendRequests: [ProfilePayload!]!
+	"""
+	Just the presence feed: friends who are playing something and allow it to be seen.
+	
+	`device_id` names the device asking, so a friend running a sealed session can be handed the
+	copy sealed to that device's key. It is optional because the device token does not carry
+	one — the id is chosen by the client and published to the key registry — and because the
+	dashboard has no device key to open a copy with. Omitting it costs nothing but the sealed
+	metadata, which an asker with no key could not have read anyway.
+	"""
+	friendsNowPlaying(deviceId: String): [FriendNowPlaying!]!
+	"""
+	How much the caller's listening overlaps a friend's. Gated on the friend's stats flag.
+	"""
+	tasteMatch(username: String!): TasteMatch!
+	"""
+	Who the caller is currently tuned in to, if anyone.
+	
+	`device_id` serves the same purpose as it does on `friends_now_playing`: following a sealed
+	session means being handed the copy sealed to this device, or the placeholder.
+	"""
+	listenAlong(deviceId: String): ListenAlongPayload
+	"""
+	Jams your friends have opened up, so one can be joined without being handed a code.
+	
+	Friendship and the switch, both — the same rule everything else social here follows.
+	"""
+	friendJams: [FriendJamPayload!]!
+	"""
+	The jam this account is in, or null. There is at most one.
+	"""
+	jam: JamPayload
+	"""
+	Your recaps of jams you have left, newest first.
+	"""
+	jamRecaps: [JamRecapPayload!]!
+	"""
+	One blend you are in, with its recipe and members. Rewritten first if it is due.
+	"""
+	blend(playlistId: String!): BlendPayload!
+	"""
+	Blends you have been asked to and not answered.
+	"""
+	blendInvites: [BlendPayload!]!
+	"""
+	Your backups, newest first.
+	"""
+	vaultBackups: [VaultBackupPayload!]!
+	"""
+	Your sealed vault key, or null before any device has enrolled one.
+	
+	For a device that signed in without the passphrase — by pairing QR or device token — and so
+	never received the envelope login hands out. It asks the user for the passphrase and unwraps
+	this on the device; the server learns nothing it did not have, and no new sign-in is minted.
+	
+	Not behind the backups switch: the same key seals synced settings. What it hands a stolen
+	token is an Argon2id-wrapped key, as a stolen database already holds.
+	"""
+	vaultKeyEnvelope: VaultKeyEnvelope
+	vaultLimits: VaultLimits!
+	"""
+	What the caller's friends have been into lately.
+	
+	Only friends who have opened `showActivity` appear. Anyone else is not merely omitted from
+	the list — nothing about them is read at all.
+	"""
+	friendActivity(days: Int, limit: Int): [FeedItemPayload!]!
+	"""
+	The circle's shared recap: one anthem, one trendsetter, and how everyone's taste lines up.
+	
+	Gated on `Surface::Stats` rather than `Surface::Activity`. A recap reports totals and
+	overlaps, which is the same kind of disclosure the statistics page already makes, and asking
+	people to open a second switch for it would mean an empty recap for everyone who had
+	already said yes to the first.
+	
+	`year` overrides `period` with a **calendar** year read in `utc_offset_minutes`, which is
+	what Agro Replay asks for. `period: "YEAR"` cannot serve that: it means the last 365 days,
+	so a recap of 2026 opened in February would be half about 2027.
+	"""
+	circleRecap(period: String, year: Int, utcOffsetMinutes: Int): CircleRecapPayload!
+	"""
+	What has been sent to the caller. Self-only; there is no argument for whose inbox to read.
+	"""
+	inbox(limit: Int, offset: Int): [DropPayload!]!
+	"""
+	What the caller has sent, as their own record of it.
+	"""
+	sentDrops(limit: Int, offset: Int): [DropPayload!]!
+	"""
+	The whole exchange with one other account, oldest first, both directions in one list.
+	
+	This is what makes a conversation rather than a mailbox. `inbox` and `sentDrops` are two
+	halves of the same exchange split by direction, which is the wrong seam: what someone
+	wants to see is everything they and one friend have handed each other, in order.
+	
+	The sender-side blanking of `read_at` still applies, per message. A thread must not become
+	a way around the rule that you cannot see whether your own messages have been opened.
+	
+	Archived drops are included: archiving clears the inbox, and a record with half of it
+	missing would be a record that lies.
+	"""
+	conversation(with: String!, limit: Int): [DropPayload!]!
+	"""
+	The number a badge shows.
+	"""
+	unreadDropCount: Int!
+	"""
+	Lists the playlists the caller can open and find: their own, every public one on the
+	server, and the friends-only ones their accepted friends have shared. A private playlist
+	is never listed for anyone but its owner.
+	"""
+	playlists: [PlaylistPayload!]!
+	"""
+	Fetches a single playlist by ID if the caller may open it: they own it, it is public, or it
+	is friends-only and they are an accepted friend of its owner.
+	"""
+	playlist(id: String!): PlaylistPayload!
+	"""
+	The current revision of each of `ids` the caller may open, so a client holding copies can
+	tell which have changed without downloading any of them.
+	"""
+	playlistRevisions(ids: [String!]!): [PlaylistRevision!]!
+	followedPlaylists: FollowedPlaylists!
+	"""
+	Everything the catalogue learned after [`since`], oldest first.
+	
+	The client keeps the highest `updated_at` it has seen and passes it back. Re-reading an
+	entry it already holds is harmless: these are facts about audio, so a client that sees one
+	twice simply agrees with itself.
+	"""
+	catalogSince(since: Int!, limit: Int! = 200): [CatalogEntry!]!
+	"""
+	The recording a source id is known to hold, for a client resolving a shared link.
+	"""
+	recordingForSource(sourceUri: String!): String
+	"""
+	Who this account follows.
+	"""
+	subscribedArtists(userId: String!): [ArtistSubscription!]!
+	"""
+	Whether this account follows the artist of a given name.
+	
+	For a page that has a name and no id — which is every artist page opened from a track.
+	"""
+	isSubscribedToArtist(userId: String!, artist: String!): Boolean!
+	"""
+	Releases by followed artists published after [`since`], oldest first.
+	
+	Oldest first because the client walks forward from a stored watermark. Newest-first would
+	mean a client that had been away announced only the most recent release and silently
+	skipped everything before it.
+	"""
+	newReleases(userId: String!, since: Int!, limit: Int! = 100): [ArtistRelease!]!
+	"""
+	What the fleet has been playing over a rolling window, most played first.
+	
+	Authenticated but not scoped to the caller — like the catalogue, this is the fleet's shared
+	view and holds nothing about who listened to what. Recordings below the exposure floor are
+	absent rather than zeroed, so a caller cannot learn that something was played a little by
+	noticing a row with a small number on it.
+	"""
+	popularTracks(days: Int! = 7, limit: Int! = 20): [PopularTrackEntry!]!
+	"""
+	The recordings that sound nearest to this one, nearest first.
+	
+	Empty when nobody has measured the seed. That is the honest answer and it is deliberately
+	not softened by falling back to the best-measured or most-played recordings: a "similar
+	tracks" endpoint that answers something when it knows nothing is how a recommender collapses
+	onto whatever is already popular.
+	
+	Callers are expected to treat these as *candidates to rank*, not as a queue. The client
+	holds a share of every radio queue for music nothing has measured, which is what keeps new
+	recordings reachable at all — this index can only ever speak about what it has been told.
+	"""
+	similarRecordings(artist: String!, title: String!, limit: Int! = 20): [SimilarTrackEntry!]!
+	"""
+	How the caller's listening year compares with everybody else's on this server.
+	
+	Takes no `userId`. That is the whole design: a `userId` argument would need a visibility
+	check, and "what percentile is my friend in" is a question nobody asked to have answered
+	about them. The caller can only ever ask about themselves.
+	
+	Answers `suppressed` on a server with fewer than [`crate::db_replay::MIN_COHORT`] listeners
+	that year, where a ranking would describe identifiable people rather than a crowd.
+	"""
+	replayChartStanding(year: Int!, utcOffsetMinutes: Int): ReplayChartStanding!
+}
+
+"""
+Who queued the most of what was played.
+"""
+type RecapContributor {
+	username: String!
+	tracks: Int!
+}
+
+"""
+One track the room heard, with the reaction it got.
+"""
+type RecapTrack {
+	title: String!
+	artist: String!
+	artworkUrl: String
+	trackUri: String!
+	addedBy: String!
+	durationMs: Int!
+	"""
+	Approvals from people other than whoever proposed it.
+	"""
+	approvals: Int!
+	skipVotes: Int!
+}
+
+"""
+What one call to `reindexNormalisation` rewrote.
+"""
+type ReindexPayload {
+	"""
+	`library_tracks` rows brought up to date this call.
+	"""
+	tracks: Int!
+	"""
+	`playlist_items` rows brought up to date this call.
+	"""
+	playlistItems: Int!
+	"""
+	False means stale rows remain — call again with the same batch size.
+	"""
+	done: Boolean!
+}
+
+"""
+Where the caller's year sits among everyone else's on this server.
+"""
+type ReplayChartStanding {
+	"""
+	0–100: the share of the cohort that listened less than the caller.
+	"""
+	percentile: Int!
+	"""
+	How many accounts were ranked.
+	"""
+	cohortSize: Int!
+	"""
+	The caller's own minutes, so the card can say what the percentile is of.
+	"""
+	minutes: Int!
+	"""
+	True when this server has too few listeners to rank anyone without describing them.
+	Everything else is zero; a client must draw nothing rather than "top 100%".
+	"""
+	suppressed: Boolean!
+}
+
+"""
+One play a client is reporting.
+"""
+input ScrobbleInput {
+	trackTitle: String!
+	artistName: String!
+	albumName: String
+	genre: String
+	durationSecs: Int!
+	"""
+	RFC3339, from the device. A phone that was offline is reporting yesterday's listening, and
+	stamping it on arrival would pile a week of history onto one afternoon.
+	
+	Stored to the hour, not the second: see `Db::record_scrobbles`.
+	"""
+	playedAt: String!
+	"""
+	A per-play id from the client, which is what makes ingest idempotent now that the stored
+	timestamp is too coarse to tell two plays of one track apart. Optional, for clients that
+	predate it.
+	"""
+	playUid: String
+}
+
+"""
+One entry in the security log.
+"""
+type SecurityEventPayload {
+	id: Int!
+	at: String!
+	"""
+	The account this concerns. Absent on a failed login for a username that does not exist.
+	"""
+	userId: String
+	"""
+	A stable machine-readable kind — see `audit::Event`.
+	"""
+	kind: String!
+	"""
+	The network the request came from, truncated to a /24 or /64. Never a full address.
+	"""
+	clientIp: String
+	deviceLabel: String
+	detail: String
+}
+
+"""
+One switchable feature and whether it is on.
+"""
+type ServerFeature {
+	id: String!
+	enabled: Boolean!
+}
+
+"""
+One link this account has minted, whichever of the two mechanisms produced it.
+"""
+type ShareLink {
+	id: String!
+	"""
+	`SHORT` for `/listen?id=…`, `EPHEMERAL` for a hosted `/share/<token>` page.
+	"""
+	kind: String!
+	"""
+	Where the link goes: the forwarding target, or the hosted audio URL.
+	"""
+	target: String!
+	"""
+	The full address to hand out.
+	"""
+	url: String!
+	"""
+	What the link is of, when the row knows. Only ephemeral shares carry track metadata.
+	"""
+	label: String
+	createdAt: Int
+	expiresAt: Int
+	"""
+	How many times it has been opened. An aggregate and nothing else — see migration 6.
+	"""
+	clickCount: Int!
+	lastClickedAt: Int
+	"""
+	Which backend minted the underlying share, when known. `"navidrome"` or `"subsonic"` matters at deletion.
+	"""
+	source: String
+}
+
+type SharePayload {
+	token: String!
+	shareUrl: String!
+	expiresAt: String!
+	trackTitle: String!
+	artistName: String!
+}
+
+"""
+One recording near the seed.
+"""
+type SimilarTrackEntry {
+	title: String!
+	artist: String!
+	"""
+	Acoustic distance. Smaller is nearer; zero means the two measured identically.
+	"""
+	distance: Float!
+	"""
+	How many independent measurements the average rests on.
+	"""
+	observations: Int!
+}
+
+"""
+A named total: an artist, an album, a genre, a device.
+"""
+type StatEntry {
+	name: String!
+	"""
+	Plays for the top-N lists; seconds for the per-device breakdown.
+	"""
+	value: Int!
+}
+
+"""
+How much of an account's allowance is gone.
+
+A separate field rather than two more columns on [`LibraryStatsPayload`], because it answers a
+different question and is computed differently. `total_bytes` counts every archived track in
+the deployment into every account's total, so it reads the same for a guest holding nothing as
+for the admin — see `Db::spool_bytes_for`. The quota is enforced against the spool, so that is
+what is reported here.
+
+`quota_bytes` is null when the account is uncapped, which is not the same as a quota of zero:
+the admin owns the disk, and a quota on them is theatre. Clients must show "no limit" for null
+rather than a full bar.
+"""
+type StorageUsagePayload {
+	usedBytes: Int!
+	quotaBytes: Int
+}
+
+"""
+How this deployment moves music between devices.
+
+The clients used to decide this individually, from local config that knew nothing about the
+server — which is why the same account could behave differently on the desktop and the phone.
+The server holds every fact the decision needs, so it makes the decision and the clients
+render it.
+"""
+enum SyncMode {
+	"""
+	A Subsonic-compatible server (Navidrome and the like) is configured for this account and
+	the server archives. Devices do not need their own copies — they stream — so downloads
+	are never offered and freeing space is always safe.
+	"""
+	NAVIDROME
+	"""
+	The server archives, but there is no music server to stream from. A device that lacks a
+	recording is offered the file itself.
+	"""
+	PEER_TO_PEER
+	"""
+	No library root: the server keeps the index and relays through the spool, but never keeps
+	the bytes. It cannot be the durable copy, so it never suggests deleting one.
+	"""
+	INDEX_ONLY
+}
+
+input SyncedSettingsInput {
+	userId: String!
+	"""
+	Sealed by the client before it is sent. The server stores it without looking.
+	"""
+	settingsBlob: String
+	hasServerUrl: Boolean
+	lyricsFetchOnline: Boolean
+	streamFormat: String
+	shareDomain: String
+	shareHosts: String
+	shareEnabled: Boolean
+}
+
+type SyncedSettingsPayload {
+	userId: String!
+	"""
+	The account's upstream settings, as the client sealed them. This server cannot read it and
+	has no key to try: it is handed back exactly as it arrived.
+	"""
+	settingsBlob: String
+	"""
+	Whether the blob contains a server address, which is all `syncMode` ever needed to know.
+	"""
+	hasServerUrl: Boolean!
+	lyricsFetchOnline: Boolean!
+	streamFormat: String!
+	"""
+	The domain the players rewrite share links onto, e.g. `frwd.top`. Empty means they each
+	share their backend's own link, which is also what happens with no Agro at all.
+	"""
+	shareDomain: String
+	"""
+	Comma-separated hosts `/listen` will forward to. The allowlist, in other words: without
+	one, the route would be an open redirect wearing the user's domain.
+	"""
+	shareHosts: String
+	shareEnabled: Boolean!
+	updatedAt: String!
+}
+
+"""
+How much two accounts' listening overlaps.
+"""
+type TasteMatch {
+	"""
+	0–100. See `taste_score` for what it actually measures.
+	"""
+	score: Int!
+	sharedArtists: [StatEntry!]!
+	sharedTracks: [StatEntry!]!
+}
+
+"""
+One cell of the taste matrix. Undirected — `a` and `b` are sorted, and each pair appears once.
+"""
+type TasteMatrixEntry {
+	a: String!
+	b: String!
+	score: Int!
+}
+
+"""
+The recovery codes, returned once when enrolment is confirmed.
+"""
+type TotpConfirmedPayload {
+	"""
+	Ten single-use codes. The server keeps only their digests and cannot show these again.
+	"""
+	recoveryCodes: [String!]!
+	"""
+	How many device tokens were signed out by enrolling. See `confirmTotp`.
+	"""
+	devicesSignedOut: Int!
+}
+
+"""
+What a client needs to finish enrolling a second factor. Shown once and never again.
+"""
+type TotpEnrolmentPayload {
+	"""
+	For the QR code.
+	"""
+	otpauthUri: String!
+	"""
+	For typing in by hand when the camera will not cooperate.
+	"""
+	secretBase32: String!
+}
+
+"""
+The state of an account's second factor, for the settings screen.
+"""
+type TotpStatus {
+	isEnabled: Boolean!
+	"""
+	Unused recovery codes left. Zero means the next lost phone is a lockout.
+	"""
+	recoveryCodesRemaining: Int!
+	"""
+	False when the server has no `AGRO_SECRET_KEY`, so enrolment cannot be offered at all.
+	"""
+	isAvailable: Boolean!
+}
+
+type TrendsetterPayload {
+	username: String!
+	"""
+	How many of the circle's top tracks this account played before anybody else did.
+	"""
+	firsts: Int!
+	"""
+	A few of them, so the claim can be checked rather than merely asserted.
+	"""
+	examples: [String!]!
+}
+
+type VaultBackupPayload {
+	id: String!
+	createdAt: String!
+	deviceId: String!
+	deviceName: String
+	appVersion: String
+	format: Int!
+	"""
+	Before compression and sealing.
+	"""
+	plainBytes: Int!
+	"""
+	What is stored.
+	"""
+	sealedBytes: Int!
+	sections: [VaultSection!]!
+	"""
+	Whether the device chose to include its sign-ins, so the dashboard can say so plainly.
+	"""
+	includesAccounts: Boolean!
+	sha256: String!
+}
+
+"""
+The account's vault key as the server keeps it: sealed under the passphrase, which it never has.
+"""
+type VaultKeyEnvelope {
+	vaultSalt: String!
+	vaultKeyWrapped: String!
+}
+
+"""
+The rules a client shows, so it never has to hard-code them and disagree.
+"""
+type VaultLimits {
+	keepPerAccount: Int!
+	maxSealedBytes: Int!
+}
+
+"""
+One section of a backup and how many records it held.
+"""
+type VaultSection {
+	name: String!
+	count: Int!
+}
+
+"""
+Directs the executor to include this field or fragment only when the `if` argument is true.
+"""
+directive @include(if: Boolean!) on FIELD | FRAGMENT_SPREAD | INLINE_FRAGMENT
+"""
+Indicates that an Input Object is a OneOf Input Object (and thus requires exactly one of its field be provided)
+"""
+directive @oneOf on INPUT_OBJECT
+"""
+Directs the executor to skip this field or fragment when the `if` argument is true.
+"""
+directive @skip(if: Boolean!) on FIELD | FRAGMENT_SPREAD | INLINE_FRAGMENT
+schema {
+	query: Query
+	mutation: Mutation
+}
