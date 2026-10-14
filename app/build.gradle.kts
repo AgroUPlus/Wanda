@@ -262,6 +262,7 @@ dependencies {
     // zemer-cipher declares Timber compileOnly; it's absent at runtime without this.
     implementation("com.jakewharton.timber:timber:5.0.1")
 
+    implementation(libs.androidx.profileinstaller)
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
