@@ -1200,9 +1200,7 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/agro/AgroSessionViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="163" column="49" source="standard:wrapping" />
-        <error line="267" column="1" source="standard:no-consecutive-blank-lines" />
-        <error line="281" column="1" source="standard:no-consecutive-blank-lines" />
+        <error line="162" column="49" source="standard:wrapping" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/ActionButtonGroup.kt">
         <error line="3" column="1" source="standard:import-ordering" />
