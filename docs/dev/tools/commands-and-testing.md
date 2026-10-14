@@ -23,13 +23,23 @@ ktlint --baseline=ktlint-baseline.xml --relative -F "app/src/**/*.kt"         # 
 Shrink the baseline by fixing a rule's violations and regenerating it with `--baseline=...` on a
 clean run (delete `ktlint-baseline.xml` first, since an existing file is only read, never rewritten).
 
-## 3. Testing Layers
+## 3. Agro Contract
+
+`app/src/test/resources/agro-schema.graphql` is a copy of Agro's `docs/api/schema.graphql`, and
+`AgroSchemaContractTest` fails when Wanda sends an operation the server's schema no longer has.
+After an Agro API change, refresh the copy:
+
+```bash
+cp ../Agro/docs/api/schema.graphql app/src/test/resources/agro-schema.graphql
+```
+
+## 4. Testing Layers
 
 - **Domain Layer**: Unit tests for UseCases and pure domain logic.
 - **Data Layer**: Repository tests with fake data sources and in-memory Room instances.
 - **UI Layer**: Compose UI tests (`createComposeRule`).
 
-## 4. Verification Guidelines for AI Agents
+## 5. Verification Guidelines for AI Agents
 
 - **Do not build the app to verify simple code changes.** Use language server diagnostics or real-time IDE syntax checks.
 - Only run full Gradle builds when explicitly requested by the user or when verifying final releases.
