@@ -45,12 +45,18 @@ litert = "1.4.0"
 glance = "1.1.1"
 
 junit = "4.13.2"
+benchmarkMacro = "1.5.0"
+profileinstaller = "1.4.1"
+uiautomator = "2.3.0"
 robolectric = "4.16.1"
 androidxTestCore = "1.7.0"
 junitExt = "1.3.0"
 espressoCore = "3.7.0"
 
 [libraries]
+androidx-benchmark-macro-junit4 = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "benchmarkMacro" }
+androidx-profileinstaller = { module = "androidx.profileinstaller:profileinstaller", version.ref = "profileinstaller" }
+androidx-uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "uiautomator" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTestCore" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -125,6 +131,7 @@ androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", vers
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+android-test = { id = "com.android.test", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
