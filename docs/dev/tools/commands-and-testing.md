@@ -23,6 +23,16 @@ ktlint --baseline=ktlint-baseline.xml --relative -F "app/src/**/*.kt"         # 
 Shrink the baseline by fixing a rule's violations and regenerating it with `--baseline=...` on a
 clean run (delete `ktlint-baseline.xml` first, since an existing file is only read, never rewritten).
 
+## Static Analysis (detekt)
+
+```bash
+./gradlew :app:detekt            # fails on findings not in app/detekt-baseline.xml
+./gradlew :app:detektBaseline    # re-freeze after fixing findings
+```
+
+detekt 2.0 is still alpha (`dev.detekt`). alpha.3 is pinned because it is the last one built against
+Kotlin 2.3.x; move to a newer alpha only together with a Kotlin upgrade.
+
 ## Coverage Floor (Kover)
 
 ```bash
