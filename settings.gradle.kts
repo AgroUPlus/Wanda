@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Wanda"
 include(":app")
+include(":baselineprofile")
