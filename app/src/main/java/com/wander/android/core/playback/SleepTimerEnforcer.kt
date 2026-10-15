@@ -16,10 +16,12 @@ import kotlinx.coroutines.launch
  * exactly on the boundary rather than a poll's worth after it.
  *
  * Collected with `collectLatest`, so changing or cancelling the timer abandons a fade in progress —
- * and the `finally` puts the volume back, whichever way the fade ended.
+ * and the `finally` lifts the fade, whichever way it ended. The fade is a factor on [PlayerVolume]
+ * rather than a saved-and-restored volume, so a track change mid-fade keeps its own gain.
  */
 internal class SleepTimerEnforcer(
     private val player: ExoPlayer,
+    private val volume: PlayerVolume,
     private val timer: SleepTimer,
     scope: CoroutineScope
 ) : Player.Listener {
@@ -44,16 +46,15 @@ internal class SleepTimerEnforcer(
 
     private suspend fun countDown(state: SleepTimerState.Countdown) {
         delay((state.endsAtElapsedMs - SystemClock.elapsedRealtime() - FADE_MS).coerceAtLeast(0L))
-        val volume = player.volume
         try {
             repeat(FADE_STEPS) { step ->
-                player.volume = volume * (1f - (step + 1f) / FADE_STEPS)
+                volume.setFade(1f - (step + 1f) / FADE_STEPS)
                 delay(FADE_MS / FADE_STEPS)
             }
             player.pause()
             timer.cancel()
         } finally {
-            player.volume = volume
+            volume.setFade(1f)
         }
     }
 

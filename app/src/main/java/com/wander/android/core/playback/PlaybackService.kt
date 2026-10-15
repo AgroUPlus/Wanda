@@ -46,6 +46,7 @@ class PlaybackService : MediaSessionService() {
     @Inject internal lateinit var agroHandoffPublisher: AgroHandoffPublisher
     @Inject lateinit var secureStorage: com.wander.android.core.security.SecureStorage
     @Inject lateinit var sleepTimer: SleepTimer
+    @Inject lateinit var loudnessReadout: LoudnessReadout
     @Inject lateinit var jamSkipGate: JamSkipGate
     @Inject internal lateinit var scrobbleForwarding: com.wander.android.data.repository.ScrobbleForwarding
 
@@ -60,7 +61,10 @@ class PlaybackService : MediaSessionService() {
         player.addListener(NowPlayingForwarder(player, scope, scrobbleForwarding))
         player.addListener(NextTrackPreloader(player))
         EpisodeSkipSilence(player, secureStorage.isSkipSilenceEnabled, scope)
-        SleepTimerEnforcer(player, sleepTimer, scope)
+        val volume = PlayerVolume { player.volume = it }
+        val loudness = secureStorage.loudness
+        LoudnessNormaliser(player, volume, loudness.mode, loudness.preampDb, loudnessReadout, scope)
+        SleepTimerEnforcer(player, volume, sleepTimer, scope)
         player.addAnalyticsListener(AudioFormatReporter())
         player.addListener(com.wander.android.ui.widget.PlaybackWidgetUpdater(applicationContext, scope))
 
