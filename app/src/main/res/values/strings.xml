@@ -1482,4 +1482,9 @@
     <string name="debug_route_source">the track\'s own source</string>
     <string name="debug_route_ephemeral">one-off stream (peer)</string>
     <string name="debug_route_podcast">podcast episode</string>
+    <string name="debug_gain">Loudness: %1$+.1f dB (%2$s) · volume ×%3$.2f</string>
+    <string name="debug_gain_track">track gain</string>
+    <string name="debug_gain_album">album gain</string>
+    <string name="debug_gain_none">Loudness: no ReplayGain tags · volume ×%1$.2f (pre-amp only)</string>
+    <string name="debug_gain_off">Loudness: levelling off</string>
 </resources>
