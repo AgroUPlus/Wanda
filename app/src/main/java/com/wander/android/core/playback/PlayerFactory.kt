@@ -88,8 +88,9 @@ class PlayerFactory @Inject constructor(
     companion object {
         /**
          * Audio offload lets the DSP play the stream while the CPU sleeps — a large battery win —
-         * but decoded PCM never reaches the processor chain, so the visualizer goes silent.
-         * Callers flip this off while a visualizer is on screen.
+         * but decoded PCM never reaches the processor chain, so anything that must process audio
+         * needs it off. [PlayerSpeedAndOffloadController] turns it off for a speed or pitch other
+         * than 1×, and for livestreams.
          */
         fun withOffload(
             parameters: androidx.media3.common.TrackSelectionParameters,
