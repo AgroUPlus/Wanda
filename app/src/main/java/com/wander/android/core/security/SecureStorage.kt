@@ -22,6 +22,7 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
 
     /** The scrobbling services' accounts — see [SecureScrobblePreferences]. */
     internal val scrobbling = SecureScrobblePreferences(prefs)
+    internal val loudness = SecureLoudnessPreferences(prefs)
 
     // ── Display Preferences ─────────────────────────────────────────────────────────────────
     val isAmoledBlack: StateFlow<Boolean> = displayPrefs.isAmoledBlack
@@ -251,9 +252,8 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
     fun setAgroShareSettings(domain: String, hosts: String) = appPrefs.setAgroShareSettings(domain, hosts)
     fun setShareDomain(domain: String) = appPrefs.setShareDomain(domain)
 
-    private val backupManager = SecureStorageBackup(prefs, ::reloadFlows)
-
     // ── Backup & Wipe ───────────────────────────────────────────────────────────────────────
+    private val backupManager = SecureStorageBackup(prefs, ::reloadFlows)
     fun exportAll(): Map<String, Any?> = backupManager.exportAll()
     fun isAccountKey(key: String): Boolean = backupManager.isAccountKey(key)
     fun importAll(values: Map<String, Any>, replaces: (String) -> Boolean) =
@@ -275,8 +275,8 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
         agroPrefs.reloadFlows()
         appPrefs.reloadFlows()
         scrobbling.reloadFlows()
+        loudness.reloadFlows()
     }
-
 
     companion object {
         const val KEY_CATALOG_CURSOR = com.wander.android.core.security.KEY_CATALOG_CURSOR
