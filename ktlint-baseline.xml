@@ -249,8 +249,9 @@
         <error line="48" column="1" source="standard:spacing-between-declarations-with-annotations" />
         <error line="49" column="1" source="standard:spacing-between-declarations-with-annotations" />
         <error line="50" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="89" column="50" source="standard:function-expression-body" />
-        <error line="297" column="1" source="standard:no-blank-line-before-rbrace" />
+        <error line="51" column="1" source="standard:spacing-between-declarations-with-annotations" />
+        <error line="93" column="50" source="standard:function-expression-body" />
+        <error line="267" column="1" source="standard:no-blank-line-before-rbrace" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/playback/PlaybackSnapshotBuilder.kt">
         <error line="52" column="54" source="standard:multiline-if-else" />
@@ -283,8 +284,8 @@
     <file name="app/src/main/java/com/wander/android/core/playback/PlayerFactory.kt">
         <error line="3" column="1" source="standard:import-ordering" />
         <error line="58" column="50" source="standard:comment-wrapping" />
-        <error line="101" column="38" source="standard:multiline-if-else" />
-        <error line="102" column="30" source="standard:multiline-if-else" />
+        <error line="102" column="38" source="standard:multiline-if-else" />
+        <error line="103" column="30" source="standard:multiline-if-else" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/playback/RelayDecryptingDataSource.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -331,10 +332,9 @@
         <error line="140" column="1" source="standard:no-consecutive-blank-lines" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/security/SecureStorage.kt">
-        <error line="85" column="121" source="standard:max-line-length" />
-        <error line="99" column="121" source="standard:max-line-length" />
-        <error line="108" column="121" source="standard:max-line-length" />
-        <error line="280" column="1" source="standard:no-consecutive-blank-lines" />
+        <error line="86" column="121" source="standard:max-line-length" />
+        <error line="100" column="121" source="standard:max-line-length" />
+        <error line="109" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/sync/ContentHasher.kt">
         <error line="3" column="1" source="standard:import-ordering" />
