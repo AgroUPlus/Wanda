@@ -311,6 +311,8 @@
     <ID>FunctionNaming:LiveChip.kt:@Composable internal fun LiveChip</ID>
     <ID>FunctionNaming:LoadingImage.kt:@Composable internal fun LoadingImage</ID>
     <ID>FunctionNaming:LocalQueueContent.kt:@Composable internal fun LocalQueueContent</ID>
+    <ID>FunctionNaming:LoudnessSection.kt:@Composable internal fun LoudnessSection</ID>
+    <ID>FunctionNaming:LoudnessSection.kt:@Composable private fun PreampSlider</ID>
     <ID>FunctionNaming:LyricLineItem.kt:@Composable fun LyricLineItem</ID>
     <ID>FunctionNaming:LyricMatchRow.kt:@OptIn(ExperimentalFoundationApi::class) @Composable fun LyricMatchRow</ID>
     <ID>FunctionNaming:LyricsControls.kt:@Composable internal fun LyricsTransport</ID>

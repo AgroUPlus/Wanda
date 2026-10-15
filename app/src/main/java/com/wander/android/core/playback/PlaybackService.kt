@@ -46,6 +46,7 @@ class PlaybackService : MediaSessionService() {
     @Inject internal lateinit var agroHandoffPublisher: AgroHandoffPublisher
     @Inject lateinit var secureStorage: com.wander.android.core.security.SecureStorage
     @Inject lateinit var sleepTimer: SleepTimer
+    @Inject lateinit var loudnessReadout: LoudnessReadout
     @Inject lateinit var jamSkipGate: JamSkipGate
     @Inject internal lateinit var scrobbleForwarding: com.wander.android.data.repository.ScrobbleForwarding
 
@@ -56,11 +57,14 @@ class PlaybackService : MediaSessionService() {
         super.onCreate()
         val player = playerFactory.create()
         player.addListener(PlayCountRecorder(player))
-        player.addListener(AgroHandoffReporter(player))
+        player.addListener(AgroHandoffReporter(player, agroHandoffPublisher))
         player.addListener(NowPlayingForwarder(player, scope, scrobbleForwarding))
         player.addListener(NextTrackPreloader(player))
         EpisodeSkipSilence(player, secureStorage.isSkipSilenceEnabled, scope)
-        SleepTimerEnforcer(player, sleepTimer, scope)
+        val volume = PlayerVolume { player.volume = it }
+        val loudness = secureStorage.loudness
+        LoudnessNormaliser(player, volume, loudness.mode, loudness.preampDb, loudnessReadout, scope)
+        SleepTimerEnforcer(player, volume, sleepTimer, scope)
         player.addAnalyticsListener(AudioFormatReporter())
         player.addListener(com.wander.android.ui.widget.PlaybackWidgetUpdater(applicationContext, scope))
 
@@ -241,40 +245,6 @@ class PlaybackService : MediaSessionService() {
                     delay(2_000L)
                 }
             }
-        }
-    }
-
-    /**
-     * Feeds the Agro handoff. It lives here rather than in `PlaybackCoordinator` so that handoff
-     * follows playback even with no UI attached; [AgroHandoffPublisher] drops states that repeat
-     * and no-ops entirely when no server is paired, so this costs nothing when unused.
-     */
-    private inner class AgroHandoffReporter(private val player: Player) : Player.Listener {
-
-        override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
-            report()
-        }
-
-        override fun onIsPlayingChanged(isPlaying: Boolean) = report()
-
-        private fun report() {
-            val track = player.currentMediaItem?.toUnifiedTrack()
-            if (track == null) {
-                agroHandoffPublisher.stop()
-                return
-            }
-            // A provider, not a value: the publisher's heartbeat re-reads the position on each tick
-            // rather than repeating a stale one.
-            agroHandoffPublisher.publish(
-                track,
-                player::getCurrentPosition,
-                // The player's length, not the track metadata's: a YouTube Music row whose
-                // subtitle carried no `3:45` reaches Room with 0, and the fleet would show a
-                // progress bar that never fills. Read on the same thread and at the same moment
-                // as the position, so the two describe one instant.
-                player::getDuration,
-                player.isPlaying
-            )
         }
     }
 

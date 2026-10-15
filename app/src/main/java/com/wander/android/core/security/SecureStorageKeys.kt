@@ -66,6 +66,8 @@ internal const val KEY_PODCASTINDEX_SECRET = "key_podcastindex_secret"
 internal const val KEY_OFFLINE_MODE = "key_offline_mode"
 internal const val KEY_PRELOAD_NEXT = "key_preload_next"
 internal const val KEY_SKIP_SILENCE = "key_skip_silence"
+internal const val KEY_LOUDNESS_MODE = "key_loudness_mode"
+internal const val KEY_LOUDNESS_PREAMP_DB = "key_loudness_preamp_db"
 internal const val KEY_INDEX_ON_MOBILE_DATA = "key_index_on_mobile_data"
 internal const val KEY_RADIO_MODE = "key_radio_mode"
 

@@ -37,7 +37,8 @@ internal class NowPlayingViewModel @Inject constructor(
     private val secureStorage: com.wander.android.core.security.SecureStorage,
     private val sleepTimer: com.wander.android.core.playback.SleepTimer,
     private val mediaForms: MediaFormController,
-    streamResolver: com.wander.android.core.playback.StreamResolver
+    streamResolver: com.wander.android.core.playback.StreamResolver,
+    loudnessReadout: com.wander.android.core.playback.LoudnessReadout
 ) : ViewModel() {
 
     val sleepTimerState = sleepTimer.state
@@ -47,12 +48,16 @@ internal class NowPlayingViewModel @Inject constructor(
 
     val isCoverArtThemeEnabled: StateFlow<Boolean> = secureStorage.isCoverArtThemeEnabled
 
-    /** Null unless debug mode is on; also null for a track that has not been resolved yet. */
-    val streamDebug: StateFlow<com.wander.android.core.playback.StreamDebug?> = combine(
+    /** Null unless debug mode is on. */
+    val streamDebug: StateFlow<PlaybackDebugInfo?> = combine(
         secureStorage.appPrefs.isDebugMode,
         playerConnection.state.map { it.currentTrack?.id }.distinctUntilChanged(),
-        streamResolver.resolvedStreams
-    ) { enabled, trackId, streams -> if (enabled) trackId?.let(streams::get) else null }
+        streamResolver.resolvedStreams,
+        loudnessReadout.applied
+    ) { enabled, trackId, streams, applied ->
+        if (!enabled || trackId == null) return@combine null
+        PlaybackDebugInfo(streams[trackId], applied?.takeIf { it.trackId == trackId }?.decision)
+    }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val isDebugMode: StateFlow<Boolean> = secureStorage.appPrefs.isDebugMode

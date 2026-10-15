@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.wander.android.R
+import com.wander.android.core.playback.LoudnessDecision
 import com.wander.android.core.playback.StreamDebug
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.StreamRoute
@@ -27,7 +28,7 @@ import com.wander.android.data.sources.StreamRoute
  * swallowing a touch outside its own bounds.
  */
 @Composable
-internal fun PlaybackDebugOverlay(track: UnifiedTrack, debug: StreamDebug?, playerDurationMs: Long) {
+internal fun PlaybackDebugOverlay(track: UnifiedTrack, info: PlaybackDebugInfo?, playerDurationMs: Long) {
     Popup(
         alignment = Alignment.TopCenter,
         properties = PopupProperties(focusable = false, clippingEnabled = false)
@@ -46,6 +47,8 @@ internal fun PlaybackDebugOverlay(track: UnifiedTrack, debug: StreamDebug?, play
                 add(stringResource(R.string.debug_track, track.source.name, track.id))
                 if (track.isLive) add(stringResource(R.string.debug_live))
                 add(stringResource(R.string.debug_duration, playerDurationMs, track.durationMs))
+                info?.loudness?.let { add(loudnessLine(it)) }
+                val debug = info?.stream
                 if (debug == null) {
                     add(stringResource(R.string.debug_unresolved))
                 } else {
@@ -59,6 +62,21 @@ internal fun PlaybackDebugOverlay(track: UnifiedTrack, debug: StreamDebug?, play
             }
             lines.forEach { Text(it, style = style, color = color) }
         }
+    }
+}
+
+@Composable
+private fun loudnessLine(decision: LoudnessDecision): String {
+    val gainDb = decision.gainDb
+    return when {
+        decision.isOff -> stringResource(R.string.debug_gain_off)
+        gainDb == null -> stringResource(R.string.debug_gain_none, decision.factor)
+        else -> stringResource(
+            R.string.debug_gain,
+            gainDb,
+            stringResource(if (decision.fromAlbum) R.string.debug_gain_album else R.string.debug_gain_track),
+            decision.factor
+        )
     }
 }
 

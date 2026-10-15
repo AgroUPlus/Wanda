@@ -1346,6 +1346,19 @@
     <string name="player_forward_30">Forward 30 seconds</string>
     <string name="settings_skip_silence">Skip silence in podcasts</string>
     <string name="settings_skip_silence_summary">Trims pauses between speakers. Music is never affected.</string>
+    <string name="settings_section_loudness">Volume levelling</string>
+    <string name="settings_loudness_title">Even out loudness</string>
+    <string name="settings_loudness_summary">Uses ReplayGain tags so a loud track doesn\'t jump out of a mixed queue. It only turns tracks down, never up.</string>
+    <string name="settings_loudness_mode_off">Off</string>
+    <string name="settings_loudness_mode_track">Track</string>
+    <string name="settings_loudness_mode_album">Album</string>
+    <string name="settings_loudness_mode_auto">Auto</string>
+    <string name="settings_loudness_hint_off">Every track plays at the volume it was mastered at.</string>
+    <string name="settings_loudness_hint_track">Each track is levelled on its own.</string>
+    <string name="settings_loudness_hint_album">Albums keep their own quiet and loud moments.</string>
+    <string name="settings_loudness_hint_auto">Album levels while an album plays in order, track levels in a mixed queue.</string>
+    <string name="settings_loudness_preamp">Pre-amp: %1$d dB</string>
+    <string name="settings_loudness_preamp_hint">Lower it to leave room for quiet tracks: everything louder comes down further, so they stop sounding quieter.</string>
     <string name="sleep_timer">Sleep timer</string>
     <plurals name="sleep_timer_minutes">
         <item quantity="one">%d minute</item>
@@ -1482,4 +1495,9 @@
     <string name="debug_route_source">the track\'s own source</string>
     <string name="debug_route_ephemeral">one-off stream (peer)</string>
     <string name="debug_route_podcast">podcast episode</string>
+    <string name="debug_gain">Loudness: %1$+.1f dB (%2$s) · volume ×%3$.2f</string>
+    <string name="debug_gain_track">track gain</string>
+    <string name="debug_gain_album">album gain</string>
+    <string name="debug_gain_none">Loudness: no ReplayGain tags · volume ×%1$.2f (pre-amp only)</string>
+    <string name="debug_gain_off">Loudness: levelling off</string>
 </resources>

@@ -63,6 +63,9 @@ internal fun LazyListScope.playbackStorageTab(
         )
     }
 
+    item(key = "sec_loudness") { SettingsSection(stringResource(R.string.settings_section_loudness)) }
+    item(key = "loudness") { GroupedCard(items = listOf<@Composable () -> Unit>({ LoudnessSection() })) }
+
     item(key = "sec_measuring") { SettingsSection(stringResource(R.string.settings_section_measuring)) }
     item(key = "measuring") {
         GroupedCard(
