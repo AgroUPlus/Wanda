@@ -9,7 +9,9 @@ been scoped in detail. Each app's top pick is marked.
 1. **Loudness normalisation across sources (top pick).** Local files, Navidrome, YouTube Music and
    Deezer play at very different volumes. Read ReplayGain tags where they exist and fall back to a
    gain estimate for the rest, so a mixed queue stays even. A small change in the player and an
-   obvious improvement.
+   obvious improvement. *Phase 1 (file tags: local, downloads, Navidrome) is built — see
+   `core/playback/LoudnessNormaliser.kt`. Still open: YouTube Music and Deezer loudness values
+   (undocumented, need calibrating against tagged copies first) and an estimate for untagged files.*
 2. **"Sonic radio" from any track.** Wanda already computes audio embeddings and Agro has acoustic
    similarity. A button that starts an endless mix of tracks that sound like the current one is mostly
    wiring.
