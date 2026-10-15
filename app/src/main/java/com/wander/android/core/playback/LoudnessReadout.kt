@@ -1,10 +1,10 @@
 package com.wander.android.core.playback
 
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** The gain [LoudnessNormaliser] applied to [trackId], for the debug overlay. */
 data class AppliedLoudness(val trackId: String, val decision: LoudnessDecision)

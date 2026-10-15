@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.LoudnessMode
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
+import kotlinx.coroutines.flow.StateFlow
 
 /** Backs [LoudnessSection]. The playback service reads the same flows, so changes apply at once. */
 @HiltViewModel
