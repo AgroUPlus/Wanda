@@ -21,12 +21,12 @@ class NavLayoutStore @Inject constructor(private val storage: SecureStorage) {
 
     /** Never empty: a Library with no sections would have nothing to show. */
     val libraryTabs: Flow<List<LibraryTab>> = storage.displayPrefs.libraryTabs
-        .map { NavLayoutCodec.decode(it, LibraryTab.entries, LibraryTab.entries).ifEmpty { LibraryTab.entries } }
+        .map { NavLayoutCodec.decode(it, LibraryTab.entries, LibraryTab.Default).ifEmpty { LibraryTab.Default } }
         .distinctUntilChanged()
 
     fun saveDockItems(items: List<DockItem>) =
         storage.displayPrefs.setDockItems(NavLayoutCodec.encode(items.take(DockItem.MaxShown)))
 
     fun saveLibraryTabs(tabs: List<LibraryTab>) =
-        storage.displayPrefs.setLibraryTabs(NavLayoutCodec.encode(tabs.ifEmpty { LibraryTab.entries }))
+        storage.displayPrefs.setLibraryTabs(NavLayoutCodec.encode(tabs.ifEmpty { LibraryTab.Default }))
 }
