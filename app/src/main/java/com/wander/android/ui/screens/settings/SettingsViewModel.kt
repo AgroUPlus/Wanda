@@ -77,7 +77,10 @@ internal class SettingsViewModel @Inject constructor(
 
     fun setArtistReleaseNotificationEnabled(enabled: Boolean) {
         secureStorage.setArtistReleaseNotificationEnabled(enabled)
-        if (enabled) artistReleaseScheduler.enable() else artistReleaseScheduler.disable()
+        if (!enabled) return artistReleaseScheduler.disable()
+        artistReleaseScheduler.enable()
+        // Never checked: take the followed back catalogue in now rather than six hours from now.
+        if (secureStorage.lastSeenReleaseWatermark == 0L) artistReleaseScheduler.checkSoon()
     }
 
     fun setAutoUpdateCheckEnabled(enabled: Boolean) = secureStorage.setAutoUpdateCheckEnabled(enabled)

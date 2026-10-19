@@ -7,7 +7,9 @@ import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -128,13 +130,8 @@ class ArtistReleaseScheduler @Inject constructor(
      * after it landed, which is the whole thing this exists to avoid.
      */
     fun enable() {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.UNMETERED)
-            .setRequiresBatteryNotLow(true)
-            .build()
-
         val request = PeriodicWorkRequestBuilder<ArtistReleaseWorker>(6, TimeUnit.HOURS)
-            .setConstraints(constraints)
+            .setConstraints(constraints())
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS)
             .build()
 
@@ -147,11 +144,32 @@ class ArtistReleaseScheduler @Inject constructor(
         )
     }
 
+    /**
+     * One check as soon as the constraints allow, for the first time the setting is turned on.
+     *
+     * The first run is the one that takes the followed back catalogue in silently, and leaving it to
+     * the periodic request put that up to six hours away, with nothing in between to show the
+     * setting had done anything at all.
+     */
+    fun checkSoon() {
+        val request = OneTimeWorkRequestBuilder<ArtistReleaseWorker>()
+            .setConstraints(constraints())
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(FIRST_CHECK, ExistingWorkPolicy.KEEP, request)
+    }
+
     fun disable() {
         WorkManager.getInstance(context).cancelUniqueWork(PERIODIC_WORK)
+        WorkManager.getInstance(context).cancelUniqueWork(FIRST_CHECK)
     }
+
+    private fun constraints() = Constraints.Builder()
+        .setRequiredNetworkType(NetworkType.UNMETERED)
+        .setRequiresBatteryNotLow(true)
+        .build()
 
     private companion object {
         const val PERIODIC_WORK = "artist_release_check"
+        const val FIRST_CHECK = "artist_release_first_check"
     }
 }
