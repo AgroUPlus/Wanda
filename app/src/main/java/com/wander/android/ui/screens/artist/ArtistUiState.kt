@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.artist
 import androidx.compose.runtime.Immutable
 import com.wander.android.data.model.ArtistPage
 import com.wander.android.data.model.UnifiedAlbum
+import com.wander.android.data.model.UnifiedTrack
 
 /**
  * Everything the artist screen draws, in one value.
@@ -21,6 +22,8 @@ import com.wander.android.data.model.UnifiedAlbum
 internal data class ArtistUiState(
     val artist: String = "",
     val page: ArtistPage = ArtistPage(),
+    /** Library songs by this artist the user has liked; see [artistLibrarySection]. */
+    val likedTracks: List<UnifiedTrack> = emptyList(),
     val heroImage: String? = null,
     val albumCount: Int = 0,
     val trackCount: Int = 0,
