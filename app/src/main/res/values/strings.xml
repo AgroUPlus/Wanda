@@ -1332,6 +1332,12 @@
     <string name="library_tab_playlists">Playlists</string>
     <string name="library_tab_podcasts">Podcasts</string>
     <string name="library_tab_offline">Offline</string>
+    <string name="library_followed_empty_title">No followed artists yet</string>
+    <string name="library_followed_empty_message">Tap Follow on an artist\'s page to see them here and hear about their new releases.</string>
+    <string name="library_followed_not_paired_title">Follows need an Agro server</string>
+    <string name="library_followed_not_paired_message">Pair an Agro server in Settings to follow artists.</string>
+    <string name="library_followed_failed_title">Couldn\'t load followed artists</string>
+    <string name="library_followed_failed_message">Your Agro server didn\'t answer. Check your connection and try again.</string>
 
     <!-- Podcasts -->
     <string name="continue_listening">Continue listening</string>
