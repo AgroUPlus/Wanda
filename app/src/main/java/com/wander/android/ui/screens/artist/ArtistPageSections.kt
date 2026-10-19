@@ -65,7 +65,7 @@ internal fun LazyListScope.artistPageSections(
             ArtistSectionTitle(
                 text = stringResource(R.string.artist_top_songs),
                 action = if (page.topSongs.size > TopSongsPreview) {
-                    if (showAllSongs) "Show less" else "Show all"
+                    stringResource(if (showAllSongs) R.string.artist_show_less else R.string.artist_show_all)
                 } else {
                     null
                 },

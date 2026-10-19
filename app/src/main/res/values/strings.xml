@@ -202,6 +202,9 @@
     <string name="artist_stop_following">Stop following %1$s</string>
     <string name="artist_top_songs">Top songs</string>
     <string name="artist_episodes">Episodes</string>
+    <string name="artist_in_your_library">In your library</string>
+    <string name="artist_show_all">Show all</string>
+    <string name="artist_show_less">Show less</string>
 
     <!-- Home -->
     <string name="home_connect_navidrome_youtube_music_settings">Connect Navidrome or YouTube Music in Settings, or grant access to music stored on this device.</string>
