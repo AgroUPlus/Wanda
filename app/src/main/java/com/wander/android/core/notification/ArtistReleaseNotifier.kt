@@ -57,15 +57,18 @@ internal class ArtistReleaseNotifier @Inject constructor(
                 // Wrapped, as `FriendNotifier` wraps its own: on API 33+ a refused
                 // POST_NOTIFICATIONS makes this throw, and the caller has already moved its
                 // watermark — so an exception here would lose the batch *and* fail the worker.
+                // Tagged by recording rather than numbered by its hash: a hash could land on the
+                // summary's id, or on another notifier's, and replace it.
                 runCatching {
                     manager.notify(
-                        RELEASE_ID_BASE + release.recordingId.hashCode(),
+                        release.recordingId,
+                        RELEASE_ID,
                         build(
                             title = release.artist,
                             body = listOfNotNull(release.title, release.album)
                                 .firstOrNull()
-                                ?.let { "New: $it" }
-                                ?: "Something new is out",
+                                ?.let { context.getString(R.string.notif_release_new, it) }
+                                ?: context.getString(R.string.notif_release_something_new),
                             cover = cover
                         )
                     )
@@ -83,9 +86,15 @@ internal class ArtistReleaseNotifier @Inject constructor(
                 build(
                     title = context.getString(R.string.notif_new_releases, releases.size.toString()),
                     body = when (artists.size) {
-                        1 -> "From ${artists.first()}"
-                        2 -> "From ${artists[0]} and ${artists[1]}"
-                        else -> "From ${artists[0]}, ${artists[1]} and ${artists.size - 2} more"
+                        1 -> context.getString(R.string.notif_releases_from_one, artists[0])
+                        2 -> context.getString(R.string.notif_releases_from_two, artists[0], artists[1])
+                        else -> context.resources.getQuantityString(
+                            R.plurals.notif_releases_from_many,
+                            artists.size - 2,
+                            artists[0],
+                            artists[1],
+                            artists.size - 2
+                        )
                     },
                     cover = null
                 )
@@ -151,7 +160,7 @@ internal class ArtistReleaseNotifier @Inject constructor(
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
-                "New releases",
+                context.getString(R.string.notif_release_channel),
                 NotificationManager.IMPORTANCE_DEFAULT
             )
         )
@@ -159,7 +168,7 @@ internal class ArtistReleaseNotifier @Inject constructor(
 
     private companion object {
         const val CHANNEL_ID = "wanda_new_releases"
-        const val RELEASE_ID_BASE = 44_000
+        const val RELEASE_ID = 44_000
         const val SUMMARY_ID = 44_999
         const val ACTIVITY_REQUEST_CODE = 4401
         const val ACTIVITY_URI = "wanda://inbox"
