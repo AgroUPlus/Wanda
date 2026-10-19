@@ -211,9 +211,9 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
         get() = appPrefs.duplicateScanCursor
         set(value) { appPrefs.duplicateScanCursor = value }
 
-    var lastNotifiedRelease: String
-        get() = appPrefs.lastNotifiedRelease
-        set(value) { appPrefs.lastNotifiedRelease = value }
+    var primedReleaseArtists: Set<String>
+        get() = appPrefs.primedReleaseArtists
+        set(value) { appPrefs.primedReleaseArtists = value }
 
     var lastSeenReplayYear: Int
         get() = appPrefs.lastSeenReplayYear

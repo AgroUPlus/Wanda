@@ -19,9 +19,10 @@ internal class SecureAppPreferences(private val prefs: SharedPreferences) {
         get() = prefs.getString(KEY_DUPLICATE_SCAN_CURSOR, "").orEmpty()
         set(value) = prefs.edit { putString(KEY_DUPLICATE_SCAN_CURSOR, value) }
 
-    var lastNotifiedRelease: String
-        get() = prefs.getString(KEY_LAST_NOTIFIED_RELEASE, "").orEmpty()
-        set(value) = prefs.edit { putString(KEY_LAST_NOTIFIED_RELEASE, value) }
+    /** Artists whose back catalogue the release check has already taken in silently. */
+    var primedReleaseArtists: Set<String>
+        get() = prefs.getStringSet(KEY_RELEASE_PRIMED_ARTISTS, emptySet()).orEmpty()
+        set(value) = prefs.edit { putStringSet(KEY_RELEASE_PRIMED_ARTISTS, value) }
 
     var lastSeenReplayYear: Int
         get() = prefs.getInt(KEY_REPLAY_SEEN_YEAR, 0)
