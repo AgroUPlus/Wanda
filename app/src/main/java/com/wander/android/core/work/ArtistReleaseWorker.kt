@@ -70,16 +70,16 @@ internal class ArtistReleaseWorker @AssistedInject constructor(
         // Several pages per run: one page of a hundred left a first run priming only part of the
         // back catalogue, and the rest arrived six hours later as a storm of "new" releases.
         var pages = 0
-        while (pages++ < MAX_PAGES) {
+        var more = true
+        while (more && pages++ < MAX_PAGES) {
             val page = subscriptions.newReleases(watermark, PAGE_SIZE).getOrElse { error ->
+                if (releases.isEmpty()) return@withContext retryOrGiveUp(error)
                 // What was already read is still worth handling; the rest comes next run.
-                if (releases.isNotEmpty()) break
-                return@withContext retryOrGiveUp(error)
+                emptyList()
             }
-            if (page.isEmpty()) break
             releases += page
-            watermark = ReleaseTriage.nextWatermark(page, PAGE_SIZE)
-            if (page.size < PAGE_SIZE) break
+            if (page.isNotEmpty()) watermark = ReleaseTriage.nextWatermark(page, PAGE_SIZE)
+            more = page.size >= PAGE_SIZE
         }
         if (releases.isEmpty()) return@withContext Result.success()
 
