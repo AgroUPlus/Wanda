@@ -55,8 +55,11 @@ internal fun ReleaseNotificationsToggle(
         modifier = modifier,
         title = stringResource(R.string.settings_new_music_from_artists_follow),
         subtitle = stringResource(
-            if (checked && !allowed) R.string.settings_release_notifications_blocked
-            else R.string.settings_checks_every_few_hours_wi
+            if (checked && !allowed) {
+                R.string.settings_release_notifications_blocked
+            } else {
+                R.string.settings_checks_every_few_hours_wi
+            }
         ),
         checked = checked,
         onCheckedChange = { turnOn ->
