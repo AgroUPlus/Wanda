@@ -49,7 +49,10 @@ internal fun LazyListScope.artistLibrarySection(
             track = track,
             onPlay = { onPlay(index) },
             onLongPress = { onLongPress(track) },
-            modifier = Modifier.animateItem().scale(rememberShelfEntranceScale(index)).groupedListItem(index, shown.size)
+            modifier = Modifier
+                .animateItem()
+                .scale(rememberShelfEntranceScale(index))
+                .groupedListItem(index, shown.size)
         )
     }
 }
