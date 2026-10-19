@@ -190,6 +190,9 @@
     <string name="artist_stop_following">Ne plus suivre %1$s</string>
     <string name="artist_top_songs">Musiques à la une</string>
     <string name="artist_episodes">Épisodes</string>
+    <string name="artist_in_your_library">In your library</string>
+    <string name="artist_show_all">Show all</string>
+    <string name="artist_show_less">Show less</string>
     <!-- Home -->
     <string name="home_connect_navidrome_youtube_music_settings">Connecter Navidrome ou YouTube Music dans les paramètres, ou donner l\'accès aux musiques sur cet appareil.</string>
     <string name="home_nothing_here_yet">Rien ici pour l\'instant</string>
@@ -533,7 +536,8 @@
     <string name="settings_back_settings">Retour aux paramètres</string>
     <string name="settings_check_again">Vérifier à nouveau</string>
     <string name="settings_check_updates_launch">Vérifier les mises à jour au lancement</string>
-    <string name="settings_checks_every_few_hours_wi">Vous avertit lorsqu\'un artiste que vous suivez sort une nouvelle chanson</string>
+    <string name="settings_checks_every_few_hours_wi">Notifies you when a followed artist releases something new. Checks every few hours on Wi-Fi.</string>
+    <string name="settings_release_notifications_blocked">Notifications are blocked for Wanda. Allow them in system settings to hear about new releases.</string>
     <string name="settings_clear_streaming_cache">Nettoyer le cache de streaming</string>
     <string name="settings_connect_directly_paste_links_from">Se connecter directement ou coller un lien Spotify, Deezer, YouTube Music, Apple Music, and des fichiers textuels pour sélectionner et importer des playlists.</string>
     <string name="settings_contribute_u201cpopular_agro_u201d">Contribuer aux statistiques d\'Agro</string>
@@ -1092,6 +1096,15 @@
     <string name="notif_downloading_music">Téléchargement de votre musique</string>
     <string name="notif_syncing_library">Synchronisation de votre bibliothèque</string>
     <string name="notif_new_releases">%1$s nouvelles sorties</string>
+    <string name="notif_release_channel">New releases</string>
+    <string name="notif_release_new">New: %1$s</string>
+    <string name="notif_release_something_new">Something new is out</string>
+    <string name="notif_releases_from_one">From %1$s</string>
+    <string name="notif_releases_from_two">From %1$s and %2$s</string>
+    <plurals name="notif_releases_from_many">
+        <item quantity="one">From %1$s, %2$s and %3$d more</item>
+        <item quantity="other">From %1$s, %2$s and %3$d more</item>
+    </plurals>
     <string name="mix_radio">Votre Radio</string>
     <string name="mix_forgotten_favourites">Favoris oubliés</string>
     <string name="mix_never_played">Jamais joués</string>
@@ -1276,6 +1289,13 @@
     <string name="library_tab_playlists">Listes de lecture</string>
     <string name="library_tab_podcasts">Podcasts</string>
     <string name="library_tab_offline">Hors ligne</string>
+    <string name="library_tab_followed">Followed</string>
+    <string name="library_followed_empty_title">No followed artists yet</string>
+    <string name="library_followed_empty_message">Tap Follow on an artist\'s page to see them here and hear about their new releases.</string>
+    <string name="library_followed_not_paired_title">Follows need an Agro server</string>
+    <string name="library_followed_not_paired_message">Pair an Agro server in Settings to follow artists.</string>
+    <string name="library_followed_failed_title">Couldn\'t load followed artists</string>
+    <string name="library_followed_failed_message">Your Agro server didn\'t answer. Check your connection and try again.</string>
     <!-- Podcasts -->
     <string name="continue_listening">Continuer à écouter</string>
     <string name="home_your_episodes">Vos épisodes</string>
