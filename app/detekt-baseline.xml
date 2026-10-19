@@ -196,6 +196,8 @@
     <ID>FunctionNaming:FingerprintsScreen.kt:@Composable private fun SectionHeader</ID>
     <ID>FunctionNaming:FingerprintsScreen.kt:@Composable private fun Summary</ID>
     <ID>FunctionNaming:FingerprintsScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun FingerprintsScreen</ID>
+    <ID>FunctionNaming:FollowedArtistsPage.kt:@Composable internal fun FollowedArtistsPage</ID>
+    <ID>FunctionNaming:FollowedArtistsPage.kt:@Composable private fun Centered</ID>
     <ID>FunctionNaming:FriendCodePanel.kt:@Composable internal fun FriendCodePanel</ID>
     <ID>FunctionNaming:FriendRow.kt:@Composable internal fun Avatar</ID>
     <ID>FunctionNaming:FriendRow.kt:@Composable internal fun FriendRow</ID>
@@ -291,6 +293,7 @@
     <ID>FunctionNaming:LibraryScreen.kt:@Composable fun LibraryScreen</ID>
     <ID>FunctionNaming:LibrarySurface.kt:@Composable fun LibrarySurface</ID>
     <ID>FunctionNaming:LibrarySyncSection.kt:@Composable private fun SyncStatus</ID>
+    <ID>FunctionNaming:LibraryTrackList.kt:@Composable internal fun AllTracksPage</ID>
     <ID>FunctionNaming:LibraryTrackList.kt:@Composable internal fun PagedTrackList</ID>
     <ID>FunctionNaming:LibraryTrackList.kt:@Composable internal fun TrackList</ID>
     <ID>FunctionNaming:LibraryTrackList.kt:@Composable private fun Centered</ID>
@@ -450,6 +453,7 @@
     <ID>FunctionNaming:RecognitionActivity.kt:@Composable private fun NoMatchView</ID>
     <ID>FunctionNaming:RecognitionStep.kt:@Composable internal fun RecognitionStep</ID>
     <ID>FunctionNaming:RelatedArtistCard.kt:@Composable internal fun RelatedArtistCard</ID>
+    <ID>FunctionNaming:ReleaseNotificationsToggle.kt:@Composable internal fun ReleaseNotificationsToggle</ID>
     <ID>FunctionNaming:ReplayArtCards.kt:@Composable internal fun ReplayCircleCard</ID>
     <ID>FunctionNaming:ReplayArtCards.kt:@Composable internal fun ReplayDiscoveryCard</ID>
     <ID>FunctionNaming:ReplayArtCards.kt:@Composable internal fun ReplayTopArtistsCard</ID>
