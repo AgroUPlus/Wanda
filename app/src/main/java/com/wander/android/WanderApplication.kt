@@ -36,6 +36,7 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
     @Inject lateinit var podcastSyncScheduler: com.wander.android.core.work.PodcastSyncScheduler
     @Inject lateinit var librarySyncScheduler: com.wander.android.core.sync.LibrarySyncScheduler
     @Inject internal lateinit var cloudBackupScheduler: com.wander.android.core.backup.CloudBackupScheduler
+    @Inject internal lateinit var artistReleaseScheduler: com.wander.android.core.work.ArtistReleaseScheduler
     @Inject lateinit var p2pServer: com.wander.android.core.sync.P2PServer
     @Inject lateinit var secureStorage: com.wander.android.core.security.SecureStorage
     @Inject lateinit var likedTrackCacheProtector: com.wander.android.data.repository.LikedTrackCacheProtector
@@ -116,6 +117,13 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
         // fresh install restored from a backup has the setting but never had the daily job.
         applicationScope.launch {
             secureStorage.cloudBackup.collect { enabled -> cloudBackupScheduler.apply(enabled) }
+        }
+        // Same reason: only the switch used to schedule the release check, so a restored setting
+        // showed as on and never checked anything.
+        applicationScope.launch {
+            secureStorage.isArtistReleaseNotificationEnabled.collect { enabled ->
+                if (enabled) artistReleaseScheduler.enable() else artistReleaseScheduler.disable()
+            }
         }
         // Embedded P2P server for direct high-speed LAN audio transfers.
         //
