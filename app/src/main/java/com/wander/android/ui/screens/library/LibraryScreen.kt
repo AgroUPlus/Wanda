@@ -254,6 +254,7 @@ fun LibraryScreen(
                         )
                     LibraryTab.TRACKS ->
                         AllTracksPage(tracks, isSyncing, contentPadding, viewModel) { actionsFor = it }
+                    LibraryTab.FOLLOWED -> FollowedArtistsPage(contentPadding, onOpenArtist)
                 }
             }
         }
