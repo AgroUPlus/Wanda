@@ -8,11 +8,11 @@ import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.RelatedArtist
 import com.wander.android.data.repository.ArtistSubscriptionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /** What the Followed tab can say, one answer at a time. */
 @Immutable
