@@ -133,7 +133,8 @@ internal class ArtistViewModel @Inject constructor(
         following.value = !wasFollowing
         viewModelScope.launch {
             val ok = if (wasFollowing) {
-                subscriptions.subscribed()
+                // Unreachable is treated as not found: the toggle rolls back rather than lying.
+                subscriptions.subscribed().getOrNull().orEmpty()
                     .firstOrNull {
                         it.normName.equals(artist.trim(), ignoreCase = true) ||
                             it.displayName.equals(artist.trim(), ignoreCase = true)
