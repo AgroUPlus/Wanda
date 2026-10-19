@@ -184,6 +184,11 @@ internal class SecureAgroPreferences(private val prefs: SharedPreferences) {
             remove(KEY_CATALOG_CURSOR)
             remove(KEY_CATALOG_PUBLISHED_AT)
             remove(KEY_CATALOG_PUBLISHED_TRACK)
+            // The release watermark is a position on that server too, and the artists it primed
+            // are its follows. Both start over, so the next server's back catalogue is taken in
+            // silently instead of announced.
+            remove(KEY_RELEASE_WATERMARK)
+            remove(KEY_RELEASE_PRIMED_ARTISTS)
             // Backing up to a server this device no longer belongs to is not something to resume
             // silently on the next one; the choice is asked again.
             remove(KEY_AGRO_CLOUD_BACKUP)
