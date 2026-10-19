@@ -19,12 +19,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.EmptyState
+import com.wander.android.ui.components.SourceFilterChips
 import com.wander.android.ui.components.SkeletonRow
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.listInset
@@ -179,4 +181,27 @@ private fun emptyMessageFor(tab: LibraryTab) = when (tab) {
 @Composable
 private fun Centered(content: @Composable () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { content() }
+}
+
+/** The Tracks tab: [PagedTrackList] under a source filter, once there is more than one source. */
+@Composable
+internal fun AllTracksPage(
+    tracks: LazyPagingItems<UnifiedTrack>,
+    isSyncing: Boolean,
+    contentPadding: PaddingValues,
+    viewModel: LibraryViewModel,
+    onLongPress: (UnifiedTrack) -> Unit
+) {
+    val sourceFilter by viewModel.sourceFilter.collectAsStateWithLifecycle()
+    Column(modifier = Modifier.fillMaxSize()) {
+        if (viewModel.availableSources.size > 1) {
+            SourceFilterChips(
+                sources = viewModel.availableSources,
+                selected = sourceFilter,
+                onSelect = viewModel::selectSource,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+        PagedTrackList(tracks, LibraryTab.TRACKS, isSyncing, contentPadding, viewModel, onLongPress)
+    }
 }

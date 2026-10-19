@@ -59,6 +59,7 @@ internal fun ArtistScreen(
     // Survives rotation but not the back stack: "show all" is a decision about this visit to this
     // page, not a preference.
     var showAllSongs by rememberSaveable { mutableStateOf(false) }
+    var showAllLiked by rememberSaveable { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
     val titleState = rememberCollapsingTitleState(listState)
@@ -151,6 +152,14 @@ internal fun ArtistScreen(
                         }
                     }
                 }
+
+                artistLibrarySection(
+                    likedTracks = state.likedTracks,
+                    showAll = showAllLiked,
+                    onToggleShowAll = { showAllLiked = !showAllLiked },
+                    onPlay = viewModel::playLiked,
+                    onLongPress = { actionsFor = it }
+                )
 
                 artistPageSections(
                     page = state.page,

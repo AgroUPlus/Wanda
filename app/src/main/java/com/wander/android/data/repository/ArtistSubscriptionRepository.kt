@@ -31,8 +31,13 @@ internal class ArtistSubscriptionRepository @Inject constructor(
     private val trackDao: TrackDao,
     private val secureStorage: SecureStorage
 ) {
-    suspend fun subscribed(): List<AgroArtistSubscription> =
-        api.subscribed().getOrElse { emptyList() }
+    /**
+     * Every artist this account follows.
+     *
+     * The `Result` is kept: an unreachable server and an account that follows nobody are different
+     * answers, and a screen listing follows has to tell them apart.
+     */
+    suspend fun subscribed(): Result<List<AgroArtistSubscription>> = api.subscribed()
 
     suspend fun isSubscribed(artist: String): Boolean =
         api.isSubscribed(artist).getOrElse { false }

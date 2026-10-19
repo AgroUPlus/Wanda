@@ -1,18 +1,23 @@
 package com.wander.android.core.work
 
 import android.content.Context
+import androidx.core.app.NotificationManagerCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.wander.android.core.notification.ArtistReleaseNotifier
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.repository.ArtistSubscriptionRepository
+import com.wander.android.data.sources.agro.AgroArtistRelease
+import com.wander.android.data.sources.agro.AgroAuthError
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -51,45 +56,63 @@ internal class ArtistReleaseWorker @AssistedInject constructor(
         if (!secureStorage.isArtistReleaseNotificationEnabled.value) {
             return@withContext Result.success()
         }
-
-        val since = secureStorage.lastSeenReleaseWatermark
-        // Retried on failure rather than treated as "nothing new": an unreachable or
-        // out-of-date server must not silently advance the watermark past releases it never sent.
-        val releases = subscriptions.newReleases(since).getOrElse { return@withContext Result.retry() }
-        if (releases.isEmpty()) return@withContext Result.success()
-
-        // The watermark moves before anything is shown, and deliberately: a notification that fails
-        // to post is a missed notification, while a watermark that fails to move is the same batch
-        // announced again on the next run, every run, forever.
-        //
-        // It moves past the whole batch, including anything suppressed below — the position has
-        // genuinely been seen, whatever is decided about saying it.
-        secureStorage.lastSeenReleaseWatermark = releases.maxOf { it.updatedAt }
-
-        // Nothing to say on the very first run. Everything already in the catalogue by an artist
-        // just followed would arrive at once as "new", which is a back catalogue, not news.
-        //
-        // Recorded even so: priming silently is only half the job. Without these rows the same back
-        // catalogue becomes news again the first time the server republishes it.
-        if (since == 0L) {
-            subscriptions.recordAnnounced(releases)
+        // Follows live on the paired server; without one there is nothing to ask, and retrying
+        // would only spin the backoff until somebody pairs.
+        if (!secureStorage.agroConfigured.value) return@withContext Result.success()
+        // Checked before anything moves: a release read while notifications are blocked would be
+        // recorded as said and never shown. Left unread, it is still there once they are allowed.
+        if (!NotificationManagerCompat.from(applicationContext).areNotificationsEnabled()) {
             return@withContext Result.success()
         }
 
-        // A republished catalogue arrives here looking exactly like a hundred new records, because
-        // `updatedAt` is when the row was published rather than when the record came out. Recording
-        // ids do not move, so they are what "already said" is measured against.
-        val unannounced = subscriptions.notYetAnnounced(releases)
-        if (unannounced.isEmpty()) return@withContext Result.success()
+        val releases = mutableListOf<AgroArtistRelease>()
+        var watermark = secureStorage.lastSeenReleaseWatermark
+        // Several pages per run: one page of a hundred left a first run priming only part of the
+        // back catalogue, and the rest arrived six hours later as a storm of "new" releases.
+        var pages = 0
+        var more = true
+        while (more && pages++ < MAX_PAGES) {
+            val page = subscriptions.newReleases(watermark, PAGE_SIZE).getOrElse { error ->
+                if (releases.isEmpty()) return@withContext retryOrGiveUp(error)
+                // What was already read is still worth handling; the rest comes next run.
+                emptyList()
+            }
+            releases += page
+            if (page.isNotEmpty()) watermark = ReleaseTriage.nextWatermark(page, PAGE_SIZE)
+            more = page.size >= PAGE_SIZE
+        }
+        if (releases.isEmpty()) return@withContext Result.success()
 
-        // Written before posting, for the reason the watermark is: a batch that fails to notify
-        // must not come back every six hours forever.
-        subscriptions.recordAnnounced(unannounced)
+        val primed = secureStorage.primedReleaseArtists
+        val unannounced = subscriptions.notYetAnnounced(ReleaseTriage.announceable(releases, primed))
+
+        // Everything is recorded and the watermark moved before anything is shown, deliberately: a
+        // notification that fails to post is a missed notification, while state that fails to move
+        // is the same batch announced again on every run, forever.
+        subscriptions.recordAnnounced(ReleaseTriage.usable(releases))
+        secureStorage.primedReleaseArtists = primed + releases.map(ReleaseTriage::artistKey)
+        secureStorage.lastSeenReleaseWatermark = watermark
+
         // The catalogue sends no artwork, so the cover is whatever this device already holds by
         // that name — usually nothing for a record just out, which is why it is allowed to be null
         // rather than being waited on.
-        notifier.notifyReleases(unannounced, subscriptions::artworkFor)
+        if (unannounced.isNotEmpty()) notifier.notifyReleases(unannounced, subscriptions::artworkFor)
         Result.success()
+    }
+
+    /**
+     * Retries what a later attempt could fix, a few times, and gives up on the rest.
+     *
+     * A rejected credential will not fix itself, and nor will a server too old to know what a
+     * release query is. Giving up ends only this run: the periodic request still comes round.
+     */
+    private fun retryOrGiveUp(error: Throwable): Result =
+        if (error is AgroAuthError || runAttemptCount >= MAX_RETRIES) Result.failure() else Result.retry()
+
+    private companion object {
+        const val PAGE_SIZE = 100
+        const val MAX_PAGES = 10
+        const val MAX_RETRIES = 3
     }
 }
 
@@ -107,13 +130,8 @@ class ArtistReleaseScheduler @Inject constructor(
      * after it landed, which is the whole thing this exists to avoid.
      */
     fun enable() {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.UNMETERED)
-            .setRequiresBatteryNotLow(true)
-            .build()
-
         val request = PeriodicWorkRequestBuilder<ArtistReleaseWorker>(6, TimeUnit.HOURS)
-            .setConstraints(constraints)
+            .setConstraints(constraints())
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS)
             .build()
 
@@ -126,11 +144,32 @@ class ArtistReleaseScheduler @Inject constructor(
         )
     }
 
+    /**
+     * One check as soon as the constraints allow, for the first time the setting is turned on.
+     *
+     * The first run is the one that takes the followed back catalogue in silently, and leaving it to
+     * the periodic request put that up to six hours away, with nothing in between to show the
+     * setting had done anything at all.
+     */
+    fun checkSoon() {
+        val request = OneTimeWorkRequestBuilder<ArtistReleaseWorker>()
+            .setConstraints(constraints())
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(FIRST_CHECK, ExistingWorkPolicy.KEEP, request)
+    }
+
     fun disable() {
         WorkManager.getInstance(context).cancelUniqueWork(PERIODIC_WORK)
+        WorkManager.getInstance(context).cancelUniqueWork(FIRST_CHECK)
     }
+
+    private fun constraints() = Constraints.Builder()
+        .setRequiredNetworkType(NetworkType.UNMETERED)
+        .setRequiresBatteryNotLow(true)
+        .build()
 
     private companion object {
         const val PERIODIC_WORK = "artist_release_check"
+        const val FIRST_CHECK = "artist_release_first_check"
     }
 }

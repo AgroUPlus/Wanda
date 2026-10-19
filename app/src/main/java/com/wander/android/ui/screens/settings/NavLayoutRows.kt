@@ -7,6 +7,7 @@ import androidx.compose.material.icons.rounded.DownloadForOffline
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Podcasts
 import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.runtime.Composable
@@ -87,4 +88,5 @@ private fun LibraryTab.icon(): ImageVector = when (this) {
     LibraryTab.PLAYLISTS -> Icons.Rounded.QueueMusic
     LibraryTab.PODCASTS -> Icons.Rounded.Podcasts
     LibraryTab.DOWNLOADS -> Icons.Rounded.DownloadForOffline
+    LibraryTab.FOLLOWED -> Icons.Rounded.Person
 }

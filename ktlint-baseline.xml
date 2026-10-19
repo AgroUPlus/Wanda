@@ -25,8 +25,9 @@
         <error line="39" column="1" source="standard:spacing-between-declarations-with-annotations" />
         <error line="40" column="1" source="standard:spacing-between-declarations-with-annotations" />
         <error line="41" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="51" column="72" source="standard:function-expression-body" />
-        <error line="149" column="1" source="standard:no-consecutive-blank-lines" />
+        <error line="42" column="1" source="standard:spacing-between-declarations-with-annotations" />
+        <error line="52" column="72" source="standard:function-expression-body" />
+        <error line="157" column="1" source="standard:no-consecutive-blank-lines" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/audio/features/FeatureExtractor.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -187,7 +188,7 @@
         <error line="28" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/notification/ArtistReleaseNotifier.kt">
-        <error line="171" column="19" source="standard:property-naming" />
+        <error line="180" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/notification/FriendNotifier.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -2088,8 +2089,10 @@
         <error line="145" column="134" source="standard:function-literal" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/LibraryScreen.kt">
-        <error line="113" column="20" source="standard:multiline-if-else" />
-        <error line="116" column="20" source="standard:multiline-if-else" />
+        <error line="111" column="20" source="standard:multiline-if-else" />
+        <error line="114" column="20" source="standard:multiline-if-else" />
+        <error line="153" column="1" source="standard:indent" />
+        <error line="154" column="1" source="standard:indent" />
         <error line="155" column="1" source="standard:indent" />
         <error line="156" column="1" source="standard:indent" />
         <error line="157" column="1" source="standard:indent" />
@@ -2105,8 +2108,8 @@
         <error line="167" column="1" source="standard:indent" />
         <error line="168" column="1" source="standard:indent" />
         <error line="169" column="1" source="standard:indent" />
-        <error line="170" column="1" source="standard:indent" />
         <error line="171" column="1" source="standard:indent" />
+        <error line="172" column="1" source="standard:indent" />
         <error line="173" column="1" source="standard:indent" />
         <error line="174" column="1" source="standard:indent" />
         <error line="175" column="1" source="standard:indent" />
@@ -2136,16 +2139,16 @@
         <error line="199" column="1" source="standard:indent" />
         <error line="200" column="1" source="standard:indent" />
         <error line="201" column="1" source="standard:indent" />
+        <error line="201" column="121" source="standard:max-line-length" />
         <error line="202" column="1" source="standard:indent" />
         <error line="203" column="1" source="standard:indent" />
-        <error line="203" column="121" source="standard:max-line-length" />
         <error line="204" column="1" source="standard:indent" />
         <error line="205" column="1" source="standard:indent" />
         <error line="206" column="1" source="standard:indent" />
         <error line="207" column="1" source="standard:indent" />
         <error line="208" column="1" source="standard:indent" />
-        <error line="209" column="1" source="standard:indent" />
         <error line="210" column="1" source="standard:indent" />
+        <error line="211" column="1" source="standard:indent" />
         <error line="212" column="1" source="standard:indent" />
         <error line="213" column="1" source="standard:indent" />
         <error line="214" column="1" source="standard:indent" />
@@ -2195,17 +2198,7 @@
         <error line="258" column="1" source="standard:indent" />
         <error line="259" column="1" source="standard:indent" />
         <error line="260" column="1" source="standard:indent" />
-        <error line="261" column="1" source="standard:indent" />
-        <error line="262" column="1" source="standard:indent" />
-        <error line="263" column="1" source="standard:indent" />
-        <error line="264" column="1" source="standard:indent" />
-        <error line="265" column="1" source="standard:indent" />
-        <error line="266" column="1" source="standard:indent" />
-        <error line="267" column="1" source="standard:indent" />
-        <error line="268" column="1" source="standard:indent" />
-        <error line="269" column="1" source="standard:indent" />
-        <error line="270" column="1" source="standard:indent" />
-        <error line="271" column="1" source="standard:no-blank-line-before-rbrace" />
+        <error line="261" column="1" source="standard:no-blank-line-before-rbrace" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/LibraryTrackList.kt">
         <error line="3" column="1" source="standard:import-ordering" />

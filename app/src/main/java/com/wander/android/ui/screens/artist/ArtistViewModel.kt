@@ -83,6 +83,7 @@ internal class ArtistViewModel @Inject constructor(
         ArtistUiState(
             artist = artist,
             page = page,
+            likedTracks = tracks.filter { it.isLiked && !it.isEpisode },
             heroImage = page.imageUrl,
             albumCount = page.albums?.albums?.size ?: 0,
             trackCount = page.topSongs.size,
@@ -132,7 +133,8 @@ internal class ArtistViewModel @Inject constructor(
         following.value = !wasFollowing
         viewModelScope.launch {
             val ok = if (wasFollowing) {
-                subscriptions.subscribed()
+                // Unreachable is treated as not found: the toggle rolls back rather than lying.
+                subscriptions.subscribed().getOrNull().orEmpty()
                     .firstOrNull {
                         it.normName.equals(artist.trim(), ignoreCase = true) ||
                             it.displayName.equals(artist.trim(), ignoreCase = true)
@@ -159,6 +161,7 @@ internal class ArtistViewModel @Inject constructor(
     fun playTop() = playback.playTop(topSongs())
     fun shuffle() = playback.shuffle(topSongs())
     fun play(index: Int) = playback.play(topSongs(), index)
+    fun playLiked(index: Int) = playback.play(state.value.likedTracks, index)
     fun playOne(track: UnifiedTrack) = playback.playOne(track)
     fun playNext(track: UnifiedTrack) = playback.playNext(track)
     fun addToQueue(track: UnifiedTrack) = playback.addToQueue(track)
