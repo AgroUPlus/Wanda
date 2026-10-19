@@ -41,7 +41,6 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.AlbumActionsSheet
 import com.wander.android.ui.components.ExpressiveRefreshIndicator
-import com.wander.android.ui.components.SourceFilterChips
 import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.headerInset
 
@@ -60,7 +59,6 @@ fun LibraryScreen(
     val tabs by viewModel.tabs.collectAsStateWithLifecycle()
     // The same instance the Podcasts page resolves: both sit under this destination.
     val podcastsViewModel: PodcastsViewModel = hiltViewModel()
-    val sourceFilter by viewModel.sourceFilter.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<com.wander.android.data.model.UnifiedTrack?>(null) }
@@ -254,17 +252,8 @@ fun LibraryScreen(
                             onLongPress = { actionsFor = it },
                             onOpenSubscriptions = onOpenSubscriptions
                         )
-                    LibraryTab.TRACKS -> Column(modifier = Modifier.fillMaxSize()) {
-                        if (viewModel.availableSources.size > 1) {
-                            SourceFilterChips(
-                                sources = viewModel.availableSources,
-                                selected = sourceFilter,
-                                onSelect = viewModel::selectSource,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-                        PagedTrackList(tracks, pageTab, isSyncing, contentPadding, viewModel) { actionsFor = it }
-                    }
+                    LibraryTab.TRACKS ->
+                        AllTracksPage(tracks, isSyncing, contentPadding, viewModel) { actionsFor = it }
                 }
             }
         }
