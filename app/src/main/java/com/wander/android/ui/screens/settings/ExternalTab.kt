@@ -3,7 +3,6 @@ package com.wander.android.ui.screens.settings
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Link
-import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -65,13 +64,10 @@ internal fun LazyListScope.externalTab(
     item(key = "artist_release_notifications") {
         GroupedCard(
             items = listOf<@Composable () -> Unit>({
-                SettingsToggle(
+                ReleaseNotificationsToggle(
                     modifier = Modifier.scale(rememberShelfEntranceScale(2)),
-                    title = stringResource(R.string.settings_new_music_from_artists_follow),
-                    subtitle = stringResource(R.string.settings_checks_every_few_hours_wi),
                     checked = state.artistReleaseNotificationsEnabled,
-                    onCheckedChange = actions.onArtistReleaseNotificationsChange,
-                    icon = Icons.Rounded.NewReleases
+                    onCheckedChange = actions.onArtistReleaseNotificationsChange
                 )
             })
         )

@@ -558,7 +558,8 @@
     <string name="settings_back_settings">Back to settings</string>
     <string name="settings_check_again">Check again</string>
     <string name="settings_check_updates_launch">Check for updates on launch</string>
-    <string name="settings_checks_every_few_hours_wi">Notifies you when a followed artist releases something new</string>
+    <string name="settings_checks_every_few_hours_wi">Notifies you when a followed artist releases something new. Checks every few hours on Wi-Fi.</string>
+    <string name="settings_release_notifications_blocked">Notifications are blocked for Wanda. Allow them in system settings to hear about new releases.</string>
     <string name="settings_clear_streaming_cache">Clear streaming cache</string>
     <string name="settings_connect_directly_paste_links_from">Connect directly or paste links from Spotify, Deezer, YouTube Music, Apple Music, and text files to select and import playlists.</string>
     <string name="settings_contribute_u201cpopular_agro_u201d">Contribute to \u201cPopular on Agro\u201d</string>
