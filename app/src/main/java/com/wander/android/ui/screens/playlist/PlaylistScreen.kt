@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.artistIdFor
 import com.wander.android.data.repository.sharedplaylist.SharedSyncState
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.CompactHeroTopBar
@@ -83,7 +84,7 @@ fun PlaylistScreen(
             onMoveDown = current?.takeIf { movable && index < tracks.lastIndex }?.let { { sharedViewModel.move(it, index, index + 1, viewModel::refresh) } },
             onOpenArtist = track.artist
                 .takeIf { it.isNotBlank() }
-                ?.let { artist -> { onOpenArtist(artist, track.artistId) } },
+                ?.let { { name -> onOpenArtist(name, track.artistIdFor(name)) } },
             onDismiss = { actionsFor = null },
             onShare = if (viewModel.canShare(track)) {
                 { viewModel.share(track) }

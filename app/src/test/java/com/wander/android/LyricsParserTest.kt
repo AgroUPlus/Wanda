@@ -58,7 +58,7 @@ class LyricsParserTest {
                     syncedLyrics = "[00:10.00]Line one\n[00:20.00]Line two",
                     source = "LOCAL_CACHE"
                 )
-            override suspend fun findLyricsForTrackOrMetadata(trackId: String, title: String, artist: String): TrackLyricsEntity? =
+            override suspend fun findLyricsForTrackOrMetadata(trackId: String, title: String, artist: String, durationMs: Long?): TrackLyricsEntity? =
                 getLyricsForTrack(trackId)
             override suspend fun insertLyrics(lyrics: TrackLyricsEntity) {}
             override suspend fun insertFts(trackId: String, plainLyrics: String) {}
@@ -150,5 +150,29 @@ class LyricsParserTest {
             )
         )
         assertEquals(com.wander.android.data.model.LyricsSyncType.WORD_SYNCED, wordSynced.syncType)
+    }
+
+    /** A chorus written once with two timestamps has to light up both times. */
+    @Test
+    fun testRepeatedTimestampsOnOneLine() {
+        val lines = LrcParser.parse("[00:12.00][00:45.50]Chorus\n[00:20.00]Verse")
+        assertEquals(listOf(12000L to "Chorus", 20000L to "Verse", 45500L to "Chorus"), lines.map { it.timestampMs to it.text })
+    }
+
+    @Test
+    fun testOffsetHeaderShiftsEveryLine() {
+        assertEquals(9500L, LrcParser.parse("[offset:+500]\n[00:10.00]A").single().timestampMs)
+        assertEquals(10250L, LrcParser.parse("[offset:-250]\n[00:10.00]A").single().timestampMs)
+    }
+
+    @Test
+    fun testLooseTimestampFormats() {
+        assertEquals(listOf(62500L, 6000200L), LrcParser.parse("[1:02.5]A\n[100:00:20]B").map { it.timestampMs })
+    }
+
+    @Test
+    fun testRepeatedWordSyncedLineShiftsItsWords() {
+        val lines = LrcParser.parse("[00:01.00][00:11.00]<00:01.00>Hi <00:01.50>there")
+        assertEquals(listOf(11000L, 11500L), lines[1].words.map { it.startMs })
     }
 }

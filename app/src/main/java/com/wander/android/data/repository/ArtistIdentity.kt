@@ -146,12 +146,15 @@ internal object ArtistIdentity {
      * candidate then has to be re-checked here: a `LIKE '%Art%'` also matches "Artisan Collective",
      * and this is what tells the two apart.
      *
-     * [sameName] alone already covers a lone "feat."/"ft." tail — [foldedName] strips it — so this
-     * only has to add splitting on the separators an equal-billing credit actually uses.
+     * [sameName] alone covers the *lead* of an "A feat. B" credit — [foldedName] strips the tail —
+     * but not B, whose page never listed the song. [ArtistCredits.split] finds the featured names
+     * and the ";"-joined ones ID3 multi-value tags arrive as; the bare-"/" split stays for the
+     * "A/B" rows this always matched.
      */
     fun creditsMatch(rawArtist: String, target: String): Boolean {
         if (sameName(rawArtist, target)) return true
-        return rawArtist.split(CREDIT_SEPARATORS).any { sameName(it, target) }
+        return ArtistCredits.split(rawArtist).any { sameName(it, target) } ||
+            rawArtist.split(CREDIT_SEPARATORS).any { sameName(it, target) }
     }
 
     private val CREDIT_SEPARATORS = Regex("""\s*[,&/]\s*|\s+[xX]\s+""")

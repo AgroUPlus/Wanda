@@ -12,6 +12,9 @@ import com.wander.android.data.repository.ServiceProblem
 import com.wander.android.data.repository.ServiceShelfResult
 import com.wander.android.data.repository.ServiceShelvesRepository
 import com.wander.android.ui.screens.home.layout.ShelfConfig
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -71,14 +74,16 @@ internal class ExtraShelves(
         builtFrom.keys.retainAll(wantedIds)
         _problems.update { it.filterKeys { id -> id in wantedIds } }
 
-        val built = wanted.mapNotNull { config ->
+        val stale = wanted.filter { config ->
             val source = config.copy(enabled = true, style = null, count = null, sources = emptyList())
             val upToDate = !force && builtFrom[config.id] == source && current.any { it.id == config.id }
-            if (upToDate) return@mapNotNull null
-            builtFrom[config.id] = source
-            build(config)
+            if (!upToDate) builtFrom[config.id] = source
+            !upToDate
         }
-        return ShelfChanges(built, gone)
+        // Side by side: most are Room reads, but the online ones each take seconds, and in turn
+        // they added up to however many such shelves the user had.
+        val built = coroutineScope { stale.map { config -> async { build(config) } }.awaitAll() }
+        return ShelfChanges(built.filterNotNull(), gone)
     }
 
     private suspend fun build(config: ShelfConfig): HomeSection? {

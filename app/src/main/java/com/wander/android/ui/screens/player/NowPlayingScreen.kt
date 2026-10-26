@@ -19,6 +19,7 @@ import com.wander.android.ui.components.KeepScreenOn
 import com.wander.android.ui.screens.social.JamViewModel
 import com.wander.android.ui.theme.CoverTintedTheme
 import com.wander.android.ui.theme.rememberCoverSeedColor
+import com.wander.android.data.repository.artistIdFor
 
 /**
  * The gap between the rows that belong to the cover: title, artist, bar, transport.
@@ -205,7 +206,7 @@ internal fun NowPlayingScreen(
             onOpenAudioTrackPicker = { showAudioTrackPicker = true }.takeIf { state.audioTracks.size > 1 },
             onOpenChapters = { episodePanel = EpisodePanel.CHAPTERS }.takeIf { episodeExtras?.chaptersUrl != null },
             onOpenTranscript = { episodePanel = EpisodePanel.TRANSCRIPT }.takeIf { episodeExtras?.transcriptUrl != null },
-            onOpenArtist = onOpenArtist?.let { open -> { open(track.artist, track.artistId) } },
+            onOpenArtist = onOpenArtist?.let { open -> { name -> open(name, track.artistIdFor(name)) } },
             onOpenAlbum = track.albumId?.let { albumId -> onOpenAlbum?.let { open -> { open(albumId) } } },
             onJamAction = jam?.let { { jamViewModel.suggest(track) } },
             onDismiss = { showMenuDrawer = false }

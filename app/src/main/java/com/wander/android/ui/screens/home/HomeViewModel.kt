@@ -180,9 +180,10 @@ class HomeViewModel @Inject constructor(
                     add(continueListening.value)
                     add(shelf(SectionLiked, "Your Favorites", HomeSectionStyle.HERO_CAROUSEL, liked.await()))
                     add(shelf(SectionDiscover, "Discover", HomeSectionStyle.DISCOVER_MASONRY, discover.await()))
-                    addAll(extras.sync(layoutStore.layout.first(), emptyList(), force = true).sections)
                 }.filterNot(HomeSection::isEmpty)
             }
+            // Added shelves already on screen stay there until their rebuild below replaces them.
+            val keptExtras = _uiState.value.allSections.filter { isAddedShelf(it.id) }
 
             // Immediately emit local shelves so the screen pops up in 0ms with zero blocking
             _uiState.value = HomeUiState(
@@ -191,12 +192,20 @@ class HomeViewModel @Inject constructor(
                 greeting = greeting(LocalTime.now()),
                 layout = _uiState.value.layout,
                 editing = _uiState.value.editing,
-                allSections = localSections.withLikes(likedTrackIds.value),
+                allSections = (localSections + keptExtras).withLikes(likedTrackIds.value),
                 sources = sources,
                 // A filter survives a refresh: it is how the user is looking at Home, not a
                 // property of the data underneath it.
                 selectedSource = _uiState.value.selectedSource?.takeIf { it in sources }
             )
+
+            // Shelves the user added after the first paint, not before it: several are online
+            // (YouTube Music, Popular on Agro, friends' picks), and Home used to wait for every
+            // one of them, one after another, before showing even the library's own shelves.
+            launch {
+                val changes = extras.sync(layoutStore.layout.first(), _uiState.value.allSections, force = true)
+                _uiState.update { it.copy(allSections = changes.applyTo(it.allSections).withLikes(likedTrackIds.value)) }
+            }
 
             // Phase 2: Non-blocking Background Network Enrichment (with 7s timeout)
             launch {
@@ -213,34 +222,7 @@ class HomeViewModel @Inject constructor(
 
                         if (feed.isNotEmpty() || (seed != null && suggestions.isNotEmpty())) {
                             _uiState.update { state ->
-                                val feedIds = feed.map { it.id }.toSet()
-                                val updated = buildList {
-                                    // Keep On Repeat first
-                                    state.allSections.find { it.id == SectionOnRepeat }?.let { add(it) }
-                                    // ...and Recently Played straight under it, ahead of the feed
-                                    state.allSections.find { it.id == SectionRecentlyPlayed }?.let { add(it) }
-                                    // Add online recommendation feed shelves
-                                    feed.forEach { shelf ->
-                                        add(carousel(shelf.id, shelf.title, shelf.tracks.take(CarouselSize)))
-                                    }
-                                    // Add remaining local sections without duplicating feed or because
-                                    state.allSections.filterNot { it.id == SectionOnRepeat || it.id == SectionRecentlyPlayed || it.id in feedIds || it.id == SectionBecause }.forEach { add(it) }
-                                    // Add seed radio recommendations
-                                    if (seed != null && suggestions.isNotEmpty()) {
-                                        add(
-                                            shelf(
-                                                id = SectionBecause,
-                                                title = "Because you listened to ${seed.title}",
-                                                style = HomeSectionStyle.FEATURED_HERO,
-                                                tracks = suggestions
-                                                    .filter { it.id != seed.id }
-                                                    .distinctBy { it.title.lowercase() }
-                                                    .filterNot { it.title.equals(seed.title, ignoreCase = true) }
-                                            )
-                                        )
-                                    }
-                                }.filterNot(HomeSection::isEmpty)
-                                state.copy(allSections = updated.withLikes(likedTrackIds.value))
+                                state.copy(allSections = state.allSections.withFeed(feed, seed, suggestions).withLikes(likedTrackIds.value))
                             }
                         }
                     }
