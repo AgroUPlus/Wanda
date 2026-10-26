@@ -66,7 +66,7 @@ internal class CatalogPublisher @Inject constructor(
         val durationMs = track.durationMs.takeIf { it > 0L }
             ?: (embedding.vector.size / embedding.dim).toLong() * EmbeddingScorer.SEGMENT_HOP_MS
 
-        val lyricsEntity = trackLyricsDao.findLyricsForTrackOrMetadata(track.id, track.title, track.artist)
+        val lyricsEntity = trackLyricsDao.findLyricsForTrackOrMetadata(track.id, track.title, track.artist, track.durationMs)
             ?: trackLyricsDao.getLyricsForTrack(embedding.trackId)
         val lyricsPayload = lyricsEntity?.syncedLyrics
             ?: lyricsEntity?.plainLyrics?.takeIf { it.isNotBlank() }

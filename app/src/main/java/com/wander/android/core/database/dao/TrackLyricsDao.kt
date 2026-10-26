@@ -26,17 +26,27 @@ interface TrackLyricsDao {
     @Query("SELECT * FROM track_lyrics WHERE trackId = :trackId")
     suspend fun getLyricsForTrack(trackId: String): TrackLyricsEntity?
 
+    /**
+     * This track's lyrics, or another copy's with the same title and artist.
+     *
+     * A copy only counts when its length is within three seconds of [durationMs]: a radio
+     * edit, an extended mix and a live take often share a title, and borrowing another cut's synced
+     * lines played them seconds off for the whole song. A null or unknown length on either side is
+     * not held against the match.
+     */
     @Query(
         """
         SELECT l.* FROM track_lyrics l
         LEFT JOIN tracks t ON t.id = l.trackId
         WHERE l.trackId = :trackId
-           OR (LOWER(t.title) = LOWER(:title) AND LOWER(t.artist) = LOWER(:artist))
+           OR (LOWER(t.title) = LOWER(:title) AND LOWER(t.artist) = LOWER(:artist)
+               AND (:durationMs IS NULL OR :durationMs <= 0 OR t.durationMs <= 0
+                    OR ABS(t.durationMs - :durationMs) <= 3000))
         ORDER BY CASE WHEN l.trackId = :trackId THEN 0 ELSE 1 END, l.syncedAt DESC
         LIMIT 1
         """
     )
-    suspend fun findLyricsForTrackOrMetadata(trackId: String, title: String, artist: String): TrackLyricsEntity?
+    suspend fun findLyricsForTrackOrMetadata(trackId: String, title: String, artist: String, durationMs: Long?): TrackLyricsEntity?
 
     /** Tracks in the library carrying exactly this title and artist, whatever their source. */
     @Query(
