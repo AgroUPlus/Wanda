@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.home
 
+import com.wander.android.data.model.RecommendedShelf
 import com.wander.android.data.model.UnifiedTrack
 import java.time.LocalTime
 
@@ -40,6 +41,40 @@ internal fun List<HomeSection>.withSection(section: HomeSection): List<HomeSecti
     val rank = SectionOrder.indexOf(section.id).takeIf { it >= 0 } ?: return this + section
     val at = indexOfFirst { SectionOrder.indexOf(it.id) > rank }
     return if (at < 0) this + section else toMutableList().also { it.add(at, section) }
+}
+
+/**
+ * Home with the online feed folded in: Quick picks and Recently Played stay on top, the feed's
+ * shelves follow them, then the rest, then "Because you listened to" built from [seed]'s radio.
+ */
+internal fun List<HomeSection>.withFeed(
+    feed: List<RecommendedShelf>,
+    seed: UnifiedTrack?,
+    suggestions: List<UnifiedTrack>
+): List<HomeSection> {
+    val feedIds = feed.map { it.id }.toSet()
+    return buildList {
+        this@withFeed.find { it.id == SectionOnRepeat }?.let { add(it) }
+        this@withFeed.find { it.id == SectionRecentlyPlayed }?.let { add(it) }
+        feed.forEach { shelf -> add(carousel(shelf.id, shelf.title, shelf.tracks.take(CarouselSize))) }
+        // The rest, without duplicating the feed or the "because" shelf rebuilt below.
+        this@withFeed.filterNot {
+            it.id == SectionOnRepeat || it.id == SectionRecentlyPlayed || it.id in feedIds || it.id == SectionBecause
+        }.forEach { add(it) }
+        if (seed != null && suggestions.isNotEmpty()) {
+            add(
+                shelf(
+                    id = SectionBecause,
+                    title = "Because you listened to ${seed.title}",
+                    style = HomeSectionStyle.FEATURED_HERO,
+                    tracks = suggestions
+                        .filter { it.id != seed.id }
+                        .distinctBy { it.title.lowercase() }
+                        .filterNot { it.title.equals(seed.title, ignoreCase = true) }
+                )
+            )
+        }
+    }.filterNot(HomeSection::isEmpty)
 }
 
 /** Time of day the user is most likely reading this. */
