@@ -36,6 +36,7 @@ import androidx.paging.compose.itemKey
 import com.wander.android.R
 import com.wander.android.data.model.HistoryTrack
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.artistIdFor
 import com.wander.android.ui.components.AddToPlaylistController
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.EmptyState
@@ -130,7 +131,7 @@ private fun HistoryTrackActions(
         onRemove = null,
         onOpenArtist = track.artist
             .takeIf { it.isNotBlank() }
-            ?.let { artist -> { onOpenArtist(artist, track.artistId) } },
+            ?.let { { name -> onOpenArtist(name, track.artistIdFor(name)) } },
         onDismiss = onDismiss,
         onShare = null,
         onAddToPlaylist = if (addToPlaylist.canAdd(track)) {

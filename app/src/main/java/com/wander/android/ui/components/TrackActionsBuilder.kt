@@ -15,6 +15,7 @@ import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Share
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.ArtistCredits
 import com.wander.android.data.sources.agro.JamMode
 import com.wander.android.ui.screens.social.JamUiState
 import com.wander.android.ui.screens.social.JamViewModel
@@ -45,7 +46,7 @@ internal class TrackActionCallbacks(
     val onShare: (() -> Unit)?,
     val onAddToPlaylist: (() -> Unit)?,
     val onStartRadio: (() -> Unit)?,
-    val onOpenArtist: (() -> Unit)?,
+    val onOpenArtist: ((String) -> Unit)?,
     val onRemove: (() -> Unit)?,
     val onDeleteDownload: (() -> Unit)?,
     val onResetProgress: (() -> Unit)?,
@@ -84,7 +85,7 @@ internal fun buildTrackActionsList(
     }
     if (state.playable) {
         callbacks.onStartRadio?.let { add(MenuAction(Icons.Rounded.Radio, "Radio") { it(); dismiss() }) }
-        callbacks.onOpenArtist?.let { add(MenuAction(Icons.Rounded.Person, "Artist") { it(); dismiss() }) }
+        callbacks.onOpenArtist?.let { addArtistActions(track.artist, it, dismiss) }
     }
     addJamAction(track, state, jamViewModel, dismiss)
     // These two ask first, and the confirmation closes the sheet; see `TrackActionsSheet`.
@@ -100,6 +101,24 @@ internal fun buildTrackActionsList(
         add(MenuAction(Icons.Rounded.Delete, labels.deleteOffline, ActionEmphasis.DANGER) { it() })
     }
 }
+
+/**
+ * "Artist", or one action per name when the credit lists several — opening a page for "A, B & C"
+ * found nobody. Where the split may have broken one act's name apart, the whole credit stays first.
+ */
+private fun MutableList<MenuAction>.addArtistActions(credit: String, open: (String) -> Unit, dismiss: () -> Unit) {
+    val options = ArtistCredits.choices(credit)
+    if (options.size <= 1) {
+        add(MenuAction(Icons.Rounded.Person, "Artist") { open(credit); dismiss() })
+        return
+    }
+    options.take(MAX_ARTIST_ACTIONS).forEach { name ->
+        add(MenuAction(Icons.Rounded.Person, name) { open(name); dismiss() })
+    }
+}
+
+/** Past this many the action sheet stops being a menu and becomes a list of names. */
+internal const val MAX_ARTIST_ACTIONS = 4
 
 private fun MutableList<MenuAction>.addLikeAction(
     state: TrackActionState,

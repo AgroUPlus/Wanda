@@ -37,8 +37,10 @@ import androidx.compose.ui.unit.dp
 import com.wander.android.ui.components.WandaSheet
 import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.ArtistCredits
 import com.wander.android.ui.components.ActionButtonGroup
 import com.wander.android.ui.components.ActionEmphasis
+import com.wander.android.ui.components.MAX_ARTIST_ACTIONS
 import com.wander.android.ui.components.MenuAction
 import com.wander.android.ui.components.MenuSheetInfoPageIndex
 import com.wander.android.ui.components.MenuSheetPageCount
@@ -76,7 +78,7 @@ internal fun NowPlayingMenuDrawer(
     onOpenAudioTrackPicker: (() -> Unit)?,
     onOpenChapters: (() -> Unit)?,
     onOpenTranscript: (() -> Unit)?,
-    onOpenArtist: (() -> Unit)?,
+    onOpenArtist: ((String) -> Unit)?,
     onOpenAlbum: (() -> Unit)?,
     onJamAction: (() -> Unit)?,
     onDismiss: () -> Unit
@@ -155,7 +157,12 @@ internal fun NowPlayingMenuDrawer(
                     }
                     add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, strings.playNext) { onPlayNext(); animatedDismiss() })
                     add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, strings.addToQueue) { onAddToQueue(); animatedDismiss() })
-                    onOpenArtist?.let { add(MenuAction(Icons.Rounded.Person, track.artist) { it(); animatedDismiss() }) }
+                    // One entry per credited artist: "A, B & C" is nobody's page.
+                    onOpenArtist?.let { open ->
+                        ArtistCredits.choices(track.artist).take(MAX_ARTIST_ACTIONS).forEach { name ->
+                            add(MenuAction(Icons.Rounded.Person, name) { open(name); animatedDismiss() })
+                        }
+                    }
                     onOpenAlbum?.let { open ->
                         track.album?.takeIf { it.isNotBlank() }?.let { album ->
                             add(MenuAction(Icons.Rounded.Album, album) { open(); animatedDismiss() })

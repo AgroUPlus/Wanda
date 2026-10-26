@@ -68,8 +68,10 @@ fun TrackActionsSheet(
      * Every screen that shows a track shows this sheet, so this is the way to an artist from
      * anywhere: a queue, a search result, a shelf on Home. Previously the only route in was
      * tapping the name on the full player, which meant the track had to be the one playing.
+     *
+     * Given the name to open: a track credited to several artists offers each of them.
      */
-    onOpenArtist: (() -> Unit)? = null,
+    onOpenArtist: ((String) -> Unit)? = null,
     /** Forgets how far into an episode the listener got. Null for anything but a podcast episode. */
     onResetProgress: (() -> Unit)? = null,
     /** What [onRemove] is called, when it removes from something other than the queue. */

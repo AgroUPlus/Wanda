@@ -25,6 +25,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.artistIdFor
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.CompactHeroTopBar
 import com.wander.android.ui.components.EmptyState
@@ -66,7 +67,7 @@ fun AlbumScreen(
             onRemove = null,
             onOpenArtist = track.artist
                 .takeIf { it.isNotBlank() }
-                ?.let { artist -> { onOpenArtist(artist, track.artistId) } },
+                ?.let { { name -> onOpenArtist(name, track.artistIdFor(name)) } },
             onDismiss = { actionsFor = null },
             onShare = if (viewModel.canShare(track)) {
                 { viewModel.share(track) }

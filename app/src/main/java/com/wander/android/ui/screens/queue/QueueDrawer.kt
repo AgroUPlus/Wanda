@@ -53,6 +53,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.artistIdFor
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.rememberHaptics
@@ -140,7 +141,7 @@ internal fun QueueDrawer(
             },
             onOpenArtist = track.artist
                 .takeIf { it.isNotBlank() }
-                ?.let { artist -> onOpenArtist?.let { open -> { open(artist, track.artistId) } } },
+                ?.let { onOpenArtist?.let { open -> { name -> open(name, track.artistIdFor(name)) } } },
             onDismiss = { actionsFor = null },
             onShare = if (queueViewModel.canShare(track)) {
                 { queueViewModel.share(track) }
