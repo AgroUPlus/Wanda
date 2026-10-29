@@ -1,5 +1,6 @@
 package com.wander.android.data.sources.agro
 
+import com.wander.android.core.network.CleartextPolicy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.InetSocketAddress
@@ -32,7 +33,10 @@ class PeerReachability @Inject constructor() {
      */
     suspend fun canReach(lanAddress: String?): Boolean {
         if (lanAddress.isNullOrBlank()) return false
-        val host = lanAddress.substringBeforeLast(':').takeIf { it.isNotBlank() } ?: return false
+        // Only LAN hosts: the address comes from the server, and probing anything it names would
+        // let it scan whatever this device can reach.
+        val host = lanAddress.substringBeforeLast(':').takeIf { it.isNotBlank() && CleartextPolicy.allows(it) }
+            ?: return false
         val port = lanAddress.substringAfterLast(':').toIntOrNull() ?: return false
 
         return withContext(Dispatchers.IO) {
