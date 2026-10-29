@@ -79,7 +79,7 @@ internal fun AppEvents(
         )
     }
 
-    // Pairing links can be fired by any page or app, so they wait here for a yes.
+    // Pairing and friend links can be fired by any page or app, so they wait here for a yes.
     val linkConfirmation by viewModel.pendingLinkConfirmation.collectAsStateWithLifecycle()
     linkConfirmation?.let { request ->
         ConfirmDialog(

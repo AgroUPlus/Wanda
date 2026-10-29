@@ -76,7 +76,7 @@ internal class AppIntentHandler @Inject constructor(
             uri.scheme == "wanda" && uri.host == "jam-room" -> deepLinkRouter.request(Routes.jam())
             uri.scheme == "wanda" && uri.host == "privacy" ->
                 deepLinkRouter.request(Routes.settingsCategory(SettingsCategory.PRIVACY.name))
-            uri.scheme == "wanda" && uri.host == "friend" -> handleFriendCode(scope, uri)
+            uri.scheme == "wanda" && uri.host == "friend" -> handleFriendCode(uri)
             isJamLink(uri) -> handleJamLink(uri)
             linkRepository.isPlaylistLink(uri) -> openSharedPlaylist(scope, uri)
             linkRepository.isAlbumLink(uri) -> openSharedAlbum(scope, uri)
@@ -91,17 +91,27 @@ internal class AppIntentHandler @Inject constructor(
         }
     }
 
-    private fun handleFriendCode(scope: CoroutineScope, uri: Uri) {
+    // Any page or app can fire this link, and a friend sees what the user listens to, so the
+    // code is only redeemed once the user has said yes.
+    private fun handleFriendCode(uri: Uri) {
         val code = uri.lastPathSegment?.trim().orEmpty()
         if (code.isEmpty()) return
-        scope.launch {
-            val friend = socialRepository.redeemFriendCode(code).getOrNull()
-            val message = friend
-                ?.let { "You and @$it are now friends" }
-                ?: "That code has expired or has already been used."
-            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-            if (friend != null) deepLinkRouter.request(TopLevelDestination.FRIENDS.route)
-        }
+        linkConfirmations.ask(
+            LinkConfirmation(
+                title = R.string.link_friend_title,
+                message = R.string.link_friend_message,
+                messageArgs = listOf(code),
+                confirmLabel = R.string.link_friend_confirm,
+                onConfirm = {
+                    val friend = socialRepository.redeemFriendCode(code).getOrNull()
+                    val message = friend
+                        ?.let { "You and @$it are now friends" }
+                        ?: "That code has expired or has already been used."
+                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                    if (friend != null) deepLinkRouter.request(TopLevelDestination.FRIENDS.route)
+                }
+            )
+        )
     }
 
     private fun isJamLink(uri: Uri): Boolean {

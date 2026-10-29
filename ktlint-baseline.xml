@@ -2,12 +2,12 @@
 <baseline version="1.0">
     <file name="app/src/main/java/com/wander/android/AppIntentHandler.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="147" column="121" source="standard:max-line-length" />
-        <error line="151" column="121" source="standard:max-line-length" />
-        <error line="174" column="29" source="standard:function-literal" />
-        <error line="174" column="30" source="standard:wrapping" />
-        <error line="174" column="121" source="standard:max-line-length" />
-        <error line="174" column="148" source="standard:function-literal" />
+        <error line="157" column="121" source="standard:max-line-length" />
+        <error line="161" column="121" source="standard:max-line-length" />
+        <error line="184" column="29" source="standard:function-literal" />
+        <error line="184" column="30" source="standard:wrapping" />
+        <error line="184" column="121" source="standard:max-line-length" />
+        <error line="184" column="148" source="standard:function-literal" />
     </file>
     <file name="app/src/main/java/com/wander/android/MainActivity.kt">
         <error line="32" column="1" source="standard:spacing-between-declarations-with-annotations" />

@@ -308,6 +308,9 @@
     <string name="link_agro_pair_title">Pair with this Agro server?</string>
     <string name="link_agro_pair_message">A link wants to connect Wanda to %1$s as %2$s. Your library, listening activity and backups will go to that server. Only continue if you scanned or opened this yourself.</string>
     <string name="link_agro_pair_confirm">Pair</string>
+    <string name="link_friend_title">Add a friend?</string>
+    <string name="link_friend_message">A link wants to redeem the friend code %1$s. Friends can see what you listen to. Only continue if you got this code from someone you know.</string>
+    <string name="link_friend_confirm">Add friend</string>
     <string name="link_agro_pair_invalid">That Agro pairing link is not valid.</string>
     <string name="link_playlist_needs_agro">This playlist is on an Agro server. Pair yours in Settings to open it.</string>
     <string name="link_playlist_agro_failed">Couldn\'t open that playlist: %1$s</string>
