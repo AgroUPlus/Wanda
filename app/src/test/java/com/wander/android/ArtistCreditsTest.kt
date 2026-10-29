@@ -42,7 +42,8 @@ class ArtistCreditsTest {
     /** The backend id is for the credit as filed; a name picked out of it would open the wrong page. */
     @Test
     fun `keeps the artist id only for the whole credit`() {
-        val track = UnifiedTrack(id = "nd:1", source = SourceType.NAVIDROME, title = "T", artist = "A, B", artistId = "nd:ab")
+        val track =
+            UnifiedTrack(id = "nd:1", source = SourceType.NAVIDROME, title = "T", artist = "A, B", artistId = "nd:ab")
         assertNull(track.artistIdFor("A"))
         assertEquals("nd:ab", track.artistIdFor("A, B"))
     }

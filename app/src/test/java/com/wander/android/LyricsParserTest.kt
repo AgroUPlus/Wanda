@@ -156,7 +156,10 @@ class LyricsParserTest {
     @Test
     fun testRepeatedTimestampsOnOneLine() {
         val lines = LrcParser.parse("[00:12.00][00:45.50]Chorus\n[00:20.00]Verse")
-        assertEquals(listOf(12000L to "Chorus", 20000L to "Verse", 45500L to "Chorus"), lines.map { it.timestampMs to it.text })
+        assertEquals(
+            listOf(12000L to "Chorus", 20000L to "Verse", 45500L to "Chorus"),
+            lines.map { it.timestampMs to it.text }
+        )
     }
 
     @Test

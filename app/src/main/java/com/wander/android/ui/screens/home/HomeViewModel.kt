@@ -204,7 +204,9 @@ class HomeViewModel @Inject constructor(
             // one of them, one after another, before showing even the library's own shelves.
             launch {
                 val changes = extras.sync(layoutStore.layout.first(), _uiState.value.allSections, force = true)
-                _uiState.update { it.copy(allSections = changes.applyTo(it.allSections).withLikes(likedTrackIds.value)) }
+                _uiState.update {
+                    it.copy(allSections = changes.applyTo(it.allSections).withLikes(likedTrackIds.value))
+                }
             }
 
             // Phase 2: Non-blocking Background Network Enrichment (with 7s timeout)
@@ -222,7 +224,10 @@ class HomeViewModel @Inject constructor(
 
                         if (feed.isNotEmpty() || (seed != null && suggestions.isNotEmpty())) {
                             _uiState.update { state ->
-                                state.copy(allSections = state.allSections.withFeed(feed, seed, suggestions).withLikes(likedTrackIds.value))
+                                state.copy(
+                                    allSections = state.allSections.withFeed(feed, seed, suggestions)
+                                        .withLikes(likedTrackIds.value)
+                                )
                             }
                         }
                     }

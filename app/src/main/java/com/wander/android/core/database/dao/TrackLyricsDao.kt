@@ -46,7 +46,12 @@ interface TrackLyricsDao {
         LIMIT 1
         """
     )
-    suspend fun findLyricsForTrackOrMetadata(trackId: String, title: String, artist: String, durationMs: Long?): TrackLyricsEntity?
+    suspend fun findLyricsForTrackOrMetadata(
+        trackId: String,
+        title: String,
+        artist: String,
+        durationMs: Long?
+    ): TrackLyricsEntity?
 
     /** Tracks in the library carrying exactly this title and artist, whatever their source. */
     @Query(

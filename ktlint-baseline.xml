@@ -633,7 +633,7 @@
     </file>
     <file name="app/src/main/java/com/wander/android/data/repository/LyricsRepository.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="253" column="121" source="standard:max-line-length" />
+        <error line="258" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/repository/MusicRepository.kt">
         <error line="147" column="121" source="standard:max-line-length" />
@@ -1415,33 +1415,33 @@
         <error line="110" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/TrackActionsBuilder.kt">
-        <error line="77" column="101" source="standard:function-literal" />
-        <error line="77" column="102" source="standard:wrapping" />
-        <error line="77" column="121" source="standard:max-line-length" />
-        <error line="77" column="137" source="standard:function-literal" />
-        <error line="78" column="98" source="standard:function-literal" />
-        <error line="78" column="99" source="standard:wrapping" />
+        <error line="78" column="101" source="standard:function-literal" />
+        <error line="78" column="102" source="standard:wrapping" />
         <error line="78" column="121" source="standard:max-line-length" />
-        <error line="78" column="136" source="standard:function-literal" />
-        <error line="94" column="29" source="standard:function-literal" />
-        <error line="94" column="30" source="standard:wrapping" />
-        <error line="94" column="109" source="standard:function-literal" />
-        <error line="94" column="110" source="standard:wrapping" />
-        <error line="94" column="121" source="standard:max-line-length" />
-        <error line="94" column="127" source="standard:function-literal" />
-        <error line="94" column="130" source="standard:function-literal" />
-        <error line="95" column="31" source="standard:function-literal" />
-        <error line="95" column="32" source="standard:wrapping" />
-        <error line="95" column="115" source="standard:function-literal" />
-        <error line="95" column="116" source="standard:wrapping" />
+        <error line="78" column="137" source="standard:function-literal" />
+        <error line="79" column="98" source="standard:function-literal" />
+        <error line="79" column="99" source="standard:wrapping" />
+        <error line="79" column="121" source="standard:max-line-length" />
+        <error line="79" column="136" source="standard:function-literal" />
+        <error line="95" column="29" source="standard:function-literal" />
+        <error line="95" column="30" source="standard:wrapping" />
+        <error line="95" column="109" source="standard:function-literal" />
+        <error line="95" column="110" source="standard:wrapping" />
         <error line="95" column="121" source="standard:max-line-length" />
-        <error line="95" column="133" source="standard:function-literal" />
-        <error line="95" column="136" source="standard:function-literal" />
-        <error line="130" column="9" source="standard:wrapping" />
-        <error line="132" column="5" source="standard:wrapping" />
+        <error line="95" column="127" source="standard:function-literal" />
+        <error line="95" column="130" source="standard:function-literal" />
+        <error line="96" column="31" source="standard:function-literal" />
+        <error line="96" column="32" source="standard:wrapping" />
+        <error line="96" column="115" source="standard:function-literal" />
+        <error line="96" column="116" source="standard:wrapping" />
+        <error line="96" column="121" source="standard:max-line-length" />
+        <error line="96" column="133" source="standard:function-literal" />
+        <error line="96" column="136" source="standard:function-literal" />
+        <error line="149" column="9" source="standard:wrapping" />
+        <error line="151" column="5" source="standard:wrapping" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/TrackActionsSheet.kt">
-        <error line="187" column="121" source="standard:max-line-length" />
+        <error line="189" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/TrackRow.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -1748,26 +1748,25 @@
         <error line="134" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/ExtraShelves.kt">
-        <error line="27" column="121" source="standard:max-line-length" />
-        <error line="28" column="121" source="standard:max-line-length" />
-        <error line="29" column="121" source="standard:max-line-length" />
         <error line="30" column="121" source="standard:max-line-length" />
         <error line="31" column="121" source="standard:max-line-length" />
         <error line="32" column="121" source="standard:max-line-length" />
         <error line="33" column="121" source="standard:max-line-length" />
         <error line="34" column="121" source="standard:max-line-length" />
-        <error line="68" column="36" source="standard:function-literal" />
-        <error line="68" column="121" source="standard:function-literal" />
-        <error line="68" column="121" source="standard:max-line-length" />
-        <error line="99" column="20" source="standard:property-wrapping" />
-        <error line="99" column="121" source="standard:max-line-length" />
+        <error line="35" column="121" source="standard:max-line-length" />
+        <error line="36" column="121" source="standard:max-line-length" />
+        <error line="37" column="121" source="standard:max-line-length" />
+        <error line="71" column="36" source="standard:function-literal" />
+        <error line="71" column="121" source="standard:function-literal" />
+        <error line="71" column="121" source="standard:max-line-length" />
+        <error line="104" column="20" source="standard:property-wrapping" />
+        <error line="104" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/FeaturedHeroShelf.kt">
         <error line="203" column="19" source="standard:property-naming" />
         <error line="206" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/HomeScreen.kt">
-        <error line="168" column="1" source="standard:indent" />
         <error line="169" column="1" source="standard:indent" />
         <error line="170" column="1" source="standard:indent" />
         <error line="171" column="1" source="standard:indent" />
@@ -1800,12 +1799,12 @@
         <error line="198" column="1" source="standard:indent" />
         <error line="199" column="1" source="standard:indent" />
         <error line="200" column="1" source="standard:indent" />
-        <error line="200" column="75" source="standard:function-literal" />
-        <error line="200" column="102" source="standard:function-literal" />
-        <error line="200" column="116" source="standard:function-literal" />
-        <error line="200" column="121" source="standard:max-line-length" />
-        <error line="200" column="153" source="standard:function-literal" />
         <error line="201" column="1" source="standard:indent" />
+        <error line="201" column="75" source="standard:function-literal" />
+        <error line="201" column="102" source="standard:function-literal" />
+        <error line="201" column="116" source="standard:function-literal" />
+        <error line="201" column="121" source="standard:max-line-length" />
+        <error line="201" column="153" source="standard:function-literal" />
         <error line="202" column="1" source="standard:indent" />
         <error line="203" column="1" source="standard:indent" />
         <error line="204" column="1" source="standard:indent" />
@@ -1818,7 +1817,7 @@
         <error line="211" column="1" source="standard:indent" />
         <error line="212" column="1" source="standard:indent" />
         <error line="213" column="1" source="standard:indent" />
-        <error line="215" column="1" source="standard:indent" />
+        <error line="214" column="1" source="standard:indent" />
         <error line="216" column="1" source="standard:indent" />
         <error line="217" column="1" source="standard:indent" />
         <error line="218" column="1" source="standard:indent" />
@@ -1830,7 +1829,7 @@
         <error line="224" column="1" source="standard:indent" />
         <error line="225" column="1" source="standard:indent" />
         <error line="226" column="1" source="standard:indent" />
-        <error line="228" column="1" source="standard:indent" />
+        <error line="227" column="1" source="standard:indent" />
         <error line="229" column="1" source="standard:indent" />
         <error line="230" column="1" source="standard:indent" />
         <error line="231" column="1" source="standard:indent" />
@@ -1848,7 +1847,8 @@
         <error line="243" column="1" source="standard:indent" />
         <error line="244" column="1" source="standard:indent" />
         <error line="245" column="1" source="standard:indent" />
-        <error line="248" column="1" source="standard:no-blank-line-before-rbrace" />
+        <error line="246" column="1" source="standard:indent" />
+        <error line="249" column="1" source="standard:no-blank-line-before-rbrace" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/HomeSection.kt">
         <error line="12" column="5" source="standard:spacing-between-declarations-with-comments" />
@@ -1873,8 +1873,8 @@
         <error line="23" column="20" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/HomeSectionOps.kt">
-        <error line="33" column="37" source="standard:multiline-if-else" />
-        <error line="34" column="14" source="standard:multiline-if-else" />
+        <error line="34" column="37" source="standard:multiline-if-else" />
+        <error line="35" column="14" source="standard:multiline-if-else" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/HomeUiState.kt">
         <error line="36" column="19" source="standard:wrapping" />
@@ -1885,13 +1885,6 @@
         <error line="88" column="121" source="standard:max-line-length" />
         <error line="143" column="121" source="standard:max-line-length" />
         <error line="179" column="121" source="standard:max-line-length" />
-        <error line="227" column="65" source="standard:function-literal" />
-        <error line="227" column="66" source="standard:wrapping" />
-        <error line="227" column="121" source="standard:max-line-length" />
-        <error line="227" column="173" source="standard:function-literal" />
-        <error line="227" column="183" source="standard:function-literal" />
-        <error line="227" column="184" source="standard:wrapping" />
-        <error line="227" column="193" source="standard:function-literal" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/HorizontalTrackCard.kt">
         <error line="112" column="19" source="standard:property-naming" />
@@ -2047,7 +2040,7 @@
         <error line="52" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/HistoryScreen.kt">
-        <error line="86" column="12" source="standard:wrapping" />
+        <error line="87" column="12" source="standard:wrapping" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/HistoryViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -2088,9 +2081,8 @@
         <error line="145" column="134" source="standard:function-literal" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/LibraryScreen.kt">
-        <error line="111" column="20" source="standard:multiline-if-else" />
-        <error line="114" column="20" source="standard:multiline-if-else" />
-        <error line="153" column="1" source="standard:indent" />
+        <error line="112" column="20" source="standard:multiline-if-else" />
+        <error line="115" column="20" source="standard:multiline-if-else" />
         <error line="154" column="1" source="standard:indent" />
         <error line="155" column="1" source="standard:indent" />
         <error line="156" column="1" source="standard:indent" />
@@ -2107,7 +2099,7 @@
         <error line="167" column="1" source="standard:indent" />
         <error line="168" column="1" source="standard:indent" />
         <error line="169" column="1" source="standard:indent" />
-        <error line="171" column="1" source="standard:indent" />
+        <error line="170" column="1" source="standard:indent" />
         <error line="172" column="1" source="standard:indent" />
         <error line="173" column="1" source="standard:indent" />
         <error line="174" column="1" source="standard:indent" />
@@ -2138,15 +2130,15 @@
         <error line="199" column="1" source="standard:indent" />
         <error line="200" column="1" source="standard:indent" />
         <error line="201" column="1" source="standard:indent" />
-        <error line="201" column="121" source="standard:max-line-length" />
         <error line="202" column="1" source="standard:indent" />
+        <error line="202" column="121" source="standard:max-line-length" />
         <error line="203" column="1" source="standard:indent" />
         <error line="204" column="1" source="standard:indent" />
         <error line="205" column="1" source="standard:indent" />
         <error line="206" column="1" source="standard:indent" />
         <error line="207" column="1" source="standard:indent" />
         <error line="208" column="1" source="standard:indent" />
-        <error line="210" column="1" source="standard:indent" />
+        <error line="209" column="1" source="standard:indent" />
         <error line="211" column="1" source="standard:indent" />
         <error line="212" column="1" source="standard:indent" />
         <error line="213" column="1" source="standard:indent" />
@@ -2197,7 +2189,8 @@
         <error line="258" column="1" source="standard:indent" />
         <error line="259" column="1" source="standard:indent" />
         <error line="260" column="1" source="standard:indent" />
-        <error line="261" column="1" source="standard:no-blank-line-before-rbrace" />
+        <error line="261" column="1" source="standard:indent" />
+        <error line="262" column="1" source="standard:no-blank-line-before-rbrace" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/LibraryTrackList.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -2334,52 +2327,46 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/player/NowPlayingMenuDrawer.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="126" column="111" source="standard:function-literal" />
-        <error line="126" column="112" source="standard:wrapping" />
-        <error line="126" column="121" source="standard:max-line-length" />
-        <error line="126" column="146" source="standard:function-literal" />
-        <error line="129" column="119" source="standard:function-literal" />
-        <error line="129" column="121" source="standard:max-line-length" />
-        <error line="129" column="137" source="standard:function-literal" />
-        <error line="139" column="97" source="standard:function-literal" />
-        <error line="139" column="121" source="standard:max-line-length" />
-        <error line="139" column="128" source="standard:function-literal" />
-        <error line="142" column="110" source="standard:function-literal" />
-        <error line="142" column="111" source="standard:wrapping" />
-        <error line="142" column="121" source="standard:max-line-length" />
-        <error line="142" column="149" source="standard:function-literal" />
-        <error line="144" column="93" source="standard:function-literal" />
+        <error line="128" column="111" source="standard:function-literal" />
+        <error line="128" column="112" source="standard:wrapping" />
+        <error line="128" column="121" source="standard:max-line-length" />
+        <error line="128" column="146" source="standard:function-literal" />
+        <error line="131" column="119" source="standard:function-literal" />
+        <error line="131" column="121" source="standard:max-line-length" />
+        <error line="131" column="137" source="standard:function-literal" />
+        <error line="141" column="97" source="standard:function-literal" />
+        <error line="141" column="121" source="standard:max-line-length" />
+        <error line="141" column="128" source="standard:function-literal" />
+        <error line="144" column="110" source="standard:function-literal" />
+        <error line="144" column="111" source="standard:wrapping" />
         <error line="144" column="121" source="standard:max-line-length" />
-        <error line="144" column="133" source="standard:function-literal" />
+        <error line="144" column="149" source="standard:function-literal" />
+        <error line="146" column="93" source="standard:function-literal" />
         <error line="146" column="121" source="standard:max-line-length" />
-        <error line="151" column="103" source="standard:function-literal" />
-        <error line="151" column="121" source="standard:max-line-length" />
-        <error line="151" column="131" source="standard:function-literal" />
-        <error line="154" column="115" source="standard:function-literal" />
-        <error line="154" column="121" source="standard:max-line-length" />
-        <error line="154" column="143" source="standard:function-literal" />
-        <error line="156" column="94" source="standard:function-literal" />
+        <error line="146" column="133" source="standard:function-literal" />
+        <error line="148" column="121" source="standard:max-line-length" />
+        <error line="153" column="103" source="standard:function-literal" />
+        <error line="153" column="121" source="standard:max-line-length" />
+        <error line="153" column="131" source="standard:function-literal" />
+        <error line="156" column="115" source="standard:function-literal" />
         <error line="156" column="121" source="standard:max-line-length" />
-        <error line="156" column="128" source="standard:function-literal" />
-        <error line="157" column="95" source="standard:function-literal" />
-        <error line="157" column="121" source="standard:max-line-length" />
-        <error line="157" column="131" source="standard:function-literal" />
-        <error line="158" column="39" source="standard:function-literal" />
-        <error line="158" column="92" source="standard:function-literal" />
-        <error line="158" column="118" source="standard:function-literal" />
-        <error line="158" column="121" source="standard:function-literal" />
+        <error line="156" column="143" source="standard:function-literal" />
+        <error line="158" column="94" source="standard:function-literal" />
         <error line="158" column="121" source="standard:max-line-length" />
-        <error line="165" column="81" source="standard:function-literal" />
-        <error line="165" column="121" source="standard:max-line-length" />
-        <error line="165" column="123" source="standard:function-literal" />
-        <error line="168" column="88" source="standard:function-literal" />
-        <error line="168" column="121" source="standard:max-line-length" />
-        <error line="168" column="134" source="standard:function-literal" />
+        <error line="158" column="128" source="standard:function-literal" />
+        <error line="159" column="95" source="standard:function-literal" />
+        <error line="159" column="121" source="standard:max-line-length" />
+        <error line="159" column="131" source="standard:function-literal" />
+        <error line="172" column="81" source="standard:function-literal" />
+        <error line="172" column="121" source="standard:max-line-length" />
+        <error line="172" column="123" source="standard:function-literal" />
+        <error line="175" column="88" source="standard:function-literal" />
+        <error line="175" column="121" source="standard:max-line-length" />
+        <error line="175" column="134" source="standard:function-literal" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/player/NowPlayingScreen.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="124" column="1" source="standard:no-empty-first-line-in-method-block" />
-        <error line="125" column="1" source="standard:indent" />
+        <error line="125" column="1" source="standard:no-empty-first-line-in-method-block" />
         <error line="126" column="1" source="standard:indent" />
         <error line="127" column="1" source="standard:indent" />
         <error line="128" column="1" source="standard:indent" />
@@ -2392,7 +2379,7 @@
         <error line="135" column="1" source="standard:indent" />
         <error line="136" column="1" source="standard:indent" />
         <error line="137" column="1" source="standard:indent" />
-        <error line="139" column="1" source="standard:indent" />
+        <error line="138" column="1" source="standard:indent" />
         <error line="140" column="1" source="standard:indent" />
         <error line="141" column="1" source="standard:indent" />
         <error line="142" column="1" source="standard:indent" />
@@ -2410,7 +2397,7 @@
         <error line="154" column="1" source="standard:indent" />
         <error line="155" column="1" source="standard:indent" />
         <error line="156" column="1" source="standard:indent" />
-        <error line="158" column="1" source="standard:indent" />
+        <error line="157" column="1" source="standard:indent" />
         <error line="159" column="1" source="standard:indent" />
         <error line="160" column="1" source="standard:indent" />
         <error line="161" column="1" source="standard:indent" />
@@ -2420,20 +2407,20 @@
         <error line="165" column="1" source="standard:indent" />
         <error line="166" column="1" source="standard:indent" />
         <error line="167" column="1" source="standard:indent" />
-        <error line="169" column="1" source="standard:indent" />
+        <error line="168" column="1" source="standard:indent" />
         <error line="170" column="1" source="standard:indent" />
         <error line="171" column="1" source="standard:indent" />
         <error line="172" column="1" source="standard:indent" />
         <error line="173" column="1" source="standard:indent" />
         <error line="174" column="1" source="standard:indent" />
         <error line="175" column="1" source="standard:indent" />
-        <error line="177" column="1" source="standard:indent" />
+        <error line="176" column="1" source="standard:indent" />
         <error line="178" column="1" source="standard:indent" />
         <error line="179" column="1" source="standard:indent" />
         <error line="180" column="1" source="standard:indent" />
         <error line="181" column="1" source="standard:indent" />
         <error line="182" column="1" source="standard:indent" />
-        <error line="184" column="1" source="standard:indent" />
+        <error line="183" column="1" source="standard:indent" />
         <error line="185" column="1" source="standard:indent" />
         <error line="186" column="1" source="standard:indent" />
         <error line="187" column="1" source="standard:indent" />
@@ -2457,24 +2444,24 @@
         <error line="205" column="1" source="standard:indent" />
         <error line="206" column="1" source="standard:indent" />
         <error line="207" column="1" source="standard:indent" />
-        <error line="207" column="32" source="standard:function-literal" />
-        <error line="207" column="73" source="standard:function-literal" />
-        <error line="207" column="82" source="standard:function-literal" />
-        <error line="207" column="121" source="standard:function-literal" />
-        <error line="207" column="121" source="standard:max-line-length" />
         <error line="208" column="1" source="standard:indent" />
+        <error line="208" column="32" source="standard:function-literal" />
+        <error line="208" column="73" source="standard:function-literal" />
+        <error line="208" column="82" source="standard:function-literal" />
+        <error line="208" column="121" source="standard:function-literal" />
+        <error line="208" column="121" source="standard:max-line-length" />
         <error line="209" column="1" source="standard:indent" />
         <error line="210" column="1" source="standard:indent" />
         <error line="211" column="1" source="standard:indent" />
         <error line="212" column="1" source="standard:indent" />
         <error line="213" column="1" source="standard:indent" />
-        <error line="215" column="1" source="standard:indent" />
+        <error line="214" column="1" source="standard:indent" />
         <error line="216" column="1" source="standard:indent" />
         <error line="217" column="1" source="standard:indent" />
         <error line="218" column="1" source="standard:indent" />
         <error line="219" column="1" source="standard:indent" />
         <error line="220" column="1" source="standard:indent" />
-        <error line="222" column="1" source="standard:indent" />
+        <error line="221" column="1" source="standard:indent" />
         <error line="223" column="1" source="standard:indent" />
         <error line="224" column="1" source="standard:indent" />
         <error line="225" column="1" source="standard:indent" />
@@ -2484,11 +2471,11 @@
         <error line="229" column="1" source="standard:indent" />
         <error line="230" column="1" source="standard:indent" />
         <error line="231" column="1" source="standard:indent" />
-        <error line="233" column="1" source="standard:indent" />
+        <error line="232" column="1" source="standard:indent" />
         <error line="234" column="1" source="standard:indent" />
         <error line="235" column="1" source="standard:indent" />
         <error line="236" column="1" source="standard:indent" />
-        <error line="238" column="1" source="standard:indent" />
+        <error line="237" column="1" source="standard:indent" />
         <error line="239" column="1" source="standard:indent" />
         <error line="240" column="1" source="standard:indent" />
         <error line="241" column="1" source="standard:indent" />
@@ -2548,6 +2535,7 @@
         <error line="295" column="1" source="standard:indent" />
         <error line="296" column="1" source="standard:indent" />
         <error line="297" column="1" source="standard:indent" />
+        <error line="298" column="1" source="standard:indent" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/player/NowPlayingViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -2628,39 +2616,39 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/playlist/PlaylistScreen.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="82" column="40" source="standard:function-literal" />
-        <error line="82" column="41" source="standard:wrapping" />
-        <error line="82" column="63" source="standard:function-literal" />
-        <error line="82" column="70" source="standard:function-literal" />
-        <error line="82" column="71" source="standard:wrapping" />
-        <error line="82" column="72" source="standard:function-literal" />
-        <error line="82" column="73" source="standard:wrapping" />
-        <error line="82" column="121" source="standard:max-line-length" />
-        <error line="82" column="137" source="standard:function-literal" />
-        <error line="82" column="139" source="standard:function-literal" />
-        <error line="83" column="42" source="standard:function-literal" />
-        <error line="83" column="43" source="standard:wrapping" />
-        <error line="83" column="80" source="standard:function-literal" />
-        <error line="83" column="87" source="standard:function-literal" />
-        <error line="83" column="88" source="standard:wrapping" />
-        <error line="83" column="89" source="standard:function-literal" />
-        <error line="83" column="90" source="standard:wrapping" />
+        <error line="83" column="40" source="standard:function-literal" />
+        <error line="83" column="41" source="standard:wrapping" />
+        <error line="83" column="63" source="standard:function-literal" />
+        <error line="83" column="70" source="standard:function-literal" />
+        <error line="83" column="71" source="standard:wrapping" />
+        <error line="83" column="72" source="standard:function-literal" />
+        <error line="83" column="73" source="standard:wrapping" />
         <error line="83" column="121" source="standard:max-line-length" />
-        <error line="83" column="154" source="standard:function-literal" />
-        <error line="83" column="156" source="standard:function-literal" />
-        <error line="129" column="121" source="standard:max-line-length" />
-        <error line="133" column="58" source="standard:function-literal" />
-        <error line="133" column="121" source="standard:max-line-length" />
-        <error line="133" column="144" source="standard:function-literal" />
-        <error line="156" column="121" source="standard:max-line-length" />
-        <error line="167" column="79" source="standard:function-literal" />
-        <error line="167" column="121" source="standard:max-line-length" />
-        <error line="167" column="129" source="standard:function-literal" />
-        <error line="192" column="43" source="standard:function-literal" />
-        <error line="192" column="85" source="standard:function-literal" />
-        <error line="192" column="98" source="standard:function-literal" />
-        <error line="192" column="121" source="standard:max-line-length" />
-        <error line="192" column="124" source="standard:function-literal" />
+        <error line="83" column="137" source="standard:function-literal" />
+        <error line="83" column="139" source="standard:function-literal" />
+        <error line="84" column="42" source="standard:function-literal" />
+        <error line="84" column="43" source="standard:wrapping" />
+        <error line="84" column="80" source="standard:function-literal" />
+        <error line="84" column="87" source="standard:function-literal" />
+        <error line="84" column="88" source="standard:wrapping" />
+        <error line="84" column="89" source="standard:function-literal" />
+        <error line="84" column="90" source="standard:wrapping" />
+        <error line="84" column="121" source="standard:max-line-length" />
+        <error line="84" column="154" source="standard:function-literal" />
+        <error line="84" column="156" source="standard:function-literal" />
+        <error line="130" column="121" source="standard:max-line-length" />
+        <error line="134" column="58" source="standard:function-literal" />
+        <error line="134" column="121" source="standard:max-line-length" />
+        <error line="134" column="144" source="standard:function-literal" />
+        <error line="157" column="121" source="standard:max-line-length" />
+        <error line="168" column="79" source="standard:function-literal" />
+        <error line="168" column="121" source="standard:max-line-length" />
+        <error line="168" column="129" source="standard:function-literal" />
+        <error line="193" column="43" source="standard:function-literal" />
+        <error line="193" column="85" source="standard:function-literal" />
+        <error line="193" column="98" source="standard:function-literal" />
+        <error line="193" column="121" source="standard:max-line-length" />
+        <error line="193" column="124" source="standard:function-literal" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/playlist/PlaylistShareHost.kt">
         <error line="1" column="1" source="standard:filename" />
@@ -2723,11 +2711,11 @@
     <file name="app/src/main/java/com/wander/android/ui/screens/queue/QueueDrawer.kt">
         <error line="2" column="1" source="standard:no-trailing-spaces" />
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="147" column="20" source="standard:multiline-if-else" />
-        <error line="150" column="20" source="standard:multiline-if-else" />
-        <error line="193" column="1" source="standard:no-consecutive-blank-lines" />
-        <error line="215" column="121" source="standard:max-line-length" />
-        <error line="232" column="1" source="standard:no-consecutive-blank-lines" />
+        <error line="148" column="20" source="standard:multiline-if-else" />
+        <error line="151" column="20" source="standard:multiline-if-else" />
+        <error line="194" column="1" source="standard:no-consecutive-blank-lines" />
+        <error line="216" column="121" source="standard:max-line-length" />
+        <error line="233" column="1" source="standard:no-consecutive-blank-lines" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/queue/QueueDrawerHeader.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -2745,8 +2733,8 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/queue/QueueScreen.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="79" column="20" source="standard:multiline-if-else" />
-        <error line="82" column="20" source="standard:multiline-if-else" />
+        <error line="80" column="20" source="standard:multiline-if-else" />
+        <error line="83" column="20" source="standard:multiline-if-else" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/queue/QueueTrackTile.kt">
         <error line="95" column="19" source="standard:property-naming" />
@@ -2832,8 +2820,8 @@
         <error line="165" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/search/SearchScreen.kt">
-        <error line="164" column="121" source="standard:max-line-length" />
-        <error line="195" column="121" source="standard:max-line-length" />
+        <error line="165" column="121" source="standard:max-line-length" />
+        <error line="196" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/search/SearchViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />

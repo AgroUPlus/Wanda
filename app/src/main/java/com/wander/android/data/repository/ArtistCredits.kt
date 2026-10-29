@@ -45,7 +45,8 @@ object ArtistCredits {
     }
 
     /** "(feat. B)" and "[ft. B]" become a plain " feat. B" so the split below sees one shape. */
-    private val BRACKETED_FEATURE = Regex("""[(\[]\s*(?:feat\.?|featuring|ft\.?)\s+([^)\]]+)[)\]]""", RegexOption.IGNORE_CASE)
+    private val BRACKETED_FEATURE =
+        Regex("""[(\[]\s*(?:feat\.?|featuring|ft\.?)\s+([^)\]]+)[)\]]""", RegexOption.IGNORE_CASE)
 
     // "/" only with space around it: unspaced, it is as likely to be "AC/DC" as a list. "and" and
     // "with" are left alone entirely — "Florence and the Machine" is one act far more often than two.

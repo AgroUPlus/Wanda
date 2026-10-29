@@ -70,7 +70,12 @@ class LyricsRepository @Inject constructor(
         durationSeconds: Long? = null
     ): LyricsState = withContext(Dispatchers.IO) {
         // Step 1: Check offline Room database (source-agnostic: by trackId or by title & artist)
-        val cached = trackLyricsDao.findLyricsForTrackOrMetadata(trackId, trackTitle.trim(), artistName.trim(), durationSeconds?.times(1000))
+        val cached = trackLyricsDao.findLyricsForTrackOrMetadata(
+            trackId,
+            trackTitle.trim(),
+            artistName.trim(),
+            durationSeconds?.times(1000)
+        )
             ?: trackLyricsDao.getLyricsForTrack(trackId)
         if (cached != null) {
             if (cached.trackId != trackId && cached.plainLyrics.isNotBlank()) {
