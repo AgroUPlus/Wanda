@@ -185,13 +185,21 @@ class AgroPairingCoordinator @Inject constructor(
         // Nothing worth keeping is only true when a *complete* pairing was already stored. A
         // half-written one — a server with no username, which no longer counts as configured — is
         // not a state to fall back to, so it is cleared like a first attempt.
-        val hadPairing = secureStorage.agroServerUrl.isNotBlank() &&
-            secureStorage.agroUsername.isNotBlank()
+        val previous = Triple(secureStorage.agroServerUrl, secureStorage.agroUsername, secureStorage.agroApiKey)
+        val hadPairing = previous.first.isNotBlank() && previous.second.isNotBlank()
         // The device id is no longer derived here: `SecureStorage.agroDeviceId` generates one on
         // first use and keeps it. Deriving it from `Build.MODEL` gave two of the same phone the
         // same identity, which a per-device library index cannot survive.
         secureStorage.setAgroCredentials(server, username, token)
-        return nodeRegistrar.registerNode().onFailure { if (!hadPairing) secureStorage.clearAgroCredentials() }
+        // A failed attempt puts the working pairing back. Left in place, the server and token it
+        // tried replaced the account the user already had.
+        return nodeRegistrar.registerNode().onFailure {
+            if (hadPairing) {
+                secureStorage.setAgroCredentials(previous.first, previous.second, previous.third)
+            } else {
+                secureStorage.clearAgroCredentials()
+            }
+        }
     }
 
     /**
