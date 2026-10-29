@@ -56,8 +56,13 @@ jobs:
       - name: Rename APK
         run: mv app/build/outputs/apk/release/app-release.apk "Wanda-${{ github.event.release.tag_name }}.apk"
 
+      # The keystore and its passwords are not needed past the build, so they are gone before
+      # any third-party code runs. The always() step below still covers a failed build.
+      - name: Remove signing material before upload
+        run: rm -f release.keystore local.properties
+
       - name: Upload APK and mapping to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           files: |
             Wanda-*.apk
