@@ -370,12 +370,12 @@
     </file>
     <file name="app/src/main/java/com/wander/android/core/sync/P2PServer.kt">
         <error line="205" column="121" source="standard:max-line-length" />
-        <error line="231" column="121" source="standard:max-line-length" />
-        <error line="240" column="121" source="standard:max-line-length" />
-        <error line="251" column="120" source="standard:max-line-length" />
-        <error line="260" column="121" source="standard:max-line-length" />
-        <error line="269" column="120" source="standard:max-line-length" />
-        <error line="274" column="120" source="standard:max-line-length" />
+        <error line="237" column="121" source="standard:max-line-length" />
+        <error line="246" column="121" source="standard:max-line-length" />
+        <error line="257" column="120" source="standard:max-line-length" />
+        <error line="266" column="121" source="standard:max-line-length" />
+        <error line="275" column="120" source="standard:max-line-length" />
+        <error line="280" column="120" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/sync/SharedTrackHash.kt">
         <error line="3" column="1" source="standard:import-ordering" />

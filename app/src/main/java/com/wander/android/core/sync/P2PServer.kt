@@ -208,6 +208,12 @@ class P2PServer @Inject constructor(
             }
 
             if (method == "GET" && path.startsWith("/p2p/pair")) {
+                // Only peers on the Wi-Fi Direct group the user accepted may pair, never the LAN.
+                if (!WifiDirectInterface.carries(s.localAddress)) {
+                    Log.w(TAG, "Pairing refused: request did not arrive over Wi-Fi Direct")
+                    audioWriter.writeForbidden(output)
+                    return
+                }
                 val requesterKey = Uri.parse("http://localhost$path").getQueryParameter("key").orEmpty()
                 val sealed = grantManager.mintPairingGrant(requesterKey)
                 val response = if (sealed == null) {
