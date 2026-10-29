@@ -984,7 +984,6 @@
     </file>
     <file name="app/src/main/java/com/wander/android/data/sources/agro/AgroStreamFetcher.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="83" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/sources/agro/AgroUploader.kt">
         <error line="3" column="1" source="standard:import-ordering" />

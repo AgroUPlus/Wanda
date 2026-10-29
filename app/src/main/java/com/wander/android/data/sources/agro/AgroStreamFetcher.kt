@@ -80,7 +80,10 @@ class AgroStreamFetcher @Inject constructor(
                     .connectTimeout(3, TimeUnit.SECONDS)
                     .readTimeout(60, TimeUnit.SECONDS)
                     .build()
-                val response = p2pClient.newCall(authorized("http://$lan/p2p/fetch/${track.contentHash}").get().build()).execute()
+                // No Agro token: this is plain HTTP to an address the server handed out, and the
+                // peer's P2P server only honours its own grants, never the account credential.
+                val request = Request.Builder().url("http://$lan/p2p/fetch/${track.contentHash}").get().build()
+                val response = p2pClient.newCall(request).execute()
                 if (response.isSuccessful && response.body != null) {
                     android.util.Log.i("P2P", "Direct LAN P2P streaming connected from $lan for \"${track.title}\"")
                     return FetchedStream(response, SyncRoute.DIRECT)
