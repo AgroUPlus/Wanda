@@ -56,10 +56,13 @@ internal class P2PAudioResponseWriter(
             val range = request.lineSequence().firstOrNull { it.startsWith("Range:", ignoreCase = true) }
             if (range != null) Log.w(TAG, "Ignoring a range request: ${range.trim()}")
 
-            if (recipientKey != null && session.isNotBlank()) {
-                writeEncrypted(output, fileIn, mime, recipientKey, session)
-            } else {
-                writePlain(output, fileIn, mime, totalLength)
+            when {
+                recipientKey != null && session.isNotBlank() ->
+                    writeEncrypted(output, fileIn, mime, recipientKey, session)
+                // A grant bound to a key was meant for that key's holder only. Served in the clear
+                // without a session, anyone who overheard the token could replay it for the audio.
+                recipientKey != null -> writeForbidden(output)
+                else -> writePlain(output, fileIn, mime, totalLength)
             }
             return true
         }

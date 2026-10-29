@@ -361,13 +361,13 @@
     <file name="app/src/main/java/com/wander/android/core/sync/P2PAudioResponseWriter.kt">
         <error line="24" column="14" source="standard:wrapping" />
         <error line="25" column="82" source="standard:wrapping" />
-        <error line="76" column="35" source="standard:function-literal" />
-        <error line="76" column="95" source="standard:function-literal" />
-        <error line="76" column="109" source="standard:function-literal" />
-        <error line="76" column="111" source="standard:function-literal" />
-        <error line="76" column="121" source="standard:max-line-length" />
-        <error line="95" column="121" source="standard:max-line-length" />
-        <error line="113" column="121" source="standard:max-line-length" />
+        <error line="79" column="35" source="standard:function-literal" />
+        <error line="79" column="95" source="standard:function-literal" />
+        <error line="79" column="109" source="standard:function-literal" />
+        <error line="79" column="111" source="standard:function-literal" />
+        <error line="79" column="121" source="standard:max-line-length" />
+        <error line="98" column="121" source="standard:max-line-length" />
+        <error line="116" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/sync/P2PServer.kt">
         <error line="205" column="121" source="standard:max-line-length" />
