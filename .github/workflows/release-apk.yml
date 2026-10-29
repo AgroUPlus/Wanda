@@ -50,11 +50,15 @@ jobs:
       # The R8 mapping is the only way to read a stack trace from this exact build; a local
       # rebuild of the same commit does not reproduce it.
       - name: Compress R8 mapping
-        run: gzip -c app/build/outputs/mapping/release/mapping.txt > "mapping-${{ github.event.release.tag_name }}.txt.gz"
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: gzip -c app/build/outputs/mapping/release/mapping.txt > "mapping-${TAG_NAME}.txt.gz"
 
       # Tags are already "vX.Y.Z", so the asset reads "Wanda-vX.Y.Z.apk".
       - name: Rename APK
-        run: mv app/build/outputs/apk/release/app-release.apk "Wanda-${{ github.event.release.tag_name }}.apk"
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: mv app/build/outputs/apk/release/app-release.apk "Wanda-${TAG_NAME}.apk"
 
       # The keystore and its passwords are not needed past the build, so they are gone before
       # any third-party code runs. The always() step below still covers a failed build.
