@@ -207,13 +207,16 @@ class P2PServer @Inject constructor(
                 return
             }
 
+            // Only peers on the Wi-Fi Direct group the user accepted may pair or unpair, never the
+            // LAN: unpairing takes no grant, so from the LAN anyone could drop a paired peer.
+            val pairingPath = path.startsWith("/p2p/pair") || path.startsWith("/p2p/unpair")
+            if (pairingPath && !WifiDirectInterface.carries(s.localAddress)) {
+                Log.w(TAG, "Pairing refused: request did not arrive over Wi-Fi Direct")
+                audioWriter.writeForbidden(output)
+                return
+            }
+
             if (method == "GET" && path.startsWith("/p2p/pair")) {
-                // Only peers on the Wi-Fi Direct group the user accepted may pair, never the LAN.
-                if (!WifiDirectInterface.carries(s.localAddress)) {
-                    Log.w(TAG, "Pairing refused: request did not arrive over Wi-Fi Direct")
-                    audioWriter.writeForbidden(output)
-                    return
-                }
                 val requesterKey = Uri.parse("http://localhost$path").getQueryParameter("key").orEmpty()
                 val sealed = grantManager.mintPairingGrant(requesterKey)
                 val response = if (sealed == null) {
