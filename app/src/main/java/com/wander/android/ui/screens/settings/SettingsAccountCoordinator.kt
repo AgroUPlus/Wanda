@@ -91,12 +91,10 @@ internal class SettingsAccountCoordinator @Inject constructor(
             if (secureStorage.navidromeConfigured.value) {
                 runCatching { navidromeSource.logout() }
             }
-            if (accountManager.isLoggedIn.value) {
-                runCatching { accountManager.signOut() }
-            }
-            if (deezerAccountManager.isLoggedIn.value) {
-                runCatching { deezerAccountManager.signOut() }
-            }
+            // Signed in or not: an abandoned sign-in can leave WebView cookies behind that were
+            // never captured, and both sign-outs are what clear CookieManager and WebStorage.
+            runCatching { accountManager.signOut() }
+            runCatching { deezerAccountManager.signOut() }
             secureStorage.clearAllCredentials()
             runCatching { socialRepository.clear() }
             runCatching { dropsRepository.clear() }
