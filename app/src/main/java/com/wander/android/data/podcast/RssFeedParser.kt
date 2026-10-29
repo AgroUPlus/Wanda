@@ -67,6 +67,9 @@ object RssFeedParser {
     }
 
     /** Null for an item with no audio to play: show notes and announcements share the feed. */
+    private fun isWebUrl(url: String): Boolean =
+        url.startsWith("https://", ignoreCase = true) || url.startsWith("http://", ignoreCase = true)
+
     private fun parseItem(parser: XmlPullParser): ParsedEpisode? {
         val depth = parser.depth
         var title: String? = null
@@ -89,7 +92,9 @@ object RssFeedParser {
                 "guid" -> guid = parser.nextText().trim().ifBlank { null }
                 "pubDate" -> published = parseDate(parser.nextText())
                 "enclosure" -> {
-                    audio = parser.getAttributeValue(null, "url")?.trim()?.ifBlank { null }
+                    // Web audio only: a feed is untrusted, and the player and the P2P server
+                    // would otherwise open whatever `file:` or `content:` address it names.
+                    audio = parser.getAttributeValue(null, "url")?.trim()?.takeIf(::isWebUrl)
                     mime = parser.getAttributeValue(null, "type")
                 }
                 "itunes:duration" -> duration = parseDurationMs(parser.nextText())
