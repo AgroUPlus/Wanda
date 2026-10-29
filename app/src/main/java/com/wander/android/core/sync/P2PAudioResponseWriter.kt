@@ -70,8 +70,8 @@ internal class P2PAudioResponseWriter(
             val f = File(track.localFilePath)
             return Pair(f.inputStream(), f.length())
         }
-        if (track?.streamUri != null) {
-            val uri = Uri.parse(track.streamUri)
+        val uri = PeerServableUri.of(track?.streamUri)
+        if (uri != null) {
             val s = runCatching { context.contentResolver.openInputStream(uri) }.getOrNull()
             val len = runCatching { context.contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize } }.getOrNull() ?: -1L
             if (s != null) return Pair(s, len)

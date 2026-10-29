@@ -1,7 +1,6 @@
 package com.wander.android.data.sources.agro
 
 import android.content.Context
-import android.net.Uri
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.network.HttpClientFactory
 import com.wander.android.core.security.AudioStreamCipher
@@ -9,6 +8,7 @@ import com.wander.android.core.security.AudioStreamKeys
 import com.wander.android.core.security.IdentityKeyManager
 import com.wander.android.core.security.RelayStreamFraming
 import com.wander.android.core.security.SecureStorage
+import com.wander.android.core.sync.PeerServableUri
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -103,13 +103,14 @@ class AgroRelayClient @Inject constructor(
             val server = base ?: return@launch
             val track = trackDao.findByContentHash(contentHash) ?: return@launch
 
+            val servable = PeerServableUri.of(track.streamUri)
             val (inputProvider, size) = when {
                 track.localFilePath != null && File(track.localFilePath).exists() -> {
                     val file = File(track.localFilePath)
                     Pair({ file.inputStream() }, file.length())
                 }
-                track.streamUri != null -> {
-                    val uri = Uri.parse(track.streamUri)
+                servable != null -> {
+                    val uri = servable
                     // Size comes from the file descriptor, not from `available()` on a probe
                     // stream: `available()` reports what can be read without blocking rather than
                     // the length, and the probe stream was being opened and never closed.
