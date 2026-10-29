@@ -49,6 +49,8 @@ class PlaybackService : MediaSessionService() {
     @Inject lateinit var loudnessReadout: LoudnessReadout
     @Inject lateinit var jamSkipGate: JamSkipGate
     @Inject internal lateinit var scrobbleForwarding: com.wander.android.data.repository.ScrobbleForwarding
+    @Inject @field:com.wander.android.di.ArtworkHttpClient
+    lateinit var artworkHttpClient: okhttp3.OkHttpClient
 
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private var mediaSession: MediaSession? = null
@@ -86,6 +88,20 @@ class PlaybackService : MediaSessionService() {
 
         mediaSession = MediaSession.Builder(this, sessionPlayer)
             .setSessionActivity(sessionActivity)
+            // The default loader fetches over a plain HTTP stack. Navidrome artwork URLs carry no
+            // credentials, so they are loaded through the client that signs them. Same size cap
+            // as the default; Media3 still wraps this in its size and cache loaders.
+            .setBitmapLoader(
+                androidx.media3.datasource.DataSourceBitmapLoader.Builder(this)
+                    .setDataSourceFactory(
+                        androidx.media3.datasource.DefaultDataSource.Factory(
+                            this,
+                            androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(artworkHttpClient)
+                        )
+                    )
+                    .setMaximumOutputDimension(MediaSession.getBitmapDimensionLimit(this) * 2 - 1)
+                    .build()
+            )
             .setCallback(object : MediaSession.Callback {
                 override fun onConnect(
                     session: MediaSession,

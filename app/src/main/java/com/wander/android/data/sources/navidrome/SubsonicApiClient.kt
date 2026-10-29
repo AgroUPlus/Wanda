@@ -8,8 +8,6 @@ import io.ktor.http.URLBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
-import java.security.MessageDigest
-import java.security.SecureRandom
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,32 +17,17 @@ import javax.inject.Singleton
  */
 @Singleton
 class SubsonicApiClient @Inject constructor(
-    private val client: HttpClient
+    private val client: HttpClient,
+    private val credentials: SubsonicCredentials
 ) {
-    private var baseUrl: String = ""
-    private var username: String = ""
-    private var password: String = ""
+    private val baseUrl: String get() = credentials.baseUrl
 
-    val isConfigured: Boolean
-        get() = baseUrl.isNotBlank() && username.isNotBlank() && password.isNotBlank()
+    val isConfigured: Boolean get() = credentials.isConfigured
 
-    fun configure(serverUrl: String, user: String, pass: String) {
-        baseUrl = serverUrl.trim().trimEnd('/')
-        username = user.trim()
-        password = pass.trim()
-    }
+    fun configure(serverUrl: String, user: String, pass: String) =
+        credentials.configure(serverUrl, user, pass)
 
-    private fun authParams(): Map<String, String> {
-        val salt = ByteArray(SALT_BYTES).also { SecureRandom().nextBytes(it) }.toHex()
-        return mapOf(
-            "u" to username,
-            "t" to md5(password + salt),
-            "s" to salt,
-            "v" to API_VERSION,
-            "c" to CLIENT_NAME,
-            "f" to "json"
-        )
-    }
+    private fun authParams(): Map<String, String> = credentials.authParams()
 
     /** Every endpoint funnels through here, so auth and error mapping exist in exactly one place. */
     private suspend fun call(
@@ -225,30 +208,16 @@ class SubsonicApiClient @Inject constructor(
      */
     fun buildCoverArtUrl(coverArtId: String?, size: Int = 1000): String? {
         if (coverArtId.isNullOrBlank()) return null
-        return buildUrl("getCoverArt.view", mapOf("id" to coverArtId, "size" to size.toString()))
+        // No credentials: this URL is stored, shared and put on the media session. The clients
+        // that load artwork sign it when they fetch it, see [SubsonicCredentials.sign].
+        return URLBuilder("$baseUrl/rest/getCoverArt.view").apply {
+            parameters.append("id", coverArtId)
+            parameters.append("size", size.toString())
+        }.buildString()
     }
 
     private fun buildUrl(endpoint: String, params: Map<String, String>): String =
         URLBuilder("$baseUrl/rest/$endpoint").apply {
             (authParams() + params).forEach { (k, v) -> parameters.append(k, v) }
         }.buildString()
-
-    private companion object {
-        const val API_VERSION = "1.16.1"
-        const val CLIENT_NAME = "Wanda"
-        const val SALT_BYTES = 8
-
-        /**
-         * MD5 is not a choice here. Subsonic 1.16.1 defines authentication as
-         * `t=md5(password + salt)` with the salt sent alongside in the clear, and a Navidrome or
-         * Subsonic server will reject anything else — there is no stronger digest to negotiate.
-         * The salt is 8 bytes of [SecureRandom] and is fresh per request, so the token is not
-         * replayable across calls, and the exchange only ever happens over HTTPS.
-         */
-        @Suppress("kotlin:S4790") // Protocol-mandated digest, not a password hash of our choosing.
-        fun md5(input: String): String =
-            MessageDigest.getInstance("MD5").digest(input.toByteArray(Charsets.UTF_8)).toHex()
-
-        fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
-    }
 }

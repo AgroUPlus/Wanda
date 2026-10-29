@@ -2,6 +2,7 @@ package com.wander.android
 
 import com.wander.android.core.network.HttpClientFactory
 import com.wander.android.data.sources.navidrome.SubsonicApiClient
+import com.wander.android.data.sources.navidrome.SubsonicCredentials
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -9,7 +10,7 @@ class SubsonicAuthTest {
 
     @Test
     fun testSubsonicClientConfiguration() {
-        val client = SubsonicApiClient(HttpClientFactory.ktorClient)
+        val client = SubsonicApiClient(HttpClientFactory.ktorClient, SubsonicCredentials())
         client.configure("https://demo.navidrome.org", "testuser", "secretpass")
         assertTrue(client.isConfigured)
 

@@ -3,6 +3,7 @@ package com.wander.android.di
 import android.content.Context
 import com.wander.android.core.network.HttpClientFactory
 import com.wander.android.core.network.ProxyRouting
+import com.wander.android.data.sources.navidrome.SubsonicRequestSigner
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -63,7 +64,8 @@ object NetworkModule {
     @Singleton
     fun provideOkHttpClient(
         @ApplicationContext context: Context,
-        secureStorage: com.wander.android.core.security.SecureStorage
+        secureStorage: com.wander.android.core.security.SecureStorage,
+        subsonicSigner: SubsonicRequestSigner
     ): OkHttpClient {
         return HttpClientFactory.okHttpClient.newBuilder()
             .cache(Cache(context.cacheDir.resolve("http_cache"), HTTP_CACHE_SIZE_BYTES))
@@ -84,6 +86,8 @@ object NetworkModule {
                     response
                 }
             }
+            // Before the proxy rewrite, which copies the request URL into a header.
+            .addInterceptor(subsonicSigner)
             .addInterceptor { chain ->
                 val request = chain.request()
 
@@ -109,6 +113,14 @@ object NetworkModule {
             }
             .build()
     }
+
+    @Provides
+    @Singleton
+    @ArtworkHttpClient
+    fun provideArtworkHttpClient(subsonicSigner: SubsonicRequestSigner): OkHttpClient =
+        HttpClientFactory.okHttpClient.newBuilder()
+            .addInterceptor(subsonicSigner)
+            .build()
 
     @Provides
     @Singleton

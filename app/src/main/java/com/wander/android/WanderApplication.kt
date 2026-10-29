@@ -14,7 +14,6 @@ import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.wander.android.core.cache.DownloadScheduler
 import com.wander.android.core.database.DatabaseCompatibility
-import com.wander.android.core.network.HttpClientFactory
 import com.wander.android.core.security.LegacyWebViewPurge
 import com.wander.android.core.sync.ScrobbleSyncScheduler
 import com.wander.android.core.sync.SharedPlaylistSyncScheduler
@@ -40,6 +39,8 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
     @Inject lateinit var p2pServer: com.wander.android.core.sync.P2PServer
     @Inject lateinit var secureStorage: com.wander.android.core.security.SecureStorage
     @Inject lateinit var likedTrackCacheProtector: com.wander.android.data.repository.LikedTrackCacheProtector
+    @Inject @field:com.wander.android.di.ArtworkHttpClient
+    lateinit var artworkHttpClient: okhttp3.OkHttpClient
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -53,8 +54,9 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
         return ImageLoader.Builder(context)
             .components {
                 // Share the app's client so artwork reuses one connection pool and the
-                // default User-Agent interceptor, instead of Coil spinning up its own.
-                add(OkHttpNetworkFetcherFactory(callFactory = { HttpClientFactory.okHttpClient }))
+                // default User-Agent interceptor, instead of Coil spinning up its own. It also
+                // signs Navidrome cover art, whose stored URLs carry no credentials.
+                add(OkHttpNetworkFetcherFactory(callFactory = { artworkHttpClient }))
             }
             .memoryCache {
                 MemoryCache.Builder()
