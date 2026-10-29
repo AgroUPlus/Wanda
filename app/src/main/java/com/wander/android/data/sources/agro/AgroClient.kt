@@ -53,6 +53,10 @@ class AgroClient @Inject constructor(
     suspend fun parseQrCodePayload(qrString: String): Result<String?> =
         pairingCoordinator.parseQrCodePayload(qrString)
 
+    /** The server host and username a pairing link names, or null when it is not one. */
+    fun describePairingLink(link: String): Pair<String, String>? =
+        pairingCoordinator.describePairingLink(link)
+
     /**
      * Exchanges a passphrase for a device token, unwrap or enrols the account vault key, then pairs.
      */

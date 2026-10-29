@@ -39,22 +39,15 @@ class AgroPairingCoordinator @Inject constructor(
             ?: secureStorage.agroServerUrl.takeIf { it.isNotBlank() }
             ?: AgroClient.DEFAULT_SERVER_URL
 
-        val vaultKeyParam = uri.getQueryParameter("vaultKey") ?: uri.getQueryParameter("vault_key")
-        if (!vaultKeyParam.isNullOrBlank()) {
-            val decodedKey = runCatching {
-                if (vaultKeyParam.length == 64 && vaultKeyParam.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) {
-                    AgroVault.decodeHex(vaultKeyParam)
-                } else {
-                    AgroVault.decodeBase64(vaultKeyParam)
-                }
-            }.getOrNull()
-            if (decodedKey != null && decodedKey.size == 32) {
-                secureStorage.agroVaultKey = decodedKey
-            }
-        }
+        // The vault key encrypts backups and handoffs, so it is only taken once the server it came
+        // with has accepted this device. Stored up front, a link whose pairing failed still left a
+        // key its sender knows in place.
+        val vaultKey = decodeVaultKey(uri.getQueryParameter("vaultKey") ?: uri.getQueryParameter("vault_key"))
 
         uri.getQueryParameter("token")?.takeIf { it.isNotBlank() }?.let { token ->
-            return pairWithToken(server, user, token)
+            return pairWithToken(server, user, token).onSuccess {
+                if (vaultKey != null) secureStorage.agroVaultKey = vaultKey
+            }
         }
         val legacy = uri.getQueryParameter("passphrase") ?: uri.getQueryParameter("key").orEmpty()
         if (legacy.isBlank()) {
@@ -139,6 +132,38 @@ class AgroPairingCoordinator @Inject constructor(
         }
     }
 
+    private fun decodeVaultKey(param: String?): ByteArray? {
+        if (param.isNullOrBlank()) return null
+        val decoded = runCatching {
+            if (param.length == HEX_KEY_LENGTH && param.all { it in HEX_DIGITS }) {
+                AgroVault.decodeHex(param)
+            } else {
+                AgroVault.decodeBase64(param)
+            }
+        }.getOrNull()
+        return decoded?.takeIf { it.size == 32 }
+    }
+
+    /**
+     * The server host and username an `agro://connect` link names, for asking the user before it
+     * is acted on. Null when the link is not one [parseQrCodePayload] would accept.
+     */
+    fun describePairingLink(link: String): Pair<String, String>? {
+        val trimmed = link.trim()
+        val uri = if (trimmed.startsWith("agro://connect")) {
+            runCatching { android.net.Uri.parse(trimmed) }.getOrNull()
+        } else {
+            null
+        }
+        return uri?.let {
+            val server = it.getQueryParameter("server")?.takeIf { s -> s.isNotBlank() }
+                ?: secureStorage.agroServerUrl.takeIf { s -> s.isNotBlank() }
+                ?: AgroClient.DEFAULT_SERVER_URL
+            val host = normalizeServerUrl(server)?.let { url -> android.net.Uri.parse(url).host } ?: server
+            host to it.getQueryParameter("username").orEmpty()
+        }
+    }
+
     private fun bytesToHex(bytes: ByteArray): String =
         bytes.joinToString("") { "%02x".format(it) }
 
@@ -182,5 +207,10 @@ class AgroPairingCoordinator @Inject constructor(
         if (uri.host.isNullOrBlank()) return null
         if (uri.scheme != "http" && uri.scheme != "https") return null
         return withScheme
+    }
+
+    private companion object {
+        const val HEX_KEY_LENGTH = 64
+        const val HEX_DIGITS = "0123456789abcdefABCDEF"
     }
 }

@@ -19,6 +19,8 @@ import com.wander.android.data.sources.agro.MissingTrack
 import com.wander.android.data.sources.agro.SyncRoute
 import com.wander.android.data.sources.local.LocalMusicSource
 import com.wander.android.ui.navigation.DeepLinkRouter
+import com.wander.android.ui.navigation.LinkConfirmation
+import com.wander.android.ui.navigation.LinkConfirmations
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.merge
@@ -41,6 +43,7 @@ class WanderAppViewModel @Inject constructor(
     private val networkCoordinator: NetworkPromptCoordinator,
     private val secureStorage: SecureStorage,
     private val deepLinkRouter: DeepLinkRouter,
+    private val linkConfirmations: LinkConfirmations,
     private val updateChecker: UpdateChecker,
     private val instantRadio: InstantRadioRepository,
     private val playerConnection: PlayerConnection,
@@ -88,6 +91,17 @@ class WanderAppViewModel @Inject constructor(
     val deepLinkRoutes = deepLinkRouter.routes
 
     fun consumeDeepLink() = deepLinkRouter.consume()
+
+    /** A link waiting on the user's yes before it acts on the account. */
+    val pendingLinkConfirmation: StateFlow<LinkConfirmation?> = linkConfirmations.pending
+
+    fun confirmLink(confirmation: LinkConfirmation) {
+        if (linkConfirmations.resolve(confirmation)) viewModelScope.launch { confirmation.onConfirm() }
+    }
+
+    fun dismissLink(confirmation: LinkConfirmation) {
+        linkConfirmations.resolve(confirmation)
+    }
 
     /** Library writes that failed to reach their backend — shown as a snackbar, not swallowed. */
     val writeErrors = musicRepository.writeErrors

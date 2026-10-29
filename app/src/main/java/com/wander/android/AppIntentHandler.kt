@@ -28,6 +28,8 @@ import com.wander.android.data.sources.agro.explain
 import com.wander.android.data.sources.ytmusic.YouTubeEntity
 import com.wander.android.data.sources.ytmusic.YouTubeEntityKind
 import com.wander.android.ui.navigation.DeepLinkRouter
+import com.wander.android.ui.navigation.LinkConfirmation
+import com.wander.android.ui.navigation.LinkConfirmations
 import com.wander.android.ui.navigation.Routes
 import com.wander.android.ui.screens.settings.SettingsCategory
 import com.wander.android.ui.navigation.TopLevelDestination
@@ -55,7 +57,8 @@ internal class AppIntentHandler @Inject constructor(
     private val catalogRepository: CatalogRepository,
     private val shareLinkRewriter: ShareLinkRewriter,
     private val deepLinkRouter: DeepLinkRouter,
-    private val socialRepository: SocialRepository
+    private val socialRepository: SocialRepository,
+    private val linkConfirmations: LinkConfirmations
 ) {
     /**
      * Links arrive here: an `agro:` pairing QR, a YouTube/YouTube Music track
@@ -66,7 +69,7 @@ internal class AppIntentHandler @Inject constructor(
         val uri = intent?.data ?: return
         val entity = linkRepository.sharedEntity(uri)
         when {
-            uri.scheme == "agro" -> handleAgroPairing(scope, uri)
+            uri.scheme == "agro" -> handleAgroPairing(uri)
             uri.scheme == "wanda" && uri.host == "inbox" -> deepLinkRouter.request(Routes.ACTIVITY)
             uri.scheme == "wanda" && uri.host == "fingerprints" -> deepLinkRouter.request(Routes.FINGERPRINTS)
             // From the listening-together notifications: the room, and where incognito lives.
@@ -261,19 +264,32 @@ internal class AppIntentHandler @Inject constructor(
         }
     }
 
-    private fun handleAgroPairing(scope: CoroutineScope, uri: Uri) {
-        scope.launch {
-            val result = agroClient.parseQrCodePayload(uri.toString())
-            val message = result.fold(
-                onSuccess = { petname ->
-                    "Paired with Agro as ${petname ?: secureStorage.agroDevicePetname.ifEmpty { "wanda" }}"
-                },
-                onFailure = { error ->
-                    android.util.Log.w("Wanda", "Agro pairing failed: ${error.message}")
-                    AgroAuthError.from(error).explain(context)
+    // Any page or app can fire this link, and pairing hands the account to the server it names,
+    // so nothing happens until the user has seen that server and said yes.
+    private fun handleAgroPairing(uri: Uri) {
+        val (host, username) = agroClient.describePairingLink(uri.toString()) ?: run {
+            Toast.makeText(context, R.string.link_agro_pair_invalid, Toast.LENGTH_LONG).show()
+            return
+        }
+        linkConfirmations.ask(
+            LinkConfirmation(
+                title = R.string.link_agro_pair_title,
+                message = R.string.link_agro_pair_message,
+                messageArgs = listOf(host, username.ifBlank { "?" }),
+                confirmLabel = R.string.link_agro_pair_confirm,
+                onConfirm = {
+                    val message = agroClient.parseQrCodePayload(uri.toString()).fold(
+                        onSuccess = { petname ->
+                            "Paired with Agro as ${petname ?: secureStorage.agroDevicePetname.ifEmpty { "wanda" }}"
+                        },
+                        onFailure = { error ->
+                            android.util.Log.w("Wanda", "Agro pairing failed: ${error.message}")
+                            AgroAuthError.from(error).explain(context)
+                        }
+                    )
+                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                 }
             )
-            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-        }
+        )
     }
 }

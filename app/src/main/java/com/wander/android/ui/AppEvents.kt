@@ -5,8 +5,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.ui.components.ConfirmDialog
 import com.wander.android.ui.components.NetworkStateDialog
 import com.wander.android.ui.components.launchShareSheet
 
@@ -74,6 +76,18 @@ internal fun AppEvents(
             prompt = prompt,
             onConfirm = { viewModel.acceptNetworkPrompt(prompt) },
             onDismiss = { viewModel.dismissNetworkPrompt(prompt) }
+        )
+    }
+
+    // Pairing links can be fired by any page or app, so they wait here for a yes.
+    val linkConfirmation by viewModel.pendingLinkConfirmation.collectAsStateWithLifecycle()
+    linkConfirmation?.let { request ->
+        ConfirmDialog(
+            title = stringResource(request.title),
+            message = stringResource(request.message, *request.messageArgs.toTypedArray()),
+            confirmLabel = stringResource(request.confirmLabel),
+            onConfirm = { viewModel.confirmLink(request) },
+            onDismiss = { viewModel.dismissLink(request) }
         )
     }
 }
