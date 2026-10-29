@@ -3,6 +3,7 @@ package com.wander.android.data.sources.agro
 import android.content.Context
 import android.net.Uri
 import com.wander.android.core.database.dao.TrackDao
+import com.wander.android.core.network.HttpClientFactory
 import com.wander.android.core.security.AudioStreamCipher
 import com.wander.android.core.security.AudioStreamKeys
 import com.wander.android.core.security.IdentityKeyManager
@@ -17,7 +18,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -43,7 +43,7 @@ class AgroRelayClient @Inject constructor(
     private val base: String? get() = secureStorage.agroServerUrl.trimEnd('/').takeIf { it.isNotBlank() }
     private val apiKey get() = secureStorage.agroApiKey
 
-    private val relayClient = OkHttpClient.Builder()
+    private val relayClient = HttpClientFactory.okHttpClient.newBuilder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)

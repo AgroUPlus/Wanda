@@ -1,6 +1,7 @@
 package com.wander.android.data.repository
 
 import android.util.Log
+import com.wander.android.core.network.HttpClientFactory
 import com.wander.android.core.p2p.OffGridTransport
 import com.wander.android.core.security.IdentityKeyManager
 import com.wander.android.core.security.SecureStorage
@@ -10,7 +11,6 @@ import com.wander.android.data.sources.StreamInfo
 import com.wander.android.data.sources.agro.AgroRelayClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.net.URLEncoder
 import java.util.UUID
@@ -31,7 +31,7 @@ internal class ListenAlongPeerResolver @Inject constructor(
     private val offGrid: OffGridTransport,
     private val identityKeyManager: IdentityKeyManager
 ) {
-    private val probeClient = OkHttpClient.Builder()
+    private val probeClient = HttpClientFactory.okHttpClient.newBuilder()
         .connectTimeout(1500, TimeUnit.MILLISECONDS)
         .readTimeout(2000, TimeUnit.MILLISECONDS)
         .build()

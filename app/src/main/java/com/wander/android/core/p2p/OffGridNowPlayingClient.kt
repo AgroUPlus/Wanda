@@ -1,9 +1,9 @@
 package com.wander.android.core.p2p
 
+import com.wander.android.core.network.HttpClientFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -21,7 +21,7 @@ import javax.inject.Singleton
 @Singleton
 internal class OffGridNowPlayingClient @Inject constructor() {
 
-    private val client = OkHttpClient.Builder()
+    private val client = HttpClientFactory.okHttpClient.newBuilder()
         .connectTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
         .readTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
         .build()

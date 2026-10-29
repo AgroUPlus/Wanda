@@ -1,10 +1,10 @@
 package com.wander.android.core.p2p
 
 import android.util.Base64
+import com.wander.android.core.network.HttpClientFactory
 import com.wander.android.core.security.IdentityKeyManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -38,7 +38,7 @@ internal class OffGridPairing @Inject constructor(
      * A short timeout on purpose: the peer is one radio hop away, and a user who has just tapped a
      * name is waiting. A link that cannot answer in seconds is not a link worth waiting on.
      */
-    private val client = OkHttpClient.Builder()
+    private val client = HttpClientFactory.okHttpClient.newBuilder()
         .connectTimeout(PAIR_TIMEOUT_MS, TimeUnit.MILLISECONDS)
         .readTimeout(PAIR_TIMEOUT_MS, TimeUnit.MILLISECONDS)
         .build()
