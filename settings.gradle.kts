@@ -16,7 +16,12 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url = java.net.URI.create("https://jitpack.io") }
+        // Only the one library built there: anything else missing from Google or Central must not
+        // quietly resolve from an unvetted build service instead.
+        maven {
+            url = java.net.URI.create("https://jitpack.io")
+            content { includeGroup("com.github.ZemerTeam") }
+        }
     }
 }
 
