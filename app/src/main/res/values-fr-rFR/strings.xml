@@ -291,6 +291,13 @@
     <string name="playlist_visibility_public_desc">Toute personne connectée à votre serveur Agro peut l\'ouvrir et le retrouver dans ses listes de lecture.</string>
     <string name="playlist_visibility_private">Juste moi</string>
     <string name="playlist_visibility_private_desc">Vous seul pouvez l\'ouvrir, par exemple sur vos autres appareils.</string>
+    <string name="link_agro_pair_title">Pair with this Agro server?</string>
+    <string name="link_agro_pair_message">A link wants to connect Wanda to %1$s as %2$s. Your library, listening activity and backups will go to that server. Only continue if you scanned or opened this yourself.</string>
+    <string name="link_agro_pair_confirm">Pair</string>
+    <string name="link_friend_title">Add a friend?</string>
+    <string name="link_friend_message">A link wants to redeem the friend code %1$s. Friends can see what you listen to. Only continue if you got this code from someone you know.</string>
+    <string name="link_friend_confirm">Add friend</string>
+    <string name="link_agro_pair_invalid">That Agro pairing link is not valid.</string>
     <string name="link_playlist_needs_agro">Cette playlist se trouve sur un serveur Agro. Associez-la dans les Paramètres pour l\'ouvrir.</string>
     <string name="link_playlist_agro_failed">Impossible d\'ouvrir cette playlist : %1$s</string>
     <string name="link_playlist_invalid">Le lien vers cette playlist est corrompu ou trop long pour s\'ouvrir.</string>
