@@ -107,8 +107,12 @@ class HomeViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            layoutStore.layout.collect { layout -> _uiState.update { it.copy(layout = layout) } }
+        }
+        // Apart from the layout itself: an online shelf takes seconds to build, and the next saved
+        // layout used to wait behind it, so a shelf dragged in the customizer snapped back.
+        viewModelScope.launch {
             layoutStore.layout.collect { layout ->
-                _uiState.update { it.copy(layout = layout) }
                 // Shelves the user added have no tracks until they are read, or after their settings change.
                 val changes = extras.sync(layout, _uiState.value.allSections)
                 _uiState.update { it.copy(allSections = changes.applyTo(it.allSections)) }
