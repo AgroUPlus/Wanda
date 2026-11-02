@@ -52,8 +52,11 @@ internal class FriendNotifier @Inject constructor(
         // Posting without POST_NOTIFICATIONS throws on API 33+. The permission is declared, but the
         // user may have refused it, and a refused notification must not take the socket down with
         // it — everything else that frame triggers still has to happen.
-        runCatching { manager.notify(notificationId(event), notification) }
-            .onFailure { android.util.Log.i(TAG, "could not post the friend notification") }
+        try {
+            manager.notify(notificationId(event), notification)
+        } catch (e: SecurityException) {
+            android.util.Log.i(TAG, "could not post the friend notification: ${e.javaClass.simpleName}")
+        }
     }
 
     /**
@@ -87,8 +90,11 @@ internal class FriendNotifier @Inject constructor(
             .setContentIntent(inboxIntent())
             .build()
 
-        runCatching { manager.notify(DROP_ID_BASE + drop.id.hashCode(), notification) }
-            .onFailure { android.util.Log.i(TAG, "could not post the drop notification") }
+        try {
+            manager.notify(DROP_ID_BASE + drop.id.hashCode(), notification)
+        } catch (e: SecurityException) {
+            android.util.Log.i(TAG, "could not post the drop notification: ${e.javaClass.simpleName}")
+        }
     }
 
     /**
@@ -106,8 +112,11 @@ internal class FriendNotifier @Inject constructor(
             .setContentIntent(inboxIntent())
             .build()
 
-        runCatching { manager.notify(BLEND_ID_BASE + invite.playlistId.hashCode(), notification) }
-            .onFailure { android.util.Log.i(TAG, "could not post the blend notification") }
+        try {
+            manager.notify(BLEND_ID_BASE + invite.playlistId.hashCode(), notification)
+        } catch (e: SecurityException) {
+            android.util.Log.i(TAG, "could not post the blend notification: ${e.javaClass.simpleName}")
+        }
     }
 
     /** One notification per person per kind, so repeated frames replace rather than stack up. */

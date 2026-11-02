@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.social
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.network.userMessageRes
 import com.wander.android.data.sources.agro.AgroFeedApi
 import com.wander.android.data.sources.agro.AgroFeedItem
 import com.wander.android.data.sources.agro.AgroRecap
@@ -19,7 +20,9 @@ internal data class CircleUiState(
     val feed: List<AgroFeedItem> = emptyList(),
     val recap: AgroRecap? = null,
     val period: String = "MONTH",
-    val loading: Boolean = true
+    val loading: Boolean = true,
+    /** A @StringRes saying why the feed or the recap could not be read, or null. */
+    val error: Int? = null
 )
 
 /**
@@ -28,7 +31,7 @@ internal data class CircleUiState(
  * Neither is cached in Room. Both are *derived* on the server from other people's plays, and a
  * local copy would outlive the switch that permitted it — the same reasoning that keeps presence
  * out of the database. An empty answer is the normal one for a circle that has not opted in, so
- * neither is treated as an error.
+ * neither is treated as an error; a failed answer is, and keeps what was on screen.
  */
 @HiltViewModel
 internal class CircleViewModel @Inject constructor(
@@ -49,9 +52,17 @@ internal class CircleViewModel @Inject constructor(
 
     fun load() {
         viewModelScope.launch {
-            val feed = feedApi.friendActivity().getOrElse { emptyList() }
-            val recap = feedApi.recap(_state.value.period).getOrNull()
-            _state.update { it.copy(feed = feed, recap = recap, loading = false) }
+            val feed = feedApi.friendActivity()
+            val recap = feedApi.recap(_state.value.period)
+            val failure = feed.exceptionOrNull() ?: recap.exceptionOrNull()
+            _state.update {
+                it.copy(
+                    feed = feed.getOrElse { _ -> it.feed },
+                    recap = recap.getOrElse { _ -> it.recap },
+                    error = failure?.userMessageRes(),
+                    loading = false
+                )
+            }
         }
     }
 }

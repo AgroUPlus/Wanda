@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.social
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.network.userMessageRes
 import com.wander.android.data.repository.ListenAlongController
 import com.wander.android.data.repository.ListenAlongSession
 import com.wander.android.core.security.SecureStorage
@@ -155,15 +156,16 @@ internal class SocialViewModel @Inject constructor(
     /**
      * Mints a code, replacing whichever one was on screen.
      *
-     * Cleared before the call so the panel shows it is working. A failure leaves it null, which
-     * the panel renders as still loading — correct, because a code that could not be minted is
-     * not a code the user should be shown as if it worked.
+     * Cleared before the call so the panel shows it is working. A failure leaves no code and says
+     * why, with a retry: a code that could not be minted is not one to show as if it worked, and
+     * a spinner that never ends is not an answer either.
      */
     fun refreshFriendCode() {
-        _search.value = _search.value.copy(friendCode = null)
+        _search.value = _search.value.copy(friendCode = null, friendCodeError = null)
         viewModelScope.launch {
-            val minted = repository.createFriendCode().getOrNull()
-            _search.value = _search.value.copy(friendCode = minted?.code)
+            repository.createFriendCode()
+                .onSuccess { minted -> _search.value = _search.value.copy(friendCode = minted.code) }
+                .onFailure { error -> _search.value = _search.value.copy(friendCodeError = error.userMessageRes()) }
         }
     }
 

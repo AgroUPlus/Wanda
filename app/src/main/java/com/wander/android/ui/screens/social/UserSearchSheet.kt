@@ -82,6 +82,7 @@ internal fun UserSearchSheet(
             FriendCodePanel(
                 visible = state.showingCode,
                 code = state.friendCode,
+                error = state.friendCodeError,
                 onRefresh = onRefreshCode,
                 onRevoke = onRevokeCode
             )

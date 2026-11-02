@@ -61,6 +61,8 @@ internal data class UserSearchState(
     val error: String? = null,
     /** True while the QR panel is showing. Never persisted — the code dies with the sheet. */
     val showingCode: Boolean = false,
-    /** Null while one is being minted. */
-    val friendCode: String? = null
+    /** Null while one is being minted, or when minting failed ([friendCodeError]). */
+    val friendCode: String? = null,
+    /** A @StringRes saying why no code could be minted, or null. */
+    val friendCodeError: Int? = null
 )

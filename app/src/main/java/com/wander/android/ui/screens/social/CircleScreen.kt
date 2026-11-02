@@ -26,6 +26,7 @@ import com.wander.android.R
 import com.wander.android.ui.components.ConnectedToggleGroup
 import com.wander.android.ui.components.CuteAvatar
 import com.wander.android.ui.components.EmptyState
+import com.wander.android.ui.components.LoadErrorState
 import com.wander.android.ui.components.PersonShape
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
@@ -56,7 +57,16 @@ internal fun CircleScreen(
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
         )
 
+        state.error?.let { error ->
+            LoadErrorState(
+                message = error,
+                onRetry = viewModel::load,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
+
         if (state.feed.isEmpty() && state.recap == null && !state.loading) {
+            if (state.error != null) return@Column
             EmptyState(
                 title = stringResource(R.string.social_nothing_circle_yet),
                 message = stringResource(R.string.social_friends_appear_here_once_they)

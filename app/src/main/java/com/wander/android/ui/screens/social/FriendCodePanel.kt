@@ -2,7 +2,9 @@ package com.wander.android.ui.screens.social
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -52,6 +54,7 @@ import kotlinx.coroutines.delay
 internal fun FriendCodePanel(
     visible: Boolean,
     code: String?,
+    @StringRes error: Int?,
     onRefresh: () -> Unit,
     onRevoke: () -> Unit,
     modifier: Modifier = Modifier
@@ -83,7 +86,16 @@ internal fun FriendCodePanel(
                 color = Color.White,
                 modifier = Modifier.size(QrSize)
             ) {
-                if (code == null) {
+                if (code == null && error != null) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = stringResource(error),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.Black,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                } else if (code == null) {
                     CircularWavyProgressIndicator(
                         modifier = Modifier.padding(QrSize / 3).aspectRatio(1f)
                     )
@@ -102,8 +114,8 @@ internal fun FriendCodePanel(
                 textAlign = TextAlign.Center
             )
 
-            TextButton(onClick = onRefresh, enabled = code != null, shapes = ButtonDefaults.shapes()) {
-                Text(stringResource(R.string.social_new_code))
+            TextButton(onClick = onRefresh, enabled = code != null || error != null, shapes = ButtonDefaults.shapes()) {
+                Text(stringResource(if (error != null) R.string.error_retry else R.string.social_new_code))
             }
         }
     }

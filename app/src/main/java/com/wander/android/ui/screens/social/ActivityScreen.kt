@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.wander.android.ui.components.LoadErrorState
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.ui.components.listInset
@@ -83,8 +84,18 @@ internal fun ActivityScreen(
             }
         }
 
+        state.error?.let { error ->
+            item(key = "error") {
+                LoadErrorState(
+                    message = error,
+                    onRetry = viewModel::refresh,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+        }
+
         val visible = state.visible
-        if (visible.isEmpty() && !state.loading && !showInvites) {
+        if (visible.isEmpty() && !state.loading && !showInvites && state.error == null) {
             item(key = "empty") {
                 ActivityEmptyState(
                     filter = state.filter,
