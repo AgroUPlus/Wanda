@@ -59,7 +59,13 @@ class PopularityRepository @Inject constructor(
         }
         if (entries.isEmpty()) return@withContext PopularOutcome.NoData
 
-        val localByKey = trackDao.getAllTracksOnce()
+        // Only the songs credited to the entries' artists are read and keyed, one query per
+        // artist: keying the whole library on every build held all of it in memory at once.
+        val localByKey = entries.map { primaryArtist(it.artist) }
+            .filter { it.isNotBlank() }
+            .distinctBy { it.lowercase() }
+            .flatMap { artist -> trackDao.getTracksByArtistOnce(artist) }
+            .distinctBy { it.id }
             .map(TrackEntity::toUnifiedTrack)
             .groupBy { TrackDeduplicator.recordingKey(it) }
 
@@ -155,6 +161,16 @@ private fun PendingScrobble.recordingKey(): String = TrackDeduplicator.recording
         durationMs = durationMs
     )
 )
+
+/**
+ * The first artist an entry credits, as typed: what a library row naming the same artist must
+ * contain. The recording key folds case, accents and "feat." clauses on top of this, and is still
+ * what decides a match; this only narrows which rows are worth keying.
+ */
+internal fun primaryArtist(artist: String): String =
+    CREDIT_SEPARATOR.split(artist, limit = 2).first().trim()
+
+private val CREDIT_SEPARATOR = Regex("""\s+(?:feat\.?|ft\.|featuring|&|x|with)\s+|,\s*""", RegexOption.IGNORE_CASE)
 
 /** What asking Agro for its popular songs came to. */
 sealed interface PopularOutcome {
