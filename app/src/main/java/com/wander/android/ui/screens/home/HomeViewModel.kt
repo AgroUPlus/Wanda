@@ -125,8 +125,13 @@ class HomeViewModel @Inject constructor(
     private fun observeLikes() {
         viewModelScope.launch {
             likedTrackIds.collect { liked ->
-                val updated = withContext(Dispatchers.Default) { _uiState.value.allSections.withLikes(liked) }
-                _uiState.update { it.copy(allSections = updated) }
+                val base = _uiState.value.allSections
+                val updated = withContext(Dispatchers.Default) { base.withLikes(liked) }
+                // Shelves that landed while this ran (the feed, an added shelf) must not be
+                // overwritten by the older list; those get the overlay here instead.
+                _uiState.update {
+                    it.copy(allSections = if (it.allSections === base) updated else it.allSections.withLikes(liked))
+                }
             }
         }
     }
