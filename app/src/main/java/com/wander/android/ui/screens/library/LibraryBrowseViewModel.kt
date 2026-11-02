@@ -1,9 +1,12 @@
 package com.wander.android.ui.screens.library
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.wander.android.core.database.dao.LibraryArtistRow
+import com.wander.android.core.database.dao.LibraryGenreRow
 import com.wander.android.data.model.LibrarySort
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
@@ -22,6 +25,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -39,7 +43,8 @@ class LibraryBrowseViewModel @Inject constructor(
     musicRepository: MusicRepository,
     private val browse: LibraryBrowseRepository,
     private val libraryPlayback: LibraryPlaybackCoordinator,
-    private val prefs: LibraryBrowsePrefs
+    private val prefs: LibraryBrowsePrefs,
+    private val savedState: SavedStateHandle
 ) : ViewModel() {
 
     private val _sorts = MutableStateFlow(
@@ -121,6 +126,23 @@ class LibraryBrowseViewModel @Inject constructor(
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val artists: StateFlow<List<LibraryArtistRow>> = sources
+        .flatMapLatest { filter -> browse.artists(filter) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val genres: StateFlow<List<LibraryGenreRow>> = sources
+        .flatMapLatest { filter -> browse.genres(filter) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** The genre the Genres page has open, or null for the list of genres. */
+    val openGenre: StateFlow<String?> = savedState.getStateFlow<String?>(KEY_GENRE, null)
+
+    fun openGenre(genre: String?) { savedState[KEY_GENRE] = genre }
+
+    val genreTracks: StateFlow<List<UnifiedTrack>> = combine(openGenre, sources, ::Pair)
+        .flatMapLatest { (genre, filter) -> genre?.let { browse.genreTracks(it, filter) } ?: flowOf(emptyList()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     /** Whether the Tracks tab has anything for Play all to play. */
     val hasTracks: StateFlow<Boolean> = sources
         .flatMapLatest { filter -> browse.hasTracks(filter) }
@@ -136,4 +158,8 @@ class LibraryBrowseViewModel @Inject constructor(
     fun playAllTracks() = libraryPlayback.playLibrary(viewModelScope, tracksSort, sources.value, shuffled = false)
 
     fun shuffleAllTracks() = libraryPlayback.playLibrary(viewModelScope, tracksSort, sources.value, shuffled = true)
+
+    private companion object {
+        const val KEY_GENRE = "library_open_genre"
+    }
 }

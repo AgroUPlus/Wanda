@@ -81,6 +81,9 @@ internal fun LibraryPage(
             val tracks = browse.tracks.collectAsLazyPagingItems()
             AllTracksPage(tracks, isSyncing, contentPadding, viewModel, browse, actions.onTrackLongPress)
         }
+        LibraryTab.ARTISTS -> LibraryArtistsPage(contentPadding, browse, actions.onOpenArtist)
+        LibraryTab.GENRES ->
+            LibraryGenresPage(contentPadding, viewModel, browse, isSyncing, actions.onTrackLongPress)
         LibraryTab.FOLLOWED -> FollowedArtistsPage(contentPadding, actions.onOpenArtist)
     }
 }

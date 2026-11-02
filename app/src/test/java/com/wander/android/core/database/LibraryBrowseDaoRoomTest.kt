@@ -97,6 +97,33 @@ class LibraryBrowseDaoRoomTest {
     }
 
     @Test
+    fun artistsComeFromTracksAndAlbumsAlike() = runBlocking {
+        db.albumDao().insertAlbums(
+            listOf(album("local:X", "X", artist = "ABBA"), album("local:Y", "Y", artist = "Only Album"))
+        )
+        val artists = db.libraryBrowseDao().observeLibraryArtists(SourceType.entries).first()
+
+        // "abba" and "ABBA" are one artist; an album-only artist is listed with no tracks.
+        assertEquals(listOf(1, 1, 0, 1), artists.map { it.trackCount })
+        assertEquals("Only Album", artists[2].name)
+    }
+
+    @Test
+    fun genresGroupWhateverTheCase() = runBlocking {
+        db.trackDao().insertNewTracks(
+            listOf(
+                track("local:4", "delta", artist = "A", album = "D", added = 4, plays = 0, played = null, genre = "Rock"),
+                track("local:5", "eps", artist = "A", album = "D", added = 5, plays = 0, played = null, genre = "rock")
+            )
+        )
+        val genres = db.libraryBrowseDao().observeLibraryGenres(SourceType.entries).first()
+        assertEquals(listOf(2), genres.map { it.trackCount })
+
+        val rock = db.libraryBrowseDao().observeGenreTracks("ROCK", SourceType.entries).first()
+        assertEquals(listOf("local:4", "local:5"), rock.map { it.id })
+    }
+
+    @Test
     fun albumsSortByTheirTracksPlays() = runBlocking {
         db.albumDao().insertAlbums(
             listOf(album("local:B", "B"), album("local:C", "C"), album("navidrome:A", "A"))
@@ -115,7 +142,8 @@ class LibraryBrowseDaoRoomTest {
         album: String,
         added: Long,
         plays: Int,
-        played: Long?
+        played: Long?,
+        genre: String? = null
     ) = TrackEntity(
         id = id,
         sourceTrackId = id.substringAfter(':'),
@@ -131,7 +159,7 @@ class LibraryBrowseDaoRoomTest {
         trackNumber = null,
         discNumber = null,
         year = null,
-        genre = null,
+        genre = genre,
         bitRateKbps = null,
         format = null,
         isLibrary = true,
@@ -140,12 +168,12 @@ class LibraryBrowseDaoRoomTest {
         addedTimestamp = added
     )
 
-    private fun album(id: String, title: String) = AlbumEntity(
+    private fun album(id: String, title: String, artist: String = "") = AlbumEntity(
         id = id,
         sourceAlbumId = title,
         source = if (id.startsWith("local:")) SourceType.LOCAL else SourceType.NAVIDROME,
         title = title,
-        artist = "",
+        artist = artist,
         artistId = null,
         coverArtUrl = null,
         isLibrary = true

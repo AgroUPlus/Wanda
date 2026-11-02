@@ -16,6 +16,9 @@ import com.wander.android.R
  * Liked comes first and is where the library opens: it is the collection you chose, small enough
  * to read at a glance, where Tracks is everything every source has ever handed over.
  *
+ * Artists and Genres are the library regrouped, read from the tags its tracks already carry —
+ * no source needs to support browsing by either.
+ *
  * Followed is off until it is turned on (see [LibraryTab.Default]): it needs a paired Agro server,
  * and a tab that opens on "pair a server first" is not one to hand everyone by default.
  */
@@ -23,6 +26,8 @@ enum class LibraryTab(@StringRes val label: Int) {
     LIKED(R.string.library_tab_liked),
     TRACKS(R.string.library_tab_tracks),
     ALBUMS(R.string.library_tab_albums),
+    ARTISTS(R.string.library_tab_artists),
+    GENRES(R.string.library_tab_genres),
     PLAYLISTS(R.string.library_tab_playlists),
     PODCASTS(R.string.library_tab_podcasts),
     DOWNLOADS(R.string.library_tab_offline),

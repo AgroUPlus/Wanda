@@ -4,7 +4,9 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
+import com.wander.android.core.database.dao.LibraryArtistRow
 import com.wander.android.core.database.dao.LibraryBrowseDao
+import com.wander.android.core.database.dao.LibraryGenreRow
 import com.wander.android.core.database.entity.AlbumEntity
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.LibrarySort
@@ -75,6 +77,15 @@ class LibraryBrowseRepository @Inject constructor(private val dao: LibraryBrowse
         }
         return rows.map { list -> list.map(AlbumEntity::toUnifiedAlbum) }.flowOn(Dispatchers.Default)
     }
+
+    fun artists(sources: Set<SourceType>): Flow<List<LibraryArtistRow>> =
+        dao.observeLibraryArtists(sources.orEvery()).distinctUntilChanged()
+
+    fun genres(sources: Set<SourceType>): Flow<List<LibraryGenreRow>> =
+        dao.observeLibraryGenres(sources.orEvery()).distinctUntilChanged()
+
+    fun genreTracks(genre: String, sources: Set<SourceType>): Flow<List<UnifiedTrack>> =
+        dao.observeGenreTracks(genre, sources.orEvery()).toTracks()
 
     private fun Flow<List<TrackEntity>>.toTracks(): Flow<List<UnifiedTrack>> =
         map { list -> list.map(TrackEntity::toUnifiedTrack) }.flowOn(Dispatchers.Default)

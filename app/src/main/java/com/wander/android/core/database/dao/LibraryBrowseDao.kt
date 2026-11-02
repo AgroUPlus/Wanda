@@ -119,4 +119,47 @@ interface LibraryBrowseDao {
         """
     )
     fun observeLibraryAlbumsByActivity(sort: String, sources: List<SourceType>): Flow<List<AlbumEntity>>
+
+    /**
+     * The library's artists, A to Z, from its tracks and its albums together: a Navidrome album
+     * is often known before any of its songs are.
+     *
+     * Grouped on the credit as printed, case-insensitively. A track credited to "A, B" is filed
+     * under that whole credit — splitting it would need `ArtistIdentity`, which is Kotlin, not SQL.
+     */
+    @Query(
+        """
+        SELECT name, MAX(artistId) AS artistId, SUM(isTrack) AS trackCount FROM (
+            SELECT artist AS name, artistId, 1 AS isTrack FROM tracks WHERE $LIBRARY_TRACKS
+            UNION ALL
+            SELECT artist AS name, artistId, 0 AS isTrack FROM albums
+            WHERE isLibrary = 1 AND source IN (:sources)
+        )
+        WHERE TRIM(name) != ''
+        GROUP BY name COLLATE NOCASE
+        ORDER BY name COLLATE NOCASE ASC
+        """
+    )
+    fun observeLibraryArtists(sources: List<SourceType>): Flow<List<LibraryArtistRow>>
+
+    /** The genre tags on the library's tracks, A to Z, with how many tracks carry each. */
+    @Query(
+        """
+        SELECT genre AS name, COUNT(*) AS trackCount FROM tracks
+        WHERE $LIBRARY_TRACKS AND genre IS NOT NULL AND TRIM(genre) != ''
+        GROUP BY genre COLLATE NOCASE
+        ORDER BY genre COLLATE NOCASE ASC
+        """
+    )
+    fun observeLibraryGenres(sources: List<SourceType>): Flow<List<LibraryGenreRow>>
+
+    /** One genre's tracks, A to Z; [genre] matches whatever capitalisation each row was tagged in. */
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE $LIBRARY_TRACKS AND genre = :genre COLLATE NOCASE
+        ORDER BY title COLLATE NOCASE ASC, id ASC
+        """
+    )
+    fun observeGenreTracks(genre: String, sources: List<SourceType>): Flow<List<TrackEntity>>
 }

@@ -98,6 +98,7 @@ internal fun TrackList(
 internal fun emptyTitleFor(tab: LibraryTab): Int = when (tab) {
     LibraryTab.LIKED -> R.string.library_liked_empty_title
     LibraryTab.DOWNLOADS -> R.string.library_downloads_empty_title
+    LibraryTab.GENRES -> R.string.library_genre_empty_title
     else -> R.string.library_tracks_empty_title
 }
 
@@ -105,6 +106,7 @@ internal fun emptyTitleFor(tab: LibraryTab): Int = when (tab) {
 internal fun emptyMessageFor(tab: LibraryTab): Int = when (tab) {
     LibraryTab.LIKED -> R.string.library_liked_empty_message
     LibraryTab.DOWNLOADS -> R.string.library_downloads_empty_message
+    LibraryTab.GENRES -> R.string.library_genre_empty_message
     else -> R.string.library_tracks_empty_message
 }
 
