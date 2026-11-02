@@ -78,6 +78,7 @@ internal fun QueueDrawer(
     drawer: QueueDrawerState,
     playerConnection: PlayerConnection,
     onOpenArtist: ((String, String?) -> Unit)? = null,
+    onOpenAlbum: ((String) -> Unit)? = null,
     queueViewModel: QueueViewModel = hiltViewModel()
 ) {
     val state by playerConnection.state.collectAsStateWithLifecycle()
@@ -129,7 +130,8 @@ internal fun QueueDrawer(
             queueViewModel = queueViewModel,
             addToPlaylist = addToPlaylist,
             onOpenArtist = onOpenArtist,
-            onDismiss = { actionsFor = null }
+            onDismiss = { actionsFor = null },
+            onOpenAlbum = onOpenAlbum
         )
     }
 

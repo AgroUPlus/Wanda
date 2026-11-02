@@ -72,6 +72,7 @@ internal fun HistoryScreen(
     contentPadding: PaddingValues,
     onBack: () -> Unit,
     onOpenArtist: (String, String?) -> Unit,
+    onOpenAlbum: (String) -> Unit,
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
     val plays = viewModel.plays.collectAsLazyPagingItems()
@@ -81,7 +82,7 @@ internal fun HistoryScreen(
     val addToPlaylist = AddToPlaylistHost()
 
     actionsFor?.let { track ->
-        HistoryTrackActions(track, viewModel, addToPlaylist, onOpenArtist) { actionsFor = null }
+        HistoryTrackActions(track, viewModel, addToPlaylist, onOpenArtist, onOpenAlbum) { actionsFor = null }
     }
 
     Column(modifier = Modifier
@@ -119,6 +120,7 @@ private fun HistoryTrackActions(
     viewModel: HistoryViewModel,
     addToPlaylist: AddToPlaylistController,
     onOpenArtist: (String, String?) -> Unit,
+    onOpenAlbum: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     TrackActionsSheet(
@@ -132,6 +134,7 @@ private fun HistoryTrackActions(
         onOpenArtist = track.artist
             .takeIf { it.isNotBlank() }
             ?.let { { name -> onOpenArtist(name, track.artistIdFor(name)) } },
+        onOpenAlbum = onOpenAlbum,
         onDismiss = onDismiss,
         onShare = null,
         onAddToPlaylist = if (addToPlaylist.canAdd(track)) {

@@ -3,6 +3,7 @@ package com.wander.android.ui.components
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
+import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Delete
@@ -35,7 +36,8 @@ internal class TrackActionLabels(
     val deleteOffline: String,
     val resetProgress: String,
     val moveUp: String,
-    val moveDown: String
+    val moveDown: String,
+    val openAlbum: String
 )
 
 /** What each action does; a null callback means the caller does not offer that action. */
@@ -47,6 +49,8 @@ internal class TrackActionCallbacks(
     val onAddToPlaylist: (() -> Unit)?,
     val onStartRadio: (() -> Unit)?,
     val onOpenArtist: ((String) -> Unit)?,
+    /** Given the track's album id; only offered when the track names one. */
+    val onOpenAlbum: ((String) -> Unit)?,
     val onRemove: (() -> Unit)?,
     val onDeleteDownload: (() -> Unit)?,
     val onResetProgress: (() -> Unit)?,
@@ -86,6 +90,14 @@ internal fun buildTrackActionsList(
     if (state.playable) {
         callbacks.onStartRadio?.let { add(MenuAction(Icons.Rounded.Radio, "Radio") { it(); dismiss() }) }
         callbacks.onOpenArtist?.let { addArtistActions(track.artist, it, dismiss) }
+    }
+    // Not gated on playability: the album page is there to look at whether or not the track
+    // would play right now.
+    val albumId = track.albumId?.takeIf { it.isNotBlank() }
+    if (albumId != null) {
+        callbacks.onOpenAlbum?.let { open ->
+            add(MenuAction(Icons.Rounded.Album, labels.openAlbum) { open(albumId); dismiss() })
+        }
     }
     addJamAction(track, state, jamViewModel, dismiss)
     // These two ask first, and the confirmation closes the sheet; see `TrackActionsSheet`.

@@ -37,6 +37,7 @@ internal fun QueueScreen(
     onClose: () -> Unit,
     onOpenJam: () -> Unit = {},
     onOpenArtist: ((String, String?) -> Unit)? = null,
+    onOpenAlbum: ((String) -> Unit)? = null,
     jamViewModel: JamViewModel = hiltViewModel(),
     queueViewModel: QueueViewModel = hiltViewModel()
 ) {
@@ -57,7 +58,8 @@ internal fun QueueScreen(
             queueViewModel = queueViewModel,
             addToPlaylist = addToPlaylist,
             onOpenArtist = onOpenArtist,
-            onDismiss = { actionsFor = null }
+            onDismiss = { actionsFor = null },
+            onOpenAlbum = onOpenAlbum
         )
     }
 

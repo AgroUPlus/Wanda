@@ -69,6 +69,10 @@ fun SearchScreen(
             onOpenArtist = track.artist
                 .takeIf { it.isNotBlank() }
                 ?.let { { name -> onOpenArtist(name, track.artistIdFor(name)) } },
+            onOpenAlbum = { albumId ->
+                viewModel.rememberQuery()
+                onOpenAlbum(albumId)
+            },
             onDismiss = { actionsFor = null },
             onShare = if (viewModel.canShare(track)) {
                 { viewModel.share(track) }

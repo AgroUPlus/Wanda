@@ -263,6 +263,10 @@ fun PlayerSheetContent(
                 onOpenArtist = { artist, artistId ->
                     queueDrawer.snapTo(0f)
                     onOpenArtist(artist, artistId)
+                },
+                onOpenAlbum = { albumId ->
+                    queueDrawer.snapTo(0f)
+                    onOpenAlbum(albumId)
                 }
             )
         }

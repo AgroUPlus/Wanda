@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Track actions sheet: opens the album the long-pressed track is on. -->
+    <string name="track_action_go_to_album">Go to album</string>
+</resources>

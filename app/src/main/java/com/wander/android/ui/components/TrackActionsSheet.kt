@@ -72,6 +72,11 @@ fun TrackActionsSheet(
      * Given the name to open: a track credited to several artists offers each of them.
      */
     onOpenArtist: ((String) -> Unit)? = null,
+    /**
+     * Opens the track's album, given its id. Offered only when the track names an album — see
+     * [UnifiedTrack.albumId] — so callers pass it wherever they can navigate, without checking.
+     */
+    onOpenAlbum: ((String) -> Unit)? = null,
     /** Forgets how far into an episode the listener got. Null for anything but a podcast episode. */
     onResetProgress: (() -> Unit)? = null,
     /** What [onRemove] is called, when it removes from something other than the queue. */
@@ -90,6 +95,7 @@ fun TrackActionsSheet(
     val moveDown = stringResource(R.string.action_move_down)
     val deleteOffline = stringResource(R.string.common_delete_offline_file)
     val resetProgress = stringResource(R.string.podcasts_reset_progress)
+    val openAlbum = stringResource(R.string.track_action_go_to_album)
 
     // Resolved here rather than passed in by each caller. This sheet is opened from a dozen
     // screens, and threading a jam callback through all of them would mean the action quietly
@@ -186,7 +192,7 @@ fun TrackActionsSheet(
                         hasDropFriends = dropFriends.isNotEmpty(),
                         jamState = jamState
                     ),
-                    labels = TrackActionLabels(likeLabel, removeFromQueue, deleteOffline, resetProgress, moveUp, moveDown),
+                    labels = TrackActionLabels(likeLabel, removeFromQueue, deleteOffline, resetProgress, moveUp, moveDown, openAlbum),
                     callbacks = TrackActionCallbacks(
                         onPlayNext = onPlayNext,
                         onAddToQueue = onAddToQueue,
@@ -195,6 +201,7 @@ fun TrackActionsSheet(
                         onAddToPlaylist = onAddToPlaylist,
                         onStartRadio = onStartRadio,
                         onOpenArtist = onOpenArtist,
+                        onOpenAlbum = onOpenAlbum,
                         onRemove = onRemove,
                         onDeleteDownload = askDeleteDownload,
                         onResetProgress = askResetProgress,

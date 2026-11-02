@@ -41,6 +41,7 @@ fun PlaylistScreen(
     contentPadding: PaddingValues,
     onBack: () -> Unit,
     onOpenArtist: (String, String?) -> Unit,
+    onOpenAlbum: (String) -> Unit,
     onOpenPlaylist: (String) -> Unit,
     viewModel: PlaylistViewModel = hiltViewModel()
 ) {
@@ -92,7 +93,8 @@ fun PlaylistScreen(
             sharedViewModel = sharedViewModel,
             addToPlaylist = addToPlaylist,
             onOpenArtist = onOpenArtist,
-            onDismiss = { actionsFor = null }
+            onDismiss = { actionsFor = null },
+            onOpenAlbum = onOpenAlbum
         )
     }
 

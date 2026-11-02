@@ -22,7 +22,8 @@ internal fun QueueTrackActions(
     queueViewModel: QueueViewModel,
     addToPlaylist: AddToPlaylistController,
     onOpenArtist: ((String, String?) -> Unit)?,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onOpenAlbum: ((String) -> Unit)? = null
 ) {
     // The row as it is now: the queue can move under a sheet that stays open.
     val entry = entries.firstOrNull { it.key == pressed.key } ?: pressed
@@ -53,6 +54,7 @@ internal fun QueueTrackActions(
         onOpenArtist = track.artist
             .takeIf { it.isNotBlank() }
             ?.let { onOpenArtist?.let { open -> { name -> open(name, track.artistIdFor(name)) } } },
+        onOpenAlbum = onOpenAlbum,
         onDismiss = onDismiss,
         onShare = if (queueViewModel.canShare(track)) {
             { queueViewModel.share(track) }
