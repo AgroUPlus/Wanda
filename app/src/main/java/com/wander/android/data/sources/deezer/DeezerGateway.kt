@@ -50,7 +50,8 @@ class DeezerGateway @Inject constructor(
     @Volatile
     private var cached: Session? = null
 
-    internal data class Session(
+    /** Not a data class on purpose: a generated `toString` would print the arl and both tokens. */
+    class Session(
         val arl: String,
         val apiToken: String,
         val licenseToken: String,
@@ -60,7 +61,7 @@ class DeezerGateway @Inject constructor(
     }
 
     /** A refusal the gateway reported in its `error` field. */
-    internal class GatewayException(val codes: Set<String>) :
+    class GatewayException(val codes: Set<String>) :
         IOException("Deezer refused the request (${codes.joinToString()})") {
         val isSessionExpired: Boolean get() = codes.any { it in SESSION_ERRORS }
     }
