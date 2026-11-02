@@ -18,7 +18,7 @@ import com.google.common.util.concurrent.ListenableFuture
 @UnstableApi
 internal class PlaybackSessionCallback(
     private val ownPackage: String,
-    private val likeButton: NotificationLikeButton,
+    private val buttons: NotificationButtons,
     private val resumption: QueueResumption
 ) : MediaSession.Callback {
 
@@ -32,11 +32,11 @@ internal class PlaybackSessionCallback(
             // tap on it is rejected as an unavailable command.
             .setAvailableSessionCommands(
                 MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
-                    .add(likeButton.sessionCommand)
+                    .add(buttons.sessionCommand)
                     .build()
             )
-            // Seeds the controller as it connects; `likeButton` republishes from then on.
-            .setMediaButtonPreferences(likeButton.preferences())
+            // Seeds the controller as it connects; `buttons` republishes from then on.
+            .setMediaButtonPreferences(buttons.preferences())
             .build()
 
     override fun onPostConnect(session: MediaSession, controller: MediaSession.ControllerInfo) {
@@ -59,7 +59,7 @@ internal class PlaybackSessionCallback(
         customCommand: SessionCommand,
         args: Bundle
     ): ListenableFuture<SessionResult> =
-        if (likeButton.handle(customCommand)) {
+        if (buttons.handle(customCommand)) {
             Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
         } else {
             super.onCustomCommand(session, controller, customCommand, args)

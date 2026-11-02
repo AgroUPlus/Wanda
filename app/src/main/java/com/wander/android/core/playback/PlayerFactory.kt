@@ -53,6 +53,10 @@ class PlayerFactory @Inject constructor(
             .setAudioAttributes(audioAttributesFor(isEpisode = false), /* handleAudioFocus = */ true)
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_NETWORK)
+            // What the notification's episode jumps and a headset's rewind and fast-forward keys
+            // do — see [NotificationButtons]. The in-app jumps use the same [EpisodeJumps] values.
+            .setSeekBackIncrementMs(EpisodeJumps.BACK_MS)
+            .setSeekForwardIncrementMs(EpisodeJumps.FORWARD_MS)
             .build()
             .apply {
                 trackSelectionParameters = withOffload(trackSelectionParameters, enabled = true)

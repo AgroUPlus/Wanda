@@ -85,7 +85,7 @@ class PlaybackService : MediaSessionService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val likeButton = NotificationLikeButton(player, musicRepository, scope)
+        val buttons = NotificationButtons(this, player, musicRepository, scope)
 
         val sessionPlayer = JamSkipPlayer(player, jamSkipGate)
         // Skipped while it still holds its first value: the player was built with that state.
@@ -110,9 +110,9 @@ class PlaybackService : MediaSessionService() {
                     .setMaximumOutputDimension(MediaSession.getBitmapDimensionLimit(this) * 2 - 1)
                     .build()
             )
-            .setCallback(PlaybackSessionCallback(packageName, likeButton, resumption))
+            .setCallback(PlaybackSessionCallback(packageName, buttons, resumption))
             .build()
-            .also(likeButton::attach)
+            .also(buttons::attach)
     }
 
     /**
