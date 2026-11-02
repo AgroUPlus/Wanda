@@ -35,6 +35,15 @@ internal fun SearchKind.filterParam(): String = when (this) {
     SearchKind.EPISODES -> EPISODES_FILTER
 }
 
+/**
+ * Albums and artists, for the search screen's record and artist rows. Not a [SearchKind]: they
+ * are asked alongside a songs search, never instead of one. Built the way ytmusicapi builds its
+ * filters (`EgWKAQ` + the filter's two letters + its options blob); not yet checked against a
+ * live response from here, unlike the three kinds above.
+ */
+internal const val ALBUMS_FILTER = "EgWKAQIYAWoMEA4QChADEAQQCRAF"
+internal const val ARTISTS_FILTER = "EgWKAQIgAWoMEA4QChADEAQQCRAF"
+
 /** The browse id behind music.youtube.com's front page. */
 internal const val HOME_BROWSE_ID = "FEmusic_home"
 

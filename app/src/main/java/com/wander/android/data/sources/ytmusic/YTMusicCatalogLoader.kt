@@ -3,6 +3,7 @@ package com.wander.android.data.sources.ytmusic
 import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.LyricsData
 import com.wander.android.data.model.RecommendedShelf
+import com.wander.android.data.model.SearchCatalog
 import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.UNKNOWN_ARTIST
 import com.wander.android.data.model.UnifiedAlbum
@@ -31,6 +32,28 @@ class YTMusicCatalogLoader @Inject constructor(
                 .mapNotNull(::parseResponsiveListItem)
                 .map { if (episodes) it.copy(isEpisode = true) else it }
         }
+
+    /**
+     * Songs, records and artists for one query, as three filtered searches side by side — InnerTube
+     * has no single call that answers all three in full. Any of them failing fails the lot: songs
+     * shown without the records the user may have been looking for would read as "no records".
+     * Videos and episodes are only ever tracks, so they stay a single search.
+     */
+    suspend fun searchCatalog(query: String, kind: SearchKind): Result<SearchCatalog> {
+        if (kind != SearchKind.TRACKS) return search(query, kind).map { SearchCatalog(tracks = it) }
+        return coroutineScope {
+            val tracks = async { search(query, kind) }
+            val albums = async { innerTube.search(query, ALBUMS_FILTER).map { it.albumSearchResults() } }
+            val artists = async { innerTube.search(query, ARTISTS_FILTER).map { it.artistSearchResults() } }
+            runCatching {
+                SearchCatalog(
+                    tracks = tracks.await().getOrThrow(),
+                    albums = albums.await().getOrThrow(),
+                    artists = artists.await().getOrThrow()
+                )
+            }
+        }
+    }
 
     suspend fun getTrack(trackId: String): Result<UnifiedTrack?> {
         val videoId = trackId.removePrefix(YTM_PREFIX)

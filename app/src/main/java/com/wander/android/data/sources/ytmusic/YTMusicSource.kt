@@ -3,6 +3,7 @@ package com.wander.android.data.sources.ytmusic
 import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.LyricsData
 import com.wander.android.data.model.RecommendedShelf
+import com.wander.android.data.model.SearchCatalog
 import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
@@ -56,7 +57,8 @@ class YTMusicSource @Inject constructor(
         lyrics = true,
         recommendations = true,
         share = true,
-        videoClips = true
+        videoClips = true,
+        collectionSearch = true
     )
 
     /**
@@ -77,6 +79,9 @@ class YTMusicSource @Inject constructor(
 
     override suspend fun search(query: String, kind: SearchKind): Result<List<UnifiedTrack>> =
         catalogLoader.search(query, kind)
+
+    override suspend fun searchCatalog(query: String, kind: SearchKind): Result<SearchCatalog> =
+        catalogLoader.searchCatalog(query, kind)
 
     /**
      * Who is signed in, for Settings to name.

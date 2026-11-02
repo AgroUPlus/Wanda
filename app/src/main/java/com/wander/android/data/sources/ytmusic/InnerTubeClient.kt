@@ -27,12 +27,16 @@ class InnerTubeClient @Inject internal constructor(
     )
 
     suspend fun search(query: String, kind: SearchKind = SearchKind.TRACKS): Result<JsonObject> =
+        search(query, kind.filterParam())
+
+    /** A search under one of the filter blobs in `InnerTubeParams`. */
+    internal suspend fun search(query: String, filter: String): Result<JsonObject> =
         transport.post(
             "search",
             buildJsonObject {
                 put("context", transport.webContext())
                 put("query", query)
-                put("params", kind.filterParam())
+                put("params", filter)
             }
         )
 

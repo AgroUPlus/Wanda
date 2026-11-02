@@ -36,6 +36,7 @@ internal fun parseLibraryAlbum(renderer: JsonObject): UnifiedAlbum? {
         title = title,
         artist = subtitle.artist ?: UNKNOWN_ARTIST,
         artistId = subtitle.artistId?.let { "$YTM_PREFIX$it" },
+        year = subtitle.year,
         coverArtUrl = renderer.path("thumbnail", "musicThumbnailRenderer", "thumbnail")
             .bestThumbnail()
     )
