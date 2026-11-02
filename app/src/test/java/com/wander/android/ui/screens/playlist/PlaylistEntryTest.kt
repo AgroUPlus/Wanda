@@ -30,6 +30,22 @@ class PlaylistEntryTest {
     }
 
     @Test
+    fun aFilterMatchesTitleArtistOrAlbumAndKeepsPositions() {
+        val entries = playlistEntries(
+            listOf(
+                UnifiedTrack(id = "1", source = SourceType.LOCAL, title = "Blue Monday", artist = "New Order"),
+                UnifiedTrack(id = "2", source = SourceType.LOCAL, title = "Song", artist = "Joy Division", album = "Closer"),
+                UnifiedTrack(id = "3", source = SourceType.LOCAL, title = "Other", artist = "Someone")
+            )
+        )
+
+        assertEquals(listOf(0), entries.filteredBy("  blue ").map { it.index })
+        assertEquals(listOf(1), entries.filteredBy("DIVISION").map { it.index })
+        assertEquals(listOf(1), entries.filteredBy("closer").map { it.index })
+        assertSame(entries, entries.filteredBy(" "))
+    }
+
+    @Test
     fun aMoveToARowThatIsNotATrackChangesNothing() {
         val entries = playlistEntries(listOf(track("a"), track("b")))
 

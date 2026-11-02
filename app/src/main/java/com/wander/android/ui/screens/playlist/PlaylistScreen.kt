@@ -13,6 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +51,7 @@ fun PlaylistScreen(
     val shared by sharedViewModel.state.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<IndexedValue<UnifiedTrack>?>(null) }
     var editingDetails by remember { mutableStateOf(false) }
+    var filter by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(sharedViewModel) { sharedViewModel.left.collect { onBack() } }
 
@@ -66,7 +68,7 @@ fun PlaylistScreen(
             if (shown) sharedViewModel.move(current, from, to, viewModel::refresh)
         }
     }
-    val canMove = playlist?.let(sharedViewModel::canMove) == true
+    val canMove = playlist?.let(sharedViewModel::canMove) == true && filter.isBlank()
 
     playlist?.takeIf { editingDetails }?.let { current ->
         PlaylistDetailsDialog(
@@ -155,7 +157,17 @@ fun PlaylistScreen(
                         )
                     }
 
-                    val rows = reorder.shown
+                    val rows = reorder.shown.filteredBy(filter)
+                    if (tracks.size >= PlaylistFilterMinTracks || filter.isNotEmpty()) {
+                        item(key = "filter", contentType = "filter") {
+                            PlaylistFilterField(
+                                query = filter,
+                                onQueryChange = { filter = it },
+                                noMatches = rows.isEmpty() && filter.isNotBlank()
+                            )
+                        }
+                    }
+
                     itemsIndexed(
                         items = rows,
                         key = { _, entry -> entry.key },

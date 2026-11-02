@@ -23,6 +23,20 @@ internal fun playlistEntries(tracks: List<UnifiedTrack>): List<PlaylistEntry> {
     }
 }
 
+/**
+ * The rows whose title, artist or album contain [query], ignoring case; all of them for a blank
+ * one. Each keeps its [PlaylistEntry.index], so a filtered row still plays and edits the right one.
+ */
+internal fun List<PlaylistEntry>.filteredBy(query: String): List<PlaylistEntry> {
+    val term = query.trim()
+    if (term.isEmpty()) return this
+    return filter { (_, _, track) ->
+        track.title.contains(term, ignoreCase = true) ||
+            track.artist.contains(term, ignoreCase = true) ||
+            track.album?.contains(term, ignoreCase = true) == true
+    }
+}
+
 /** These rows with the one keyed [fromKey] taken to where [toKey] is; unchanged if either is gone. */
 internal fun List<PlaylistEntry>.moving(fromKey: Any, toKey: Any): List<PlaylistEntry> {
     val from = indexOfFirst { it.key == fromKey }

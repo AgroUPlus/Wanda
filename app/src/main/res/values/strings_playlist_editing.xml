@@ -11,4 +11,9 @@
     <!-- Accessibility label of the drag grip on a playlist row; %1$s is the song's title. -->
     <string name="playlist_reorder">Reorder %1$s</string>
     <string name="playlist_details_shared_note">Friends who follow it on Agro keep seeing the name it was shared with.</string>
+    <!-- The filter field over a long playlist's tracks. -->
+    <string name="playlist_filter_hint">Find in playlist</string>
+    <string name="playlist_filter_clear">Clear</string>
+    <!-- %1$s is what was typed into the filter field. -->
+    <string name="playlist_filter_no_matches">No songs in this playlist match “%1$s”</string>
 </resources>
