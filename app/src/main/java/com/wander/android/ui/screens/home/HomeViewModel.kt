@@ -21,6 +21,7 @@ import com.wander.android.ui.screens.home.layout.HomeLayoutStore
 import com.wander.android.ui.screens.home.layout.ShelfUsageStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -162,8 +163,12 @@ class HomeViewModel @Inject constructor(
     /** Pull-to-refresh. Same work as [refresh], but the shelves stay on screen while it runs. */
     fun pullToRefresh() = refresh(showSpinner = false)
 
+    /** The load in flight. A new one replaces it: stacked pulls each re-ran every online fetch. */
+    private var refreshJob: Job? = null
+
     fun refresh(showSpinner: Boolean = true, rebuildAddedShelves: Boolean = true) {
-        viewModelScope.launch {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
             // If we already have sections rendered, keep them on screen without showing full spinner
             val hasExisting = _uiState.value.allSections.isNotEmpty()
             if (showSpinner && !hasExisting) {
