@@ -114,6 +114,7 @@ class LibraryViewModel @Inject constructor(
                         .onSuccess { _albumsError.value = null }
                         .onFailure { _albumsError.value = it.userMessageRes() }
                     musicRepository.getRecentTracks(LIBRARY_TRACK_REFRESH)
+                    musicRepository.importRemoteLikes()
                 }
             }
             playlists.join()

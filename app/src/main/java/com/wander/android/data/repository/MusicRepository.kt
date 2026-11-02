@@ -43,6 +43,7 @@ class MusicRepository @Inject constructor(
     private val acousticFeatures: AcousticFeatureRepository,
     private val embeddingDao: TrackEmbeddingDao,
     private val likeOutbox: LikeOutbox,
+    private val likeSyncDao: com.wander.android.core.database.dao.LikeSyncDao,
     val sources: Set<@JvmSuppressWildcards IMusicSource>
 ) {
     private val reachability = SourceReachability(connectivity, secureStorage)
@@ -124,6 +125,8 @@ class MusicRepository @Inject constructor(
         likeOutbox = likeOutbox
     )
 
+    private val remoteLikes = RemoteLikesImport(likeSyncDao, ::activeSources, ::persist)
+
     private val radioGenerator = SmartRadioGenerator(
         trackDao = trackDao,
         activeSources = ::activeSources,
@@ -183,6 +186,12 @@ class MusicRepository @Inject constructor(
     fun getLikedTrackIdsFlow(): Flow<Set<String>> = likesAndHistory.getLikedTrackIdsFlow()
     suspend fun toggleLike(track: UnifiedTrack) = likesAndHistory.toggleLike(track)
     suspend fun unifySplitLikes() = likesAndHistory.unifySplitLikes()
+
+    /** Every connected backend's liked songs into Room, then any like still owed sent on. */
+    suspend fun importRemoteLikes() = withContext(Dispatchers.IO) {
+        remoteLikes.importAll()
+        likeOutbox.resumeIfOwed()
+    }
     suspend fun recordPlay(track: UnifiedTrack) = likesAndHistory.recordPlay(track)
     suspend fun removeFromHistory(historyId: Long) = likesAndHistory.removeFromHistory(historyId)
     suspend fun clearHistory() = likesAndHistory.clearHistory()

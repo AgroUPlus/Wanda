@@ -5,8 +5,13 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.wander.android.core.database.entity.PendingLikeEntity
+import com.wander.android.core.database.entity.RemoteLikeEntity
+import com.wander.android.data.model.SourceType
 
-/** The like outbox: wishes a backend has not confirmed yet. */
+/**
+ * Likes between Wanda and the backends: the outbox of wishes a backend has not confirmed yet, and
+ * the record of which likes a backend has.
+ */
 @Dao
 interface LikeSyncDao {
 
@@ -26,4 +31,17 @@ interface LikeSyncDao {
 
     @Query("UPDATE pending_likes SET attempts = attempts + 1 WHERE trackId = :trackId AND queuedAt = :queuedAt")
     suspend fun countAttempt(trackId: String, queuedAt: Long)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun recordRemoteLikes(likes: List<RemoteLikeEntity>)
+
+    @Query("DELETE FROM remote_likes WHERE trackId IN (:trackIds)")
+    suspend fun forgetRemoteLikes(trackIds: List<String>)
+
+    @Query("SELECT trackId FROM remote_likes WHERE source = :source")
+    suspend fun remoteLikedIds(source: SourceType): List<String>
+
+    /** Bound by [MAX_BOUND_IDS] like every id list; callers chunk. */
+    @Query("UPDATE tracks SET isLiked = :liked WHERE id IN (:trackIds)")
+    suspend fun setTracksLiked(trackIds: List<String>, liked: Boolean)
 }
