@@ -1,8 +1,10 @@
 package com.wander.android.ui.screens.social
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.network.userMessageRes
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.JamPlaybackController
@@ -42,7 +44,8 @@ internal data class JamUiState(
     val savedRecaps: Set<String> = emptySet(),
     /** The recap written when this screen's user just left, shown first rather than under the fold. */
     val justLeftRecap: String? = null,
-    val error: String? = null
+    /** Why the last call failed, as a sentence to show; never the exception's own text. */
+    @StringRes val error: Int? = null
 )
 
 @HiltViewModel
@@ -107,7 +110,7 @@ internal class JamViewModel @Inject constructor(
         refresh()
         refreshFriendJams()
         viewModelScope.launch {
-            recapRepository.refresh().onFailure { _state.value = _state.value.copy(error = it.message) }
+            recapRepository.refresh().onFailure { _state.value = _state.value.copy(error = it.userMessageRes()) }
         }
     }
 
@@ -183,10 +186,11 @@ internal class JamViewModel @Inject constructor(
     }
 
     /**
-     * Runs one call, showing whatever the server said when it refuses.
+     * Runs one call, showing why it failed when it does.
      *
-     * The refusals here are the feature's own rules — "only the creator can change the mode" — so
-     * they are worth showing verbatim rather than flattened into a generic failure.
+     * As a sentence chosen by the failure's kind, not the exception's message: that is English
+     * whatever the listener's language, and it can carry the server's address. See
+     * [userMessageRes].
      */
     private fun run(block: suspend () -> Result<Unit>) {
         viewModelScope.launch {
@@ -194,7 +198,7 @@ internal class JamViewModel @Inject constructor(
             val result = block()
             _state.value = _state.value.copy(
                 isBusy = false,
-                error = result.exceptionOrNull()?.message
+                error = result.exceptionOrNull()?.userMessageRes()
             )
         }
     }

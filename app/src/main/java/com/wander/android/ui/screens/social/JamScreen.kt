@@ -141,7 +141,7 @@ private fun JamRoom(jam: Jam, state: JamUiState, contentPadding: PaddingValues, 
         state.error?.let { message ->
             item(key = "error") {
                 Text(
-                    text = message,
+                    text = stringResource(message),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 16.dp)

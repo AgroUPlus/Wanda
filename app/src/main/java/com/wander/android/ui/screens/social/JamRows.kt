@@ -184,7 +184,7 @@ internal fun StartOrJoin(
     onJoin: (String) -> Unit,
     friendJams: List<FriendJam>,
     onJoinFriendJam: (String) -> Unit,
-    error: String?,
+    @StringRes error: Int?,
     initialCode: String? = null,
     modifier: Modifier = Modifier
 ) {
@@ -241,7 +241,7 @@ internal fun StartOrJoin(
 
         error?.let {
             Text(
-                text = it,
+                text = stringResource(it),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error
             )

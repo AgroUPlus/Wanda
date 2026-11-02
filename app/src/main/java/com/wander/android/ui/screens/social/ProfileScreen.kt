@@ -3,6 +3,8 @@ package com.wander.android.ui.screens.social
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -23,6 +26,7 @@ import com.wander.android.ui.components.CompactHeroBarHeight
 import com.wander.android.ui.components.CompactHeroTopBar
 import com.wander.android.ui.components.RankedList
 import com.wander.android.ui.components.collapsingTitleSource
+import com.wander.android.ui.components.listInset
 import com.wander.android.ui.components.rememberCollapsingTitleState
 import com.wander.android.ui.theme.profileName
 
@@ -51,6 +55,9 @@ internal fun ProfileScreen(
     val listState = rememberLazyListState()
     val titleState = rememberCollapsingTitleState(listState)
     val topInset = contentPadding.calculateTopPadding()
+    // The list's own insets, side edges included, with the bar's height added on top.
+    val sides = contentPadding.listInset()
+    val direction = LocalLayoutDirection.current
 
     // One Box, like the artist page: the list runs under the bar, which turns opaque and takes the
     // name once the hero's own copy of it scrolls up to meet it.
@@ -60,8 +67,10 @@ internal fun ProfileScreen(
         LazyColumn(
             state = listState,
             contentPadding = PaddingValues(
+                start = sides.calculateStartPadding(direction),
                 top = topInset + CompactHeroBarHeight,
-                bottom = contentPadding.calculateBottomPadding()
+                end = sides.calculateEndPadding(direction),
+                bottom = sides.calculateBottomPadding()
             ),
             modifier = Modifier.fillMaxSize()
         ) {
