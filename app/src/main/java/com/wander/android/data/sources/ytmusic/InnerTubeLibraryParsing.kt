@@ -101,7 +101,10 @@ private fun libraryPlaylist(endpoint: JsonElement?, title: String?, cover: Strin
         id = "$YTM_PREFIX$browseId",
         source = SourceType.YTMUSIC,
         name = title?.takeIf { it.isNotBlank() } ?: return null,
-        coverArtUrl = cover
+        coverArtUrl = cover,
+        // YouTube's own lists (Liked Music, Episodes for later) take no edits. A saved `PL…`
+        // playlist of someone else's carries no owner here, so it reads as editable.
+        isEditable = editablePlaylistId("$YTM_PREFIX$browseId") != null
     )
 }
 

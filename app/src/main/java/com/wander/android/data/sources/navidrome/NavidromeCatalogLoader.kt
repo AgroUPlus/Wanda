@@ -114,7 +114,8 @@ class NavidromeCatalogLoader @Inject constructor(
                 coverArtUrl = apiClient.buildCoverArtUrl(playlist.coverArt),
                 songCount = playlist.songCount,
                 durationMs = playlist.duration * 1000L,
-                isPublic = playlist.public
+                isPublic = playlist.public,
+                isEditable = playlist.owner == null || playlist.owner.equals(apiClient.username, ignoreCase = true)
             )
         }
     }

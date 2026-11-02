@@ -23,6 +23,9 @@ class SubsonicCredentials @Inject constructor() {
 
     val baseUrl: String get() = account.baseUrl
 
+    /** Who is signed in, to tell this account's playlists from ones others shared with it. */
+    val username: String get() = account.username
+
     val isConfigured: Boolean
         get() = account.let { it.baseUrl.isNotBlank() && it.username.isNotBlank() && it.password.isNotBlank() }
 

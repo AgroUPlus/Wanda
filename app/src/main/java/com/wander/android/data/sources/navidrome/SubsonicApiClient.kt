@@ -27,6 +27,8 @@ class SubsonicApiClient @Inject constructor(
 
     val isConfigured: Boolean get() = credentials.isConfigured
 
+    val username: String get() = credentials.username
+
     fun configure(serverUrl: String, user: String, pass: String) =
         credentials.configure(serverUrl, user, pass)
 

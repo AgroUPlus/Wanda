@@ -69,7 +69,8 @@ class PlaylistWriteRepository @Inject constructor(
             val specific = if (type != SourceType.LOCAL) {
                 writableSource(type)?.getPlaylists()?.getOrDefault(emptyList()).orEmpty()
             } else emptyList()
-            (local + specific + shared.writableFollowed()).distinctBy { it.id }
+            // A playlist someone else owns is listed by its backend but refuses additions.
+            (local + specific.filter { it.isEditable } + shared.writableFollowed()).distinctBy { it.id }
         }
 
     suspend fun createPlaylist(
@@ -167,7 +168,7 @@ class PlaylistWriteRepository @Inject constructor(
      * Agro has no rename, and a title changed only in the copy would be undone by the next sync.
      */
     fun canEditDetails(playlist: UnifiedPlaylist): Boolean =
-        playlist.source != SourceType.AGRO && writableSource(playlist.source) != null
+        playlist.source != SourceType.AGRO && playlist.isEditable && writableSource(playlist.source) != null
 
     /** Renames [playlist] and replaces its description, on whichever source holds it. */
     suspend fun updateDetails(playlist: UnifiedPlaylist, name: String, comment: String?): Result<Unit> =

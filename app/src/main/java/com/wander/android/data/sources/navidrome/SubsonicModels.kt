@@ -191,7 +191,9 @@ data class SubsonicPlaylist(
     val coverArt: String? = null,
     val songCount: Int = 0,
     val duration: Long = 0L,
-    val public: Boolean = false
+    val public: Boolean = false,
+    /** Whose it is. A public playlist of another user is listed too, and only its owner may edit it. */
+    val owner: String? = null
 )
 
 @Serializable
