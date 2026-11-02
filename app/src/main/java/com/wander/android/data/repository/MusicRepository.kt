@@ -4,6 +4,7 @@ import com.wander.android.core.database.dao.AlbumDao
 import com.wander.android.core.database.dao.HistoryDao
 import com.wander.android.core.database.dao.PlaylistDao
 import com.wander.android.core.database.dao.TrackDao
+import com.wander.android.core.database.dao.TrackEmbeddingDao
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.security.SecureStorage
@@ -38,6 +39,7 @@ class MusicRepository @Inject constructor(
     private val scrobbleSuppression: ScrobbleSuppression,
     private val recordingRules: RecordingRulesRepository,
     private val acousticFeatures: AcousticFeatureRepository,
+    private val embeddingDao: TrackEmbeddingDao,
     val sources: Set<@JvmSuppressWildcards IMusicSource>
 ) {
     internal fun activeSources(): List<IMusicSource> {
@@ -124,6 +126,7 @@ class MusicRepository @Inject constructor(
         activeSources = ::activeSources,
         recordingRules = recordingRules,
         acousticFeatures = acousticFeatures,
+        sonicNeighbours = SonicNeighbours(embeddingDao),
         renditionsOf = { likesAndHistory.renditionsOf(it) },
         persist = ::persist
     )

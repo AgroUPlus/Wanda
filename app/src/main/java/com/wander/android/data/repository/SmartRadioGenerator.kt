@@ -16,8 +16,12 @@ import kotlinx.coroutines.withContext
  * seed's name or the last search:
  * - each backend's own radio endpoint for the seed's rendition there (Navidrome `getSimilarSongs2`,
  *   YouTube Music's watch-playlist radio, Deezer's track radio);
+ * - the indexed tracks whose stored audio embedding is nearest the seed's ([SonicNeighbours]);
  * - the user's own collection sharing the seed's primary artist or genre — what keeps a station
  *   going when a backend answers with nothing, as Navidrome does without a metadata agent.
+ *
+ * The three are taken in turn rather than one after another, so a backend that answers with forty
+ * tracks cannot crowd the library's closest matches out of a twenty-track batch.
  *
  * [RadioPool] then drops the seed, its renditions and other uploads of the same song, and the
  * acoustic vectors order what is left.
@@ -27,6 +31,7 @@ internal class SmartRadioGenerator(
     private val activeSources: () -> List<IMusicSource>,
     private val recordingRules: RecordingRulesRepository,
     private val acousticFeatures: AcousticFeatureRepository,
+    private val sonicNeighbours: SonicNeighbours,
     private val renditionsOf: suspend (UnifiedTrack) -> List<UnifiedTrack>,
     private val persist: suspend (List<UnifiedTrack>, Boolean) -> Unit
 ) {
@@ -36,10 +41,11 @@ internal class SmartRadioGenerator(
             if (fromSource.isNotEmpty()) persist(fromSource, false)
 
             val fromLibrary = libraryNeighbours(seed, count * 2)
+            val soundsLike = soundsLike(seed, count)
 
             val pool = RadioPool.of(
                 seed = seed,
-                candidates = interleaveBySource(fromSource) + fromLibrary,
+                candidates = RadioPool.roundRobin(interleaveBySource(fromSource), soundsLike, fromLibrary),
                 rules = recordingRules.current()
             )
             if (pool.isEmpty()) return@withContext emptyList()
@@ -70,6 +76,14 @@ internal class SmartRadioGenerator(
             genre = seed.genre?.trim()?.takeIf { it.isNotEmpty() },
             limit = limit
         ).map(TrackEntity::toUnifiedTrack)
+    }
+
+    /** [SonicNeighbours] for [seed], as tracks, in their nearest-first order. */
+    private suspend fun soundsLike(seed: UnifiedTrack, limit: Int): List<UnifiedTrack> {
+        val ids = sonicNeighbours.nearest(seed.id, limit)
+        if (ids.isEmpty()) return emptyList()
+        val byId = trackDao.getTracksByIds(ids).associateBy { it.id }
+        return ids.mapNotNull { byId[it]?.toUnifiedTrack() }.filterNot { it.isEpisode || it.isLive }
     }
 
     private suspend fun radioAcrossSources(seed: UnifiedTrack, count: Int): List<UnifiedTrack> =

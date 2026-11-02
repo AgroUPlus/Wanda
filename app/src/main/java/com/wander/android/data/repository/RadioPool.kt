@@ -15,6 +15,12 @@ import com.wander.android.data.model.UnifiedTrack
  */
 internal object RadioPool {
 
+    /** One from each of [lists] in turn, until all are spent. */
+    fun <T> roundRobin(vararg lists: List<T>): List<T> = buildList {
+        val longest = lists.maxOfOrNull { it.size } ?: 0
+        for (i in 0 until longest) for (list in lists) list.getOrNull(i)?.let { add(it) }
+    }
+
     fun of(seed: UnifiedTrack, candidates: List<UnifiedTrack>, rules: RecordingRules): List<UnifiedTrack> {
         val seedTitle = TrackNormalizer.normalizeTitle(seed.title)
         return rules.distinct(candidates).filterNot { candidate ->
