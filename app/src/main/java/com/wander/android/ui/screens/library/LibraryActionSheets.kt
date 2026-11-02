@@ -7,6 +7,7 @@ import com.wander.android.data.repository.artistIdFor
 import com.wander.android.ui.components.AddToPlaylistController
 import com.wander.android.ui.components.AlbumActionsSheet
 import com.wander.android.ui.components.TrackActionsSheet
+import com.wander.android.ui.components.rememberAlbumDownload
 
 /** The long-press sheet for an album tile in the Library. */
 @Composable
@@ -23,6 +24,7 @@ internal fun LibraryAlbumActions(
         onPlayNext = { viewModel.playAlbumNext(album) },
         onAddToQueue = { viewModel.addAlbumToQueue(album) },
         onAddToPlaylist = { viewModel.addAlbumToPlaylist(album, addToPlaylist) },
+        onDownload = rememberAlbumDownload(album),
         onGoToArtist = album.artist
             .takeIf { it.isNotBlank() }
             ?.let { artist -> { onOpenArtist(artist, album.artistId) } },

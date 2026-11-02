@@ -2,6 +2,7 @@ package com.wander.android.data.repository
 
 import androidx.compose.runtime.Immutable
 import com.wander.android.data.model.SourceType
+import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.model.isOneShotTrackId
 
@@ -37,6 +38,9 @@ internal object ManualDownloadRules {
      */
     fun canDownload(track: UnifiedTrack): Boolean =
         track.source !in NotDownloadable && !track.isLive && !isOneShotTrackId(track.id)
+
+    /** Whether an album's tracks can be, by the same source rule as [canDownload]'s. */
+    fun canDownload(album: UnifiedAlbum): Boolean = album.source !in NotDownloadable
 
     /** A download the user can take back: never a local file, which is the user's own. */
     fun canRemove(track: UnifiedTrack, marks: DownloadMarks): Boolean =

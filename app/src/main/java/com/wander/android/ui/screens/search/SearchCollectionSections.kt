@@ -46,6 +46,7 @@ internal fun LazyListScope.artistResultsSection(
 /** The records a search matched — your library's first — as one row of covers. */
 internal fun LazyListScope.albumResultsSection(
     albums: List<UnifiedAlbum>,
+    onLongPressAlbum: (UnifiedAlbum) -> Unit,
     onOpenAlbum: (String) -> Unit
 ) {
     if (albums.isEmpty()) return
@@ -61,6 +62,7 @@ internal fun LazyListScope.albumResultsSection(
                     album = album,
                     index = index,
                     onClick = { onOpenAlbum(album.id) },
+                    onLongClick = { onLongPressAlbum(album) },
                     artworkSize = 132.dp,
                     modifier = Modifier.width(148.dp)
                 )

@@ -34,6 +34,7 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistController
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.AlbumActionsSheet
+import com.wander.android.ui.components.rememberAlbumDownload
 import com.wander.android.ui.components.CompactHeroTopBar
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.TrackActionsSheet
@@ -256,6 +257,7 @@ private fun ArtistAlbumActions(
         onDismiss = onDismiss,
         // No `canShare` gate: an album link describes the record rather than naming a server.
         onShare = { viewModel.shareAlbum(album) },
+        onDownload = rememberAlbumDownload(album),
         onAddToPlaylist = {
             viewModel.getAlbumTracks(album) { tracks ->
                 addToPlaylist.openForTracks(tracks, album.source)

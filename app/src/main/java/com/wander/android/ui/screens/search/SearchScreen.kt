@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
+import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.EmptyState
@@ -56,6 +57,7 @@ fun SearchScreen(
     val selectedSources by viewModel.selectedSources.collectAsStateWithLifecycle()
     val kind by viewModel.kind.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
+    var albumActionsFor by remember { mutableStateOf<UnifiedAlbum?>(null) }
     var isLyricsExpanded by rememberSaveable(query) { mutableStateOf(false) }
 
     val addToPlaylist = AddToPlaylistHost()
@@ -70,6 +72,17 @@ fun SearchScreen(
             onSelect = { selection.toggle(SelectedTrack(track.id, track)) }
                 .takeIf { state.results.any { it.id == track.id } },
             onDismiss = { actionsFor = null }
+        )
+    }
+
+    albumActionsFor?.let { album ->
+        SearchAlbumActions(
+            album,
+            onOpenArtist = { name, id ->
+                viewModel.rememberQuery()
+                onOpenArtist(name, id)
+            },
+            onDismiss = { albumActionsFor = null }
         )
     }
 
@@ -161,7 +174,7 @@ fun SearchScreen(
                             viewModel.rememberQuery()
                             onOpenArtist(name, id)
                         }
-                        albumResultsSection(state.albums) { albumId ->
+                        albumResultsSection(state.albums, onLongPressAlbum = { albumActionsFor = it }) { albumId ->
                             viewModel.rememberQuery()
                             onOpenAlbum(albumId)
                         }
