@@ -3,6 +3,7 @@ package com.wander.android.data.repository
 import android.util.Log
 import com.wander.android.core.cache.DownloadScheduler
 import com.wander.android.core.database.dao.TrackDao
+import com.wander.android.core.database.dao.getTracksByIdsChunked
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.SourceType
@@ -45,6 +46,32 @@ class ManualDownloadRepository @Inject constructor(
         secureStorage.downloads.markManual(wanted.map { it.id })
         scheduler.downloadManual()
         wanted.size
+    }
+
+    /**
+     * Queues what is still waiting again, under the current Wi-Fi-only rule: after that setting
+     * changed, or downloads were resumed. Nothing is queued when nothing is waiting.
+     */
+    suspend fun requeueWaiting() = withContext(Dispatchers.IO) {
+        if (waitingIds().isNotEmpty()) scheduler.requeueManual()
+    }
+
+    /**
+     * Takes back every download still waiting, for "Cancel": the job is gone, and the rows must
+     * offer "Download" again rather than say they are waiting for one that is not coming.
+     */
+    suspend fun dropWaiting() = withContext(Dispatchers.IO) {
+        secureStorage.downloads.unmarkManual(waitingIds())
+    }
+
+    /** Marked by hand and not downloaded yet; a mark whose row has gone counts as waiting. */
+    private suspend fun waitingIds(): List<String> {
+        val marked = secureStorage.downloads.manualTrackIds.value
+        if (marked.isEmpty()) return emptyList()
+        val downloaded = trackDao.getTracksByIdsChunked(marked.toList())
+            .filter { it.isDownloaded }
+            .mapTo(HashSet()) { it.id }
+        return marked.filterNot { it in downloaded }
     }
 
     /**

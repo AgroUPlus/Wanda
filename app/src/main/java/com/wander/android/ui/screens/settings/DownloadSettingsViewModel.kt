@@ -6,6 +6,7 @@ import com.wander.android.core.cache.DownloadScheduler
 import com.wander.android.core.notification.WorkProgressNotification
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.core.work.WorkControls
+import com.wander.android.data.repository.ManualDownloadRepository
 import com.wander.android.data.repository.StorageButlerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -26,7 +27,8 @@ internal class DownloadSettingsViewModel @Inject constructor(
     secureStorage: SecureStorage,
     private val downloadScheduler: DownloadScheduler,
     private val workControls: WorkControls,
-    private val storageRepository: StorageButlerRepository
+    private val storageRepository: StorageButlerRepository,
+    private val manualDownloads: ManualDownloadRepository
 ) : ViewModel() {
 
     private val prefs = secureStorage.downloads
@@ -54,6 +56,8 @@ internal class DownloadSettingsViewModel @Inject constructor(
     fun setWifiOnly(enabled: Boolean) {
         prefs.setWifiOnly(enabled)
         downloadScheduler.scheduleAutoDownload()
+        // The manual job carries the rule it was queued under; see `requeueManual`.
+        viewModelScope.launch { manualDownloads.requeueWaiting() }
     }
 
     /** Read by the worker before each track, so the next sweep honours it; no reschedule needed. */

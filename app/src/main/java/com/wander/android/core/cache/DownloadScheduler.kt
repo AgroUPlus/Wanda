@@ -109,7 +109,17 @@ class DownloadScheduler @Inject constructor(
      * one more pass behind it, which picks up whatever that run read too early to see; and a chain
      * that failed (the disk filled) is replaced rather than failing everything appended to it.
      */
-    fun downloadManual() {
+    fun downloadManual() = enqueueManual(ExistingWorkPolicy.APPEND_OR_REPLACE)
+
+    /**
+     * Swaps the queued manual job for one under the current Wi-Fi-only rule. A request waiting for
+     * Wi-Fi would otherwise keep waiting after the user allowed mobile data, and one downloading
+     * over mobile data would carry on after they took that back. Also what a resume calls, since
+     * a pause cancels the job along with the rest of the downloads.
+     */
+    fun requeueManual() = enqueueManual(ExistingWorkPolicy.REPLACE)
+
+    private fun enqueueManual(policy: ExistingWorkPolicy) {
         val network = if (secureStorage.downloads.wifiOnly.value) NetworkType.UNMETERED else NetworkType.CONNECTED
         val request = OneTimeWorkRequestBuilder<DownloadWorker>()
             .addTag(WorkControls.tagFor(WorkProgressNotification.Kind.DOWNLOAD))
@@ -119,7 +129,7 @@ class DownloadScheduler @Inject constructor(
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork(
             MANUAL_WORK,
-            ExistingWorkPolicy.APPEND_OR_REPLACE,
+            policy,
             request
         )
     }
