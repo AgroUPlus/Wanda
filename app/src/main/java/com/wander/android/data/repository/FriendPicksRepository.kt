@@ -28,9 +28,12 @@ class FriendPicksRepository @Inject internal constructor(
         // or failing, the cached copy is what there is.
         dropsRepository.refresh()
         val recent = drops.recentIncoming(limit).distinctBy { it.trackTitle.lowercase() to it.artistName.lowercase() }
-        return withTimeoutOrNull(SEARCH_TIMEOUT_MILLIS) {
-            coroutineScope { recent.map { drop -> async { resolve(drop) } }.map { it.await() } }
-        }.orEmpty().filterNotNull()
+        // Bounded per drop: one slow search under a single shared limit cost the shelf every
+        // drop the other searches had already found. Two drops can resolve to one song.
+        return coroutineScope {
+            recent.map { drop -> async { withTimeoutOrNull(SEARCH_TIMEOUT_MILLIS) { resolve(drop) } } }
+                .map { it.await() }
+        }.filterNotNull().distinctBy { it.id }
     }
 
     private suspend fun resolve(drop: DropEntity): UnifiedTrack? =
