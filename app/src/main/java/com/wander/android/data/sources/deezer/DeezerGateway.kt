@@ -83,6 +83,15 @@ class DeezerGateway @Inject constructor(
             ?: throw IOException("Deezer returned no track token for this song")
     }
 
+    /**
+     * `song.getLyrics`' results: timed lines in `LYRICS_SYNC_JSON`, plain text in `LYRICS_TEXT`.
+     * A song Deezer holds no lyrics for is refused as a [GatewayException], not answered empty.
+     */
+    fun songLyrics(session: Session, cleanTrackId: String): Result<JsonObject> = runCatching {
+        val payload = buildJsonObject { put("sng_id", cleanTrackId) }
+        call("song.getLyrics", session.apiToken, session.cookie, payload.toString()).first
+    }
+
     private fun openSession(arl: String): Session {
         val (results, headers) = call("deezer.getUserData", apiToken = "", cookie = "arl=$arl", body = "{}")
         val options = results["OPTIONS"]?.jsonObject

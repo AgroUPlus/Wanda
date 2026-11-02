@@ -1,6 +1,7 @@
 package com.wander.android.data.sources.deezer
 
 import com.wander.android.data.model.ArtistDetails
+import com.wander.android.data.model.LyricsData
 import com.wander.android.data.model.RecommendedShelf
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
@@ -22,7 +23,8 @@ import javax.inject.Singleton
 class DeezerSource @Inject constructor(
     private val apiClient: DeezerApiClient,
     private val streamResolver: DeezerStreamResolver,
-    private val accountManager: DeezerAccountManager
+    private val accountManager: DeezerAccountManager,
+    private val lyrics: DeezerLyrics
 ) : IMusicSource {
 
     override val sourceType: SourceType = SourceType.DEEZER
@@ -36,6 +38,7 @@ class DeezerSource @Inject constructor(
         playlists = false,
         likes = false,
         radio = true,
+        lyrics = true,
         recommendations = true
     )
 
@@ -67,6 +70,9 @@ class DeezerSource @Inject constructor(
 
     override suspend fun getArtist(artistId: String): Result<ArtistDetails> =
         apiClient.getArtist(artistId)
+
+    /** Needs the signed-in session, as a stream does; see [DeezerLyrics]. */
+    override suspend fun getLyrics(trackId: String): Result<LyricsData?> = lyrics.fetch(trackId)
 
     override suspend fun getRadio(seedTrackId: String, count: Int): Result<List<UnifiedTrack>> =
         apiClient.getTrackRadio(seedTrackId)
