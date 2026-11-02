@@ -1,6 +1,7 @@
 package com.wander.android.core.playback
 
 import androidx.media3.common.PlaybackException
+import com.wander.android.R
 
 /**
  * Translates low-level Media3 and HTTP playback failures into user-actionable messages.
@@ -11,7 +12,7 @@ import androidx.media3.common.PlaybackException
  */
 internal object PlaybackErrorTranslator {
 
-    fun userMessage(exception: PlaybackException): String {
+    fun userMessage(exception: PlaybackException): PlaybackMessage {
         var cause: Throwable? = exception
         var best: String? = null
         while (cause != null) {
@@ -22,34 +23,36 @@ internal object PlaybackErrorTranslator {
     }
 
     /** The mapping itself, apart from the exception it is read from, so it needs no player classes. */
-    fun fromMessage(raw: String?, errorCodeName: String): String =
-        raw?.asActionableMessage() ?: "Playback failed ($errorCodeName)."
+    fun fromMessage(raw: String?, errorCodeName: String): PlaybackMessage =
+        raw?.asActionableMessage() ?: PlaybackMessage.Resource(R.string.playback_error_generic, listOf(errorCodeName))
 
-    private fun String.asActionableMessage(): String = when {
+    private fun String.asActionableMessage(): PlaybackMessage = when {
         contains("YouTube Music refused", ignoreCase = true) &&
             (contains("401") || contains("403")) ->
-            "Sign in to YouTube Music again — the session expired."
+            res(R.string.playback_error_youtube_session)
 
         contains("no playable audio", ignoreCase = true) ->
-            "This track isn't playable from YouTube Music."
+            res(R.string.playback_error_youtube_unplayable)
 
         // A signature or throttling-nonce transform failing is transient — YouTube rotated its player
         // JS — and retrying picks up the new one, which is very different advice from "unplayable".
         contains("unscramble", ignoreCase = true) ||
             contains("throttling parameter", ignoreCase = true) ->
-            "Couldn't prepare the YouTube stream. Try again in a moment."
+            res(R.string.playback_error_youtube_prepare)
 
         contains("will not play this track", ignoreCase = true) ->
-            "YouTube Music won't play this track here."
+            res(R.string.playback_error_youtube_refused)
 
         isExpiredStreamMessage(this) ->
-            "Stream expired. Play it again to refresh it."
+            res(R.string.playback_error_stream_expired)
 
         isConnectivityMessage(this) ->
-            "Can't reach the source. Check your connection."
+            res(R.string.playback_error_unreachable)
 
-        else -> this
+        else -> PlaybackMessage.Verbatim(this)
     }
+
+    private fun res(id: Int) = PlaybackMessage.Resource(id)
 
     /**
      * Whether the stream URL was refused as expired: a 403 or 410 from the host serving it. A

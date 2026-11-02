@@ -1,6 +1,8 @@
 package com.wander.android.data.repository
 
+import android.content.res.Resources
 import androidx.media3.common.MimeTypes
+import com.wander.android.R
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.network.ConnectivityObserver
@@ -24,6 +26,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
  * local downloads, Navidrome server substitution, and the original remote backend.
  */
 internal class PlaybackStreamResolver(
+    private val resources: Resources,
     private val trackDao: TrackDao,
     private val sources: Set<IMusicSource>,
     private val secureStorage: SecureStorage,
@@ -102,11 +105,13 @@ internal class PlaybackStreamResolver(
         ) {
             return Result.failure(
                 IOException(
-                    if (secureStorage.isOfflineMode.value) {
-                        "Offline mode — this track is not downloaded to this device"
-                    } else {
-                        "No network — this track is not available on this device"
-                    }
+                    resources.getString(
+                        if (secureStorage.isOfflineMode.value) {
+                            R.string.playback_offline_not_downloaded
+                        } else {
+                            R.string.playback_offline_no_network
+                        }
+                    )
                 )
             )
         }
@@ -136,7 +141,7 @@ internal class PlaybackStreamResolver(
             withTimeoutOrNull(CROSS_SOURCE_BUDGET_MS) { streamableCopyOf(track, unavailable) }
         }
         return substitute?.let { Result.success(it) } ?: Result.failure(
-            IllegalStateException("$unavailableName isn't connected. Sign in to it in Settings to play this track.")
+            IllegalStateException(resources.getString(R.string.playback_source_not_connected, unavailableName))
         )
     }
 

@@ -125,7 +125,7 @@ class PlaylistImportWorker @AssistedInject constructor(
             title = applicationContext.getString(R.string.notif_importing_playlist, name),
             text = listOfNotNull(
                 applicationContext.getString(R.string.notif_import_progress, done, total),
-                eta.describe(done, total, System.currentTimeMillis())
+                eta.describe(applicationContext.resources, done, total, System.currentTimeMillis())
             ).joinToString(" · "),
             done = done,
             total = total

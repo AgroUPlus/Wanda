@@ -51,8 +51,8 @@ class DownloadWorker @AssistedInject constructor(
             kind = WorkProgressNotification.Kind.DOWNLOAD,
             title = applicationContext.getString(R.string.notif_downloading_music),
             text = listOfNotNull(
-                "$done of $total",
-                eta.describe(done, total, System.currentTimeMillis()),
+                applicationContext.getString(R.string.notif_import_progress, done, total),
+                eta.describe(applicationContext.resources, done, total, System.currentTimeMillis()),
                 title
             ).joinToString(" · "),
             done = done,

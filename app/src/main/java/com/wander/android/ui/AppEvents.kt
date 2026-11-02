@@ -28,15 +28,17 @@ internal fun AppEvents(
     playerConnection: PlayerConnection,
     snackbarHostState: SnackbarHostState
 ) {
-    LaunchedEffect(playerConnection) {
+    // Resolved at display time, so a message follows the app's language — see PlaybackMessage.
+    val context = LocalContext.current
+    LaunchedEffect(playerConnection, context) {
         playerConnection.errors.collect { message ->
-            snackbarHostState.showSnackbar(message, withDismissAction = true)
+            snackbarHostState.showSnackbar(message.resolve(context), withDismissAction = true)
         }
     }
 
-    LaunchedEffect(playerConnection) {
+    LaunchedEffect(playerConnection, context) {
         playerConnection.notices.collect { message ->
-            snackbarHostState.showSnackbar(message)
+            snackbarHostState.showSnackbar(message.resolve(context))
         }
     }
 
@@ -46,7 +48,6 @@ internal fun AppEvents(
         }
     }
 
-    val context = LocalContext.current
     LaunchedEffect(viewModel, context) {
         viewModel.shareLinks.collect { link -> context.launchShareSheet(link) }
     }

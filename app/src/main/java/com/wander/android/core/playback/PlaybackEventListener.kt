@@ -26,7 +26,7 @@ internal class PlaybackEventListener(
     private val isRadioMode: StateFlow<Boolean>,
     private val isLiveNow: () -> Boolean,
     private val isOrderLocked: () -> Boolean,
-    private val onError: (String) -> Unit,
+    private val onError: (PlaybackMessage) -> Unit,
     private val emit: (PlaybackState) -> Unit
 ) : Player.Listener {
 

@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -135,11 +136,11 @@ private fun ListeningView(readiness: IndexReadiness, audioLevel: Float = 0f) {
     Text(stringResource(R.string.common_listening_2), style = MaterialTheme.typography.headlineSmall, color = Color.White)
     Text(
         text = when (readiness) {
-            is IndexReadiness.Ready ->
-                "Hold it near the music. Matching against ${readiness.trackCount} " +
-                    "${if (readiness.trackCount == 1) "track" else "tracks"} measured on this device."
-            IndexReadiness.Empty -> "Index is filling..."
-            IndexReadiness.ModelMissing -> "Model missing"
+            is IndexReadiness.Ready -> pluralStringResource(
+                R.plurals.recognition_matching_against, readiness.trackCount, readiness.trackCount
+            )
+            IndexReadiness.Empty -> stringResource(R.string.recognition_index_filling)
+            IndexReadiness.ModelMissing -> stringResource(R.string.recognition_model_missing)
         },
         style = MaterialTheme.typography.bodyMedium,
         color = Color.White.copy(alpha = 0.7f),

@@ -24,6 +24,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import com.wander.android.ui.components.rememberHaptics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.res.stringResource
+import com.wander.android.R
 import androidx.compose.ui.unit.dp
 
 /** Matches the touch target an `IconButton` would have given this slot. */
@@ -88,6 +91,15 @@ internal fun QueueRadioButton(
         )
     }
 
+    val description = stringResource(R.string.queue_button_description)
+    val radioState = stringResource(
+        if (isRadioMode) R.string.queue_button_radio_on else R.string.queue_button_radio_off
+    )
+    // Named as the long press's action, so a screen reader offers it as one rather than leaving
+    // the gesture to be described in prose.
+    val longClickLabel = stringResource(
+        if (isRadioMode) R.string.queue_button_radio_turn_off else R.string.queue_button_radio_turn_on
+    )
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -95,17 +107,15 @@ internal fun QueueRadioButton(
             .clip(CircleShape)
             .combinedClickable(
                 onClick = onOpenQueue,
+                onLongClickLabel = longClickLabel,
                 onLongClick = {
                     haptics.heldDown()
                     onToggleRadio()
                 }
             )
             .semantics {
-                contentDescription = if (isRadioMode) {
-                    "Open queue. Radio on — long press to turn off"
-                } else {
-                    "Open queue. Long press to turn on radio"
-                }
+                contentDescription = description
+                stateDescription = radioState
             }
     ) {
         Icon(

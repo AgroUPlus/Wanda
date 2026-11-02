@@ -164,7 +164,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
                         R.plurals.notif_measuring_progress, total, done, total
                     )
                 },
-                eta.describe(done, total, System.currentTimeMillis()),
+                eta.describe(applicationContext.resources, done, total, System.currentTimeMillis()),
                 title
             ).joinToString(" · "),
             done = done,

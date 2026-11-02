@@ -25,7 +25,7 @@ internal object PlaybackStateFlowBuilder {
         orderLocked: StateFlow<Boolean>,
         isRadioMode: StateFlow<Boolean>,
         resolvedLive: StateFlow<Set<String>>,
-        onError: (String) -> Unit,
+        onError: (PlaybackMessage) -> Unit,
         scope: CoroutineScope
     ): StateFlow<PlaybackState> {
         lateinit var stateRef: StateFlow<PlaybackState>
@@ -62,7 +62,7 @@ internal object PlaybackStateFlowBuilder {
         isRadioMode: StateFlow<Boolean>,
         isLiveNow: () -> Boolean,
         isOrderLocked: () -> Boolean,
-        onError: (String) -> Unit
+        onError: (PlaybackMessage) -> Unit
     ): Flow<PlaybackState> = callbackFlow {
         val listener = PlaybackEventListener(ctrl, collaborators, isRadioMode, isLiveNow, isOrderLocked, onError) { trySend(it) }
         ctrl.addListener(listener)

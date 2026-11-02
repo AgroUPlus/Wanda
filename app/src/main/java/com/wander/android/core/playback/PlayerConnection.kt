@@ -6,6 +6,7 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
+import com.wander.android.R
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.UnifiedTrack
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -53,11 +54,11 @@ class PlayerConnection @Inject constructor(
     private val _actualAudioFormat = MutableStateFlow<ActualAudioFormat?>(null)
     val isRadioMode: StateFlow<Boolean> get() = secureStorage.isRadioMode
 
-    private val _errors = MutableSharedFlow<String>(extraBufferCapacity = 1)
-    val errors: SharedFlow<String> = _errors.asSharedFlow()
+    private val _errors = MutableSharedFlow<PlaybackMessage>(extraBufferCapacity = 1)
+    val errors: SharedFlow<PlaybackMessage> = _errors.asSharedFlow()
 
-    private val _notices = MutableSharedFlow<String>(extraBufferCapacity = 1)
-    val notices: SharedFlow<String> = _notices.asSharedFlow()
+    private val _notices = MutableSharedFlow<PlaybackMessage>(extraBufferCapacity = 1)
+    val notices: SharedFlow<PlaybackMessage> = _notices.asSharedFlow()
 
     val episodeCheckpoints: SharedFlow<EpisodeCheckpoint> = checkpointTracker.episodeCheckpoints
     val speedAndPitch: StateFlow<SpeedAndPitch> = speedController.speedAndPitch
@@ -232,14 +233,14 @@ class PlayerConnection @Inject constructor(
     }
 
     /** Raises [message] — already localized by the caller — as a snackbar through [notices]. */
-    fun notify(message: String) = _notices.tryEmit(message)
+    fun notify(message: String) = _notices.tryEmit(PlaybackMessage.Verbatim(message))
 
-    fun notifyNoStation() = _notices.tryEmit("Not enough listening yet — play a few tracks and try again")
+    fun notifyNoStation() = _notices.tryEmit(PlaybackMessage.Resource(R.string.radio_no_station))
 
     fun toggleRadio() {
         val enabled = !secureStorage.isRadioMode.value
         secureStorage.setRadioMode(enabled)
-        _notices.tryEmit(if (enabled) "Radio mode on — the queue keeps going" else "Radio mode off")
+        _notices.tryEmit(PlaybackMessage.Resource(if (enabled) R.string.radio_mode_on else R.string.radio_mode_off))
     }
 
     fun setSpeedAndPitch(speed: Float, pitch: Float) =

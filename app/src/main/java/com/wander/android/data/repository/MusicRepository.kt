@@ -28,6 +28,7 @@ import kotlinx.coroutines.withContext
  */
 @Singleton
 class MusicRepository @Inject constructor(
+    @param:dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val trackDao: TrackDao,
     private val albumDao: AlbumDao,
     private val playlistDao: PlaylistDao,
@@ -78,6 +79,7 @@ class MusicRepository @Inject constructor(
     }
 
     private val streamResolver = PlaybackStreamResolver(
+        resources = context.resources,
         trackDao = trackDao,
         sources = sources,
         secureStorage = secureStorage,
