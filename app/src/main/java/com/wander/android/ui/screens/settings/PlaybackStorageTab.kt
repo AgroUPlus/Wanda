@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.settings
 
+import android.text.format.Formatter
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CloudOff
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.wander.android.R
 import com.wander.android.ui.components.GroupedCard
@@ -151,7 +153,7 @@ internal fun LazyListScope.playbackStorageTab(
                     SettingsRow(
                         modifier = Modifier.scale(rememberShelfEntranceScale(6)),
                         title = stringResource(R.string.settings_clear_streaming_cache),
-                        subtitle = formatBytes(state.cacheBytes) + " in use",
+                        subtitle = stringResource(R.string.settings_cache_in_use, formatBytes(state.cacheBytes)),
                         onClick = actions.onClearCache,
                         icon = Icons.Rounded.DeleteSweep
                     )
@@ -166,8 +168,6 @@ internal fun LazyListScope.playbackStorageTab(
     }
 }
 
-internal fun formatBytes(bytes: Long): String = when {
-    bytes >= 1L shl 30 -> "%.1f GB".format(bytes.toDouble() / (1L shl 30))
-    bytes >= 1L shl 20 -> "%.0f MB".format(bytes.toDouble() / (1L shl 20))
-    else -> "0 MB"
-}
+/** A byte count in the reader's own locale and units, as the cloud backup rows already show it. */
+@Composable
+internal fun formatBytes(bytes: Long): String = Formatter.formatShortFileSize(LocalContext.current, bytes)

@@ -27,9 +27,7 @@ internal fun AgroPairedMessage(state: AgroPairingState.Paired) {
         style = MaterialTheme.typography.bodyMedium
     )
     Text(
-        text = "Your other devices will see this one as “${state.petname}”. " +
-            "This device holds a token of its own, which you can revoke from the server without " +
-            "changing your passphrase.",
+        text = stringResource(R.string.agro_paired_petname, state.petname),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )

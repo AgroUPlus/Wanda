@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.IntentSender
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.R
 import com.wander.android.core.audio.fingerprint.FingerprintIndexing
 import com.wander.android.core.audio.fingerprint.FingerprintProgress
 import com.wander.android.core.cache.DownloadScheduler
@@ -182,7 +183,8 @@ internal class SettingsViewModel @Inject constructor(
     fun setIncognito(enabled: Boolean) { viewModelScope.launch { incognitoRepository.set(enabled) } }
 
     val navidromeServer: String get() = secureStorage.navidromeServerUrl
-    val agroDevicePetname: String get() = secureStorage.agroDevicePetname.ifEmpty { "Wanda Android" }
+    val agroDevicePetname: String
+        get() = secureStorage.agroDevicePetname.ifEmpty { context.getString(R.string.agro_default_device_name) }
     val agroDeviceId: String get() = secureStorage.agroDeviceId
     val agroServer: String get() = secureStorage.agroServerUrl
 

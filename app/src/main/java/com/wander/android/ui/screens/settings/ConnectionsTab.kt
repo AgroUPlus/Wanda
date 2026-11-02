@@ -30,9 +30,9 @@ internal fun LazyListScope.connectionsTab(
                         // should point — the user just needs telling it's ready, not how it got
                         // that way.
                         subtitle = when {
-                            state.navidrome -> "Connected to ${state.navidromeServer}"
-                            state.syncedNavidrome?.serverUrl != null -> "Ready to sign in"
-                            else -> "Not connected"
+                            state.navidrome -> stringResource(R.string.settings_connected_to, state.navidromeServer)
+                            state.syncedNavidrome?.serverUrl != null -> stringResource(R.string.settings_ready_to_sign_in)
+                            else -> stringResource(R.string.settings_not_connected)
                         },
                         onClick = if (state.navidrome) actions.onNavidromeSignOut else actions.onNavidromeLogin,
                         leading = { SourceIcon(SourceType.NAVIDROME) }
@@ -46,9 +46,11 @@ internal fun LazyListScope.connectionsTab(
                             // A Google account can hold several YouTube channels and only the
                             // session knows which one is active, so naming it is the only way to
                             // be sure the right one is signed in. Falls back to the bare state.
-                            state.youTubeAccount.takeIf { it.isNotBlank() }?.let { "Signed in as $it" } ?: "Signed in"
+                            state.youTubeAccount.takeIf { it.isNotBlank() }
+                                ?.let { stringResource(R.string.settings_signed_in_as, it) }
+                                ?: stringResource(R.string.settings_signed_in)
                         } else {
-                            "Signed out"
+                            stringResource(R.string.settings_signed_out)
                         },
                         onClick = if (state.youTube) actions.onYouTubeSignOut else actions.onYouTubeLogin,
                         leading = { SourceIcon(SourceType.YTMUSIC) }
@@ -59,15 +61,16 @@ internal fun LazyListScope.connectionsTab(
                         modifier = Modifier.scale(rememberShelfEntranceScale(2)),
                         title = stringResource(R.string.deezer_account),
                         subtitle = if (state.deezer) {
-                            val account = state.deezerAccount.takeIf { it.isNotBlank() } ?: "Signed in"
+                            val account = state.deezerAccount.takeIf { it.isNotBlank() }
+                                ?: stringResource(R.string.settings_signed_in)
                             val tierDisplay = when (state.deezerTier) {
                                 "HIFI" -> stringResource(R.string.deezer_tier_hifi)
                                 "PREMIUM" -> stringResource(R.string.deezer_tier_premium)
                                 else -> stringResource(R.string.deezer_tier_free)
                             }
-                            "$account ($tierDisplay)"
+                            stringResource(R.string.settings_account_with_tier, account, tierDisplay)
                         } else {
-                            "Signed out"
+                            stringResource(R.string.settings_signed_out)
                         },
                         onClick = if (state.deezer) actions.onDeezerSignOut else actions.onDeezerLogin,
                         leading = { SourceIcon(SourceType.DEEZER) }

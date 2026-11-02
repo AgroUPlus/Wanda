@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings → Connections: what each source row says about its account. -->
+    <string name="settings_connected_to">Connected to %1$s</string>
+    <string name="settings_ready_to_sign_in">Ready to sign in</string>
+    <string name="settings_not_connected">Not connected</string>
+    <string name="settings_signed_in">Signed in</string>
+    <string name="settings_signed_in_as">Signed in as %1$s</string>
+    <string name="settings_signed_out">Signed out</string>
+    <!-- An account name, then its plan in brackets: "alex (Premium (320 kbps))". -->
+    <string name="settings_account_with_tier">%1$s (%2$s)</string>
+
+    <!-- Settings → External: the share link's address, or that none was chosen. -->
+    <string name="settings_share_domain_listen">%1$s/listen</string>
+    <string name="settings_share_domain_default">Default</string>
+
+    <!-- Settings → Playback & storage: how much the streaming cache holds, e.g. "1.2 GB in use". -->
+    <string name="settings_cache_in_use">%1$s in use</string>
+
+    <!-- Agro pairing dialog. -->
+    <string name="agro_pairing_title_connected">Connected</string>
+    <string name="agro_pairing_title_registered">Account created</string>
+    <string name="agro_pairing_title_create">Create an Agro account</string>
+    <string name="agro_pairing_title_pair">Pair with Agro</string>
+    <string name="agro_pairing_waiting_approval">Waiting for approval</string>
+    <string name="agro_pairing_pair_this_device">Pair this device</string>
+    <string name="agro_pairing_connecting">Connecting…</string>
+    <string name="agro_pairing_create_account">Create account</string>
+    <string name="agro_pairing_pair">Pair</string>
+    <string name="agro_pairing_camera_failed">Couldn\'t open the camera app</string>
+    <string name="agro_pairing_have_account">I already have an account</string>
+    <string name="agro_pairing_create_on_server">Create an account on this server</string>
+    <string name="agro_paired_petname">Your other devices will see this one as “%1$s”. This device holds a token of its own, which you can revoke from the server without changing your passphrase.</string>
+    <!-- The name this phone goes by on the Agro server until the user renames it. Must match the label sent at pairing. -->
+    <string name="agro_default_device_name" translatable="false">Wanda Android</string>
+
+    <!-- Agro devices list. -->
+    <string name="agro_device_listening_now">Listening now</string>
+    <string name="agro_device_away">Away</string>
+    <string name="agro_device_resuming">Resuming…</string>
+    <string name="agro_device_continue_here">Continue here</string>
+
+    <!-- Backup passphrase dialog. -->
+    <string name="backup_passphrase_choose">Choose a passphrase</string>
+    <string name="backup_passphrase_enter">Enter the passphrase</string>
+    <string name="backup_passphrase_export_explain">The backup holds your server passwords and sign-in tokens, so it is encrypted with this passphrase. Nobody can recover it for you — without it the file cannot be opened again.</string>
+    <string name="backup_passphrase_import_explain">The passphrase this backup was created with.</string>
+    <string name="backup_export">Export</string>
+    <string name="backup_import">Import</string>
+
+    <!-- Backup results: the action that failed, then why. -->
+    <string name="backup_export_failed">Export failed: %1$s</string>
+    <string name="backup_import_failed">Import failed: %1$s</string>
+    <string name="backup_wrong_passphrase_or_damaged">wrong passphrase, or the file is damaged</string>
+    <string name="backup_file_unreadable">the file could not be read</string>
+
+    <!-- Duplicate merge preview. -->
+    <string name="merge_review_different_albums">Different albums: %1$s</string>
+    <string name="merge_review_lengths_differ">Lengths differ by %1$ds</string>
+    <plurals name="merge_kept_apart">
+        <item quantity="one">%1$d pair kept apart</item>
+        <item quantity="other">%1$d pairs kept apart</item>
+    </plurals>
+    <plurals name="merge_rows_become_recordings">
+        <item quantity="one">%1$d row would become %2$d recordings</item>
+        <item quantity="other">%1$d rows would become %2$d recordings</item>
+    </plurals>
+    <plurals name="merge_rows_folded">
+        <item quantity="one">%1$d row folded together</item>
+        <item quantity="other">%1$d rows folded together</item>
+    </plurals>
+    <plurals name="merge_split_likes">
+        <item quantity="one">%1$d like currently split across copies</item>
+        <item quantity="other">%1$d likes currently split across copies</item>
+    </plurals>
+    <plurals name="merge_worth_checking">
+        <item quantity="one">%1$d worth checking</item>
+        <item quantity="other">%1$d worth checking</item>
+    </plurals>
+</resources>

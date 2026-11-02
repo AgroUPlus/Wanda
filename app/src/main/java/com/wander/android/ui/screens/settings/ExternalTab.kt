@@ -35,9 +35,11 @@ internal fun LazyListScope.externalTab(
                     modifier = Modifier.scale(rememberShelfEntranceScale(1)),
                     title = stringResource(R.string.settings_custom_share_domain),
                     subtitle = when {
-                        state.agroShareDomain.isNotBlank() -> "${state.agroShareDomain}/listen"
-                        state.shareDomain.isNotBlank() -> "${state.shareDomain}/listen"
-                        else -> "Default"
+                        state.agroShareDomain.isNotBlank() ->
+                            stringResource(R.string.settings_share_domain_listen, state.agroShareDomain)
+                        state.shareDomain.isNotBlank() ->
+                            stringResource(R.string.settings_share_domain_listen, state.shareDomain)
+                        else -> stringResource(R.string.settings_share_domain_default)
                     },
                     onClick = actions.onEditShareDomain,
                     enabled = !state.incognito,

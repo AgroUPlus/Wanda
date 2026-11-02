@@ -55,10 +55,10 @@ internal fun AgroPairingDialog(
         title = {
             Text(
                 when {
-                    state is AgroPairingState.Paired -> "Connected"
-                    state is AgroPairingState.Registered -> "Account created"
-                    mode == AgroPairingMode.CREATE -> "Create an Agro account"
-                    else -> "Pair with Agro"
+                    state is AgroPairingState.Paired -> stringResource(R.string.agro_pairing_title_connected)
+                    state is AgroPairingState.Registered -> stringResource(R.string.agro_pairing_title_registered)
+                    mode == AgroPairingMode.CREATE -> stringResource(R.string.agro_pairing_title_create)
+                    else -> stringResource(R.string.agro_pairing_title_pair)
                 }
             )
         },
@@ -105,7 +105,15 @@ internal fun AgroPairingDialog(
                     enabled = !state.signup.isPending,
                     shapes = ButtonDefaults.shapes()
                 ) {
-                    Text(if (state.signup.isPending) "Waiting for approval" else "Pair this device")
+                    Text(
+                        stringResource(
+                            if (state.signup.isPending) {
+                                R.string.agro_pairing_waiting_approval
+                            } else {
+                                R.string.agro_pairing_pair_this_device
+                            }
+                        )
+                    )
                 }
 
                 else -> TextButton(
@@ -122,9 +130,9 @@ internal fun AgroPairingDialog(
                 ) {
                     Text(
                         when {
-                            busy -> "Connecting…"
-                            mode == AgroPairingMode.CREATE -> "Create account"
-                            else -> "Pair"
+                            busy -> stringResource(R.string.agro_pairing_connecting)
+                            mode == AgroPairingMode.CREATE -> stringResource(R.string.agro_pairing_create_account)
+                            else -> stringResource(R.string.agro_pairing_pair)
                         }
                     )
                 }
