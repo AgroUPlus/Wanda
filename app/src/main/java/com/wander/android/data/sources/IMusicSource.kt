@@ -191,9 +191,16 @@ interface IMusicSource {
     suspend fun createShareLink(target: ShareTarget): Result<String> =
         Result.failure(UnsupportedOperationException("$displayName cannot create share links"))
 
-    suspend fun setLiked(trackId: String, liked: Boolean): Result<Unit> = Result.success(Unit)
+    /**
+     * Likes or unlikes [trackId] on the backend. Only meaningful when [SourceCapabilities.likes] is
+     * set; the default fails, since a like reported as synced that went nowhere is a quiet lie.
+     */
+    suspend fun setLiked(trackId: String, liked: Boolean): Result<Unit> =
+        Result.failure(UnsupportedOperationException("$displayName cannot store likes"))
+
+    /** Records a play on the backend. Only meaningful when [SourceCapabilities.scrobble] is set. */
     suspend fun scrobble(trackId: String, submissionTime: Long = System.currentTimeMillis()): Result<Unit> =
-        Result.success(Unit)
+        Result.failure(UnsupportedOperationException("$displayName does not record plays"))
 
     /** Tells the backend [trackId] is playing now, without counting a play. See [SourceCapabilities.scrobble]. */
     suspend fun nowPlaying(trackId: String): Result<Unit> =

@@ -110,20 +110,19 @@ class MusicSourceContractTest {
             source.deletePlaylist("p"),
             source.getVideoStreamInfo("t"),
             source.getArtist("a"),
-            source.getArtistAlbumPage("b", null, "artist")
+            source.getArtistAlbumPage("b", null, "artist"),
+            source.removeFromPlaylist("p", 0),
+            source.moveInPlaylist("p", 0, 1),
+            // Callers check `likes` and `scrobble` first; a source without them must not claim
+            // a like or a play went through.
+            source.setLiked("t", true),
+            source.scrobble("t"),
+            source.nowPlaying("t")
         )
 
         failures.forEach { result ->
             assertTrue(result.isFailure)
             assertTrue(result.exceptionOrNull() is UnsupportedOperationException)
         }
-    }
-
-    @Test
-    fun likingAndScrobblingAreHarmlessNoOpsWhenUnsupported() = runTest {
-        val source = BareSource()
-
-        assertTrue(source.setLiked("t", true).isSuccess)
-        assertTrue(source.scrobble("t").isSuccess)
     }
 }
