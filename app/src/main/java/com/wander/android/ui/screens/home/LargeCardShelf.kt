@@ -1,5 +1,7 @@
 package com.wander.android.ui.screens.home
 
+import androidx.compose.ui.res.stringResource
+import com.wander.android.R
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -98,6 +100,7 @@ private fun LargeTrackCard(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = { if (enabled) onPlay() },
+                onLongClickLabel = stringResource(R.string.common_more_options),
                 onLongClick = onLongPress
             )
     ) {

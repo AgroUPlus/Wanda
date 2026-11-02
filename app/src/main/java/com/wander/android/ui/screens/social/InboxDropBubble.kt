@@ -139,6 +139,7 @@ internal fun ConversationDropMessage(
                 .clip(bubbleShape)
                 .combinedClickable(
                     onClick = onPlay,
+                    onLongClickLabel = stringResource(R.string.common_more_options),
                     onLongClick = {
                         haptics.heldDown()
                         onLongPress()

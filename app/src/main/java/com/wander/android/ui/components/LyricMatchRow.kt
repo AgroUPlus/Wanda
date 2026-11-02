@@ -1,5 +1,7 @@
 package com.wander.android.ui.components
 
+import androidx.compose.ui.res.stringResource
+import com.wander.android.R
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -74,6 +76,7 @@ fun LyricMatchRow(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onPlay,
+                onLongClickLabel = stringResource(R.string.common_more_options),
                 onLongClick = onLongPress
             )
             .padding(horizontal = 8.dp, vertical = 6.dp)

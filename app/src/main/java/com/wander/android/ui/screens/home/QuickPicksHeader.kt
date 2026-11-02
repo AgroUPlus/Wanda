@@ -132,6 +132,7 @@ private fun CoverCluster(
                         )
                         .combinedClickable(
                             onClick = { onPlay(index) },
+                            onLongClickLabel = stringResource(R.string.common_more_options),
                             onLongClick = { onLongPress(tracks[index]) }
                         )
                 )

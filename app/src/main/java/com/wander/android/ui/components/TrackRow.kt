@@ -14,6 +14,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -119,6 +123,7 @@ fun TrackRow(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = { if (enabled || selected != null) onPlay() },
+                onLongClickLabel = stringResource(R.string.common_more_options),
                 onLongClick = onLongPress
             )
             .then(if (selected != null) Modifier.semantics { this.selected = selected == true } else Modifier)
@@ -207,6 +212,18 @@ fun TrackRow(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp, end = if (onToggleLike == null && !isPlaying) 4.dp else 0.dp)
+                )
+            }
+        }
+
+        // The same sheet the long press opens, for anyone who cannot or would not long-press:
+        // without it every action on a track was behind a gesture nothing on screen advertised.
+        if (onLongPress != null && selected == null) {
+            IconButton(onClick = onLongPress, modifier = Modifier.size(48.dp)) {
+                Icon(
+                    imageVector = Icons.Rounded.MoreVert,
+                    contentDescription = stringResource(R.string.common_more_options_for, track.title),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

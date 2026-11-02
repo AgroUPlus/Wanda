@@ -1,5 +1,7 @@
 package com.wander.android.ui.screens.library
 
+import androidx.compose.ui.res.stringResource
+import com.wander.android.R
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -53,6 +55,7 @@ fun PlaylistRow(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick,
+                onLongClickLabel = stringResource(R.string.common_more_options),
                 onLongClick = onLongPress
             )
             .padding(horizontal = 16.dp, vertical = 8.dp)

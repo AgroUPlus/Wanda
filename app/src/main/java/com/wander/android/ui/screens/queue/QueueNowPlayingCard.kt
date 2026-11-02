@@ -64,6 +64,7 @@ internal fun QueueNowPlayingCard(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = {},
+                onLongClickLabel = stringResource(R.string.common_more_options),
                 onLongClick = onLongPress
             )
     ) {

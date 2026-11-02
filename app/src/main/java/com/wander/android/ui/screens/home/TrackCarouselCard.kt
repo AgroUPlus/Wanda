@@ -1,5 +1,7 @@
 package com.wander.android.ui.screens.home
 
+import androidx.compose.ui.res.stringResource
+import com.wander.android.R
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -46,6 +48,7 @@ internal fun CarouselItemScope.TrackCarouselCard(
             .maskClip(MaterialTheme.shapes.extraLarge)
             .combinedClickable(
                 onClick = { if (enabled) onPlay() },
+                onLongClickLabel = stringResource(R.string.common_more_options),
                 onLongClick = onLongPress
             )
             .graphicsLayer { alpha = if (enabled) 1f else DisabledAlpha }
