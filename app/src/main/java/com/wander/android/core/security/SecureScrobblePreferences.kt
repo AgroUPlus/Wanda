@@ -39,8 +39,17 @@ internal class SecureScrobblePreferences(private val prefs: SharedPreferences) {
         putString(KEY_LASTFM_API_SECRET, secret.trim())
     }
 
+    /**
+     * Why ListenBrainz (or Last.fm) signed this device out by itself — a revoked token, a lapsed
+     * session — or null when it did not. Kept across restarts, so the notice outlives the process
+     * and a reconnect knows the plays queued since were never declined by the user.
+     */
+    val listenBrainzSignedOut: String? get() = prefs.getString(KEY_LISTENBRAINZ_SIGNED_OUT, null)
+    val lastFmSignedOut: String? get() = prefs.getString(KEY_LASTFM_SIGNED_OUT, null)
+
     fun connectListenBrainz(username: String, token: String) {
         prefs.edit {
+            remove(KEY_LISTENBRAINZ_SIGNED_OUT)
             putString(KEY_LISTENBRAINZ_USER, username)
             putString(KEY_LISTENBRAINZ_TOKEN, token)
             putBoolean(KEY_LISTENBRAINZ_ENABLED, true)
@@ -50,6 +59,7 @@ internal class SecureScrobblePreferences(private val prefs: SharedPreferences) {
 
     fun connectLastFm(username: String, session: String) {
         prefs.edit {
+            remove(KEY_LASTFM_SIGNED_OUT)
             putString(KEY_LASTFM_USER, username)
             putString(KEY_LASTFM_SESSION, session)
             putBoolean(KEY_LASTFM_ENABLED, true)
@@ -67,14 +77,23 @@ internal class SecureScrobblePreferences(private val prefs: SharedPreferences) {
         _lastFm.value = read(KEY_LASTFM_USER, KEY_LASTFM_ENABLED)
     }
 
-    /** Signs out: the token goes, not just the switch. */
-    fun disconnectListenBrainz() {
-        prefs.edit { remove(KEY_LISTENBRAINZ_TOKEN); remove(KEY_LISTENBRAINZ_USER); remove(KEY_LISTENBRAINZ_ENABLED) }
+    /**
+     * Signs out: the token goes, not just the switch. [reason] is set when the service did it
+     * rather than the user; a user's own sign-out clears any earlier one.
+     */
+    fun disconnectListenBrainz(reason: String? = null) {
+        prefs.edit {
+            remove(KEY_LISTENBRAINZ_TOKEN); remove(KEY_LISTENBRAINZ_USER); remove(KEY_LISTENBRAINZ_ENABLED)
+            if (reason != null) putString(KEY_LISTENBRAINZ_SIGNED_OUT, reason) else remove(KEY_LISTENBRAINZ_SIGNED_OUT)
+        }
         _listenBrainz.value = ScrobbleAccount(null, false)
     }
 
-    fun disconnectLastFm() {
-        prefs.edit { remove(KEY_LASTFM_SESSION); remove(KEY_LASTFM_USER); remove(KEY_LASTFM_ENABLED) }
+    fun disconnectLastFm(reason: String? = null) {
+        prefs.edit {
+            remove(KEY_LASTFM_SESSION); remove(KEY_LASTFM_USER); remove(KEY_LASTFM_ENABLED)
+            if (reason != null) putString(KEY_LASTFM_SIGNED_OUT, reason) else remove(KEY_LASTFM_SIGNED_OUT)
+        }
         _lastFm.value = ScrobbleAccount(null, false)
     }
 

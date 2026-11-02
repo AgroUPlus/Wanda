@@ -94,6 +94,11 @@ internal class LastFmClient @Inject constructor(
             when ((error as? LastFmError)?.code) {
                 // Invalid or revoked session, or a key Last.fm no longer accepts.
                 4, 9, 10, 14, 26 -> ScrobbleOutcome.Unauthorized(error.message.orEmpty())
+                // A request Last.fm will refuse however often it is sent: unknown service or
+                // method, bad format or parameters, no such resource, a signature it rejects.
+                // Retrying kept the batch at the head of the outbox and every later play behind it.
+                2, 3, 5, 6, 7, 13 -> ScrobbleOutcome.Done
+                // Network failures, 8 (try again), 11 and 16 (service down) and 29 (rate limit).
                 else -> ScrobbleOutcome.Retry(error.message.orEmpty())
             }
         }

@@ -35,6 +35,9 @@ internal const val KEY_LASTFM_USER = "key_lastfm_user"
 internal const val KEY_LASTFM_ENABLED = "key_lastfm_enabled"
 internal const val KEY_LASTFM_API_KEY = "key_lastfm_api_key"
 internal const val KEY_LASTFM_API_SECRET = "key_lastfm_api_secret"
+/** Why the service signed this device out on its own; present only until the user connects again. */
+internal const val KEY_LISTENBRAINZ_SIGNED_OUT = "key_listenbrainz_signed_out"
+internal const val KEY_LASTFM_SIGNED_OUT = "key_lastfm_signed_out"
 
 internal val ACCOUNT_KEYS = setOf(
     KEY_NAVIDROME_URL, KEY_NAVIDROME_USER, KEY_NAVIDROME_TOKEN, KEY_YTM_COOKIE,
@@ -45,7 +48,7 @@ internal val ACCOUNT_KEYS = setOf(
     KEY_AGRO_IDENTITY_PRIV, KEY_AGRO_IDENTITY_PUB, KEY_PODCASTINDEX_KEY, KEY_PODCASTINDEX_SECRET,
     // Scrobbling services: a token or session is a sign-in, so it travels only with ACCOUNTS.
     KEY_LISTENBRAINZ_TOKEN, KEY_LISTENBRAINZ_USER, KEY_LASTFM_SESSION, KEY_LASTFM_USER,
-    KEY_LASTFM_API_KEY, KEY_LASTFM_API_SECRET
+    KEY_LASTFM_API_KEY, KEY_LASTFM_API_SECRET, KEY_LISTENBRAINZ_SIGNED_OUT, KEY_LASTFM_SIGNED_OUT
 )
 
 internal const val KEY_AGRO_CATALOG_TRADE = "key_agro_catalog_trade"
