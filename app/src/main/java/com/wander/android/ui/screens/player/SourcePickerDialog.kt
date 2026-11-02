@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.wander.android.R
+import com.wander.android.data.model.nameRes
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.model.isPlayableOffline
 import com.wander.android.ui.components.AudioQualityBadge
@@ -136,7 +137,7 @@ private fun RenditionRow(
         SourceIcon(rendition.source, size = 28.dp, modifier = Modifier.padding(end = 12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = rendition.source.displayName,
+                text = stringResource(rendition.source.nameRes),
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (isCurrent) MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.onSurface

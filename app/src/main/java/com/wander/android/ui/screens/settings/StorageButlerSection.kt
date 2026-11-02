@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
+import com.wander.android.data.model.nameRes
 import com.wander.android.data.repository.StorageBreakdown
 
 /**
@@ -46,7 +47,7 @@ internal fun StorageButlerSection(
                 Text(
                     text = stringResource(
                         R.string.storage_source_line,
-                        entry.source.displayName,
+                        stringResource(entry.source.nameRes),
                         entry.trackCount,
                         formatBytes(entry.bytes)
                     ),

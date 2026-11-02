@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
+import com.wander.android.data.model.nameRes
 import com.wander.android.data.importer.M3uWriter
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedPlaylist
@@ -67,7 +68,7 @@ internal fun PlaylistShareHost(
 
     when (sheet) {
         PlaylistSheet.SHARE -> PlaylistShareSheet(
-            originalSource = playlist.source.displayName.takeIf { viewModel.canShareOriginal(playlist) },
+            originalSource = stringResource(playlist.source.nameRes).takeIf { viewModel.canShareOriginal(playlist) },
             publishesACopy = viewModel.publishesACopy(playlist),
             publication = publication,
             choices = PlaylistShareChoices(
@@ -104,7 +105,7 @@ internal fun PlaylistShareHost(
             )
         }
         PlaylistSheet.CONVERT -> ConvertPlaylistSheet(
-            sourceName = playlist.source.displayName,
+            sourceName = stringResource(playlist.source.nameRes),
             onConvert = { viewModel.convert(playlist, tracks) },
             onDismiss = viewModel::dismiss
         )

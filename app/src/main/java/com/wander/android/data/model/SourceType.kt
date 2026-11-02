@@ -9,9 +9,8 @@ import kotlinx.serialization.Serializable
  * `priority` orders sources when the same recording is available from several of them — lower
  * wins. Local is instant, free and works offline; Navidrome is your own server at full quality.
  *
- * `shortName` is for places that are tight for room — the Home filter row, where four chips have
- * to fit on one line. It falls back to `displayName`, so a source only overrides it when the full
- * name genuinely does not fit.
+ * `displayName` is the fixed English name, for logs and diagnostics. What the user reads is
+ * [nameRes] (and [shortNameRes] where room is tight), so it can be translated.
  *
  * `isPersonalLibrary` says whether this backend's catalogue *is* the user's own collection.
  * Browsing Navidrome albums shows music you own. It decides whether a fetched track counts
@@ -22,10 +21,9 @@ enum class SourceType(
     val displayName: String,
     val idPrefix: String,
     val priority: Int,
-    val isPersonalLibrary: Boolean,
-    shortName: String? = null
+    val isPersonalLibrary: Boolean
 ) {
-    LOCAL("On this device", "local:", priority = 0, isPersonalLibrary = true, shortName = "Local"),
+    LOCAL("On this device", "local:", priority = 0, isPersonalLibrary = true),
     NAVIDROME("Navidrome", "navidrome:", priority = 1, isPersonalLibrary = true),
     YTMUSIC("YouTube Music", "ytm:", priority = 2, isPersonalLibrary = false),
     DEEZER("Deezer", "deezer:", priority = 3, isPersonalLibrary = false),
@@ -36,15 +34,12 @@ enum class SourceType(
      * playlists only, never tracks: each of its tracks is matched to one of the sources above, or
      * is [UNRESOLVED] until it is.
      */
-    AGRO("Shared on Agro", "agro:", priority = 98, isPersonalLibrary = false, shortName = "Shared"),
+    AGRO("Shared on Agro", "agro:", priority = 98, isPersonalLibrary = false),
 
     /**
      * A track imported from a pasted playlist that no backend has been matched to yet. It has no
      * `IMusicSource`, is never playable and never a search candidate; `PlaylistImportWorker`
      * replaces it with the matched track.
      */
-    UNRESOLVED("Importing", "unresolved:", priority = 99, isPersonalLibrary = false);
-
-    /** The name to use where space is tight. Full name unless one was given. */
-    val shortName: String = shortName ?: displayName
+    UNRESOLVED("Importing", "unresolved:", priority = 99, isPersonalLibrary = false)
 }

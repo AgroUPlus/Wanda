@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
+import com.wander.android.data.model.nameRes
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.SpeedAndPitch
@@ -134,7 +135,7 @@ internal fun ImmersivePlayerLayout(
             onSwapMediaType = onSwapMediaType,
             jam = jam,
             source = PlayerSourceChip(
-                label = track.source.displayName,
+                label = stringResource(track.source.nameRes),
                 mutedColor = OnCoverArt.copy(alpha = 0.75f),
                 onOpenPicker = onOpenSourcePicker
             ),

@@ -7,6 +7,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
+import com.wander.android.data.model.nameRes
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.CollapsingTitleState
@@ -26,7 +27,7 @@ internal fun PlaylistHeader(
 ) {
     val trackCount = playlist?.songCount?.takeIf { it > 0 } ?: tracks.size
     val subtitle = listOfNotNull(
-        playlist?.source?.displayName,
+        playlist?.source?.let { stringResource(it.nameRes) },
         pluralStringResource(R.plurals.collection_track_count, trackCount, trackCount),
         shareActions.sharedWith?.let { stringResource(R.string.playlist_shared_badge, stringResource(visibilityTitle(it))) },
         playlist?.comment?.takeIf { it.isNotBlank() }

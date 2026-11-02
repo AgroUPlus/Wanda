@@ -21,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
+import com.wander.android.data.model.nameRes
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.KeptApartPair
 import com.wander.android.data.repository.MergeGroup
@@ -54,7 +55,7 @@ internal fun MergeGroupRow(group: MergeGroup, onKeepApart: (UnifiedTrack) -> Uni
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "· ${rendition.source.displayName} — ${format(rendition.durationMs)}" +
+                        text = "· ${stringResource(rendition.source.nameRes)} — ${format(rendition.durationMs)}" +
                             if (rendition.isLiked) "  ♥" else "",
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier
@@ -113,8 +114,8 @@ internal fun KeptApartRow(pair: KeptApartPair, onRejoin: () -> Unit) {
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${pair.a.source.displayName} — ${format(pair.a.durationMs)}  ·  " +
-                        "${pair.b.source.displayName} — ${format(pair.b.durationMs)}",
+                    text = "${stringResource(pair.a.source.nameRes)} — ${format(pair.a.durationMs)}  ·  " +
+                        "${stringResource(pair.b.source.nameRes)} — ${format(pair.b.durationMs)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

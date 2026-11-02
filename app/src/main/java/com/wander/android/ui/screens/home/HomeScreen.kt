@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
+import com.wander.android.data.model.shortNameRes
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.artistIdFor
@@ -220,7 +221,7 @@ fun HomeScreen(
                                 sources = state.sources,
                                 selected = state.selectedSource,
                                 onSelect = viewModel::selectSource,
-                                label = SourceType::shortName,
+                                label = SourceType::shortNameRes,
                                 modifier = Modifier.padding(vertical = 4.dp)
                             )
                         }

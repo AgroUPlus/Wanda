@@ -2,4 +2,17 @@
 <resources>
     <!-- Sync offer card: the peer a direct transfer comes from, then the route's name -->
     <string name="sync_route_via_peer">%1$s · %2$s</string>
+
+    <!-- Where a track or playlist comes from, as named on screen -->
+    <string name="source_name_local">On this device</string>
+    <string name="source_name_navidrome" translatable="false">Navidrome</string>
+    <string name="source_name_ytmusic" translatable="false">YouTube Music</string>
+    <string name="source_name_deezer" translatable="false">Deezer</string>
+    <string name="source_name_podcast">Podcasts</string>
+    <string name="source_name_agro">Shared on Agro</string>
+    <!-- A pasted playlist's track that has not been matched to a source yet -->
+    <string name="source_name_unresolved">Importing</string>
+    <!-- Short source names for the Home filter chips, where four have to fit on one line -->
+    <string name="source_short_name_local">Local</string>
+    <string name="source_short_name_agro">Shared</string>
 </resources>

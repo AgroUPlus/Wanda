@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import com.wander.android.R
+import com.wander.android.data.model.nameRes
 import com.wander.android.core.playback.toUnifiedTrack
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,7 +43,7 @@ internal class PlaybackWidgetUpdater(
         val track = player.currentMediaItem?.toUnifiedTrack()
         return WidgetSnapshot(
             title = track?.title,
-            subtitle = track?.let { context.getString(R.string.widget_track_line, it.artist, it.source.displayName) },
+            subtitle = track?.let { context.getString(R.string.widget_track_line, it.artist, context.getString(it.source.nameRes)) },
             artworkUrl = track?.artworkUrl,
             isPlaying = player.isPlaying
         )
