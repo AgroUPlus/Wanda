@@ -122,7 +122,8 @@ class LyricsRepository @Inject constructor(
             }
         }
 
-        // Step 2: Check source-native lyrics (e.g. Navidrome embedded synced lyrics)
+        // Step 2: Check source-native lyrics — for a local file its own tags and a `.lrc` beside
+        // it; for a server, what the server holds (Navidrome's structured lyrics, Deezer's).
         val matchingSource = sources.firstOrNull {
             it.capabilities.lyrics && trackId.startsWith(it.sourceType.idPrefix)
         }

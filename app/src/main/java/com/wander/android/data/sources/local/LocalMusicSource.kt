@@ -2,12 +2,14 @@ package com.wander.android.data.sources.local
 
 import com.wander.android.core.database.dao.getTracksByIdsChunked
 import android.content.Context
+import android.net.Uri
 import com.wander.android.core.database.dao.PlaylistDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.PlaylistEntity
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.permissions.hasAudioPermission
 import com.wander.android.core.security.SecureStorage
+import com.wander.android.data.model.LyricsData
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
@@ -16,6 +18,7 @@ import com.wander.android.data.repository.ArtistCredits
 import com.wander.android.data.sources.IMusicSource
 import com.wander.android.data.sources.SourceCapabilities
 import com.wander.android.data.sources.StreamInfo
+import com.wander.android.data.sources.local.lyrics.LocalLyricsReader
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,7 +41,8 @@ class LocalMusicSource @Inject constructor(
     private val scanner: MediaStoreScanner,
     private val trackDao: TrackDao,
     private val playlistDao: PlaylistDao,
-    private val secureStorage: SecureStorage
+    private val secureStorage: SecureStorage,
+    private val lyricsReader: LocalLyricsReader
 ) : IMusicSource {
 
     override val sourceType = SourceType.LOCAL
@@ -49,7 +53,8 @@ class LocalMusicSource @Inject constructor(
         albums = true,
         radio = true,
         playlists = true,
-        playlistWrite = true
+        playlistWrite = true,
+        lyrics = true
     )
 
     private val _isConfigured = MutableStateFlow(context.hasAudioPermission())
@@ -116,6 +121,13 @@ class LocalMusicSource @Inject constructor(
         val uri = trackDao.getTrackById(trackId)?.streamUri
             ?: return Result.failure(IOException("Local track $trackId is no longer on this device"))
         return Result.success(StreamInfo(uri = uri, format = "audio/*", isDirectFile = true))
+    }
+
+    /** The file's own lyrics — tagged into it, or in a `.lrc` beside it. See [LocalLyricsReader]. */
+    override suspend fun getLyrics(trackId: String): Result<LyricsData?> {
+        val uri = trackDao.getTrackById(trackId)?.streamUri
+            ?: return Result.failure(IOException("Local track $trackId is no longer on this device"))
+        return lyricsReader.read(trackId, Uri.parse(uri))
     }
 
     /**
