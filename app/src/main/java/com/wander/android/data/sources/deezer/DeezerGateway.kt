@@ -55,7 +55,9 @@ class DeezerGateway @Inject constructor(
         val arl: String,
         val apiToken: String,
         val licenseToken: String,
-        val sid: String?
+        val sid: String?,
+        /** The signed-in account's numeric id, which the profile pages are addressed by. */
+        val userId: String?
     ) {
         val cookie: String get() = "arl=$arl" + sid?.let { "; sid=$it" }.orEmpty()
     }
@@ -92,6 +94,11 @@ class DeezerGateway @Inject constructor(
         call("song.getLyrics", session.apiToken, session.cookie, payload.toString()).first
     }
 
+    /** Any other gateway method, for the account's library; see [DeezerLibrary]. */
+    fun request(session: Session, method: String, payload: JsonObject): Result<JsonObject> = runCatching {
+        call(method, session.apiToken, session.cookie, payload.toString()).first
+    }
+
     private fun openSession(arl: String): Session {
         val (results, headers) = call("deezer.getUserData", apiToken = "", cookie = "arl=$arl", body = "{}")
         val options = results["OPTIONS"]?.jsonObject
@@ -103,10 +110,12 @@ class DeezerGateway @Inject constructor(
         val isLossless = options["web_lossless"]?.jsonPrimitive?.booleanOrNull == true
         val isHq = options["web_hq"]?.jsonPrimitive?.booleanOrNull == true
         accountManager.updateTier(DeezerAccountTier.fromFlags(isLossless, isHq))
-        results["USER"]?.jsonObject?.get("BLOG_NAME")?.jsonPrimitive?.contentOrNull?.let {
+        val user = results["USER"]?.jsonObject
+        user?.get("BLOG_NAME")?.jsonPrimitive?.contentOrNull?.let {
             accountManager.updateAccountName(it)
         }
-        return Session(arl, apiToken, licenseToken, sidOf(headers))
+        val userId = user?.get("USER_ID")?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() && it != "0" }
+        return Session(arl, apiToken, licenseToken, sidOf(headers), userId)
     }
 
     /** One gateway call: its `results`, and the response's headers for the session cookie. */

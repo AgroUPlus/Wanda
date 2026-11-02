@@ -86,12 +86,13 @@ class DeezerApiClient @Inject constructor(
         }
     }
 
-    suspend fun getTrackRadio(trackId: String): Result<List<UnifiedTrack>> = withContext(Dispatchers.IO) {
+    /** [count] is asked for and enforced: the endpoint answers with its own default size. */
+    suspend fun getTrackRadio(trackId: String, count: Int): Result<List<UnifiedTrack>> = withContext(Dispatchers.IO) {
         val cleanId = trackId.removePrefix(ID_PREFIX)
-        val url = "$BASE_URL/track/$cleanId/radio"
+        val url = "$BASE_URL/track/$cleanId/radio?limit=$count"
         fetchJson(url).map { root ->
             val data = root.jsonObject["data"]?.jsonArray ?: return@map emptyList()
-            DeezerParsing.parseTrackList(data)
+            DeezerParsing.parseTrackList(data).take(count)
         }
     }
 

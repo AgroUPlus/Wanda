@@ -64,9 +64,11 @@ internal class RemoteLikesImport(
         var offset = 0
         while (collected.size < MAX_LIKES) {
             val page = source.getLikedTracks(PAGE_SIZE, offset).getOrElse { return Result.failure(it) }
+            // Only an empty page ends the list: a source may return a short page mid-list when it
+            // drops entries it cannot show, and taking that for the end would read as unlikes.
+            if (page.isEmpty()) return Result.success(LikeWalk(collected, complete = true))
             val fresh = page.filter { seen.add(it.id) }
             collected += fresh
-            if (page.size < PAGE_SIZE) return Result.success(LikeWalk(collected, complete = true))
             // A full page of nothing new: the source ignored the offset, and the rest is unknown.
             if (fresh.isEmpty()) return Result.success(LikeWalk(collected, complete = false))
             offset += page.size

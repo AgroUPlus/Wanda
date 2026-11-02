@@ -4,6 +4,8 @@ import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.LyricsData
 import com.wander.android.data.model.RecommendedShelf
 import com.wander.android.data.model.SourceType
+import com.wander.android.data.model.UnifiedAlbum
+import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.IMusicSource
 import com.wander.android.data.sources.SourceCapabilities
@@ -24,7 +26,8 @@ class DeezerSource @Inject constructor(
     private val apiClient: DeezerApiClient,
     private val streamResolver: DeezerStreamResolver,
     private val accountManager: DeezerAccountManager,
-    private val lyrics: DeezerLyrics
+    private val lyrics: DeezerLyrics,
+    private val library: DeezerLibrary
 ) : IMusicSource {
 
     override val sourceType: SourceType = SourceType.DEEZER
@@ -35,8 +38,10 @@ class DeezerSource @Inject constructor(
         search = true,
         albums = true,
         artists = true,
-        playlists = false,
-        likes = false,
+        // The account's own favourites, playlists and albums, read through its session; see
+        // [DeezerLibrary]. Every one needs signing in, as [isConfigured] already does.
+        playlists = true,
+        likes = true,
         radio = true,
         lyrics = true,
         recommendations = true
@@ -75,7 +80,21 @@ class DeezerSource @Inject constructor(
     override suspend fun getLyrics(trackId: String): Result<LyricsData?> = lyrics.fetch(trackId)
 
     override suspend fun getRadio(seedTrackId: String, count: Int): Result<List<UnifiedTrack>> =
-        apiClient.getTrackRadio(seedTrackId)
+        apiClient.getTrackRadio(seedTrackId, count)
+
+    override suspend fun getLikedTracks(limit: Int, offset: Int): Result<List<UnifiedTrack>> =
+        library.likedTracks(limit, offset)
+
+    override suspend fun setLiked(trackId: String, liked: Boolean): Result<Unit> =
+        library.setLiked(trackId, liked)
+
+    override suspend fun getAlbums(limit: Int, offset: Int): Result<List<UnifiedAlbum>> =
+        library.albums(limit, offset)
+
+    override suspend fun getPlaylists(): Result<List<UnifiedPlaylist>> = library.playlists()
+
+    override suspend fun getPlaylistTracks(playlistId: String): Result<List<UnifiedTrack>> =
+        library.playlistTracks(playlistId)
 
     override suspend fun getRecommendations(): Result<List<RecommendedShelf>> =
         apiClient.getChartTracks().map { tracks ->
