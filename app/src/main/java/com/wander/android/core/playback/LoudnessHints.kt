@@ -27,7 +27,7 @@ class LoudnessHints @Inject constructor() {
             gains.remove(trackId)
             return
         }
-        if (gains.size >= MAX_ENTRIES && trackId !in gains) gains.clear()
+        if (gains.size >= MAX_ENTRIES && !gains.containsKey(trackId)) gains.clear()
         gains[trackId] = trackGainDb
     }
 
