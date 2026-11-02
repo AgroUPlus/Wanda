@@ -53,6 +53,7 @@ class PlaybackService : MediaSessionService() {
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private var mediaSession: MediaSession? = null
     private var queueResumption: QueueResumption? = null
+    private var widgetUpdater: com.wander.android.ui.widget.PlaybackWidgetUpdater? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -74,7 +75,9 @@ class PlaybackService : MediaSessionService() {
         LoudnessNormaliser(player, volume, loudness.mode, loudness.preampDb, loudnessReadout, scope)
         SleepTimerEnforcer(player, volume, sleepTimer, scope)
         player.addAnalyticsListener(AudioFormatReporter())
-        player.addListener(com.wander.android.ui.widget.PlaybackWidgetUpdater(applicationContext, scope))
+        val widget = com.wander.android.ui.widget.PlaybackWidgetUpdater(applicationContext, player)
+        player.addListener(widget)
+        widgetUpdater = widget
         val resumption = QueueResumption(player, savedQueueStore, scope).also(player::addListener)
         queueResumption = resumption
 
@@ -181,6 +184,8 @@ class PlaybackService : MediaSessionService() {
         // Before the release below, which empties the player this reads.
         queueResumption?.flush()
         queueResumption = null
+        widgetUpdater?.onServiceStopped()
+        widgetUpdater = null
         mediaSession?.run {
             player.release()
             release()

@@ -88,7 +88,6 @@
     <!-- Now Playing widget (Glance) -->
     <string name="widget_nothing_playing">Rien ne joue</string>
     <string name="widget_track_line">%1$s · %2$s</string>
-    <string name="widget_previous">Précédent</string>
     <string name="widget_play">Jouer</string>
     <string name="widget_pause">Pause</string>
     <string name="widget_next">Suivant</string>

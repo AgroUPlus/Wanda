@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    4x2 minimum: roughly 250dp x 110dp, which is what the plan's "4×2 Now Playing widget" means in
-    the grid the launcher actually measures widgets in (a cell is ~70dp before the standard -30dp
-    inter-cell margin subtraction most launchers apply).
+    Placed as a 4x2 where the launcher honours targetCell* (API 31+), and resizable down to a 2x1.
+    Sizes are in the dp the launcher measures widgets in: a cell is ~70dp before the standard -30dp
+    inter-cell margin, so 4x2 is ~250x110dp, 4x1 ~250x40dp and 2x1 ~110x40dp. The widget lays
+    itself out for whichever of those it is given (SizeMode.Responsive in NowPlayingWidget).
+    Below API 31 the initial size is minWidth x minHeight, the 4x1 row.
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="250dp"
-    android:minHeight="110dp"
+    android:minHeight="40dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="40dp"
     android:targetCellWidth="4"
     android:targetCellHeight="2"
     android:updatePeriodMillis="0"

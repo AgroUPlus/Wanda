@@ -20,6 +20,10 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * The UI's handle on playback: a [MediaController] bound to [PlaybackService], exposed as flows.
@@ -105,6 +109,15 @@ class PlayerConnection @Inject constructor(
             },
             MoreExecutors.directExecutor()
         )
+    }
+
+    /**
+     * Connects if needed and waits for the controller, for callers that act on playback from a
+     * cold start (the widget's buttons). False if the service did not answer within [timeoutMs].
+     */
+    suspend fun awaitConnected(timeoutMs: Long): Boolean = withContext(Dispatchers.Main.immediate) {
+        connect()
+        withTimeoutOrNull(timeoutMs) { _controller.filterNotNull().first() } != null
     }
 
     fun release() {
