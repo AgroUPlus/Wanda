@@ -52,7 +52,7 @@ class FingerprintTrackProcessor @Inject constructor(
                 source.first,
                 source.second,
                 maxSeconds = if (wantsWholeTrack) {
-                    EMBEDDING_MAX_SECONDS
+                    AudioEmbedder.MAX_INDEXED_SECONDS
                 } else {
                     PcmDecoder.DEFAULT_MAX_SECONDS
                 }
@@ -62,26 +62,39 @@ class FingerprintTrackProcessor @Inject constructor(
                 trackAttemptDao.recordAttempt(track.id, System.currentTimeMillis())
                 return
             }
-            if (track.attempts > 0) {
-                trackAttemptDao.clearAttempts(track.id)
-            }
             // The head of the same decode. Features and contours were measured over the first
             // minute and their stored `version` says so, so handing them the whole track now
             // would silently change every number they have ever written without anything
             // marking the change. The embedding is the one that wanted the rest of the song.
             val head = samples.headSeconds(PcmDecoder.DEFAULT_MAX_SECONDS)
-            if (needsFeatures) acousticFeatures.measure(track.id, head)
-            if (needsEmbedding) {
-                embeddingSearch.index(track.id, samples)
-                // With neural embeddings now stored, find duplicates among other indexed tracks
-                // and record links in recording_links. Recorded even when there are none: a
-                // re-index is a correction, and a link the fresh fingerprint no longer supports
-                // has to be able to go away.
-                recordingLinks.record(track.id, recordingIdentity.matchesFor(track.id))
+            val measured = !needsFeatures || acousticFeatures.measure(track.id, head)
+            val embedded = !needsEmbedding || embed(track, samples)
+
+            // Finished only when every measurement asked for was stored *and* will not be asked
+            // for again. Anything short of that — a silent intro that measures to nothing, a
+            // decode that ended well before the declared duration — leaves the track in the
+            // pending queries, and clearing its attempts here used to mean it was decoded again,
+            // in full, at the head of every run. Backing off lets the rest of the library through.
+            if (measured && embedded) {
+                if (track.attempts > 0) trackAttemptDao.clearAttempts(track.id)
+            } else {
+                trackAttemptDao.recordAttempt(track.id, System.currentTimeMillis())
             }
         } finally {
             progress.finished(track.id)
         }
+    }
+
+    /** Stores the embedding, links duplicates, and says whether the track now counts as covered. */
+    private suspend fun embed(track: TrackEntity, samples: FloatArray): Boolean {
+        val segments = embeddingSearch.index(track.id, samples)
+        if (segments == 0) return false
+        // With neural embeddings now stored, find duplicates among other indexed tracks
+        // and record links in recording_links. Recorded even when there are none: a
+        // re-index is a correction, and a link the fresh fingerprint no longer supports
+        // has to be able to go away.
+        recordingLinks.record(track.id, recordingIdentity.matchesFor(track.id))
+        return EmbeddingRepository.coversTrack(track.durationMs, segments)
     }
 
     /**
@@ -96,10 +109,6 @@ class FingerprintTrackProcessor @Inject constructor(
         val stream = musicRepository.getStreamInfo(track.id).getOrNull() ?: return null
         if (stream.uri.endsWith(LIVE_SUFFIX)) return null
         return stream.uri to stream.headers
-    }
-
-    companion object {
-        const val EMBEDDING_MAX_SECONDS = 12 * 60
     }
 }
 

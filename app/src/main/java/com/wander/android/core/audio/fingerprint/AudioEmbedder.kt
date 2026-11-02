@@ -132,6 +132,12 @@ class AudioEmbedder @Inject constructor(
         const val SEGMENT_SAMPLES = 8_000   // 1.0 s at AudioFormat.SAMPLE_RATE
         const val HOP_SAMPLES = 4_000       // 0.5 s — the model's training fingerprint rate
 
+        /**
+         * The most of any one track that is decoded and embedded. A track longer than this is
+         * indexed over its first twelve minutes and counts as fully covered there.
+         */
+        const val MAX_INDEXED_SECONDS = 12 * 60
+
         /** Identifies which model produced a stored vector; see [com.wander.android.data.repository.EmbeddingRepository]. */
         const val MODEL_NAME = "nmfp-triplet"
 

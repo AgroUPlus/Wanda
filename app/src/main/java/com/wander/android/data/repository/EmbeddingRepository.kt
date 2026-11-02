@@ -39,11 +39,17 @@ class EmbeddingRepository @Inject constructor(
     val modelReady: Flow<Boolean> =
         embedder.modelState.map { it is EmbeddingModelManager.State.Ready }
 
-    /** Computes [samples]'s embedding sequence and stores it. A track that embeds to nothing is skipped. */
-    suspend fun index(trackId: String, samples: FloatArray) = withContext(Dispatchers.Default) {
-        if (!embedder.isAvailable()) return@withContext
+    /**
+     * Computes [samples]'s embedding sequence and stores it.
+     *
+     * Returns how many segments were stored — 0 when nothing was, because the model is not
+     * available or the track embeds to nothing — so the caller can tell a finished track from one
+     * that will only come back on the next run.
+     */
+    suspend fun index(trackId: String, samples: FloatArray): Int = withContext(Dispatchers.Default) {
+        if (!embedder.isAvailable()) return@withContext 0
         val vectors = embedder.embed(samples)
-        if (vectors.isEmpty()) return@withContext
+        if (vectors.isEmpty()) return@withContext 0
         val flat = AudioEmbedder.flatten(vectors)
         withContext(Dispatchers.IO) {
             embeddingDao.upsert(
@@ -58,6 +64,7 @@ class EmbeddingRepository @Inject constructor(
                 )
             )
         }
+        vectors.size
     }
 
     /**
@@ -102,7 +109,8 @@ class EmbeddingRepository @Inject constructor(
             limit = limit,
             bytesPerSegment = AudioEmbedder.EMBED_DIM,
             segmentHopMs = EmbeddingScorer.SEGMENT_HOP_MS,
-            coverageToleranceMs = EmbeddingScorer.COVERAGE_TOLERANCE_MS
+            coverageToleranceMs = EmbeddingScorer.COVERAGE_TOLERANCE_MS,
+            maxCoverageMs = AudioEmbedder.MAX_INDEXED_SECONDS * 1_000L
         ).toSet()
     }
 
@@ -137,6 +145,17 @@ class EmbeddingRepository @Inject constructor(
         const val MIN_MARGIN = EmbeddingScorer.MIN_MARGIN
         const val EARLY_MIN_SIMILARITY = EmbeddingScorer.EARLY_MIN_SIMILARITY
         const val EARLY_MIN_MARGIN = EmbeddingScorer.EARLY_MIN_MARGIN
+
+        /**
+         * Whether [segments] stored vectors satisfy [needingIndex] for a track declaring
+         * [declaredMs] — the same arithmetic as the query, so a track this calls finished is one
+         * the query will not offer again.
+         */
+        fun coversTrack(declaredMs: Long, segments: Int): Boolean {
+            if (declaredMs <= 0) return segments > 0
+            val target = minOf(declaredMs, AudioEmbedder.MAX_INDEXED_SECONDS * 1_000L)
+            return segments.toLong() * SEGMENT_HOP_MS >= target - COVERAGE_TOLERANCE_MS
+        }
 
         fun decide(bestSimilarity: Float, runnerUpSimilarity: Float): Boolean =
             EmbeddingScorer.decide(bestSimilarity, runnerUpSimilarity)

@@ -22,9 +22,15 @@ class AcousticFeatureRepository @Inject constructor(
     private val extractor: FeatureExtractor
 ) {
 
-    /** Measures [samples] and stores the result. A track that measures to nothing is skipped. */
-    suspend fun measure(trackId: String, samples: FloatArray) = withContext(Dispatchers.IO) {
-        val features = extractor.extract(samples) ?: return@withContext
+    /**
+     * Measures [samples] and stores the result.
+     *
+     * False when the track measures to nothing (too short, silent, no usable pulse) and nothing
+     * was stored: such a track stays in [needingMeasurement], and the caller must back off from it
+     * rather than decode it again on every run.
+     */
+    suspend fun measure(trackId: String, samples: FloatArray): Boolean = withContext(Dispatchers.IO) {
+        val features = extractor.extract(samples) ?: return@withContext false
         featureDao.upsert(
             TrackFeatureEntity(
                 trackId = trackId,
@@ -38,6 +44,7 @@ class AcousticFeatureRepository @Inject constructor(
                 measuredAt = System.currentTimeMillis()
             )
         )
+        true
     }
 
     /** Which of the tracks on this device still need measuring. */

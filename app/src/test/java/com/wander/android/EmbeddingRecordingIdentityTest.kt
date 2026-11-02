@@ -81,7 +81,8 @@ class EmbeddingRecordingIdentityTest {
             limit: Int,
             bytesPerSegment: Int,
             segmentHopMs: Int,
-            coverageToleranceMs: Int
+            coverageToleranceMs: Int,
+            maxCoverageMs: Long
         ) = emptyList<String>()
         override suspend fun candidateIdsByDuration(
             excludingId: String,
