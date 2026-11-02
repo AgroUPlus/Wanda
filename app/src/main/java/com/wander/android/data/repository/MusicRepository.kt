@@ -43,20 +43,17 @@ class MusicRepository @Inject constructor(
     private val embeddingDao: TrackEmbeddingDao,
     val sources: Set<@JvmSuppressWildcards IMusicSource>
 ) {
-    internal fun activeSources(): List<IMusicSource> {
-        val offline = secureStorage.isOfflineMode.value || !connectivity.isOnline.value
-        return sources.filter { source ->
-            source.isConfigured.value && (!offline || source.sourceType == SourceType.LOCAL)
-        }
+    private val reachability = SourceReachability(connectivity, secureStorage)
+
+    /** Configured sources that can answer now; see [SourceReachability] for a LAN server. */
+    internal fun activeSources(): List<IMusicSource> = sources.filter { source ->
+        source.isConfigured.value && reachability.isReachable(source.sourceType)
     }
 
-    internal fun searchableSources(): List<IMusicSource> {
-        val offline = secureStorage.isOfflineMode.value || !connectivity.isOnline.value
-        return sources.filter { source ->
-            source.isSearchable.value &&
-                source.capabilities.search &&
-                (!offline || source.sourceType == SourceType.LOCAL)
-        }
+    internal fun searchableSources(): List<IMusicSource> = sources.filter { source ->
+        source.isSearchable.value &&
+            source.capabilities.search &&
+            reachability.isReachable(source.sourceType)
     }
 
     private suspend fun persist(tracks: List<UnifiedTrack>, asLibrary: Boolean) {
@@ -83,7 +80,7 @@ class MusicRepository @Inject constructor(
         trackDao = trackDao,
         sources = sources,
         secureStorage = secureStorage,
-        connectivity = connectivity,
+        reachability = reachability,
         recordingRules = recordingRules
     )
 

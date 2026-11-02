@@ -5,8 +5,6 @@ import androidx.media3.common.MimeTypes
 import com.wander.android.R
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.TrackEntity
-import com.wander.android.core.network.ConnectivityObserver
-import com.wander.android.core.network.LocalNetworkHost
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.isOneShotTrackId
@@ -19,7 +17,6 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 /**
  * Resolves playable [StreamInfo] for a given track id, checking ephemeral peer streams,
@@ -30,7 +27,7 @@ internal class PlaybackStreamResolver(
     private val trackDao: TrackDao,
     private val sources: Set<IMusicSource>,
     private val secureStorage: SecureStorage,
-    private val connectivity: ConnectivityObserver,
+    private val reachability: SourceReachability,
     private val recordingRules: RecordingRulesRepository
 ) {
     private val ephemeralStreams = ConcurrentHashMap<String, StreamInfo>()
@@ -101,7 +98,7 @@ internal class PlaybackStreamResolver(
         )
 
         if (type != SourceType.LOCAL &&
-            (!isReachable(type) || secureStorage.isOfflineMode.value)
+            (!reachability.isReachable(type) || secureStorage.isOfflineMode.value)
         ) {
             return Result.failure(
                 IOException(
@@ -161,17 +158,6 @@ internal class PlaybackStreamResolver(
                 val found = source.search("${cached.title} ${cached.artist}").getOrNull().orEmpty()
                 rules.substituteFor(wanted, found)?.let { hit -> source.getStreamInfo(hit.id).getOrNull() }
             }
-    }
-
-    /**
-     * Whether [type]'s server can be reached now. A validated connection reaches anything; without
-     * one, a Navidrome server on the LAN or a tailnet still can, so its tracks stay playable.
-     */
-    private fun isReachable(type: SourceType): Boolean {
-        if (connectivity.isOnline.value) return true
-        if (type != SourceType.NAVIDROME || !connectivity.hasAnyNetwork) return false
-        val host = secureStorage.navidromeServerUrl.toHttpUrlOrNull()?.host ?: return false
-        return LocalNetworkHost.isLocal(host)
     }
 
     /** Episodes carry their enclosure URL in Room; there is no backend to ask for a stream. */
