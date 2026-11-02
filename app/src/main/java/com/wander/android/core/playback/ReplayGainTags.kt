@@ -80,8 +80,8 @@ internal object ReplayGainTags {
         fun lame(field: Mp3InfoReplayGain.GainField) {
             if (field.originator == Mp3InfoReplayGain.GainField.ORIGINATOR_UNSET) return
             when (field.name) {
-                Mp3InfoReplayGain.GainField.NAME_RADIO -> lameTrack = lameTrack ?: field.gain
-                Mp3InfoReplayGain.GainField.NAME_AUDIOPHILE -> lameAlbum = lameAlbum ?: field.gain
+                Mp3InfoReplayGain.GainField.NAME_RADIO -> lameTrack = lameTrack ?: plausible(field.gain)
+                Mp3InfoReplayGain.GainField.NAME_AUDIOPHILE -> lameAlbum = lameAlbum ?: plausible(field.gain)
             }
         }
 
@@ -96,14 +96,22 @@ internal object ReplayGainTags {
      * whose tags say nothing, such as one the server transcoded. Held to the same bounds as a tag.
      */
     fun fromSource(extras: Map<String, String>): ReplayGainInfo = ReplayGainInfo(
-        trackGainDb = extras[EXTRA_REPLAYGAIN_TRACK_DB]?.toFloatOrNull()?.takeIf { it.isFinite() && it in PLAUSIBLE_DB },
-        albumGainDb = extras[EXTRA_REPLAYGAIN_ALBUM_DB]?.toFloatOrNull()?.takeIf { it.isFinite() && it in PLAUSIBLE_DB }
+        trackGainDb = extras[EXTRA_REPLAYGAIN_TRACK_DB]?.toFloatOrNull()?.let { plausible(it) },
+        albumGainDb = extras[EXTRA_REPLAYGAIN_ALBUM_DB]?.toFloatOrNull()?.let { plausible(it) }
     )
+
+    /**
+     * [db], or null when no real track could carry it. Every family goes through this — the LAME
+     * header's gain used to be taken as read, and that header is written (and mis-written) by
+     * encoders other than LAME: a stray −40 dB in it turned a track down to 1% and it played as
+     * silence, with nothing on screen to say why.
+     */
+    internal fun plausible(db: Float): Float? = db.takeIf { it.isFinite() && it in PLAUSIBLE_DB }
 
     /** `"-6.50 dB"`, `"+3.2 dB"`, `"-6,5"`: the leading number, as dB. */
     internal fun parseDb(raw: String): Float? {
         val number = DB_PATTERN.find(raw.trim())?.groupValues?.get(1)?.replace(',', '.') ?: return null
-        return number.toFloatOrNull()?.takeIf { it.isFinite() && it in PLAUSIBLE_DB }
+        return number.toFloatOrNull()?.let { plausible(it) }
     }
 
     /**
@@ -112,7 +120,7 @@ internal object ReplayGainTags {
      */
     internal fun parseR128(raw: String): Float? {
         val q78 = raw.trim().toIntOrNull() ?: return null
-        return (q78 / Q78_ONE + R128_TO_REPLAYGAIN_DB).takeIf { it in PLAUSIBLE_DB }
+        return plausible(q78 / Q78_ONE + R128_TO_REPLAYGAIN_DB)
     }
 
     private const val TRACK_GAIN = "REPLAYGAIN_TRACK_GAIN"
@@ -126,6 +134,11 @@ internal object ReplayGainTags {
     private val TXXX_IDS = setOf("TXXX", "TXX")
     private val DB_PATTERN = Regex("""^([+-]?\d+(?:[.,]\d+)?)""")
 
-    /** No real gain is anywhere near this; a value outside it is a broken tag, not a quiet track. */
-    private val PLAUSIBLE_DB = -60f..60f
+    /**
+     * A value outside this is a broken tag, not a loud or quiet track. The floor is physical: the
+     * loudest thing a digital file can hold, a full-scale square wave, measures about +3 LUFS, which
+     * is −21 dB against the −18 LUFS reference — so no honest gain is below −24 dB. The ceiling only
+     * mirrors it; a positive gain is capped to 0 dB by [LoudnessGain] anyway.
+     */
+    private val PLAUSIBLE_DB = -24f..24f
 }
