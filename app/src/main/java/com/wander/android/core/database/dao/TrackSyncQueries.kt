@@ -65,16 +65,16 @@ interface TrackSyncQueries {
     @Query("SELECT COUNT(*) FROM tracks WHERE source = 'LOCAL'")
     fun countLocalFlow(): Flow<Int>
 
-    @Query(
-        """
-        SELECT contentHash FROM tracks
-        WHERE source = 'LOCAL' AND id NOT IN (:keepIds) AND contentHash IS NOT NULL
-        """
-    )
-    suspend fun localContentHashesNotIn(keepIds: List<String>): List<String>
+    @Query("SELECT id FROM tracks WHERE source = 'LOCAL'")
+    suspend fun localTrackIds(): List<String>
 
-    @Query("DELETE FROM tracks WHERE source = 'LOCAL' AND id NOT IN (:keepIds)")
-    suspend fun deleteLocalTracksNotIn(keepIds: List<String>): Int
+    /** At most [MAX_BOUND_IDS] ids per call — see [TrackDao.applyLocalScan]. */
+    @Query("SELECT contentHash FROM tracks WHERE source = 'LOCAL' AND id IN (:ids) AND contentHash IS NOT NULL")
+    suspend fun localContentHashesOf(ids: List<String>): List<String>
+
+    /** At most [MAX_BOUND_IDS] ids per call — see [TrackDao.applyLocalScan]. */
+    @Query("DELETE FROM tracks WHERE source = 'LOCAL' AND id IN (:ids)")
+    suspend fun deleteLocalTracks(ids: List<String>): Int
 
     /**
      * Refreshes the file facts a rescan reads, which [TrackDao.upsertTracks] leaves alone on an

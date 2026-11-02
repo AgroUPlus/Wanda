@@ -49,6 +49,10 @@ interface TrackDao : TrackLibraryQueries, TrackSyncQueries, TrackRadioQueries {
      * Rows are updated in place — never cleared and rebuilt — so a full rescan keeps the likes,
      * play counts, last-played times and content hashes the user and the hasher put there.
      *
+     * The set difference is worked out here rather than with `NOT IN (:keepIds)`: a library is
+     * easily larger than the 999 values SQLite binds per statement on Android 11 and older, and
+     * every id statement below is chunked for the same reason.
+     *
      * @param keepIds the local ids that survive, or null to prune nothing.
      * @return content hashes of the pruned rows, so the server can be told what went. They are
      *   read before the delete; afterwards there is nothing left to read them from.
@@ -58,11 +62,13 @@ interface TrackDao : TrackLibraryQueries, TrackSyncQueries, TrackRadioQueries {
         if (scanned.isNotEmpty()) {
             upsertTracks(scanned)
             scanned.forEach { refreshLocalFileFields(it.id, it.sizeBytes, it.fileExtension, it.albumArtist) }
-            markAsLibrary(scanned.map { it.id })
+            scanned.map { it.id }.chunked(MAX_BOUND_IDS).forEach { markAsLibrary(it) }
         }
         if (keepIds == null) return emptyList()
-        val gone = localContentHashesNotIn(keepIds)
-        deleteLocalTracksNotIn(keepIds)
+        val keep = keepIds.toHashSet()
+        val goneIds = localTrackIds().filterNot { it in keep }.chunked(MAX_BOUND_IDS)
+        val gone = goneIds.flatMap { localContentHashesOf(it) }
+        goneIds.forEach { deleteLocalTracks(it) }
         return gone
     }
 

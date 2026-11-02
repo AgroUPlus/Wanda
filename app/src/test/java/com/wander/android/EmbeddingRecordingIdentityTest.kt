@@ -168,8 +168,9 @@ class EmbeddingRecordingIdentityTest {
         override fun countPendingUploadFlow(): kotlinx.coroutines.flow.Flow<Int> = kotlinx.coroutines.flow.emptyFlow()
         override fun countSyncedFlow(): kotlinx.coroutines.flow.Flow<Int> = kotlinx.coroutines.flow.emptyFlow()
         override fun countLocalFlow(): kotlinx.coroutines.flow.Flow<Int> = kotlinx.coroutines.flow.emptyFlow()
-        override suspend fun localContentHashesNotIn(keepIds: List<String>): List<String> = emptyList()
-        override suspend fun deleteLocalTracksNotIn(keepIds: List<String>): Int = 0
+        override suspend fun localTrackIds(): List<String> = emptyList()
+        override suspend fun localContentHashesOf(ids: List<String>): List<String> = emptyList()
+        override suspend fun deleteLocalTracks(ids: List<String>): Int = 0
         override suspend fun refreshLocalFileFields(id: String, sizeBytes: Long?, fileExtension: String?, albumArtist: String?) {}
         override suspend fun getTracksByIds(ids: List<String>): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun tracksWithUserState(): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
