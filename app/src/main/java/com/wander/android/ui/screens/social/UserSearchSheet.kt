@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.social
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -75,7 +76,7 @@ internal fun UserSearchSheet(
                         contentDescription = null,
                         modifier = Modifier.padding(end = 6.dp)
                     )
-                    Text(if (state.showingCode) "Hide my code" else "My code")
+                    Text(stringResource(if (state.showingCode) R.string.social_hide_my_code else R.string.social_my_code))
                 }
             }
 
@@ -112,7 +113,7 @@ internal fun UserSearchSheet(
                     FriendRow(
                         profile = profile,
                         subtitle = "@" + profile.username,
-                        actionLabel = profile.actionLabel(state.requested),
+                        actionLabel = stringResource(profile.actionLabel(state.requested)),
                         onAction = { onSendRequest(profile.username) }
                             .takeIf { profile.friendState == FriendState.NONE &&
                                 profile.username !in state.requested },
@@ -133,9 +134,10 @@ internal fun UserSearchSheet(
     }
 }
 
-private fun AgroProfile.actionLabel(requested: Set<String>): String = when {
-    username in requested -> "Asked"
-    friendState == FriendState.ACCEPTED -> "Friends"
-    friendState == FriendState.PENDING -> "Pending"
-    else -> "Add"
+@StringRes
+private fun AgroProfile.actionLabel(requested: Set<String>): Int = when {
+    username in requested -> R.string.social_search_asked
+    friendState == FriendState.ACCEPTED -> R.string.social_search_friends
+    friendState == FriendState.PENDING -> R.string.social_search_pending
+    else -> R.string.social_search_add
 }

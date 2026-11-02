@@ -122,7 +122,7 @@ internal fun OffGridScreen(
             }
 
             if (state.links.isNotEmpty()) {
-                item(key = "links_header") { SectionHeader("Connected") }
+                item(key = "links_header") { SectionHeader(stringResource(R.string.common_connected)) }
                 items(state.links, key = { "link-${it.deviceId}" }) { link ->
                     ConnectedRow(link = link, onDisconnect = viewModel::disconnect)
                 }
@@ -138,7 +138,7 @@ internal fun OffGridScreen(
             }
 
             if (state.isAdvertising) {
-                item(key = "peers_header") { SectionHeader("In the room") }
+                item(key = "peers_header") { SectionHeader(stringResource(R.string.offgrid_section_room)) }
                 if (state.isSearching) {
                     item(key = "searching") { SearchingRow() }
                 }

@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.social
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -84,7 +85,7 @@ internal fun PeerRow(
     ListItem(
         headlineContent = { Text(stringResource(R.string.common_device, peer.beacon.shortFingerprint())) },
         supportingContent = {
-            Text(if (isLinked) "Connected, encrypted" else signalWord(peer.rssi))
+            Text(stringResource(if (isLinked) R.string.offgrid_connected_encrypted else signalWord(peer.rssi)))
         },
         leadingContent = {
             Icon(Icons.Rounded.BluetoothSearching, contentDescription = null)
@@ -119,14 +120,16 @@ internal fun ListenAlongRow(
     onStop: () -> Unit
 ) {
     ListItem(
-        headlineContent = { Text(if (isFollowing) "Listening along" else "Listen along") },
+        headlineContent = {
+            Text(stringResource(if (isFollowing) R.string.offgrid_listening_along else R.string.offgrid_listen_along))
+        },
         supportingContent = {
             Text(
                 when {
-                    unresolvable != null -> "Can't find \"$unresolvable\" on this phone"
+                    unresolvable != null -> stringResource(R.string.offgrid_cant_find, unresolvable)
                     nowPlaying != null -> nowPlaying
-                    isFollowing -> "Waiting for them to play something"
-                    else -> "Play whatever the linked device plays"
+                    isFollowing -> stringResource(R.string.offgrid_waiting)
+                    else -> stringResource(R.string.offgrid_play_whatever)
                 }
             )
         },
@@ -137,7 +140,7 @@ internal fun ListenAlongRow(
         FilledTonalButton(
             onClick = if (isFollowing) onStop else onStart,
             shapes = ButtonDefaults.shapes()
-        ) { Text(if (isFollowing) "Stop following" else "Listen along") }
+        ) { Text(stringResource(if (isFollowing) R.string.offgrid_stop_following else R.string.offgrid_listen_along)) }
     }
 }
 
@@ -154,8 +157,8 @@ internal fun ConnectedRow(
         supportingContent = {
             Text(
                 when (link.role) {
-                    OffGridLink.Role.INITIATED -> "Connected, encrypted"
-                    OffGridLink.Role.ACCEPTED -> "Connected to you, encrypted"
+                    OffGridLink.Role.INITIATED -> stringResource(R.string.offgrid_connected_encrypted)
+                    OffGridLink.Role.ACCEPTED -> stringResource(R.string.offgrid_connected_to_you_encrypted)
                 }
             )
         },
@@ -172,10 +175,11 @@ internal fun ConnectedRow(
 
 private fun shortId(deviceId: Int): String = "%08X".format(deviceId).chunked(4).joinToString(" ")
 
-private fun signalWord(rssi: Int): String = when {
-    rssi > -55 -> "Right here"
-    rssi > -70 -> "Nearby"
-    else -> "Further away"
+@StringRes
+private fun signalWord(rssi: Int): Int = when {
+    rssi > -55 -> R.string.offgrid_signal_here
+    rssi > -70 -> R.string.offgrid_signal_nearby
+    else -> R.string.offgrid_signal_far
 }
 
 @Composable

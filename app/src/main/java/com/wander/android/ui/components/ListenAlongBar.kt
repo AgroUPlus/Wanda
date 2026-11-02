@@ -86,7 +86,7 @@ internal fun ListenAlongBar(
                 if (session.nowPlaying != null) TransportBadge(from = session.resolvedFrom)
             }
             Text(
-                text = session.statusLine(),
+                text = session.status().text(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                 maxLines = 1,
@@ -105,16 +105,32 @@ internal fun ListenAlongBar(
  * host changed track, nothing happened here, and without this the app said nothing at all about
  * why.
  */
-internal fun ListenAlongSession.statusLine(): String {
-    unresolvable?.let { return "Can't find “$it” in any of your sources" }
-    val track = nowPlaying ?: return "Waiting for them to play something"
+internal fun ListenAlongSession.status(): ListenAlongStatus {
+    unresolvable?.let { return ListenAlongStatus.Unresolvable(it) }
+    val track = nowPlaying ?: return ListenAlongStatus.Waiting
     // Sealed to a key this device does not hold. Without this the line renders the server's
     // placeholder against an empty artist — a blank half-line that reads as a bug rather than as
     // the one thing it actually means.
-    if (!track.isReadable) return "Can't see what they're playing on this device"
+    if (!track.isReadable) return ListenAlongStatus.Unreadable
     // The transport used to be spelled out here as well; it is the badge's job now, and repeating
     // it cost the half of the line that says what is actually playing.
-    return "${track.trackTitle} — ${track.artistName}"
+    return ListenAlongStatus.Playing(track.trackTitle, track.artistName)
+}
+
+/** What [status] decided, kept apart from its wording so the decision can be tested off-device. */
+internal sealed interface ListenAlongStatus {
+    data class Unresolvable(val title: String) : ListenAlongStatus
+    data object Waiting : ListenAlongStatus
+    data object Unreadable : ListenAlongStatus
+    data class Playing(val title: String, val artist: String) : ListenAlongStatus
+}
+
+@Composable
+private fun ListenAlongStatus.text(): String = when (this) {
+    is ListenAlongStatus.Unresolvable -> stringResource(R.string.listen_along_cant_find, title)
+    ListenAlongStatus.Waiting -> stringResource(R.string.listen_along_waiting)
+    ListenAlongStatus.Unreadable -> stringResource(R.string.listen_along_unreadable)
+    is ListenAlongStatus.Playing -> stringResource(R.string.listen_along_now_playing, title, artist)
 }
 
 val JamBarHeight: Dp = 44.dp
@@ -170,7 +186,7 @@ internal fun JamBar(
                     maxDisplay = 4
                 )
                 Text(
-                    text = jam.nowPlaying?.title ?: "Queue is empty",
+                    text = jam.nowPlaying?.title ?: stringResource(R.string.jam_queue_empty),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
                     maxLines = 1,

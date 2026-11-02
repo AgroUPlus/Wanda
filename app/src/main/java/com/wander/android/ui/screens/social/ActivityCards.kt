@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -141,7 +142,7 @@ internal fun NewReleaseCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = release.title ?: release.album ?: "Something new",
+                    text = release.title ?: release.album ?: stringResource(R.string.activity_release_something_new),
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -192,9 +193,9 @@ internal fun ActivityHero(
             Spacer(Modifier.height(4.dp))
             Text(
                 text = if (unread > 0) {
-                    "$unread unread · your circle, and what people sent you"
+                    pluralStringResource(R.plurals.activity_subtitle_unread, unread, unread)
                 } else {
-                    "Your circle, and what people sent you"
+                    stringResource(R.string.activity_subtitle)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -206,20 +207,15 @@ internal fun ActivityHero(
 /** Says which of the four lists is empty, because "nothing here" under a filter is ambiguous. */
 @Composable
 internal fun ActivityEmptyState(filter: ActivityFilter, releasesUnsupported: Boolean) {
-    val message = when {
-        releasesUnsupported && filter == ActivityFilter.RELEASES ->
-            "This Agro server is too old to know about artist subscriptions. Update the server " +
-                "to follow artists and see their releases here."
-
-        filter == ActivityFilter.ALL ->
-            "Nothing yet. Friends show up here once they share activity, or send you something."
-        filter == ActivityFilter.CIRCLE ->
-            "No circle activity. Friends appear here once they turn on activity sharing."
-        filter == ActivityFilter.SHARED ->
-            "Nobody has sent you a song yet."
-        else ->
-            "Subscribe to an artist and new releases will land here."
-    }
+    val message = stringResource(
+        when {
+            releasesUnsupported && filter == ActivityFilter.RELEASES -> R.string.activity_empty_releases_unsupported
+            filter == ActivityFilter.ALL -> R.string.activity_empty_all
+            filter == ActivityFilter.CIRCLE -> R.string.activity_empty_circle
+            filter == ActivityFilter.SHARED -> R.string.activity_empty_shared
+            else -> R.string.activity_empty_releases
+        }
+    )
 
     Box(
         contentAlignment = Alignment.Center,

@@ -1,8 +1,10 @@
 package com.wander.android.ui.screens.social
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.R
 import com.wander.android.core.network.userMessageRes
 import com.wander.android.data.repository.ArtistSubscriptionRepository
 import com.wander.android.data.repository.DropsRepository
@@ -79,11 +81,11 @@ internal sealed interface ActivityItem {
 }
 
 /** Which slice of the feed is showing. */
-internal enum class ActivityFilter(val label: String) {
-    ALL("All"),
-    CIRCLE("Circle"),
-    SHARED("Shared"),
-    RELEASES("Releases")
+internal enum class ActivityFilter(@param:StringRes val label: Int) {
+    ALL(R.string.activity_filter_all),
+    CIRCLE(R.string.activity_filter_circle),
+    SHARED(R.string.activity_filter_shared),
+    RELEASES(R.string.activity_filter_releases)
 }
 
 @Immutable

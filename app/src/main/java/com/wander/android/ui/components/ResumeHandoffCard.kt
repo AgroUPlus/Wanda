@@ -79,7 +79,7 @@ internal fun ResumeHandoffCard(
                 // the track title — the part you actually need to read — squashed underneath it.
                 // The marquee is the safety net for a device name long enough to overflow anyway.
                 Text(
-                    text = if (isLive) "Playing on $deviceName" else "Left off on $deviceName",
+                    text = stringResource(if (isLive) R.string.session_playing_on else R.string.session_left_off_on, deviceName),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                     maxLines = 1,
@@ -114,7 +114,7 @@ internal fun ResumeHandoffCard(
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
-                    text = if (isResuming) "Finding…" else "Resume",
+                    text = stringResource(if (isResuming) R.string.session_finding else R.string.session_resume),
                     modifier = Modifier.padding(start = 6.dp)
                 )
             }

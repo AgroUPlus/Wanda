@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import com.wander.android.ui.components.LoadErrorState
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -57,6 +58,8 @@ internal fun ActivityScreen(
         }
 
         item(key = "filters") {
+            // Resolved here: the button group's content is not a composable scope.
+            val labels = ActivityFilter.entries.associateWith { stringResource(it.label) }
             ButtonGroup(
                 overflowIndicator = {},
                 modifier = Modifier
@@ -67,7 +70,7 @@ internal fun ActivityScreen(
                 ActivityFilter.entries.forEach { filter ->
                     toggleableItem(
                         checked = state.filter == filter,
-                        label = filter.label,
+                        label = labels.getValue(filter),
                         onCheckedChange = { viewModel.setFilter(filter) }
                     )
                 }
