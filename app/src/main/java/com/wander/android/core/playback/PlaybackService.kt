@@ -71,6 +71,7 @@ class PlaybackService : MediaSessionService() {
         player.addListener(NextTrackPreloader(player))
         EpisodeSkipSilence(player, secureStorage.isSkipSilenceEnabled, scope)
         EpisodeAudioAttributes(player)
+        PlaybackWakeMode(player)
         BluetoothOffloadVeto(player, bluetoothOutput.connected, scope)
         val volume = PlayerVolume { player.volume = it }
         val loudness = secureStorage.loudness

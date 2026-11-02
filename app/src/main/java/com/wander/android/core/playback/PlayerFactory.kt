@@ -52,6 +52,7 @@ class PlayerFactory @Inject constructor(
         return ExoPlayer.Builder(context, renderersFactory, mediaSourceFactory)
             .setAudioAttributes(audioAttributesFor(isEpisode = false), /* handleAudioFocus = */ true)
             .setHandleAudioBecomingNoisy(true)
+            // Until [PlaybackWakeMode] sees the queue: drops to a CPU-only lock for on-device files.
             .setWakeMode(C.WAKE_MODE_NETWORK)
             // What the notification's episode jumps and a headset's rewind and fast-forward keys
             // do — see [NotificationButtons]. The in-app jumps use the same [EpisodeJumps] values.
