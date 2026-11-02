@@ -42,7 +42,7 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.KeptApartPair
 import com.wander.android.data.repository.MergeGroup
 import com.wander.android.ui.components.headerInset
-import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.nestedListInset
 
 /**
  * What the recording migration would do to *this* library, before it does any of it.
@@ -108,7 +108,7 @@ internal fun MergePreviewScreen(
         }
 
         LazyColumn(
-            contentPadding = contentPadding.listInset(),
+            contentPadding = contentPadding.nestedListInset(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection)
         ) {

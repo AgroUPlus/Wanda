@@ -35,7 +35,7 @@ import com.wander.android.ui.components.SourceToggleChips
 import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.headerInset
-import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.nestedListInset
 import com.wander.android.ui.components.rememberShelfEntranceScale
 
 @Composable
@@ -90,7 +90,7 @@ fun SearchScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = contentPadding.calculateTopPadding())
+            .padding(contentPadding.headerInset())
     ) {
         // The field itself is in the dock at the bottom of the app — one search box, always in the
         // same place, whether or not you are on this screen. What stays here is everything that
@@ -128,7 +128,7 @@ fun SearchScreen(
             contentAlignment = Alignment.Center
         ) {
             // The bottom inset carries the player and nav bar. The list gets it through
-            // `listInset()`; anything centred has to be lifted by the same amount or it centres
+            // `nestedListInset()`; anything centred has to be lifted by the same amount or it centres
             // in a space that runs underneath them, and reads as sitting too low.
             val centred = Modifier.padding(bottom = contentPadding.calculateBottomPadding())
 
@@ -139,7 +139,7 @@ fun SearchScreen(
                 // history must not flash up under a query that is already there.
                 query.isBlank() && recentSearches.isNotEmpty() -> RecentSearchesList(
                     queries = recentSearches,
-                    contentPadding = contentPadding.listInset(),
+                    contentPadding = contentPadding.nestedListInset(),
                     onSelect = historyViewModel::search,
                     onRemove = historyViewModel::remove,
                     onClearAll = historyViewModel::clear
@@ -167,7 +167,7 @@ fun SearchScreen(
                 )
 
                 else -> LazyColumn(
-                    contentPadding = contentPadding.listInset(),
+                    contentPadding = contentPadding.nestedListInset(),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     artistResultsSection(state.artists) { name, id ->

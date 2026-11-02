@@ -25,7 +25,7 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.SkeletonRow
 import com.wander.android.ui.components.TrackRow
-import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.nestedListInset
 import com.wander.android.ui.components.rememberShelfEntranceScale
 
 private const val TRACKS_PAGE_SIZE = 40
@@ -45,7 +45,7 @@ internal fun TrackList(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(contentPadding.listInset())
+                    .padding(contentPadding.nestedListInset())
             ) {
                 repeat(SKELETON_ROWS) {
                     SkeletonRow(leadingSize = 48.dp, leadingShape = MaterialTheme.shapes.extraSmall)
@@ -63,7 +63,7 @@ internal fun TrackList(
     val visibleTracks = remember(tracks, pageSize) { tracks.take(pageSize) }
     val hasMore = visibleTracks.size < tracks.size
 
-    LazyColumn(contentPadding = contentPadding.listInset(), modifier = Modifier.fillMaxSize()) {
+    LazyColumn(contentPadding = contentPadding.nestedListInset(), modifier = Modifier.fillMaxSize()) {
         itemsIndexed(
             items = visibleTracks,
             key = { _, track -> track.id },

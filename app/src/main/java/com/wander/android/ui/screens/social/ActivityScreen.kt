@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.social
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -48,6 +49,8 @@ internal fun ActivityScreen(
     LazyColumn(
         contentPadding = contentPadding.listInset(),
         modifier = Modifier.fillMaxSize()
+            // The list carries the side insets; the hero inside it must not add them again.
+            .consumeWindowInsets(contentPadding.listInset())
     ) {
         item(key = "hero") {
             ActivityHero(

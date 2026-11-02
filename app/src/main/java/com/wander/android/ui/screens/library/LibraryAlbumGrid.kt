@@ -39,7 +39,7 @@ import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.FastScroller
 import com.wander.android.ui.components.SkeletonCard
 import com.wander.android.ui.components.fastScrollLetter
-import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.nestedListInset
 
 private const val ALBUMS_PAGE_SIZE = 24
 private const val PAGE_PREFETCH_DISTANCE = 4
@@ -96,7 +96,7 @@ internal fun AlbumGrid(
         LazyVerticalGrid(
             state = gridState,
             columns = GridCells.Adaptive(minSize = 156.dp),
-            contentPadding = contentPadding.listInset(),
+            contentPadding = contentPadding.nestedListInset(),
             modifier = Modifier.fillMaxSize()
         ) {
             if (showsRecentRow) {
@@ -182,7 +182,7 @@ internal fun AlbumGrid(
             labelFor = letterFor?.let { letter -> { index -> albums.getOrNull(index)?.let(letter) } },
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(contentPadding.listInset())
+                .padding(contentPadding.nestedListInset())
                 .padding(vertical = 8.dp)
         )
     }

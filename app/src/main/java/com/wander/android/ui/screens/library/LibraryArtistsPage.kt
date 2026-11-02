@@ -33,7 +33,7 @@ import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.FastScroller
 import com.wander.android.ui.components.fastScrollLetter
 import com.wander.android.ui.components.groupedListItem
-import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.nestedListInset
 import com.wander.android.ui.components.monogramOf
 
 /**
@@ -65,7 +65,7 @@ internal fun LibraryArtistsPage(
         Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
                 state = listState,
-                contentPadding = contentPadding.listInset(),
+                contentPadding = contentPadding.nestedListInset(),
                 modifier = Modifier.fillMaxSize()
             ) {
                 itemsIndexed(artists, key = { _, artist -> artist.name }) { index, artist ->
@@ -84,7 +84,7 @@ internal fun LibraryArtistsPage(
                 labelFor = { index -> fastScrollLetter(artists.getOrNull(index)?.name) },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(contentPadding.listInset())
+                    .padding(contentPadding.nestedListInset())
                     .padding(vertical = 8.dp)
             )
         }

@@ -26,7 +26,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.data.repository.ListeningReport
-import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
 import com.wander.android.ui.theme.sectionTitle
 import java.time.Instant
@@ -63,7 +62,7 @@ fun StatsScreen(
                 period = state.window.period,
                 onPeriod = viewModel::setPeriod,
                 onBack = onBack,
-                topInset = contentPadding.headerInset()
+                topInset = PaddingValues(top = contentPadding.calculateTopPadding())
             )
         }
 

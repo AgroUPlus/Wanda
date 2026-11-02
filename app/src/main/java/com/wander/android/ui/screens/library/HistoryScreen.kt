@@ -44,7 +44,7 @@ import com.wander.android.ui.components.GroupedOuterRadius
 import com.wander.android.ui.components.SkeletonRow
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.headerInset
-import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.nestedListInset
 import com.wander.android.ui.components.rememberShelfEntranceScale
 import java.time.Instant
 import java.time.ZoneId
@@ -102,7 +102,7 @@ internal fun HistoryScreen(
             HistoryPlaceholder(plays, contentPadding)
         } else {
             LazyColumn(
-                contentPadding = contentPadding.listInset(),
+                contentPadding = contentPadding.nestedListInset(),
                 modifier = Modifier.fillMaxSize()
             ) {
                 historyItems(plays, zone, viewModel) { actionsFor = it }
@@ -120,7 +120,7 @@ internal fun HistoryScreen(
 @Composable
 private fun HistoryPlaceholder(plays: LazyPagingItems<HistoryTrack>, contentPadding: PaddingValues) {
     if (plays.loadState.refresh is LoadState.Loading) {
-        Column(modifier = Modifier.fillMaxSize().padding(contentPadding.listInset())) {
+        Column(modifier = Modifier.fillMaxSize().padding(contentPadding.nestedListInset())) {
             repeat(SKELETON_ROWS) {
                 SkeletonRow(leadingSize = 48.dp, leadingShape = MaterialTheme.shapes.extraSmall)
             }

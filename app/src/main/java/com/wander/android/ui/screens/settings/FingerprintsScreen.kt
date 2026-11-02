@@ -36,7 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.headerInset
-import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.nestedListInset
 
 /**
  * What the fingerprint indexer has measured, track by track.
@@ -89,7 +89,7 @@ internal fun FingerprintsScreen(
         }
 
         LazyColumn(
-            contentPadding = contentPadding.listInset(),
+            contentPadding = contentPadding.nestedListInset(),
             modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection)
         ) {
             item(key = "summary") { Summary(state, viewModel::setPaused) }

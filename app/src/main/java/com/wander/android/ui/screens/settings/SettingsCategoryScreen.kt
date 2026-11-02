@@ -26,7 +26,7 @@ import androidx.compose.ui.res.stringResource
 import com.wander.android.R
 import com.wander.android.ui.components.NoIndication
 import com.wander.android.ui.components.headerInset
-import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.nestedListInset
 
 /**
  * One page of settings — the rows that used to be one tab of the pager.
@@ -106,7 +106,7 @@ internal fun SettingsCategoryScreen(
         CompositionLocalProvider(LocalIndication provides NoIndication) {
             LazyColumn(
                 state = listState,
-                contentPadding = contentPadding.listInset(),
+                contentPadding = contentPadding.nestedListInset(),
                 modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection)
             ) {
                 when (category) {

@@ -62,6 +62,7 @@ import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.nestedListInset
 import com.wander.android.ui.components.ConfirmDialog
 
 private const val OPML_MIME = "text/x-opml"
@@ -156,7 +157,7 @@ internal fun PodcastSubscriptionsScreen(
                     )
                 }
                 else -> LazyColumn(
-                    contentPadding = contentPadding.listInset(),
+                    contentPadding = contentPadding.nestedListInset(),
                     modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection)
                 ) {
                     itemsIndexed(list, key = { _, podcast -> podcast.feedUrl }) { index, podcast ->

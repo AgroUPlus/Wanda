@@ -26,7 +26,7 @@ import androidx.compose.ui.res.stringResource
 import com.wander.android.R
 import com.wander.android.ui.components.GroupedCard
 import com.wander.android.ui.components.headerInset
-import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.nestedListInset
 import com.wander.android.ui.components.rememberShelfEntranceScale
 
 /**
@@ -85,7 +85,7 @@ internal fun SettingsScreen(
 
         LazyColumn(
             state = listState,
-            contentPadding = contentPadding.listInset(),
+            contentPadding = contentPadding.nestedListInset(),
             modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection)
         ) {
             item(key = "search") { SettingsSearchField(query = query, onQueryChange = { query = it }) }

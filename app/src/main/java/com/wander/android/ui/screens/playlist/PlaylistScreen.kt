@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.playlist
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -130,6 +131,8 @@ fun PlaylistScreen(
                     state = listState,
                     contentPadding = contentPadding.listInset(),
                     modifier = Modifier.fillMaxSize()
+                        // The list carries the side insets; the hero inside it must not add them again.
+                        .consumeWindowInsets(contentPadding.listInset())
                 ) {
                     item(key = "header", contentType = "header") {
                         PlaylistHeader(

@@ -42,9 +42,13 @@ import com.wander.android.ui.navigation.navigateSettled
 import com.wander.android.ui.navigation.WanderDock
 
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.ui.unit.dp
 import com.wander.android.ui.components.player.MiniStripHeight
 import com.wander.android.ui.navigation.DockRowHeight
@@ -160,6 +164,9 @@ internal fun rememberWanderDockState(
                 scaleOut(dockSpec(), targetScale = 0.85f),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
+                // A side navigation bar or cutout in landscape: the dock spans the width, so it
+                // has to clear them itself — nothing above it in this full-bleed Box does.
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                 .padding(bottom = dockInset + MiniPlayerGap)
         ) {
             WanderDock(

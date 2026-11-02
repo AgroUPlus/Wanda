@@ -38,6 +38,7 @@ import com.wander.android.data.sources.agro.Jam
 import com.wander.android.data.sources.agro.StoredJamRecap
 import com.wander.android.ui.components.ConfirmRequest
 import com.wander.android.ui.components.headerInset
+import com.wander.android.ui.components.listInset
 import com.wander.android.ui.components.rememberConfirmState
 import com.wander.android.ui.theme.CoverTintedTheme
 import com.wander.android.ui.theme.buttonSmall
@@ -89,7 +90,7 @@ internal fun JamScreen(
                     // The jam just left goes first: that recap is what someone leaving came back to see.
                     val (justLeft, earlier) = state.recaps.partition { it.id == state.justLeftRecap }
                     LazyColumn(
-                        contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding() + 28.dp),
+                        contentPadding = contentPadding.listInset(extraBottom = 28.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
                         items(justLeft, key = { "recap-${it.id}" }) { recap -> RecapItem(recap, state, viewModel) }
@@ -131,7 +132,7 @@ private fun LazyItemScope.RecapItem(recap: StoredJamRecap, state: JamUiState, vi
 @Composable
 private fun JamRoom(jam: Jam, state: JamUiState, contentPadding: PaddingValues, viewModel: JamViewModel) {
     LazyColumn(
-        contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding() + 28.dp),
+        contentPadding = contentPadding.listInset(extraBottom = 28.dp),
         modifier = Modifier.fillMaxSize()
     ) {
         item(key = "now") { JamNowPlayingCard(jam, state.unresolvable, state.outOfSync, viewModel) }

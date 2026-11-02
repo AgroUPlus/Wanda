@@ -51,7 +51,7 @@ import com.wander.android.ui.components.newplaylist.NewPlaylistSheet
 import com.wander.android.ui.screens.library.blend.BlendInvites
 import com.wander.android.ui.components.PlaylistActionsSheet
 import com.wander.android.ui.components.SkeletonRow
-import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.nestedListInset
 
 private const val PLAYLISTS_PAGE_SIZE = 30
 private const val PAGE_PREFETCH_DISTANCE = 4
@@ -174,7 +174,7 @@ internal fun PlaylistList(
 
     LazyColumn(
         state = listState,
-        contentPadding = contentPadding.listInset(),
+        contentPadding = contentPadding.nestedListInset(),
         modifier = Modifier.fillMaxSize()
     ) {
         item(key = "playlist_actions", contentType = "action") {

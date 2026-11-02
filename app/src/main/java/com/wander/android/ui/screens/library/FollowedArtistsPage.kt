@@ -19,7 +19,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.ui.components.EmptyState
-import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.nestedListInset
 import com.wander.android.ui.screens.artist.RelatedArtistCard
 
 /** The Library's Followed tab: every artist this account follows, as round portraits. */
@@ -62,7 +62,7 @@ internal fun FollowedArtistsPage(
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 112.dp),
-                contentPadding = contentPadding.listInset(),
+                contentPadding = contentPadding.nestedListInset(),
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(current.artists, key = { "followed-${it.name}" }) { artist ->

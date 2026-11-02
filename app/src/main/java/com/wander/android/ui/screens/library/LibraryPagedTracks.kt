@@ -27,7 +27,7 @@ import com.wander.android.ui.components.SkeletonRow
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.fastScrollLetter
 import com.wander.android.ui.components.groupedListItem
-import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.nestedListInset
 import com.wander.android.ui.components.rememberShelfEntranceScale
 
 private const val LOADING_ROWS = 8
@@ -61,7 +61,7 @@ internal fun PagedTrackList(
         // gap is a lie that lasts just long enough to be read.
         if (isSyncing || tracks.loadState.refresh is LoadState.Loading) {
             Column(
-                modifier = Modifier.fillMaxSize().padding(contentPadding.listInset())
+                modifier = Modifier.fillMaxSize().padding(contentPadding.nestedListInset())
             ) {
                 repeat(LOADING_ROWS) {
                     SkeletonRow(leadingSize = 48.dp, leadingShape = MaterialTheme.shapes.extraSmall)
@@ -79,7 +79,7 @@ internal fun PagedTrackList(
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
-            contentPadding = contentPadding.listInset(),
+            contentPadding = contentPadding.nestedListInset(),
             modifier = Modifier.fillMaxSize()
         ) {
             items(
@@ -120,7 +120,7 @@ internal fun PagedTrackList(
             labelFor = letterFor?.let { letter -> { index -> tracks.peek(index)?.let(letter) } },
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(contentPadding.listInset())
+                .padding(contentPadding.nestedListInset())
                 .padding(vertical = 8.dp)
         )
     }

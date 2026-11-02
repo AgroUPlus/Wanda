@@ -164,6 +164,7 @@ fun WanderApp(
             ) {
                 Scaffold(
                     containerColor = MaterialTheme.colorScheme.background,
+                    contentWindowInsets = shellContentInsets(),
                     modifier = Modifier.backdropBlur(isBackBlurEnabled) {
                         val back = sheetState.predictiveBackProgress
                         val covered = sheetState.progress

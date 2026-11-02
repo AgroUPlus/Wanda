@@ -33,7 +33,7 @@ import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.groupedListItem
-import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.nestedListInset
 
 /**
  * The library by genre tag, and one genre's tracks once it is opened.
@@ -83,7 +83,7 @@ private fun GenreList(contentPadding: PaddingValues, browse: LibraryBrowseViewMo
         }
         return
     }
-    LazyColumn(contentPadding = contentPadding.listInset(), modifier = Modifier.fillMaxSize()) {
+    LazyColumn(contentPadding = contentPadding.nestedListInset(), modifier = Modifier.fillMaxSize()) {
         itemsIndexed(genres, key = { _, genre -> genre.name }) { index, genre ->
             Column(
                 modifier = Modifier

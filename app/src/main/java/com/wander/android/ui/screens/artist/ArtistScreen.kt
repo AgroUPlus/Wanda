@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.artist
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
@@ -103,6 +104,8 @@ internal fun ArtistScreen(
                 // No blanket item spacing: it also landed between the grouped song rows, which
                 // are meant to sit 2 dp apart as one group. Section titles carry the room instead.
                 modifier = Modifier.fillMaxSize()
+                    // The list carries the side insets; the hero inside it must not add them again.
+                    .consumeWindowInsets(contentPadding.listInset())
             ) {
                 item(key = "header", contentType = "header") {
                     ArtistHero(
