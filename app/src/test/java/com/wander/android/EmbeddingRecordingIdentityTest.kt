@@ -129,7 +129,6 @@ class EmbeddingRecordingIdentityTest {
         override suspend fun searchTracksInSource(source: com.wander.android.data.model.SourceType, query: String, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun deleteUnreferencedUnresolved(): Int = 0
         override suspend fun searchSubscribedEpisodes(query: String, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
-        override suspend fun getRandomTracksInSource(source: com.wander.android.data.model.SourceType, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun getRecentlyAddedInSource(source: com.wander.android.data.model.SourceType, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun getRecentlyAddedTracks(limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun markLive(trackId: String) {}
@@ -141,6 +140,7 @@ class EmbeddingRecordingIdentityTest {
         override suspend fun getForgottenFavorites(thresholdTimestamp: Long, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun getNeverPlayedTracks(limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun getSeedNeighbours(seedId: String, artist: String, genre: String?, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun getSeedNeighboursInSource(source: com.wander.android.data.model.SourceType, seedId: String, artist: String, genre: String?, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override fun observeGenres(): kotlinx.coroutines.flow.Flow<List<String>> = kotlinx.coroutines.flow.flowOf(emptyList())
         override suspend fun getTracksByGenres(genres: List<String>, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun getRandomTracks(limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()

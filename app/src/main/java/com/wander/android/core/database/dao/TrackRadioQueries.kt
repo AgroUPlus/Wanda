@@ -2,6 +2,7 @@ package com.wander.android.core.database.dao
 
 import androidx.room.Query
 import com.wander.android.core.database.entity.TrackEntity
+import com.wander.android.data.model.SourceType
 
 /**
  * Read queries that pull radio candidates out of the user's own collection.
@@ -29,4 +30,24 @@ interface TrackRadioQueries {
         """
     )
     suspend fun getSeedNeighbours(seedId: String, artist: String, genre: String?, limit: Int): List<TrackEntity>
+
+    /** [getSeedNeighbours] within one [source], for a backend whose radio is its own Room rows. */
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE source = :source AND id != :seedId AND isEpisode = 0 AND isLive = 0
+          AND $IN_COLLECTION
+          AND ((:artist != '' AND artist LIKE '%' || :artist || '%' COLLATE NOCASE)
+            OR (:genre IS NOT NULL AND LOWER(genre) = LOWER(:genre)))
+        ORDER BY RANDOM()
+        LIMIT :limit
+        """
+    )
+    suspend fun getSeedNeighboursInSource(
+        source: SourceType,
+        seedId: String,
+        artist: String,
+        genre: String?,
+        limit: Int
+    ): List<TrackEntity>
 }

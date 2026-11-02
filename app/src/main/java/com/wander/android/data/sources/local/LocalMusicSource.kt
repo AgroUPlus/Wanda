@@ -12,6 +12,7 @@ import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.ArtistCredits
 import com.wander.android.data.sources.IMusicSource
 import com.wander.android.data.sources.SourceCapabilities
 import com.wander.android.data.sources.StreamInfo
@@ -121,10 +122,26 @@ class LocalMusicSource @Inject constructor(
         return Result.success(StreamInfo(uri = uri, format = "audio/*", isDirectFile = true))
     }
 
-    override suspend fun getRadio(seedTrackId: String, count: Int): Result<List<UnifiedTrack>> =
-        Result.success(
-            trackDao.getRandomTracksInSource(SourceType.LOCAL, count).map(TrackEntity::toUnifiedTrack)
+    /**
+     * The device's other songs by the seed's lead artist or in its genre.
+     *
+     * It used to be a random slice of the device, whatever the seed. The sound-alike ranking is not
+     * repeated here: `SmartRadioGenerator` already orders every station by the measured features
+     * and adds the fingerprint index's nearest tracks, local ones included.
+     */
+    override suspend fun getRadio(seedTrackId: String, count: Int): Result<List<UnifiedTrack>> {
+        val seed = trackDao.getTrackById(seedTrackId)
+            ?: return Result.failure(IOException("Local track $seedTrackId is no longer on this device"))
+        return Result.success(
+            trackDao.getSeedNeighboursInSource(
+                source = SourceType.LOCAL,
+                seedId = seed.id,
+                artist = ArtistCredits.leadName(seed.artist),
+                genre = seed.genre?.trim()?.takeIf { it.isNotEmpty() },
+                limit = count
+            ).map(TrackEntity::toUnifiedTrack)
         )
+    }
 
     override suspend fun getRecentTracks(limit: Int): Result<List<UnifiedTrack>> =
         Result.success(

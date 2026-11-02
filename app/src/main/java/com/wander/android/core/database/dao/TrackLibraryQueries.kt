@@ -125,9 +125,6 @@ interface TrackLibraryQueries {
     )
     suspend fun searchTracksInSource(source: SourceType, query: String, limit: Int = 50): List<TrackEntity>
 
-    @Query("SELECT * FROM tracks WHERE source = :source AND isEpisode = 0 ORDER BY RANDOM() LIMIT :limit")
-    suspend fun getRandomTracksInSource(source: SourceType, limit: Int): List<TrackEntity>
-
     @Query("SELECT * FROM tracks WHERE source = :source AND isEpisode = 0 AND $IN_COLLECTION ORDER BY addedTimestamp DESC LIMIT :limit")
     suspend fun getRecentlyAddedInSource(source: SourceType, limit: Int): List<TrackEntity>
 

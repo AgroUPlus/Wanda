@@ -39,6 +39,15 @@ class ArtistCreditsTest {
         assertEquals(listOf("A", "B"), ArtistCredits.choices("A, B"))
     }
 
+    /** A radio looks a seed's artist up by one name, never widened by splitting a band in two. */
+    @Test
+    fun `leads with the first artist unless the credit may be one act`() {
+        assertEquals("A", ArtistCredits.leadName("A feat. B"))
+        assertEquals("A", ArtistCredits.leadName("A, B"))
+        assertEquals("Simon & Garfunkel", ArtistCredits.leadName("Simon & Garfunkel"))
+        assertEquals("", ArtistCredits.leadName("  "))
+    }
+
     /** The backend id is for the credit as filed; a name picked out of it would open the wrong page. */
     @Test
     fun `keeps the artist id only for the whole credit`() {

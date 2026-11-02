@@ -58,25 +58,14 @@ internal class SmartRadioGenerator(
             )
         }
 
-    /**
-     * The seed's artist and genre in the user's own collection.
-     *
-     * A credit that may be one act's name ("Simon & Garfunkel") is matched whole rather than by its
-     * first name, which would otherwise pull in every song by anyone called Simon.
-     */
-    private suspend fun libraryNeighbours(seed: UnifiedTrack, limit: Int): List<UnifiedTrack> {
-        val artist = if (ArtistCredits.isAmbiguous(seed.artist)) {
-            seed.artist.trim()
-        } else {
-            ArtistCredits.split(seed.artist).firstOrNull().orEmpty()
-        }
-        return trackDao.getSeedNeighbours(
+    /** The seed's artist and genre in the user's own collection. */
+    private suspend fun libraryNeighbours(seed: UnifiedTrack, limit: Int): List<UnifiedTrack> =
+        trackDao.getSeedNeighbours(
             seedId = seed.id,
-            artist = artist,
+            artist = ArtistCredits.leadName(seed.artist),
             genre = seed.genre?.trim()?.takeIf { it.isNotEmpty() },
             limit = limit
         ).map(TrackEntity::toUnifiedTrack)
-    }
 
     /** [SonicNeighbours] for [seed], as tracks, in their nearest-first order. */
     private suspend fun soundsLike(seed: UnifiedTrack, limit: Int): List<UnifiedTrack> {
