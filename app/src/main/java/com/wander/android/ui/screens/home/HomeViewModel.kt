@@ -88,7 +88,9 @@ class HomeViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.Eagerly, HomeSection(SectionContinueListening, "", HomeSectionStyle.TRACK_CAROUSEL))
 
     init {
-        refresh()
+        // The layout collector builds the added shelves on its first emission; building them
+        // here as well ran every one of their searches twice, side by side, on every open.
+        refresh(rebuildAddedShelves = false)
         observeLibrary()
         observeLikes()
         observeLayout()
@@ -155,7 +157,7 @@ class HomeViewModel @Inject constructor(
     /** Pull-to-refresh. Same work as [refresh], but the shelves stay on screen while it runs. */
     fun pullToRefresh() = refresh(showSpinner = false)
 
-    fun refresh(showSpinner: Boolean = true) {
+    fun refresh(showSpinner: Boolean = true, rebuildAddedShelves: Boolean = true) {
         viewModelScope.launch {
             // If we already have sections rendered, keep them on screen without showing full spinner
             val hasExisting = _uiState.value.allSections.isNotEmpty()
@@ -206,10 +208,12 @@ class HomeViewModel @Inject constructor(
             // Shelves the user added after the first paint, not before it: several are online
             // (YouTube Music, Popular on Agro, friends' picks), and Home used to wait for every
             // one of them, one after another, before showing even the library's own shelves.
-            launch {
-                val changes = extras.sync(layoutStore.layout.first(), _uiState.value.allSections, force = true)
-                _uiState.update {
-                    it.copy(allSections = changes.applyTo(it.allSections).withLikes(likedTrackIds.value))
+            if (rebuildAddedShelves) {
+                launch {
+                    val changes = extras.sync(layoutStore.layout.first(), _uiState.value.allSections, force = true)
+                    _uiState.update {
+                        it.copy(allSections = changes.applyTo(it.allSections).withLikes(likedTrackIds.value))
+                    }
                 }
             }
 
