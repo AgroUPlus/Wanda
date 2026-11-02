@@ -11,8 +11,10 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
@@ -134,6 +136,10 @@ fun WanderApp(
         animationSpec = dockSpec(),
         label = "dockBottomInset"
     )
+    // A wide window trades the dock's buttons for a rail at the start edge; see `rememberUseNavRail`.
+    val useRail = rememberUseNavRail() && showChrome
+    var railWidth by remember { mutableStateOf(0.dp) }
+    val railInset = if (useRail) railWidth else 0.dp
 
     val offlinePlayback by viewModel.offlinePlayback.collectAsStateWithLifecycle()
     val isCoverArtThemeEnabled by viewModel.isCoverArtThemeEnabled.collectAsStateWithLifecycle()
@@ -188,8 +194,8 @@ fun WanderApp(
                         else -> dockBottom + attachedBar.height + MiniPlayerShadowInset
                     }
                     val direction = LocalLayoutDirection.current
-                    val contentPadding = remember(padding, extraBottom, direction) {
-                        padding.plusBottom(extraBottom, direction)
+                    val contentPadding = remember(padding, extraBottom, direction, railInset) {
+                        padding.plusBottom(extraBottom, direction).withMinStart(railInset, direction)
                     }
                     NavHost(
                         navController = navController,
@@ -207,11 +213,15 @@ fun WanderApp(
                     }
                 }
 
+                if (useRail) {
+                    ShellNavRail(navController, currentRoute, bottomClearance = dockBottom) { railWidth = it }
+                }
+
                 val dockState = rememberWanderDockState(
                     navController = navController,
                     viewModel = viewModel,
                     motionScheme = motionScheme,
-                    visibility = DockVisibility(currentRoute, showDockRow, hasTrack),
+                    visibility = DockVisibility(currentRoute, showDockRow, hasTrack, railInset),
                     sheetState = sheetState,
                     dockInset = dockInset
                 )
