@@ -71,21 +71,36 @@ class PlaylistViewModel @Inject constructor(
         }
     }
 
+    private val _isRefreshing = MutableStateFlow(false)
+
+    /** A reload the person asked for by pulling, as opposed to the ones that follow an edit or a sync. */
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     fun refresh() {
+        viewModelScope.launch { load() }
+    }
+
+    fun pullToRefresh() {
         viewModelScope.launch {
-            _isLoading.value = true
-            val pl = musicRepository.getPlaylistById(playlistId)
-            _playlist.value = pl
-            val list = sharedTracks() ?: musicRepository.getPlaylistTracksById(playlistId)
-            _tracks.value = list
-            if (pl != null && pl.coverArtUrl == null) {
-                val fallbackCover = list.firstNotNullOfOrNull { it.artworkUrl }
-                if (fallbackCover != null) {
-                    _playlist.value = pl.copy(coverArtUrl = fallbackCover)
-                }
-            }
-            _isLoading.value = false
+            _isRefreshing.value = true
+            load()
+            _isRefreshing.value = false
         }
+    }
+
+    private suspend fun load() {
+        _isLoading.value = true
+        val pl = musicRepository.getPlaylistById(playlistId)
+        _playlist.value = pl
+        val list = sharedTracks() ?: musicRepository.getPlaylistTracksById(playlistId)
+        _tracks.value = list
+        if (pl != null && pl.coverArtUrl == null) {
+            val fallbackCover = list.firstNotNullOfOrNull { it.artworkUrl }
+            if (fallbackCover != null) {
+                _playlist.value = pl.copy(coverArtUrl = fallbackCover)
+            }
+        }
+        _isLoading.value = false
     }
 
     /**

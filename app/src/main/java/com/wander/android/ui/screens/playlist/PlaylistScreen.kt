@@ -32,6 +32,7 @@ import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.listInset
 import com.wander.android.ui.components.rememberCollapsingTitleState
 import com.wander.android.ui.screens.album.AlbumSkeleton
+import com.wander.android.ui.screens.album.DetailRefreshBox
 import com.wander.android.ui.screens.album.HeroTitleMaxLines
 import com.wander.android.ui.theme.heroTitle
 
@@ -46,6 +47,7 @@ fun PlaylistScreen(
     val playlist by viewModel.playlist.collectAsStateWithLifecycle()
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val importWork by viewModel.importWork.collectAsStateWithLifecycle()
     val sharedViewModel: SharedPlaylistViewModel = hiltViewModel()
     val shared by sharedViewModel.state.collectAsStateWithLifecycle()
@@ -94,7 +96,11 @@ fun PlaylistScreen(
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    DetailRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = viewModel::pullToRefresh,
+        topInset = contentPadding.calculateTopPadding()
+    ) {
         when {
             isLoading && playlist == null && tracks.isEmpty() -> {
                 AlbumSkeleton(contentPadding.listInset())
@@ -109,7 +115,9 @@ fun PlaylistScreen(
                 ) {
                     EmptyState(
                         title = stringResource(R.string.playlist_playlist_unavailable),
-                        message = stringResource(R.string.playlist_playlist_couldn_t_loaded_from)
+                        message = stringResource(R.string.playlist_playlist_couldn_t_loaded_from),
+                        actionLabel = stringResource(R.string.common_try_again),
+                        onAction = viewModel::refresh
                     )
                 }
             }

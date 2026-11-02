@@ -48,15 +48,30 @@ class AlbumViewModel @Inject constructor(
         refresh()
     }
 
+    private val _isRefreshing = MutableStateFlow(false)
+
+    /** A reload the person asked for by pulling the page down. */
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     fun refresh() {
+        viewModelScope.launch { load() }
+    }
+
+    fun pullToRefresh() {
         viewModelScope.launch {
-            _isLoading.value = true
-            _album.value = catalogRepository.album(albumId)
-            // Fills in tracks Room has not seen. The flow above picks them up on its own.
-            catalogRepository.refreshAlbum(albumId)
-            _album.value = catalogRepository.album(albumId) ?: _album.value
-            _isLoading.value = false
+            _isRefreshing.value = true
+            load()
+            _isRefreshing.value = false
         }
+    }
+
+    private suspend fun load() {
+        _isLoading.value = true
+        _album.value = catalogRepository.album(albumId)
+        // Fills in tracks Room has not seen. The flow above picks them up on its own.
+        catalogRepository.refreshAlbum(albumId)
+        _album.value = catalogRepository.album(albumId) ?: _album.value
+        _isLoading.value = false
     }
 
     fun playAll() = tracks.value.takeIf { it.isNotEmpty() }?.let { playerConnection.play(it) }

@@ -49,6 +49,7 @@ fun AlbumScreen(
     val album by viewModel.album.collectAsStateWithLifecycle()
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
 
     val listState = rememberLazyListState()
@@ -82,7 +83,11 @@ fun AlbumScreen(
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    DetailRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = viewModel::pullToRefresh,
+        topInset = contentPadding.calculateTopPadding()
+    ) {
         when {
             isLoading && album == null && tracks.isEmpty() -> {
                 AlbumSkeleton(contentPadding.listInset())
@@ -97,7 +102,9 @@ fun AlbumScreen(
                 ) {
                     EmptyState(
                         title = stringResource(R.string.album_album_unavailable),
-                        message = stringResource(R.string.album_album_isn_t_any_connected)
+                        message = stringResource(R.string.album_album_isn_t_any_connected),
+                        actionLabel = stringResource(R.string.common_try_again),
+                        onAction = viewModel::refresh
                     )
                 }
             }
