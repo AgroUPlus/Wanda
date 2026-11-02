@@ -1,0 +1,6 @@
+<resources>
+    <!-- Title of the queue screen while in a Jam; the argument is the room's join code. -->
+    <string name="queue_jam_title">Jam Queue · %1$s</string>
+    <!-- Title of the queue screen outside a Jam. -->
+    <string name="queue_screen_title_up_next">Up next</string>
+</resources>

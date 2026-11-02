@@ -83,7 +83,11 @@ internal fun QueueScreen(
                     .then(if (jam != null) Modifier.clickable(onClick = onOpenJam) else Modifier)
             ) {
                 Text(
-                    text = if (jam != null) "Jam Queue · ${jam.code}" else "Up next",
+                    text = if (jam != null) {
+                        stringResource(R.string.queue_jam_title, jam.code)
+                    } else {
+                        stringResource(R.string.queue_screen_title_up_next)
+                    },
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -96,7 +100,8 @@ internal fun QueueScreen(
                 }
             }
 
-            if (jam == null && state.queue.isNotEmpty()) {
+            // Not while following someone: the queue is theirs, and the drawer hides it too.
+            if (jam == null && !state.orderLocked && state.queue.isNotEmpty()) {
                 ClearQueueButton(state.queue.size, playerConnection::clearQueue)
             }
         }
