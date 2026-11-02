@@ -9,4 +9,7 @@
     </plurals>
     <string name="sleep_timer_chip_until_end">Until the end</string>
     <string name="sleep_timer_chip_description">Sleep timer on</string>
+
+    <!-- Now playing menu -->
+    <string name="player_equalizer">Equalizer</string>
 </resources>

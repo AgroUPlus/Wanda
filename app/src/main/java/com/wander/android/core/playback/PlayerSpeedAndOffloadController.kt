@@ -84,6 +84,9 @@ internal data class OffloadRoute(val isLive: Boolean, val skipsSilence: Boolean,
  * Nor while a Bluetooth output is connected ([BluetoothAudioOutput]): offloaded playback over
  * Bluetooth played silence on some phones until a volume key was pressed. The battery cost is
  * small there — the radio link, not the decoder, is what a Bluetooth session spends power on.
+ *
+ * An external equalizer attached to the session (see [ExternalEqualizer]) is not an input: the
+ * platform does not tell the app whether one is attached, so there is nothing cheap to decide on.
  */
 internal fun offloadAllowed(
     isLive: Boolean,

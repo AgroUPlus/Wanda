@@ -208,6 +208,7 @@ internal fun NowPlayingScreen(
             onOpenArtist = onOpenArtist?.let { open -> { name -> open(name, track.artistIdFor(name)) } },
             onOpenAlbum = track.albumId?.let { albumId -> onOpenAlbum?.let { open -> { open(albumId) } } },
             onJamAction = jam?.let { { jamViewModel.suggest(track) } },
+            equalizerIntent = viewModel.equalizerIntent(),
             onDismiss = { showMenuDrawer = false }
         )
     }

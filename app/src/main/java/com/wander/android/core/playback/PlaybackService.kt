@@ -47,6 +47,7 @@ class PlaybackService : MediaSessionService() {
     @Inject internal lateinit var scrobbleForwarding: com.wander.android.data.repository.ScrobbleForwarding
     @Inject internal lateinit var sourceNowPlaying: com.wander.android.data.repository.SourceNowPlaying
     @Inject internal lateinit var savedQueueStore: SavedQueueStore
+    @Inject lateinit var externalEqualizer: ExternalEqualizer
     @Inject @field:com.wander.android.di.ArtworkHttpClient
     lateinit var artworkHttpClient: okhttp3.OkHttpClient
 
@@ -75,6 +76,9 @@ class PlaybackService : MediaSessionService() {
         LoudnessNormaliser(player, volume, loudness.mode, loudness.preampDb, loudnessReadout, scope)
         SleepTimerEnforcer(player, volume, sleepTimer, scope)
         player.addAnalyticsListener(AudioFormatReporter())
+        // The session id arrives after the player is built; the listener announces it then.
+        player.addListener(externalEqualizer)
+        externalEqualizer.open(player.audioSessionId)
         val widget = com.wander.android.ui.widget.PlaybackWidgetUpdater(applicationContext, player)
         player.addListener(widget)
         widgetUpdater = widget
@@ -186,6 +190,7 @@ class PlaybackService : MediaSessionService() {
         queueResumption = null
         widgetUpdater?.onServiceStopped()
         widgetUpdater = null
+        externalEqualizer.close()
         mediaSession?.run {
             player.release()
             release()
