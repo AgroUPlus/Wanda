@@ -9,9 +9,12 @@ import androidx.media3.common.Format
 import androidx.media3.common.Timeline
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.session.MediaLibraryService
+import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaSessionService
 import com.wander.android.MainActivity
+import com.wander.android.core.playback.browse.BrowseTree
+import com.wander.android.core.playback.browse.PlayRequestResolver
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.sources.agro.AgroHandoffPublisher
 import dagger.hilt.android.AndroidEntryPoint
@@ -31,10 +34,14 @@ import javax.inject.Inject
  * Owns the [ExoPlayer] and the [MediaSession]. The UI holds a `MediaController` onto this
  * service, which is what gives us the notification, lockscreen and Bluetooth controls, and lets
  * playback outlive the Activity.
+ *
+ * A [MediaLibraryService] rather than a plain session service so a car can browse the library and
+ * search it — see [BrowseTree]. The session is a [MediaLibraryService.MediaLibrarySession]; to
+ * everything that only controls playback it is the same session it always was.
  */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @AndroidEntryPoint
-class PlaybackService : MediaSessionService() {
+class PlaybackService : MediaLibraryService() {
 
     @Inject lateinit var playerFactory: PlayerFactory
     @Inject lateinit var musicRepository: MusicRepository
@@ -49,11 +56,13 @@ class PlaybackService : MediaSessionService() {
     @Inject internal lateinit var sourceNowPlaying: com.wander.android.data.repository.SourceNowPlaying
     @Inject internal lateinit var savedQueueStore: SavedQueueStore
     @Inject lateinit var externalEqualizer: ExternalEqualizer
+    @Inject internal lateinit var browseTree: BrowseTree
+    @Inject internal lateinit var playRequests: PlayRequestResolver
     @Inject @field:com.wander.android.di.ArtworkHttpClient
     lateinit var artworkHttpClient: okhttp3.OkHttpClient
 
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
-    private var mediaSession: MediaSession? = null
+    private var mediaSession: MediaLibrarySession? = null
     private var queueResumption: QueueResumption? = null
     private var widgetUpdater: com.wander.android.ui.widget.PlaybackWidgetUpdater? = null
 
@@ -103,7 +112,8 @@ class PlaybackService : MediaSessionService() {
             .onEach { sessionPlayer.onGateChanged() }
             .launchIn(scope)
 
-        mediaSession = MediaSession.Builder(this, sessionPlayer)
+        val callback = PlaybackSessionCallback(packageName, buttons, resumption, browseTree, playRequests, scope)
+        mediaSession = MediaLibrarySession.Builder(this, sessionPlayer, callback)
             .setSessionActivity(sessionActivity)
             // The default loader fetches over a plain HTTP stack. Navidrome artwork URLs carry no
             // credentials, so they are loaded through the client that signs them. Same size cap
@@ -119,7 +129,6 @@ class PlaybackService : MediaSessionService() {
                     .setMaximumOutputDimension(MediaSession.getBitmapDimensionLimit(this) * 2 - 1)
                     .build()
             )
-            .setCallback(PlaybackSessionCallback(packageName, buttons, resumption))
             .build()
             .also(buttons::attach)
     }
@@ -177,7 +186,7 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = mediaSession
 
     /** Nothing left playing and the user swiped the task away: don't linger as a foreground service. */
     override fun onTaskRemoved(rootIntent: Intent?) {

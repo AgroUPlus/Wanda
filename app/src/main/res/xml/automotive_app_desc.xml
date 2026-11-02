@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Declares Wanda to Android Auto as a media app: its library is browsed through PlaybackService. -->
+<automotiveApp>
+    <uses name="media" />
+</automotiveApp>

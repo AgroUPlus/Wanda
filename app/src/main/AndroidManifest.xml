@@ -232,17 +232,26 @@
         </activity>
 
         <!--
-          Not exported: only this app's own MediaController binds to it. Media3 routes
-          notification and media-button intents internally.
+          Exported so Android Auto, Android Automotive and the Assistant can bind to it: the first
+          action is how Media3 browsers find it, the second how the platform's legacy
+          MediaBrowser protocol — which Android Auto speaks — does. Binding gets an app transport
+          controls, as the platform session always offered; browsing and searching the library is
+          answered only for this app, the car hosts and trusted controllers — see BrowserAccess.
         -->
         <service
             android:name=".core.playback.PlaybackService"
-            android:exported="false"
+            android:exported="true"
             android:foregroundServiceType="mediaPlayback">
             <intent-filter>
-                <action android:name="androidx.media3.session.MediaSessionService" />
+                <action android:name="androidx.media3.session.MediaLibraryService" />
+                <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
         </service>
+
+        <!-- Lists Wanda among Android Auto's media apps; see @xml/automotive_app_desc. -->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
 
         <!--
           Lets a headset or car play button reach PlaybackService after the process was killed.

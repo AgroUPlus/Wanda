@@ -7,10 +7,15 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.wander.android.core.playback.browse.BrowseTree
+import com.wander.android.core.playback.browse.LibrarySessionCallback
+import com.wander.android.core.playback.browse.PlayRequestResolver
+import kotlinx.coroutines.CoroutineScope
 
 /**
  * The [PlaybackService] session's callback: which commands a controller gets, the notification's
- * custom buttons, and playback resumption.
+ * custom buttons, and playback resumption. Browsing, search and other apps' play requests are
+ * [LibrarySessionCallback]'s.
  *
  * [ownPackage] is this app's package. Controllers from it — the app, the widget, the media
  * notification — open on the saved queue as they connect; see [QueueResumption.restoreIfEmpty].
@@ -19,8 +24,11 @@ import com.google.common.util.concurrent.ListenableFuture
 internal class PlaybackSessionCallback(
     private val ownPackage: String,
     private val buttons: NotificationButtons,
-    private val resumption: QueueResumption
-) : MediaSession.Callback {
+    private val resumption: QueueResumption,
+    tree: BrowseTree,
+    requests: PlayRequestResolver,
+    scope: CoroutineScope
+) : LibrarySessionCallback(ownPackage, tree, requests, scope) {
 
     override fun onConnect(
         session: MediaSession,
@@ -29,9 +37,10 @@ internal class PlaybackSessionCallback(
         MediaSession.ConnectionResult.AcceptedResultBuilder(session)
             .setAvailablePlayerCommands(MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS)
             // The defaults plus the heart. Without adding it here the button is drawn but every
-            // tap on it is rejected as an unavailable command.
+            // tap on it is rejected as an unavailable command. The library commands are in the
+            // defaults' library set; BrowserAccess decides who is answered.
             .setAvailableSessionCommands(
-                MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
+                MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
                     .add(buttons.sessionCommand)
                     .build()
             )
