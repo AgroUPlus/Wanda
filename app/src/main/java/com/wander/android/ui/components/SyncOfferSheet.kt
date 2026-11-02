@@ -1,6 +1,7 @@
 package com.wander.android.ui.components
 
-import androidx.annotation.StringRes
+import android.content.Context
+import android.text.format.Formatter
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -175,7 +177,7 @@ internal fun SyncOfferSheet(
                             )
                         }
                         Text(
-                            text = formatSize(track.sizeBytes),
+                            text = formatSize(LocalContext.current, track.sizeBytes),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(start = 12.dp)
@@ -206,21 +208,12 @@ internal fun SyncOfferSheet(
     }
 }
 
-/** How a route is named on screen. [SyncRoute.label] is the English one, kept for logs and the card. */
-@StringRes
-private fun SyncRoute.labelRes(): Int = when (this) {
-    SyncRoute.DIRECT -> R.string.sync_route_direct
-    SyncRoute.RELAY -> R.string.sync_route_relay
-    SyncRoute.ARCHIVE -> R.string.sync_route_archive
-}
-
-/** Sizes are here to give a sense of the download, so one decimal is plenty. */
-private fun formatSize(bytes: Long): String = when {
-    bytes >= 1_000_000_000 -> "%.1f GB".format(bytes / 1_000_000_000.0)
-    bytes >= 1_000_000 -> "%.0f MB".format(bytes / 1_000_000.0)
-    bytes > 0 -> "%.0f KB".format(bytes / 1_000.0)
-    else -> ""
-}
+/**
+ * Sizes are here to give a sense of the download, in the units and digits of the user's locale.
+ * Nothing at all for a size the offer did not state.
+ */
+private fun formatSize(context: Context, bytes: Long): String =
+    if (bytes > 0) Formatter.formatShortFileSize(context, bytes) else ""
 
 /** Where one track has got to in a run. */
 private enum class TrackFetchState { DONE, FETCHING, WAITING }

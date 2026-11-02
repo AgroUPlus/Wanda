@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sync offer card: the peer a direct transfer comes from, then the route's name -->
+    <string name="sync_route_via_peer">%1$s · %2$s</string>
+</resources>
