@@ -3,20 +3,20 @@ package com.wander.android.data.sources.deezer
 import com.wander.android.core.playback.DeezerDecryptingDataSource
 import com.wander.android.data.sources.StreamInfo
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonObject
-import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -27,26 +27,17 @@ import javax.inject.Singleton
 /**
  * Resolves full Deezer track CDN streams via Deezer's web gateway and media APIs.
  *
- * Requests the appropriate audio format (MP3_128 for Free users, MP3_320/FLAC for Premium/HiFi)
- * and stamps the track ID header so [DeezerDecryptingDataSource] can decrypt it on the fly.
+ * Asks for the best format the account and the user's preference allow, falling back down
+ * [DeezerAudioFormat]'s ladder when this track has no file at that quality, and stamps the track ID
+ * header so [DeezerDecryptingDataSource] can decrypt it on the fly.
  */
 @Singleton
 class DeezerStreamResolver @Inject constructor(
     private val okHttpClient: OkHttpClient,
-    private val accountManager: DeezerAccountManager
+    private val accountManager: DeezerAccountManager,
+    private val gateway: DeezerGateway
 ) {
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
-    private val sessionMutex = Mutex()
-
-    /**
-     * The license token, with the `arl` it was issued to.
-     *
-     * Keyed on the session rather than held bare: sign-out, a different account signing in, and
-     * "forget everything" all change the stored `arl` without passing through here, and a bare
-     * token outlived every one of them — the next account streamed on the previous one's license.
-     */
-    @Volatile
-    private var cachedLicense: Pair<String, String>? = null
 
     suspend fun resolveStream(trackId: String): Result<StreamInfo> = withContext(Dispatchers.IO) {
         val cleanId = trackId.removePrefix("deezer:")
@@ -56,120 +47,57 @@ class DeezerStreamResolver @Inject constructor(
             return@withContext Result.failure(IllegalStateException("Streaming from Deezer requires signing in"))
         }
 
-        val licenseToken = getOrFetchLicenseToken(arl).getOrElse {
-            return@withContext Result.failure(it)
+        var session = gateway.session(arl).getOrElse { return@withContext Result.failure(it) }
+        var trackToken = gateway.trackToken(session, cleanId)
+        // A gateway session goes stale on Deezer's side long before the process ends; one fresh
+        // session is worth trying before calling the track unplayable.
+        if ((trackToken.exceptionOrNull() as? DeezerGateway.GatewayException)?.isSessionExpired == true) {
+            gateway.invalidate()
+            session = gateway.session(arl).getOrElse { return@withContext Result.failure(it) }
+            trackToken = gateway.trackToken(session, cleanId)
         }
+        val token = trackToken.getOrElse { return@withContext Result.failure(it) }
 
-        val trackToken = fetchTrackToken(cleanId, arl).getOrElse {
-            return@withContext Result.failure(it)
-        }
-
-        val tier = accountManager.tier
-        val (requestedFormat, mimeType, bitRate) = selectFormat(tier, accountManager.audioQuality)
-
-        val streamUrl = requestMediaUrl(licenseToken, trackToken, requestedFormat).getOrElse {
-            return@withContext Result.failure(it)
-        }
-
-        Result.success(
+        val ladder = DeezerAudioFormat.ladderFrom(accountManager.tier, accountManager.audioQuality)
+        requestMediaUrl(session.licenseToken, token, ladder).map { (streamUrl, format) ->
             StreamInfo(
                 uri = streamUrl,
-                format = mimeType,
-                bitRateKbps = bitRate,
+                format = format.mimeType,
+                bitRateKbps = format.bitRateKbps,
                 isDirectFile = false,
-                headers = mapOf(
-                    DeezerDecryptingDataSource.DEEZER_TRACK_ID_HEADER to cleanId
-                )
+                headers = mapOf(DeezerDecryptingDataSource.DEEZER_TRACK_ID_HEADER to cleanId)
             )
-        )
-    }
-
-    private fun selectFormat(tier: DeezerAccountTier, userPref: String): Triple<String, String, Int> {
-        return when {
-            tier == DeezerAccountTier.HIFI && (userPref == "FLAC" || userPref == "AUTO") ->
-                Triple("FLAC", "audio/flac", 1411)
-            tier.canStreamHq && (userPref == "MP3_320" || userPref == "AUTO") ->
-                Triple("MP3_320", "audio/mpeg", 320)
-            else ->
-                Triple("MP3_128", "audio/mpeg", 128)
         }
     }
 
-    private suspend fun getOrFetchLicenseToken(arl: String): Result<String> = sessionMutex.withLock {
-        cachedLicense?.takeIf { (owner, _) -> owner == arl }?.let { (_, token) -> return Result.success(token) }
-
-        val request = Request.Builder()
-            .url("$GW_LIGHT_URL?method=deezer.getUserData&api_version=1.0&api_token=")
-            .addHeader("Cookie", "arl=$arl")
-            .post("{}".toRequestBody(JSON_MEDIA_TYPE))
-            .build()
-
-        runCatching {
-            okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) throw IOException("Failed to fetch user data: ${response.code}")
-                val body = response.body?.string() ?: throw IOException("Empty user data response")
-                val root = json.parseToJsonElement(body).jsonObject
-                val results = root["results"]?.jsonObject ?: throw IOException("Invalid user data payload")
-
-                val options = results["OPTIONS"]?.jsonObject
-                val licenseToken = options?.get("license_token")?.jsonPrimitive?.content
-                    ?: throw IOException("No license token in Deezer user data")
-
-                val isLossless = options["web_lossless"]?.jsonPrimitive?.booleanOrNull == true
-                val isHq = options["web_hq"]?.jsonPrimitive?.booleanOrNull == true
-                accountManager.updateTier(DeezerAccountTier.fromFlags(isLossless, isHq))
-
-                results["USER"]?.jsonObject?.get("BLOG_NAME")?.jsonPrimitive?.content?.let {
-                    accountManager.updateAccountName(it)
-                }
-
-                cachedLicense = arl to licenseToken
-                licenseToken
-            }
-        }
-    }
-
-    private fun fetchTrackToken(cleanTrackId: String, arl: String): Result<String> {
-        val payload = buildJsonObject {
-            put("sng_id", cleanTrackId)
-        }.toString().toRequestBody(JSON_MEDIA_TYPE)
-
-        val request = Request.Builder()
-            .url("$GW_LIGHT_URL?method=song.getData&api_version=1.0&api_token=")
-            .addHeader("Cookie", "arl=$arl")
-            .post(payload)
-            .build()
-
-        return runCatching {
-            okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) throw IOException("Failed to fetch song data: ${response.code}")
-                val body = response.body?.string() ?: throw IOException("Empty song data response")
-                val root = json.parseToJsonElement(body).jsonObject
-                val results = root["results"]?.jsonObject ?: throw IOException("No results in song.getData")
-                results["TRACK_TOKEN"]?.jsonPrimitive?.content
-                    ?: throw IOException("No TRACK_TOKEN found for track $cleanTrackId")
-            }
-        }
-    }
-
-    private fun requestMediaUrl(licenseToken: String, trackToken: String, format: String): Result<String> {
+    /**
+     * Trades the tokens for a CDN URL. Every format in [ladder] is offered, best first, and Deezer
+     * answers with the first one this track actually has — a song with no FLAC master plays as
+     * MP3 instead of failing for a HiFi account. The format it picked is read back, because the
+     * player and the cache key need to know what the bytes really are.
+     */
+    private fun requestMediaUrl(
+        licenseToken: String,
+        trackToken: String,
+        ladder: List<DeezerAudioFormat>
+    ): Result<Pair<String, DeezerAudioFormat>> {
         val bodyJson = buildJsonObject {
             put("license_token", licenseToken)
             putJsonArray("media") {
                 addJsonObject {
                     put("type", "FULL")
                     putJsonArray("formats") {
-                        addJsonObject {
-                            put("cipher", "BF_CBC_STRIPE")
-                            put("format", format)
+                        ladder.forEach { format ->
+                            addJsonObject {
+                                put("cipher", "BF_CBC_STRIPE")
+                                put("format", format.tag)
+                            }
                         }
                     }
                 }
             }
-            putJsonArray("track_tokens") {
-                add(trackToken)
-            }
-        }.toString().toRequestBody(JSON_MEDIA_TYPE)
+            putJsonArray("track_tokens") { add(trackToken) }
+        }.toString().toRequestBody(DeezerGateway.JSON_MEDIA_TYPE)
 
         val request = Request.Builder()
             .url(MEDIA_URL)
@@ -181,23 +109,38 @@ class DeezerStreamResolver @Inject constructor(
                 if (!response.isSuccessful) throw IOException("Media URL request failed: ${response.code}")
                 val body = response.body?.string() ?: throw IOException("Empty media URL response")
                 val root = json.parseToJsonElement(body).jsonObject
-                val dataArray = root["data"]?.jsonArray ?: throw IOException("Missing data in media URL response")
-                val firstMedia = dataArray.firstOrNull()?.jsonObject?.get("media")?.jsonArray?.firstOrNull()?.jsonObject
-                val sources = firstMedia?.get("sources")?.jsonArray
-                val url = sources?.firstOrNull()?.jsonObject?.get("url")?.jsonPrimitive?.content
-                    ?: throw IOException("No stream URL available in requested format $format")
-                url
+                mediaErrors(root["errors"])?.let { throw IOException("Deezer refused the stream: $it") }
+                val entry = root["data"]?.jsonArray?.firstOrNull() as? JsonObject
+                    ?: throw IOException("Missing data in media URL response")
+                mediaErrors(entry["errors"])?.let { throw IOException("Deezer refused the stream: $it") }
+                val media = entry["media"]?.jsonArray?.firstOrNull() as? JsonObject
+                    ?: throw IOException("Deezer has no stream of this track in ${ladder.joinToString { it.tag }}")
+                val url = (media["sources"]?.jsonArray?.firstOrNull() as? JsonObject)
+                    ?.get("url")?.jsonPrimitive?.contentOrNull
+                    ?: throw IOException("No stream URL in Deezer media response")
+                val served = media["format"]?.jsonPrimitive?.contentOrNull
+                    ?.let(DeezerAudioFormat::fromTag)
+                    ?: ladder.first()
+                url to served
             }
         }
     }
 
-    fun invalidateSession() {
-        cachedLicense = null
-    }
+    /** The messages in a media API `errors` array, or null when it reports none. */
+    private fun mediaErrors(errors: JsonElement?): String? =
+        (errors as? JsonArray)
+            ?.map { error ->
+                val fields = error as? JsonObject
+                fields?.get("message")?.jsonPrimitive?.contentOrNull
+                    ?: fields?.get("code")?.jsonPrimitive?.contentOrNull
+                    ?: error.toString()
+            }
+            ?.takeIf { it.isNotEmpty() }
+            ?.joinToString("; ")
+
+    fun invalidateSession() = gateway.invalidate()
 
     private companion object {
-        const val GW_LIGHT_URL = "https://www.deezer.com/ajax/gw-light.php"
         const val MEDIA_URL = "https://media.deezer.com/v1/get_url"
-        val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
     }
 }
