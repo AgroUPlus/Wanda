@@ -32,6 +32,7 @@ class MusicRepository @Inject constructor(
     private val trackDao: TrackDao,
     private val albumDao: AlbumDao,
     private val playlistDao: PlaylistDao,
+    private val remotePlaylistDao: com.wander.android.core.database.dao.RemotePlaylistDao,
     private val historyDao: HistoryDao,
     private val secureStorage: SecureStorage,
     private val connectivity: ConnectivityObserver,
@@ -97,7 +98,8 @@ class MusicRepository @Inject constructor(
         sources = sources,
         activeSources = ::activeSources,
         persist = ::persist,
-        recordingRules = recordingRules
+        recordingRules = recordingRules,
+        remotePlaylists = RemotePlaylistStore(remotePlaylistDao, trackDao)
     )
 
     private val searchRepo = SearchAndDiscoveryRepository(
@@ -146,6 +148,7 @@ class MusicRepository @Inject constructor(
     suspend fun getAlbumTracks(album: UnifiedAlbum) = catalogCollections.getAlbumTracks(album)
     suspend fun getAlbumTracksById(albumId: String) = catalogCollections.getAlbumTracksById(albumId)
     suspend fun getPlaylists(only: Set<SourceType>? = null) = catalogCollections.getPlaylists(only)
+    fun observeRemotePlaylists() = catalogCollections.observeRemotePlaylists()
     suspend fun getPlaylistTracks(playlist: UnifiedPlaylist) = catalogCollections.getPlaylistTracks(playlist)
     suspend fun getPlaylistById(playlistId: String) = catalogCollections.getPlaylistById(playlistId)
     suspend fun getPlaylistTracksById(playlistId: String) = catalogCollections.getPlaylistTracksById(playlistId)

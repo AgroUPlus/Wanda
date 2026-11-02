@@ -35,7 +35,8 @@ internal class CatalogCollectionRepository(
     private val sources: Set<IMusicSource>,
     private val activeSources: () -> List<IMusicSource>,
     private val persist: suspend (List<UnifiedTrack>, Boolean) -> Unit,
-    private val recordingRules: RecordingRulesRepository
+    private val recordingRules: RecordingRulesRepository,
+    private val remotePlaylists: RemotePlaylistStore
 ) {
     private fun sourceFor(type: SourceType) = sources.firstOrNull { it.sourceType == type }
 
@@ -116,27 +117,57 @@ internal class CatalogCollectionRepository(
 
     /**
      * Every source's playlists, or only [only]'s: the library re-reads the local ones alone.
-     * Fails only when a source failed and none answered with anything.
+     * Fails only when a source failed and none answered with anything. A backend's answer is
+     * written to Room, which is where the library reads it from — see [observeRemotePlaylists].
      */
     suspend fun getPlaylists(only: Set<SourceType>? = null): Result<List<UnifiedPlaylist>> = coroutineScope {
-        val results = activeSources()
+        val asked = activeSources()
             .filter { it.capabilities.playlists && (only == null || it.sourceType in only) }
-            .map { source -> async { source.getPlaylists() } }
-            .awaitAll()
+        val results = asked.map { source -> async { source.getPlaylists() } }.awaitAll()
+        asked.zip(results).forEach { (source, result) ->
+            if (source.sourceType in RemotePlaylistStore.ROOM_NATIVE) return@forEach
+            result.onSuccess { remotePlaylists.replace(source.sourceType, it) }
+        }
         combined(results, results.flatMap { it.getOrNull().orEmpty() })
     }
+
+    /** Every backend playlist Room holds, again whenever a refresh changes them. */
+    fun observeRemotePlaylists(): Flow<List<UnifiedPlaylist>> = remotePlaylists.observe()
 
     suspend fun getPlaylistTracks(playlist: UnifiedPlaylist): Result<List<UnifiedTrack>> =
         withContext(Dispatchers.IO) {
             val remote = sourceFor(playlist.source)?.getPlaylistTracks(playlist.id)
                 ?: return@withContext Result.success(emptyList())
-            remote.onSuccess { persist(it, true) }
+            remembered(playlist.id, playlist.source, remote)
         }
+
+    /**
+     * A backend's tracks for a playlist, persisted with the playlist's order; when the backend
+     * fails, the order it last answered with, if this device ever opened the playlist.
+     */
+    private suspend fun remembered(
+        playlistId: String,
+        type: SourceType,
+        remote: Result<List<UnifiedTrack>>
+    ): Result<List<UnifiedTrack>> {
+        val tracks = remote.getOrElse { error ->
+            val stored = if (type in RemotePlaylistStore.ROOM_NATIVE) null else remotePlaylists.tracks(playlistId)
+            return stored?.let { Result.success(it) } ?: Result.failure(error)
+        }
+        // A followed playlist's tracks are already in Room, and are someone else's picks:
+        // persisting them as library would put them in this user's own collection.
+        if (type != SourceType.AGRO) persist(tracks, true)
+        if (type !in RemotePlaylistStore.ROOM_NATIVE) remotePlaylists.rememberTracks(playlistId, tracks)
+        return Result.success(tracks)
+    }
 
     suspend fun getPlaylistById(playlistId: String): UnifiedPlaylist? = withContext(Dispatchers.IO) {
         val type = SourceType.entries.firstOrNull { playlistId.startsWith(it.idPrefix) }
         val remote = type?.let(::sourceFor)?.getPlaylist(playlistId)?.getOrNull()
         if (remote != null) return@withContext remote
+        if (type != null && type !in RemotePlaylistStore.ROOM_NATIVE) {
+            remotePlaylists.playlist(playlistId)?.let { return@withContext it }
+        }
 
         val localEntity = playlistDao.getPlaylistById(playlistId)
         if (localEntity != null) {
@@ -155,13 +186,11 @@ internal class CatalogCollectionRepository(
     suspend fun getPlaylistTracksById(playlistId: String): Result<List<UnifiedTrack>> = withContext(Dispatchers.IO) {
         val type = SourceType.entries.firstOrNull { playlistId.startsWith(it.idPrefix) } ?: SourceType.LOCAL
         val remote = sourceFor(type)?.getPlaylistTracks(playlistId)
-        val tracks = remote?.getOrNull().orEmpty()
-        if (tracks.isNotEmpty()) {
-            // A followed playlist's tracks are already in Room, and are someone else's picks:
-            // persisting them as library would put them in this user's own collection.
-            if (type != SourceType.AGRO) persist(tracks, true)
-            return@withContext Result.success(tracks)
+        if (remote != null && type !in RemotePlaylistStore.ROOM_NATIVE) {
+            return@withContext remembered(playlistId, type, remote)
         }
+        val tracks = remote?.getOrNull().orEmpty()
+        if (tracks.isNotEmpty()) return@withContext remembered(playlistId, type, Result.success(tracks))
         val localEntity = playlistDao.getPlaylistById(playlistId)
         if (localEntity != null) {
             val ids = localEntity.trackIds.split(',').filter { it.isNotBlank() }
