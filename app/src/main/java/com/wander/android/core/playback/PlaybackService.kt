@@ -2,7 +2,6 @@ package com.wander.android.core.playback
 
 import android.app.PendingIntent
 import android.content.Intent
-import android.os.Bundle
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -12,10 +11,6 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
-import androidx.media3.session.SessionCommand
-import androidx.media3.session.SessionResult
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
 import com.wander.android.MainActivity
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.sources.agro.AgroHandoffPublisher
@@ -51,11 +46,13 @@ class PlaybackService : MediaSessionService() {
     @Inject lateinit var bluetoothOutput: BluetoothAudioOutput
     @Inject internal lateinit var scrobbleForwarding: com.wander.android.data.repository.ScrobbleForwarding
     @Inject internal lateinit var sourceNowPlaying: com.wander.android.data.repository.SourceNowPlaying
+    @Inject internal lateinit var savedQueueStore: SavedQueueStore
     @Inject @field:com.wander.android.di.ArtworkHttpClient
     lateinit var artworkHttpClient: okhttp3.OkHttpClient
 
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private var mediaSession: MediaSession? = null
+    private var queueResumption: QueueResumption? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -73,6 +70,8 @@ class PlaybackService : MediaSessionService() {
         SleepTimerEnforcer(player, volume, sleepTimer, scope)
         player.addAnalyticsListener(AudioFormatReporter())
         player.addListener(com.wander.android.ui.widget.PlaybackWidgetUpdater(applicationContext, scope))
+        val resumption = QueueResumption(player, savedQueueStore, scope).also(player::addListener)
+        queueResumption = resumption
 
         val sessionActivity = PendingIntent.getActivity(
             this,
@@ -106,37 +105,7 @@ class PlaybackService : MediaSessionService() {
                     .setMaximumOutputDimension(MediaSession.getBitmapDimensionLimit(this) * 2 - 1)
                     .build()
             )
-            .setCallback(object : MediaSession.Callback {
-                override fun onConnect(
-                    session: MediaSession,
-                    controller: MediaSession.ControllerInfo
-                ): MediaSession.ConnectionResult {
-                    return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
-                        .setAvailablePlayerCommands(MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS)
-                        // The defaults plus the heart. Without adding it here the button is drawn
-                        // but every tap on it is rejected as an unavailable command.
-                        .setAvailableSessionCommands(
-                            MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
-                                .add(likeButton.sessionCommand)
-                                .build()
-                        )
-                        // Seeds the controller as it connects; `likeButton` republishes from then on.
-                        .setMediaButtonPreferences(likeButton.preferences())
-                        .build()
-                }
-
-                override fun onCustomCommand(
-                    session: MediaSession,
-                    controller: MediaSession.ControllerInfo,
-                    customCommand: SessionCommand,
-                    args: Bundle
-                ): ListenableFuture<SessionResult> =
-                    if (likeButton.handle(customCommand)) {
-                        Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
-                    } else {
-                        super.onCustomCommand(session, controller, customCommand, args)
-                    }
-            })
+            .setCallback(PlaybackSessionCallback(packageName, likeButton, resumption))
             .build()
             .also(likeButton::attach)
     }
@@ -204,6 +173,9 @@ class PlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         agroHandoffPublisher.stop()
+        // Before the release below, which empties the player this reads.
+        queueResumption?.flush()
+        queueResumption = null
         mediaSession?.run {
             player.release()
             release()

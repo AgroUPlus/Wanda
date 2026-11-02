@@ -132,6 +132,9 @@ internal fun MediaItem.toUnifiedTrack(): UnifiedTrack? {
 internal fun MediaItem.toUnidentifiedTrack(index: Int): UnifiedTrack =
     fromItemFields("$UNIDENTIFIED_ITEM_PREFIX$index", isLiveUri())
 
+/** True for an id minted by [toUnidentifiedTrack]: it names a queue slot, not a track. */
+internal fun isUnidentifiedItemId(id: String): Boolean = id.startsWith(UNIDENTIFIED_ITEM_PREFIX)
+
 /** Rebuilds a track from the item's standard fields, for when the queued track did not survive. */
 private fun MediaItem.fromItemFields(trackId: String, live: Boolean): UnifiedTrack {
     // Every other prefix lookup in the codebase matches against the full SourceType.entries list;

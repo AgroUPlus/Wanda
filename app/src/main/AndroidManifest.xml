@@ -223,6 +223,18 @@
         </service>
 
         <!--
+          Lets a headset or car play button reach PlaybackService after the process was killed.
+          Media3 starts the service and asks it for the saved queue (onPlaybackResumption).
+        -->
+        <receiver
+            android:name="androidx.media3.session.MediaButtonReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
+        </receiver>
+
+        <!--
           WorkManager runs long jobs through its own foreground service, and on API 34+ a service
           must declare the type it will use. The FOREGROUND_SERVICE_DATA_SYNC permission alone is
           not enough — without this, promoting the library-sync worker to the foreground throws
