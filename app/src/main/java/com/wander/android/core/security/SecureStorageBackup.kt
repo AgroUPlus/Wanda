@@ -63,5 +63,8 @@ internal val DEVICE_LOCAL_KEYS: Set<String> = setOf(
     // The release-check position on the paired server and the artists it has primed: a pair, as
     // on unpair. The watermark without its primed set would announce a whole back catalogue.
     KEY_RELEASE_WATERMARK,
-    KEY_RELEASE_PRIMED_ARTISTS
+    KEY_RELEASE_PRIMED_ARTISTS,
+    // What was typed into search on this phone. A log rather than a setting, and a backup file
+    // is something people move around and share; nobody restores a device to get it back.
+    KEY_SEARCH_HISTORY
 )

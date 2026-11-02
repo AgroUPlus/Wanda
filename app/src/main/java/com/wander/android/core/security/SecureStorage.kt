@@ -19,10 +19,10 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
     private val accountPrefs = SecureAccountPreferences(prefs)
     private val agroPrefs = SecureAgroPreferences(prefs)
     internal val appPrefs = SecureAppPreferences(prefs)
-
     /** The scrobbling services' accounts — see [SecureScrobblePreferences]. */
     internal val scrobbling = SecureScrobblePreferences(prefs)
     internal val loudness = SecureLoudnessPreferences(prefs)
+    internal val searchHistory = SecureSearchHistory(prefs)
 
     // ── Display Preferences ─────────────────────────────────────────────────────────────────
     val isAmoledBlack: StateFlow<Boolean> = displayPrefs.isAmoledBlack
@@ -276,6 +276,7 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
         appPrefs.reloadFlows()
         scrobbling.reloadFlows()
         loudness.reloadFlows()
+        searchHistory.reloadFlows()
     }
 
     companion object {

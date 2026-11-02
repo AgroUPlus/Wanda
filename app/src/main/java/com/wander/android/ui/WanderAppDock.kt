@@ -177,6 +177,7 @@ internal fun rememberWanderDockState(
                 onQueryChange = onQueryChange,
                 onSearch = openLibrary,
                 onListen = onListen,
+                onSearchFocusChanged = viewModel::setSearchFocused,
                 // The raw signal, overshoot and all — see `WanderDock`'s own doc for why this is
                 // read straight off the sheet rather than animated again.
                 progress = { sheetState.rawProgress },

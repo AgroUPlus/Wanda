@@ -43,9 +43,11 @@ fun SearchScreen(
     contentPadding: PaddingValues,
     onOpenAlbum: (String) -> Unit,
     onOpenArtist: (String, String?) -> Unit,
-    viewModel: SearchViewModel = hiltViewModel()
+    viewModel: SearchViewModel = hiltViewModel(),
+    historyViewModel: SearchHistoryViewModel = hiltViewModel()
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
+    val recentSearches by historyViewModel.recent.collectAsStateWithLifecycle()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val availableSources by viewModel.availableSources.collectAsStateWithLifecycle()
     val selectedSources by viewModel.selectedSources.collectAsStateWithLifecycle()
@@ -129,6 +131,16 @@ fun SearchScreen(
             when {
                 state.isSearching -> LoadingIndicator(modifier = centred)
 
+                // The field, not `hasQuery`: the state trails typing by the debounce, and the
+                // history must not flash up under a query that is already there.
+                query.isBlank() && recentSearches.isNotEmpty() -> RecentSearchesList(
+                    queries = recentSearches,
+                    contentPadding = contentPadding.listInset(),
+                    onSelect = historyViewModel::search,
+                    onRemove = historyViewModel::remove,
+                    onClearAll = historyViewModel::clear
+                )
+
                 !state.hasQuery -> EmptyState(
                     title = stringResource(R.string.search_search_everything_once),
                     message = stringResource(R.string.search_navidrome_youtube_music_music_device),
@@ -154,8 +166,14 @@ fun SearchScreen(
                     contentPadding = contentPadding.listInset(),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    artistResultsSection(state.artists, onOpenArtist)
-                    albumResultsSection(state.albums, onOpenAlbum)
+                    artistResultsSection(state.artists) { name, id ->
+                        viewModel.rememberQuery()
+                        onOpenArtist(name, id)
+                    }
+                    albumResultsSection(state.albums) { albumId ->
+                        viewModel.rememberQuery()
+                        onOpenAlbum(albumId)
+                    }
                     lyricMatchesSection(
                         matches = state.lyricMatches,
                         query = query,

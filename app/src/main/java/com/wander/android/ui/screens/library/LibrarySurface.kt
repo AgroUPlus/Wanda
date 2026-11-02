@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.ui.screens.search.SearchHistoryViewModel
 import com.wander.android.ui.screens.search.SearchScreen
 import com.wander.android.ui.screens.search.SearchViewModel
 
@@ -40,12 +41,18 @@ fun LibrarySurface(
     onOpenPlaylist: (String) -> Unit = {},
     onOpenImport: () -> Unit = {},
     onOpenSubscriptions: () -> Unit = {},
-    searchViewModel: SearchViewModel = hiltViewModel()
+    searchViewModel: SearchViewModel = hiltViewModel(),
+    historyViewModel: SearchHistoryViewModel = hiltViewModel()
 ) {
     val query by searchViewModel.query.collectAsStateWithLifecycle()
+    val fieldFocused by historyViewModel.isFieldFocused.collectAsStateWithLifecycle()
+    val recentSearches by historyViewModel.recent.collectAsStateWithLifecycle()
+    // An empty field with focus is someone about to search: their recent searches are more use
+    // to them than the shelves, as long as there are any to offer.
+    val searching = query.isNotBlank() || (fieldFocused && recentSearches.isNotEmpty())
 
     AnimatedContent(
-        targetState = query.isNotBlank(),
+        targetState = searching,
         transitionSpec = {
             // Results rise into place and the shelves settle back down: the direction of travel
             // says which of the two you asked for. `SizeTransform(clip = false)` because both
@@ -55,13 +62,14 @@ fun LibrarySurface(
         },
         label = "librarySurface",
         modifier = Modifier.fillMaxSize()
-    ) { searching ->
-        if (searching) {
+    ) { showingSearch ->
+        if (showingSearch) {
             SearchScreen(
                 contentPadding = contentPadding,
                 onOpenAlbum = onOpenAlbum,
                 onOpenArtist = onOpenArtist,
-                viewModel = searchViewModel
+                viewModel = searchViewModel,
+                historyViewModel = historyViewModel
             )
         } else {
             LibraryScreen(

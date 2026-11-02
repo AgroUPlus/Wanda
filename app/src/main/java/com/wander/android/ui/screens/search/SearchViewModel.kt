@@ -8,6 +8,7 @@ import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MusicRepository
+import com.wander.android.data.repository.SearchHistoryRepository
 import com.wander.android.data.repository.SearchQueryHolder
 import com.wander.android.data.repository.ShareRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -49,7 +50,8 @@ class SearchViewModel @Inject constructor(
     private val playbackCoordinator: PlaybackCoordinator,
     private val shareRepository: ShareRepository,
     private val queryHolder: SearchQueryHolder,
-    private val catalogTracks: CatalogTrackResolver
+    private val catalogTracks: CatalogTrackResolver,
+    private val searchHistory: SearchHistoryRepository
 ) : ViewModel() {
 
     /**
@@ -193,10 +195,15 @@ class SearchViewModel @Inject constructor(
     /** Back to "everything", including sources that connect later — see [_selectedSources]. */
     fun selectAllSources() { _selectedSources.value = null }
 
-    fun play(tracks: List<UnifiedTrack>, index: Int) = playerConnection.play(tracks, index)
+    /**
+     * Files the current query under recent searches. Called when a result is used — played, or
+     * opened — so what is kept is the searches that found something; see [SearchHistoryRepository].
+     */
+    fun rememberQuery() = searchHistory.record(query.value)
 
     /** Plays the track and seeks directly to the matched lyric line's timestamp offset. */
     fun playTrackAtTimestamp(track: UnifiedTrack, timestampMs: Long?) {
+        rememberQuery()
         playerConnection.play(
             tracks = listOf(track),
             startIndex = 0,
@@ -210,6 +217,7 @@ class SearchViewModel @Inject constructor(
 
     /** Plays the track, then fills the queue behind it with its source's radio. */
     fun startRadio(track: UnifiedTrack) {
+        rememberQuery()
         viewModelScope.launch { playbackCoordinator.startRadio(track) }
     }
 

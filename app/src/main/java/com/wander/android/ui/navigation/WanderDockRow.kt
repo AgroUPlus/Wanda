@@ -69,6 +69,8 @@ fun WanderDockRow(
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
     onListen: () -> Unit,
+    /** Told when the field gains or loses focus — the library offers recent searches meanwhile. */
+    onSearchFocusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var focused by remember { mutableStateOf(false) }
@@ -93,6 +95,7 @@ fun WanderDockRow(
             onListen = onListen,
             onFocusChanged = { hasFocus ->
                 focused = hasFocus
+                onSearchFocusChanged(hasFocus)
                 if (hasFocus) onOpenLibrary()
             },
             modifier = Modifier

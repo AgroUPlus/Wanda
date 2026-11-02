@@ -65,6 +65,8 @@ class WanderAppViewModel @Inject constructor(
 
     fun setSearchQuery(value: String) = searchQueryHolder.set(value)
 
+    fun setSearchFocused(focused: Boolean) = searchQueryHolder.setFieldFocused(focused)
+
     val isImmersivePlayer: StateFlow<Boolean> = secureStorage.isImmersivePlayer
 
     /** The instant-radio button, hoisted to the shell. */

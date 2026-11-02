@@ -64,6 +64,7 @@ fun WanderDock(
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
     onListen: () -> Unit,
+    onSearchFocusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     progress: () -> Float = { 0f },
     pairedWithMiniPlayer: Boolean = false
@@ -102,7 +103,8 @@ fun WanderDock(
             onOpenLibrary = onOpenLibrary,
             onQueryChange = onQueryChange,
             onSearch = onSearch,
-            onListen = onListen
+            onListen = onListen,
+            onSearchFocusChanged = onSearchFocusChanged
         )
     }
 }
