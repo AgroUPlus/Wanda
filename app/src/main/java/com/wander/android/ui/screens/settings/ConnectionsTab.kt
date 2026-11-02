@@ -102,4 +102,17 @@ internal fun LazyListScope.connectionsTab(
             )
         )
     }
+
+    if (state.deezer) {
+        item(key = "sec_stream_quality") {
+            SettingsSection(stringResource(R.string.settings_section_stream_quality))
+        }
+        item(key = "stream_quality") {
+            GroupedCard(
+                items = listOf<@Composable () -> Unit>(
+                    { DeezerQualityRow(modifier = Modifier.scale(rememberShelfEntranceScale(4))) }
+                )
+            )
+        }
+    }
 }

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings → Connections: how good a stream each source sends. -->
+    <string name="settings_section_stream_quality">Streaming quality</string>
+
+    <string name="settings_deezer_quality">Deezer quality</string>
+    <string name="settings_deezer_quality_sub">The most Deezer may send. Your plan still sets the limit, and a song with no file at this quality plays at the next one down.</string>
+    <string name="settings_deezer_quality_auto">Best</string>
+    <string name="settings_deezer_quality_flac">FLAC</string>
+    <string name="settings_deezer_quality_320">320 kbps</string>
+    <string name="settings_deezer_quality_128">128 kbps</string>
+</resources>
