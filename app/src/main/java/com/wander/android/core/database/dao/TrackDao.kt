@@ -42,6 +42,30 @@ interface TrackDao : TrackLibraryQueries, TrackSyncQueries, TrackRadioQueries {
         }
     }
 
+    /**
+     * Writes one MediaStore scan and prunes what it says has gone, as a single transaction, so a
+     * rescan interrupted half-way leaves the library as it was rather than half-built.
+     *
+     * Rows are updated in place — never cleared and rebuilt — so a full rescan keeps the likes,
+     * play counts, last-played times and content hashes the user and the hasher put there.
+     *
+     * @param keepIds the local ids that survive, or null to prune nothing.
+     * @return content hashes of the pruned rows, so the server can be told what went. They are
+     *   read before the delete; afterwards there is nothing left to read them from.
+     */
+    @Transaction
+    suspend fun applyLocalScan(scanned: List<TrackEntity>, keepIds: List<String>?): List<String> {
+        if (scanned.isNotEmpty()) {
+            upsertTracks(scanned)
+            scanned.forEach { refreshLocalFileFields(it.id, it.sizeBytes, it.fileExtension, it.albumArtist) }
+            markAsLibrary(scanned.map { it.id })
+        }
+        if (keepIds == null) return emptyList()
+        val gone = localContentHashesNotIn(keepIds)
+        deleteLocalTracksNotIn(keepIds)
+        return gone
+    }
+
     /** Episodes of subscribed feeds whose title, show or author contains [query], newest first. */
     @Query(
         """

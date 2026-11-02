@@ -2,7 +2,6 @@ package com.wander.android.core.database.dao
 
 import androidx.room.Query
 import com.wander.android.core.database.entity.TrackEntity
-import com.wander.android.data.model.SourceType
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -77,8 +76,31 @@ interface TrackSyncQueries {
     @Query("DELETE FROM tracks WHERE source = 'LOCAL' AND id NOT IN (:keepIds)")
     suspend fun deleteLocalTracksNotIn(keepIds: List<String>): Int
 
-    @Query("DELETE FROM tracks WHERE source = :source")
-    suspend fun clearBySource(source: SourceType)
+    /**
+     * Refreshes the file facts a rescan reads, which [TrackDao.upsertTracks] leaves alone on an
+     * existing row. A size that changed means the bytes did, so the content hash and the server's
+     * confirmation of it no longer describe this file and are cleared for the hasher to redo.
+     * SQLite evaluates every right-hand side against the row as it was, so the comparison sees the
+     * old size.
+     */
+    @Query(
+        """
+        UPDATE tracks SET
+            contentHash = CASE
+                WHEN sizeBytes IS NOT NULL AND :sizeBytes IS NOT NULL AND sizeBytes != :sizeBytes THEN NULL
+                ELSE contentHash
+            END,
+            syncedAt = CASE
+                WHEN sizeBytes IS NOT NULL AND :sizeBytes IS NOT NULL AND sizeBytes != :sizeBytes THEN NULL
+                ELSE syncedAt
+            END,
+            sizeBytes = COALESCE(:sizeBytes, sizeBytes),
+            fileExtension = COALESCE(:fileExtension, fileExtension),
+            albumArtist = :albumArtist
+        WHERE id = :id
+        """
+    )
+    suspend fun refreshLocalFileFields(id: String, sizeBytes: Long?, fileExtension: String?, albumArtist: String?)
 
     @Query("SELECT * FROM tracks WHERE isLiked = 1 OR isLibrary = 1 OR playCount > 0")
     suspend fun tracksWithUserState(): List<TrackEntity>
