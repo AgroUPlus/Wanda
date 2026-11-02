@@ -1,6 +1,5 @@
 package com.wander.android.core.playback
 
-import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
@@ -11,14 +10,14 @@ import kotlinx.coroutines.flow.StateFlow
 internal class PlaybackCollaborators(
     val queueManager: PlayerQueueManager,
     val retryHandler: LivePlaybackRetryHandler,
-    val checkpointTracker: EpisodeCheckpointTracker,
     val actualAudioFormat: MutableStateFlow<ActualAudioFormat?>,
     val errorRecovery: TrackErrorRecovery
 )
 
 /**
  * Translates Media3 [Player.Listener] events of one [MediaController] into [PlaybackState] snapshots,
- * keeping the queue mirror, audio-format reset and episode checkpoints in step with the player.
+ * keeping the queue mirror and audio-format reset in step with the player. Episode progress is
+ * saved by the service's own player instead; see [EpisodeProgressRecorder].
  */
 internal class PlaybackEventListener(
     private val controller: MediaController,
@@ -31,7 +30,6 @@ internal class PlaybackEventListener(
 ) : Player.Listener {
 
     private val queueManager get() = collaborators.queueManager
-    private val checkpointTracker get() = collaborators.checkpointTracker
     private var seekEpoch = 0L
 
     /** Seeds the queue mirror and emits the first snapshot; call right after registering the listener. */
@@ -52,30 +50,7 @@ internal class PlaybackEventListener(
             collaborators.errorRecovery.onItemReady()
         }
         if (events.contains(Player.EVENT_POSITION_DISCONTINUITY)) seekEpoch++
-        checkpointTracker.rememberDuration(currentTrack(player), player.duration)
-        // Not in a batch that also changed the playing item: by then `currentTrack` is already the
-        // new item while `currentPosition` can still be the old one's, and that pairing would save
-        // the previous episode's time as the new episode's progress. The old item was checkpointed
-        // by `onPositionDiscontinuity`, so nothing is lost by skipping it here.
-        if (events.contains(Player.EVENT_IS_PLAYING_CHANGED) && !player.isPlaying && !events.changesPlayingItem()) {
-            checkpointTracker.checkpoint(currentTrack(player), player.currentPosition, player.duration)
-        }
         emitSnapshot(player)
-    }
-
-    override fun onPositionDiscontinuity(
-        oldPosition: Player.PositionInfo,
-        newPosition: Player.PositionInfo,
-        reason: Int
-    ) {
-        val sameItemSeek = reason == Player.DISCONTINUITY_REASON_SEEK &&
-            oldPosition.mediaItemIndex == newPosition.mediaItemIndex
-        if (sameItemSeek) return
-        checkpointTracker.checkpoint(
-            queueManager.lastQueue.getOrNull(oldPosition.mediaItemIndex),
-            oldPosition.positionMs,
-            C.TIME_UNSET
-        )
     }
 
     override fun onPlayerError(error: PlaybackException) {
@@ -92,8 +67,6 @@ internal class PlaybackEventListener(
         events.contains(Player.EVENT_TIMELINE_CHANGED) ||
             events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION) ||
             queueManager.lastQueue.size != player.mediaItemCount
-
-    private fun currentTrack(player: Player) = queueManager.lastQueue.getOrNull(player.currentMediaItemIndex)
 
     private fun emitSnapshot(player: Player) {
         emit(

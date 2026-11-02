@@ -58,12 +58,14 @@ class PlaybackService : MediaLibraryService() {
     @Inject lateinit var externalEqualizer: ExternalEqualizer
     @Inject internal lateinit var browseTree: BrowseTree
     @Inject internal lateinit var playRequests: PlayRequestResolver
+    @Inject lateinit var episodeProgress: com.wander.android.data.repository.EpisodeProgressRepository
     @Inject @field:com.wander.android.di.ArtworkHttpClient
     lateinit var artworkHttpClient: okhttp3.OkHttpClient
 
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private var mediaSession: MediaLibrarySession? = null
     private var queueResumption: QueueResumption? = null
+    private var episodeRecorder: EpisodeProgressRecorder? = null
     private var widgetUpdater: com.wander.android.ui.widget.PlaybackWidgetUpdater? = null
 
     override fun onCreate() {
@@ -75,6 +77,7 @@ class PlaybackService : MediaLibraryService() {
             player.repeatMode = modes.repeatMode
         }
         player.addListener(PlayCountRecorder(player))
+        episodeRecorder = EpisodeProgressRecorder(player, episodeProgress).also(player::addListener)
         player.addListener(AgroHandoffReporter(player, agroHandoffPublisher))
         player.addListener(NowPlayingForwarder(player, scope, scrobbleForwarding, sourceNowPlaying))
         player.addListener(NextTrackPreloader(player))
@@ -199,6 +202,8 @@ class PlaybackService : MediaLibraryService() {
         // Before the release below, which empties the player this reads.
         queueResumption?.flush()
         queueResumption = null
+        episodeRecorder?.flush()
+        episodeRecorder = null
         widgetUpdater?.onServiceStopped()
         widgetUpdater = null
         externalEqualizer.close()

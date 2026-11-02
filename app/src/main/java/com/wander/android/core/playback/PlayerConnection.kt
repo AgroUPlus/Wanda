@@ -40,7 +40,6 @@ class PlayerConnection @Inject constructor(
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private val queueManager = PlayerQueueManager()
     private val retryHandler = LivePlaybackRetryHandler()
-    private val checkpointTracker = EpisodeCheckpointTracker()
     private val skipManager = SkipGraceManager()
     private val playerModes = secureStorage.playbackPrefs.modes
     private val speedController = PlayerSpeedAndOffloadController(playerModes)
@@ -60,7 +59,6 @@ class PlayerConnection @Inject constructor(
     private val _notices = MutableSharedFlow<PlaybackMessage>(extraBufferCapacity = 1)
     val notices: SharedFlow<PlaybackMessage> = _notices.asSharedFlow()
 
-    val episodeCheckpoints: SharedFlow<EpisodeCheckpoint> = checkpointTracker.episodeCheckpoints
     val speedAndPitch: StateFlow<SpeedAndPitch> = speedController.speedAndPitch
 
     data class QueueSnapshot(val tracks: List<UnifiedTrack>, val index: Int, val positionMs: Long)
@@ -68,7 +66,7 @@ class PlayerConnection @Inject constructor(
     val state: StateFlow<PlaybackState> = PlaybackStateFlowBuilder.create(
         controller = _controller,
         collaborators = PlaybackCollaborators(
-            queueManager, retryHandler, checkpointTracker, _actualAudioFormat, TrackErrorRecovery()
+            queueManager, retryHandler, _actualAudioFormat, TrackErrorRecovery()
         ),
         orderLocked = _orderLocked,
         isRadioMode = secureStorage.isRadioMode,

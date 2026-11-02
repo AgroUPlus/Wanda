@@ -113,11 +113,9 @@ class PlaybackCoordinator @Inject internal constructor(
             .launchIn(scope)
 
         // Episodes resume where they were left; songs do not. See EpisodeProgressRepository.
+        // Saved by the service's player (EpisodeProgressRecorder), so a car's listening counts too.
         // Pruned once per process: nothing else ever removes a row for an episode heard once.
         scope.launch { episodeProgress.prune() }
-        connection.episodeCheckpoints
-            .onEach { episodeProgress.save(it.trackId, it.positionMs, it.durationMs) }
-            .launchIn(scope)
 
         // Resumed on the first frame rather than at the moment the track becomes current: a seek
         // issued while the item is still preparing races the initial buffer and lands at zero —
