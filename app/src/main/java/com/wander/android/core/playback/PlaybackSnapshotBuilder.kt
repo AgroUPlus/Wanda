@@ -40,6 +40,7 @@ internal object PlaybackSnapshotBuilder {
 
         val curIndex = runCatching { player.currentMediaItemIndex }.getOrDefault(0)
         val shuffle = runCatching { player.shuffleModeEnabled }.getOrDefault(false)
+        val playOrder = runCatching { player.currentTimeline.playOrder(shuffle) }.getOrDefault(emptyList())
         val repMode = runCatching { player.repeatMode }.getOrDefault(Player.REPEAT_MODE_OFF)
 
         val audioTracks = runCatching {
@@ -63,6 +64,7 @@ internal object PlaybackSnapshotBuilder {
             currentTrack = track,
             queue = cachedQueue,
             currentIndex = curIndex,
+            playOrder = playOrder,
             isPlaying = playing,
             isBuffering = buffering,
             durationMs = dur,

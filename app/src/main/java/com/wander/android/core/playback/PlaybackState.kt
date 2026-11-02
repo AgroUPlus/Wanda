@@ -28,6 +28,11 @@ data class PlaybackState(
     val currentTrack: UnifiedTrack? = null,
     val queue: List<UnifiedTrack> = emptyList(),
     val currentIndex: Int = -1,
+    /**
+     * [queue] indices in the order the player will play them: the shuffled order while shuffle is
+     * on, `0..n-1` otherwise. Read through [orderedIndices], which covers it lagging the queue.
+     */
+    val playOrder: List<Int> = emptyList(),
     val isPlaying: Boolean = false,
     val isBuffering: Boolean = false,
     val durationMs: Long = 0L,

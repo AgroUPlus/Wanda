@@ -59,7 +59,10 @@ class PlayerFactory @Inject constructor(
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
-            .apply { trackSelectionParameters = withOffload(trackSelectionParameters, enabled = true) }
+            .apply {
+                trackSelectionParameters = withOffload(trackSelectionParameters, enabled = true)
+                PlayNextShuffleOrder.install(this)
+            }
     }
 
     /**

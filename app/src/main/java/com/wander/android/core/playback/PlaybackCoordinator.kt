@@ -97,7 +97,7 @@ class PlaybackCoordinator @Inject internal constructor(
         // In a Jam, the queue belongs to the room rather than personal radio top-up.
         connection.state
             .filterNotNull()
-            .map { RadioTrigger(it.isRadioMode, it.currentIndex, it.queue.size) }
+            .map { RadioTrigger(it.isRadioMode, it.playPosition, it.queue.size) }
             .distinctUntilChanged()
             .onEach { trigger ->
                 if (!trigger.enabled || stationStarting) return@onEach

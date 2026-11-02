@@ -52,6 +52,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.core.playback.playPosition
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.artistIdFor
 import com.wander.android.ui.components.AddToPlaylistHost
@@ -185,16 +186,17 @@ internal fun QueueDrawer(
                 Column(modifier = Modifier.fillMaxWidth()) {
                     BottomSheetDefaults.DragHandle(modifier = Modifier.align(Alignment.CenterHorizontally))
                     QueueDrawerHeader(
-                        currentIndex = state.currentIndex,
+                        playPosition = state.playPosition,
                         queueSize = state.queue.size,
                         orderLocked = state.orderLocked,
                         onClearQueue = playerConnection::clearQueue
                     )
 
-
                     QueueUpNext(
-                        entries = rememberQueueEntries(state.queue, state.currentIndex, itemGenerations),
-                        canReorder = !state.orderLocked,
+                        entries = rememberQueueEntries(state, itemGenerations),
+                        // Under shuffle the rows are in play order and a move reorders the player's
+                        // index order, which is not what the drag would appear to do.
+                        canReorder = !state.orderLocked && !state.isShuffle,
                         onPlay = { playerConnection.seekToIndex(it) },
                         onMove = { from, to ->
                             playerConnection.moveInQueue(from, to)
