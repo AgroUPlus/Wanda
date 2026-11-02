@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.playlist
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
@@ -25,13 +26,13 @@ internal fun PlaylistHeader(
     val trackCount = playlist?.songCount?.takeIf { it > 0 } ?: tracks.size
     val subtitle = listOfNotNull(
         playlist?.source?.displayName,
-        "$trackCount track${if (trackCount == 1) "" else "s"}",
+        pluralStringResource(R.plurals.collection_track_count, trackCount, trackCount),
         shareActions.sharedWith?.let { stringResource(R.string.playlist_shared_badge, stringResource(visibilityTitle(it))) },
         playlist?.comment?.takeIf { it.isNotBlank() }
     ).joinToString(" · ")
 
     AlbumHero(
-        title = playlist?.name ?: "Playlist",
+        title = playlist?.name ?: stringResource(R.string.playlist_fallback_title),
         subtitle = subtitle,
         artworkUrl = playlist?.coverArtUrl ?: tracks.firstNotNullOfOrNull { it.artworkUrl },
         onPlay = onPlay,

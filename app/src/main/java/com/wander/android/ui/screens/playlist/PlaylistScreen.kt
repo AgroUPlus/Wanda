@@ -216,7 +216,7 @@ fun PlaylistScreen(
         CompactHeroTopBar(
             titleState = titleState,
             onBack = onBack,
-            title = playlist?.name ?: "Playlist",
+            title = playlist?.name ?: stringResource(R.string.playlist_fallback_title),
             onPlay = viewModel::playAll,
             heroTitleStyle = MaterialTheme.typography.heroTitle,
             heroTitleMaxLines = HeroTitleMaxLines,

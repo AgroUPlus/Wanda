@@ -21,6 +21,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -193,9 +194,10 @@ internal fun ArtistScreen(
     }
 }
 
+@Composable
 private fun artistSubtitle(albumCount: Int, trackCount: Int): String = listOfNotNull(
-    albumCount.takeIf { it > 0 }?.let { "$it album${if (it == 1) "" else "s"}" },
-    trackCount.takeIf { it > 0 }?.let { "$it track${if (it == 1) "" else "s"}" }
+    albumCount.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.collection_album_count, it, it) },
+    trackCount.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.collection_track_count, it, it) }
 ).joinToString(" · ")
 
 @Composable

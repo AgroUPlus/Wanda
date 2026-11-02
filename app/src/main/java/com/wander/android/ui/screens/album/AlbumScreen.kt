@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -181,8 +182,9 @@ fun AlbumScreen(
 }
 
 /** "Nirvana · 1991 · 13 tracks", skipping whatever is unknown. */
+@Composable
 private fun albumSubtitle(artist: String, year: Int?, trackCount: Int): String = listOfNotNull(
     artist.takeIf { it.isNotBlank() },
     year?.toString(),
-    trackCount.takeIf { it > 0 }?.let { "$it track${if (it == 1) "" else "s"}" }
+    trackCount.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.collection_track_count, it, it) }
 ).joinToString(" · ")
