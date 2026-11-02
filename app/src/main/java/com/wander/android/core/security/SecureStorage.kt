@@ -3,14 +3,12 @@ package com.wander.android.core.security
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import com.wander.android.data.model.PlaybackMediaType
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * The only place credentials live. Backed by the Android Keystore via
- * [EncryptedSharedPreferences] — nothing here is ever written to Room, to logs, or to backups.
+ * The only place credentials live. Backed by the Android Keystore via EncryptedSharedPreferences
+ * (see [openEncryptedPrefs]) — nothing here is ever written to Room, to logs, or to backups.
  */
 class SecureStorage internal constructor(private val prefs: SharedPreferences) {
 
@@ -284,18 +282,6 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
         const val KEY_CATALOG_CURSOR = com.wander.android.core.security.KEY_CATALOG_CURSOR
         const val KEY_CATALOG_PUBLISHED_AT = com.wander.android.core.security.KEY_CATALOG_PUBLISHED_AT
 
-        fun create(context: Context): SecureStorage {
-            val masterKey = MasterKey.Builder(context.applicationContext)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            val prefs = EncryptedSharedPreferences.create(
-                context.applicationContext,
-                PREFS_NAME,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
-            return SecureStorage(prefs)
-        }
+        fun create(context: Context): SecureStorage = SecureStorage(openEncryptedPrefs(context))
     }
 }
