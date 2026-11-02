@@ -107,7 +107,8 @@ class YTMusicCatalogLoader @Inject constructor(
         return Result.success(
             when (target.kind) {
                 ShareKind.TRACK -> "$WATCH_URL$id"
-                ShareKind.PLAYLIST -> "$PLAYLIST_URL$id"
+                // Library playlists are named by their `VL…` browse id; a link wants the list id.
+                ShareKind.PLAYLIST -> "$PLAYLIST_URL${id.removePrefix("VL")}"
                 ShareKind.ALBUM, ShareKind.ARTIST -> "$BROWSE_URL$id"
             }
         )
