@@ -84,8 +84,15 @@ class SharedPlaylistViewModel @Inject constructor(
         viewModelScope.launch { writes.removeFromPlaylist(playlist, index).onSuccess { onDone() } }
     }
 
+    /**
+     * [onDone] runs whether or not the move went through: a dragged row is already drawn where it
+     * was dropped, and only a reload puts it back when the backend refused the move.
+     */
     fun move(playlist: UnifiedPlaylist, from: Int, to: Int, onDone: () -> Unit) {
-        viewModelScope.launch { writes.moveInPlaylist(playlist, from, to).onSuccess { onDone() } }
+        viewModelScope.launch {
+            writes.moveInPlaylist(playlist, from, to)
+            onDone()
+        }
     }
 
     /** Tries again now, for a copy marked out of sync. */

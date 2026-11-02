@@ -8,5 +8,7 @@
     <string name="playlist_details_description">Description</string>
     <string name="playlist_details_save">Save</string>
     <!-- Shown in the edit dialog when the playlist has been shared through Agro, which has no rename. -->
+    <!-- Accessibility label of the drag grip on a playlist row; %1$s is the song's title. -->
+    <string name="playlist_reorder">Reorder %1$s</string>
     <string name="playlist_details_shared_note">Friends who follow it on Agro keep seeing the name it was shared with.</string>
 </resources>

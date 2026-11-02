@@ -112,6 +112,17 @@ class PlaylistViewModel @Inject constructor(
         if (start >= 0) playerConnection.play(queue, start)
     }
 
+    /**
+     * Shows a dragged row's move at once, before it is written, and says whether it could. The
+     * write's own reload follows either way, so a move the backend refused is put back.
+     */
+    fun showMove(from: Int, to: Int): Boolean {
+        val list = _tracks.value
+        if (from !in list.indices || to !in list.indices) return false
+        _tracks.value = list.toMutableList().apply { add(to, removeAt(from)) }
+        return true
+    }
+
     /** Whether the open playlist's name and description can be changed here. */
     fun canEditDetails(): Boolean = _playlist.value?.let(playlistWrites::canEditDetails) == true
 
