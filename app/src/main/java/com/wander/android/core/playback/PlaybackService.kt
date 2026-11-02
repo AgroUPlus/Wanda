@@ -64,6 +64,7 @@ class PlaybackService : MediaSessionService() {
         player.addListener(NowPlayingForwarder(player, scope, scrobbleForwarding, sourceNowPlaying))
         player.addListener(NextTrackPreloader(player))
         EpisodeSkipSilence(player, secureStorage.isSkipSilenceEnabled, scope)
+        EpisodeAudioAttributes(player)
         val volume = PlayerVolume { player.volume = it }
         val loudness = secureStorage.loudness
         LoudnessNormaliser(player, volume, loudness.mode, loudness.preampDb, loudnessReadout, scope)
