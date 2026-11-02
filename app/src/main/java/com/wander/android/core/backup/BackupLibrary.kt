@@ -14,9 +14,11 @@ import kotlinx.serialization.Serializable
  * they were played, the playlists made here, the duplicate-recording decisions, and where each
  * podcast episode was left.
  *
- * Caches — artwork, lyrics, audio features, embeddings, shelves, server-synced friends and drops —
- * are left out on purpose. They are rebuilt from their sources on the next sync, and carrying them
- * would make the file many times larger to restate what the other side can fetch again.
+ * Caches — artwork, lyrics, shelves, server-synced friends and drops — are left out on purpose.
+ * They are rebuilt from their sources on the next sync, and carrying them would make the file many
+ * times larger to restate what the other side can fetch again. Audio features and fingerprints are
+ * the exception, carried in their own sections (see BackupExtras.kt): they cost a full decode of
+ * every track to rebuild, not a sync.
  */
 
 /**

@@ -45,7 +45,7 @@ internal fun BackupSection(viewModel: BackupViewModel = hiltViewModel()) {
     var pending by remember { mutableStateOf<PendingBackup?>(null) }
     // Chosen before the file picker, so the file is only created once there is something to put in it.
     var choosingSections by remember { mutableStateOf(false) }
-    var sections by remember { mutableStateOf(BackupSection.entries.toSet()) }
+    var sections by remember { mutableStateOf(BackupSection.defaults) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument(BACKUP_MIME)

@@ -33,6 +33,14 @@ internal data class BackupDocument(
     val episodes: List<BackupEpisode> = emptyList(),
     /** Subscribed podcast feeds; travel with the LIBRARY section. */
     val podcasts: List<BackupPodcast> = emptyList(),
+    /** Catalogue corrections, the METADATA section. */
+    val canonical: List<BackupCanonical> = emptyList(),
+    /** Shared-playlist copies and jam recaps, the SHARED section. */
+    val sharedPlaylists: List<BackupSharedPlaylist> = emptyList(),
+    val jamRecaps: List<BackupJamRecap> = emptyList(),
+    /** Measurements from the audio: FEATURES, and the size-capped, opt-in EMBEDDINGS. */
+    val features: List<BackupFeatures> = emptyList(),
+    val embeddings: List<BackupEmbedding> = emptyList(),
     /**
      * One digest per section the backup carries, keyed by [BackupSection.name] — which sections
      * were chosen, and proof each arrived whole; see [verifyIntegrity].

@@ -34,6 +34,7 @@ internal class BackupContentsIO @Inject constructor(
     private val linkDao: RecordingLinkDao,
     private val episodeDao: EpisodeProgressDao,
     private val podcastDao: PodcastDao,
+    private val extras: BackupExtrasIO,
     private val appLocaleStore: AppLocaleStore
 ) {
 
@@ -61,7 +62,8 @@ internal class BackupContentsIO @Inject constructor(
             links = if (on(BackupSection.MERGES)) linkDao.getAllOnce().map { it.toBackup() } else emptyList(),
             podcasts = if (on(BackupSection.LIBRARY)) podcastDao.getAll().map { it.toBackup() } else emptyList(),
             episodes = if (on(BackupSection.EPISODES)) episodeDao.getAll().map { it.toBackup() } else emptyList()
-        ).let { it.copy(manifest = it.sectionDigests(BackupJson, sections)) }
+        ).let { extras.collectInto(it, sections) }
+            .let { it.copy(manifest = it.sectionDigests(BackupJson, sections)) }
     }
 
     /**
@@ -116,6 +118,8 @@ internal class BackupContentsIO @Inject constructor(
                 val current = episodeDao.get(episode.trackId)
                 if (current == null || current.updatedAt < episode.updatedAt) episodeDao.upsert(episode.toEntity())
             }
+            // Empty in a backup made before these sections existed, which then restores as it did.
+            extras.restore(document)
         }
 
         val values = (document.entries + document.accounts).toPreferenceValues()
