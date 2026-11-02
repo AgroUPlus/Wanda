@@ -14,6 +14,7 @@ import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.selection.SelectedTrack
 import com.wander.android.ui.components.selection.SelectionAction
 import com.wander.android.ui.components.selection.TrackSelectionState
+import com.wander.android.ui.components.selection.TrackSwipeBox
 
 /** The selection entry for a playlist row: keyed by the entry, carrying its position. */
 internal fun PlaylistEntry.selectionItem() = SelectedTrack(key, track, index.toLong())
@@ -70,21 +71,22 @@ internal fun LazyListScope.playlistTrackRows(
             count = rows.size,
             draggable = canMove && !selection.isActive && !sharedViewModel.isPending(index)
         ) { rowModifier ->
-            TrackRow(
-                track = track,
-                onPlay = selection.onTap(item) { viewModel.play(index) },
-                onLongPress = selection.onLongPress(item) { onLongPress(IndexedValue(index, track)) }
-                    ?.takeUnless { unmatched && !removable },
-                trailingLabel = sharedViewModel.addedBy(index)
-                    ?.let { stringResource(R.string.shared_playlist_added_by, it) },
-                matchStatus = when {
-                    !unmatched -> null
-                    isImporting -> MatchStatus.MATCHING
-                    else -> MatchStatus.NOT_FOUND
-                },
-                selected = selection.stateOf(item.key),
-                modifier = rowModifier
-            )
+            TrackSwipeBox(track, enabled = !selection.isActive, modifier = rowModifier) {
+                TrackRow(
+                    track = track,
+                    onPlay = selection.onTap(item) { viewModel.play(index) },
+                    onLongPress = selection.onLongPress(item) { onLongPress(IndexedValue(index, track)) }
+                        ?.takeUnless { unmatched && !removable },
+                    trailingLabel = sharedViewModel.addedBy(index)
+                        ?.let { stringResource(R.string.shared_playlist_added_by, it) },
+                    matchStatus = when {
+                        !unmatched -> null
+                        isImporting -> MatchStatus.MATCHING
+                        else -> MatchStatus.NOT_FOUND
+                    },
+                    selected = selection.stateOf(item.key)
+                )
+            }
         }
     }
 }

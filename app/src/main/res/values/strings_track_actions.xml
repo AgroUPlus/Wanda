@@ -20,4 +20,8 @@
 
     <!-- Row accessibility -->
     <string name="common_more_options_for">More options for %1$s</string>
+
+    <!-- Swiping a track row -->
+    <string name="swipe_playing_next">“%1$s” plays next</string>
+    <string name="swipe_added_to_queue">“%1$s” added to the queue</string>
 </resources>

@@ -39,6 +39,7 @@ import com.wander.android.ui.components.rememberCollapsingTitleState
 import com.wander.android.ui.components.rememberDownloadAll
 import com.wander.android.ui.components.selection.SelectedTrack
 import com.wander.android.ui.components.selection.TrackSelectionBar
+import com.wander.android.ui.components.selection.TrackSwipeBox
 import com.wander.android.ui.components.selection.rememberTrackSelectionState
 
 /**
@@ -179,16 +180,21 @@ fun AlbumScreen(
                         contentType = { _, _ -> "track" }
                     ) { index, track ->
                         val item = SelectedTrack(track.id, track)
-                        TrackRow(
+                        TrackSwipeBox(
                             track = track,
-                            onPlay = selection.onTap(item) { viewModel.play(index) },
-                            onLongPress = selection.onLongPress(item) { actionsFor = track },
-                            selected = selection.stateOf(item.key),
+                            enabled = !selection.isActive,
                             modifier = Modifier
                                 .animateItem()
                                 .scale(rememberShelfEntranceScale(index))
                                 .groupedListItem(index, tracks.size)
-                        )
+                        ) {
+                            TrackRow(
+                                track = track,
+                                onPlay = selection.onTap(item) { viewModel.play(index) },
+                                onLongPress = selection.onLongPress(item) { actionsFor = track },
+                                selected = selection.stateOf(item.key)
+                            )
+                        }
                     }
                 }
             }

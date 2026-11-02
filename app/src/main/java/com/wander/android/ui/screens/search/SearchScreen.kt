@@ -38,6 +38,7 @@ import com.wander.android.ui.components.nestedListInset
 import com.wander.android.ui.components.rememberShelfEntranceScale
 import com.wander.android.ui.components.selection.SelectedTrack
 import com.wander.android.ui.components.selection.TrackSelectionBar
+import com.wander.android.ui.components.selection.TrackSwipeBox
 import com.wander.android.ui.components.selection.rememberTrackSelectionState
 
 @Composable
@@ -185,21 +186,26 @@ fun SearchScreen(
                         ) { index, track ->
                             val entranceScale = rememberShelfEntranceScale(index)
                             val item = SelectedTrack(track.id, track)
-                            TrackRow(
+                            TrackSwipeBox(
                                 track = track,
-                                // A radio from the tapped song, not the results list.
-                                //
-                                // The list is everything matching a string: searching "Signals" and
-                                // pressing one of them queued every other song with "Signals" in its
-                                // name, by unrelated artists, in relevance order. That is a spelling
-                                // coincidence, not a running order. A station seeded from the track
-                                // plays it first and then what actually sounds like it, across every
-                                // configured source — see `PlaybackCoordinator.startRadio`.
-                                onPlay = selection.onTap(item) { viewModel.startRadio(track) },
-                                onLongPress = selection.onLongPress(item) { actionsFor = track },
-                                selected = selection.stateOf(item.key),
+                                enabled = !selection.isActive,
                                 modifier = Modifier.animateItem().scale(entranceScale)
-                            )
+                            ) {
+                                TrackRow(
+                                    track = track,
+                                    // A radio from the tapped song, not the results list.
+                                    //
+                                    // The list is everything matching a string: searching "Signals" and
+                                    // pressing one of them queued every other song with "Signals" in its
+                                    // name, by unrelated artists, in relevance order. That is a spelling
+                                    // coincidence, not a running order. A station seeded from the track
+                                    // plays it first and then what actually sounds like it, across every
+                                    // configured source — see `PlaybackCoordinator.startRadio`.
+                                    onPlay = selection.onTap(item) { viewModel.startRadio(track) },
+                                    onLongPress = selection.onLongPress(item) { actionsFor = track },
+                                    selected = selection.stateOf(item.key)
+                                )
+                            }
                         }
                     }
                 }
