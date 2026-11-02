@@ -1,5 +1,7 @@
 package com.wander.android.data.sources.deezer
 
+import android.content.Context
+import com.wander.android.R
 import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.LyricsData
 import com.wander.android.data.model.RecommendedShelf
@@ -10,6 +12,7 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.IMusicSource
 import com.wander.android.data.sources.SourceCapabilities
 import com.wander.android.data.sources.StreamInfo
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -27,7 +30,8 @@ class DeezerSource @Inject constructor(
     private val streamResolver: DeezerStreamResolver,
     private val accountManager: DeezerAccountManager,
     private val lyrics: DeezerLyrics,
-    private val library: DeezerLibrary
+    private val library: DeezerLibrary,
+    @ApplicationContext private val context: Context
 ) : IMusicSource {
 
     override val sourceType: SourceType = SourceType.DEEZER
@@ -99,7 +103,7 @@ class DeezerSource @Inject constructor(
     override suspend fun getRecommendations(): Result<List<RecommendedShelf>> =
         apiClient.getChartTracks().map { tracks ->
             if (tracks.isNotEmpty()) {
-                listOf(RecommendedShelf(id = "deezer_charts", title = "Deezer Top Charts", tracks = tracks))
+                listOf(RecommendedShelf(id = "deezer_charts", title = context.getString(R.string.deezer_shelf_top_charts), tracks = tracks))
             } else {
                 emptyList()
             }

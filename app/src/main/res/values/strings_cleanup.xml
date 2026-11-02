@@ -64,4 +64,7 @@
     <string name="fingerprint_status_indexed">Fingerprinted</string>
     <string name="fingerprint_status_processing">Fingerprinting now</string>
     <string name="fingerprint_status_missing">Not fingerprinted</string>
+
+    <!-- Home: Deezer's chart shelf -->
+    <string name="deezer_shelf_top_charts">Deezer Top Charts</string>
 </resources>
