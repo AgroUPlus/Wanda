@@ -57,6 +57,7 @@ fun PlaylistScreen(
     val sharedViewModel: SharedPlaylistViewModel = hiltViewModel()
     val shared by sharedViewModel.state.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<IndexedValue<UnifiedTrack>?>(null) }
+    var editingDetails by remember { mutableStateOf(false) }
 
     LaunchedEffect(sharedViewModel) { sharedViewModel.left.collect { onBack() } }
 
@@ -66,6 +67,16 @@ fun PlaylistScreen(
     val addToPlaylist = AddToPlaylistHost()
 
     val shareActions = PlaylistShareHost(playlist, tracks, onOpenPlaylist)
+
+    playlist?.takeIf { editingDetails }?.let { current ->
+        PlaylistDetailsDialog(
+            name = current.name,
+            description = current.comment,
+            isShared = shareActions.sharedWith != null,
+            onSave = viewModel::editDetails,
+            onDismiss = { editingDetails = false }
+        )
+    }
 
     actionsFor?.let { (index, track) ->
         val current = playlist
@@ -217,6 +228,8 @@ fun PlaylistScreen(
             heroTitleMaxLines = HeroTitleMaxLines,
             topInset = contentPadding.calculateTopPadding(),
             modifier = Modifier.align(Alignment.TopStart)
-        )
+        ) {
+            PlaylistOverflow(onEditDetails = { editingDetails = true }.takeIf { viewModel.canEditDetails() })
+        }
     }
 }

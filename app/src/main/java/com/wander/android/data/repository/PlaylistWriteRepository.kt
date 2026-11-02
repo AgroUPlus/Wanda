@@ -162,6 +162,22 @@ class PlaylistWriteRepository @Inject constructor(
         }
     }
 
+    /**
+     * Whether [playlist]'s name and description can be changed here. Agro's own playlists cannot:
+     * Agro has no rename, and a title changed only in the copy would be undone by the next sync.
+     */
+    fun canEditDetails(playlist: UnifiedPlaylist): Boolean =
+        playlist.source != SourceType.AGRO && writableSource(playlist.source) != null
+
+    /** Renames [playlist] and replaces its description, on whichever source holds it. */
+    suspend fun updateDetails(playlist: UnifiedPlaylist, name: String, comment: String?): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            val source = writableSource(playlist.source).takeIf { playlist.source != SourceType.AGRO }
+                ?: return@withContext Result.failure(IllegalStateException("${playlist.source} cannot modify playlists"))
+            source.updatePlaylistDetails(playlist.id, name.trim(), comment?.trim())
+                .onFailure { outcomes.report(R.string.playlist_edit_failed, playlist.name) }
+        }
+
     /** Whether the entries of a playlist on [type] can be removed and moved, outside Agro. */
     fun canEditEntries(type: SourceType): Boolean = type == SourceType.LOCAL || writableSource(type) != null
 

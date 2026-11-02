@@ -11,6 +11,7 @@ import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MusicRepository
+import com.wander.android.data.repository.PlaylistWriteRepository
 import com.wander.android.data.repository.ShareRepository
 import com.wander.android.data.repository.sharedplaylist.SharedPlaylistRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,6 +34,7 @@ class PlaylistViewModel @Inject constructor(
     private val playbackCoordinator: PlaybackCoordinator,
     private val importScheduler: PlaylistImportScheduler,
     private val sharedPlaylists: SharedPlaylistRepository,
+    private val playlistWrites: PlaylistWriteRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -108,6 +110,16 @@ class PlaylistViewModel @Inject constructor(
         val queue = playable()
         val start = _tracks.value.getOrNull(index)?.let(queue::indexOf) ?: return
         if (start >= 0) playerConnection.play(queue, start)
+    }
+
+    /** Whether the open playlist's name and description can be changed here. */
+    fun canEditDetails(): Boolean = _playlist.value?.let(playlistWrites::canEditDetails) == true
+
+    fun editDetails(name: String, description: String) {
+        val current = _playlist.value ?: return
+        viewModelScope.launch {
+            playlistWrites.updateDetails(current, name, description).onSuccess { refresh() }
+        }
     }
 
     /** Matches the placeholders that were not found, again. */

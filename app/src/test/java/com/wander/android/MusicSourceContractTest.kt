@@ -108,6 +108,7 @@ class MusicSourceContractTest {
             source.createPlaylist("x", emptyList()),
             source.addToPlaylist("p", listOf("t")),
             source.deletePlaylist("p"),
+            source.updatePlaylistDetails("p", "name", null),
             source.getVideoStreamInfo("t"),
             source.getArtist("a"),
             source.getArtistAlbumPage("b", null, "artist"),

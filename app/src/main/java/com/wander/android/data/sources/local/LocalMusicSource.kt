@@ -213,6 +213,19 @@ class LocalMusicSource @Inject constructor(
         return Result.success(Unit)
     }
 
+    override suspend fun updatePlaylistDetails(playlistId: String, name: String, comment: String?): Result<Unit> {
+        val existing = playlistDao.getPlaylistById(playlistId)
+            ?: return Result.failure(IOException("Playlist not found"))
+        playlistDao.updatePlaylist(
+            existing.copy(
+                name = name,
+                comment = comment?.takeIf { it.isNotBlank() },
+                updatedAt = System.currentTimeMillis()
+            )
+        )
+        return Result.success(Unit)
+    }
+
     override suspend fun deletePlaylist(playlistId: String): Result<Unit> {
         playlistDao.deletePlaylist(playlistId)
         trackDao.deleteUnreferencedUnresolved()

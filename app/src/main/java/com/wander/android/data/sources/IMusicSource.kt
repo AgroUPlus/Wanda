@@ -168,6 +168,13 @@ interface IMusicSource {
     suspend fun addToPlaylist(playlistId: String, trackIds: List<String>): Result<Unit> =
         Result.failure(UnsupportedOperationException("$displayName cannot modify playlists"))
 
+    /**
+     * Renames a playlist and replaces its description; a null or blank [comment] clears it.
+     * See [createPlaylist].
+     */
+    suspend fun updatePlaylistDetails(playlistId: String, name: String, comment: String?): Result<Unit> =
+        Result.failure(UnsupportedOperationException("$displayName cannot modify playlists"))
+
     /** Deletes a playlist. */
     suspend fun deletePlaylist(playlistId: String): Result<Unit> =
         Result.failure(UnsupportedOperationException("$displayName cannot delete playlists"))

@@ -172,6 +172,9 @@ class NavidromeSource @Inject constructor(
             songIdsToAdd = trackIds.map { it.removePrefix(PREFIX) }
         )
 
+    override suspend fun updatePlaylistDetails(playlistId: String, name: String, comment: String?): Result<Unit> =
+        apiClient.updatePlaylistDetails(playlistId.removePrefix(PREFIX), name, comment.orEmpty())
+
     override suspend fun deletePlaylist(playlistId: String): Result<Unit> =
         apiClient.deletePlaylist(playlistId.removePrefix(PREFIX))
 

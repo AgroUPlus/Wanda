@@ -120,6 +120,10 @@ class SubsonicApiClient @Inject constructor(
             *songIdsToAdd.map { "songIdToAdd" to it as Any? }.toTypedArray()
         ).map { }
 
+    /** Sets the name and the comment; an empty comment clears the one the server holds. */
+    suspend fun updatePlaylistDetails(playlistId: String, name: String, comment: String): Result<Unit> =
+        call("updatePlaylist.view", "playlistId" to playlistId, "name" to name, "comment" to comment).map { }
+
     /** Drops the entry at [index] (zero-based, as the server lists them) — one copy, not every one. */
     suspend fun removeFromPlaylist(playlistId: String, index: Int): Result<Unit> =
         call("updatePlaylist.view", "playlistId" to playlistId, "songIndexToRemove" to index).map { }

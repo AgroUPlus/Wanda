@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The playlist page's overflow menu, at the end of its collapsing bar. -->
+    <string name="playlist_more_options">More options</string>
+    <!-- Opens a dialog to rename the playlist and change its description. -->
+    <string name="playlist_edit_details">Edit details</string>
+    <string name="playlist_details_name">Name</string>
+    <string name="playlist_details_description">Description</string>
+    <string name="playlist_details_save">Save</string>
+    <!-- Shown in the edit dialog when the playlist has been shared through Agro, which has no rename. -->
+    <string name="playlist_details_shared_note">Friends who follow it on Agro keep seeing the name it was shared with.</string>
+</resources>
