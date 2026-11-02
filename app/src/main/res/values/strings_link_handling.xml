@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="link_unsupported">That link isn\'t something Wanda can open.</string>
+    <string name="link_shared_playlist_description">Shared playlist</string>
+    <string name="link_album_tracks_failed">Found “%1$s” but couldn\'t load its tracks.</string>
+    <string name="link_album_open_failed">Couldn\'t open that album link.</string>
+    <string name="link_nothing_playable">Nothing playable behind that link.</string>
+    <string name="link_open_failed">Couldn\'t open that link.</string>
+    <string name="link_friend_added">You and @%1$s are now friends</string>
+    <string name="link_friend_code_invalid">That code has expired or has already been used.</string>
+    <string name="link_agro_paired_as">Paired with Agro as %1$s</string>
+</resources>

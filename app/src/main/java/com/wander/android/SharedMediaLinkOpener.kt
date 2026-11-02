@@ -3,6 +3,7 @@ package com.wander.android
 import android.content.Context
 import android.net.Uri
 import android.widget.Toast
+import com.wander.android.core.network.userMessageRes
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.importer.PlatformType
 import com.wander.android.data.importer.RawImportPlaylist
@@ -65,7 +66,7 @@ internal class SharedMediaLinkOpener @Inject constructor(
             val playlist = RawImportPlaylist(
                 platform = PlatformType.PLAIN_TEXT,
                 title = link.name,
-                description = "Shared playlist",
+                description = context.getString(R.string.link_shared_playlist_description),
                 tracks = link.tracks.map { RawImportTrack(it.title, it.artist, it.album, it.durationMs) }
             )
             playlistImporter.savePending(playlist).fold(
@@ -75,8 +76,7 @@ internal class SharedMediaLinkOpener @Inject constructor(
                     deepLinkRouter.request(Routes.playlist(id))
                 },
                 onFailure = { cause ->
-                    val message = cause.message ?: context.getString(R.string.link_playlist_invalid)
-                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, cause.userMessageRes(), Toast.LENGTH_LONG).show()
                 }
             )
         }
@@ -100,7 +100,7 @@ internal class SharedMediaLinkOpener @Inject constructor(
             sharedPlaylists.follow(id).fold(
                 onSuccess = { route -> deepLinkRouter.request(Routes.playlist(route)) },
                 onFailure = {
-                    val message = context.getString(R.string.link_playlist_agro_failed, it.message)
+                    val message = context.getString(R.string.link_playlist_agro_failed, context.getString(it.userMessageRes()))
                     Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                 }
             )
@@ -115,17 +115,17 @@ internal class SharedMediaLinkOpener @Inject constructor(
                     if (tracks.isEmpty()) {
                         Toast.makeText(
                             context,
-                            "Found “${album.title}” but couldn't load its tracks.",
+                            context.getString(R.string.link_album_tracks_failed, album.title),
                             Toast.LENGTH_LONG
                         ).show()
                     } else {
                         playerConnection.play(tracks)
                     }
                 },
-                onFailure = { cause ->
+                onFailure = { _ ->
                     Toast.makeText(
                         context,
-                        cause.message ?: "Couldn't open that album link.",
+                        R.string.link_album_open_failed,
                         Toast.LENGTH_LONG
                     ).show()
                 }
@@ -137,10 +137,10 @@ internal class SharedMediaLinkOpener @Inject constructor(
         scope.launch {
             linkRepository.resolveTrack(uri).fold(
                 onSuccess = { track -> playerConnection.play(listOf(track)) },
-                onFailure = { cause ->
+                onFailure = { _ ->
                     Toast.makeText(
                         context,
-                        cause.message ?: context.getString(R.string.link_track_open_failed),
+                        R.string.link_track_open_failed,
                         Toast.LENGTH_LONG
                     ).show()
                 }
@@ -165,7 +165,7 @@ internal class SharedMediaLinkOpener @Inject constructor(
             if (tracks.isEmpty()) {
                 Toast.makeText(
                     context,
-                    "Nothing playable behind that link.",
+                    R.string.link_nothing_playable,
                     Toast.LENGTH_LONG
                 ).show()
             } else {
@@ -184,10 +184,10 @@ internal class SharedMediaLinkOpener @Inject constructor(
                         playerConnection.setSpeedAndPitch(it.speed, it.pitch)
                     }
                 },
-                onFailure = { cause ->
+                onFailure = { _ ->
                     Toast.makeText(
                         context,
-                        cause.message ?: "Couldn't open that link.",
+                        R.string.link_open_failed,
                         Toast.LENGTH_LONG
                     ).show()
                 }

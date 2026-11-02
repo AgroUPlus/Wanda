@@ -70,7 +70,7 @@ internal class AppIntentHandler @Inject constructor(
             entity != null -> sharedMedia.openSharedEntity(scope, entity)
             uri.scheme == "https" || uri.scheme == "wanda" -> Toast.makeText(
                 context,
-                "That link isn't something Wanda can open.",
+                R.string.link_unsupported,
                 Toast.LENGTH_LONG
             ).show()
         }

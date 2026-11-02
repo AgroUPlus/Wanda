@@ -45,8 +45,8 @@ internal class ConfirmedLinkHandler @Inject constructor(
                 onConfirm = {
                     val friend = socialRepository.redeemFriendCode(code).getOrNull()
                     val message = friend
-                        ?.let { "You and @$it are now friends" }
-                        ?: "That code has expired or has already been used."
+                        ?.let { context.getString(R.string.link_friend_added, it) }
+                        ?: context.getString(R.string.link_friend_code_invalid)
                     Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                     if (friend != null) deepLinkRouter.request(TopLevelDestination.FRIENDS.route)
                 }
@@ -70,7 +70,10 @@ internal class ConfirmedLinkHandler @Inject constructor(
                 onConfirm = {
                     val message = agroClient.parseQrCodePayload(uri.toString()).fold(
                         onSuccess = { petname ->
-                            "Paired with Agro as ${petname ?: secureStorage.agroDevicePetname.ifEmpty { "wanda" }}"
+                            context.getString(
+                                R.string.link_agro_paired_as,
+                                petname ?: secureStorage.agroDevicePetname.ifEmpty { "wanda" }
+                            )
                         },
                         onFailure = { error ->
                             android.util.Log.w("Wanda", "Agro pairing failed: ${error.loggableMessage()}")
