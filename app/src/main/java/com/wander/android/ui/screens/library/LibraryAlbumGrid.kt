@@ -53,9 +53,9 @@ internal fun AlbumGrid(
     if (albums.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             EmptyState(
-                title = stringResource(R.string.library_no_albums_yet),
-                message = stringResource(loadError ?: R.string.library_albums_appear_once_connected_source),
-                actionLabel = loadError?.let { stringResource(R.string.error_retry) },
+                title = R.string.library_no_albums_yet,
+                message = loadError ?: R.string.library_albums_appear_once_connected_source,
+                actionLabel = loadError?.let { R.string.error_retry },
                 onAction = onRetry.takeIf { loadError != null }
             )
         }

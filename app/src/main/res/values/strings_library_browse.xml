@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Library track lists: empty states -->
+    <string name="library_liked_empty_title">Nothing liked yet</string>
+    <string name="library_liked_empty_message">Tap the heart on any track to keep it here.</string>
+    <string name="library_downloads_empty_title">Nothing saved offline</string>
+    <string name="library_downloads_empty_message">Liked tracks download automatically on Wi-Fi while your phone is charging.</string>
+    <string name="library_tracks_empty_title">Your library is empty</string>
+    <string name="library_tracks_empty_message">Connect a source in Settings, or grant access to music on this device.</string>
+</resources>

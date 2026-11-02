@@ -60,10 +60,10 @@ internal fun LibraryPodcastsPage(
     if (state.hasNoEpisodes && inbox.isEmpty() && !hasSubscriptions) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             EmptyState(
-                title = stringResource(R.string.podcasts_empty_title),
-                message = stringResource(R.string.podcasts_empty_message),
+                title = R.string.podcasts_empty_title,
+                message = R.string.podcasts_empty_message,
                 icon = Icons.Rounded.Podcasts,
-                actionLabel = stringResource(R.string.podcasts_empty_action),
+                actionLabel = R.string.podcasts_empty_action,
                 onAction = onOpenSubscriptions
             )
         }

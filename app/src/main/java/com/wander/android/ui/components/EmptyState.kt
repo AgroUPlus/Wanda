@@ -1,5 +1,6 @@
 package com.wander.android.ui.components
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,12 +20,38 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /**
  * Shown when a screen has nothing to display. Framed with an expressive Material shape backdrop,
  * headline typography, and clear next steps.
+ *
+ * Takes string resources: empty-state copy is fixed text and belongs in `strings.xml`.
+ */
+@Composable
+fun EmptyState(
+    @StringRes title: Int,
+    @StringRes message: Int,
+    modifier: Modifier = Modifier,
+    icon: ImageVector = Icons.Rounded.MusicNote,
+    @StringRes actionLabel: Int? = null,
+    onAction: (() -> Unit)? = null
+) {
+    EmptyState(
+        title = stringResource(title),
+        message = stringResource(message),
+        modifier = modifier,
+        icon = icon,
+        actionLabel = actionLabel?.let { stringResource(it) },
+        onAction = onAction
+    )
+}
+
+/**
+ * [EmptyState] for text that is assembled at runtime (a search query quoted back, a name).
+ * Fixed copy uses the `@StringRes` overload above.
  */
 @Composable
 fun EmptyState(

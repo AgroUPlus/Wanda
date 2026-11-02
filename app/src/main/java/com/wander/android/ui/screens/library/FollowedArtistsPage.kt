@@ -14,7 +14,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -38,25 +37,25 @@ internal fun FollowedArtistsPage(
         FollowedArtistsState.Loading -> Centered { LoadingIndicator() }
         FollowedArtistsState.NotPaired -> Centered {
             EmptyState(
-                title = stringResource(R.string.library_followed_not_paired_title),
-                message = stringResource(R.string.library_followed_not_paired_message),
+                title = R.string.library_followed_not_paired_title,
+                message = R.string.library_followed_not_paired_message,
                 icon = Icons.Rounded.Person
             )
         }
         FollowedArtistsState.Failed -> Centered {
             EmptyState(
-                title = stringResource(R.string.library_followed_failed_title),
-                message = stringResource(R.string.library_followed_failed_message),
+                title = R.string.library_followed_failed_title,
+                message = R.string.library_followed_failed_message,
                 icon = Icons.Rounded.Person,
-                actionLabel = stringResource(R.string.common_try_again),
+                actionLabel = R.string.common_try_again,
                 onAction = viewModel::refresh
             )
         }
         is FollowedArtistsState.Loaded -> if (current.artists.isEmpty()) {
             Centered {
                 EmptyState(
-                    title = stringResource(R.string.library_followed_empty_title),
-                    message = stringResource(R.string.library_followed_empty_message),
+                    title = R.string.library_followed_empty_title,
+                    message = R.string.library_followed_empty_message,
                     icon = Icons.Rounded.Person
                 )
             }

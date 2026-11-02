@@ -158,8 +158,8 @@ private fun HistoryPlaceholder(plays: LazyPagingItems<HistoryTrack>, contentPadd
     }
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         EmptyState(
-            title = stringResource(R.string.library_nothing_played_yet),
-            message = stringResource(R.string.library_everything_play_turns_up_here)
+            title = R.string.library_nothing_played_yet,
+            message = R.string.library_everything_play_turns_up_here
         )
     }
 }

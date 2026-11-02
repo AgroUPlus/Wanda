@@ -118,9 +118,9 @@ internal fun PlaylistList(
             ) {
                 BlendInvites(onJoined = onOpenPlaylist, modifier = Modifier.padding(horizontal = 16.dp))
                 EmptyState(
-                    title = stringResource(R.string.library_no_playlists),
-                    message = stringResource(loadError ?: R.string.library_playlists_from_sources_imported_playlists),
-                    actionLabel = loadError?.let { stringResource(R.string.error_retry) },
+                    title = R.string.library_no_playlists,
+                    message = loadError ?: R.string.library_playlists_from_sources_imported_playlists,
+                    actionLabel = loadError?.let { R.string.error_retry },
                     onAction = if (loadError != null) ({ viewModel.refreshPlaylists() }) else null
                 )
                 Row(

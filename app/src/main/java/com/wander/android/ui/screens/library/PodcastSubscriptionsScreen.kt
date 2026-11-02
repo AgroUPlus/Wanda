@@ -148,10 +148,10 @@ internal fun PodcastSubscriptionsScreen(
                 list == null -> Unit
                 list.isEmpty() -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyState(
-                        title = stringResource(R.string.podcasts_subscriptions_empty_title),
-                        message = stringResource(R.string.podcasts_subscriptions_empty_message),
+                        title = R.string.podcasts_subscriptions_empty_title,
+                        message = R.string.podcasts_subscriptions_empty_message,
                         icon = Icons.Rounded.Podcasts,
-                        actionLabel = stringResource(R.string.podcasts_add),
+                        actionLabel = R.string.podcasts_add,
                         onAction = { showAdd = true }
                     )
                 }

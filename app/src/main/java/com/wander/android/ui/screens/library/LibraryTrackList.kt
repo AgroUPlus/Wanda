@@ -1,5 +1,7 @@
 package com.wander.android.ui.screens.library
 
+import androidx.annotation.StringRes
+import com.wander.android.R
 import com.wander.android.ui.components.groupedListItem
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -165,17 +167,18 @@ internal fun PagedTrackList(
     }
 }
 
-private fun emptyTitleFor(tab: LibraryTab) = when (tab) {
-    LibraryTab.LIKED -> "Nothing liked yet"
-    LibraryTab.DOWNLOADS -> "Nothing saved offline"
-    else -> "Your library is empty"
+@StringRes
+private fun emptyTitleFor(tab: LibraryTab): Int = when (tab) {
+    LibraryTab.LIKED -> R.string.library_liked_empty_title
+    LibraryTab.DOWNLOADS -> R.string.library_downloads_empty_title
+    else -> R.string.library_tracks_empty_title
 }
 
-private fun emptyMessageFor(tab: LibraryTab) = when (tab) {
-    LibraryTab.LIKED -> "Tap the heart on any track to keep it here."
-    LibraryTab.DOWNLOADS ->
-        "Liked tracks download automatically on Wi-Fi while your phone is charging."
-    else -> "Connect a source in Settings, or grant access to music on this device."
+@StringRes
+private fun emptyMessageFor(tab: LibraryTab): Int = when (tab) {
+    LibraryTab.LIKED -> R.string.library_liked_empty_message
+    LibraryTab.DOWNLOADS -> R.string.library_downloads_empty_message
+    else -> R.string.library_tracks_empty_message
 }
 
 @Composable
