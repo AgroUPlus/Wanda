@@ -68,8 +68,8 @@ internal fun CircleScreen(
         if (state.feed.isEmpty() && state.recap == null && !state.loading) {
             if (state.error != null) return@Column
             EmptyState(
-                title = stringResource(R.string.social_nothing_circle_yet),
-                message = stringResource(R.string.social_friends_appear_here_once_they)
+                title = R.string.social_nothing_circle_yet,
+                message = R.string.social_friends_appear_here_once_they
             )
             return@Column
         }

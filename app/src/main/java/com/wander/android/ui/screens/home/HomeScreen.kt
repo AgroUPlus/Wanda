@@ -153,9 +153,9 @@ fun HomeScreen(
             // No music anywhere, under any filter — there is nothing for the header or the source
             // chips to do, so the whole screen is the "go connect something" message.
             state.isGloballyEmpty -> EmptyState(
-                title = stringResource(R.string.home_nothing_play_yet),
-                message = stringResource(R.string.home_connect_navidrome_youtube_music_settings),
-                actionLabel = stringResource(R.string.social_open_settings),
+                title = R.string.home_nothing_play_yet,
+                message = R.string.home_connect_navidrome_youtube_music_settings,
+                actionLabel = R.string.social_open_settings,
                 onAction = onOpenSettings,
                 modifier = Modifier.align(Alignment.Center)
             )

@@ -146,16 +146,16 @@ fun SearchScreen(
                     )
 
                     !state.hasQuery -> EmptyState(
-                        title = stringResource(R.string.search_search_everything_once),
-                        message = stringResource(R.string.search_navidrome_youtube_music_music_device),
+                        title = R.string.search_search_everything_once,
+                        message = R.string.search_navidrome_youtube_music_music_device,
                         modifier = centred
                     )
 
                     state.isFailure -> EmptyState(
-                        title = stringResource(R.string.search_failed_title),
-                        message = stringResource(R.string.search_failed_message),
+                        title = R.string.search_failed_title,
+                        message = R.string.search_failed_message,
                         icon = Icons.Rounded.CloudOff,
-                        actionLabel = stringResource(R.string.search_retry),
+                        actionLabel = R.string.search_retry,
                         onAction = viewModel::retry,
                         modifier = centred
                     )

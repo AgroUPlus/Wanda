@@ -8,7 +8,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.core.playback.PlayerConnection
@@ -29,8 +28,8 @@ internal fun LocalQueueContent(
 ) {
     if (entries.isEmpty()) {
         EmptyState(
-            title = stringResource(R.string.queue_queue_empty),
-            message = stringResource(R.string.queue_play_something_will_show_up),
+            title = R.string.queue_queue_empty,
+            message = R.string.queue_play_something_will_show_up,
             modifier = Modifier.padding(top = 96.dp)
         )
         return
