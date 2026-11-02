@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
 import com.wander.android.R
+import com.wander.android.core.permissions.rememberPermissionGate
 import com.wander.android.data.model.SourceType
 import com.wander.android.ui.components.GroupedCard
 import com.wander.android.ui.components.SourceIcon
@@ -73,15 +74,23 @@ internal fun LazyListScope.connectionsTab(
                     )
                 },
                 {
+                    // Audio only: the row says it is about music files, so a notification prompt
+                    // riding along would be unexplained. The scan that follows a grant is started
+                    // by the app-wide gate, which notices the grant when the activity resumes.
+                    val audioGate = rememberPermissionGate(requestOnStart = false, askNotifications = false)
+                    // localReady lags a fresh grant until that scan runs; the gate does not.
+                    val needsAccess = !state.localReady && !audioGate.hasAudio
                     SettingsRow(
                         modifier = Modifier.scale(rememberShelfEntranceScale(3)),
                         title = stringResource(R.string.common_music_device),
                         subtitle = when {
-                            !state.localReady -> "Needs permission to read audio files"
+                            needsAccess && audioGate.audioBlocked -> stringResource(R.string.settings_local_access_blocked)
+                            needsAccess -> stringResource(R.string.settings_local_access_needed)
                             state.localScanFolder != null -> state.localScanFolder
-                            else -> "Whole device"
+                            else -> stringResource(R.string.settings_local_whole_device)
                         },
-                        onClick = actions.onRescanLocal,
+                        // Without access a rescan finds nothing; the tap goes where access is given.
+                        onClick = if (needsAccess) audioGate::request else actions.onRescanLocal,
                         // A phone's audio is not all music: ringtones, podcast downloads and
                         // voice memos all satisfy MediaStore's IS_MUSIC. Narrowing the scan is
                         // set once and forgotten, so it sits behind a long press rather than

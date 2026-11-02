@@ -1,9 +1,13 @@
 package com.wander.android.core.permissions
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.core.content.ContextCompat
 
 /** `READ_MEDIA_AUDIO` on API 33+, `READ_EXTERNAL_STORAGE` below it. */
@@ -29,6 +33,17 @@ fun Context.hasPermission(permission: String): Boolean =
     ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
 
 fun Context.hasAudioPermission(): Boolean = hasPermission(AUDIO_PERMISSION)
+
+/**
+ * Opens this app's page in system settings, where a permission Android no longer asks about can
+ * still be granted. A new task when started from something other than an activity, as Android
+ * requires.
+ */
+fun Context.openAppSettings() {
+    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null))
+    if (this !is Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    startActivity(intent)
+}
 
 /** Whether this device may open connections to peers on the same network. */
 fun Context.hasLocalNetworkPermission(): Boolean =
