@@ -90,6 +90,19 @@ class YTMusicCatalogLoader @Inject constructor(
     suspend fun getLikedTracks(limit: Int, offset: Int): Result<List<UnifiedTrack>> =
         likedShelf.slice(offset, limit)
 
+    /**
+     * What the account actually played, newest first, from `FEmusic_history` — one shelf per day.
+     * A song played on two days appears on both, so only its latest play is kept. The first page
+     * holds a few hundred rows, well beyond what any caller asks for, so no continuation is read.
+     */
+    suspend fun getRecentTracks(limit: Int): Result<List<UnifiedTrack>> =
+        innerTube.browse(HISTORY_BROWSE_ID).map { root ->
+            root.responsiveListItems()
+                .mapNotNull(::parseResponsiveListItem)
+                .distinctBy { it.id }
+                .take(limit)
+        }
+
     suspend fun getAlbums(limit: Int, offset: Int): Result<List<UnifiedAlbum>> =
         albumShelf.slice(offset, limit)
 
@@ -156,6 +169,7 @@ class YTMusicCatalogLoader @Inject constructor(
     companion object {
         const val LIKED_BROWSE_ID = "FEmusic_liked_videos"
         const val LIBRARY_ALBUMS_BROWSE_ID = "FEmusic_liked_albums"
+        const val HISTORY_BROWSE_ID = "FEmusic_history"
         const val WATCH_URL = "https://music.youtube.com/watch?v="
         const val BROWSE_URL = "https://music.youtube.com/browse/"
         const val PLAYLIST_URL = "https://music.youtube.com/playlist?list="

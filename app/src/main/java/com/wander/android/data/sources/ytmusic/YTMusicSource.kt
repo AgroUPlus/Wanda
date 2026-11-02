@@ -106,7 +106,7 @@ class YTMusicSource @Inject constructor(
         catalogLoader.getLikedTracks(limit, offset)
 
     override suspend fun getRecentTracks(limit: Int): Result<List<UnifiedTrack>> =
-        getLikedTracks(limit, 0)
+        catalogLoader.getRecentTracks(limit)
 
     override suspend fun getAlbums(limit: Int, offset: Int): Result<List<UnifiedAlbum>> =
         catalogLoader.getAlbums(limit, offset)
