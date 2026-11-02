@@ -11,7 +11,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.progressOf
 import com.wander.android.core.playback.rememberPlaybackPosition
@@ -49,14 +51,16 @@ internal fun MiniPlayButton(
     LaunchedEffect(isPlaying) { amplitudeState.animateTo(if (isPlaying) 1f else 0f, spec) }
     val amplitude = { amplitudeState.value }
     val playShape = rememberCookieMorphShape(amplitude)
+    val playInteraction = remember { MutableInteractionSource() }
+    val playLabel = stringResource(if (isPlaying) R.string.action_pause else R.string.action_play)
 
+    // The ring is the touch target: at 52dp it clears the 48dp minimum the 40dp button does not.
     CircularProgressRing(
         progress = progress,
         ringSize = MiniRingSize,
         amplitude = amplitude,
-        modifier = modifier
+        modifier = modifier.miniTouchTarget(playLabel, playInteraction, playerConnection::togglePlayPause)
     ) {
-        val playInteraction = remember { MutableInteractionSource() }
         val playScale by rememberPressScale(playInteraction)
         FilledIconButton(
             onClick = playerConnection::togglePlayPause,
@@ -64,6 +68,7 @@ internal fun MiniPlayButton(
             shape = playShape,
             modifier = Modifier
                 .size(MiniButtonSize)
+                .hiddenFromAccessibility()
                 .graphicsLayer { scaleX = playScale; scaleY = playScale }
         ) {
             PlayPauseIcon(

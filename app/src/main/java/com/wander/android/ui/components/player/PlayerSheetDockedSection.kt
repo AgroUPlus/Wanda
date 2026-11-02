@@ -19,6 +19,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import com.wander.android.R
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.ui.components.MiniArtworkSize
@@ -43,6 +48,16 @@ internal fun BoxScope.PlayerSheetDockedSection(
     anchors: PlayerArtworkAnchors,
     onExpand: () -> Unit
 ) {
+    // Skipping back is otherwise only a swipe, which TalkBack and Switch Access cannot make; both
+    // directions are offered as actions on the strip itself.
+    val previousLabel = stringResource(R.string.action_previous)
+    val nextLabel = stringResource(R.string.action_next)
+    val skipActions = remember(playerConnection, previousLabel, nextLabel) {
+        listOf(
+            CustomAccessibilityAction(previousLabel) { playerConnection.previous(); true },
+            CustomAccessibilityAction(nextLabel) { playerConnection.next(); true }
+        )
+    }
     MiniPlayer(
         track = playback.currentTrack,
         isPlaying = playback.isPlaying,
@@ -72,7 +87,9 @@ internal fun BoxScope.PlayerSheetDockedSection(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 enabled = docked,
+                onClickLabel = stringResource(R.string.player_open),
                 onClick = onExpand
             )
+            .then(if (docked) Modifier.semantics { customActions = skipActions } else Modifier)
     )
 }

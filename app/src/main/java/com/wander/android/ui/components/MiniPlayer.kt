@@ -2,6 +2,7 @@ package com.wander.android.ui.components
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,6 +36,9 @@ import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.player.MiniButtonSize
 import com.wander.android.ui.components.player.MiniPlayButton
+import com.wander.android.ui.components.player.MiniTouchTargetSize
+import com.wander.android.ui.components.player.hiddenFromAccessibility
+import com.wander.android.ui.components.player.miniTouchTarget
 import kotlin.math.abs
 
 /** The edge of the docked strip's cover art. */
@@ -159,7 +163,8 @@ fun MiniPlayer(
             // The 48dp minimum-touch-target wrapper is switched off for these: it lays a 40dp
             // button out at 40dp but *places* it as if the box were 48, shifting the glyph 4dp
             // down-right of its own layout box — which is what pushed the play button off the
-            // centre of the progress ring around it.
+            // centre of the progress ring around it. Each button gets a full-size target of its own
+            // instead — see `miniTouchTarget`.
             CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -174,19 +179,27 @@ fun MiniPlayer(
                     )
                     val nextInteraction = remember { MutableInteractionSource() }
                     val nextScale by rememberPressScale(nextInteraction)
-                    FilledTonalIconButton(
-                        onClick = playerConnection::next,
-                        interactionSource = nextInteraction,
-                        shape = CircleShape,
-                        colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                                .copy(alpha = MiniButtonContainerAlpha)
-                        ),
+                    Box(
+                        contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .size(MiniButtonSize)
-                            .graphicsLayer { scaleX = nextScale; scaleY = nextScale }
+                            .size(MiniTouchTargetSize)
+                            .miniTouchTarget(stringResource(R.string.action_next), nextInteraction, playerConnection::next)
                     ) {
-                        Icon(Icons.Rounded.SkipNext, contentDescription = stringResource(R.string.action_next))
+                        FilledTonalIconButton(
+                            onClick = playerConnection::next,
+                            interactionSource = nextInteraction,
+                            shape = CircleShape,
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                                    .copy(alpha = MiniButtonContainerAlpha)
+                            ),
+                            modifier = Modifier
+                                .size(MiniButtonSize)
+                                .hiddenFromAccessibility()
+                                .graphicsLayer { scaleX = nextScale; scaleY = nextScale }
+                        ) {
+                            Icon(Icons.Rounded.SkipNext, contentDescription = null)
+                        }
                     }
                 }
             }

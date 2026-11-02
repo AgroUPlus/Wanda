@@ -67,4 +67,9 @@
 
     <!-- Home: Deezer's chart shelf -->
     <string name="deezer_shelf_top_charts">Deezer Top Charts</string>
+
+    <!-- Play/pause button's screen reader label while a track is playing -->
+    <string name="action_pause">Pause</string>
+    <!-- Screen reader: what tapping the docked mini player does -->
+    <string name="player_open">Open player</string>
 </resources>
