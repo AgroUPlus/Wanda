@@ -20,7 +20,9 @@ class SecureStorageBackupTest {
         KEY_CATALOG_PUBLISHED_TRACK to "track-7",
         KEY_RELEASE_WATERMARK to 55L,
         KEY_RELEASE_PRIMED_ARTISTS to setOf("artist"),
-        KEY_SEARCH_HISTORY to "radiohead\nbjork"
+        KEY_SEARCH_HISTORY to "radiohead\nbjork",
+        KEY_DOWNLOADS_STORAGE_FULL to true,
+        KEY_MANUAL_DOWNLOAD_IDS to setOf("navidrome:1")
     )
 
     private fun prefsWith(values: Map<String, Any>) = FakeSharedPreferences().apply {
