@@ -2,7 +2,6 @@ package com.wander.android.ui.screens.player
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -34,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
+import com.wander.android.core.playback.SleepTimerState
 import com.wander.android.data.sources.agro.Jam
 import com.wander.android.ui.components.AvatarGroup
 import com.wander.android.ui.theme.LiveIndicator
@@ -43,7 +43,8 @@ internal class PlayerSourceChip(val label: String, val mutedColor: Color, val on
 
 /**
  * The player's top bar: minimize on the left, the source name in the middle with the song/video
- * toggle under it (or a live jam badge when one is active), the queue button on the right.
+ * toggle under it (or a live jam badge when one is active) and the sleep timer's countdown below
+ * that while one is set, the queue button on the right.
  *
  * Shared between [ImmersivePlayerLayout] and [StandardPlayerLayout], which differ only in the
  * chip's text colour (drawn over artwork vs. over a plain surface) and in what wraps this — the
@@ -56,6 +57,7 @@ internal fun PlayerTopBar(
     onSwapMediaType: () -> Unit,
     jam: Jam?,
     source: PlayerSourceChip,
+    sleepTimer: SleepTimerState,
     onOpenJam: () -> Unit,
     onMinimize: () -> Unit,
     onOpenQueue: () -> Unit,
@@ -69,9 +71,8 @@ internal fun PlayerTopBar(
             )
         }
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.weight(1f)
         ) {
             if (jam != null) {
@@ -108,6 +109,7 @@ internal fun PlayerTopBar(
                     AnimatedMediaToggle(state = mediaToggle, onSwap = onSwapMediaType)
                 }
             }
+            SleepTimerChip(sleepTimer)
         }
 
         FilledTonalIconButton(onClick = onOpenQueue, colors = playerOverlayButtonColors()) {

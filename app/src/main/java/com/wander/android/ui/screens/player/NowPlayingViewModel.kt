@@ -42,9 +42,12 @@ internal class NowPlayingViewModel @Inject constructor(
 ) : ViewModel() {
 
     val sleepTimerState = sleepTimer.state
-    fun startSleepCountdown(minutes: Int) = sleepTimer.startCountdown(minutes)
-    fun sleepAtEndOfItem() = sleepTimer.stopAtEndOfItem()
-    fun cancelSleepTimer() = sleepTimer.cancel()
+    val sleepTimerActions = SleepTimerActions(
+        onCountdown = sleepTimer::startCountdown,
+        onExtend = sleepTimer::extend,
+        onEndOfItem = sleepTimer::stopAtEndOfItem,
+        onCancel = sleepTimer::cancel
+    )
 
     val isCoverArtThemeEnabled: StateFlow<Boolean> = secureStorage.isCoverArtThemeEnabled
 

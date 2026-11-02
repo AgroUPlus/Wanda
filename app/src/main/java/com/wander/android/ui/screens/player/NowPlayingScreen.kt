@@ -223,9 +223,7 @@ internal fun NowPlayingScreen(
         SleepTimerSheet(
             state = sleepTimerState,
             isEpisode = track.isEpisode,
-            onCountdown = viewModel::startSleepCountdown,
-            onEndOfItem = viewModel::sleepAtEndOfItem,
-            onCancel = viewModel::cancelSleepTimer,
+            actions = viewModel.sleepTimerActions,
             onDismiss = { showSleepTimer = false }
         )
     }

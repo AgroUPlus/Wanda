@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sleep timer -->
+    <string name="sleep_timer_custom">Custom…</string>
+    <string name="sleep_timer_start">Start timer</string>
+    <plurals name="sleep_timer_extend">
+        <item quantity="one">+%d minute</item>
+        <item quantity="other">+%d minutes</item>
+    </plurals>
+    <string name="sleep_timer_chip_until_end">Until the end</string>
+    <string name="sleep_timer_chip_description">Sleep timer on</string>
+</resources>

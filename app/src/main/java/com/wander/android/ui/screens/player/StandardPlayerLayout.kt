@@ -30,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
@@ -101,6 +102,7 @@ internal fun StandardPlayerLayout(
                 mutedColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 onOpenPicker = onOpenSourcePicker
             ),
+            sleepTimer = viewModel.sleepTimerState.collectAsStateWithLifecycle().value,
             onOpenJam = onOpenJam,
             onMinimize = onMinimize,
             onOpenQueue = onOpenQueue,
