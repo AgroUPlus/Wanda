@@ -147,11 +147,11 @@ class HomeViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            musicRepository.getLikedTracksFlow().collect { liked ->
+            musicRepository.getLikedTracksFlow(CarouselSize).collect { liked ->
                 _uiState.update { state ->
                     state.copy(
                         allSections = state.allSections.withSection(
-                            shelf(SectionLiked, "Your Favorites", HomeSectionStyle.HERO_CAROUSEL, liked.take(CarouselSize))
+                            shelf(SectionLiked, "Your Favorites", HomeSectionStyle.HERO_CAROUSEL, liked)
                         )
                     )
                 }

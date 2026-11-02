@@ -133,6 +133,7 @@ class MusicRepository @Inject constructor(
 
     // ── Library ─────────────────────────────────────────────────────────────────────────────
     fun getLikedTracksFlow() = libraryTracks.getLikedTracksFlow()
+    fun getLikedTracksFlow(limit: Int) = libraryTracks.getLikedTracksFlow(limit)
     fun getRecentlyPlayedFlow() = libraryTracks.getRecentlyPlayedFlow()
     fun getDownloadedTracksFlow() = libraryTracks.getDownloadedTracksFlow()
     suspend fun downloadedTracks() = libraryTracks.downloadedTracks()

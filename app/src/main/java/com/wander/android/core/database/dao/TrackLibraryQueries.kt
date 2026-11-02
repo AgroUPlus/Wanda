@@ -45,6 +45,10 @@ interface TrackLibraryQueries {
     @Query("SELECT * FROM tracks WHERE isLiked = 1 AND isEpisode = 0 ORDER BY lastPlayedTimestamp DESC")
     fun getLikedTracksFlow(): Flow<List<TrackEntity>>
 
+    /** Home's Favourites shelf: [getLikedTracksList]'s order and limit, kept up to date. */
+    @Query("SELECT * FROM tracks WHERE isLiked = 1 AND isEpisode = 0 ORDER BY lastPlayedTimestamp DESC, addedTimestamp DESC LIMIT :limit")
+    fun observeLikedTracks(limit: Int): Flow<List<TrackEntity>>
+
     @Query("SELECT id FROM tracks WHERE isLiked = 1")
     fun getLikedTrackIdsFlow(): Flow<List<String>>
 

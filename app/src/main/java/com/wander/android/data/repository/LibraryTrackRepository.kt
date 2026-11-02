@@ -14,6 +14,7 @@ import com.wander.android.data.model.UnifiedTrack
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -29,6 +30,13 @@ internal class LibraryTrackRepository(
 ) {
     fun getLikedTracksFlow(): Flow<List<UnifiedTrack>> =
         trackDao.getLikedTracksFlow().mapToTracks()
+
+    /**
+     * The first [limit] liked tracks. Room re-runs a query on every write to `tracks` — each play,
+     * each search result saved — so a shelf that shows twelve should not map every like each time.
+     */
+    fun getLikedTracksFlow(limit: Int): Flow<List<UnifiedTrack>> =
+        trackDao.observeLikedTracks(limit).mapToTracks().distinctUntilChanged()
 
     fun getRecentlyPlayedFlow(): Flow<List<UnifiedTrack>> =
         historyDao.getRecentlyPlayedTracksFlow()
