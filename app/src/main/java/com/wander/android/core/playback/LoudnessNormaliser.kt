@@ -15,7 +15,8 @@ import kotlinx.coroutines.flow.launchIn
  * Re-decided whenever the playing item, its tracks or the queue change, and when a setting does.
  * The tags come from the selected audio format's metadata — parsed by Media3 during extraction —
  * so this covers anything played as a file with its tags intact: local files, downloads, and
- * Navidrome, whose streams are requested raw.
+ * Navidrome, whose streams are requested raw. Where the stream has none — a server that transcodes
+ * regardless — the values an OpenSubsonic server reported for the song are used instead.
  *
  * While the new item's tracks are not known yet, the previous gain is kept rather than reset: a
  * reset would play the start of a loud track at full volume until its tags arrive.
@@ -50,8 +51,10 @@ internal class LoudnessNormaliser(
         val trackId = player.currentMediaItem?.mediaId
         val metadata = selectedAudioMetadata()
         if (trackId == null || metadata == null) return
+        // The stream's own tags win; what the source reported fills in what they lack.
+        val fromSource = ReplayGainTags.fromSource(player.currentMediaItem?.toUnifiedTrack()?.extraData.orEmpty())
         val decision = LoudnessGain.decide(
-            info = ReplayGainTags.read(metadata.takeIf { it.length() > 0 }),
+            info = ReplayGainTags.read(metadata.takeIf { it.length() > 0 }).orElse(fromSource),
             mode = mode.value,
             preampDb = preampDb.value,
             inAlbumRun = inAlbumRun()

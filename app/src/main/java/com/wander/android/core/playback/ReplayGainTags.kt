@@ -7,9 +7,16 @@ import androidx.media3.extractor.metadata.id3.InternalFrame
 import androidx.media3.extractor.metadata.id3.TextInformationFrame
 import androidx.media3.extractor.metadata.vorbis.VorbisComment
 import androidx.media3.extractor.mp3.Mp3InfoReplayGain
+import com.wander.android.data.model.EXTRA_REPLAYGAIN_ALBUM_DB
+import com.wander.android.data.model.EXTRA_REPLAYGAIN_TRACK_DB
+import com.wander.android.data.model.UnifiedTrack
 
 /** A file's ReplayGain values in dB, relative to ReplayGain 2.0's −18 LUFS. Null when untagged. */
 data class ReplayGainInfo(val trackGainDb: Float?, val albumGainDb: Float?) {
+    /** This info, with each value it lacks taken from [other]. */
+    fun orElse(other: ReplayGainInfo) =
+        ReplayGainInfo(trackGainDb ?: other.trackGainDb, albumGainDb ?: other.albumGainDb)
+
     companion object {
         val NONE = ReplayGainInfo(null, null)
     }
@@ -83,6 +90,15 @@ internal object ReplayGainTags {
             albumGainDb = album ?: r128Album ?: lameAlbum
         )
     }
+
+    /**
+     * What the track's source reported, from [UnifiedTrack.extraData] — the fallback for a stream
+     * whose tags say nothing, such as one the server transcoded. Held to the same bounds as a tag.
+     */
+    fun fromSource(extras: Map<String, String>): ReplayGainInfo = ReplayGainInfo(
+        trackGainDb = extras[EXTRA_REPLAYGAIN_TRACK_DB]?.toFloatOrNull()?.takeIf { it.isFinite() && it in PLAUSIBLE_DB },
+        albumGainDb = extras[EXTRA_REPLAYGAIN_ALBUM_DB]?.toFloatOrNull()?.takeIf { it.isFinite() && it in PLAUSIBLE_DB }
+    )
 
     /** `"-6.50 dB"`, `"+3.2 dB"`, `"-6,5"`: the leading number, as dB. */
     internal fun parseDb(raw: String): Float? {

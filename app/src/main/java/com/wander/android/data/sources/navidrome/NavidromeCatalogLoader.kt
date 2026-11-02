@@ -3,6 +3,8 @@ package com.wander.android.data.sources.navidrome
 import android.util.Log
 import com.wander.android.data.model.ArtistAlbumSection
 import com.wander.android.data.model.ArtistDetails
+import com.wander.android.data.model.EXTRA_REPLAYGAIN_ALBUM_DB
+import com.wander.android.data.model.EXTRA_REPLAYGAIN_TRACK_DB
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
@@ -127,7 +129,11 @@ class NavidromeCatalogLoader @Inject constructor(
         bitRateKbps = bitRate,
         format = suffix ?: contentType,
         isLiked = starred != null,
-        playCount = playCount
+        playCount = playCount,
+        extraData = buildMap {
+            replayGain?.trackGain?.let { put(EXTRA_REPLAYGAIN_TRACK_DB, it.toString()) }
+            replayGain?.albumGain?.let { put(EXTRA_REPLAYGAIN_ALBUM_DB, it.toString()) }
+        }
     )
 
     fun SubsonicAlbum.toUnified() = UnifiedAlbum(

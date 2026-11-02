@@ -133,7 +133,20 @@ data class SubsonicSong(
     val path: String? = null,
     val isVideo: Boolean = false,
     val playCount: Int = 0,
-    val starred: String? = null
+    val starred: String? = null,
+    /** OpenSubsonic; absent on plain Subsonic servers. */
+    val replayGain: SubsonicReplayGain? = null
+)
+
+/**
+ * OpenSubsonic's `replayGain`, in dB. Only the gains are read: playback levels through the player
+ * volume, which can only attenuate, so a peak could never change what is applied — see
+ * `LoudnessGain`.
+ */
+@Serializable
+data class SubsonicReplayGain(
+    val trackGain: Float? = null,
+    val albumGain: Float? = null
 )
 
 @Serializable
