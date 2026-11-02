@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.audio.fingerprint.EmbeddingModelManager
 import com.wander.android.core.audio.fingerprint.FingerprintProgress
+import com.wander.android.core.database.dao.TrackAttemptDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.notification.WorkProgressNotification
 import com.wander.android.core.work.WorkControls
@@ -62,7 +63,9 @@ internal data class FingerprintsUiState(
     val recognitionModel: EmbeddingModelManager.State = EmbeddingModelManager.State.Absent,
     /** Tracks with a neural fingerprint. The same number as [indexed] since the embedder
      *  became the only engine; kept as its own field because the screen names it separately. */
-    val embedded: Int = 0
+    val embedded: Int = 0,
+    /** Tracks the indexer could not read and is backing off from. */
+    val failed: Int = 0
 ) {
     /** The one being decoded right now, if any — the line the screen leads with. */
     val processing: FingerprintRow?
@@ -81,6 +84,7 @@ internal data class FingerprintsUiState(
 @HiltViewModel
 internal class FingerprintsViewModel @Inject constructor(
     trackDao: TrackDao,
+    trackAttemptDao: TrackAttemptDao,
     statuses: FingerprintStatusRepository,
     private val workControls: WorkControls,
     private val progress: FingerprintProgress,
@@ -135,8 +139,9 @@ internal class FingerprintsViewModel @Inject constructor(
         // not each of them.
         statuses.statuses().conflate(),
         workControls.isPaused(WorkProgressNotification.Kind.FINGERPRINT),
-        embeddingModel.state
-    ) { tracks, byId, paused, model ->
+        embeddingModel.state,
+        trackAttemptDao.failedCountFlow()
+    ) { tracks, byId, paused, model, failed ->
         val rows = tracks
             .map { track -> FingerprintRow(track, byId[track.id] ?: FingerprintStatus.MISSING) }
             // Processing first, then missing, then done — most actionable at the top.
@@ -192,7 +197,8 @@ internal class FingerprintsViewModel @Inject constructor(
             // Counted from the rows on screen, not from the whole table: the two used to have
             // different denominators (a global embedding count over a library-only row count),
             // which is how "200 of 200" appeared next to a list where nothing was green.
-            embedded = rows.count { it.status == FingerprintStatus.INDEXED }
+            embedded = rows.count { it.status == FingerprintStatus.INDEXED },
+            failed = failed
         )
     }
         // The grouping and the thousand-row sort are real work and have no business on the main

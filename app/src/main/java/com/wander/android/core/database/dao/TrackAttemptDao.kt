@@ -2,6 +2,7 @@ package com.wander.android.core.database.dao
 
 import androidx.room.Dao
 import androidx.room.Query
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Tracks indexer attempts and timestamps so background sweeps back off from unreachable tracks
@@ -34,6 +35,17 @@ interface TrackAttemptDao {
             "WHERE isLive = 0 AND (isLibrary = 1 OR playCount > 0 OR lastPlayedTimestamp IS NOT NULL)"
     )
     suspend fun indexCandidates(): List<IndexCandidate>
+
+    /**
+     * Measurable tracks the indexer tried and failed on, and is backing off from.
+     *
+     * Shown on the Fingerprints screen, so a count that stops moving has a visible reason.
+     */
+    @Query(
+        "SELECT COUNT(*) FROM tracks WHERE attempts > 0 AND isLive = 0 " +
+            "AND (isLibrary = 1 OR playCount > 0 OR lastPlayedTimestamp IS NOT NULL)"
+    )
+    fun failedCountFlow(): Flow<Int>
 }
 
 /** One measurable track as the batch planner sees it. */

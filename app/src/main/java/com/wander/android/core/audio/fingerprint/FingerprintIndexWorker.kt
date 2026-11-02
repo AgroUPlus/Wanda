@@ -155,7 +155,15 @@ class FingerprintIndexWorker @AssistedInject constructor(
             kind = WorkProgressNotification.Kind.FINGERPRINT,
             title = applicationContext.getString(R.string.notif_measuring_library),
             text = listOfNotNull(
-                if (remaining > total) "$done of $total · $remaining left" else "$done of $total",
+                if (remaining > total) {
+                    applicationContext.resources.getQuantityString(
+                        R.plurals.notif_measuring_progress_remaining, remaining, done, total, remaining
+                    )
+                } else {
+                    applicationContext.resources.getQuantityString(
+                        R.plurals.notif_measuring_progress, total, done, total
+                    )
+                },
                 eta.describe(done, total, System.currentTimeMillis()),
                 title
             ).joinToString(" · "),
