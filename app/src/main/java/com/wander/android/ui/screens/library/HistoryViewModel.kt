@@ -35,6 +35,16 @@ internal class HistoryViewModel @Inject constructor(
         viewModelScope.launch { playbackCoordinator.startRadio(track) }
     }
 
+    /** Takes one play out of the log; it still scrobbles if it has not yet. */
+    fun removeEntry(entry: HistoryTrack) {
+        viewModelScope.launch { musicRepository.removeFromHistory(entry.historyId) }
+    }
+
+    /** Empties the log; plays still waiting to scrobble are still sent. */
+    fun clearAll() {
+        viewModelScope.launch { musicRepository.clearHistory() }
+    }
+
     fun toggleLike(track: UnifiedTrack) {
         viewModelScope.launch { musicRepository.toggleLike(track) }
     }

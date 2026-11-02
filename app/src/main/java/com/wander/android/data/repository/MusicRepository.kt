@@ -180,6 +180,8 @@ class MusicRepository @Inject constructor(
     suspend fun toggleLike(track: UnifiedTrack) = likesAndHistory.toggleLike(track)
     suspend fun unifySplitLikes() = likesAndHistory.unifySplitLikes()
     suspend fun recordPlay(track: UnifiedTrack) = likesAndHistory.recordPlay(track)
+    suspend fun removeFromHistory(historyId: Long) = likesAndHistory.removeFromHistory(historyId)
+    suspend fun clearHistory() = likesAndHistory.clearHistory()
 
     // ── Radio ───────────────────────────────────────────────────────────────────────────────
     suspend fun generateRadio(seed: UnifiedTrack, count: Int = 20) = radioGenerator.generateRadio(seed, count)

@@ -67,6 +67,28 @@ class HistoryDaoRoomTest {
         assertEquals(listOf(ours), dao.getPendingScrobbles(NAVIDROME).map { it.historyId })
     }
 
+    /** Removing a play from History must not cancel a scrobble that has not gone yet. */
+    @Test
+    fun aHiddenPlayStaysInTheOutbox() = runBlocking {
+        val dao = db.historyDao()
+        val id = dao.recordHistory(HistoryEntity(trackId = "navidrome:t1", playedAt = 1_000))
+
+        dao.hidePlay(id)
+        assertEquals(0, dao.hideAllPlays())
+
+        assertEquals(listOf(id), dao.getPendingScrobbles(NAVIDROME).map { it.historyId })
+        assertEquals(1, dao.allPlays().size)
+    }
+
+    @Test
+    fun clearingHidesEveryShowingPlay() = runBlocking {
+        val dao = db.historyDao()
+        repeat(3) { dao.recordHistory(HistoryEntity(trackId = "local:t$it", playedAt = it.toLong())) }
+
+        assertEquals(3, dao.hideAllPlays())
+        assertEquals(0, dao.hideAllPlays())
+    }
+
     @Test
     fun anEmptyOutboxIsEmpty() = runBlocking {
         assertTrue(db.historyDao().getPendingScrobbles(NAVIDROME).isEmpty())

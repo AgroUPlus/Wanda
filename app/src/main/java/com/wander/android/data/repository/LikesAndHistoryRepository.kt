@@ -88,6 +88,21 @@ internal class LikesAndHistoryRepository(
         scrobbleForwardScheduler.forwardSoon()
     }
 
+    /**
+     * Takes a play out of History. Hidden, not deleted: the row may still be waiting to reach a
+     * scrobbling service, and its flags are what send it — see `HistoryEntity.hidden`.
+     */
+    suspend fun removeFromHistory(historyId: Long) = withContext(Dispatchers.IO) {
+        historyDao.hidePlay(historyId)
+        Unit
+    }
+
+    /** Clears History the same way: every play hidden, every pending scrobble still sent. */
+    suspend fun clearHistory() = withContext(Dispatchers.IO) {
+        historyDao.hideAllPlays()
+        Unit
+    }
+
     private suspend fun isLiked(track: UnifiedTrack): Boolean =
         trackDao.getTrackById(track.id)?.isLiked ?: track.isLiked
 }

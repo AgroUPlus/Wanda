@@ -9,7 +9,7 @@ import com.wander.android.core.database.entity.TrackEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface HistoryDao {
+interface HistoryDao : HistoryEditQueries {
 
     /**
      * What was played, most recent first, as tracks rather than as ids.
@@ -24,6 +24,7 @@ interface HistoryDao {
         """
         SELECT t.* FROM history h
         INNER JOIN tracks t ON t.id = h.trackId
+        WHERE h.hidden = 0
         GROUP BY h.trackId
         ORDER BY MAX(h.playedAt) DESC
         LIMIT :limit
@@ -36,6 +37,7 @@ interface HistoryDao {
         """
         SELECT t.* FROM history h
         INNER JOIN tracks t ON t.id = h.trackId
+        WHERE h.hidden = 0
         GROUP BY h.trackId
         ORDER BY MAX(h.playedAt) DESC
         LIMIT :limit
@@ -56,6 +58,7 @@ interface HistoryDao {
         SELECT h.historyId AS historyId, h.playedAt AS playedAt, t.*
         FROM history h
         INNER JOIN tracks t ON t.id = h.trackId
+        WHERE h.hidden = 0
         ORDER BY h.playedAt DESC
         """
     )
