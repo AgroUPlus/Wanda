@@ -104,8 +104,15 @@ class NavidromeSource @Inject constructor(
         )
     }
 
+    /**
+     * A server that answers "no" — no lyrics for this song, or no such endpoint on an older
+     * server — has answered: that is no lyrics, not an outage. Only a transport failure stays a
+     * failure, so the lyrics panel can say it could not ask.
+     */
     override suspend fun getLyrics(trackId: String): Result<LyricsData?> =
-        apiClient.getLyricsBySongId(trackId.removePrefix(PREFIX)).map { list ->
+        apiClient.getLyricsBySongId(trackId.removePrefix(PREFIX)).recoverCatching { error ->
+            if (error is SubsonicServerException) null else throw error
+        }.map { list ->
             val structured = list?.structuredLyrics?.firstOrNull() ?: return@map null
             val lines = structured.line.orEmpty()
             if (lines.isEmpty()) return@map null

@@ -44,7 +44,7 @@ class SubsonicApiClient @Inject constructor(
             }.body()
             val body = root.response
             if (body.status != "ok") {
-                throw IOException(body.error?.message ?: "Server rejected the request")
+                throw SubsonicServerException(body.error?.code, body.error?.message ?: "Server rejected the request")
             }
             body
         }
