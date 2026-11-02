@@ -32,11 +32,12 @@ import com.wander.android.data.repository.LyricsRepository
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class SearchUiState(
-    val isSearching: Boolean = false,
-    val results: List<UnifiedTrack> = emptyList(),
-    val lyricMatches: List<LyricMatch> = emptyList(),
-    val hasQuery: Boolean = false
+/** One search to run: what was typed, where to look, for what, and which attempt this is. */
+private data class SearchRequest(
+    val query: String,
+    val sources: Set<SourceType>,
+    val kind: SearchKind,
+    val attempt: Int
 )
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -102,6 +103,11 @@ class SearchViewModel @Inject constructor(
 
     fun selectKind(kind: SearchKind) { _kind.value = kind }
 
+    /** Bumped by [retry], so the same query, sources and kind are asked again. */
+    private val attempt = MutableStateFlow(0)
+
+    fun retry() { attempt.update { it + 1 } }
+
     // Re-runs when the sources change as well as the query: toggling a backend on has to go and
     // ask it, not just unhide results that were never fetched.
     private val searchResults: StateFlow<SearchUiState> = combine(
@@ -111,9 +117,10 @@ class SearchViewModel @Inject constructor(
         // changed what "everything" means without this flow noticing — the results stayed as they
         // were until the next keystroke.
         selectedSources,
-        _kind
-    ) { query, sources, kind -> Triple(query, sources, kind) }
-        .debounce { (query, _, _) -> if (query.isBlank()) 0L else DEBOUNCE_MS }
+        _kind,
+        attempt
+    ) { text, sources, kind, tries -> SearchRequest(text, sources, kind, tries) }
+        .debounce { request -> if (request.query.isBlank()) 0L else DEBOUNCE_MS }
         .flatMapLatest { (query, sources, kind) ->
             flow {
                 if (query.isBlank()) {
@@ -121,7 +128,7 @@ class SearchViewModel @Inject constructor(
                     return@flow
                 }
                 emit(SearchUiState(isSearching = true, hasQuery = true))
-                val tracks = musicRepository.searchAllSources(query, sources, kind)
+                val outcome = musicRepository.searchWithStatus(query, sources, kind)
                 val lyricMatches = if (kind == SearchKind.TRACKS) {
                     resolveCatalogue(lyricsRepository.searchByLyrics(query))
                 } else {
@@ -130,9 +137,11 @@ class SearchViewModel @Inject constructor(
                 emit(
                     SearchUiState(
                         isSearching = false,
-                        results = tracks,
+                        results = outcome.tracks,
                         lyricMatches = lyricMatches,
-                        hasQuery = true
+                        hasQuery = true,
+                        unansweredSources = outcome.failedSources,
+                        allSourcesFailed = outcome.allFailed
                     )
                 )
             }

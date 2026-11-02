@@ -16,4 +16,11 @@
         <item quantity="one">Show %1$d more lyric match</item>
         <item quantity="other">Show %1$d more lyric matches</item>
     </plurals>
+
+    <!-- Every source the search asked failed to answer, and nothing on the device matched. -->
+    <string name="search_failed_title">Search didn\'t go through</string>
+    <string name="search_failed_message">None of your sources answered. Check your connection and try again.</string>
+    <string name="search_retry">Try again</string>
+    <!-- Some sources answered and some did not. %1$s is the list of source names that did not. -->
+    <string name="search_sources_unanswered">Some sources didn\'t respond: %1$s</string>
 </resources>

@@ -172,6 +172,8 @@ class MusicRepository @Inject constructor(
     // ── Search & Discovery ──────────────────────────────────────────────────────────────────
     suspend fun searchAllSources(query: String, onlySources: Set<SourceType>? = null, kind: SearchKind = SearchKind.TRACKS) =
         searchRepo.searchAllSources(query, onlySources, kind)
+    suspend fun searchWithStatus(query: String, onlySources: Set<SourceType>?, kind: SearchKind): SearchOutcome =
+        searchRepo.searchWithStatus(query, onlySources, kind)
     suspend fun searchAlbums(query: String) = searchRepo.searchAlbums(query)
     suspend fun resolveTrack(id: String, title: String, artist: String) = searchRepo.resolveTrack(id, title, artist)
     suspend fun getRecentTracks(limit: Int = 30) = searchRepo.getRecentTracks(limit)

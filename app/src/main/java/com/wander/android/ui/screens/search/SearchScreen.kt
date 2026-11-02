@@ -1,21 +1,17 @@
 package com.wander.android.ui.screens.search
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,7 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -109,6 +104,13 @@ fun SearchScreen(
             )
         }
 
+        if (!state.isSearching && !state.isFailure && state.unansweredSources.isNotEmpty()) {
+            UnansweredSourcesNote(
+                sources = state.unansweredSources,
+                modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 8.dp)
+            )
+        }
+
         // fillMaxWidth is load-bearing: without it the Box wraps its content, so it was only as
         // wide as the spinner and `Center` had nothing to centre within — the indicator sat at
         // the Column's start edge.
@@ -132,7 +134,16 @@ fun SearchScreen(
                     modifier = centred
                 )
 
-                state.results.isEmpty() && state.lyricMatches.isEmpty() -> EmptyState(
+                state.isFailure -> EmptyState(
+                    title = stringResource(R.string.search_failed_title),
+                    message = stringResource(R.string.search_failed_message),
+                    icon = Icons.Rounded.CloudOff,
+                    actionLabel = stringResource(R.string.search_retry),
+                    onAction = viewModel::retry,
+                    modifier = centred
+                )
+
+                state.isEmpty -> EmptyState(
                     title = stringResource(R.string.search_no_matches),
                     message = stringResource(R.string.search_nothing_found_connected_sources, query),
                     modifier = centred
@@ -142,90 +153,16 @@ fun SearchScreen(
                     contentPadding = contentPadding.listInset(),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    if (state.lyricMatches.isNotEmpty()) {
-                        val displayedLyrics = if (isLyricsExpanded) state.lyricMatches else state.lyricMatches.take(5)
-                        item(key = "header_lyrics") {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.search_matched_lyrics),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                if (state.lyricMatches.size > 5) {
-                                    TextButton(
-                                        onClick = { isLyricsExpanded = !isLyricsExpanded },
-                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                                    ) {
-                                        Text(
-                                            text = if (isLyricsExpanded) {
-                                                stringResource(R.string.search_lyrics_show_less)
-                                            } else {
-                                                pluralStringResource(
-                                                    R.plurals.search_lyrics_see_all,
-                                                    state.lyricMatches.size,
-                                                    state.lyricMatches.size
-                                                )
-                                            },
-                                            style = MaterialTheme.typography.labelMedium
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        itemsIndexed(
-                            items = displayedLyrics,
-                            key = { _, match -> "lyric_${match.track.id}" },
-                            contentType = { _, _ -> "lyric_match" }
-                        ) { index, match ->
-                            val entranceScale = rememberShelfEntranceScale(index)
-                            com.wander.android.ui.components.LyricMatchRow(
-                                match = match,
-                                searchQuery = query,
-                                onPlay = { viewModel.playTrackAtTimestamp(match.track, match.timestampMs) },
-                                onLongPress = { actionsFor = match.track },
-                                modifier = Modifier.animateItem().scale(entranceScale)
-                            )
-                        }
-                        if (state.lyricMatches.size > 5) {
-                            item(key = "footer_lyrics_toggle") {
-                                TextButton(
-                                    onClick = { isLyricsExpanded = !isLyricsExpanded },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp)
-                                        .animateItem()
-                                ) {
-                                    Text(
-                                        text = if (isLyricsExpanded) {
-                                            stringResource(R.string.search_lyrics_show_fewer)
-                                        } else {
-                                            val hidden = state.lyricMatches.size - 5
-                                            pluralStringResource(R.plurals.search_lyrics_show_more, hidden, hidden)
-                                        },
-                                        style = MaterialTheme.typography.labelMedium
-                                    )
-                                }
-                            }
-                        }
-                        if (state.results.isNotEmpty()) {
-                            item(key = "header_tracks") {
-                                Text(
-                                    text = stringResource(R.string.search_songs),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier
-                                        .padding(horizontal = 16.dp)
-                                        .padding(top = 16.dp, bottom = 8.dp)
-                                        .animateItem()
-                                )
-                            }
-                        }
+                    lyricMatchesSection(
+                        matches = state.lyricMatches,
+                        query = query,
+                        expanded = isLyricsExpanded,
+                        onToggleExpanded = { isLyricsExpanded = !isLyricsExpanded },
+                        onPlay = { match -> viewModel.playTrackAtTimestamp(match.track, match.timestampMs) },
+                        onLongPress = { track -> actionsFor = track }
+                    )
+                    if (state.lyricMatches.isNotEmpty() && state.results.isNotEmpty()) {
+                        searchSectionHeader(key = "header_tracks", title = R.string.search_songs)
                     }
 
                     itemsIndexed(

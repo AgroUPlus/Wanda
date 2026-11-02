@@ -1,9 +1,11 @@
 package com.wander.android.data.repository
 
+import android.util.Log
 import com.wander.android.core.database.dao.AlbumDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.AlbumEntity
 import com.wander.android.core.database.entity.TrackEntity
+import com.wander.android.core.network.loggableMessage
 import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
@@ -34,21 +36,8 @@ internal class SearchAndDiscoveryRepository(
     ): List<UnifiedTrack> = coroutineScope {
         if (query.isBlank()) return@coroutineScope emptyList()
 
-        val allowed = searchableSources()
-            .filter { onlySources == null || it.sourceType in onlySources }
-        val allowedTypes = allowed.map(IMusicSource::sourceType).toSet()
-
-        val cached = when (kind) {
-            // Podcast episodes are not songs, and a downloaded one must not slip into this list
-            // through the `isDownloaded` allowance below.
-            SearchKind.TRACKS -> trackDao.searchTracks(query)
-                .map(TrackEntity::toUnifiedTrack)
-                .filter { it.source != SourceType.PODCAST && (it.source in allowedTypes || it.isDownloaded) }
-            // Subscribed episodes live only in Room and have no backend to ask, so this is the
-            // whole search for them.
-            SearchKind.EPISODES -> trackDao.searchSubscribedEpisodes(query).map(TrackEntity::toUnifiedTrack)
-            else -> emptyList()
-        }
+        val allowed = allowedSources(onlySources)
+        val cached = cachedTracks(query, kind, allowed.map(IMusicSource::sourceType).toSet())
         val remote = allowed
             .filter { it.capabilities.search }
             .map { source -> async { source.search(query, kind).getOrDefault(emptyList()) } }
@@ -56,6 +45,63 @@ internal class SearchAndDiscoveryRepository(
 
         persist(remote, false)
         TrackDeduplicator.deduplicate((cached + remote).distinctBy { it.id })
+    }
+
+    /**
+     * [searchAllSources] for the search screen, which has to tell "nothing matched" from "nobody
+     * answered". The same backends are asked the same way; the difference is that a failure is
+     * reported in the [SearchOutcome] instead of being folded into an empty list.
+     *
+     * A separate function rather than a change to [searchAllSources]: its other callers — track
+     * resolution, link and import matching, the shelves — want a best-effort list and have no
+     * use for which backend was down.
+     */
+    suspend fun searchWithStatus(
+        query: String,
+        onlySources: Set<SourceType>?,
+        kind: SearchKind
+    ): SearchOutcome = coroutineScope {
+        if (query.isBlank()) return@coroutineScope SearchOutcome()
+
+        val allowed = allowedSources(onlySources)
+        val cached = cachedTracks(query, kind, allowed.map(IMusicSource::sourceType).toSet())
+        val answers = allowed
+            .filter { it.capabilities.search }
+            .map { source -> source.sourceType to async { source.search(query, kind) } }
+            .map { (type, answer) -> type to answer.await() }
+
+        // The type and a redacted message only: the exception text can carry the request URL,
+        // and with it the query and the backend's credentials.
+        answers.forEach { (type, answer) ->
+            answer.onFailure { Log.w(TAG, "Search on $type failed: ${it.loggableMessage()}") }
+        }
+        val remote = answers.flatMap { (_, answer) -> answer.getOrNull().orEmpty() }
+        persist(remote, false)
+
+        SearchOutcome(
+            tracks = TrackDeduplicator.deduplicate((cached + remote).distinctBy { it.id }),
+            askedSources = answers.map { it.first },
+            failedSources = answers.filter { it.second.isFailure }.map { it.first }
+        )
+    }
+
+    private fun allowedSources(onlySources: Set<SourceType>?): List<IMusicSource> =
+        searchableSources().filter { onlySources == null || it.sourceType in onlySources }
+
+    private suspend fun cachedTracks(
+        query: String,
+        kind: SearchKind,
+        allowedTypes: Set<SourceType>
+    ): List<UnifiedTrack> = when (kind) {
+        // Podcast episodes are not songs, and a downloaded one must not slip into this list
+        // through the `isDownloaded` allowance below.
+        SearchKind.TRACKS -> trackDao.searchTracks(query)
+            .map(TrackEntity::toUnifiedTrack)
+            .filter { it.source != SourceType.PODCAST && (it.source in allowedTypes || it.isDownloaded) }
+        // Subscribed episodes live only in Room and have no backend to ask, so this is the
+        // whole search for them.
+        SearchKind.EPISODES -> trackDao.searchSubscribedEpisodes(query).map(TrackEntity::toUnifiedTrack)
+        else -> emptyList()
     }
 
     suspend fun searchAlbums(query: String): List<UnifiedAlbum> = withContext(Dispatchers.IO) {
@@ -125,4 +171,8 @@ internal class SearchAndDiscoveryRepository(
 
     private fun String.normalisedForMatch(): String =
         lowercase().filter { it.isLetterOrDigit() || it.isWhitespace() }.trim()
+
+    private companion object {
+        const val TAG = "SearchAndDiscovery"
+    }
 }
