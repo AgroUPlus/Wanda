@@ -1,6 +1,5 @@
 package com.wander.android.core.playback.browse
 
-import com.wander.android.core.database.dao.PlaylistDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.dao.getTracksByIdsChunked
 import com.wander.android.core.database.entity.TrackEntity
@@ -25,7 +24,7 @@ import javax.inject.Singleton
 @Singleton
 internal class BrowseTracks @Inject constructor(
     private val trackDao: TrackDao,
-    private val playlistDao: PlaylistDao,
+    private val playlists: BrowsePlaylists,
     private val libraryBrowse: LibraryBrowseRepository,
     private val smartMixes: SmartMixRepository,
     private val episodeProgress: EpisodeProgressRepository
@@ -56,15 +55,11 @@ internal class BrowseTracks @Inject constructor(
         if (track.isEpisode) episodeProgress.resumePosition(track.id) else null
 
     /**
-     * A Wanda playlist's tracks in its own order.
-     *
-     * Only Wanda's own playlists are in Room. A Navidrome or YouTube Music playlist is fetched
-     * from its server each time it is opened, so it is not offered to a car at all rather than
-     * offered and then failing in a tunnel.
+     * A playlist's tracks in its own order: a Wanda playlist's, or a backend playlist's as Room
+     * last stored them when it was opened in the app; see [BrowsePlaylists].
      */
     private suspend fun playlistTracks(playlistId: String): List<UnifiedTrack>? {
-        val playlist = playlistDao.getPlaylistById(playlistId) ?: return null
-        val ids = playlist.trackIds.split(',').filter { it.isNotBlank() }
+        val ids = playlists.byId(playlistId)?.trackIds ?: return null
         val byId = trackDao.getTracksByIdsChunked(ids).associateBy(TrackEntity::id)
         return ids.mapNotNull { byId[it]?.toUnifiedTrack() }
     }

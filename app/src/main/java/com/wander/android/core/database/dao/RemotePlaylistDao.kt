@@ -15,6 +15,9 @@ interface RemotePlaylistDao {
     @Query("SELECT * FROM remote_playlists ORDER BY position ASC")
     fun observeAll(): Flow<List<RemotePlaylistEntity>>
 
+    @Query("SELECT * FROM remote_playlists ORDER BY position ASC")
+    suspend fun getAll(): List<RemotePlaylistEntity>
+
     @Query("SELECT * FROM remote_playlists WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): RemotePlaylistEntity?
 

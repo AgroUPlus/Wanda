@@ -6,7 +6,6 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.wander.android.R
 import com.wander.android.core.database.dao.AlbumDao
-import com.wander.android.core.database.dao.PlaylistDao
 import com.wander.android.data.model.LibrarySort
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.repository.LibraryBrowseRepository
@@ -21,7 +20,7 @@ import javax.inject.Singleton
  *
  * - **Home** — Recently played, Most played, and the smart mixes Home shows.
  * - **Library** — Liked, Albums, Downloads.
- * - **Playlists** — Wanda's own playlists.
+ * - **Playlists** — Wanda's own playlists, then connected backends' ones; see [BrowsePlaylists].
  * - **Podcasts** — episodes started and not finished.
  *
  * Four at the root because a car draws the root's children as tabs, and Android Auto shows no
@@ -36,7 +35,7 @@ internal class BrowseTree @Inject constructor(
     @ApplicationContext private val context: Context,
     private val tracks: BrowseTracks,
     private val libraryBrowse: LibraryBrowseRepository,
-    private val playlistDao: PlaylistDao,
+    private val playlists: BrowsePlaylists,
     private val albumDao: AlbumDao,
     private val smartMixes: SmartMixRepository
 ) {
@@ -57,7 +56,7 @@ internal class BrowseTree @Inject constructor(
                 listOf(fixed(BrowseId.Recent), fixed(BrowseId.MostPlayed)) + mixFolders()
             )
             BrowseId.Library -> window.of(listOf(BrowseId.Liked, BrowseId.Albums, BrowseId.Downloads).map { fixed(it) })
-            BrowseId.Playlists -> window.of(playlistDao.getAllPlaylists()).map {
+            BrowseId.Playlists -> window.of(playlists.all()).map {
                 folder(BrowseId.Playlist(it.id), it.name, PLAYLIST, artworkUrl = it.coverArtUrl)
             }
             BrowseId.Albums -> window.of(libraryBrowse.albums(LibrarySort.RECENTLY_PLAYED, emptySet()).first())
@@ -75,7 +74,7 @@ internal class BrowseTree @Inject constructor(
         }
         BrowseId.Root -> root
         is BrowseId.Mix -> mixFolders().firstOrNull { it.mediaId == id.encode() }
-        is BrowseId.Playlist -> playlistDao.getPlaylistById(id.playlistId)?.let {
+        is BrowseId.Playlist -> playlists.byId(id.playlistId)?.let {
             folder(id, it.name, MediaMetadata.MEDIA_TYPE_PLAYLIST, artworkUrl = it.coverArtUrl)
         }
         is BrowseId.Album -> albumDao.getAlbumById(id.albumId)?.toUnifiedAlbum()?.let(::albumFolder)
