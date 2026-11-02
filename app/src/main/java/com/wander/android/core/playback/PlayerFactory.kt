@@ -92,8 +92,8 @@ class PlayerFactory @Inject constructor(
         /**
          * Audio offload lets the DSP play the stream while the CPU sleeps — a large battery win —
          * but decoded PCM never reaches the processor chain, so anything that must process audio
-         * needs it off. [PlayerSpeedAndOffloadController] turns it off for a speed or pitch other
-         * than 1×, and for livestreams.
+         * needs it off. [offloadAllowed] is the one rule for when: never at a speed or pitch other
+         * than 1×, under silence skipping, or for a livestream.
          */
         fun withOffload(
             parameters: androidx.media3.common.TrackSelectionParameters,

@@ -224,8 +224,12 @@ class PlayerConnection @Inject constructor(
     }
 
     fun setSpeedAndPitch(speed: Float, pitch: Float) =
-        speedController.setSpeedAndPitch(_controller.value, speed, pitch, state.value.currentTrack?.isLive == true)
+        speedController.setSpeedAndPitch(_controller.value, speed, pitch, isLiveNow(), skipsSilenceNow())
 
-    fun setOffloadEnabled(enabled: Boolean) =
-        speedController.setOffloadEnabled(_controller.value, enabled, state.value.currentTrack?.isLive == true)
+    /** Re-decides audio offload for the current track; see [offloadAllowed] for the rule. */
+    fun refreshOffload() = speedController.applyOffload(_controller.value, isLiveNow(), skipsSilenceNow())
+
+    private fun isLiveNow() = state.value.currentTrack?.isLive == true
+
+    private fun skipsSilenceNow() = skipsSilence(secureStorage.isSkipSilenceEnabled.value, state.value.currentTrack)
 }

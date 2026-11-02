@@ -13,6 +13,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
@@ -145,10 +146,12 @@ class PlaybackCoordinator @Inject internal constructor(
             .onEach { applyOffload() }
             .launchIn(scope)
 
-        // Livestreams veto audio offload — see `applyOffload`.
+        // Livestreams and silence-skipped episodes veto audio offload — see `offloadAllowed`. Both
+        // turn on what is playing, and the second also on the setting.
         connection.state
-            .map { it.currentTrack?.isLive == true }
+            .map { (it.currentTrack?.isLive == true) to (it.currentTrack?.isEpisode == true) }
             .distinctUntilChanged()
+            .combine(secureStorage.isSkipSilenceEnabled) { kind, skip -> kind to skip }
             .onEach { applyOffload() }
             .launchIn(scope)
     }
@@ -196,15 +199,12 @@ class PlaybackCoordinator @Inject internal constructor(
     }
 
     /**
-     * Decides whether offload is on.
-     *
-     * A livestream wants offload off because offload hands a fixed buffer to the DSP and
-     * expects a track that ends, and an HLS live window is not one.
+     * Has the connection re-decide offload. The decision itself is `offloadAllowed`, which also
+     * weighs the speed and pitch: deciding it here from the livestream flag alone switched offload
+     * back on under a track playing at 1.5x.
      */
     private fun applyOffload() {
-        val live = connection.state.value.currentTrack?.isLive == true
-        val offload = !live
-        scope.launch(Dispatchers.Main) { connection.setOffloadEnabled(offload) }
+        scope.launch(Dispatchers.Main) { connection.refreshOffload() }
     }
 
     private data class RadioTrigger(val enabled: Boolean, val index: Int, val size: Int)
