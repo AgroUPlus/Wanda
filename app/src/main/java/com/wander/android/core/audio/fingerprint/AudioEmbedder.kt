@@ -71,16 +71,20 @@ class AudioEmbedder @Inject constructor(
     fun embed(samples: FloatArray): Array<FloatArray> {
         if (samples.isEmpty()) return emptyArray()
         val started = SystemClock.elapsedRealtime()
-        val windows = segment(samples)
+        val (pcm, count) = segment(samples)
         val itp = interpreter()
 
         val input = ByteBuffer.allocateDirect(SEGMENT_SAMPLES * 4).order(ByteOrder.nativeOrder())
+        // A float view of the same direct buffer: each window is one bulk copy out of the track,
+        // rather than a `FloatArray` per window (the whole track again, twice over at a 50%
+        // overlap) followed by eight thousand `putFloat` calls.
+        val window = input.asFloatBuffer()
         val output = Array(1) { FloatArray(EMBED_DIM) }
-        val result = Array(windows.size) { FloatArray(EMBED_DIM) }
+        val result = Array(count) { FloatArray(EMBED_DIM) }
 
-        for ((i, window) in windows.withIndex()) {
-            input.rewind()
-            for (v in window) input.putFloat(v)
+        for (i in 0 until count) {
+            window.clear()
+            window.put(pcm, i * HOP_SAMPLES, SEGMENT_SAMPLES)
             input.rewind()
             itp.run(input, output)
             // Re-normalise: fp16 round-off can leave the vector fractionally off the unit sphere,
@@ -95,8 +99,8 @@ class AudioEmbedder @Inject constructor(
         val elapsed = SystemClock.elapsedRealtime() - started
         Log.i(
             TAG,
-            "embedded ${windows.size} segments (${samples.size / SEGMENT_SAMPLES}s) in ${elapsed}ms " +
-                "(${elapsed / windows.size.coerceAtLeast(1)}ms/segment)"
+            "embedded $count segments (${samples.size / SEGMENT_SAMPLES}s) in ${elapsed}ms " +
+                "(${elapsed / count.coerceAtLeast(1)}ms/segment)"
         )
         return result
     }
@@ -113,7 +117,11 @@ class AudioEmbedder @Inject constructor(
      */
     val modelState: StateFlow<EmbeddingModelManager.State> get() = modelManager.state
 
-    private fun segment(samples: FloatArray): Array<FloatArray> {
+    /**
+     * [samples] zero-padded so every window fits, and how many windows there are. Window `i` is
+     * `[i * HOP_SAMPLES, i * HOP_SAMPLES + SEGMENT_SAMPLES)` of the returned array.
+     */
+    private fun segment(samples: FloatArray): Pair<FloatArray, Int> {
         var pcm = samples
         if (pcm.size < SEGMENT_SAMPLES) pcm = pcm.copyOf(SEGMENT_SAMPLES)
         var n = 1 + (pcm.size - SEGMENT_SAMPLES) / HOP_SAMPLES
@@ -122,7 +130,7 @@ class AudioEmbedder @Inject constructor(
             pcm = pcm.copyOf(pcm.size + (HOP_SAMPLES - remainder))
             n += 1
         }
-        return Array(n) { i -> pcm.copyOfRange(i * HOP_SAMPLES, i * HOP_SAMPLES + SEGMENT_SAMPLES) }
+        return pcm to n
     }
 
     companion object {
