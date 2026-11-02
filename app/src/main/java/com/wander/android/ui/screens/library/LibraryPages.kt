@@ -40,6 +40,7 @@ internal fun LibraryPage(
             val albums by browse.albums.collectAsStateWithLifecycle()
             val recentAlbums by browse.recentAlbums.collectAsStateWithLifecycle()
             val albumsError by viewModel.albumsError.collectAsStateWithLifecycle()
+            val sorts by browse.sorts.collectAsStateWithLifecycle()
             AlbumGrid(
                 albums = albums,
                 recentAlbums = recentAlbums,
@@ -47,7 +48,8 @@ internal fun LibraryPage(
                 onOpenAlbum = actions.onOpenAlbum,
                 onAlbumLongPress = actions.onAlbumLongPress,
                 loadError = albumsError,
-                onRetry = viewModel::refresh
+                onRetry = viewModel::refresh,
+                letterFor = albumLetter(sorts[tab])
             )
         }
         LibraryTab.PLAYLISTS -> SortablePage(tab, browse) {

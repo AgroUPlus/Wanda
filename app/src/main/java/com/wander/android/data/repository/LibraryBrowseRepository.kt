@@ -29,8 +29,17 @@ import kotlinx.coroutines.withContext
 @Singleton
 class LibraryBrowseRepository @Inject constructor(private val dao: LibraryBrowseDao) {
 
+    /**
+     * Placeholders on, so the list is its whole length from the first page and a fast-scroll jump
+     * lands on a real index; [PagingConfig.jumpThreshold] makes a far jump reload around where it
+     * landed instead of paging through every row in between.
+     */
     fun pagedTracks(sort: LibrarySort, sources: Set<SourceType>): Flow<PagingData<UnifiedTrack>> = Pager(
-        config = PagingConfig(pageSize = PAGE_SIZE, enablePlaceholders = false),
+        config = PagingConfig(
+            pageSize = PAGE_SIZE,
+            enablePlaceholders = true,
+            jumpThreshold = PAGE_SIZE * JUMP_PAGES
+        ),
         pagingSourceFactory = { dao.pagedLibraryTracks(sort.name, sources.orEvery()) }
     ).flow.map { page -> page.map(TrackEntity::toUnifiedTrack) }
 
@@ -61,5 +70,6 @@ class LibraryBrowseRepository @Inject constructor(private val dao: LibraryBrowse
 
     private companion object {
         const val PAGE_SIZE = 60
+        const val JUMP_PAGES = 3
     }
 }
