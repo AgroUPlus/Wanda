@@ -169,7 +169,8 @@ internal fun QueueDrawer(
                         playPosition = state.playPosition,
                         queueSize = state.queue.size,
                         orderLocked = state.orderLocked,
-                        onClearQueue = playerConnection::clearQueue
+                        onClearQueue = playerConnection::clearQueue,
+                        queue = state.queue
                     )
 
                     QueueUpNext(
