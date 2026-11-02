@@ -116,10 +116,10 @@ internal open class LibrarySessionCallback(
         if (access.mayBrowse(browser)) scope.sessionFuture { block() } else Futures.immediateFuture(denied())
 }
 
-private fun <T> denied(): LibraryResult<T> = LibraryResult.ofError(SessionError.ERROR_PERMISSION_DENIED)
+private fun <T> denied(): LibraryResult<T> = LibraryResult.ofError<T>(SessionError.ERROR_PERMISSION_DENIED)
 
 /** An id this tree never handed out, one that no longer exists, or a page that cannot. */
-private fun <T> badValue(): LibraryResult<T> = LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+private fun <T> badValue(): LibraryResult<T> = LibraryResult.ofError<T>(SessionError.ERROR_BAD_VALUE)
 
 /** Tells a car it may offer its search box and voice search for this app. */
 private fun rootParams(): LibraryParams = LibraryParams.Builder()
