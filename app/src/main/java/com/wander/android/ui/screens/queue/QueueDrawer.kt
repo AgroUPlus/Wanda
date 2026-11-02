@@ -53,10 +53,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.playPosition
-import com.wander.android.data.model.UnifiedTrack
-import com.wander.android.data.repository.artistIdFor
 import com.wander.android.ui.components.AddToPlaylistHost
-import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.rememberHaptics
 import com.wander.android.ui.components.scrollingTitle
 import kotlinx.coroutines.launch
@@ -84,7 +81,7 @@ internal fun QueueDrawer(
     queueViewModel: QueueViewModel = hiltViewModel()
 ) {
     val state by playerConnection.state.collectAsStateWithLifecycle()
-    var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
+    var actionsFor by remember { mutableStateOf<QueueEntry?>(null) }
     val addToPlaylist = AddToPlaylistHost()
     val haptics = rememberHaptics()
     val scope = rememberCoroutineScope()
@@ -118,38 +115,14 @@ internal fun QueueDrawer(
     val currentSpec by rememberUpdatedState(spec)
     val nestedScroll = remember(drawer) { drawerNestedScroll(drawer) { currentSpec } }
 
-    actionsFor?.let { track ->
-        TrackActionsSheet(
-            track = track,
-            isLiked = track.isLiked,
-            onPlayNext = {
-                queueViewModel.playNext(track)
-                actionsFor = null
-            },
-            onAddToQueue = {
-                queueViewModel.addToQueue(track)
-                actionsFor = null
-            },
-            onStartRadio = {
-                queueViewModel.startRadio(track)
-                actionsFor = null
-            },
-            onToggleLike = { queueViewModel.toggleLike(track) },
-            onRemove = {
-                val idx = state.queue.indexOfFirst { it.id == track.id }
-                if (idx >= 0) queueViewModel.removeFromQueue(idx)
-                actionsFor = null
-            },
-            onOpenArtist = track.artist
-                .takeIf { it.isNotBlank() }
-                ?.let { onOpenArtist?.let { open -> { name -> open(name, track.artistIdFor(name)) } } },
-            onDismiss = { actionsFor = null },
-            onShare = if (queueViewModel.canShare(track)) {
-                { queueViewModel.share(track) }
-            } else null,
-            onAddToPlaylist = if (addToPlaylist.canAdd(track)) {
-                { addToPlaylist.open(track) }
-            } else null
+    actionsFor?.let { entry ->
+        QueueTrackActions(
+            entry = entry,
+            queue = state.queue,
+            queueViewModel = queueViewModel,
+            addToPlaylist = addToPlaylist,
+            onOpenArtist = onOpenArtist,
+            onDismiss = { actionsFor = null }
         )
     }
 

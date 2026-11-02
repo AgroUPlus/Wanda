@@ -28,10 +28,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.core.playback.PlayerConnection
-import com.wander.android.data.model.UnifiedTrack
-import com.wander.android.data.repository.artistIdFor
 import com.wander.android.ui.components.AddToPlaylistHost
-import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.screens.social.JamViewModel
 
 @Composable
@@ -46,41 +43,17 @@ internal fun QueueScreen(
     val state by playerConnection.state.collectAsStateWithLifecycle()
     val jamState by jamViewModel.state.collectAsStateWithLifecycle()
     val jam = jamState.jam
-    var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
+    var actionsFor by remember { mutableStateOf<QueueEntry?>(null) }
     val addToPlaylist = AddToPlaylistHost()
 
-    actionsFor?.let { track ->
-        TrackActionsSheet(
-            track = track,
-            isLiked = track.isLiked,
-            onPlayNext = {
-                queueViewModel.playNext(track)
-                actionsFor = null
-            },
-            onAddToQueue = {
-                queueViewModel.addToQueue(track)
-                actionsFor = null
-            },
-            onStartRadio = {
-                queueViewModel.startRadio(track)
-                actionsFor = null
-            },
-            onToggleLike = { queueViewModel.toggleLike(track) },
-            onRemove = {
-                val idx = state.queue.indexOfFirst { it.id == track.id }
-                if (idx >= 0) queueViewModel.removeFromQueue(idx)
-                actionsFor = null
-            },
-            onOpenArtist = track.artist
-                .takeIf { it.isNotBlank() }
-                ?.let { onOpenArtist?.let { open -> { name -> open(name, track.artistIdFor(name)) } } },
-            onDismiss = { actionsFor = null },
-            onShare = if (queueViewModel.canShare(track)) {
-                { queueViewModel.share(track) }
-            } else null,
-            onAddToPlaylist = if (addToPlaylist.canAdd(track)) {
-                { addToPlaylist.open(track) }
-            } else null
+    actionsFor?.let { entry ->
+        QueueTrackActions(
+            entry = entry,
+            queue = state.queue,
+            queueViewModel = queueViewModel,
+            addToPlaylist = addToPlaylist,
+            onOpenArtist = onOpenArtist,
+            onDismiss = { actionsFor = null }
         )
     }
 

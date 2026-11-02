@@ -17,7 +17,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
-import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.GroupedItemGap
 import com.wander.android.ui.components.groupedItemShape
 import com.wander.android.ui.components.rememberHaptics
@@ -37,7 +36,7 @@ internal fun QueueUpNext(
     canReorder: Boolean,
     onPlay: (Int) -> Unit,
     onMove: (from: Int, to: Int) -> Unit,
-    onLongPress: (UnifiedTrack) -> Unit,
+    onLongPress: (QueueEntry) -> Unit,
     onRemove: (QueueEntry) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -90,7 +89,7 @@ internal fun QueueUpNext(
             item(key = now.key, contentType = "now-playing") {
                 QueueNowPlayingCard(
                     track = now.track,
-                    onLongPress = { onLongPress(now.track) },
+                    onLongPress = { onLongPress(now) },
                     modifier = Modifier.animateItem()
                 )
             }
@@ -114,7 +113,7 @@ internal fun QueueUpNext(
                         shape = shape,
                         isDragging = isDragging,
                         onPlay = { onPlay(entry.queueIndex) },
-                        onLongPress = { onLongPress(entry.track) },
+                        onLongPress = { onLongPress(entry) },
                         dragHandle = if (canReorder) {
                             {
                                 draggableHandle(
@@ -138,7 +137,7 @@ private fun LazyListScope.playedSection(
     expanded: Boolean,
     onToggle: () -> Unit,
     onPlay: (Int) -> Unit,
-    onLongPress: (UnifiedTrack) -> Unit,
+    onLongPress: (QueueEntry) -> Unit,
     onRemove: (QueueEntry) -> Unit
 ) {
     if (played.isEmpty()) return
@@ -156,7 +155,7 @@ private fun LazyListScope.playedSection(
                 shape = shape,
                 isDragging = false,
                 onPlay = { onPlay(entry.queueIndex) },
-                onLongPress = { onLongPress(entry.track) }
+                onLongPress = { onLongPress(entry) }
             )
         }
     }
