@@ -79,31 +79,31 @@ internal class SettingsLibrarySyncCoordinator @Inject constructor(
 
     fun setP2pSync(enabled: Boolean) {
         secureStorage.setAgroP2pSync(enabled)
-        updatePeriodicSync(enabled || secureStorage.agroServerArchive || secureStorage.agroCatalogTrade)
+        syncNowIf(enabled || secureStorage.agroServerArchive || secureStorage.agroCatalogTrade)
     }
 
     fun setCatalogTrade(enabled: Boolean) {
         secureStorage.setAgroCatalogTrade(enabled)
-        updatePeriodicSync(enabled || secureStorage.agroP2pSync || secureStorage.agroServerArchive)
+        syncNowIf(enabled || secureStorage.agroP2pSync || secureStorage.agroServerArchive)
     }
 
     fun setServerArchive(enabled: Boolean) {
         secureStorage.setAgroServerArchive(enabled)
-        updatePeriodicSync(enabled || secureStorage.agroP2pSync || secureStorage.agroCatalogTrade)
+        syncNowIf(enabled || secureStorage.agroP2pSync || secureStorage.agroCatalogTrade)
     }
 
     fun setLibrarySync(enabled: Boolean) {
         secureStorage.setAgroLibrarySync(enabled)
-        updatePeriodicSync(enabled)
+        syncNowIf(enabled)
     }
 
-    private fun updatePeriodicSync(enabled: Boolean) {
-        if (enabled) {
-            librarySyncScheduler.enablePeriodicSync()
-            librarySyncScheduler.syncNow()
-        } else {
-            librarySyncScheduler.disablePeriodicSync()
-        }
+    /**
+     * The periodic pass follows these settings by itself (see
+     * [com.wander.android.core.work.PeriodicSyncGate]), restores included; switching one on also
+     * asks for a pass straight away, since the user is standing there.
+     */
+    private fun syncNowIf(enabled: Boolean) {
+        if (enabled) librarySyncScheduler.syncNow()
     }
 
     fun syncLibraryNow() = librarySyncScheduler.syncNow()

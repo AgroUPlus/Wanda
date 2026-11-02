@@ -17,7 +17,8 @@ import javax.inject.Singleton
 /**
  * When [SharedPlaylistSyncWorker] runs: a slow periodic pass, as the backstop for pushes missed
  * while the app was closed, and a one-off as soon as there is a connection whenever an edit made
- * here could not be sent. A pass with nothing to do is one small request.
+ * here could not be sent. The periodic pass exists only while there is a shared copy to keep up
+ * to date; [com.wander.android.core.work.PeriodicSyncGate] schedules and cancels it.
  */
 @Singleton
 class SharedPlaylistSyncScheduler @Inject constructor(
@@ -36,6 +37,10 @@ class SharedPlaylistSyncScheduler @Inject constructor(
         // KEEP, so opening the app often does not keep pushing the next pass back.
         WorkManager.getInstance(context)
             .enqueueUniquePeriodicWork(PERIODIC_WORK, ExistingPeriodicWorkPolicy.KEEP, request)
+    }
+
+    fun cancel() {
+        WorkManager.getInstance(context).cancelUniqueWork(PERIODIC_WORK)
     }
 
     /** Sends unsent edits once a connection is back. WorkManager keeps it across the app closing. */

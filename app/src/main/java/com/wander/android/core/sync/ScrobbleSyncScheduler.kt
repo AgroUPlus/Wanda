@@ -22,8 +22,9 @@ import javax.inject.Singleton
  * days and leave the fleet's statistics permanently behind. Any connection will do; the battery
  * check stays, because nothing here is urgent.
  *
- * Enqueued unconditionally at startup and left alone. The worker itself checks whether Agro is
- * paired, so pairing later needs no scheduling change — the next pass simply finds a server.
+ * The periodic pass exists only while Agro is paired: [com.wander.android.core.work.PeriodicSyncGate]
+ * schedules it on pairing and cancels it on sign-out, so an unpaired phone is not woken every two
+ * hours to find there is nowhere to send anything.
  */
 @Singleton
 class ScrobbleSyncScheduler @Inject constructor(
@@ -48,6 +49,11 @@ class ScrobbleSyncScheduler @Inject constructor(
             ExistingPeriodicWorkPolicy.KEEP,
             request
         )
+    }
+
+    /** Stops the periodic pass. A pending [syncSoon] still runs, and finds nothing to do. */
+    fun cancel() {
+        WorkManager.getInstance(context).cancelUniqueWork(PERIODIC_WORK)
     }
 
     /**

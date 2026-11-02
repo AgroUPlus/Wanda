@@ -56,6 +56,11 @@ class PodcastSyncScheduler @Inject constructor(
             .enqueueUniquePeriodicWork(PERIODIC_WORK, ExistingPeriodicWorkPolicy.KEEP, request)
     }
 
+    /** Stops the periodic pass once there is no feed left to check. */
+    fun disable() {
+        WorkManager.getInstance(context).cancelUniqueWork(PERIODIC_WORK)
+    }
+
     /** A pass now, for an import or a pull-to-refresh. */
     fun syncNow() {
         val request = OneTimeWorkRequestBuilder<PodcastSyncWorker>().setConstraints(constraints()).build()
