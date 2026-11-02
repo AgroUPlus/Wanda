@@ -1,5 +1,6 @@
 package com.wander.android.data.repository
 
+import com.wander.android.core.network.loggableMessage
 import android.util.Log
 import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.network.HttpClientFactory
@@ -63,7 +64,7 @@ internal class AgroSessionWebSocket(
                 }
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                    Log.w(TAG, "Agro live updates stopped: ${t.message}")
+                    Log.w(TAG, "Agro live updates stopped: ${t.loggableMessage()}")
                     close(t)
                 }
             }

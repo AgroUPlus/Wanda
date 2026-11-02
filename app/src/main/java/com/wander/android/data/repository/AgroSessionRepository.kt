@@ -1,5 +1,6 @@
 package com.wander.android.data.repository
 
+import com.wander.android.core.network.loggableMessage
 import android.util.Log
 import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.security.IdentityKeyManager
@@ -105,7 +106,7 @@ class AgroSessionRepository @Inject constructor(
     private fun AgroHandoffState.key() = "$deviceId|$trackUri"
 
     private fun log(what: String, error: Throwable) {
-        Log.w(TAG, "Agro $what refresh failed: ${error.message}")
+        Log.w(TAG, "Agro $what refresh failed: ${error.loggableMessage()}")
     }
 
     private companion object {

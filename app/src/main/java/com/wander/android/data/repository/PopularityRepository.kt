@@ -1,5 +1,6 @@
 package com.wander.android.data.repository
 
+import com.wander.android.core.network.loggableMessage
 import android.util.Log
 import com.wander.android.core.database.dao.PendingScrobble
 import com.wander.android.core.database.dao.TrackDao
@@ -53,7 +54,7 @@ class PopularityRepository @Inject constructor(
         if (secureStorage.agroServerUrl.isBlank()) return@withContext PopularOutcome.NotPaired
 
         val entries = popularityApi.popularTracks(limit = limit * OVERFETCH).getOrElse {
-            Log.w(TAG, "popular tracks unavailable: ${it.message}")
+            Log.w(TAG, "popular tracks unavailable: ${it.loggableMessage()}")
             return@withContext PopularOutcome.Unreachable
         }
         if (entries.isEmpty()) return@withContext PopularOutcome.NoData
@@ -102,7 +103,7 @@ class PopularityRepository @Inject constructor(
             // Dropped, not retried. See AgroPopularityApi.submitPlayCounts: without a submitter
             // identity a retry is indistinguishable from more listening, so re-sending would
             // inflate the very total it is trying to report honestly.
-            Log.w(TAG, "play counts not contributed: ${error.message}")
+            Log.w(TAG, "play counts not contributed: ${error.loggableMessage()}")
         }
     }
 

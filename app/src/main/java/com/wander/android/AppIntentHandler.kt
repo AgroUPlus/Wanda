@@ -1,5 +1,6 @@
 package com.wander.android
 
+import com.wander.android.core.network.loggableMessage
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -293,7 +294,7 @@ internal class AppIntentHandler @Inject constructor(
                             "Paired with Agro as ${petname ?: secureStorage.agroDevicePetname.ifEmpty { "wanda" }}"
                         },
                         onFailure = { error ->
-                            android.util.Log.w("Wanda", "Agro pairing failed: ${error.message}")
+                            android.util.Log.w("Wanda", "Agro pairing failed: ${error.loggableMessage()}")
                             AgroAuthError.from(error).explain(context)
                         }
                     )

@@ -1,5 +1,6 @@
 package com.wander.android.data.sources.agro
 
+import com.wander.android.core.network.loggableMessage
 import android.content.Context
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.network.HttpClientFactory
@@ -180,7 +181,7 @@ class AgroRelayClient @Inject constructor(
                     android.util.Log.i(TAG, "Relay send outcome: HTTP ${res.code}")
                 }
             }.onFailure { err ->
-                android.util.Log.w(TAG, "Relay send failed: ${err.message}")
+                android.util.Log.w(TAG, "Relay send failed: ${err.loggableMessage()}")
             }
         }
     }
