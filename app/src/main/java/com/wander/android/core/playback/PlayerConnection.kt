@@ -37,7 +37,8 @@ class PlayerConnection @Inject constructor(
     private val retryHandler = LivePlaybackRetryHandler()
     private val checkpointTracker = EpisodeCheckpointTracker()
     private val skipManager = SkipGraceManager()
-    private val speedController = PlayerSpeedAndOffloadController()
+    private val playerModes = secureStorage.playbackPrefs.modes
+    private val speedController = PlayerSpeedAndOffloadController(playerModes)
 
     private val _orderLocked = MutableStateFlow(false)
     private val jamCoordinator = PlayerJamCoordinator(scope, _orderLocked, queueManager)
@@ -192,6 +193,7 @@ class PlayerConnection @Inject constructor(
         if (isFollowing || isInJam) return
         val ctrl = _controller.value ?: return
         ctrl.shuffleModeEnabled = !ctrl.shuffleModeEnabled
+        playerModes.setShuffle(ctrl.shuffleModeEnabled)
     }
 
     fun toggleRepeat() {
@@ -202,6 +204,7 @@ class PlayerConnection @Inject constructor(
             Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
             else -> Player.REPEAT_MODE_OFF
         }
+        playerModes.setRepeatMode(ctrl.repeatMode)
     }
 
     fun setRadioMode(enabled: Boolean) = secureStorage.setRadioMode(enabled)
@@ -227,15 +230,30 @@ class PlayerConnection @Inject constructor(
     }
 
     fun setSpeedAndPitch(speed: Float, pitch: Float) =
-        speedController.setSpeedAndPitch(_controller.value, speed, pitch, routeNow())
+        speedController.setSpeedAndPitch(
+            _controller.value,
+            SpeedAndPitch(speed, pitch),
+            isEpisode = isEpisodeNow(),
+            route = routeNow()
+        )
 
-    /** Re-decides audio offload for the current track; see [offloadAllowed] for the rule. */
-    fun refreshOffload() = speedController.applyOffload(_controller.value, routeNow())
+    /**
+     * Applies the speed and pitch remembered for the current track's kind, and re-decides audio
+     * offload with them; see [offloadAllowed] for the rule.
+     */
+    fun refreshPlaybackParameters() = speedController.applyRemembered(_controller.value, isEpisodeNow(), routeNow())
 
     /** Whether a Bluetooth output is connected, which vetoes offload; see [BluetoothAudioOutput]. */
     val bluetoothConnected: StateFlow<Boolean> get() = bluetoothOutput.connected
 
     private fun routeNow() = OffloadRoute(isLiveNow(), skipsSilenceNow(), bluetoothOutput.connected.value)
+
+    /**
+     * Read from the controller rather than [state]: right after `play`, the controller already
+     * holds the new item while the state flow still describes the old one, and a shared link sets
+     * its speed in exactly that gap.
+     */
+    private fun isEpisodeNow() = _controller.value?.currentMediaItem?.toUnifiedTrack()?.isEpisode == true
 
     private fun isLiveNow() = state.value.currentTrack?.isLive == true
 

@@ -143,18 +143,19 @@ class PlaybackCoordinator @Inject internal constructor(
 
         connection.controller
             .filterNotNull()
-            .onEach { applyOffload() }
+            .onEach { applyPlaybackParameters() }
             .launchIn(scope)
 
         // Livestreams, silence-skipped episodes and a Bluetooth output veto audio offload — see
         // `offloadAllowed`. The first two turn on what is playing, the second also on the setting,
-        // and the last on earbuds connecting or going away mid-track.
+        // and the last on earbuds connecting or going away mid-track. A change between episode and
+        // music is also a change of remembered speed.
         connection.state
             .map { (it.currentTrack?.isLive == true) to (it.currentTrack?.isEpisode == true) }
             .distinctUntilChanged()
             .combine(secureStorage.isSkipSilenceEnabled) { kind, skip -> kind to skip }
             .combine(connection.bluetoothConnected) { kind, bluetooth -> kind to bluetooth }
-            .onEach { applyOffload() }
+            .onEach { applyPlaybackParameters() }
             .launchIn(scope)
     }
 
@@ -201,12 +202,13 @@ class PlaybackCoordinator @Inject internal constructor(
     }
 
     /**
-     * Has the connection re-decide offload. The decision itself is `offloadAllowed`, which also
+     * Has the connection apply the speed remembered for what is playing (episodes and music keep
+     * their own) and re-decide offload with it. The decision itself is `offloadAllowed`, which also
      * weighs the speed and pitch: deciding it here from the livestream flag alone switched offload
      * back on under a track playing at 1.5x.
      */
-    private fun applyOffload() {
-        scope.launch(Dispatchers.Main) { connection.refreshOffload() }
+    private fun applyPlaybackParameters() {
+        scope.launch(Dispatchers.Main) { connection.refreshPlaybackParameters() }
     }
 
     private data class RadioTrigger(val enabled: Boolean, val index: Int, val size: Int)

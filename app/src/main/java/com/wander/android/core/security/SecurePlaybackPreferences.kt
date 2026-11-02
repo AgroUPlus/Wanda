@@ -13,6 +13,9 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 internal class SecurePlaybackPreferences(private val prefs: SharedPreferences) {
 
+    /** Shuffle, repeat, and speed and pitch per kind of audio — see [SecurePlayerModePreferences]. */
+    val modes = SecurePlayerModePreferences(prefs)
+
     private val _isOfflineMode = MutableStateFlow(prefs.getBoolean(KEY_OFFLINE_MODE, false))
     val isOfflineMode: StateFlow<Boolean> = _isOfflineMode.asStateFlow()
 

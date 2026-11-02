@@ -57,6 +57,11 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         val player = playerFactory.create()
+        // As the listener last left them; PlayerConnection records each toggle.
+        secureStorage.playbackPrefs.modes.let { modes ->
+            player.shuffleModeEnabled = modes.shuffle
+            player.repeatMode = modes.repeatMode
+        }
         player.addListener(PlayCountRecorder(player))
         player.addListener(AgroHandoffReporter(player, agroHandoffPublisher))
         player.addListener(NowPlayingForwarder(player, scope, scrobbleForwarding, sourceNowPlaying))

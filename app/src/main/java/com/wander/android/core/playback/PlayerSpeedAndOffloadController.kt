@@ -2,6 +2,7 @@ package com.wander.android.core.playback
 
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.session.MediaController
+import com.wander.android.core.security.SecurePlayerModePreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,26 +14,52 @@ import kotlinx.coroutines.flow.asStateFlow
  * places that each knew half the rule: a speed change turned it off, and the next livestream check
  * turned it straight back on at whatever speed was set.
  */
-internal class PlayerSpeedAndOffloadController {
+internal class PlayerSpeedAndOffloadController(private val store: SecurePlayerModePreferences) {
 
     private val _speedAndPitch = MutableStateFlow(SpeedAndPitch())
     val speedAndPitch: StateFlow<SpeedAndPitch> = _speedAndPitch.asStateFlow()
 
-    fun setSpeedAndPitch(ctrl: MediaController?, speed: Float, pitch: Float, route: OffloadRoute) {
+    /** Sets and remembers the speed and pitch for the kind of audio playing now. */
+    fun setSpeedAndPitch(
+        ctrl: MediaController?,
+        requested: SpeedAndPitch,
+        isEpisode: Boolean,
+        route: OffloadRoute
+    ) {
         if (ctrl == null) return
         val clamped = SpeedAndPitch(
-            speed = speed.coerceIn(SpeedAndPitch.RANGE),
-            pitch = pitch.coerceIn(SpeedAndPitch.RANGE)
+            speed = requested.speed.coerceIn(SpeedAndPitch.RANGE),
+            pitch = requested.pitch.coerceIn(SpeedAndPitch.RANGE)
         )
-        _speedAndPitch.value = clamped
-        // Before the new rate: a rate other than 1x must never reach a player still in offload.
-        applyOffload(ctrl, route)
-        ctrl.playbackParameters = PlaybackParameters(clamped.speed, clamped.pitch)
+        store.setSpeedAndPitch(forEpisodes = isEpisode, value = clamped)
+        apply(ctrl, clamped, route)
+    }
+
+    /**
+     * Switches to the speed and pitch remembered for what is playing now — episodes keep theirs,
+     * everything else shares the other — and re-decides offload for it.
+     */
+    fun applyRemembered(ctrl: MediaController?, isEpisode: Boolean, route: OffloadRoute) {
+        if (ctrl == null) return
+        apply(ctrl, store.speedAndPitch(forEpisodes = isEpisode), route)
+    }
+
+    private fun apply(ctrl: MediaController, value: SpeedAndPitch, route: OffloadRoute) {
+        _speedAndPitch.value = value
+        val parameters = PlaybackParameters(value.speed, value.pitch)
+        // Ordered so that a rate other than 1x never reaches a player still in offload: offload
+        // goes off before the rate leaves 1x, and comes back on only once the rate is back at 1x.
+        if (value.isDefault) {
+            if (ctrl.playbackParameters != parameters) ctrl.playbackParameters = parameters
+            applyOffload(ctrl, route)
+        } else {
+            applyOffload(ctrl, route)
+            if (ctrl.playbackParameters != parameters) ctrl.playbackParameters = parameters
+        }
     }
 
     /** Re-decides offload for what is playing now, at the speed and pitch currently set. */
-    fun applyOffload(ctrl: MediaController?, route: OffloadRoute) {
-        if (ctrl == null) return
+    private fun applyOffload(ctrl: MediaController, route: OffloadRoute) {
         val allowed = offloadAllowed(route.isLive, _speedAndPitch.value, route.skipsSilence, route.onBluetooth)
         ctrl.trackSelectionParameters = PlayerFactory.withVideoSuppressed(
             PlayerFactory.withOffload(ctrl.trackSelectionParameters, allowed),
