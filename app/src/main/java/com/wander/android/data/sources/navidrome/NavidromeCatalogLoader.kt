@@ -31,16 +31,26 @@ class NavidromeCatalogLoader @Inject constructor(
         apiClient.getSimilarSongs2(seedTrackId.removePrefix(NAVIDROME_PREFIX), count)
             .map { songs -> songs.map { it.toUnified() } }
 
+    /** `getStarred2` has no paging of its own, so the page is cut from the whole list here. */
     suspend fun getLikedTracks(limit: Int, offset: Int): Result<List<UnifiedTrack>> =
-        apiClient.getStarred2().map { starred -> starred.song.orEmpty().map { it.toUnified() } }
+        apiClient.getStarred2().map { starred ->
+            starred.song.orEmpty().drop(offset).take(limit).map { it.toUnified() }
+        }
 
+    /**
+     * Songs from the newest albums. Subsonic lists recent albums, not songs, so each album has to be
+     * opened; that is done a few at a time and stops once [limit] songs are in hand, rather than
+     * opening all [RECENT_ALBUMS] at once for a shelf that shows twenty.
+     */
     suspend fun getRecentTracks(limit: Int): Result<List<UnifiedTrack>> = coroutineScope {
         apiClient.getAlbumList2(type = "newest", size = RECENT_ALBUMS).mapCatching { albums ->
-            albums
-                .map { album -> async { apiClient.getAlbum(album.id).getOrNull()?.song.orEmpty() } }
-                .flatMap { it.await() }
-                .map { it.toUnified() }
-                .take(limit)
+            val songs = mutableListOf<SubsonicSong>()
+            for (chunk in albums.chunked(ALBUMS_AT_ONCE)) {
+                if (songs.size >= limit) break
+                chunk.map { album -> async { apiClient.getAlbum(album.id) } }
+                    .forEach { songs += it.await().getOrThrow().song.orEmpty() }
+            }
+            songs.take(limit).map { it.toUnified() }
         }
     }
 
@@ -66,7 +76,10 @@ class NavidromeCatalogLoader @Inject constructor(
             ArtistDetails(
                 id = "$NAVIDROME_PREFIX${artist.id}",
                 name = artist.name,
-                imageUrl = null,
+                // The server's own artwork for the artist, fetched from it like every other cover.
+                // `largeImageUrl` is not used: it points at a third party (Last.fm, Spotify), and
+                // loading it would tell them which artists this user browses.
+                imageUrl = apiClient.buildCoverArtUrl(artist.coverArt),
                 bio = info?.biography?.stripBiographyMarkup(),
                 musicBrainzId = info?.musicBrainzId?.takeIf { it.isNotBlank() },
                 sections = if (albums.isEmpty()) {
@@ -132,6 +145,7 @@ class NavidromeCatalogLoader @Inject constructor(
 
     private companion object {
         const val RECENT_ALBUMS = 25
+        const val ALBUMS_AT_ONCE = 4
         const val TAG = "NavidromeCatalogLoader"
     }
 }
