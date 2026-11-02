@@ -29,11 +29,12 @@ import kotlinx.coroutines.withContext
  *
  * Bounded per run rather than looping to completion. A worker that decodes a thousand files in one
  * go is a worker that gets killed a few hundred in and starts again from the same place next time;
- * a bounded batch that reschedules itself always keeps the ground it gained. [Result.retry] is
- * what asks for the next batch, and it only fires while there is genuinely more to do.
+ * a bounded batch that reschedules itself always keeps the ground it gained. The next batch is a
+ * fresh request appended to the same unique work, queued only while there is genuinely more to do
+ * — not [Result.retry], whose exponential backoff made each batch wait longer than the last.
  *
- * Tracks that fail to decode are skipped, not retried. A file this device has no decoder for will
- * not acquire one, and retrying it would stall the queue behind it forever.
+ * Tracks that fail to decode are backed off, not retried each run. A file this device has no
+ * decoder for will not acquire one, and retrying it would stall the queue behind it forever.
  */
 @HiltWorker
 class FingerprintIndexWorker @AssistedInject constructor(
@@ -96,21 +97,55 @@ class FingerprintIndexWorker @AssistedInject constructor(
             if (track.localFilePath != null || track.isDownloaded) 0 else 1
         }
         val batch = ordered.take(BATCH_SIZE)
-        val eta = WorkEta(System.currentTimeMillis())
-        runCatching { setForeground(notifying(eta, 0, batch.size, remaining = pending.size)) }
+        val started = System.currentTimeMillis()
+        val eta = WorkEta(started)
+        val foreground = promote(notifying(eta, 0, batch.size, remaining = pending.size))
 
+        var processed = 0
         for ((index, track) in batch.withIndex()) {
+            // WorkManager discards the result of a stopped worker and reschedules it itself.
             if (isStopped) return@withContext Result.retry()
-            runCatching { setForeground(notifying(eta, index, batch.size, track.title, pending.size)) }
+            // Stop taking new tracks before the platform's ~10-minute ceiling on a worker that is
+            // not in the foreground; the rest goes to the continuation below, not to a kill.
+            if (System.currentTimeMillis() - started > RUN_BUDGET_MS) break
+            if (foreground) {
+                promote(notifying(eta, index, batch.size, track.title, pending.size))
+            }
 
             trackProcessor.processTrack(
                 track = track,
                 needsFeatures = track.id in needsFeatures,
                 needsEmbedding = track.id in needsEmbedding
             )
+            processed++
         }
 
-        if (ordered.size > BATCH_SIZE) Result.retry() else Result.success()
+        // A sweep with more left hands it to a fresh request rather than `Result.retry()` — see
+        // [FingerprintIndexing.enqueueContinuation]. A single-track request never continues.
+        if (requestedId == null && ordered.size > processed && processed > 0) {
+            FingerprintIndexing.enqueueContinuation(
+                applicationContext,
+                allowMobileData = inputData.getBoolean(FingerprintIndexing.KEY_ALLOW_MOBILE_DATA, false),
+                explicit = inputData.getBoolean(FingerprintIndexing.KEY_EXPLICIT, false)
+            )
+        }
+        Result.success()
+    }
+
+    /**
+     * Makes this run a foreground service, which is what lifts the background time limit.
+     *
+     * False when the platform refuses: from Android 12 a foreground service cannot be started
+     * while the app is in the background, and `setForeground` then throws
+     * `ForegroundServiceStartNotAllowedException` (an [IllegalStateException]). The batch still
+     * runs, bounded by [RUN_BUDGET_MS], so the refusal is logged rather than treated as failure.
+     */
+    private suspend fun promote(info: androidx.work.ForegroundInfo): Boolean = try {
+        setForeground(info)
+        true
+    } catch (e: IllegalStateException) {
+        android.util.Log.w(TAG, "Not promoted to foreground: ${e.javaClass.simpleName}")
+        false
     }
 
     private fun notifying(
@@ -137,7 +172,11 @@ class FingerprintIndexWorker @AssistedInject constructor(
      * `FingerprintBackoffTest` asserts its shape — the doubling, and the 24-hour cap.
      */
     internal companion object {
+        private const val TAG = "FingerprintIndex"
         private const val BATCH_SIZE = 100
+
+        /** Wall time after which a run stops taking new tracks; under WorkManager's 10 minutes. */
+        private const val RUN_BUDGET_MS = 8 * 60 * 1000L
         private const val FEATURE_BATCH_LIMIT = BATCH_SIZE * 2
         private const val EMBEDDING_BATCH_LIMIT = BATCH_SIZE * 2
 
