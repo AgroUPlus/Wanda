@@ -13,6 +13,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import com.wander.android.data.model.SourceType
+import com.wander.android.data.model.UNKNOWN_ARTIST
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.core.security.SecureStorage
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -134,11 +135,12 @@ class MediaStoreScanner @Inject constructor(
             MediaStore.Audio.Media.SIZE,
             MediaStore.Audio.Media.DISPLAY_NAME
         ) + if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Added in API 30. Below that they simply are not available, and the server falls back
-            // to the track artist and an absent disc number.
+            // Added in API 30. Below that they simply are not available: the server falls back
+            // to the track artist and an absent disc number, and the track has no genre.
             arrayOf(
                 MediaStore.Audio.Media.ALBUM_ARTIST,
-                MediaStore.Audio.Media.DISC_NUMBER
+                MediaStore.Audio.Media.DISC_NUMBER,
+                MediaStore.Audio.Media.GENRE
             )
         } else {
             emptyArray()
@@ -186,6 +188,7 @@ class MediaStoreScanner @Inject constructor(
             // getColumnIndex, not ...OrThrow: these are absent below API 30 by design.
             val albumArtistCol = c.getColumnIndex(MediaStore.Audio.Media.ALBUM_ARTIST)
             val discCol = c.getColumnIndex(MediaStore.Audio.Media.DISC_NUMBER)
+            val genreCol = c.getColumnIndex(MediaStore.Audio.Media.GENRE)
 
             while (c.moveToNext()) {
                 val id = c.getLong(idCol)
@@ -195,9 +198,9 @@ class MediaStoreScanner @Inject constructor(
                 tracks += UnifiedTrack(
                     id = "local:$id",
                     source = SourceType.LOCAL,
-                    title = c.getString(titleCol) ?: "Unknown Title",
-                    artist = c.getString(artistCol) ?: "Unknown Artist",
-                    album = c.getString(albumCol),
+                    title = c.getString(titleCol).mediaStoreValue() ?: "Unknown Title",
+                    artist = c.getString(artistCol).mediaStoreValue() ?: UNKNOWN_ARTIST,
+                    album = c.getString(albumCol).mediaStoreValue(),
                     albumId = "local:album:$albumId",
                     durationMs = c.getLong(durCol),
                     artworkUrl = ContentUris.withAppendedId(ALBUM_ART_URI, albumId).toString(),
@@ -209,6 +212,7 @@ class MediaStoreScanner @Inject constructor(
                         ?.let { c.getInt(it) }
                         ?.takeIf { it > 0 },
                     year = c.getInt(yearCol).takeIf { it > 0 },
+                    genre = genreCol.takeIf { it >= 0 }?.let { c.getString(it).mediaStoreValue() },
                     format = c.getString(mimeCol),
                     isDownloaded = true,
                     isCached = true,
@@ -222,8 +226,7 @@ class MediaStoreScanner @Inject constructor(
                             ?.takeIf { it.isNotBlank() && it.length <= 8 }
                             ?.let { put(EXTRA_EXTENSION, it.lowercase()) }
                         albumArtistCol.takeIf { it >= 0 }
-                            ?.let { c.getString(it) }
-                            ?.takeIf { it.isNotBlank() }
+                            ?.let { c.getString(it).mediaStoreValue() }
                             ?.let { put(EXTRA_ALBUM_ARTIST, it) }
                     }
                 )
