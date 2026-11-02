@@ -30,7 +30,15 @@ data class SubsonicResponse(
     /** `getArtist.view` — an artist and their records. */
     val artist: SubsonicArtistDetail? = null,
     /** `getArtistInfo2.view` — the biography and portraits, which the artist row does not carry. */
-    val artistInfo2: SubsonicArtistInfo? = null
+    val artistInfo2: SubsonicArtistInfo? = null,
+    /** `getOpenSubsonicExtensions.view` — what an OpenSubsonic server adds to the classic API. */
+    val openSubsonicExtensions: List<SubsonicExtension>? = null
+)
+
+@Serializable
+data class SubsonicExtension(
+    val name: String,
+    val versions: List<Int> = emptyList()
 )
 
 /** `getArtist.view`: the artist row plus every album credited to them. */

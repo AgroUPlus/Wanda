@@ -22,6 +22,9 @@ class SubsonicApiClient @Inject constructor(
 ) {
     private val baseUrl: String get() = credentials.baseUrl
 
+    /** Which server answers, for remembering what it supports. Not a URL to log or send. */
+    internal val serverKey: String get() = baseUrl
+
     val isConfigured: Boolean get() = credentials.isConfigured
 
     fun configure(serverUrl: String, user: String, pass: String) =
@@ -144,6 +147,14 @@ class SubsonicApiClient @Inject constructor(
 
     suspend fun getLyricsBySongId(id: String): Result<SubsonicLyricsList?> =
         call("getLyricsBySongId.view", "id" to id).map { it.lyricsList }
+
+    /** Classic Subsonic lyrics, matched by name: what a server without `songLyrics` offers. */
+    suspend fun getLyrics(artist: String, title: String): Result<SubsonicLyrics?> =
+        call("getLyrics.view", "artist" to artist, "title" to title).map { it.lyrics }
+
+    /** The OpenSubsonic extensions the server declares. Fails on a classic Subsonic server. */
+    suspend fun getOpenSubsonicExtensions(): Result<List<SubsonicExtension>> =
+        call("getOpenSubsonicExtensions.view").map { it.openSubsonicExtensions.orEmpty() }
 
     suspend fun getArtist(artistId: String): Result<SubsonicArtistDetail> =
         call("getArtist.view", "id" to artistId).mapCatching {

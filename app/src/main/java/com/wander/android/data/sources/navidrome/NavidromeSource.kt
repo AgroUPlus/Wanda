@@ -3,7 +3,6 @@ package com.wander.android.data.sources.navidrome
 import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.ArtistDetails
-import com.wander.android.data.model.LyricLine
 import com.wander.android.data.model.LyricsData
 import com.wander.android.data.model.SearchCatalog
 import com.wander.android.data.model.SearchKind
@@ -64,6 +63,8 @@ class NavidromeSource @Inject constructor(
 
     override val isConfigured: StateFlow<Boolean> = secureStorage.navidromeConfigured
 
+    private val lyrics = NavidromeLyrics(apiClient)
+
     init {
         applyStoredCredentials()
     }
@@ -121,25 +122,9 @@ class NavidromeSource @Inject constructor(
         )
     }
 
-    /**
-     * A server that answers "no" — no lyrics for this song, or no such endpoint on an older
-     * server — has answered: that is no lyrics, not an outage. Only a transport failure stays a
-     * failure, so the lyrics panel can say it could not ask.
-     */
+    /** See [NavidromeLyrics] for which call a server is asked. */
     override suspend fun getLyrics(trackId: String): Result<LyricsData?> =
-        apiClient.getLyricsBySongId(trackId.removePrefix(PREFIX)).recoverCatching { error ->
-            if (error is SubsonicServerException) null else throw error
-        }.map { list ->
-            val structured = list?.structuredLyrics?.firstOrNull() ?: return@map null
-            val lines = structured.line.orEmpty()
-            if (lines.isEmpty()) return@map null
-            LyricsData(
-                trackId = trackId,
-                isSynced = structured.synced,
-                lines = lines.map { LyricLine(timestampMs = it.start ?: 0L, text = it.value) },
-                source = "Navidrome"
-            )
-        }
+        lyrics.fetch(trackId, trackId.removePrefix(PREFIX))
 
     override suspend fun getRadio(seedTrackId: String, count: Int): Result<List<UnifiedTrack>> =
         catalogLoader.getRadio(seedTrackId, count)
