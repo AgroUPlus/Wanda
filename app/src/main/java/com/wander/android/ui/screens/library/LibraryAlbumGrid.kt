@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
 import com.wander.android.R
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.ui.components.EmptyState
@@ -45,13 +46,17 @@ internal fun AlbumGrid(
     recentAlbums: List<UnifiedAlbum>,
     contentPadding: PaddingValues,
     onOpenAlbum: (String) -> Unit,
-    onAlbumLongPress: (UnifiedAlbum) -> Unit = {}
+    onAlbumLongPress: (UnifiedAlbum) -> Unit = {},
+    @StringRes loadError: Int? = null,
+    onRetry: () -> Unit = {}
 ) {
     if (albums.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             EmptyState(
                 title = stringResource(R.string.library_no_albums_yet),
-                message = stringResource(R.string.library_albums_appear_once_connected_source)
+                message = stringResource(loadError ?: R.string.library_albums_appear_once_connected_source),
+                actionLabel = loadError?.let { stringResource(R.string.error_retry) },
+                onAction = onRetry.takeIf { loadError != null }
             )
         }
         return

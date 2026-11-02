@@ -191,7 +191,7 @@ internal class AppIntentHandler @Inject constructor(
         scope.launch {
             linkRepository.resolveAlbum(uri).fold(
                 onSuccess = { album ->
-                    val tracks = musicRepository.getAlbumTracks(album)
+                    val tracks = musicRepository.getAlbumTracks(album).getOrNull().orEmpty()
                     if (tracks.isEmpty()) {
                         Toast.makeText(
                             context,
@@ -232,8 +232,8 @@ internal class AppIntentHandler @Inject constructor(
         scope.launch {
             val id = SourceType.YTMUSIC.idPrefix + entity.id
             val tracks = when (entity.kind) {
-                YouTubeEntityKind.ALBUM -> musicRepository.getAlbumTracksById(id)
-                YouTubeEntityKind.PLAYLIST -> musicRepository.getPlaylistTracksById(id)
+                YouTubeEntityKind.ALBUM -> musicRepository.getAlbumTracksById(id).getOrNull().orEmpty()
+                YouTubeEntityKind.PLAYLIST -> musicRepository.getPlaylistTracksById(id).getOrNull().orEmpty()
                 YouTubeEntityKind.ARTIST -> (catalogRepository.artistDetails(id) as? ArtistFetch.Found)
                     ?.page
                     ?.sections

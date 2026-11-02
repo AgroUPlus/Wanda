@@ -1,5 +1,7 @@
 package com.wander.android.ui.screens.library
 
+import android.util.Log
+import com.wander.android.core.network.loggableMessage
 import com.wander.android.core.playback.PlaybackCoordinator
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.SourceType
@@ -49,28 +51,28 @@ class LibraryPlaybackCoordinator @Inject constructor(
 
     fun openPlaylist(scope: CoroutineScope, playlist: UnifiedPlaylist) {
         scope.launch {
-            val tracks = musicRepository.getPlaylistTracks(playlist)
+            val tracks = playlistTracks(playlist)
             if (tracks.isNotEmpty()) playerConnection.play(tracks)
         }
     }
 
     fun playPlaylistNext(scope: CoroutineScope, playlist: UnifiedPlaylist) {
         scope.launch {
-            val tracks = musicRepository.getPlaylistTracks(playlist)
+            val tracks = playlistTracks(playlist)
             if (tracks.isNotEmpty()) playerConnection.playNext(tracks)
         }
     }
 
     fun addPlaylistToQueue(scope: CoroutineScope, playlist: UnifiedPlaylist) {
         scope.launch {
-            val tracks = musicRepository.getPlaylistTracks(playlist)
+            val tracks = playlistTracks(playlist)
             if (tracks.isNotEmpty()) playerConnection.addToQueue(tracks)
         }
     }
 
     fun addPlaylistToAnother(scope: CoroutineScope, playlist: UnifiedPlaylist, controller: AddToPlaylistController) {
         scope.launch {
-            val tracks = musicRepository.getPlaylistTracks(playlist)
+            val tracks = playlistTracks(playlist)
             if (tracks.isNotEmpty()) {
                 controller.openForTracks(tracks, playlist.source)
             }
@@ -79,29 +81,48 @@ class LibraryPlaybackCoordinator @Inject constructor(
 
     fun playAlbum(scope: CoroutineScope, album: UnifiedAlbum) {
         scope.launch {
-            val tracks = musicRepository.getAlbumTracks(album)
+            val tracks = albumTracks(album)
             if (tracks.isNotEmpty()) playerConnection.play(tracks)
         }
     }
 
     fun playAlbumNext(scope: CoroutineScope, album: UnifiedAlbum) {
         scope.launch {
-            val tracks = musicRepository.getAlbumTracks(album)
+            val tracks = albumTracks(album)
             if (tracks.isNotEmpty()) playerConnection.playNext(tracks)
         }
     }
 
     fun addAlbumToQueue(scope: CoroutineScope, album: UnifiedAlbum) {
         scope.launch {
-            val tracks = musicRepository.getAlbumTracks(album)
+            val tracks = albumTracks(album)
             if (tracks.isNotEmpty()) playerConnection.addToQueue(tracks)
         }
     }
 
     fun addAlbumToPlaylist(scope: CoroutineScope, album: UnifiedAlbum, controller: AddToPlaylistController) {
         scope.launch {
-            val tracks = musicRepository.getAlbumTracks(album)
+            val tracks = albumTracks(album)
             if (tracks.isNotEmpty()) controller.openForTracks(tracks, album.source)
         }
+    }
+
+    /**
+     * The tracks behind a sheet action, or empty when they could not be had. These actions have no
+     * screen of their own to report on; the failure is logged, and the album or playlist screen is
+     * where it is shown.
+     */
+    private suspend fun albumTracks(album: UnifiedAlbum): List<UnifiedTrack> =
+        musicRepository.getAlbumTracks(album)
+            .onFailure { Log.w(TAG, "Album tracks failed: ${it.loggableMessage()}") }
+            .getOrNull().orEmpty()
+
+    private suspend fun playlistTracks(playlist: UnifiedPlaylist): List<UnifiedTrack> =
+        musicRepository.getPlaylistTracks(playlist)
+            .onFailure { Log.w(TAG, "Playlist tracks failed: ${it.loggableMessage()}") }
+            .getOrNull().orEmpty()
+
+    private companion object {
+        const val TAG = "LibraryPlayback"
     }
 }

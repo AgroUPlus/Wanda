@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.album
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.network.userMessageRes
 import com.wander.android.core.playback.PlaybackCoordinator
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.UnifiedAlbum
@@ -44,6 +45,10 @@ class AlbumViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    /** A @StringRes saying why the tracks could not be loaded, or null. */
+    private val _loadError = MutableStateFlow<Int?>(null)
+    val loadError: StateFlow<Int?> = _loadError.asStateFlow()
+
     init {
         refresh()
     }
@@ -70,6 +75,8 @@ class AlbumViewModel @Inject constructor(
         _album.value = catalogRepository.album(albumId)
         // Fills in tracks Room has not seen. The flow above picks them up on its own.
         catalogRepository.refreshAlbum(albumId)
+            .onSuccess { _loadError.value = null }
+            .onFailure { _loadError.value = it.userMessageRes() }
         _album.value = catalogRepository.album(albumId) ?: _album.value
         _isLoading.value = false
     }

@@ -51,6 +51,7 @@ fun AlbumScreen(
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val loadError by viewModel.loadError.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
 
     val listState = rememberLazyListState()
@@ -103,7 +104,7 @@ fun AlbumScreen(
                 ) {
                     EmptyState(
                         title = stringResource(R.string.album_album_unavailable),
-                        message = stringResource(R.string.album_album_isn_t_any_connected),
+                        message = stringResource(loadError ?: R.string.album_album_isn_t_any_connected),
                         actionLabel = stringResource(R.string.common_try_again),
                         onAction = viewModel::refresh
                     )
@@ -136,6 +137,18 @@ fun AlbumScreen(
                                 .padding(bottom = 16.dp),
                             titleModifier = Modifier.collapsingTitleSource(titleState)
                         )
+                    }
+
+                    loadError?.let { error ->
+                        item(key = "load-error", contentType = "load-error") {
+                            EmptyState(
+                                title = stringResource(R.string.collection_tracks_load_failed),
+                                message = stringResource(error),
+                                actionLabel = stringResource(R.string.error_retry),
+                                onAction = viewModel::refresh,
+                                modifier = Modifier.padding(vertical = 24.dp)
+                            )
+                        }
                     }
 
                     // The artist name is a way *out* of this page, into the rest of their work.

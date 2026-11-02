@@ -49,6 +49,7 @@ fun PlaylistScreen(
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val loadError by viewModel.loadError.collectAsStateWithLifecycle()
     val importWork by viewModel.importWork.collectAsStateWithLifecycle()
     val sharedViewModel: SharedPlaylistViewModel = hiltViewModel()
     val shared by sharedViewModel.state.collectAsStateWithLifecycle()
@@ -117,7 +118,7 @@ fun PlaylistScreen(
                 ) {
                     EmptyState(
                         title = stringResource(R.string.playlist_playlist_unavailable),
-                        message = stringResource(R.string.playlist_playlist_couldn_t_loaded_from),
+                        message = stringResource(loadError ?: R.string.playlist_playlist_couldn_t_loaded_from),
                         actionLabel = stringResource(R.string.common_try_again),
                         onAction = viewModel::refresh
                     )
@@ -139,6 +140,18 @@ fun PlaylistScreen(
                             onPlay = viewModel::playAll,
                             onShuffle = viewModel::shuffle
                         )
+                    }
+
+                    loadError?.let { error ->
+                        item(key = "load-error", contentType = "load-error") {
+                            EmptyState(
+                                title = stringResource(R.string.collection_tracks_load_failed),
+                                message = stringResource(error),
+                                actionLabel = stringResource(R.string.error_retry),
+                                onAction = viewModel::refresh,
+                                modifier = Modifier.padding(vertical = 24.dp)
+                            )
+                        }
                     }
 
                     shared?.takeIf { it.isBlend }?.let { state ->

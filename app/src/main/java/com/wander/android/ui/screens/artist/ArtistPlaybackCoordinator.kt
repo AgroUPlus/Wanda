@@ -1,5 +1,7 @@
 package com.wander.android.ui.screens.artist
 
+import android.util.Log
+import com.wander.android.core.network.loggableMessage
 import com.wander.android.core.playback.PlaybackCoordinator
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.UnifiedAlbum
@@ -49,7 +51,7 @@ internal class ArtistPlaybackCoordinator @Inject constructor(
 
     fun playAlbum(album: UnifiedAlbum, scope: CoroutineScope) {
         scope.launch {
-            val albumTracks = musicRepository.getAlbumTracks(album)
+            val albumTracks = albumTracks(album)
             if (albumTracks.isNotEmpty()) {
                 playerConnection.play(albumTracks)
             }
@@ -58,7 +60,7 @@ internal class ArtistPlaybackCoordinator @Inject constructor(
 
     fun playAlbumNext(album: UnifiedAlbum, scope: CoroutineScope) {
         scope.launch {
-            val albumTracks = musicRepository.getAlbumTracks(album)
+            val albumTracks = albumTracks(album)
             if (albumTracks.isNotEmpty()) {
                 playerConnection.playNext(albumTracks)
             }
@@ -67,7 +69,7 @@ internal class ArtistPlaybackCoordinator @Inject constructor(
 
     fun addAlbumToQueue(album: UnifiedAlbum, scope: CoroutineScope) {
         scope.launch {
-            val albumTracks = musicRepository.getAlbumTracks(album)
+            val albumTracks = albumTracks(album)
             if (albumTracks.isNotEmpty()) {
                 playerConnection.addToQueue(albumTracks)
             }
@@ -83,10 +85,20 @@ internal class ArtistPlaybackCoordinator @Inject constructor(
         onTracks: (List<UnifiedTrack>) -> Unit
     ) {
         scope.launch {
-            val albumTracks = musicRepository.getAlbumTracks(album)
+            val albumTracks = albumTracks(album)
             if (albumTracks.isNotEmpty()) {
                 onTracks(albumTracks)
             }
         }
+    }
+
+    /** The album's tracks, or empty when they could not be had; the album screen is where that is shown. */
+    private suspend fun albumTracks(album: UnifiedAlbum): List<UnifiedTrack> =
+        musicRepository.getAlbumTracks(album)
+            .onFailure { Log.w(TAG, "Album tracks failed: ${it.loggableMessage()}") }
+            .getOrNull().orEmpty()
+
+    private companion object {
+        const val TAG = "ArtistPlayback"
     }
 }

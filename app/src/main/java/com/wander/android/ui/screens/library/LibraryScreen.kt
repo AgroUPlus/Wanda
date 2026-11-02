@@ -120,6 +120,7 @@ fun LibraryScreen(
     val likedTracks by viewModel.likedTracks.collectAsStateWithLifecycle()
     val downloadedTracks by viewModel.downloadedTracks.collectAsStateWithLifecycle()
     val albums by viewModel.albums.collectAsStateWithLifecycle()
+    val albumsError by viewModel.albumsError.collectAsStateWithLifecycle()
     val recentAlbums by viewModel.recentAlbums.collectAsStateWithLifecycle()
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
 
@@ -239,7 +240,9 @@ fun LibraryScreen(
                             recentAlbums = recentAlbums,
                             contentPadding = contentPadding,
                             onOpenAlbum = onOpenAlbum,
-                            onAlbumLongPress = { albumActionsFor = it }
+                            onAlbumLongPress = { albumActionsFor = it },
+                            loadError = albumsError,
+                            onRetry = viewModel::refresh
                         )
                     LibraryTab.PLAYLISTS ->
                         PlaylistList(playlists, contentPadding, viewModel, addToPlaylist, onOpenPlaylist, onOpenImport)

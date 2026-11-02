@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.network.userMessageRes
 import com.wander.android.core.playback.PlaybackCoordinator
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.SourceType
@@ -108,6 +109,13 @@ class LibraryViewModel @Inject constructor(
 
     val playlists: StateFlow<List<UnifiedPlaylist>> = playlistsLoader.playlists
 
+    /** A @StringRes saying why the playlists could not be read, or null. */
+    val playlistsError: StateFlow<Int?> = playlistsLoader.error
+
+    /** A @StringRes saying why the albums could not be refreshed, or null. Room's albums stay shown. */
+    private val _albumsError = MutableStateFlow<Int?>(null)
+    val albumsError: StateFlow<Int?> = _albumsError.asStateFlow()
+
     /** A refresh the user asked for by pulling: the only one that shows the spinner. */
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
@@ -142,6 +150,8 @@ class LibraryViewModel @Inject constructor(
                 if (pulled || CatalogueRefreshGate.due()) {
                     localSource.refresh()
                     musicRepository.refreshAlbums()
+                        .onSuccess { _albumsError.value = null }
+                        .onFailure { _albumsError.value = it.userMessageRes() }
                     musicRepository.getRecentTracks(LIBRARY_TRACK_REFRESH)
                 }
             }

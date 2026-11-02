@@ -1,6 +1,7 @@
 package com.wander.android.ui.screens.library
 
 import com.wander.android.core.database.dao.PlaylistDao
+import com.wander.android.core.network.userMessageRes
 import com.wander.android.core.database.dao.SharedPlaylistDao
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedPlaylist
@@ -36,6 +37,10 @@ class LibraryPlaylistsLoader @Inject constructor(
     private val _playlists = MutableStateFlow<List<UnifiedPlaylist>>(emptyList())
     val playlists: StateFlow<List<UnifiedPlaylist>> = _playlists.asStateFlow()
 
+    /** A @StringRes saying why the last read failed, or null. A failed half keeps what it showed before. */
+    private val _error = MutableStateFlow<Int?>(null)
+    val error: StateFlow<Int?> = _error.asStateFlow()
+
     /** Starts following Room. Called once, from the owning view model's scope. */
     fun start(scope: CoroutineScope) {
         scope.launch {
@@ -49,12 +54,16 @@ class LibraryPlaylistsLoader @Inject constructor(
     /** Both halves. */
     suspend fun refresh() {
         readRoomBacked()
-        remote.value = musicRepository.getPlaylists(only = SourceType.entries.toSet() - ROOM_BACKED)
+        musicRepository.getPlaylists(only = SourceType.entries.toSet() - ROOM_BACKED)
+            .onSuccess { remote.value = it; _error.value = null }
+            .onFailure { _error.value = it.userMessageRes() }
         publish()
     }
 
     private suspend fun readRoomBacked() {
-        roomBacked.value = musicRepository.getPlaylists(only = ROOM_BACKED)
+        musicRepository.getPlaylists(only = ROOM_BACKED)
+            .onSuccess { roomBacked.value = it }
+            .onFailure { _error.value = it.userMessageRes() }
         publish()
     }
 

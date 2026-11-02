@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.playlist
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.network.userMessageRes
 import com.wander.android.core.playback.PlaybackCoordinator
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.work.ImportWorkState
@@ -51,6 +52,10 @@ class PlaylistViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    /** A @StringRes saying why the tracks could not be loaded, or null. What was shown stays. */
+    private val _loadError = MutableStateFlow<Int?>(null)
+    val loadError: StateFlow<Int?> = _loadError.asStateFlow()
+
     init {
         refresh()
     }
@@ -92,7 +97,9 @@ class PlaylistViewModel @Inject constructor(
         _isLoading.value = true
         val pl = musicRepository.getPlaylistById(playlistId)
         _playlist.value = pl
-        val list = sharedTracks() ?: musicRepository.getPlaylistTracksById(playlistId)
+        val loaded = sharedTracks()?.let { Result.success(it) } ?: musicRepository.getPlaylistTracksById(playlistId)
+        loaded.onSuccess { _loadError.value = null }.onFailure { _loadError.value = it.userMessageRes() }
+        val list = loaded.getOrElse { _tracks.value }
         _tracks.value = list
         if (pl != null && pl.coverArtUrl == null) {
             val fallbackCover = list.firstNotNullOfOrNull { it.artworkUrl }
