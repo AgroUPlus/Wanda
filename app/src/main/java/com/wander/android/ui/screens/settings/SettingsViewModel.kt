@@ -159,6 +159,9 @@ internal class SettingsViewModel @Inject constructor(
         } else {
             if (kind == WorkProgressNotification.Kind.FINGERPRINT) fingerprintProgress.retryFailures()
             workControls.resume(kind)
+            // Pausing cancels by tag, which removes the periodic sweep along with the run in
+            // flight; without this it only came back at the next app start.
+            if (kind == WorkProgressNotification.Kind.DOWNLOAD) downloadScheduler.scheduleAutoDownload()
         }
     }
 

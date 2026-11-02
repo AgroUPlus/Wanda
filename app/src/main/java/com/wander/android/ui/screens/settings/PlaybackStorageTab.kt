@@ -7,6 +7,7 @@ import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.MobiledataOff
+import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.Radar
 import androidx.compose.material.icons.rounded.Podcasts
 import androidx.compose.material.icons.rounded.Speed
@@ -95,13 +96,22 @@ internal fun LazyListScope.playbackStorageTab(
                     )
                 },
                 {
+                    // The progress notification pauses a pass in flight, but it is only there
+                    // while one runs; this is where the pause is found, and lifted, the rest of
+                    // the time.
+                    SettingsToggle(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(4)),
+                        title = stringResource(R.string.settings_pause_measuring),
+                        subtitle = stringResource(R.string.settings_pause_measuring_sub),
+                        checked = state.measuringPaused,
+                        onCheckedChange = actions.onMeasuringPausedChange,
+                        icon = Icons.Rounded.PauseCircle
+                    )
+                },
+                {
                     SettingsRow(
                         modifier = Modifier.scale(rememberShelfEntranceScale(4)),
                         title = stringResource(R.string.settings_what_has_been_measured),
-                        // Pause/resume of a running pass lives on the progress notification, not
-                        // here: it is an action on work in flight, and the notification is where
-                        // that work is already visible. This screen is the report; that one is
-                        // the remote control.
                         subtitle = stringResource(R.string.settings_see_which_songs_wanda_can),
                         onClick = actions.onOpenFingerprints,
                         icon = Icons.Rounded.Radar
@@ -122,6 +132,16 @@ internal fun LazyListScope.playbackStorageTab(
                         subtitle = stringResource(R.string.settings_otherwise_happens_wi_fi_while),
                         onClick = actions.onDownloadLiked,
                         icon = Icons.Rounded.Download
+                    )
+                },
+                {
+                    SettingsToggle(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(5)),
+                        title = stringResource(R.string.settings_pause_downloads),
+                        subtitle = stringResource(R.string.settings_pause_downloads_sub),
+                        checked = state.downloadingPaused,
+                        onCheckedChange = actions.onDownloadingPausedChange,
+                        icon = Icons.Rounded.PauseCircle
                     )
                 },
                 {
