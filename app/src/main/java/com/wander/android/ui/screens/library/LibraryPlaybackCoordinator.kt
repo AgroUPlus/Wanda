@@ -4,10 +4,12 @@ import android.util.Log
 import com.wander.android.core.network.loggableMessage
 import com.wander.android.core.playback.PlaybackCoordinator
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.data.model.LibrarySort
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.LibraryBrowseRepository
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.ui.components.AddToPlaylistController
 import kotlinx.coroutines.CoroutineScope
@@ -22,7 +24,8 @@ import javax.inject.Singleton
 class LibraryPlaybackCoordinator @Inject constructor(
     private val playerConnection: PlayerConnection,
     private val playbackCoordinator: PlaybackCoordinator,
-    private val musicRepository: MusicRepository
+    private val musicRepository: MusicRepository,
+    private val browse: LibraryBrowseRepository
 ) {
     fun play(tracks: List<UnifiedTrack>, index: Int) = playerConnection.play(tracks, index)
 
@@ -34,9 +37,9 @@ class LibraryPlaybackCoordinator @Inject constructor(
         scope.launch { playbackCoordinator.startRadio(track) }
     }
 
-    fun playFromLibrary(scope: CoroutineScope, track: UnifiedTrack, sourceFilter: SourceType?) {
+    fun playFromLibrary(scope: CoroutineScope, track: UnifiedTrack, sort: LibrarySort, sources: Set<SourceType>) {
         scope.launch {
-            val ids = musicRepository.libraryTrackIds(sourceFilter)
+            val ids = browse.trackIds(sort, sources)
             val index = ids.indexOf(track.id)
             if (index < 0) {
                 playerConnection.play(listOf(track), 0)

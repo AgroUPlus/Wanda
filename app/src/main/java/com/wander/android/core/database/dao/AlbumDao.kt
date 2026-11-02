@@ -40,16 +40,6 @@ interface AlbumDao {
     @Query("SELECT * FROM albums")
     suspend fun getAllAlbumsOnce(): List<AlbumEntity>
 
-    /**
-     * The user's own records, for the Library tab.
-     *
-     * [getAllAlbumsFlow] returns the whole table, which is also the cache backing artist pages and
-     * album headers — so the Library tab was showing every record the app had ever drawn a tile
-     * for. See [AlbumEntity.isLibrary].
-     */
-    @Query("SELECT * FROM albums WHERE isLibrary = 1 ORDER BY title ASC")
-    fun getLibraryAlbumsFlow(): Flow<List<AlbumEntity>>
-
     @Query("SELECT * FROM albums WHERE id = :albumId LIMIT 1")
     suspend fun getAlbumById(albumId: String): AlbumEntity?
 

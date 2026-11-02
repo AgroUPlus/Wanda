@@ -132,20 +132,15 @@ class MusicRepository @Inject constructor(
     )
 
     // ── Library ─────────────────────────────────────────────────────────────────────────────
-    fun getLikedTracksFlow() = libraryTracks.getLikedTracksFlow()
     fun getLikedTracksFlow(limit: Int) = libraryTracks.getLikedTracksFlow(limit)
     fun getRecentlyPlayedFlow() = libraryTracks.getRecentlyPlayedFlow()
-    fun getDownloadedTracksFlow() = libraryTracks.getDownloadedTracksFlow()
     suspend fun downloadedTracks() = libraryTracks.downloadedTracks()
-    fun pagedLibraryTracks(source: SourceType?) = libraryTracks.pagedLibraryTracks(source)
     fun pagedHistory() = libraryTracks.pagedHistory()
     suspend fun tracksByIds(ids: List<String>) = libraryTracks.tracksByIds(ids)
-    suspend fun libraryTrackIds(source: SourceType?) = libraryTracks.libraryTrackIds(source)
     suspend fun trackById(trackId: String) = libraryTracks.trackById(trackId)
     suspend fun deleteDownloadedTrack(trackId: String) = libraryTracks.deleteDownloadedTrack(trackId)
 
     // ── Albums & Playlists ──────────────────────────────────────────────────────────────────
-    fun getAlbumsFlow() = catalogCollections.getAlbumsFlow()
     fun getRecentlyAddedAlbumIdsFlow(limit: Int = 12) = catalogCollections.getRecentlyAddedAlbumIdsFlow(limit)
     fun getAlbumTracksFlow(albumId: String) = catalogCollections.getAlbumTracksFlow(albumId)
     suspend fun refreshAlbums(pageSize: Int = CatalogCollectionRepository.ALBUM_PAGE_SIZE) = catalogCollections.refreshAlbums(pageSize)

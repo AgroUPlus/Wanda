@@ -1,8 +1,11 @@
 package com.wander.android.ui.screens.library
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.wander.android.data.model.UnifiedAlbum
@@ -26,14 +29,15 @@ internal fun LibraryPage(
     tab: LibraryTab,
     contentPadding: PaddingValues,
     viewModel: LibraryViewModel,
+    browse: LibraryBrowseViewModel,
     addToPlaylist: AddToPlaylistController,
     actions: LibraryPageActions
 ) {
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
     when (tab) {
-        LibraryTab.ALBUMS -> {
-            val albums by viewModel.albums.collectAsStateWithLifecycle()
-            val recentAlbums by viewModel.recentAlbums.collectAsStateWithLifecycle()
+        LibraryTab.ALBUMS -> SortablePage(tab, browse) {
+            val albums by browse.albums.collectAsStateWithLifecycle()
+            val recentAlbums by browse.recentAlbums.collectAsStateWithLifecycle()
             val albumsError by viewModel.albumsError.collectAsStateWithLifecycle()
             AlbumGrid(
                 albums = albums,
@@ -51,12 +55,12 @@ internal fun LibraryPage(
                 playlists, contentPadding, viewModel, addToPlaylist, actions.onOpenPlaylist, actions.onOpenImport
             )
         }
-        LibraryTab.LIKED -> {
-            val likedTracks by viewModel.likedTracks.collectAsStateWithLifecycle()
+        LibraryTab.LIKED -> SortablePage(tab, browse) {
+            val likedTracks by browse.likedTracks.collectAsStateWithLifecycle()
             TrackList(likedTracks, tab, isSyncing, contentPadding, viewModel, actions.onTrackLongPress)
         }
-        LibraryTab.DOWNLOADS -> {
-            val downloadedTracks by viewModel.downloadedTracks.collectAsStateWithLifecycle()
+        LibraryTab.DOWNLOADS -> SortablePage(tab, browse) {
+            val downloadedTracks by browse.downloadedTracks.collectAsStateWithLifecycle()
             TrackList(downloadedTracks, tab, isSyncing, contentPadding, viewModel, actions.onTrackLongPress)
         }
         LibraryTab.PODCASTS ->
@@ -67,9 +71,22 @@ internal fun LibraryPage(
                 onOpenSubscriptions = actions.onOpenSubscriptions
             )
         LibraryTab.TRACKS -> {
-            val tracks = viewModel.tracks.collectAsLazyPagingItems()
-            AllTracksPage(tracks, isSyncing, contentPadding, viewModel, actions.onTrackLongPress)
+            val tracks = browse.tracks.collectAsLazyPagingItems()
+            AllTracksPage(tracks, isSyncing, contentPadding, viewModel, browse, actions.onTrackLongPress)
         }
         LibraryTab.FOLLOWED -> FollowedArtistsPage(contentPadding, actions.onOpenArtist)
+    }
+}
+
+/** A list under its [LibraryListToolbar], which stays put even when the list below is empty. */
+@Composable
+private fun SortablePage(
+    tab: LibraryTab,
+    browse: LibraryBrowseViewModel,
+    content: @Composable () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        LibraryListToolbar(tab, browse)
+        content()
     }
 }

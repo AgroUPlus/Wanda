@@ -37,7 +37,8 @@ fun LibraryScreen(
     onOpenPlaylist: (String) -> Unit = {},
     onOpenImport: () -> Unit = {},
     onOpenSubscriptions: () -> Unit = {},
-    viewModel: LibraryViewModel = hiltViewModel()
+    viewModel: LibraryViewModel = hiltViewModel(),
+    browse: LibraryBrowseViewModel = hiltViewModel()
 ) {
     val tab by viewModel.tab.collectAsStateWithLifecycle()
     val tabs by viewModel.tabs.collectAsStateWithLifecycle()
@@ -68,8 +69,8 @@ fun LibraryScreen(
             onAlbumLongPress = { albumActionsFor = it }
         )
     }
-    val likedTracks by viewModel.likedTracks.collectAsStateWithLifecycle()
-    val downloadedTracks by viewModel.downloadedTracks.collectAsStateWithLifecycle()
+    val likedTracks by browse.likedTracks.collectAsStateWithLifecycle()
+    val downloadedTracks by browse.downloadedTracks.collectAsStateWithLifecycle()
 
     val pagerState = rememberPagerState(
         initialPage = tabs.indexOf(tab).coerceAtLeast(0),
@@ -126,7 +127,7 @@ fun LibraryScreen(
                     },
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    LibraryPage(tabs[page], contentPadding, viewModel, addToPlaylist, pageActions)
+                    LibraryPage(tabs[page], contentPadding, viewModel, browse, addToPlaylist, pageActions)
                 }
             }
         }

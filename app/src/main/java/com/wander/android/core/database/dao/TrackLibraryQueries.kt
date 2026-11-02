@@ -1,6 +1,5 @@
 package com.wander.android.core.database.dao
 
-import androidx.paging.PagingSource
 import androidx.room.Query
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.SourceType
@@ -24,18 +23,6 @@ interface TrackLibraryQueries {
     @Query("SELECT * FROM tracks WHERE isLibrary = 1 ORDER BY title ASC")
     fun getAllTracksFlow(): Flow<List<TrackEntity>>
 
-    @Query("SELECT * FROM tracks WHERE isLibrary = 1 AND isEpisode = 0 ORDER BY title ASC")
-    fun pagedTracks(): PagingSource<Int, TrackEntity>
-
-    @Query("SELECT * FROM tracks WHERE isLibrary = 1 AND isEpisode = 0 AND source = :source ORDER BY title ASC")
-    fun pagedTracksBySource(source: SourceType): PagingSource<Int, TrackEntity>
-
-    @Query("SELECT id FROM tracks WHERE isLibrary = 1 AND isEpisode = 0 ORDER BY title ASC")
-    suspend fun libraryTrackIds(): List<String>
-
-    @Query("SELECT id FROM tracks WHERE isLibrary = 1 AND isEpisode = 0 AND source = :source ORDER BY title ASC")
-    suspend fun libraryTrackIdsBySource(source: SourceType): List<String>
-
     @Query("SELECT * FROM tracks WHERE source != 'UNRESOLVED'")
     suspend fun getAllTracksOnce(): List<TrackEntity>
 
@@ -51,9 +38,6 @@ interface TrackLibraryQueries {
 
     @Query("SELECT id FROM tracks WHERE isLiked = 1")
     fun getLikedTrackIdsFlow(): Flow<List<String>>
-
-    @Query("SELECT * FROM tracks WHERE isDownloaded = 1 AND isEpisode = 0 AND source != 'LOCAL' ORDER BY title ASC")
-    fun getDownloadedTracksFlow(): Flow<List<TrackEntity>>
 
     @Query("SELECT * FROM tracks WHERE isDownloaded = 1 AND source != 'LOCAL'")
     suspend fun getDownloadedTracksOnce(): List<TrackEntity>

@@ -9,7 +9,6 @@ import com.wander.android.core.database.dao.HistoryTrackEntry
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.HistoryTrack
-import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -28,9 +27,6 @@ internal class LibraryTrackRepository(
     private val historyDao: HistoryDao,
     private val recordingRules: RecordingRulesRepository
 ) {
-    fun getLikedTracksFlow(): Flow<List<UnifiedTrack>> =
-        trackDao.getLikedTracksFlow().mapToTracks()
-
     /**
      * The first [limit] liked tracks. Room re-runs a query on every write to `tracks` — each play,
      * each search result saved — so a shelf that shows twelve should not map every like each time.
@@ -43,19 +39,9 @@ internal class LibraryTrackRepository(
             .mapToTracks()
             .map { tracks -> recordingRules.current().distinct(tracks) }
 
-    fun getDownloadedTracksFlow(): Flow<List<UnifiedTrack>> =
-        trackDao.getDownloadedTracksFlow().mapToTracks()
-
     suspend fun downloadedTracks(): List<UnifiedTrack> = withContext(Dispatchers.IO) {
         trackDao.getOfflineTracksOnce().map(TrackEntity::toUnifiedTrack)
     }
-
-    fun pagedLibraryTracks(source: SourceType?): Flow<PagingData<UnifiedTrack>> = Pager(
-        config = PagingConfig(pageSize = PAGE_SIZE, enablePlaceholders = false),
-        pagingSourceFactory = {
-            if (source == null) trackDao.pagedTracks() else trackDao.pagedTracksBySource(source)
-        }
-    ).flow.map { page -> page.map(TrackEntity::toUnifiedTrack) }
 
     /**
      * The full play log, paged. See [HistoryDao.pagedHistory] for why this cannot be the same
@@ -68,10 +54,6 @@ internal class LibraryTrackRepository(
 
     suspend fun tracksByIds(ids: List<String>): List<UnifiedTrack> = withContext(Dispatchers.IO) {
         trackDao.getTracksByIds(ids).map(TrackEntity::toUnifiedTrack)
-    }
-
-    suspend fun libraryTrackIds(source: SourceType?): List<String> = withContext(Dispatchers.IO) {
-        if (source == null) trackDao.libraryTrackIds() else trackDao.libraryTrackIdsBySource(source)
     }
 
     suspend fun trackById(trackId: String): UnifiedTrack? = withContext(Dispatchers.IO) {
@@ -98,7 +80,6 @@ internal class LibraryTrackRepository(
     )
 
     companion object {
-        const val PAGE_SIZE = 60
         const val HISTORY_PAGE_SIZE = 60
     }
 }

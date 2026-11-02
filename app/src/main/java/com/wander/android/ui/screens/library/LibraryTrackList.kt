@@ -115,7 +115,8 @@ internal fun PagedTrackList(
     tab: LibraryTab,
     isSyncing: Boolean,
     contentPadding: PaddingValues,
-    viewModel: LibraryViewModel,
+    onPlay: (UnifiedTrack) -> Unit,
+    onToggleLike: (UnifiedTrack) -> Unit,
     onLongPress: (UnifiedTrack) -> Unit
 ) {
     if (tracks.itemCount == 0) {
@@ -153,8 +154,8 @@ internal fun PagedTrackList(
                 // The queue is built from the database on tap, not from what the screen holds:
                 // paging means the screen holds only the pages scrolled through, and playing the
                 // fortieth track must still queue the whole library after it.
-                onPlay = { viewModel.playFromLibrary(track) },
-                onToggleLike = { viewModel.toggleLike(track) },
+                onPlay = { onPlay(track) },
+                onToggleLike = { onToggleLike(track) },
                 onLongPress = { onLongPress(track) },
                 modifier = Modifier.scale(entranceScale).groupedListItem(index, tracks.itemCount)
             )
@@ -186,25 +187,33 @@ private fun Centered(content: @Composable () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { content() }
 }
 
-/** The Tracks tab: [PagedTrackList] under a source filter, once there is more than one source. */
+/** The Tracks tab: [PagedTrackList] under its sort, and a source filter once there is more than one. */
 @Composable
 internal fun AllTracksPage(
     tracks: LazyPagingItems<UnifiedTrack>,
     isSyncing: Boolean,
     contentPadding: PaddingValues,
     viewModel: LibraryViewModel,
+    browse: LibraryBrowseViewModel,
     onLongPress: (UnifiedTrack) -> Unit
 ) {
-    val sourceFilter by viewModel.sourceFilter.collectAsStateWithLifecycle()
+    val sourceFilter by browse.sourceFilter.collectAsStateWithLifecycle()
     Column(modifier = Modifier.fillMaxSize()) {
-        if (viewModel.availableSources.size > 1) {
-            SourceFilterChips(
-                sources = viewModel.availableSources,
-                selected = sourceFilter,
-                onSelect = viewModel::selectSource,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
+        LibraryListToolbar(LibraryTab.TRACKS, browse) {
+            if (browse.availableSources.size > 1) {
+                SourceFilterChips(
+                    sources = browse.availableSources,
+                    selected = sourceFilter,
+                    onSelect = browse::selectSource,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
         }
-        PagedTrackList(tracks, LibraryTab.TRACKS, isSyncing, contentPadding, viewModel, onLongPress)
+        PagedTrackList(
+            tracks, LibraryTab.TRACKS, isSyncing, contentPadding,
+            onPlay = browse::playFromLibrary,
+            onToggleLike = viewModel::toggleLike,
+            onLongPress = onLongPress
+        )
     }
 }

@@ -19,23 +19,14 @@ import com.wander.android.data.sources.local.LocalMusicSource
 import com.wander.android.ui.components.AddToPlaylistController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import com.wander.android.ui.navigation.NavLayoutStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOn
-import androidx.paging.PagingData
-import androidx.paging.cachedIn
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val musicRepository: MusicRepository,
@@ -76,45 +67,6 @@ class LibraryViewModel @Inject constructor(
         KEY_TAB,
         browsePrefs.lastTab() ?: LibraryTab.LIKED
     )
-
-    private val _sourceFilter = MutableStateFlow<SourceType?>(null)
-    val sourceFilter: StateFlow<SourceType?> = _sourceFilter.asStateFlow()
-
-    // Configured sources only — not every registered backend, the same accessor Home's own source
-    // filter uses. A source no one is signed into (Deezer before login, say) has nothing to filter
-    // by and reads as a broken chip that always returns zero tracks.
-    val availableSources: List<SourceType> = musicRepository.configuredSources().sorted()
-
-    /**
-     * One flow per tab rather than one flow keyed on the selected tab.
-     */
-    val tracks: Flow<PagingData<UnifiedTrack>> = _sourceFilter
-        .flatMapLatest { filter -> musicRepository.pagedLibraryTracks(filter) }
-        .cachedIn(viewModelScope)
-
-    fun playFromLibrary(track: UnifiedTrack) {
-        libraryPlayback.playFromLibrary(viewModelScope, track, _sourceFilter.value)
-    }
-
-    val likedTracks: StateFlow<List<UnifiedTrack>> = musicRepository.getLikedTracksFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    val downloadedTracks: StateFlow<List<UnifiedTrack>> = musicRepository.getDownloadedTracksFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    val recentAlbums: StateFlow<List<UnifiedAlbum>> = combine(
-        musicRepository.getAlbumsFlow(),
-        musicRepository.getRecentlyAddedAlbumIdsFlow()
-    ) { albums, recentIds ->
-        val byId = albums.associateBy { it.id }
-        recentIds.mapNotNull(byId::get)
-    }
-        .flowOn(kotlinx.coroutines.Dispatchers.Default)
-        .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    val albums: StateFlow<List<UnifiedAlbum>> = musicRepository.getAlbumsFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val playlists: StateFlow<List<UnifiedPlaylist>> = playlistsLoader.playlists
 
@@ -183,8 +135,6 @@ class LibraryViewModel @Inject constructor(
         savedState[KEY_TAB] = tab
         browsePrefs.setLastTab(tab)
     }
-
-    fun selectSource(source: SourceType?) { _sourceFilter.value = source }
 
     fun play(tracks: List<UnifiedTrack>, index: Int) = libraryPlayback.play(tracks, index)
 

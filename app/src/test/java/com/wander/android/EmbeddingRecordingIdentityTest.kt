@@ -107,16 +107,11 @@ class EmbeddingRecordingIdentityTest {
      */
     private class FakeTrackDao : com.wander.android.core.database.dao.TrackDao {
         override fun getAllTracksFlow(): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
-        override fun pagedTracks(): androidx.paging.PagingSource<Int, com.wander.android.core.database.entity.TrackEntity> = throw NotImplementedError()
-        override fun pagedTracksBySource(source: com.wander.android.data.model.SourceType): androidx.paging.PagingSource<Int, com.wander.android.core.database.entity.TrackEntity> = throw NotImplementedError()
-        override suspend fun libraryTrackIds(): List<String> = emptyList()
-        override suspend fun libraryTrackIdsBySource(source: com.wander.android.data.model.SourceType): List<String> = emptyList()
         override suspend fun getAllTracksOnce(): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override fun getTracksBySourceFlow(source: com.wander.android.data.model.SourceType): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
         override fun getLikedTracksFlow(): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
         override fun observeLikedTracks(limit: Int): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
         override fun getLikedTrackIdsFlow(): kotlinx.coroutines.flow.Flow<List<String>> = kotlinx.coroutines.flow.emptyFlow()
-        override fun getDownloadedTracksFlow(): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
         override suspend fun getDownloadedTracksOnce(): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun getOfflineTracksOnce(): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override fun getTracksByAlbumFlow(albumId: String): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()

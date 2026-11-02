@@ -53,6 +53,8 @@ object AppModule {
         db.jamRecapDao()
     @Provides fun provideTrackDao(db: WanderDatabase): TrackDao = db.trackDao()
     @Provides fun provideAlbumDao(db: WanderDatabase): AlbumDao = db.albumDao()
+    @Provides fun provideLibraryBrowseDao(db: WanderDatabase): com.wander.android.core.database.dao.LibraryBrowseDao =
+        db.libraryBrowseDao()
     @Provides fun provideArtistDao(db: WanderDatabase): ArtistDao = db.artistDao()
     @Provides fun provideHistoryDao(db: WanderDatabase): HistoryDao = db.historyDao()
     @Provides fun provideReplayRecapDao(db: WanderDatabase): com.wander.android.core.database.dao.ReplayRecapDao =

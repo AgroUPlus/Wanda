@@ -39,11 +39,6 @@ internal class CatalogCollectionRepository(
 ) {
     private fun sourceFor(type: SourceType) = sources.firstOrNull { it.sourceType == type }
 
-    fun getAlbumsFlow(): Flow<List<UnifiedAlbum>> =
-        albumDao.getLibraryAlbumsFlow()
-            .map { list -> list.map(AlbumEntity::toUnifiedAlbum) }
-            .flowOn(Dispatchers.Default)
-
     fun getRecentlyAddedAlbumIdsFlow(limit: Int = 12): Flow<List<String>> =
         trackDao.observeRecentlyAddedAlbumIds(limit)
 
