@@ -12,10 +12,18 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 sealed interface FeedFetch {
-    /** The feed answered 304: nothing changed since the validators we sent. */
-    data object NotModified : FeedFetch
+    /** Where a permanent redirect (301, 308) says the feed now lives, or null when it has not moved. */
+    val movedTo: String?
 
-    data class Updated(val feed: ParsedFeed, val etag: String?, val lastModified: String?) : FeedFetch
+    /** The feed answered 304: nothing changed since the validators we sent. */
+    data class NotModified(override val movedTo: String?) : FeedFetch
+
+    data class Updated(
+        val feed: ParsedFeed,
+        val etag: String?,
+        val lastModified: String?,
+        override val movedTo: String?
+    ) : FeedFetch
 }
 
 /**
@@ -39,7 +47,8 @@ class PodcastFeedClient @Inject constructor(private val client: OkHttpClient) {
         }.build()
 
         client.newCall(request).execute().use { response ->
-            if (response.code == HTTP_NOT_MODIFIED) return@use FeedFetch.NotModified
+            val movedTo = permanentRedirectTarget(response)
+            if (response.code == HTTP_NOT_MODIFIED) return@use FeedFetch.NotModified(movedTo)
             if (!response.isSuccessful) throw IOException("The feed answered HTTP ${response.code}")
             val source = response.body.source()
             source.request(MAX_FEED_BYTES + 1)
@@ -55,7 +64,8 @@ class PodcastFeedClient @Inject constructor(private val client: OkHttpClient) {
             FeedFetch.Updated(
                 feed = feed,
                 etag = response.header("ETag"),
-                lastModified = response.header("Last-Modified")
+                lastModified = response.header("Last-Modified"),
+                movedTo = movedTo
             )
         }
     }

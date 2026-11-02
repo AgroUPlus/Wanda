@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,6 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.DownloadDone
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Podcasts
 import androidx.compose.material.icons.rounded.Refresh
@@ -27,6 +30,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -159,6 +163,7 @@ internal fun PodcastSubscriptionsScreen(
                         SubscriptionRow(
                             podcast,
                             onRemove = { removing = podcast },
+                            onAutoDownloadChange = { viewModel.setAutoDownload(podcast.feedUrl, it) },
                             modifier = Modifier.animateItem().scale(rememberShelfEntranceScale(index))
                         )
                     }
@@ -181,7 +186,12 @@ internal fun PodcastSubscriptionsScreen(
 }
 
 @Composable
-private fun SubscriptionRow(podcast: PodcastEntity, onRemove: () -> Unit, modifier: Modifier = Modifier) {
+private fun SubscriptionRow(
+    podcast: PodcastEntity,
+    onRemove: () -> Unit,
+    onAutoDownloadChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
     ListItem(
         headlineContent = { Text(podcast.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = if (podcast.author != null) {
@@ -198,8 +208,18 @@ private fun SubscriptionRow(podcast: PodcastEntity, onRemove: () -> Unit, modifi
             )
         },
         trailingContent = {
-            IconButton(onClick = onRemove) {
-                Icon(Icons.Rounded.Delete, stringResource(R.string.podcasts_unsubscribe))
+            Row {
+                IconToggleButton(checked = podcast.autoDownload, onCheckedChange = onAutoDownloadChange) {
+                    Icon(
+                        if (podcast.autoDownload) Icons.Rounded.DownloadDone else Icons.Rounded.Download,
+                        stringResource(
+                            if (podcast.autoDownload) R.string.podcasts_auto_download_on else R.string.podcasts_auto_download_off
+                        )
+                    )
+                }
+                IconButton(onClick = onRemove) {
+                    Icon(Icons.Rounded.Delete, stringResource(R.string.podcasts_unsubscribe))
+                }
             }
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),

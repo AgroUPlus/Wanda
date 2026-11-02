@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Notification channel for new podcast episodes found by the background sync -->
+    <string name="notif_podcast_channel">New podcast episodes</string>
+    <!-- Notification title when one new episode arrived; %1$s is the show's name -->
+    <string name="notif_podcast_new_episode">New episode of %1$s</string>
+    <!-- Notification title when several new episodes arrived; body lists the shows -->
+    <plurals name="notif_podcast_new_episodes">
+        <item quantity="one">%d new episode</item>
+        <item quantity="other">%d new episodes</item>
+    </plurals>
+
+    <!-- Per-show auto-download toggle, accessibility labels -->
+    <string name="podcasts_auto_download_off">Download new episodes automatically</string>
+    <string name="podcasts_auto_download_on">Stop downloading new episodes automatically</string>
+    <!-- Snackbars after toggling auto-download for a show; %1$d is how many downloads are kept -->
+    <string name="podcasts_auto_download_enabled">New episodes will download on Wi-Fi. The newest %1$d are kept.</string>
+    <string name="podcasts_auto_download_disabled">New episodes will no longer download automatically</string>
+</resources>

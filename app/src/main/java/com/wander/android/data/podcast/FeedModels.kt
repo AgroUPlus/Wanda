@@ -25,5 +25,7 @@ data class ParsedFeed(
     val title: String,
     val author: String?,
     val artworkUrl: String?,
-    val episodes: List<ParsedEpisode>
+    val episodes: List<ParsedEpisode>,
+    /** `<itunes:new-feed-url>`: the publisher moved the feed and asks players to follow. Web addresses only. */
+    val newFeedUrl: String? = null
 )

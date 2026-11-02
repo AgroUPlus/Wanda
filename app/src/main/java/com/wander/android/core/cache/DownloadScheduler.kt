@@ -75,8 +75,33 @@ class DownloadScheduler @Inject constructor(
         )
     }
 
+    /**
+     * One podcast episode an auto-downloading show just published. Wi-Fi only and battery not low,
+     * but not charging: an episode is wanted for the next commute, not the next overnight charge.
+     * Unique per episode with KEEP, so a second sync pass does not queue it twice.
+     */
+    fun downloadEpisode(trackId: String) {
+        val request = OneTimeWorkRequestBuilder<DownloadWorker>()
+            .addTag(WorkControls.tagFor(WorkProgressNotification.Kind.DOWNLOAD))
+            .setInputData(workDataOf(DownloadWorker.KEY_TRACK_ID to trackId))
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.UNMETERED)
+                    .setRequiresBatteryNotLow(true)
+                    .build()
+            )
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES)
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            EPISODE_WORK_PREFIX + trackId,
+            ExistingWorkPolicy.KEEP,
+            request
+        )
+    }
+
     internal companion object {
         const val WORK_NAME = "wanda_auto_download"
         const val IMMEDIATE_WORK = "wanda_auto_download_now"
+        const val EPISODE_WORK_PREFIX = "wanda_episode_download_"
     }
 }

@@ -27,6 +27,7 @@ object RssFeedParser {
         // players read and is the larger, so it wins; the plain `<image>` is only the fallback.
         var itunesArtwork: String? = null
         var imageArtwork: String? = null
+        var newFeedUrl: String? = null
         val episodes = mutableListOf<ParsedEpisode>()
         var sawChannel = false
 
@@ -43,6 +44,9 @@ object RssFeedParser {
                     itunesArtwork = parser.getAttributeValue(null, "href")
                 }
                 "image" -> if (parser.depth == CHANNEL_CHILD_DEPTH && imageArtwork == null) imageArtwork = readImageUrl(parser)
+                "itunes:new-feed-url" -> if (parser.depth == CHANNEL_CHILD_DEPTH && newFeedUrl == null) {
+                    newFeedUrl = parser.nextText().trim().takeIf(::isWebUrl)
+                }
             }
         }
         if (!sawChannel) throw FeedParseException("Not an RSS podcast feed")
@@ -50,7 +54,8 @@ object RssFeedParser {
             title = title?.ifBlank { null } ?: throw FeedParseException("The feed has no title"),
             author = author,
             artworkUrl = itunesArtwork ?: imageArtwork,
-            episodes = episodes
+            episodes = episodes,
+            newFeedUrl = newFeedUrl
         )
     }
 

@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.wander.android.R
 import com.wander.android.core.database.entity.PodcastEntity
 import com.wander.android.data.repository.OpmlImportResult
+import com.wander.android.data.repository.PodcastAutoDownloads
 import com.wander.android.data.repository.PodcastRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -52,6 +53,18 @@ class PodcastSubscriptionsViewModel @Inject constructor(
 
     fun remove(feedUrl: String) {
         viewModelScope.launch { podcasts.unsubscribe(feedUrl) }
+    }
+
+    /** New episodes of [feedUrl] download on Wi-Fi, newest few kept; turning it on fetches the latest now. */
+    fun setAutoDownload(feedUrl: String, enabled: Boolean) {
+        viewModelScope.launch {
+            podcasts.setAutoDownload(feedUrl, enabled)
+            if (enabled) {
+                say(R.string.podcasts_auto_download_enabled, PodcastAutoDownloads.KEEP_DOWNLOADED)
+            } else {
+                say(R.string.podcasts_auto_download_disabled)
+            }
+        }
     }
 
     fun refresh() = busy {

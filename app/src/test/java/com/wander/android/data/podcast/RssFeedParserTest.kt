@@ -89,6 +89,21 @@ class RssFeedParserTest {
     }
 
     @Test
+    fun `a moved feed names its new address`() {
+        val xml = """<rss><channel><title>T</title><itunes:new-feed-url> https://new.example/feed </itunes:new-feed-url></channel></rss>"""
+
+        assertEquals("https://new.example/feed", RssFeedParser.parse(parserOf(xml)).newFeedUrl)
+        assertNull(RssFeedParser.parse(parserOf(feed)).newFeedUrl)
+    }
+
+    @Test
+    fun `a new feed address that is not a web address is ignored`() {
+        val xml = """<rss><channel><title>T</title><itunes:new-feed-url>file:///sdcard/x</itunes:new-feed-url></channel></rss>"""
+
+        assertNull(RssFeedParser.parse(parserOf(xml)).newFeedUrl)
+    }
+
+    @Test
     fun `durations in every iTunes shape`() {
         assertEquals(3_723_000L, RssFeedParser.parseDurationMs("01:02:03"))
         assertEquals(125_000L, RssFeedParser.parseDurationMs("2:05"))
