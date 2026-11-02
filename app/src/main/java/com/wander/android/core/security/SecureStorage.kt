@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 class SecureStorage internal constructor(private val prefs: SharedPreferences) {
 
     internal val displayPrefs = SecureDisplayPreferences(prefs)
-    private val playbackPrefs = SecurePlaybackPreferences(prefs)
+    internal val playbackPrefs = SecurePlaybackPreferences(prefs)
     private val accountPrefs = SecureAccountPreferences(prefs)
     private val agroPrefs = SecureAgroPreferences(prefs)
     internal val appPrefs = SecureAppPreferences(prefs)

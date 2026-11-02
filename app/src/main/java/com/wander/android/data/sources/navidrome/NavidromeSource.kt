@@ -1,5 +1,6 @@
 package com.wander.android.data.sources.navidrome
 
+import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.LyricLine
@@ -28,16 +29,20 @@ private const val PREFIX = "navidrome:"
 class NavidromeSource @Inject constructor(
     private val secureStorage: SecureStorage,
     private val apiClient: SubsonicApiClient,
-    private val catalogLoader: NavidromeCatalogLoader
+    private val catalogLoader: NavidromeCatalogLoader,
+    /** Which of the two quality settings applies: the metered one or the Wi-Fi one. */
+    private val connectivity: ConnectivityObserver
 ) : IMusicSource {
 
     constructor(
         secureStorage: SecureStorage,
-        apiClient: SubsonicApiClient
+        apiClient: SubsonicApiClient,
+        connectivity: ConnectivityObserver
     ) : this(
         secureStorage = secureStorage,
         apiClient = apiClient,
-        catalogLoader = NavidromeCatalogLoader(apiClient)
+        catalogLoader = NavidromeCatalogLoader(apiClient),
+        connectivity = connectivity
     )
 
     override val sourceType = SourceType.NAVIDROME
@@ -102,11 +107,16 @@ class NavidromeSource @Inject constructor(
 
     override suspend fun getStreamInfo(trackId: String): Result<StreamInfo> {
         if (!apiClient.isConfigured) return Result.failure(IllegalStateException("Navidrome not configured"))
+        val quality = if (connectivity.isMetered) {
+            secureStorage.playbackPrefs.navidromeQualityMobile.value
+        } else {
+            secureStorage.playbackPrefs.navidromeQualityWifi.value
+        }
         return Result.success(
             StreamInfo(
-                uri = apiClient.buildStreamUrl(trackId.removePrefix(PREFIX)),
-                format = "audio/*",
-                bitRateKbps = 320
+                uri = apiClient.buildStreamUrl(trackId.removePrefix(PREFIX), quality),
+                format = quality.mimeType,
+                bitRateKbps = quality.maxBitRateKbps.takeIf { it > 0 } ?: 320
             )
         )
     }

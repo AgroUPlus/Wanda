@@ -103,15 +103,20 @@ internal fun LazyListScope.connectionsTab(
         )
     }
 
-    if (state.deezer) {
+    if (state.navidrome || state.deezer) {
         item(key = "sec_stream_quality") {
             SettingsSection(stringResource(R.string.settings_section_stream_quality))
         }
         item(key = "stream_quality") {
+            val scale = Modifier.scale(rememberShelfEntranceScale(4))
             GroupedCard(
-                items = listOf<@Composable () -> Unit>(
-                    { DeezerQualityRow(modifier = Modifier.scale(rememberShelfEntranceScale(4))) }
-                )
+                items = buildList<@Composable () -> Unit> {
+                    if (state.navidrome) {
+                        add { NavidromeQualityRow(metered = false, modifier = scale) }
+                        add { NavidromeQualityRow(metered = true, modifier = scale) }
+                    }
+                    if (state.deezer) add { DeezerQualityRow(modifier = scale) }
+                }
             )
         }
     }

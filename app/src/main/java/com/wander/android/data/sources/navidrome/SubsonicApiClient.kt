@@ -216,16 +216,18 @@ class SubsonicApiClient @Inject constructor(
      * where it was. It only happens to the formats a given server is configured to convert, which
      * is why FLAC would not scrub while MP3 did.
      *
-     * `estimateContentLength` stays for the case where a server transcodes anyway despite `raw`:
-     * without it such a response carries no `Content-Length`, Media3 reports `TIME_UNSET` and the
-     * duration falls back to the metadata's — see the resolution in `PlayerConnection.snapshot`.
+     * `estimateContentLength` stays for the case where a server transcodes anyway despite `raw`,
+     * and for a [quality] the user chose to have converted: without it such a response carries no
+     * `Content-Length`, Media3 reports `TIME_UNSET` and the duration falls back to the metadata's —
+     * see the resolution in `PlayerConnection.snapshot`. A converted stream still cannot seek
+     * reliably, for the reason above; that is the cost the quality setting's description states.
      */
-    fun buildStreamUrl(trackId: String): String =
-        buildUrl("stream.view", mapOf(
-            "id" to trackId,
-            "format" to "raw",
-            "estimateContentLength" to "true"
-        ))
+    fun buildStreamUrl(trackId: String, quality: NavidromeStreamQuality): String {
+        val conversion = quality.format?.let { format ->
+            mapOf("format" to format, "maxBitRate" to quality.maxBitRateKbps.toString())
+        } ?: mapOf("format" to "raw")
+        return buildUrl("stream.view", mapOf("id" to trackId) + conversion + ("estimateContentLength" to "true"))
+    }
 
     /**
      * 500 px was fine for a list row and soft as a full-screen player cover on a 1080 px-wide

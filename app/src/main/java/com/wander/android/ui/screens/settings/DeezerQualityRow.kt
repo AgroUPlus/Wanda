@@ -19,8 +19,8 @@ import com.wander.android.data.sources.deezer.DeezerAudioFormat
 internal enum class DeezerQualityChoice(val tag: String, @StringRes val label: Int) {
     AUTO("AUTO", R.string.settings_deezer_quality_auto),
     FLAC(DeezerAudioFormat.FLAC.tag, R.string.settings_deezer_quality_flac),
-    MP3_320(DeezerAudioFormat.MP3_320.tag, R.string.settings_deezer_quality_320),
-    MP3_128(DeezerAudioFormat.MP3_128.tag, R.string.settings_deezer_quality_128);
+    MP3_320(DeezerAudioFormat.MP3_320.tag, R.string.settings_quality_320_kbps),
+    MP3_128(DeezerAudioFormat.MP3_128.tag, R.string.settings_quality_128_kbps);
 
     companion object {
         /** The stored choice; anything else (never set, or cleared at sign-out) is [AUTO]. */

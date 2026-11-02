@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.settings
 
 import androidx.lifecycle.ViewModel
 import com.wander.android.core.security.SecureStorage
+import com.wander.android.data.sources.navidrome.NavidromeStreamQuality
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,4 +29,14 @@ internal class StreamQualityViewModel @Inject constructor(
         secureStorage.deezerAudioQuality = choice.tag
         _deezerQuality.value = choice
     }
+
+    val navidromeQualityWifi: StateFlow<NavidromeStreamQuality> =
+        secureStorage.playbackPrefs.navidromeQualityWifi
+    val navidromeQualityMobile: StateFlow<NavidromeStreamQuality> =
+        secureStorage.playbackPrefs.navidromeQualityMobile
+
+    fun setNavidromeQualityWifi(quality: NavidromeStreamQuality) =
+        secureStorage.playbackPrefs.setNavidromeQualityWifi(quality)
+    fun setNavidromeQualityMobile(quality: NavidromeStreamQuality) =
+        secureStorage.playbackPrefs.setNavidromeQualityMobile(quality)
 }

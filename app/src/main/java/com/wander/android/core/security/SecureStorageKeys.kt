@@ -75,6 +75,8 @@ internal const val KEY_LOUDNESS_MODE = "key_loudness_mode"
 internal const val KEY_LOUDNESS_PREAMP_DB = "key_loudness_preamp_db"
 internal const val KEY_INDEX_ON_MOBILE_DATA = "key_index_on_mobile_data"
 internal const val KEY_RADIO_MODE = "key_radio_mode"
+internal const val KEY_NAVIDROME_QUALITY_WIFI = "key_navidrome_quality_wifi"
+internal const val KEY_NAVIDROME_QUALITY_MOBILE = "key_navidrome_quality_mobile"
 
 internal const val KEY_AMOLED_BLACK = "key_amoled_black"
 internal const val KEY_BACK_BLUR = "key_back_blur"

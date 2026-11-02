@@ -3,6 +3,7 @@ package com.wander.android.core.security
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.wander.android.data.model.PlaybackMediaType
+import com.wander.android.data.sources.navidrome.NavidromeStreamQuality
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,6 +25,25 @@ internal class SecurePlaybackPreferences(private val prefs: SharedPreferences) {
     private val _isIndexOnMobileDataEnabled =
         MutableStateFlow(prefs.getBoolean(KEY_INDEX_ON_MOBILE_DATA, false))
     val isIndexOnMobileDataEnabled: StateFlow<Boolean> = _isIndexOnMobileDataEnabled.asStateFlow()
+
+    /** Navidrome's stream quality on an unmetered network, and on a metered one. */
+    private val _navidromeQualityWifi =
+        MutableStateFlow(NavidromeStreamQuality.fromKey(prefs.getString(KEY_NAVIDROME_QUALITY_WIFI, null)))
+    val navidromeQualityWifi: StateFlow<NavidromeStreamQuality> = _navidromeQualityWifi.asStateFlow()
+
+    private val _navidromeQualityMobile =
+        MutableStateFlow(NavidromeStreamQuality.fromKey(prefs.getString(KEY_NAVIDROME_QUALITY_MOBILE, null)))
+    val navidromeQualityMobile: StateFlow<NavidromeStreamQuality> = _navidromeQualityMobile.asStateFlow()
+
+    fun setNavidromeQualityWifi(quality: NavidromeStreamQuality) {
+        prefs.edit { putString(KEY_NAVIDROME_QUALITY_WIFI, quality.name) }
+        _navidromeQualityWifi.value = quality
+    }
+
+    fun setNavidromeQualityMobile(quality: NavidromeStreamQuality) {
+        prefs.edit { putString(KEY_NAVIDROME_QUALITY_MOBILE, quality.name) }
+        _navidromeQualityMobile.value = quality
+    }
 
     private val _isRadioMode = MutableStateFlow(prefs.getBoolean(KEY_RADIO_MODE, true))
     val isRadioMode: StateFlow<Boolean> = _isRadioMode.asStateFlow()
@@ -126,6 +146,9 @@ internal class SecurePlaybackPreferences(private val prefs: SharedPreferences) {
         _isSkipSilenceEnabled.value = prefs.getBoolean(KEY_SKIP_SILENCE, false)
         _isIndexOnMobileDataEnabled.value = prefs.getBoolean(KEY_INDEX_ON_MOBILE_DATA, false)
         _isRadioMode.value = prefs.getBoolean(KEY_RADIO_MODE, true)
+        _navidromeQualityWifi.value = NavidromeStreamQuality.fromKey(prefs.getString(KEY_NAVIDROME_QUALITY_WIFI, null))
+        _navidromeQualityMobile.value =
+            NavidromeStreamQuality.fromKey(prefs.getString(KEY_NAVIDROME_QUALITY_MOBILE, null))
         _isExternalLyricsEnabled.value = prefs.getBoolean(KEY_EXTERNAL_LYRICS, true)
         _isMusicBrainzLookupEnabled.value = prefs.getBoolean(KEY_MUSICBRAINZ_LOOKUP, false)
         _isPodcastIndexEnabled.value = prefs.getBoolean(KEY_PODCASTINDEX_ENABLED, false)
