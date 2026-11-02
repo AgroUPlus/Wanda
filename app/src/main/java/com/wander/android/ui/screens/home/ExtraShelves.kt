@@ -12,6 +12,7 @@ import com.wander.android.data.repository.ServiceProblem
 import com.wander.android.data.repository.ServiceShelfResult
 import com.wander.android.data.repository.ServiceShelvesRepository
 import com.wander.android.ui.screens.home.layout.ShelfConfig
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -81,8 +82,12 @@ internal class ExtraShelves(
             !upToDate
         }
         // Side by side: most are Room reads, but the online ones each take seconds, and in turn
-        // they added up to however many such shelves the user had.
-        val built = coroutineScope { stale.map { config -> async { build(config) } }.awaitAll() }
+        // they added up to however many such shelves the user had. Off the main thread: a search
+        // maps and de-duplicates its results on the caller's thread, and the Christian and
+        // friends' shelves run several searches each, which stuttered Home while it scrolled.
+        val built = coroutineScope {
+            stale.map { config -> async(Dispatchers.Default) { build(config) } }.awaitAll()
+        }
         return ShelfChanges(built.filterNotNull(), gone)
     }
 
