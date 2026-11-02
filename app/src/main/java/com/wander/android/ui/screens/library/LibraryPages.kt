@@ -12,6 +12,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistController
+import com.wander.android.ui.components.selection.TrackSelectionState
 
 /** What the long-press callbacks and navigation of every Library page lead to. */
 internal class LibraryPageActions(
@@ -21,7 +22,9 @@ internal class LibraryPageActions(
     val onOpenImport: () -> Unit,
     val onOpenSubscriptions: () -> Unit,
     val onTrackLongPress: (UnifiedTrack) -> Unit,
-    val onAlbumLongPress: (UnifiedAlbum) -> Unit
+    val onAlbumLongPress: (UnifiedAlbum) -> Unit,
+    /** Shared by the track pages; see [selectsTracks]. */
+    val selection: TrackSelectionState
 )
 
 /** One page of the Library pager: the content of [tab]. */
@@ -64,11 +67,11 @@ internal fun LibraryPage(
         }
         LibraryTab.LIKED -> SortablePage(tab, browse) {
             val likedTracks by browse.likedTracks.collectAsStateWithLifecycle()
-            TrackList(likedTracks, tab, isSyncing, contentPadding, viewModel, actions.onTrackLongPress)
+            TrackList(likedTracks, tab, isSyncing, contentPadding, viewModel, actions.onTrackLongPress, actions.selection)
         }
         LibraryTab.DOWNLOADS -> SortablePage(tab, browse) {
             val downloadedTracks by browse.downloadedTracks.collectAsStateWithLifecycle()
-            TrackList(downloadedTracks, tab, isSyncing, contentPadding, viewModel, actions.onTrackLongPress)
+            TrackList(downloadedTracks, tab, isSyncing, contentPadding, viewModel, actions.onTrackLongPress, actions.selection)
         }
         LibraryTab.PODCASTS ->
             LibraryPodcastsPage(
@@ -79,14 +82,18 @@ internal fun LibraryPage(
             )
         LibraryTab.TRACKS -> {
             val tracks = browse.tracks.collectAsLazyPagingItems()
-            AllTracksPage(tracks, isSyncing, contentPadding, viewModel, browse, actions.onTrackLongPress)
+            AllTracksPage(tracks, isSyncing, contentPadding, viewModel, browse, actions.onTrackLongPress, actions.selection)
         }
         LibraryTab.ARTISTS -> LibraryArtistsPage(contentPadding, browse, actions.onOpenArtist)
         LibraryTab.GENRES ->
-            LibraryGenresPage(contentPadding, viewModel, browse, isSyncing, actions.onTrackLongPress)
+            LibraryGenresPage(contentPadding, viewModel, browse, isSyncing, actions.onTrackLongPress, actions.selection)
         LibraryTab.FOLLOWED -> FollowedArtistsPage(contentPadding, actions.onOpenArtist)
     }
 }
+
+/** The tabs whose rows can be selected; the sheet offers Select only there. */
+internal val LibraryTab.selectsTracks: Boolean
+    get() = this == LibraryTab.TRACKS || this == LibraryTab.LIKED || this == LibraryTab.DOWNLOADS || this == LibraryTab.GENRES
 
 /** A list under its [LibraryListToolbar], which stays put even when the list below is empty. */
 @Composable

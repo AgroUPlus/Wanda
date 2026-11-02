@@ -35,17 +35,19 @@ class TrackDownloadViewModel @Inject constructor(
     val marks: StateFlow<DownloadMarks> = downloads.marks
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DownloadMarks())
 
-    fun canDownload(track: UnifiedTrack): Boolean =
-        ManualDownloadRules.canDownload(track) && !marks.value.isDownloaded(track) && !marks.value.isQueued(track)
+    /** [current] is the caller's collected [marks], so a composition reads the value it observes. */
+    fun canDownload(track: UnifiedTrack, current: DownloadMarks = marks.value): Boolean =
+        ManualDownloadRules.canDownload(track) && !current.isDownloaded(track) && !current.isQueued(track)
 
-    fun canRemove(track: UnifiedTrack): Boolean = ManualDownloadRules.canRemove(track, marks.value)
+    fun canRemove(track: UnifiedTrack, current: DownloadMarks = marks.value): Boolean =
+        ManualDownloadRules.canRemove(track, current)
 
     fun download(tracks: List<UnifiedTrack>) {
-        viewModelScope.launch { downloads.download(tracks.filter(::canDownload)) }
+        viewModelScope.launch { downloads.download(tracks.filter { canDownload(it) }) }
     }
 
     fun remove(tracks: List<UnifiedTrack>) {
-        viewModelScope.launch { downloads.remove(tracks.filter(::canRemove)) }
+        viewModelScope.launch { downloads.remove(tracks.filter { canRemove(it) }) }
     }
 }
 
@@ -66,6 +68,6 @@ val LocalDownloadMarks = compositionLocalOf { DownloadMarks() }
 fun rememberDownloadAll(tracks: List<UnifiedTrack>): (() -> Unit)? {
     val downloads: TrackDownloadViewModel = hiltViewModel()
     val marks by downloads.marks.collectAsStateWithLifecycle()
-    val wanted = remember(tracks, marks) { tracks.filter(downloads::canDownload) }
+    val wanted = remember(tracks, marks) { tracks.filter { downloads.canDownload(it, marks) } }
     return remember(wanted) { { downloads.download(wanted) }.takeIf { wanted.isNotEmpty() } }
 }

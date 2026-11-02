@@ -46,6 +46,9 @@ import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.nestedListInset
 import com.wander.android.ui.components.rememberShelfEntranceScale
+import com.wander.android.ui.components.selection.TrackSelectionBar
+import com.wander.android.ui.components.selection.TrackSelectionState
+import com.wander.android.ui.components.selection.rememberTrackSelectionState
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -77,16 +80,28 @@ internal fun HistoryScreen(
     var actionsFor by remember { mutableStateOf<HistoryTrack?>(null) }
 
     val addToPlaylist = AddToPlaylistHost()
+    val selection = rememberTrackSelectionState()
 
     actionsFor?.let { entry ->
-        HistoryTrackActions(entry, viewModel, addToPlaylist, onOpenArtist, onOpenAlbum) { actionsFor = null }
+        HistoryTrackActions(
+            entry, viewModel, addToPlaylist, onOpenArtist, onOpenAlbum,
+            onSelect = { selection.toggle(entry.selectionItem()) }
+        ) { actionsFor = null }
     }
 
     Column(modifier = Modifier
         .fillMaxSize()
         .padding(contentPadding.headerInset())
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(end = 8.dp)) {
+        // The header gives way to the selection's bar while one runs; the Column already clears
+        // the status bar, so the bar needs no inset of its own.
+        TrackSelectionBar(
+            selection = selection,
+            addToPlaylist = addToPlaylist,
+            topInset = 0.dp,
+            extraActions = historySelectionActions(viewModel)
+        )
+        if (!selection.isActive) Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(end = 8.dp)) {
             IconButton(onClick = onBack, modifier = Modifier.padding(start = 4.dp)) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
             }
@@ -105,7 +120,7 @@ internal fun HistoryScreen(
                 contentPadding = contentPadding.nestedListInset(),
                 modifier = Modifier.fillMaxSize()
             ) {
-                historyItems(plays, zone, viewModel) { actionsFor = it }
+                historyItems(plays, zone, viewModel, selection) { actionsFor = it }
                 if (plays.loadState.append is LoadState.Loading) {
                     items(count = 3, key = { "history_skeleton_$it" }, contentType = { "skeleton" }) {
                         SkeletonRow(leadingSize = 48.dp, leadingShape = MaterialTheme.shapes.extraSmall)
@@ -139,6 +154,7 @@ private fun LazyListScope.historyItems(
     plays: LazyPagingItems<HistoryTrack>,
     zone: ZoneId,
     viewModel: HistoryViewModel,
+    selection: TrackSelectionState,
     onLongPress: (HistoryTrack) -> Unit
 ) {
     items(
@@ -147,7 +163,7 @@ private fun LazyListScope.historyItems(
         contentType = plays.itemContentType { "play" }
     ) { index ->
         val entry = plays[index] ?: return@items
-        HistoryEntry(plays, index, entry, zone, viewModel, onLongPress, Modifier.animateItem())
+        HistoryEntry(plays, index, entry, zone, viewModel, selection, onLongPress, Modifier.animateItem())
     }
 }
 
@@ -158,6 +174,7 @@ private fun HistoryEntry(
     entry: HistoryTrack,
     zone: ZoneId,
     viewModel: HistoryViewModel,
+    selection: TrackSelectionState,
     onLongPress: (HistoryTrack) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -171,11 +188,12 @@ private fun HistoryEntry(
         if (isFirstOfDay) {
             HistoryDateDivider(dayMillis = entry.playedAt, zone = zone)
         }
+        val item = entry.selectionItem()
         HistoryRow(
             entry = entry,
             isFirstOfDay = isFirstOfDay,
             isLastOfDay = isLastOfDay,
-            onPlay = {
+            onPlay = selection.onTap(item) {
                 // Queues from what is currently loaded, not the whole log: a play log
                 // has no natural "everything after this" the way an album does, so the
                 // queue is exactly the window already on screen, same as before paging.
@@ -184,7 +202,8 @@ private fun HistoryEntry(
                 viewModel.play(loaded.map { it.track }, playIndex.coerceAtLeast(0))
             },
             onToggleLike = { viewModel.toggleLike(entry.track) },
-            onLongPress = { onLongPress(entry) },
+            onLongPress = selection.onLongPress(item) { onLongPress(entry) },
+            selected = selection.stateOf(item.key),
             zone = zone
         )
     }
@@ -197,7 +216,8 @@ private fun HistoryRow(
     isLastOfDay: Boolean,
     onPlay: () -> Unit,
     onToggleLike: () -> Unit,
-    onLongPress: () -> Unit,
+    onLongPress: (() -> Unit)?,
+    selected: Boolean?,
     zone: ZoneId
 ) {
     TrackRow(
@@ -205,6 +225,7 @@ private fun HistoryRow(
         onPlay = onPlay,
         onToggleLike = onToggleLike,
         onLongPress = onLongPress,
+        selected = selected,
         trailingLabel = Instant.ofEpochMilli(entry.playedAt).atZone(zone).toLocalTime().format(PlayTime),
         modifier = Modifier.dayGroupedItem(isFirstOfDay, isLastOfDay)
     )

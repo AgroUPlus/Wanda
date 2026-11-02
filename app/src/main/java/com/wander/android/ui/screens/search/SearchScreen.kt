@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,16 +28,17 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
-import com.wander.android.data.repository.artistIdFor
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.SearchKindToggle
 import com.wander.android.ui.components.SourceToggleChips
-import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.nestedListInset
 import com.wander.android.ui.components.rememberShelfEntranceScale
+import com.wander.android.ui.components.selection.SelectedTrack
+import com.wander.android.ui.components.selection.TrackSelectionBar
+import com.wander.android.ui.components.selection.rememberTrackSelectionState
 
 @Composable
 fun SearchScreen(
@@ -57,164 +59,158 @@ fun SearchScreen(
 
     val addToPlaylist = AddToPlaylistHost()
 
+    val selection = rememberTrackSelectionState()
+    // A new search is a new list; whatever was selected in the last one is not in it.
+    LaunchedEffect(query) { selection.clear() }
+
     actionsFor?.let { track ->
-        TrackActionsSheet(
-            track = track,
-            isLiked = track.isLiked,
-            onPlayNext = { viewModel.playNext(track) },
-            onAddToQueue = { viewModel.addToQueue(track) },
-            onStartRadio = { viewModel.startRadio(track) },
-            onToggleLike = { viewModel.toggleLike(track) },
-            onRemove = null,
-            onOpenArtist = track.artist
-                .takeIf { it.isNotBlank() }
-                ?.let { { name -> onOpenArtist(name, track.artistIdFor(name)) } },
-            onOpenAlbum = { albumId ->
-                viewModel.rememberQuery()
-                onOpenAlbum(albumId)
-            },
-            onDismiss = { actionsFor = null },
-            onShare = if (viewModel.canShare(track)) {
-                { viewModel.share(track) }
-            } else {
-                null
-            },
-            onAddToPlaylist = if (addToPlaylist.canAdd(track)) {
-                { addToPlaylist.open(track) }
-            } else {
-                null
-            }
+        SearchTrackActions(
+            track, viewModel, addToPlaylist, onOpenArtist, onOpenAlbum,
+            onSelect = { selection.toggle(SelectedTrack(track.id, track)) }
+                .takeIf { state.results.any { it.id == track.id } },
+            onDismiss = { actionsFor = null }
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(contentPadding.headerInset())
-    ) {
-        // The field itself is in the dock at the bottom of the app — one search box, always in the
-        // same place, whether or not you are on this screen. What stays here is everything that
-        // shapes the search rather than states it.
-        SearchKindToggle(
-            selected = kind,
-            onSelect = viewModel::selectKind,
-            modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 12.dp)
-        )
-
-        if (availableSources.size > 1) {
-            SourceToggleChips(
-                sources = availableSources,
-                selected = selectedSources,
-                onToggle = viewModel::toggleSource,
-                onSelectAll = viewModel::selectAllSources,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-        }
-
-        if (!state.isSearching && !state.isFailure && state.unansweredSources.isNotEmpty()) {
-            UnansweredSourcesNote(
-                sources = state.unansweredSources,
-                modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 8.dp)
-            )
-        }
-
-        // fillMaxWidth is load-bearing: without it the Box wraps its content, so it was only as
-        // wide as the spinner and `Center` had nothing to centre within — the indicator sat at
-        // the Column's start edge.
-        Box(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .padding(contentPadding.headerInset())
         ) {
-            // The bottom inset carries the player and nav bar. The list gets it through
-            // `nestedListInset()`; anything centred has to be lifted by the same amount or it centres
-            // in a space that runs underneath them, and reads as sitting too low.
-            val centred = Modifier.padding(bottom = contentPadding.calculateBottomPadding())
+            // The field itself is in the dock at the bottom of the app — one search box, always in the
+            // same place, whether or not you are on this screen. What stays here is everything that
+            // shapes the search rather than states it.
+            SearchKindToggle(
+                selected = kind,
+                onSelect = viewModel::selectKind,
+                modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 12.dp)
+            )
 
-            when {
-                state.isSearching -> LoadingIndicator(modifier = centred)
-
-                // The field, not `hasQuery`: the state trails typing by the debounce, and the
-                // history must not flash up under a query that is already there.
-                query.isBlank() && recentSearches.isNotEmpty() -> RecentSearchesList(
-                    queries = recentSearches,
-                    contentPadding = contentPadding.nestedListInset(),
-                    onSelect = historyViewModel::search,
-                    onRemove = historyViewModel::remove,
-                    onClearAll = historyViewModel::clear
+            if (availableSources.size > 1) {
+                SourceToggleChips(
+                    sources = availableSources,
+                    selected = selectedSources,
+                    onToggle = viewModel::toggleSource,
+                    onSelectAll = viewModel::selectAllSources,
+                    modifier = Modifier.padding(bottom = 12.dp)
                 )
+            }
 
-                !state.hasQuery -> EmptyState(
-                    title = stringResource(R.string.search_search_everything_once),
-                    message = stringResource(R.string.search_navidrome_youtube_music_music_device),
-                    modifier = centred
+            if (!state.isSearching && !state.isFailure && state.unansweredSources.isNotEmpty()) {
+                UnansweredSourcesNote(
+                    sources = state.unansweredSources,
+                    modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 8.dp)
                 )
+            }
 
-                state.isFailure -> EmptyState(
-                    title = stringResource(R.string.search_failed_title),
-                    message = stringResource(R.string.search_failed_message),
-                    icon = Icons.Rounded.CloudOff,
-                    actionLabel = stringResource(R.string.search_retry),
-                    onAction = viewModel::retry,
-                    modifier = centred
-                )
+            // fillMaxWidth is load-bearing: without it the Box wraps its content, so it was only as
+            // wide as the spinner and `Center` had nothing to centre within — the indicator sat at
+            // the Column's start edge.
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                // The bottom inset carries the player and nav bar. The list gets it through
+                // `nestedListInset()`; anything centred has to be lifted by the same amount or it centres
+                // in a space that runs underneath them, and reads as sitting too low.
+                val centred = Modifier.padding(bottom = contentPadding.calculateBottomPadding())
 
-                state.isEmpty -> EmptyState(
-                    title = stringResource(R.string.search_no_matches),
-                    message = stringResource(R.string.search_nothing_found_connected_sources, query),
-                    modifier = centred
-                )
+                when {
+                    state.isSearching -> LoadingIndicator(modifier = centred)
 
-                else -> LazyColumn(
-                    contentPadding = contentPadding.nestedListInset(),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    artistResultsSection(state.artists) { name, id ->
-                        viewModel.rememberQuery()
-                        onOpenArtist(name, id)
-                    }
-                    albumResultsSection(state.albums) { albumId ->
-                        viewModel.rememberQuery()
-                        onOpenAlbum(albumId)
-                    }
-                    lyricMatchesSection(
-                        matches = state.lyricMatches,
-                        query = query,
-                        expanded = isLyricsExpanded,
-                        onToggleExpanded = { isLyricsExpanded = !isLyricsExpanded },
-                        onPlay = { match -> viewModel.playTrackAtTimestamp(match.track, match.timestampMs) },
-                        onLongPress = { track -> actionsFor = track }
+                    // The field, not `hasQuery`: the state trails typing by the debounce, and the
+                    // history must not flash up under a query that is already there.
+                    query.isBlank() && recentSearches.isNotEmpty() -> RecentSearchesList(
+                        queries = recentSearches,
+                        contentPadding = contentPadding.nestedListInset(),
+                        onSelect = historyViewModel::search,
+                        onRemove = historyViewModel::remove,
+                        onClearAll = historyViewModel::clear
                     )
-                    val hasOtherSections = state.lyricMatches.isNotEmpty() ||
-                        state.albums.isNotEmpty() || state.artists.isNotEmpty()
-                    if (hasOtherSections && state.results.isNotEmpty()) {
-                        searchSectionHeader(key = "header_tracks", title = R.string.search_songs)
-                    }
 
-                    itemsIndexed(
-                        items = state.results,
-                        key = { _, track -> track.id },
-                        contentType = { _, _ -> "track" }
-                    ) { index, track ->
-                        val entranceScale = rememberShelfEntranceScale(index)
-                        TrackRow(
-                            track = track,
-                            // A radio from the tapped song, not the results list.
-                            //
-                            // The list is everything matching a string: searching "Signals" and
-                            // pressing one of them queued every other song with "Signals" in its
-                            // name, by unrelated artists, in relevance order. That is a spelling
-                            // coincidence, not a running order. A station seeded from the track
-                            // plays it first and then what actually sounds like it, across every
-                            // configured source — see `PlaybackCoordinator.startRadio`.
-                            onPlay = { viewModel.startRadio(track) },
-                            onLongPress = { actionsFor = track },
-                            modifier = Modifier.animateItem().scale(entranceScale)
+                    !state.hasQuery -> EmptyState(
+                        title = stringResource(R.string.search_search_everything_once),
+                        message = stringResource(R.string.search_navidrome_youtube_music_music_device),
+                        modifier = centred
+                    )
+
+                    state.isFailure -> EmptyState(
+                        title = stringResource(R.string.search_failed_title),
+                        message = stringResource(R.string.search_failed_message),
+                        icon = Icons.Rounded.CloudOff,
+                        actionLabel = stringResource(R.string.search_retry),
+                        onAction = viewModel::retry,
+                        modifier = centred
+                    )
+
+                    state.isEmpty -> EmptyState(
+                        title = stringResource(R.string.search_no_matches),
+                        message = stringResource(R.string.search_nothing_found_connected_sources, query),
+                        modifier = centred
+                    )
+
+                    else -> LazyColumn(
+                        contentPadding = contentPadding.nestedListInset(),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        artistResultsSection(state.artists) { name, id ->
+                            viewModel.rememberQuery()
+                            onOpenArtist(name, id)
+                        }
+                        albumResultsSection(state.albums) { albumId ->
+                            viewModel.rememberQuery()
+                            onOpenAlbum(albumId)
+                        }
+                        lyricMatchesSection(
+                            matches = state.lyricMatches,
+                            query = query,
+                            expanded = isLyricsExpanded,
+                            onToggleExpanded = { isLyricsExpanded = !isLyricsExpanded },
+                            onPlay = { match -> viewModel.playTrackAtTimestamp(match.track, match.timestampMs) },
+                            onLongPress = { track -> actionsFor = track }
                         )
+                        val hasOtherSections = state.lyricMatches.isNotEmpty() ||
+                            state.albums.isNotEmpty() || state.artists.isNotEmpty()
+                        if (hasOtherSections && state.results.isNotEmpty()) {
+                            searchSectionHeader(key = "header_tracks", title = R.string.search_songs)
+                        }
+
+                        itemsIndexed(
+                            items = state.results,
+                            key = { _, track -> track.id },
+                            contentType = { _, _ -> "track" }
+                        ) { index, track ->
+                            val entranceScale = rememberShelfEntranceScale(index)
+                            val item = SelectedTrack(track.id, track)
+                            TrackRow(
+                                track = track,
+                                // A radio from the tapped song, not the results list.
+                                //
+                                // The list is everything matching a string: searching "Signals" and
+                                // pressing one of them queued every other song with "Signals" in its
+                                // name, by unrelated artists, in relevance order. That is a spelling
+                                // coincidence, not a running order. A station seeded from the track
+                                // plays it first and then what actually sounds like it, across every
+                                // configured source — see `PlaybackCoordinator.startRadio`.
+                                onPlay = selection.onTap(item) { viewModel.startRadio(track) },
+                                onLongPress = selection.onLongPress(item) { actionsFor = track },
+                                selected = selection.stateOf(item.key),
+                                modifier = Modifier.animateItem().scale(entranceScale)
+                            )
+                        }
                     }
                 }
             }
         }
+
+        TrackSelectionBar(
+            selection = selection,
+            addToPlaylist = addToPlaylist,
+            topInset = contentPadding.calculateTopPadding(),
+            modifier = Modifier.align(Alignment.TopStart)
+        )
     }
 }

@@ -43,6 +43,7 @@ internal fun LibraryTrackActions(
     addToPlaylist: AddToPlaylistController,
     onOpenArtist: (String, String?) -> Unit,
     onOpenAlbum: (String) -> Unit,
+    onSelect: (() -> Unit)?,
     onDismiss: () -> Unit
 ) {
     TrackActionsSheet(
@@ -70,6 +71,7 @@ internal fun LibraryTrackActions(
         },
         onResetProgress = if (tab == LibraryTab.PODCASTS && track.isEpisode) {
             { podcastsViewModel.resetProgress(track) }
-        } else null
+        } else null,
+        onSelect = onSelect
     )
 }

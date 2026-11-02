@@ -37,6 +37,9 @@ import com.wander.android.ui.components.listInset
 import com.wander.android.ui.components.collapsingTitleSource
 import com.wander.android.ui.components.rememberCollapsingTitleState
 import com.wander.android.ui.components.rememberDownloadAll
+import com.wander.android.ui.components.selection.SelectedTrack
+import com.wander.android.ui.components.selection.TrackSelectionBar
+import com.wander.android.ui.components.selection.rememberTrackSelectionState
 
 /**
  * One record, with its actual tracklist — reached by tapping the album name in the player, which
@@ -61,6 +64,7 @@ fun AlbumScreen(
 
     val addToPlaylist = AddToPlaylistHost()
     val downloadAlbum = rememberDownloadAll(tracks)
+    val selection = rememberTrackSelectionState()
 
     actionsFor?.let { track ->
         TrackActionsSheet(
@@ -84,7 +88,8 @@ fun AlbumScreen(
                 { addToPlaylist.open(track) }
             } else {
                 null
-            }
+            },
+            onSelect = { selection.toggle(SelectedTrack(track.id, track)) }
         )
     }
 
@@ -173,10 +178,12 @@ fun AlbumScreen(
                         key = { _, track -> track.id },
                         contentType = { _, _ -> "track" }
                     ) { index, track ->
+                        val item = SelectedTrack(track.id, track)
                         TrackRow(
                             track = track,
-                            onPlay = { viewModel.play(index) },
-                            onLongPress = { actionsFor = track },
+                            onPlay = selection.onTap(item) { viewModel.play(index) },
+                            onLongPress = selection.onLongPress(item) { actionsFor = track },
+                            selected = selection.stateOf(item.key),
                             modifier = Modifier
                                 .animateItem()
                                 .scale(rememberShelfEntranceScale(index))
@@ -194,6 +201,12 @@ fun AlbumScreen(
             onPlay = viewModel::playAll,
             heroTitleStyle = MaterialTheme.typography.heroTitle,
             heroTitleMaxLines = HeroTitleMaxLines,
+            topInset = contentPadding.calculateTopPadding(),
+            modifier = Modifier.align(Alignment.TopStart)
+        )
+        TrackSelectionBar(
+            selection = selection,
+            addToPlaylist = addToPlaylist,
             topInset = contentPadding.calculateTopPadding(),
             modifier = Modifier.align(Alignment.TopStart)
         )

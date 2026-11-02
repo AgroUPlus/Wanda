@@ -40,6 +40,11 @@ internal class HistoryViewModel @Inject constructor(
         viewModelScope.launch { musicRepository.removeFromHistory(entry.historyId) }
     }
 
+    /** Several plays at once, from a selection: each one listen, as [removeEntry] removes one. */
+    fun removeEntries(historyIds: List<Long>) {
+        viewModelScope.launch { historyIds.distinct().forEach { musicRepository.removeFromHistory(it) } }
+    }
+
     /** Empties the log; plays still waiting to scrobble are still sent. */
     fun clearAll() {
         viewModelScope.launch { musicRepository.clearHistory() }

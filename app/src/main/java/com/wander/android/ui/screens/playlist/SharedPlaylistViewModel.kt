@@ -85,6 +85,21 @@ class SharedPlaylistViewModel @Inject constructor(
     }
 
     /**
+     * Removes the rows at [indices] this account may remove, last first, so each position still
+     * names the row it did when the selection was made. Stops at the first refusal — its reason is
+     * already on its way to the snackbar — and reloads either way.
+     */
+    fun removeAll(playlist: UnifiedPlaylist, indices: List<Int>, onDone: () -> Unit) {
+        val removable = indices.distinct().filter { canRemove(playlist, it) }.sortedDescending()
+        viewModelScope.launch {
+            for (index in removable) {
+                if (writes.removeFromPlaylist(playlist, index).isFailure) break
+            }
+            onDone()
+        }
+    }
+
+    /**
      * [onDone] runs whether or not the move went through: a dragged row is already drawn where it
      * was dropped, and only a reload puts it back when the backend refused the move.
      */

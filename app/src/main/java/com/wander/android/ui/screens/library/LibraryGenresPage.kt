@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.library
 
+import com.wander.android.ui.components.selection.TrackSelectionState
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -47,7 +48,8 @@ internal fun LibraryGenresPage(
     viewModel: LibraryViewModel,
     browse: LibraryBrowseViewModel,
     isSyncing: Boolean,
-    onLongPress: (UnifiedTrack) -> Unit
+    onLongPress: (UnifiedTrack) -> Unit,
+    selection: TrackSelectionState
 ) {
     val openGenre by browse.openGenre.collectAsStateWithLifecycle()
     BackHandler(enabled = openGenre != null) { browse.openGenre(null) }
@@ -65,7 +67,7 @@ internal fun LibraryGenresPage(
                 onPlay = { viewModel.play(tracks, 0) },
                 onShuffle = { viewModel.play(tracks.shuffled(), 0) }
             )
-            TrackList(tracks, LibraryTab.GENRES, isSyncing, contentPadding, viewModel, onLongPress)
+            TrackList(tracks, LibraryTab.GENRES, isSyncing, contentPadding, viewModel, onLongPress, selection)
         }
     }
 }

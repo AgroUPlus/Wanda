@@ -7,4 +7,14 @@
     <string name="track_download_state_queued">Waiting to download</string>
     <string name="album_download_all">Download album</string>
     <string name="playlist_download_all">Download playlist</string>
+
+    <!-- Selecting several tracks -->
+    <string name="selection_select">Select</string>
+    <string name="selection_exit">Cancel selection</string>
+    <string name="selection_selected">Selected</string>
+    <string name="common_more_options">More options</string>
+    <plurals name="selection_count">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
 </resources>

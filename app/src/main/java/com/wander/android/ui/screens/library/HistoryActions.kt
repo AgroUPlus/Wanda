@@ -1,6 +1,7 @@
 package com.wander.android.ui.screens.library
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -13,6 +14,8 @@ import com.wander.android.ui.components.AddToPlaylistController
 import com.wander.android.ui.components.ConfirmRequest
 import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.rememberConfirmState
+import com.wander.android.ui.components.selection.SelectedTrack
+import com.wander.android.ui.components.selection.SelectionAction
 
 /** The long-press sheet for one play in History, with Remove from history. */
 @Composable
@@ -22,6 +25,7 @@ internal fun HistoryTrackActions(
     addToPlaylist: AddToPlaylistController,
     onOpenArtist: (String, String?) -> Unit,
     onOpenAlbum: (String) -> Unit,
+    onSelect: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val track = entry.track
@@ -45,9 +49,20 @@ internal fun HistoryTrackActions(
             { addToPlaylist.open(track) }
         } else {
             null
-        }
+        },
+        onSelect = onSelect
     )
 }
+
+/** A play as a selection entry: keyed and removed by its log row, not by its track. */
+internal fun HistoryTrack.selectionItem() = SelectedTrack("play_$historyId", track, historyId)
+
+/** Remove from history, for a selection: each selected play, not every play of its track. */
+internal fun historySelectionActions(viewModel: HistoryViewModel): List<SelectionAction> = listOf(
+    SelectionAction(Icons.Rounded.Delete, R.string.history_remove_entry) { selected ->
+        viewModel.removeEntries(selected.map { it.ref })
+    }
+)
 
 /** Clear history, behind a confirmation: one tap from the header must not empty the log. */
 @Composable

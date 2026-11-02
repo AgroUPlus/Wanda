@@ -81,7 +81,9 @@ fun TrackActionsSheet(
     removeLabel: String? = null,
     /** Reorders a playlist the caller may rearrange; null at either end, or when it may not. */
     onMoveUp: (() -> Unit)? = null,
-    onMoveDown: (() -> Unit)? = null
+    onMoveDown: (() -> Unit)? = null,
+    /** Starts selection mode on the list behind the sheet, with this track selected. */
+    onSelect: (() -> Unit)? = null
 ) {
     val playable = track.isPlayableNow()
     // Held here and flipped optimistically: callers pass the track as it was when the menu opened,
@@ -193,7 +195,8 @@ fun TrackActionsSheet(
                         resetProgress = resetProgress,
                         moveUp = moveUp,
                         moveDown = moveDown,
-                        openAlbum = openAlbum
+                        openAlbum = openAlbum,
+                        select = stringResource(R.string.selection_select)
                     ),
                     callbacks = TrackActionCallbacks(
                         onPlayNext = onPlayNext,
@@ -210,7 +213,8 @@ fun TrackActionsSheet(
                         confirmsRemoveDownload = downloads.removeAsks,
                         onResetProgress = askResetProgress,
                         onMoveUp = onMoveUp,
-                        onMoveDown = onMoveDown
+                        onMoveDown = onMoveDown,
+                        onSelect = onSelect
                     ),
                     jamViewModel = jamViewModel,
                     sheet = TrackActionSheetFlow(

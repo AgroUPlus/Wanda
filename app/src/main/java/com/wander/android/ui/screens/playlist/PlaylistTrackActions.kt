@@ -25,7 +25,8 @@ internal fun PlaylistTrackActions(
     addToPlaylist: AddToPlaylistController,
     onOpenArtist: (String, String?) -> Unit,
     onDismiss: () -> Unit,
-    onOpenAlbum: ((String) -> Unit)? = null
+    onOpenAlbum: ((String) -> Unit)? = null,
+    onSelect: (() -> Unit)? = null
 ) {
     val movable = playlist != null && sharedViewModel.canMove(playlist) && !sharedViewModel.isPending(index)
     TrackActionsSheet(
@@ -48,6 +49,7 @@ internal fun PlaylistTrackActions(
         onOpenAlbum = onOpenAlbum,
         onDismiss = onDismiss,
         onShare = { viewModel.share(track) }.takeIf { viewModel.canShare(track) },
-        onAddToPlaylist = { addToPlaylist.open(track) }.takeIf { addToPlaylist.canAdd(track) }
+        onAddToPlaylist = { addToPlaylist.open(track) }.takeIf { addToPlaylist.canAdd(track) },
+        onSelect = onSelect
     )
 }

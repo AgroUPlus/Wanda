@@ -27,6 +27,9 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.ExpressiveRefreshIndicator
 import com.wander.android.ui.components.headerInset
+import com.wander.android.ui.components.selection.SelectedTrack
+import com.wander.android.ui.components.selection.TrackSelectionBar
+import com.wander.android.ui.components.selection.rememberTrackSelectionState
 
 @Composable
 fun LibraryScreen(
@@ -49,16 +52,22 @@ fun LibraryScreen(
     var albumActionsFor by remember { mutableStateOf<UnifiedAlbum?>(null) }
 
     val addToPlaylist = AddToPlaylistHost()
+    // One selection for every track page; a different tab is a different list, so it starts over.
+    val selection = rememberTrackSelectionState()
+    LaunchedEffect(tab) { selection.clear() }
 
     albumActionsFor?.let { album ->
         LibraryAlbumActions(album, viewModel, addToPlaylist, onOpenArtist) { albumActionsFor = null }
     }
     actionsFor?.let { track ->
-        LibraryTrackActions(track, tab, viewModel, podcastsViewModel, addToPlaylist, onOpenArtist, onOpenAlbum) {
+        LibraryTrackActions(
+            track, tab, viewModel, podcastsViewModel, addToPlaylist, onOpenArtist, onOpenAlbum,
+            onSelect = { selection.toggle(SelectedTrack(track.id, track)) }.takeIf { tab.selectsTracks }
+        ) {
             actionsFor = null
         }
     }
-    val pageActions = remember(onOpenAlbum, onOpenArtist, onOpenPlaylist, onOpenImport, onOpenSubscriptions) {
+    val pageActions = remember(onOpenAlbum, onOpenArtist, onOpenPlaylist, onOpenImport, onOpenSubscriptions, selection) {
         LibraryPageActions(
             onOpenAlbum = onOpenAlbum,
             onOpenArtist = onOpenArtist,
@@ -66,7 +75,8 @@ fun LibraryScreen(
             onOpenImport = onOpenImport,
             onOpenSubscriptions = onOpenSubscriptions,
             onTrackLongPress = { actionsFor = it },
-            onAlbumLongPress = { albumActionsFor = it }
+            onAlbumLongPress = { albumActionsFor = it },
+            selection = selection
         )
     }
     val likedTracks by browse.likedTracks.collectAsStateWithLifecycle()
@@ -151,6 +161,14 @@ fun LibraryScreen(
                 if (playsLibrary) browse.shuffleAllTracks() else viewModel.play(activeTracks.shuffled(), 0)
             },
             bottomInset = contentPadding.calculateBottomPadding()
+        )
+
+        // Over the title and tabs: while selecting, those are not what the screen is about.
+        TrackSelectionBar(
+            selection = selection,
+            addToPlaylist = addToPlaylist,
+            topInset = contentPadding.calculateTopPadding(),
+            modifier = Modifier.align(Alignment.TopStart)
         )
     }
 }

@@ -27,6 +27,8 @@ import com.wander.android.ui.components.SkeletonRow
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.nestedListInset
 import com.wander.android.ui.components.rememberShelfEntranceScale
+import com.wander.android.ui.components.selection.SelectedTrack
+import com.wander.android.ui.components.selection.TrackSelectionState
 
 private const val TRACKS_PAGE_SIZE = 40
 private const val SKELETON_ROWS = 8
@@ -38,7 +40,8 @@ internal fun TrackList(
     isSyncing: Boolean,
     contentPadding: PaddingValues,
     viewModel: LibraryViewModel,
-    onLongPress: (UnifiedTrack) -> Unit
+    onLongPress: (UnifiedTrack) -> Unit,
+    selection: TrackSelectionState
 ) {
     if (tracks.isEmpty()) {
         if (isSyncing) {
@@ -75,11 +78,13 @@ internal fun TrackList(
                 }
             }
             val entranceScale = rememberShelfEntranceScale(index)
+            val item = SelectedTrack(track.id, track)
             TrackRow(
                 track = track,
-                onPlay = { viewModel.play(tracks, index) },
+                onPlay = selection.onTap(item) { viewModel.play(tracks, index) },
                 onToggleLike = { viewModel.toggleLike(track) },
-                onLongPress = { onLongPress(track) },
+                onLongPress = selection.onLongPress(item) { onLongPress(track) },
+                selected = selection.stateOf(item.key),
                 modifier = Modifier
                     .animateItem()
                     .scale(entranceScale)

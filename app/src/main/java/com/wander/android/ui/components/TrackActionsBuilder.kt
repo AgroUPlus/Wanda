@@ -6,6 +6,7 @@ import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Favorite
@@ -39,7 +40,8 @@ internal class TrackActionLabels(
     val resetProgress: String,
     val moveUp: String,
     val moveDown: String,
-    val openAlbum: String
+    val openAlbum: String,
+    val select: String
 )
 
 /** What each action does; a null callback means the caller does not offer that action. */
@@ -62,7 +64,8 @@ internal class TrackActionCallbacks(
     val confirmsRemoveDownload: Boolean,
     val onResetProgress: (() -> Unit)?,
     val onMoveUp: (() -> Unit)? = null,
-    val onMoveDown: (() -> Unit)? = null
+    val onMoveDown: (() -> Unit)? = null,
+    val onSelect: (() -> Unit)? = null
 )
 
 /** The sheet's own state changes an action can trigger. */
@@ -112,6 +115,7 @@ internal fun buildTrackActionsList(
         }
     }
     addJamAction(track, state, jamViewModel, dismiss)
+    callbacks.onSelect?.let { add(MenuAction(Icons.Rounded.CheckCircle, labels.select, ActionEmphasis.ICON) { it(); dismiss() }) }
     // These ask first, and the confirmation closes the sheet; see `TrackActionsSheet`.
     callbacks.onResetProgress?.let {
         add(MenuAction(Icons.Rounded.RestartAlt, labels.resetProgress, ActionEmphasis.ICON) { it() })

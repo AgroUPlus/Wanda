@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -19,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
@@ -28,10 +28,10 @@ import com.wander.android.data.repository.sharedplaylist.SharedSyncState
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.CompactHeroTopBar
 import com.wander.android.ui.components.EmptyState
-import com.wander.android.ui.components.MatchStatus
-import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.listInset
 import com.wander.android.ui.components.rememberCollapsingTitleState
+import com.wander.android.ui.components.selection.TrackSelectionBar
+import com.wander.android.ui.components.selection.rememberTrackSelectionState
 import com.wander.android.ui.screens.album.AlbumSkeleton
 import com.wander.android.ui.screens.album.DetailRefreshBox
 import com.wander.android.ui.screens.album.HeroTitleMaxLines
@@ -64,6 +64,7 @@ fun PlaylistScreen(
     val titleState = rememberCollapsingTitleState(listState)
 
     val addToPlaylist = AddToPlaylistHost()
+    val selection = rememberTrackSelectionState()
 
     val shareActions = PlaylistShareHost(playlist, tracks, onOpenPlaylist)
 
@@ -96,7 +97,8 @@ fun PlaylistScreen(
             addToPlaylist = addToPlaylist,
             onOpenArtist = onOpenArtist,
             onDismiss = { actionsFor = null },
-            onOpenAlbum = onOpenAlbum
+            onOpenAlbum = onOpenAlbum,
+            onSelect = { playlistEntries(tracks).getOrNull(index)?.let { selection.toggle(it.selectionItem()) } }
         )
     }
 
@@ -194,39 +196,9 @@ fun PlaylistScreen(
                         }
                     }
 
-                    itemsIndexed(
-                        items = rows,
-                        key = { _, entry -> entry.key },
-                        contentType = { _, _ -> "track" }
-                    ) { position, entry ->
-                        val index = entry.index
-                        val track = entry.track
-                        val unmatched = track.source == SourceType.UNRESOLVED
-                        // An unmatched track has nothing to play, but can still be taken out of a
-                        // playlist this account may edit.
-                        val removable = playlist?.let { sharedViewModel.canRemove(it, index) } == true
-                        PlaylistTrackItem(
-                            reorder = reorder,
-                            entry = entry,
-                            position = position,
-                            count = rows.size,
-                            draggable = canMove && !sharedViewModel.isPending(index)
-                        ) { rowModifier ->
-                            TrackRow(
-                                track = track,
-                                onPlay = { viewModel.play(index) },
-                                onLongPress = { actionsFor = IndexedValue(index, track) }.takeUnless { unmatched && !removable },
-                                trailingLabel = sharedViewModel.addedBy(index)
-                                    ?.let { stringResource(R.string.shared_playlist_added_by, it) },
-                                matchStatus = when {
-                                    !unmatched -> null
-                                    importWork.isRunning -> MatchStatus.MATCHING
-                                    else -> MatchStatus.NOT_FOUND
-                                },
-                                modifier = rowModifier
-                            )
-                        }
-                    }
+                    playlistTrackRows(
+                        rows, playlist, reorder, canMove, importWork.isRunning, viewModel, sharedViewModel, selection
+                    ) { actionsFor = it }
                 }
             }
         }
@@ -243,5 +215,12 @@ fun PlaylistScreen(
         ) {
             PlaylistOverflow(onEditDetails = { editingDetails = true }.takeIf { viewModel.canEditDetails() })
         }
+        TrackSelectionBar(
+            selection = selection,
+            addToPlaylist = addToPlaylist,
+            topInset = contentPadding.calculateTopPadding(),
+            modifier = Modifier.align(Alignment.TopStart),
+            extraActions = playlistSelectionActions(playlist, selection, viewModel, sharedViewModel)
+        )
     }
 }

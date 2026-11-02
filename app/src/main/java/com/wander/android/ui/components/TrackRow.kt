@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,12 +27,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.FingerprintStatus
+import com.wander.android.ui.components.selection.SelectedArtworkMark
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -73,7 +76,12 @@ fun TrackRow(
      * Where an imported placeholder is in being matched to a playable track. Null for every real
      * track, which is every row outside an import.
      */
-    matchStatus: MatchStatus? = null
+    matchStatus: MatchStatus? = null,
+    /**
+     * Null outside selection mode. Inside it, whether this row is one of the selected — and a tap
+     * reaches [onPlay] even on a row that would not play, since the caller toggles it instead.
+     */
+    selected: Boolean? = null
 ) {
     // Dimming the whole row rather than each piece: the row is one object, and fading the parts
     // separately made the artwork and the text disagree about how unavailable the track was.
@@ -87,7 +95,9 @@ fun TrackRow(
     val pressScale by rememberPressScale(interactionSource, label = "trackRowPress")
     val artworkShape = rememberShelfArtworkShape(isPressed)
     val rowBackground by animateColorAsState(
-        targetValue = if (isPlaying && showBackground) {
+        targetValue = if (selected == true) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else if (isPlaying && showBackground) {
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.30f)
         } else {
             Color.Transparent
@@ -108,20 +118,24 @@ fun TrackRow(
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
-                onClick = { if (enabled) onPlay() },
+                onClick = { if (enabled || selected != null) onPlay() },
                 onLongClick = onLongPress
             )
+            .then(if (selected != null) Modifier.semantics { this.selected = selected == true } else Modifier)
             .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {
-        Artwork(
-            url = track.artworkUrl,
-            contentDescription = null,
-            sizeDp = 52.dp,
-            shape = artworkShape,
-            modifier = Modifier
-                .size(52.dp)
-                .graphicsLayer { alpha = rowAlpha }
-        )
+        Box {
+            Artwork(
+                url = track.artworkUrl,
+                contentDescription = null,
+                sizeDp = 52.dp,
+                shape = artworkShape,
+                modifier = Modifier
+                    .size(52.dp)
+                    .graphicsLayer { alpha = rowAlpha }
+            )
+            if (selected == true) SelectedArtworkMark(Modifier.matchParentSize())
+        }
 
         Column(
             modifier = Modifier
@@ -184,7 +198,8 @@ fun TrackRow(
                     color = MaterialTheme.colorScheme.error
                 )
                 isPlaying -> KineticEqualizer(isPlaying = true)
-                onToggleLike != null -> LikeButton(isLiked = track.isLiked, onToggle = onToggleLike)
+                // A heart mid-selection would be a second tap target that does something else.
+                onToggleLike != null && selected == null -> LikeButton(isLiked = track.isLiked, onToggle = onToggleLike)
             }
             trailingLabel?.let {
                 Text(

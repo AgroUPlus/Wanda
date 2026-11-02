@@ -34,9 +34,9 @@ internal fun rememberTrackSheetDownloads(
     val removeAsks = marks.isDownloaded(track)
     val remove = { downloads.remove(listOf(track)) }
     return TrackSheetDownloads(
-        download = { downloads.download(listOf(track)) }.takeIf { downloads.canDownload(track) },
+        download = { downloads.download(listOf(track)) }.takeIf { downloads.canDownload(track, marks) },
         remove = when {
-            !downloads.canRemove(track) -> null
+            !downloads.canRemove(track, marks) -> null
             removeAsks -> { { onConfirm(ConfirmRequest(title, message, confirmLabel, remove)) } }
             else -> remove
         },

@@ -29,6 +29,8 @@ import com.wander.android.ui.components.fastScrollLetter
 import com.wander.android.ui.components.groupedListItem
 import com.wander.android.ui.components.nestedListInset
 import com.wander.android.ui.components.rememberShelfEntranceScale
+import com.wander.android.ui.components.selection.SelectedTrack
+import com.wander.android.ui.components.selection.TrackSelectionState
 
 private const val LOADING_ROWS = 8
 
@@ -53,6 +55,7 @@ internal fun PagedTrackList(
     onPlay: (UnifiedTrack) -> Unit,
     onToggleLike: (UnifiedTrack) -> Unit,
     onLongPress: (UnifiedTrack) -> Unit,
+    selection: TrackSelectionState,
     letterFor: ((UnifiedTrack) -> String?)? = null
 ) {
     if (tracks.itemCount == 0) {
@@ -99,14 +102,16 @@ internal fun PagedTrackList(
                     return@items
                 }
                 val entranceScale = rememberShelfEntranceScale(index)
+                val item = SelectedTrack(track.id, track)
                 TrackRow(
                     track = track,
                     // The queue is built from the database on tap, not from what the screen holds:
                     // paging means the screen holds only the pages scrolled through, and playing
                     // the fortieth track must still queue the rest of the library after it.
-                    onPlay = { onPlay(track) },
+                    onPlay = selection.onTap(item) { onPlay(track) },
                     onToggleLike = { onToggleLike(track) },
-                    onLongPress = { onLongPress(track) },
+                    onLongPress = selection.onLongPress(item) { onLongPress(track) },
+                    selected = selection.stateOf(item.key),
                     modifier = Modifier.scale(entranceScale).then(position)
                 )
             }
@@ -142,7 +147,8 @@ internal fun AllTracksPage(
     contentPadding: PaddingValues,
     viewModel: LibraryViewModel,
     browse: LibraryBrowseViewModel,
-    onLongPress: (UnifiedTrack) -> Unit
+    onLongPress: (UnifiedTrack) -> Unit,
+    selection: TrackSelectionState
 ) {
     val sorts by browse.sorts.collectAsStateWithLifecycle()
     Column(modifier = Modifier.fillMaxSize()) {
@@ -152,6 +158,7 @@ internal fun AllTracksPage(
             onPlay = browse::playFromLibrary,
             onToggleLike = viewModel::toggleLike,
             onLongPress = onLongPress,
+            selection = selection,
             letterFor = trackLetter(sorts[LibraryTab.TRACKS])
         )
     }
