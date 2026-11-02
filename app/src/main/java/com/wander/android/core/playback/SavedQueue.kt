@@ -23,7 +23,7 @@ internal data class SavedQueue(
          *
          * A one-shot track (a friend's relayed file — see [isOneShotTrackId]) names a transfer that
          * is consumed the first time it is read, so it is left out; so is a row with no identity of
-         * its own. If the playing item is one of those, the queue resumes at the next track that
+         * its own, and a file another app opened here, whose access grant will have lapsed. If the playing item is one of those, the queue resumes at the next track that
          * was kept, from its start. Null when nothing is left to save.
          */
         fun of(tracks: List<UnifiedTrack>, index: Int, positionMs: Long): SavedQueue? {
@@ -46,6 +46,6 @@ internal data class SavedQueue(
         }
 
         private fun isSavable(track: UnifiedTrack): Boolean =
-            !isOneShotTrackId(track.id) && !isUnidentifiedItemId(track.id)
+            !isOneShotTrackId(track.id) && !isUnidentifiedItemId(track.id) && !isOpenedFileId(track.id)
     }
 }

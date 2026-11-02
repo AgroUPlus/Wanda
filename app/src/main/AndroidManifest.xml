@@ -237,6 +237,17 @@
                 <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <!--
+              "Open with Wanda" for an audio file in a file manager, a download or an attachment.
+              Played once from the URI, never added to the library — see OpenedAudioFile.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="audio/*" />
+            </intent-filter>
         </activity>
 
         <!--

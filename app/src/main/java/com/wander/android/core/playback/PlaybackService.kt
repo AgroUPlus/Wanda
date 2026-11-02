@@ -239,7 +239,8 @@ class PlaybackService : MediaLibraryService() {
             scrobbleJob?.cancel()
             if (!player.isPlaying) return
             val track = player.currentMediaItem?.toUnifiedTrack() ?: return
-            if (recordedFor == track.id) return
+            // A file opened from another app is played, not added to the library and its history.
+            if (recordedFor == track.id || isOpenedFileId(track.id)) return
 
             scrobbleJob = scope.launch {
                 while (player.isPlaying) {

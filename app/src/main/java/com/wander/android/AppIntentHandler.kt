@@ -32,15 +32,16 @@ internal class AppIntentHandler @Inject constructor(
     private val confirmedLinks: ConfirmedLinkHandler,
     private val sharedMedia: SharedMediaLinkOpener,
     private val voiceSearch: VoiceSearch,
-    private val playerConnection: PlayerConnection
+    private val playerConnection: PlayerConnection,
+    private val openedFiles: OpenedAudioFile
 ) {
     /**
-     * Links arrive here: an `agro:` pairing QR, a YouTube/YouTube Music track
-     * someone shared, a `wanda://listen` handoff, a `wanda://inbox` notification,
-     * or a Jam invite link `https://frwd.top/jam?code=...` / `wanda://jam?code=...`.
+     * Links arrive here: an audio file opened from another app, an `agro:` pairing QR, a
+     * YouTube/YouTube Music track someone shared, a `wanda://listen` handoff, a `wanda://inbox`
+     * notification, or a Jam invite link `https://frwd.top/jam?code=...` / `wanda://jam?code=...`.
      *
      * [firstDelivery] is false when the activity was recreated with the intent it already had:
-     * a voice request is not played a second time because the screen rotated.
+     * a voice request or an opened file is not played a second time because the screen rotated.
      */
     fun handleIntent(scope: CoroutineScope, intent: Intent?, firstDelivery: Boolean) {
         if (intent?.action == MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH) {
@@ -50,6 +51,8 @@ internal class AppIntentHandler @Inject constructor(
         val uri = intent?.data ?: return
         val entity = linkRepository.sharedEntity(uri)
         when {
+            // "Open with": the manifest only routes audio files here on these two schemes.
+            uri.scheme == "content" || uri.scheme == "file" -> if (firstDelivery) openedFiles.play(scope, uri)
             uri.scheme == "agro" -> confirmedLinks.handleAgroPairing(uri)
             uri.scheme == "wanda" && uri.host == "inbox" -> deepLinkRouter.request(Routes.ACTIVITY)
             uri.scheme == "wanda" && uri.host == "fingerprints" -> deepLinkRouter.request(Routes.FINGERPRINTS)
