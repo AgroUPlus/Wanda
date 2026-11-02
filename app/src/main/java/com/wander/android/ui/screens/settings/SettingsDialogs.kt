@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.ui.components.ConfirmDialog
 
@@ -150,5 +151,10 @@ internal fun SettingsDialogs(
             },
             onDismiss = { dialogs.confirmForgetEverything = false }
         )
+    }
+
+    val forgetFailures by viewModel.forgetFailures.collectAsStateWithLifecycle()
+    if (forgetFailures.isNotEmpty()) {
+        ForgetFailuresDialog(steps = forgetFailures, onDismiss = viewModel::dismissForgetFailures)
     }
 }

@@ -1,5 +1,8 @@
 package com.wander.android.ui.screens.settings
 
+import android.util.Log
+import androidx.annotation.StringRes
+import com.wander.android.R
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.repository.DropsRepository
 import com.wander.android.data.repository.SocialRepository
@@ -8,6 +11,7 @@ import com.wander.android.data.sources.local.LocalMusicSource
 import com.wander.android.data.sources.navidrome.NavidromeSource
 import com.wander.android.data.sources.ytmusic.GoogleAccountManager
 import com.wander.android.data.sources.ytmusic.YTMusicSource
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -84,26 +88,67 @@ internal class SettingsAccountCoordinator @Inject constructor(
         scope.launch { localSource.refresh(full = true) }
     }
 
-    /** Wipes every stored credential. Deliberately destructive and irreversible. */
+    private val _forgetFailures = MutableStateFlow<List<Int>>(emptyList())
+
+    /** The steps of the last [forgetEverything] that did not complete, as string resources. */
+    val forgetFailures: StateFlow<List<Int>> = _forgetFailures.asStateFlow()
+
+    fun dismissForgetFailures() {
+        _forgetFailures.value = emptyList()
+    }
+
+    /**
+     * Wipes every stored credential. Deliberately destructive and irreversible.
+     *
+     * Each step runs whether or not the one before it worked — a server that cannot be reached
+     * must not leave a Deezer session behind — and every one that fails is reported in
+     * [forgetFailures] rather than dropped. The streaming cache goes too: it holds Deezer and relay
+     * audio already decrypted, fetched with the credentials being forgotten.
+     */
     fun forgetEverything(scope: CoroutineScope, onResetAgroPairing: () -> Unit) {
         scope.launch {
+            val failed = mutableListOf<Int>()
             if (secureStorage.agroConfigured.value) {
-                runCatching { sessionApi.unregisterNode() }
+                failed.attempt(R.string.forget_step_agro_unregister) { sessionApi.unregisterNode().getOrThrow() }
             }
             if (secureStorage.navidromeConfigured.value) {
-                runCatching { navidromeSource.logout() }
+                failed.attempt(R.string.forget_step_navidrome) { navidromeSource.logout() }
             }
             // Signed in or not: an abandoned sign-in can leave WebView cookies behind that were
             // never captured, and both sign-outs are what clear CookieManager and WebStorage.
-            runCatching { accountManager.signOut() }
-            runCatching { deezerAccountManager.signOut() }
+            failed.attempt(R.string.forget_step_youtube) { accountManager.signOut() }
+            failed.attempt(R.string.forget_step_deezer) { deezerAccountManager.signOut() }
             deezerStreamResolver.invalidateSession()
             secureStorage.clearAllCredentials()
-            runCatching { socialRepository.clear() }
-            runCatching { dropsRepository.clear() }
-            runCatching { jamRecaps.clear() }
+            failed.attempt(R.string.forget_step_friends) { socialRepository.clear() }
+            failed.attempt(R.string.forget_step_drops) { dropsRepository.clear() }
+            failed.attempt(R.string.forget_step_jam_recaps) { jamRecaps.clear() }
             blends.clear()
+            failed.attempt(R.string.forget_step_audio_cache) {
+                withContext(Dispatchers.IO) { cacheManager.clearCache() }
+            }
+            refreshCacheSize(scope)
             onResetAgroPairing()
+            _forgetFailures.value = failed
         }
+    }
+
+    /**
+     * Runs one step of [forgetEverything], recording [step] if it throws. Broad on purpose: the
+     * steps are independent, and the failure is surfaced to the user, not swallowed.
+     */
+    private suspend fun MutableList<Int>.attempt(@StringRes step: Int, block: suspend () -> Unit) {
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "A forget-everything step failed: ${e.javaClass.simpleName}")
+            add(step)
+        }
+    }
+
+    private companion object {
+        const val TAG = "SettingsAccount"
     }
 }

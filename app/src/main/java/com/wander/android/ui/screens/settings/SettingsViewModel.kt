@@ -105,6 +105,8 @@ internal class SettingsViewModel @Inject constructor(
     fun disconnectDeezer() = accountCoordinator.disconnectDeezer()
     fun rescanLocalLibrary() = accountCoordinator.rescanLocalLibrary(viewModelScope)
     fun forgetEverything() = accountCoordinator.forgetEverything(viewModelScope) { resetAgroPairing() }
+    val forgetFailures: StateFlow<List<Int>> = accountCoordinator.forgetFailures
+    fun dismissForgetFailures() = accountCoordinator.dismissForgetFailures()
 
     // ── Display & Playback Preferences ─────────────────────────────────────────────────────
 
