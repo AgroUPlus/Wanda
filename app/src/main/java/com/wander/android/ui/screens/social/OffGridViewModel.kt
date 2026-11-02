@@ -7,7 +7,6 @@ import com.wander.android.R
 import com.wander.android.core.network.loggableMessage
 import com.wander.android.core.p2p.NearbyPeers
 import com.wander.android.core.p2p.OffGridLink
-import com.wander.android.core.p2p.OffGridPairing
 import com.wander.android.core.p2p.OffGridTransport
 import com.wander.android.core.sync.P2PServer
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -165,7 +164,7 @@ internal class OffGridViewModel @Inject constructor(
             // initiator possessed.
             _state.value = _state.value.copy(
                 isConnecting = false,
-                error = result.exceptionOrNull()?.let(::describe)
+                error = result.exceptionOrNull()?.let(::describeLinkFailure)
             )
         }
     }
@@ -211,21 +210,6 @@ internal class OffGridViewModel @Inject constructor(
 
     fun dismissError() {
         _state.value = _state.value.copy(error = null)
-    }
-
-    /**
-     * What to say about a failed connection. The link never coming up is logged with its reason
-     * (`WifiDirectLink` names a refused permission or an empty room) and told as one message that
-     * points at the settings involved; the reason itself is English from the platform.
-     */
-    private fun describe(error: Throwable): Int = when {
-        error !is OffGridPairing.PairingException -> {
-            Log.w(TAG, "No direct link: ${error.loggableMessage()}")
-            R.string.offgrid_error_no_link
-        }
-        error.failure is OffGridPairing.Failure.WrongPeer -> R.string.offgrid_error_wrong_peer
-        error.failure is OffGridPairing.Failure.Unreadable -> R.string.offgrid_error_unreadable
-        else -> R.string.offgrid_error_no_answer
     }
 
     /**
