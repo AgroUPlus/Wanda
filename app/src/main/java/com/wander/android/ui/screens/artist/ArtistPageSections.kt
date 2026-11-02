@@ -187,7 +187,7 @@ private fun LazyListScope.albumShelf(
     item(key = "$keyPrefix-title", contentType = SECTION_TITLE) {
         ArtistSectionTitle(
             text = section.title,
-            action = "See all".takeIf { canExpand },
+            action = stringResource(R.string.artist_see_all).takeIf { canExpand },
             isBusy = loadingShelf == section.title,
             onAction = { onExpandShelf(section) }
         )

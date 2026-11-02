@@ -9,9 +9,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.repository.FingerprintStatus
 import com.wander.android.ui.theme.LocalDarkTheme
 
@@ -47,18 +49,19 @@ fun FingerprintBadge(
     // Animated, so a track finishing its decode fades from blue to green rather than blinking — a
     // hard swap on a list that updates as the worker moves through it reads as flicker.
     val colour by animateColorAsState(target, label = "fingerprintBadge")
+    val description = stringResource(
+        when (status) {
+            FingerprintStatus.INDEXED -> R.string.fingerprint_status_indexed
+            FingerprintStatus.PROCESSING -> R.string.fingerprint_status_processing
+            FingerprintStatus.MISSING -> R.string.fingerprint_status_missing
+        }
+    )
 
     Box(
         modifier = modifier
             .size(DotSize)
             .background(colour, CircleShape)
-            .semantics {
-                contentDescription = when (status) {
-                    FingerprintStatus.INDEXED -> "Fingerprinted"
-                    FingerprintStatus.PROCESSING -> "Fingerprinting now"
-                    FingerprintStatus.MISSING -> "Not fingerprinted"
-                }
-            }
+            .semantics { contentDescription = description }
     )
 }
 

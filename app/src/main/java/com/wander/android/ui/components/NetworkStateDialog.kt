@@ -38,22 +38,16 @@ fun NetworkStateDialog(
             )
         },
         title = {
-            Text(if (goingOffline) "You're offline" else "You're back online")
+            Text(stringResource(if (goingOffline) R.string.network_offline_title else R.string.network_online_title))
         },
         text = {
             Text(
-                if (goingOffline) {
-                    "No network connection. Turn on offline mode to play only what is already " +
-                        "downloaded to this device?"
-                } else {
-                    "The connection is back. Turn offline mode off and use your streaming " +
-                        "sources again?"
-                }
+                stringResource(if (goingOffline) R.string.network_offline_message else R.string.network_online_message)
             )
         },
         confirmButton = {
             TextButton(onClick = onConfirm, shapes = ButtonDefaults.shapes()) {
-                Text(if (goingOffline) "Go offline" else "Go online")
+                Text(stringResource(if (goingOffline) R.string.network_go_offline else R.string.network_go_online))
             }
         },
         dismissButton = {
