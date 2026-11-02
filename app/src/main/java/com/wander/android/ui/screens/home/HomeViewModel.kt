@@ -23,8 +23,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -178,26 +176,10 @@ class HomeViewModel @Inject constructor(
             }
 
             // Phase 1: Instant Local-First Room Database Read (< 5ms)
-            var sources: List<SourceType> = emptyList()
-            val localSections = coroutineScope {
-                // Read before the shelves rather than beside them: the lead shelf is built across
-                // whichever backends are configured, so it cannot start until that is known.
-                sources = musicRepository.configuredSources()
-                val onRepeat = async { homeShelfRepository.getQuickPicks(CarouselSize, sources) }
-                val recentlyPlayed = async { homeShelfRepository.getRecentlyPlayed(CarouselSize) }
-                val liked = async { homeShelfRepository.getLikedTracks(CarouselSize) }
-                val discover = async { homeShelfRepository.getNeverPlayed(CarouselSize) }
-
-                buildList {
-                    // The lead shelf earns legible full-width rows; the second earns big
-                    // artwork. The rest stay carousels, so the top of Home has a shape to it.
-                    add(shelf(SectionOnRepeat, "Quick picks", HomeSectionStyle.TRACK_PAGER, onRepeat.await()))
-                    add(shelf(SectionRecentlyPlayed, "Recently Played", HomeSectionStyle.HERO_CAROUSEL, recentlyPlayed.await()))
-                    add(continueListening.value)
-                    add(shelf(SectionLiked, "Your Favorites", HomeSectionStyle.HERO_CAROUSEL, liked.await()))
-                    add(shelf(SectionDiscover, "Discover", HomeSectionStyle.DISCOVER_MASONRY, discover.await()))
-                }.filterNot(HomeSection::isEmpty)
-            }
+            // Read before the shelves rather than beside them: the lead shelf is built across
+            // whichever backends are configured, so it cannot start until that is known.
+            val sources: List<SourceType> = musicRepository.configuredSources()
+            val localSections = homeShelfRepository.localShelves(sources, continueListening.value)
             // Added shelves already on screen stay there until their rebuild below replaces them.
             val keptExtras = _uiState.value.allSections.filter { isAddedShelf(it.id) }
 
@@ -231,14 +213,8 @@ class HomeViewModel @Inject constructor(
             launch {
                 runCatching {
                     kotlinx.coroutines.withTimeoutOrNull(7000) {
-                        val feedDeferred = async { recommendationRepository.getShelves() }
-                        val recommendedDeferred = async {
-                            val seed = homeShelfRepository.getRecentlyPlayed(1).firstOrNull()
-                            seed to seed?.let { musicRepository.generateRadio(it, CarouselSize) }.orEmpty()
-                        }
-                        // Only the shelves that are a kind of music; see `RecommendedShelf.isGeneric`.
-                        val feed = feedDeferred.await().filter { it.isGeneric }
-                        val (seed, suggestions) = recommendedDeferred.await()
+                        val (feed, seed, suggestions) =
+                            loadOnlineFeed(recommendationRepository, homeShelfRepository, musicRepository)
 
                         if (feed.isNotEmpty() || (seed != null && suggestions.isNotEmpty())) {
                             _uiState.update { state ->
