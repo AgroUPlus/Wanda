@@ -42,6 +42,7 @@ class PlaybackService : MediaSessionService() {
     @Inject lateinit var secureStorage: com.wander.android.core.security.SecureStorage
     @Inject lateinit var sleepTimer: SleepTimer
     @Inject lateinit var loudnessReadout: LoudnessReadout
+    @Inject lateinit var loudnessHints: LoudnessHints
     @Inject lateinit var jamSkipGate: JamSkipGate
     @Inject lateinit var bluetoothOutput: BluetoothAudioOutput
     @Inject internal lateinit var scrobbleForwarding: com.wander.android.data.repository.ScrobbleForwarding
@@ -73,7 +74,7 @@ class PlaybackService : MediaSessionService() {
         BluetoothOffloadVeto(player, bluetoothOutput.connected, scope)
         val volume = PlayerVolume { player.volume = it }
         val loudness = secureStorage.loudness
-        LoudnessNormaliser(player, volume, loudness.mode, loudness.preampDb, loudnessReadout, scope)
+        LoudnessNormaliser(player, volume, loudness.mode, loudness.preampDb, loudnessReadout, loudnessHints, scope)
         SleepTimerEnforcer(player, volume, sleepTimer, scope)
         player.addAnalyticsListener(AudioFormatReporter())
         // The session id arrives after the player is built; the listener announces it then.

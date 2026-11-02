@@ -22,7 +22,12 @@ data class StreamInfo(
     /** The InnerTube identity that minted this stream, for YouTube Music only. */
     val client: String? = null,
     /** Why a preferred client was skipped; debug mode only. */
-    val note: String? = null
+    val note: String? = null,
+    /**
+     * A ReplayGain 2.0 track gain in dB the source measured for this stream, where it reports one
+     * only at resolve time (YouTube Music's `loudnessDb`). The fallback after the file's own tags.
+     */
+    val loudnessGainDb: Float? = null
 )
 
 /**

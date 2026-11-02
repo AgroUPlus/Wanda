@@ -16,7 +16,8 @@ import kotlinx.coroutines.flow.launchIn
  * The tags come from the selected audio format's metadata — parsed by Media3 during extraction —
  * so this covers anything played as a file with its tags intact: local files, downloads, and
  * Navidrome, whose streams are requested raw. Where the stream has none — a server that transcodes
- * regardless — the values an OpenSubsonic server reported for the song are used instead.
+ * regardless — the values an OpenSubsonic server reported for the song are used instead, and after
+ * those the gain a stream resolve measured ([LoudnessHints]: YouTube Music's `loudnessDb`).
  *
  * While the new item's tracks are not known yet, the previous gain is kept rather than reset: a
  * reset would play the start of a loud track at full volume until its tags arrive.
@@ -27,6 +28,7 @@ internal class LoudnessNormaliser(
     private val mode: StateFlow<LoudnessMode>,
     private val preampDb: StateFlow<Int>,
     private val readout: LoudnessReadout,
+    private val hints: LoudnessHints,
     scope: CoroutineScope
 ) : Player.Listener {
 
@@ -51,10 +53,13 @@ internal class LoudnessNormaliser(
         val trackId = player.currentMediaItem?.mediaId
         val metadata = selectedAudioMetadata()
         if (trackId == null || metadata == null) return
-        // The stream's own tags win; what the source reported fills in what they lack.
+        // The stream's own tags win; what the source reported fills in what they lack, and what
+        // the resolve measured fills in after that.
         val fromSource = ReplayGainTags.fromSource(player.currentMediaItem?.toUnifiedTrack()?.extraData.orEmpty())
         val decision = LoudnessGain.decide(
-            info = ReplayGainTags.read(metadata.takeIf { it.length() > 0 }).orElse(fromSource),
+            info = ReplayGainTags.read(metadata.takeIf { it.length() > 0 })
+                .orElse(fromSource)
+                .orElse(hints.forTrack(trackId)),
             mode = mode.value,
             preampDb = preampDb.value,
             inAlbumRun = inAlbumRun()
