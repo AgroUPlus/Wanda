@@ -86,6 +86,20 @@ class ConnectivityObserver @Inject constructor(
      */
     val isMetered: Boolean
         get() = manager?.isActiveNetworkMetered ?: true
+
+    /**
+     * Whether the phone is on *some* network, validated or not.
+     *
+     * [isOnline] needs `NET_CAPABILITY_VALIDATED`, which a home Wi-Fi with its uplink down, or one
+     * that blocks Android's probe, never gets — yet a server on that LAN is reachable all the
+     * same. Read on demand, like [isMetered]; true when it cannot tell, like [isOnline].
+     */
+    val hasAnyNetwork: Boolean
+        get() {
+            val cm = manager ?: return true
+            val network = cm.activeNetwork ?: return false
+            return cm.getNetworkCapabilities(network) != null
+        }
 }
 
 private fun ConnectivityManager.hasInternet(network: Network?): Boolean {
