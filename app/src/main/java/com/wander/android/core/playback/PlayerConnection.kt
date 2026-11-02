@@ -60,7 +60,9 @@ class PlayerConnection @Inject constructor(
 
     val state: StateFlow<PlaybackState> = PlaybackStateFlowBuilder.create(
         controller = _controller,
-        collaborators = PlaybackCollaborators(queueManager, retryHandler, checkpointTracker, _actualAudioFormat),
+        collaborators = PlaybackCollaborators(
+            queueManager, retryHandler, checkpointTracker, _actualAudioFormat, TrackErrorRecovery()
+        ),
         orderLocked = _orderLocked,
         isRadioMode = secureStorage.isRadioMode,
         resolvedLive = streamResolver.resolvedLive,

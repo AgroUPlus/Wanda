@@ -12,7 +12,8 @@ internal class PlaybackCollaborators(
     val queueManager: PlayerQueueManager,
     val retryHandler: LivePlaybackRetryHandler,
     val checkpointTracker: EpisodeCheckpointTracker,
-    val actualAudioFormat: MutableStateFlow<ActualAudioFormat?>
+    val actualAudioFormat: MutableStateFlow<ActualAudioFormat?>,
+    val errorRecovery: TrackErrorRecovery
 )
 
 /**
@@ -24,6 +25,7 @@ internal class PlaybackEventListener(
     private val collaborators: PlaybackCollaborators,
     private val isRadioMode: StateFlow<Boolean>,
     private val isLiveNow: () -> Boolean,
+    private val isOrderLocked: () -> Boolean,
     private val onError: (String) -> Unit,
     private val emit: (PlaybackState) -> Unit
 ) : Player.Listener {
@@ -42,7 +44,13 @@ internal class PlaybackEventListener(
         if (timelineChanged(player, events)) {
             queueManager.lastQueue = PlaybackSnapshotBuilder.queueTracks(player, queueManager.trackCache)
         }
-        if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)) collaborators.actualAudioFormat.value = null
+        if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)) {
+            collaborators.actualAudioFormat.value = null
+            collaborators.errorRecovery.onItemChanged()
+        }
+        if (events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED) && player.playbackState == Player.STATE_READY) {
+            collaborators.errorRecovery.onItemReady()
+        }
         if (events.contains(Player.EVENT_POSITION_DISCONTINUITY)) seekEpoch++
         checkpointTracker.rememberDuration(currentTrack(player), player.duration)
         // Not in a batch that also changed the playing item: by then `currentTrack` is already the
@@ -74,7 +82,10 @@ internal class PlaybackEventListener(
         val retry = collaborators.retryHandler
         if (retry.retryContainerMismatch(controller, error)) return
         if (retry.rejoinLiveEdge(controller, isLiveNow())) return
+        val recovery = collaborators.errorRecovery
+        if (recovery.refreshExpiredStream(controller, error)) return
         onError(PlaybackErrorTranslator.userMessage(error))
+        recovery.skipPastFailedItem(controller, error, isLive = isLiveNow(), orderLocked = isOrderLocked())
     }
 
     private fun timelineChanged(player: Player, events: Player.Events): Boolean =

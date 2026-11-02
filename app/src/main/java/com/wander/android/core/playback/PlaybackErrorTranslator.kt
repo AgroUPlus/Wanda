@@ -42,13 +42,45 @@ internal object PlaybackErrorTranslator {
         contains("will not play this track", ignoreCase = true) ->
             "YouTube Music won't play this track here."
 
-        contains("Response code: 403") || contains("Response code: 410") ->
+        isExpiredStreamMessage(this) ->
             "Stream expired. Play it again to refresh it."
 
-        contains("Unable to connect", ignoreCase = true) ||
-            contains("UnknownHost", ignoreCase = true) ->
+        isConnectivityMessage(this) ->
             "Can't reach the source. Check your connection."
 
         else -> this
     }
+
+    /**
+     * Whether the stream URL was refused as expired: a 403 or 410 from the host serving it. A
+     * YouTube stream URL carries an expiry, so a track paused long enough fails like this on resume.
+     */
+    fun isExpiredStream(exception: PlaybackException): Boolean = exception.messages().any(::isExpiredStreamMessage)
+
+    /**
+     * Whether the failure is the network rather than the track — in which case the next track would
+     * fail exactly the same way.
+     */
+    fun isConnectivityFailure(exception: PlaybackException): Boolean =
+        exception.errorCode in CONNECTIVITY_ERROR_CODES || exception.messages().any(::isConnectivityMessage)
+
+    fun isExpiredStreamMessage(raw: String): Boolean =
+        raw.contains("Response code: 403") || raw.contains("Response code: 410")
+
+    fun isConnectivityMessage(raw: String): Boolean =
+        raw.contains("Unable to connect", ignoreCase = true) || raw.contains("UnknownHost", ignoreCase = true)
+
+    /** Every message down the cause chain. Media3 keeps only the direct cause across the session boundary. */
+    private fun PlaybackException.messages(): List<String> =
+        generateSequence<Throwable>(this) { it.cause }
+            .take(MAX_CAUSE_DEPTH)
+            .mapNotNull { cause -> cause.message?.takeIf { it.isNotBlank() } }
+            .toList()
+
+    private val CONNECTIVITY_ERROR_CODES = setOf(
+        PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+        PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT
+    )
+
+    private const val MAX_CAUSE_DEPTH = 16
 }
