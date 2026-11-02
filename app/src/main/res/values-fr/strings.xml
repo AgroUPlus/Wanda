@@ -377,7 +377,6 @@
     <string name="playlist_share_agro_copy_desc">Cela permet de créer d\'abord une playlist Wanda, afin que la copie partagée reste synchronisée et que d\'autres puissent la modifier. L\'original reste tel quel.</string>
     <string name="playlist_share_source">Lien d\'origine</string>
     <string name="playlist_share_source_desc">Le lien %1$s propre à la playlist.</string>
-    <string name="playlist_download">Télécharger au format M3U</string>
     <string name="playlist_convert_action">Ajouter à la playlist Wanda</string>
     <string name="playlist_convert_title">Convertir en playlist Wanda</string>
     <string name="playlist_convert_body">Cette playlist est actuellement liée à la source %1$s. Comme elle se trouve sur ce serveur, elle ne peut contenir que des titres provenant de %1$s.</string>

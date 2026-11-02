@@ -398,7 +398,6 @@
     <string name="playlist_share_agro_copy_desc">Makes it a Wanda playlist first, so the shared copy stays in sync and others can edit it. The original is left as it is.</string>
     <string name="playlist_share_source">Original link</string>
     <string name="playlist_share_source_desc">The playlist\'s own %1$s link.</string>
-    <string name="playlist_download">Download as M3U</string>
     <string name="playlist_convert_action">Convert to Wanda playlist</string>
     <string name="playlist_convert_title">Convert to Wanda Playlist</string>
     <string name="playlist_convert_body">This playlist is currently source-locked to %1$s. Because it lives on that server, it can only contain %1$s tracks.</string>

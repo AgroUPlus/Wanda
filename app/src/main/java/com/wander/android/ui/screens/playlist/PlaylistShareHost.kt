@@ -29,14 +29,15 @@ import com.wander.android.data.repository.PlaylistFileExporter
 internal class PlaylistShareActions(
     val onShare: (() -> Unit)?,
     val onConvert: (() -> Unit)?,
-    val onDownload: (() -> Unit)?,
+    /** Saves the tracks as an `.m3u8` file through the system save dialog. */
+    val onExport: (() -> Unit)?,
     /** Who can open the playlist's Agro copy, for the header to say it is shared; null when not. */
     val sharedWith: PlaylistVisibility? = null
 )
 
 /**
- * Hosts the playlist's share, visibility and convert sheets, the system save dialog for a
- * download, and the share sheet for a file, and returns the header actions that open them.
+ * Hosts the playlist's share, visibility and convert sheets, the system save dialog for an
+ * M3U export, and the share sheet for a file, and returns the header actions that open them.
  */
 @Composable
 internal fun PlaylistShareHost(
@@ -126,7 +127,7 @@ internal fun PlaylistShareHost(
     return PlaylistShareActions(
         onShare = { viewModel.open(PlaylistSheet.SHARE) }.takeIf { hasTracks },
         onConvert = { viewModel.open(PlaylistSheet.CONVERT) }.takeIf { viewModel.canConvert(playlist, tracks) },
-        onDownload = { saveFile.launch(M3uWriter.fileName(playlist.name)) }.takeIf { hasTracks },
+        onExport = { saveFile.launch(M3uWriter.fileName(playlist.name)) }.takeIf { hasTracks },
         sharedWith = publication?.visibility
     )
 }

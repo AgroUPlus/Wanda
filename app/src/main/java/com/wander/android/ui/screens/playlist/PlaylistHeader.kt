@@ -39,7 +39,7 @@ internal fun PlaylistHeader(
         onShare = shareActions.onShare,
         isShared = shareActions.sharedWith != null,
         onConvert = shareActions.onConvert,
-        onDownload = shareActions.onDownload,
+        onExport = shareActions.onExport,
         modifier = Modifier.padding(bottom = 16.dp),
         titleModifier = Modifier.collapsingTitleSource(titleState),
         overline = R.string.hero_overline_playlist
