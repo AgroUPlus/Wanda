@@ -26,7 +26,8 @@ import javax.inject.Singleton
  *
  * Plain [SharedPreferences] rather than `SecureStorage`: a chosen language is not a credential,
  * and `SecureStorage` is backed by the Keystore, which cannot be read from `attachBaseContext`
- * cheaply enough to sit in front of every activity launch.
+ * cheaply enough to sit in front of every activity launch. Being outside it, the tag is not in
+ * `SecureStorage.exportAll`; the settings backup adds it itself (see `BackupContentsIO`).
  */
 @Singleton
 class AppLocaleStore @Inject constructor(
