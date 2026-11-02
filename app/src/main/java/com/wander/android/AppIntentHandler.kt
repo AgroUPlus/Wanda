@@ -1,65 +1,29 @@
 package com.wander.android
 
-import com.wander.android.core.network.loggableMessage
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import com.wander.android.core.playback.PlayerConnection
-import com.wander.android.core.security.SecureStorage
-import com.wander.android.data.importer.PlatformType
-import com.wander.android.data.importer.RawImportPlaylist
-import com.wander.android.data.importer.RawImportTrack
-import com.wander.android.data.model.ArtistTrackSection
-import com.wander.android.data.model.SourceType
-import com.wander.android.data.repository.ArtistFetch
-import com.wander.android.data.repository.CatalogRepository
 import com.wander.android.data.repository.LinkRepository
-import com.wander.android.data.repository.MusicRepository
-import com.wander.android.data.repository.PlaylistImportRepository
-import com.wander.android.data.repository.ShareLinkRewriter
-import com.wander.android.data.repository.SocialRepository
-import com.wander.android.data.repository.AgroPlaylistLink
-import com.wander.android.data.repository.UniversalPlaylistLink
-import com.wander.android.data.sources.agro.AgroAuthError
-import com.wander.android.data.sources.agro.AgroClient
-import com.wander.android.data.repository.sharedplaylist.SharedPlaylistRepository
-import com.wander.android.data.sources.agro.AgroSharedPlaylistApi
-import com.wander.android.data.sources.agro.explain
-import com.wander.android.data.sources.ytmusic.YouTubeEntity
-import com.wander.android.data.sources.ytmusic.YouTubeEntityKind
 import com.wander.android.ui.navigation.DeepLinkRouter
-import com.wander.android.ui.navigation.LinkConfirmation
-import com.wander.android.ui.navigation.LinkConfirmations
 import com.wander.android.ui.navigation.Routes
 import com.wander.android.ui.screens.settings.SettingsCategory
-import com.wander.android.ui.navigation.TopLevelDestination
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Handles incoming intent URI routing, including deep links, Agro pairing, friend codes,
- * Jam invites, and shared media links.
+ * Routes an incoming intent to what handles it: deep links into a screen and Jam invites here,
+ * pairing and friend codes to [ConfirmedLinkHandler], shared music to [SharedMediaLinkOpener].
  */
 @Singleton
 internal class AppIntentHandler @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val playerConnection: PlayerConnection,
-    private val secureStorage: SecureStorage,
-    private val agroClient: AgroClient,
     private val linkRepository: LinkRepository,
-    private val musicRepository: MusicRepository,
-    private val playlistImporter: PlaylistImportRepository,
-    private val agroPlaylists: AgroSharedPlaylistApi,
-    private val sharedPlaylists: SharedPlaylistRepository,
-    private val catalogRepository: CatalogRepository,
-    private val shareLinkRewriter: ShareLinkRewriter,
     private val deepLinkRouter: DeepLinkRouter,
-    private val socialRepository: SocialRepository,
-    private val linkConfirmations: LinkConfirmations
+    private val confirmedLinks: ConfirmedLinkHandler,
+    private val sharedMedia: SharedMediaLinkOpener
 ) {
     /**
      * Links arrive here: an `agro:` pairing QR, a YouTube/YouTube Music track
@@ -70,49 +34,26 @@ internal class AppIntentHandler @Inject constructor(
         val uri = intent?.data ?: return
         val entity = linkRepository.sharedEntity(uri)
         when {
-            uri.scheme == "agro" -> handleAgroPairing(uri)
+            uri.scheme == "agro" -> confirmedLinks.handleAgroPairing(uri)
             uri.scheme == "wanda" && uri.host == "inbox" -> deepLinkRouter.request(Routes.ACTIVITY)
             uri.scheme == "wanda" && uri.host == "fingerprints" -> deepLinkRouter.request(Routes.FINGERPRINTS)
             // From the listening-together notifications: the room, and where incognito lives.
             uri.scheme == "wanda" && uri.host == "jam-room" -> deepLinkRouter.request(Routes.jam())
             uri.scheme == "wanda" && uri.host == "privacy" ->
                 deepLinkRouter.request(Routes.settingsCategory(SettingsCategory.PRIVACY.name))
-            uri.scheme == "wanda" && uri.host == "friend" -> handleFriendCode(uri)
+            uri.scheme == "wanda" && uri.host == "friend" -> confirmedLinks.handleFriendCode(uri)
             isJamLink(uri) -> handleJamLink(uri)
-            linkRepository.isPlaylistLink(uri) -> openSharedPlaylist(scope, uri)
-            linkRepository.isAlbumLink(uri) -> openSharedAlbum(scope, uri)
-            linkRepository.isTrackLink(uri) -> openSharedTrack(scope, uri)
-            linkRepository.canOpen(uri) -> openSharedLink(scope, uri)
-            entity != null -> openSharedEntity(scope, entity)
+            linkRepository.isPlaylistLink(uri) -> sharedMedia.openSharedPlaylist(scope, uri)
+            linkRepository.isAlbumLink(uri) -> sharedMedia.openSharedAlbum(scope, uri)
+            linkRepository.isTrackLink(uri) -> sharedMedia.openSharedTrack(scope, uri)
+            linkRepository.canOpen(uri) -> sharedMedia.openSharedLink(scope, uri)
+            entity != null -> sharedMedia.openSharedEntity(scope, entity)
             uri.scheme == "https" || uri.scheme == "wanda" -> Toast.makeText(
                 context,
                 "That link isn't something Wanda can open.",
                 Toast.LENGTH_LONG
             ).show()
         }
-    }
-
-    // Any page or app can fire this link, and a friend sees what the user listens to, so the
-    // code is only redeemed once the user has said yes.
-    private fun handleFriendCode(uri: Uri) {
-        val code = uri.lastPathSegment?.trim().orEmpty()
-        if (code.isEmpty()) return
-        linkConfirmations.ask(
-            LinkConfirmation(
-                title = R.string.link_friend_title,
-                message = R.string.link_friend_message,
-                messageArgs = listOf(code),
-                confirmLabel = R.string.link_friend_confirm,
-                onConfirm = {
-                    val friend = socialRepository.redeemFriendCode(code).getOrNull()
-                    val message = friend
-                        ?.let { "You and @$it are now friends" }
-                        ?: "That code has expired or has already been used."
-                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                    if (friend != null) deepLinkRouter.request(TopLevelDestination.FRIENDS.route)
-                }
-            )
-        )
     }
 
     private fun isJamLink(uri: Uri): Boolean {
@@ -130,177 +71,5 @@ internal class AppIntentHandler @Inject constructor(
         } else {
             deepLinkRouter.request(Routes.jam())
         }
-    }
-
-    /**
-     * A playlist someone shared: saved at once as placeholders, then matched to this device's own
-     * sources in the background — the same path as an import from another service.
-     */
-    private fun openSharedPlaylist(scope: CoroutineScope, uri: Uri) {
-        if (AgroPlaylistLink.isAgroLink(uri.toString())) {
-            openAgroPlaylist(scope, AgroPlaylistLink.parse(uri.toString()))
-            return
-        }
-        val link = UniversalPlaylistLink.parse(uri.toString())
-        if (link == null) {
-            Toast.makeText(context, R.string.link_playlist_invalid, Toast.LENGTH_LONG).show()
-            return
-        }
-        scope.launch {
-            val playlist = RawImportPlaylist(
-                platform = PlatformType.PLAIN_TEXT,
-                title = link.name,
-                description = "Shared playlist",
-                tracks = link.tracks.map { RawImportTrack(it.title, it.artist, it.album, it.durationMs) }
-            )
-            playlistImporter.savePending(playlist).fold(
-                onSuccess = { id ->
-                    Toast.makeText(context, context.getString(R.string.link_playlist_saved, link.name), Toast.LENGTH_LONG).show()
-                    deepLinkRouter.request(Routes.playlist(id))
-                },
-                onFailure = { cause ->
-                    Toast.makeText(context, cause.message ?: context.getString(R.string.link_playlist_invalid), Toast.LENGTH_LONG).show()
-                }
-            )
-        }
-    }
-
-    /**
-     * A playlist on the Agro server this device is paired with: followed, so this device keeps a
-     * live copy that follows the owner's changes, rather than saved as a snapshot that never does.
-     * It can still be made into a Wanda playlist of its own from its screen.
-     */
-    private fun openAgroPlaylist(scope: CoroutineScope, id: String?) {
-        if (id == null) {
-            Toast.makeText(context, R.string.link_playlist_invalid, Toast.LENGTH_LONG).show()
-            return
-        }
-        if (!agroPlaylists.isAvailable) {
-            Toast.makeText(context, R.string.link_playlist_needs_agro, Toast.LENGTH_LONG).show()
-            return
-        }
-        scope.launch {
-            sharedPlaylists.follow(id).fold(
-                onSuccess = { route -> deepLinkRouter.request(Routes.playlist(route)) },
-                onFailure = { Toast.makeText(context, context.getString(R.string.link_playlist_agro_failed, it.message), Toast.LENGTH_LONG).show() }
-            )
-        }
-    }
-
-    private fun openSharedAlbum(scope: CoroutineScope, uri: Uri) {
-        scope.launch {
-            linkRepository.resolveAlbum(uri).fold(
-                onSuccess = { album ->
-                    val tracks = musicRepository.getAlbumTracks(album).getOrNull().orEmpty()
-                    if (tracks.isEmpty()) {
-                        Toast.makeText(
-                            context,
-                            "Found “${album.title}” but couldn't load its tracks.",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    } else {
-                        playerConnection.play(tracks)
-                    }
-                },
-                onFailure = { cause ->
-                    Toast.makeText(
-                        context,
-                        cause.message ?: "Couldn't open that album link.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            )
-        }
-    }
-
-    private fun openSharedTrack(scope: CoroutineScope, uri: Uri) {
-        scope.launch {
-            linkRepository.resolveTrack(uri).fold(
-                onSuccess = { track -> playerConnection.play(listOf(track)) },
-                onFailure = { cause ->
-                    Toast.makeText(
-                        context,
-                        cause.message ?: context.getString(R.string.link_track_open_failed),
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            )
-        }
-    }
-
-    private fun openSharedEntity(scope: CoroutineScope, entity: YouTubeEntity) {
-        scope.launch {
-            val id = SourceType.YTMUSIC.idPrefix + entity.id
-            val tracks = when (entity.kind) {
-                YouTubeEntityKind.ALBUM -> musicRepository.getAlbumTracksById(id).getOrNull().orEmpty()
-                YouTubeEntityKind.PLAYLIST -> musicRepository.getPlaylistTracksById(id).getOrNull().orEmpty()
-                YouTubeEntityKind.ARTIST -> (catalogRepository.artistDetails(id) as? ArtistFetch.Found)
-                    ?.page
-                    ?.sections
-                    ?.filterIsInstance<ArtistTrackSection>()
-                    ?.firstOrNull()
-                    ?.tracks
-                    .orEmpty()
-            }
-            if (tracks.isEmpty()) {
-                Toast.makeText(
-                    context,
-                    "Nothing playable behind that link.",
-                    Toast.LENGTH_LONG
-                ).show()
-            } else {
-                playerConnection.play(tracks)
-            }
-        }
-    }
-
-    private fun openSharedLink(scope: CoroutineScope, uri: Uri) {
-        scope.launch {
-            linkRepository.resolve(uri).fold(
-                onSuccess = { track ->
-                    musicRepository.rememberSharedTrack(track)
-                    playerConnection.play(listOf(track))
-                    shareLinkRewriter.playbackOf(uri)?.let {
-                        playerConnection.setSpeedAndPitch(it.speed, it.pitch)
-                    }
-                },
-                onFailure = { cause ->
-                    Toast.makeText(
-                        context,
-                        cause.message ?: "Couldn't open that link.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            )
-        }
-    }
-
-    // Any page or app can fire this link, and pairing hands the account to the server it names,
-    // so nothing happens until the user has seen that server and said yes.
-    private fun handleAgroPairing(uri: Uri) {
-        val (host, username) = agroClient.describePairingLink(uri.toString()) ?: run {
-            Toast.makeText(context, R.string.link_agro_pair_invalid, Toast.LENGTH_LONG).show()
-            return
-        }
-        linkConfirmations.ask(
-            LinkConfirmation(
-                title = R.string.link_agro_pair_title,
-                message = R.string.link_agro_pair_message,
-                messageArgs = listOf(host, username.ifBlank { "?" }),
-                confirmLabel = R.string.link_agro_pair_confirm,
-                onConfirm = {
-                    val message = agroClient.parseQrCodePayload(uri.toString()).fold(
-                        onSuccess = { petname ->
-                            "Paired with Agro as ${petname ?: secureStorage.agroDevicePetname.ifEmpty { "wanda" }}"
-                        },
-                        onFailure = { error ->
-                            android.util.Log.w("Wanda", "Agro pairing failed: ${error.loggableMessage()}")
-                            AgroAuthError.from(error).explain(context)
-                        }
-                    )
-                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                }
-            )
-        )
     }
 }
