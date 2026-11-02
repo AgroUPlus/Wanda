@@ -73,7 +73,7 @@ internal fun SharedWithMeCard(
             CuteAvatar(seed = drop.fromUser, size = 40.dp)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "@" + drop.fromUser + " sent you a song",
+                    text = stringResource(R.string.drop_sent_you_a_song, drop.fromUser),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

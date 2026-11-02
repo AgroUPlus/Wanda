@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.MediaStore
 import android.widget.Toast
+import com.wander.android.R
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.browse.VoiceQuery
 import com.wander.android.core.playback.browse.VoiceSearch
@@ -102,7 +103,7 @@ internal class AppIntentHandler @Inject constructor(
     private fun handleJamLink(uri: Uri) {
         val code = uri.getQueryParameter("code")?.trim()?.uppercase()?.filter { it.isLetterOrDigit() }?.take(10)
         if (!code.isNullOrEmpty()) {
-            Toast.makeText(context, "Opening Jam $code...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.jam_opening_code, code), Toast.LENGTH_SHORT).show()
             deepLinkRouter.request(Routes.jam(code))
         } else {
             deepLinkRouter.request(Routes.jam())

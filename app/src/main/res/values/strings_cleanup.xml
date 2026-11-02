@@ -30,4 +30,18 @@
     <!-- Home, filtered to one source that has nothing to show; %1$s is the source's name -->
     <string name="home_source_has_no_tracks">%1$s has no tracks. Tap the filter again to see everything.</string>
     <string name="home_filter_has_no_tracks">This source has no tracks. Tap the filter again to see everything.</string>
+
+    <!-- Track action sheet: suggesting a track to a Jam that votes on what plays next -->
+    <string name="jam_action_suggest">Suggest</string>
+    <!-- Social feed: a friend sent the user a track; %1$s is their username -->
+    <string name="drop_sent_you_a_song">\@%1$s sent you a song</string>
+    <!-- Title of Android's share sheet for a link -->
+    <string name="share_chooser_track">Share track</string>
+    <string name="share_chooser_album">Share album</string>
+    <string name="share_chooser_artist">Share artist</string>
+    <string name="share_chooser_playlist">Share playlist</string>
+    <!-- Toast while a Jam invite link opens; %1$s is the Jam's code -->
+    <string name="jam_opening_code">Opening Jam %1$s…</string>
+    <!-- Welcome: the recognition step; %1$d is the model's size in megabytes -->
+    <string name="welcome_recognition_model_size">It needs a one-time %1$d MB model. After that it works fully offline.</string>
 </resources>

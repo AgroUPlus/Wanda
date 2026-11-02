@@ -21,8 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import kotlinx.coroutines.launch
 
 /**
@@ -99,7 +101,7 @@ fun LikeButton(
                 Icon(
                     imageVector = if (isLiked) Icons.Rounded.Favorite
                     else Icons.Rounded.FavoriteBorder,
-                    contentDescription = if (isLiked) "Remove from liked" else "Add to liked",
+                    contentDescription = stringResource(if (isLiked) R.string.action_unlike else R.string.action_like),
                     tint = if (isLiked) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier

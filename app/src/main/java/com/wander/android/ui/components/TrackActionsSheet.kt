@@ -196,7 +196,8 @@ fun TrackActionsSheet(
                         moveUp = moveUp,
                         moveDown = moveDown,
                         openAlbum = openAlbum,
-                        select = stringResource(R.string.selection_select)
+                        select = stringResource(R.string.selection_select),
+                        names = trackActionNames()
                     ),
                     callbacks = TrackActionCallbacks(
                         onPlayNext = onPlayNext,

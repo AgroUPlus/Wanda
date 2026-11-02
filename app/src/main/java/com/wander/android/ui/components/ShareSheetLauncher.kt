@@ -2,6 +2,8 @@ package com.wander.android.ui.components
 
 import android.content.Context
 import android.content.Intent
+import androidx.annotation.StringRes
+import com.wander.android.R
 import com.wander.android.data.repository.ShareLink
 import com.wander.android.data.sources.ShareKind
 
@@ -20,16 +22,17 @@ internal fun Context.launchShareSheet(link: ShareLink) {
     // Always the chooser, never a remembered default: sharing a track is a deliberate act aimed
     // at one person, and silently reusing last time's target would send it to the wrong one.
     startActivity(
-        Intent.createChooser(intent, "Share ${link.target.kind.label}")
+        Intent.createChooser(intent, getString(link.target.kind.chooserTitle))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     )
 }
 
-/** Lower case, for use mid-sentence in a chooser title. */
-private val ShareKind.label: String
+/** The share sheet's title, whole, so each language can word it its own way. */
+@get:StringRes
+private val ShareKind.chooserTitle: Int
     get() = when (this) {
-        ShareKind.TRACK -> "track"
-        ShareKind.ALBUM -> "album"
-        ShareKind.ARTIST -> "artist"
-        ShareKind.PLAYLIST -> "playlist"
+        ShareKind.TRACK -> R.string.share_chooser_track
+        ShareKind.ALBUM -> R.string.share_chooser_album
+        ShareKind.ARTIST -> R.string.share_chooser_artist
+        ShareKind.PLAYLIST -> R.string.share_chooser_playlist
     }
