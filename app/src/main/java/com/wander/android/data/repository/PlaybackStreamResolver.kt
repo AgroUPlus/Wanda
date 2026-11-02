@@ -110,9 +110,50 @@ internal class PlaybackStreamResolver(
         }
         if (type == SourceType.PODCAST) return podcastStream(cached)
         val source = sourceFor(type) ?: return Result.failure(IllegalStateException("$type is unavailable"))
+        if (!source.isStreamable.value) return connectedSubstituteFor(cached, type, source.displayName)
         return source.getStreamInfo(trackId).onSuccess { info ->
             if (info.format == MimeTypes.APPLICATION_M3U8) trackDao.markLive(trackId)
         }
+    }
+
+    /**
+     * The track belongs to a source that cannot stream right now — Deezer signed out, say. Asking
+     * it anyway only fails deep inside its resolver, so another streamable source's copy of the
+     * same recording is used instead, judged by the same [RecordingRules] as every other
+     * substitution here. Local files and Navidrome were already tried by the tiers above.
+     *
+     * When no connected source has it, the failure names the source the track needs rather than
+     * whatever the unconnected backend happened to throw.
+     */
+    private suspend fun connectedSubstituteFor(
+        cached: TrackEntity?,
+        unavailable: SourceType,
+        unavailableName: String
+    ): Result<StreamInfo> {
+        val substitute = cached?.let { track ->
+            withTimeoutOrNull(CROSS_SOURCE_BUDGET_MS) { streamableCopyOf(track, unavailable) }
+        }
+        return substitute?.let { Result.success(it) } ?: Result.failure(
+            IllegalStateException("$unavailableName isn't connected. Sign in to it in Settings to play this track.")
+        )
+    }
+
+    private suspend fun streamableCopyOf(cached: TrackEntity, unavailable: SourceType): StreamInfo? {
+        val wanted = cached.toUnifiedTrack()
+        val rules = recordingRules.current()
+        return sources
+            .filter { source ->
+                source.sourceType != unavailable &&
+                    source.sourceType !in TRIED_BY_EARLIER_TIERS &&
+                    source.capabilities.search &&
+                    source.isSearchable.value &&
+                    source.isStreamable.value
+            }
+            .sortedBy { it.sourceType.priority }
+            .firstNotNullOfOrNull { source ->
+                val found = source.search("${cached.title} ${cached.artist}").getOrNull().orEmpty()
+                rules.substituteFor(wanted, found)?.let { hit -> source.getStreamInfo(hit.id).getOrNull() }
+            }
     }
 
     /** Episodes carry their enclosure URL in Room; there is no backend to ask for a stream. */
@@ -151,5 +192,7 @@ internal class PlaybackStreamResolver(
         private const val MAX_EPHEMERAL_STREAMS = 256
         private const val TITLE_CANDIDATES = 20
         private const val SUBSTITUTION_BUDGET_MS = 1_500L
+        private const val CROSS_SOURCE_BUDGET_MS = 5_000L
+        private val TRIED_BY_EARLIER_TIERS = setOf(SourceType.LOCAL, SourceType.NAVIDROME)
     }
 }

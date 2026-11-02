@@ -56,9 +56,10 @@ interface IMusicSource {
     /**
      * Whether a track from this source can be *played* right now.
      *
-     * Usually the same as [isSearchable]. They differ for a backend that shows its catalogue to
-     * anyone but only streams to a signed-in account (Deezer): offering such a source as an
-     * alternative copy of a song would hand the user a choice that fails the moment they take it.
+     * Usually the same as [isSearchable]. They would differ for a backend that shows its catalogue
+     * to anyone but only streams to a signed-in account: offering such a source as an alternative
+     * copy of a song would hand the user a choice that fails the moment they take it. Playback
+     * checks this before asking a source for a stream, and looks for a connected copy instead.
      */
     val isStreamable: StateFlow<Boolean> get() = isSearchable
 

@@ -7,7 +7,6 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.IMusicSource
 import com.wander.android.data.sources.SourceCapabilities
 import com.wander.android.data.sources.StreamInfo
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -40,13 +39,13 @@ class DeezerSource @Inject constructor(
         recommendations = true
     )
 
+    /**
+     * Also what [isSearchable] and [isStreamable] answer. Deezer's public API would serve a search
+     * signed out, but a stream needs the account's session — and every search result is something
+     * the app goes on to play: the search screen, link and import matching, deduplication picking
+     * the copy to keep. A signed-out Deezer in search handed out tracks that could only fail.
+     */
     override val isConfigured: StateFlow<Boolean> = accountManager.isLoggedIn
-
-    /** Deezer allows searching and browsing catalog metadata even before signing in. */
-    override val isSearchable: StateFlow<Boolean> = ALWAYS_SEARCHABLE
-
-    /** Streams are only decryptable with the account's session, so signed out there is nothing to play. */
-    override val isStreamable: StateFlow<Boolean> = accountManager.isLoggedIn
 
     override suspend fun search(query: String): Result<List<UnifiedTrack>> =
         apiClient.searchTracks(query)
@@ -80,8 +79,4 @@ class DeezerSource @Inject constructor(
                 emptyList()
             }
         }
-
-    private companion object {
-        val ALWAYS_SEARCHABLE: StateFlow<Boolean> = MutableStateFlow(true)
-    }
 }
