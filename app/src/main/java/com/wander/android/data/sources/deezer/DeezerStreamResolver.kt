@@ -37,12 +37,22 @@ class DeezerStreamResolver @Inject constructor(
 ) {
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
     private val sessionMutex = Mutex()
-    private var cachedLicenseToken: String? = null
+
+    /**
+     * The license token, with the `arl` it was issued to.
+     *
+     * Keyed on the session rather than held bare: sign-out, a different account signing in, and
+     * "forget everything" all change the stored `arl` without passing through here, and a bare
+     * token outlived every one of them — the next account streamed on the previous one's license.
+     */
+    @Volatile
+    private var cachedLicense: Pair<String, String>? = null
 
     suspend fun resolveStream(trackId: String): Result<StreamInfo> = withContext(Dispatchers.IO) {
         val cleanId = trackId.removePrefix("deezer:")
         val arl = accountManager.arl
         if (arl.isBlank()) {
+            invalidateSession()
             return@withContext Result.failure(IllegalStateException("Streaming from Deezer requires signing in"))
         }
 
@@ -86,7 +96,7 @@ class DeezerStreamResolver @Inject constructor(
     }
 
     private suspend fun getOrFetchLicenseToken(arl: String): Result<String> = sessionMutex.withLock {
-        cachedLicenseToken?.let { return Result.success(it) }
+        cachedLicense?.takeIf { (owner, _) -> owner == arl }?.let { (_, token) -> return Result.success(token) }
 
         val request = Request.Builder()
             .url("$GW_LIGHT_URL?method=deezer.getUserData&api_version=1.0&api_token=")
@@ -113,7 +123,7 @@ class DeezerStreamResolver @Inject constructor(
                     accountManager.updateAccountName(it)
                 }
 
-                cachedLicenseToken = licenseToken
+                cachedLicense = arl to licenseToken
                 licenseToken
             }
         }
@@ -182,7 +192,7 @@ class DeezerStreamResolver @Inject constructor(
     }
 
     fun invalidateSession() {
-        cachedLicenseToken = null
+        cachedLicense = null
     }
 
     private companion object {

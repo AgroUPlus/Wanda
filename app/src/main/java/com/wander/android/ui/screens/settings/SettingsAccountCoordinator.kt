@@ -28,6 +28,7 @@ internal class SettingsAccountCoordinator @Inject constructor(
     private val accountManager: GoogleAccountManager,
     private val ytMusicSource: YTMusicSource,
     private val deezerAccountManager: com.wander.android.data.sources.deezer.DeezerAccountManager,
+    private val deezerStreamResolver: com.wander.android.data.sources.deezer.DeezerStreamResolver,
     private val localSource: LocalMusicSource,
     private val sessionApi: AgroSessionApi,
     private val socialRepository: SocialRepository,
@@ -76,6 +77,7 @@ internal class SettingsAccountCoordinator @Inject constructor(
 
     fun disconnectDeezer() {
         deezerAccountManager.signOut()
+        deezerStreamResolver.invalidateSession()
     }
 
     fun rescanLocalLibrary(scope: CoroutineScope) {
@@ -95,6 +97,7 @@ internal class SettingsAccountCoordinator @Inject constructor(
             // never captured, and both sign-outs are what clear CookieManager and WebStorage.
             runCatching { accountManager.signOut() }
             runCatching { deezerAccountManager.signOut() }
+            deezerStreamResolver.invalidateSession()
             secureStorage.clearAllCredentials()
             runCatching { socialRepository.clear() }
             runCatching { dropsRepository.clear() }
