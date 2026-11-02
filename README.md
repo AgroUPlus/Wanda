@@ -82,7 +82,7 @@ Yes! Through Agro, Wanda has a native <b>Friends System</b> and <b>Jam Rooms</b>
 <details>
 <summary><b>Is it safe to share my listening activity with friends?</b></summary>
 <br>
-Incredibly safe. Agro provides <b>End-to-End Encryption (E2EE)</b> for absolutely everything. It also uses a <b>Privacy Relay</b> system to mask network metadata. This means your communication, your social graph, and your listening habits are completely untraceable—even to your ISP.
+Incredibly safe. Agro provides <b>End-to-End Encryption (E2EE)</b> for absolutely everything. It also uses a <b>Privacy Relay</b> system to mask network metadata. This keeps what you share and play unreadable in transit and on the server. It does not make you invisible: your ISP can still see that you connect to an Agro server, when, and roughly how much data moves.
 </details>
 
 <details>
@@ -128,11 +128,11 @@ Every backend implements a single interface (`IMusicSource`) declaring explicit 
 ## Key Capabilities
 
 * **E2EE Listen-Along & Jam Rooms** (with Agro): Host or join synchronized listening sessions with friends over local Wi-Fi or secure Agro relays. Encrypted end-to-end, with zero tracking of your listening history.
-* **Off-Grid Local Mesh** (no server needed): Discover nearby listeners and trade audio fingerprints peer-to-peer over local network transports without Internet connectivity.
+* **Off-Grid Local Mesh** (no server needed): Discover nearby listeners on the local network and connect point-to-point, each side verifying the other by its identity fingerprint, without Internet connectivity.
 * **Synced Lyrics**: Native source lyrics prioritized first (Navidrome structured formats), followed by optional, user-consented lookups via LRCLIB. Time-synced lines highlight smoothly and allow tap-to-seek.
-* **Acoustic Fingerprinting**: Embedded Chromaprint/fpcalc engine tracks audio signatures for cross-backend deduplication and seamless library matching.
-* **Smart Mixes & Infinite Radio**: Endless Radio, Forgotten Favorites, and Deep Cuts computed locally on-device from your listening graph.
-* **Incognito Mode**: Instantly halts play history logging, scrobbles, and cache retention at the source level.
+* **Acoustic Fingerprinting**: An in-house, on-device fingerprinter (Haitsma-Kalker family, plus neural audio embeddings) matches recordings across backends for deduplication and library matching. No Chromaprint or `fpcalc` binary is bundled.
+* **Smart Mixes & Infinite Radio**: Endless Radio, Forgotten Favourites, and Never Played computed locally on-device from your listening graph.
+* **Incognito Mode**: Stops recording play history and search history, and stops scrobbling, now-playing updates and Agro presence. Audio already streamed may still be kept in the local playback cache.
 * **Material 3 Expressive UI**: Fluid spring animations, edge-to-edge window insets, predictive back gestures, cover-art dynamic color tinting, and pure OLED black theming.
 
 <p align="center">
@@ -151,7 +151,7 @@ Every backend implements a single interface (`IMusicSource`) declaring explicit 
 ### Battery First
 * **Zero Polling Loops**: Playback updates stream via native event callbacks; progress indicators tick only while audio is playing and the screen is actively visible.
 * **Direct Audio Offload**: Hardware DSP audio offload is enabled by default so the main application processor can sleep during playback.
-* **Smart Wake Locks**: Network wake locks are held exclusively during remote stream buffering, and completely released during local playback.
+* **Smart Wake Locks**: The Wi-Fi lock is held only while the playing or next track streams; while both are local files or downloads, playback keeps just a CPU wake lock.
 * **Constrained Sync**: Background cache downloads run through WorkManager under strict unmetered network, battery-not-low, and charging conditions.
 
 ### Hardened Privacy
@@ -175,7 +175,7 @@ The codebase enforces strict, automated engineering constraints documented in [A
 ```
 app/src/main/java/com/wander/android/
 ├── core/
-│   ├── audio/        Chromaprint acoustic fingerprinting
+│   ├── audio/        Acoustic fingerprinting, embeddings and audio features
 │   ├── cache/        Media cache and WorkManager download engine
 │   ├── database/     Room entities, DAOs, and migrations
 │   ├── network/      Shared OkHttp and Ktor engines with HTTPS guards

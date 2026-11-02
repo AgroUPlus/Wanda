@@ -9,16 +9,28 @@ been scoped in detail. Each app's top pick is marked.
 1. **Loudness normalisation across sources (top pick).** Local files, Navidrome, YouTube Music and
    Deezer play at very different volumes. Read ReplayGain tags where they exist and fall back to a
    gain estimate for the rest, so a mixed queue stays even. A small change in the player and an
-   obvious improvement. *Phase 1 (file tags: local, downloads, Navidrome) is built — see
-   `core/playback/LoudnessNormaliser.kt`. Still open: YouTube Music and Deezer loudness values
-   (undocumented, need calibrating against tagged copies first) and an estimate for untagged files.*
+   obvious improvement. *Status: mostly built. Phase 1 (file tags: local, downloads, Navidrome, plus
+   OpenSubsonic's reported gain) is in `core/playback/LoudnessNormaliser.kt`. Phase 2 adds YouTube
+   Music: its `/player` `loudnessDb` becomes a ReplayGain 2.0 gain (`InnerTubeLoudness.kt`, handed
+   over through `LoudnessHints`) and is used after tags. Still open: Deezer (its track `gain` is
+   undocumented and needs calibrating against tagged copies), and an integrated-loudness estimate for
+   untagged local files — the feature pass stores only a clamped RMS energy, so this needs a new
+   column (a schema change) and a K-weighted, gated measurement.*
 2. **"Sonic radio" from any track.** Wanda already computes audio embeddings and Agro has acoustic
    similarity. A button that starts an endless mix of tracks that sound like the current one is mostly
-   wiring.
+   wiring. *Status: built into track radio. `SonicNeighbours` pulls the library's nearest tracks by
+   embedding centroid into every radio started from a track (`SmartRadioGenerator`); there is no
+   separate "sonic only" button.*
 3. **Smart offline cache.** Pre-download the tracks you are likely to play next, based on listening
-   history, on Wi-Fi and while charging only. Fits the battery-first rule.
+   history, on Wi-Fi and while charging only. Fits the battery-first rule. *Status: built.
+   `core/cache/predict/OfflinePredictor` ranks tracks by recency-weighted plays, time-of-day and
+   weekday fit, and recent library adds; `DownloadWorker` uses it to fill spare batch room behind
+   "Also download predicted songs", within the storage limit. Skips are not recorded in history, so
+   skip rate is not a signal yet.*
 4. **Android Auto and Wear OS controls.** A large gain in reach for a music player, but more work than
-   the others.
+   the others. *Status: not started. `PlaybackService` is a plain `MediaSessionService`: a watch can
+   mirror its notification through the system, but Android Auto lists only apps with a
+   `MediaLibraryService` and a browse tree, and there is no Wear app.*
 
 ## Agro
 
