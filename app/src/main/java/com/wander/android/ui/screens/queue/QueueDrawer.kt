@@ -115,10 +115,17 @@ internal fun QueueDrawer(
     val currentSpec by rememberUpdatedState(spec)
     val nestedScroll = remember(drawer) { drawerNestedScroll(drawer) { currentSpec } }
 
-    actionsFor?.let { entry ->
+    val entries = rememberQueueEntries(state, itemGenerations)
+    // Under shuffle the rows are in play order and a move reorders the player's index order,
+    // which is not what the drag would appear to do.
+    val canReorder = !state.orderLocked && !state.isShuffle
+
+    actionsFor?.let { pressed ->
         QueueTrackActions(
-            entry = entry,
+            pressed = pressed,
+            entries = entries,
             queue = state.queue,
+            canReorder = canReorder,
             queueViewModel = queueViewModel,
             addToPlaylist = addToPlaylist,
             onOpenArtist = onOpenArtist,
@@ -166,10 +173,8 @@ internal fun QueueDrawer(
                     )
 
                     QueueUpNext(
-                        entries = rememberQueueEntries(state, itemGenerations),
-                        // Under shuffle the rows are in play order and a move reorders the player's
-                        // index order, which is not what the drag would appear to do.
-                        canReorder = !state.orderLocked && !state.isShuffle,
+                        entries = entries,
+                        canReorder = canReorder,
                         onPlay = { playerConnection.seekToIndex(it) },
                         onMove = { from, to ->
                             playerConnection.moveInQueue(from, to)

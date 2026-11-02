@@ -45,11 +45,15 @@ internal fun QueueScreen(
     val jam = jamState.jam
     var actionsFor by remember { mutableStateOf<QueueEntry?>(null) }
     val addToPlaylist = AddToPlaylistHost()
+    val entries = rememberQueueEntries(state)
 
-    actionsFor?.let { entry ->
+    actionsFor?.let { pressed ->
         QueueTrackActions(
-            entry = entry,
+            pressed = pressed,
+            entries = entries,
             queue = state.queue,
+            // As in the drawer: a move under shuffle would not do what the rows suggest.
+            canReorder = !state.orderLocked && !state.isShuffle,
             queueViewModel = queueViewModel,
             addToPlaylist = addToPlaylist,
             onOpenArtist = onOpenArtist,
@@ -105,7 +109,7 @@ internal fun QueueScreen(
             )
         } else {
             LocalQueueContent(
-                state = state,
+                entries = entries,
                 playerConnection = playerConnection,
                 onTrackLongPress = { actionsFor = it },
                 onToggleLike = { queueViewModel.toggleLike(it) }

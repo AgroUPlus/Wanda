@@ -121,7 +121,9 @@ internal fun QueueUpNext(
                                     onDragStopped = { haptics.settled() }
                                 )
                             }
-                        } else null
+                        } else null,
+                        onMoveUp = if (canReorder) shown.stepFrom(index, -1)?.let { to -> { onMove(entry.queueIndex, to) } } else null,
+                        onMoveDown = if (canReorder) shown.stepFrom(index, 1)?.let { to -> { onMove(entry.queueIndex, to) } } else null
                     )
                 }
             }

@@ -35,6 +35,17 @@ class QueueEntriesTest {
     }
 
     @Test
+    fun aSingleStepMovesOnlyAmongUpcomingRows() {
+        val entries = queueEntries(queue, order = listOf(0, 1, 2, 3), currentIndex = 1, generations = emptyMap())
+
+        // The first upcoming row cannot move above the playing one.
+        assertEquals(null to 3, moveStepsFor(entries[2], entries, canReorder = true))
+        assertEquals(2 to null, moveStepsFor(entries[3], entries, canReorder = true))
+        assertEquals(null to null, moveStepsFor(entries[0], entries, canReorder = true))
+        assertEquals(null to null, moveStepsFor(entries[2], entries, canReorder = false))
+    }
+
+    @Test
     fun nothingPlayingMeansEverythingIsUpNext() {
         val entries = queueEntries(queue, order = listOf(0, 1, 2, 3), currentIndex = -1, generations = emptyMap())
 

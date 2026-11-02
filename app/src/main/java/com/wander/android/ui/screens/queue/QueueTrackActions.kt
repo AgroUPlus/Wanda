@@ -15,15 +15,22 @@ import com.wander.android.ui.components.TrackActionsSheet
  */
 @Composable
 internal fun QueueTrackActions(
-    entry: QueueEntry,
+    pressed: QueueEntry,
+    entries: List<QueueEntry>,
     queue: List<UnifiedTrack>,
+    canReorder: Boolean,
     queueViewModel: QueueViewModel,
     addToPlaylist: AddToPlaylistController,
     onOpenArtist: ((String, String?) -> Unit)?,
     onDismiss: () -> Unit
 ) {
+    // The row as it is now: the queue can move under a sheet that stays open.
+    val entry = entries.firstOrNull { it.key == pressed.key } ?: pressed
     val track = entry.track
+    val (moveUpTo, moveDownTo) = moveStepsFor(entry, entries, canReorder)
     TrackActionsSheet(
+        onMoveUp = moveUpTo?.let { to -> { queueViewModel.moveInQueue(entry.queueIndex, to) } },
+        onMoveDown = moveDownTo?.let { to -> { queueViewModel.moveInQueue(entry.queueIndex, to) } },
         track = track,
         isLiked = track.isLiked,
         onPlayNext = {
@@ -54,6 +61,27 @@ internal fun QueueTrackActions(
             { addToPlaylist.open(track) }
         } else null
     )
+}
+
+/**
+ * The queue index of the upcoming row [step] places from the one at [position] in this list of
+ * upcoming rows, or null at either end. Only upcoming rows move, and only among themselves — the
+ * same rule a drag follows.
+ */
+internal fun List<QueueEntry>.stepFrom(position: Int, step: Int): Int? =
+    getOrNull(position + step)?.queueIndex
+
+/**
+ * The single-step moves for [entry], read from the current [entries] by key so a sheet opened a
+ * while ago still moves the row from where it is now. Null on both sides when the order cannot be
+ * changed or the row is not upcoming.
+ */
+internal fun moveStepsFor(entry: QueueEntry, entries: List<QueueEntry>, canReorder: Boolean): Pair<Int?, Int?> {
+    if (!canReorder) return null to null
+    val upcoming = entries.filter { it.role == QueueItemRole.UP_NEXT }
+    val position = upcoming.indexOfFirst { it.key == entry.key }
+    if (position < 0) return null to null
+    return upcoming.stepFrom(position, -1) to upcoming.stepFrom(position, 1)
 }
 
 /**

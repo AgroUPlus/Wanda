@@ -11,7 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
-import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.EmptyState
@@ -23,12 +22,12 @@ import com.wander.android.ui.components.TrackRow
  */
 @Composable
 internal fun LocalQueueContent(
-    state: PlaybackState,
+    entries: List<QueueEntry>,
     playerConnection: PlayerConnection,
     onTrackLongPress: (QueueEntry) -> Unit,
     onToggleLike: (UnifiedTrack) -> Unit
 ) {
-    if (state.queue.isEmpty()) {
+    if (entries.isEmpty()) {
         EmptyState(
             title = stringResource(R.string.queue_queue_empty),
             message = stringResource(R.string.queue_play_something_will_show_up),
@@ -37,7 +36,6 @@ internal fun LocalQueueContent(
         return
     }
 
-    val entries = rememberQueueEntries(state)
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
         shape = MaterialTheme.shapes.large,
