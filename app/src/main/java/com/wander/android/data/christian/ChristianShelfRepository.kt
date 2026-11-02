@@ -1,5 +1,6 @@
 package com.wander.android.data.christian
 
+import android.util.Log
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MusicRepository
 import kotlinx.coroutines.async
@@ -24,10 +25,20 @@ class ChristianShelfRepository @Inject constructor(private val music: MusicRepos
             .filter { languages.isEmpty() || it.language in languages }
             .shuffled()
             .take(ARTISTS_PER_SHELF)
-        val songs = withTimeoutOrNull(SEARCH_TIMEOUT_MILLIS) {
-            coroutineScope { artists.map { artist -> async { songsBy(artist) } }.map { it.await() } }
-        }.orEmpty()
-        return songs.flatMap { it.shuffled().take(SONGS_PER_ARTIST) }.shuffled().take(limit)
+        // The limit is per artist, not over the lot: one slow search used to throw away every
+        // other artist's results along with its own, and the shelf came back empty.
+        val songs = coroutineScope {
+            artists.map { artist ->
+                async { withTimeoutOrNull(SEARCH_TIMEOUT_MILLIS) { songsBy(artist) } }
+            }.map { it.await() }
+        }
+        val timedOut = songs.count { it == null }
+        if (timedOut > 0) Log.w(TAG, "$timedOut of ${artists.size} artist searches timed out")
+        return songs.filterNotNull()
+            .flatMap { it.shuffled().take(SONGS_PER_ARTIST) }
+            .distinctBy { it.id }
+            .shuffled()
+            .take(limit)
     }
 
     private suspend fun songsBy(artist: ChristianArtist): List<UnifiedTrack> =
@@ -39,5 +50,6 @@ class ChristianShelfRepository @Inject constructor(private val music: MusicRepos
         const val ARTISTS_PER_SHELF = 6
         const val SONGS_PER_ARTIST = 3
         const val SEARCH_TIMEOUT_MILLIS = 8_000L
+        const val TAG = "ChristianShelf"
     }
 }
