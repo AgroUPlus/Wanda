@@ -52,7 +52,6 @@ object FingerprintIndexing {
                         // bounded per run with the rest deferred to the next.
                         // What is actually expensive here is the network, and that is what the
                         // remaining two constraints are for.
-                        .setRequiresCharging(true)
                         .setRequiresBatteryNotLow(true)
                         .setRequiredNetworkType(
                             if (allowMobileData) NetworkType.CONNECTED else NetworkType.UNMETERED
@@ -88,7 +87,11 @@ object FingerprintIndexing {
     }
 
     /**
-     * Queues one track to measure when charging and on Wi-Fi (or mobile data if enabled).
+     * Queues one track to measure on Wi-Fi (or mobile data if enabled).
+     *
+     * No charging requirement, for the same reason as [enqueue]: this is the track the user is
+     * playing right now, and a phone that is playing music is rarely plugged in. One track is one
+     * bounded decode, not a library sweep.
      */
     fun enqueueFor(context: Context, trackId: String, allowMobileData: Boolean = false) {
         WorkManager.getInstance(context).enqueueUniqueWork(
@@ -98,7 +101,6 @@ object FingerprintIndexing {
                 .addTag(WorkControls.tagFor(WorkProgressNotification.Kind.FINGERPRINT))
                 .setConstraints(
                     Constraints.Builder()
-                        .setRequiresCharging(true)
                         .setRequiresBatteryNotLow(true)
                         .setRequiredNetworkType(
                             if (allowMobileData) NetworkType.CONNECTED else NetworkType.UNMETERED
