@@ -1,5 +1,7 @@
 package com.wander.android.core.security
 
+import java.io.InputStream
+import java.io.OutputStream
 import java.security.MessageDigest
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
@@ -34,6 +36,40 @@ internal class DeezerStreamCipher(trackId: String) {
         val cipher = Cipher.getInstance(TRANSFORMATION) // NOSONAR: Blowfish is mandated by Deezer's stream format, not our choice
         cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec)
         return cipher.doFinal(ciphertext, offset, length)
+    }
+
+    /**
+     * Decrypts a whole stream, read from its first byte, into [output].
+     *
+     * For a download: playback decrypts on the way into the player, but a file written to disk
+     * is later played as a plain local file with nothing in that path to decrypt it, so it has to
+     * be stored as plaintext. Chunks are counted from the start, which is why [input] must be too.
+     */
+    fun decryptStream(input: InputStream, output: OutputStream) {
+        val chunk = ByteArray(CHUNK_SIZE)
+        var chunkIndex = 0L
+        while (true) {
+            val filled = fill(input, chunk)
+            if (filled <= 0) return
+            if (isChunkEncrypted(chunkIndex, filled)) {
+                output.write(decryptChunk(chunk, 0, filled))
+            } else {
+                output.write(chunk, 0, filled)
+            }
+            if (filled < CHUNK_SIZE) return
+            chunkIndex++
+        }
+    }
+
+    /** Reads until [buffer] is full or the stream ends; the chunk grid depends on full reads. */
+    private fun fill(input: InputStream, buffer: ByteArray): Int {
+        var total = 0
+        while (total < buffer.size) {
+            val count = input.read(buffer, total, buffer.size - total)
+            if (count < 0) break
+            total += count
+        }
+        return total
     }
 
     /**

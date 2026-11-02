@@ -60,4 +60,27 @@ class DeezerStreamCipherTest {
         assertFalse(DeezerStreamCipher.isChunkEncrypted(0, 1500))
         assertFalse(DeezerStreamCipher.isChunkEncrypted(3, 512))
     }
+
+    @Test
+    fun `decryptStream turns a whole encrypted stream back into plaintext`() {
+        val size = DeezerStreamCipher.CHUNK_SIZE
+        val cipher = DeezerStreamCipher(testTrackId)
+        // Seven full chunks and a short tail: chunks 0, 3 and 6 are encrypted, the tail never is.
+        val plaintext = ByteArray(size * 7 + 700) { (it * 31 % 251).toByte() }
+        val encrypted = plaintext.copyOf()
+        for (index in 0 until 7) {
+            if (DeezerStreamCipher.isChunkEncrypted(index.toLong(), size)) {
+                cipher.encryptChunk(plaintext, index * size, size).copyInto(encrypted, index * size)
+            }
+        }
+
+        val out = java.io.ByteArrayOutputStream()
+        // A stream that hands back a few bytes at a time, as a network body does.
+        val trickle = object : java.io.FilterInputStream(java.io.ByteArrayInputStream(encrypted)) {
+            override fun read(b: ByteArray, off: Int, len: Int): Int = super.read(b, off, minOf(len, 300))
+        }
+        cipher.decryptStream(trickle, out)
+
+        assertArrayEquals(plaintext, out.toByteArray())
+    }
 }

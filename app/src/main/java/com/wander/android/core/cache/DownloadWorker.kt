@@ -9,7 +9,10 @@ import androidx.work.workDataOf
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.notification.WorkEta
 import com.wander.android.core.notification.WorkProgressNotification
+import com.wander.android.core.playback.DeezerDecryptingDataSource
+import com.wander.android.core.security.DeezerStreamCipher
 import com.wander.android.core.work.WorkControls
+import com.wander.android.data.model.isOneShotTrackId
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.SmartMixRepository
 import dagger.assisted.Assisted
@@ -63,7 +66,7 @@ class DownloadWorker @AssistedInject constructor(
 
         // A single explicit request from the context menu, or the periodic liked-tracks sweep.
         val requestedId = inputData.getString(KEY_TRACK_ID)
-        val pending = if (requestedId != null) {
+        val candidates = if (requestedId != null) {
             listOfNotNull(trackDao.getTrackById(requestedId)).filterNot { it.isDownloaded }
         } else {
             // Liked tracks, not most-played: the user explicitly asked to keep these.
@@ -74,6 +77,9 @@ class DownloadWorker @AssistedInject constructor(
             if (liked.size < BATCH_SIZE) (liked + predictiveCandidates(BATCH_SIZE - liked.size)).distinctBy { it.id }
             else liked
         }
+        // A peer's or relayed track is borrowed for one playback: its session serves once, and
+        // writing it to disk would turn the loan into a copy (and save the relay's ciphertext).
+        val pending = candidates.filterNot { isOneShotTrackId(it.id) }
         if (pending.isEmpty()) return@withContext Result.success()
 
         downloadsDir.mkdirs()
@@ -119,9 +125,21 @@ class DownloadWorker @AssistedInject constructor(
             .filterNot { it.isDownloaded }
     }
 
+    /**
+     * Fetches [url] into [destination] as audio a plain file player can read.
+     *
+     * Playback decrypts a Deezer stream inside the Media3 chain, keyed on
+     * [DeezerDecryptingDataSource.DEEZER_TRACK_ID_HEADER]; a download used to copy the bytes
+     * straight to disk, ciphertext and all, and a downloaded file is played as a plain local file
+     * that nothing decrypts. So it is decrypted here, and the marker header — meant for that data
+     * source, not the CDN — is not sent.
+     */
     private fun download(url: String, headers: Map<String, String>, destination: File) {
+        val deezerTrackId = headers[DeezerDecryptingDataSource.DEEZER_TRACK_ID_HEADER]?.trim()?.takeIf { it.isNotEmpty() }
         val request = Request.Builder().url(url).apply {
-            headers.forEach { (k, v) -> header(k, v) }
+            headers
+                .filterKeys { it != DeezerDecryptingDataSource.DEEZER_TRACK_ID_HEADER }
+                .forEach { (k, v) -> header(k, v) }
         }.build()
 
         okHttpClient.newCall(request).execute().use { response ->
@@ -130,7 +148,13 @@ class DownloadWorker @AssistedInject constructor(
             }
             // Checked against the real size where the server sends one, before any byte lands.
             files.requireRoomFor(response.body.contentLength())
-            files.write(response.body.byteStream(), destination)
+            files.write(response.body.byteStream(), destination) { input, out ->
+                if (deezerTrackId != null) {
+                    DeezerStreamCipher(deezerTrackId).decryptStream(input, out)
+                } else {
+                    input.copyTo(out)
+                }
+            }
         }
     }
 

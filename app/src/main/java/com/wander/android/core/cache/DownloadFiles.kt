@@ -3,6 +3,7 @@ package com.wander.android.core.cache
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import java.io.OutputStream
 
 /** Free space a download must leave behind, so offline music never fills the device to the brim. */
 internal const val MIN_FREE_SPACE_BYTES = 64L * 1024 * 1024
@@ -39,14 +40,19 @@ internal class DownloadFiles(private val dir: File) {
     }
 
     /**
-     * Copies [body] to [destination] via a `.part` file. The part file is deleted on every path
-     * that does not end in a successful rename, exception included.
+     * Copies [body] to [destination] via a `.part` file, through [copy] (plain copy by default;
+     * Deezer downloads pass a decrypting copy). The part file is deleted on every path that does
+     * not end in a successful rename, exception included.
      */
-    fun write(body: InputStream, destination: File) {
+    fun write(
+        body: InputStream,
+        destination: File,
+        copy: (InputStream, OutputStream) -> Unit = { input, out -> input.copyTo(out) },
+    ) {
         dir.mkdirs()
         val part = File.createTempFile("${destination.nameWithoutExtension}.", PART_SUFFIX, dir)
         try {
-            part.outputStream().use { out -> body.copyTo(out) }
+            part.outputStream().use { out -> copy(body, out) }
             if (!part.renameTo(destination)) {
                 throw IOException("Could not move the finished download into place")
             }
