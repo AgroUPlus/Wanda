@@ -9,7 +9,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Album
@@ -70,7 +69,6 @@ internal fun NowPlayingMenuDrawer(
     onAddToPlaylist: () -> Unit,
     onToggleRadio: () -> Unit,
     onOpenSpeedPitch: () -> Unit,
-    onPlayNext: () -> Unit,
     onAddToQueue: () -> Unit,
     onToggleLike: () -> Unit,
     onShare: (() -> Unit)?,
@@ -111,7 +109,6 @@ internal fun NowPlayingMenuDrawer(
                 }
                 val radioLabel = stringResource(R.string.menu_radio)
                 val strings = MenuStrings(
-                    playNext = stringResource(R.string.action_play_next),
                     addToQueue = stringResource(R.string.action_add_to_queue),
                     addToPlaylist = stringResource(R.string.action_add_to_playlist),
                     speed = stringResource(R.string.action_speed_and_pitch),
@@ -155,7 +152,8 @@ internal fun NowPlayingMenuDrawer(
                     onOpenTranscript?.let { open ->
                         add(MenuAction(Icons.AutoMirrored.Rounded.Notes, strings.transcript, ActionEmphasis.ICON) { open(); animatedDismiss() })
                     }
-                    add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, strings.playNext) { onPlayNext(); animatedDismiss() })
+                    // No "Play next": this track is the one playing, so it would only queue a copy
+                    // of itself straight behind itself.
                     add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, strings.addToQueue) { onAddToQueue(); animatedDismiss() })
                     // One entry per credited artist: "A, B & C" is nobody's page.
                     onOpenArtist?.let { open ->
@@ -204,7 +202,6 @@ internal fun NowPlayingMenuDrawer(
 
 /** Resolved once in composition, since the action list is built in a plain lambda. */
 private class MenuStrings(
-    val playNext: String,
     val addToQueue: String,
     val addToPlaylist: String,
     val speed: String,

@@ -198,7 +198,6 @@ internal fun NowPlayingScreen(
             onAddToPlaylist = { addToPlaylist.open(track) },
             onToggleRadio = playerConnection::toggleRadio,
             onOpenSpeedPitch = { showSpeedPitch = true },
-            onPlayNext = { playerConnection.playNext(listOf(track)) },
             onAddToQueue = { playerConnection.addToQueue(listOf(track)) },
             onToggleLike = { viewModel.toggleLike(track) },
             onShare = { viewModel.share(track) }.takeIf { viewModel.canShare(track) },
