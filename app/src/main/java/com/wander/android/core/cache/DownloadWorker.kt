@@ -4,6 +4,7 @@ import com.wander.android.R
 import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
+import androidx.work.Data
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.wander.android.core.database.dao.TrackDao
@@ -114,6 +115,7 @@ class DownloadWorker @AssistedInject constructor(
             val downloaded = runCatching { download(streamInfo.uri, streamInfo.headers, destination) }
             if (downloaded.isSuccess) {
                 trackDao.setDownloaded(entity.id, true, destination.absolutePath)
+                prefs.setStorageFull(false)
             } else if (downloaded.exceptionOrNull() is InsufficientStorageException) {
                 // Every later track would hit the same wall.
                 return@withContext Result.failure(noSpace())
@@ -172,7 +174,11 @@ class DownloadWorker @AssistedInject constructor(
         }
     }
 
-    private fun noSpace() = workDataOf(KEY_FAILURE_REASON to FAILURE_INSUFFICIENT_STORAGE)
+    /** Also recorded for Settings, which says downloads are paused until there is room. */
+    private fun noSpace(): Data {
+        secureStorage.downloads.setStorageFull(true)
+        return workDataOf(KEY_FAILURE_REASON to FAILURE_INSUFFICIENT_STORAGE)
+    }
 
     private fun extensionFor(format: String): String = when {
         format.contains("opus") || format.contains("webm") -> "opus"

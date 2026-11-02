@@ -36,6 +36,7 @@ internal class DownloadSettingsViewModel @Inject constructor(
     val wifiOnly: StateFlow<Boolean> = prefs.wifiOnly
     val limitBytes: StateFlow<Long> = prefs.limitBytes
     val streamCacheBytes: StateFlow<Long> = prefs.streamCacheBytes
+    val storageFull: StateFlow<Boolean> = prefs.storageFull
 
     private val _isDeleting = MutableStateFlow(false)
     val isDeleting: StateFlow<Boolean> = _isDeleting.asStateFlow()
@@ -71,6 +72,8 @@ internal class DownloadSettingsViewModel @Inject constructor(
             _isDeleting.value = true
             workControls.cancel(WorkProgressNotification.Kind.DOWNLOAD)
             storageRepository.deleteAllDownloads()
+            // The room is back; the next run finds out for itself if it is not enough.
+            prefs.setStorageFull(false)
             downloadScheduler.scheduleAutoDownload()
             _isDeleting.value = false
             onDone()

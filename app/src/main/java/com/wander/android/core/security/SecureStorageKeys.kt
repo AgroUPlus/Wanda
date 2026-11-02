@@ -80,6 +80,7 @@ internal const val KEY_AUTO_DOWNLOAD_PREDICTED = "key_auto_download_predicted"
 internal const val KEY_DOWNLOAD_WIFI_ONLY = "key_download_wifi_only"
 internal const val KEY_DOWNLOAD_LIMIT_BYTES = "key_download_limit_bytes"
 internal const val KEY_STREAM_CACHE_BYTES = "key_stream_cache_bytes"
+internal const val KEY_DOWNLOADS_STORAGE_FULL = "key_downloads_storage_full"
 internal const val KEY_NAVIDROME_QUALITY_WIFI = "key_navidrome_quality_wifi"
 internal const val KEY_NAVIDROME_QUALITY_MOBILE = "key_navidrome_quality_mobile"
 

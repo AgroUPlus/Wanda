@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.SdCardAlert
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,11 +46,15 @@ internal fun DownloadSettingsCard(
     val wifiOnly by viewModel.wifiOnly.collectAsStateWithLifecycle()
     val limit by viewModel.limitBytes.collectAsStateWithLifecycle()
     val deleting by viewModel.isDeleting.collectAsStateWithLifecycle()
+    val storageFull by viewModel.storageFull.collectAsStateWithLifecycle()
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
+
+    // First, because it explains why nothing below is happening.
+    val notice: List<@Composable () -> Unit> = if (storageFull) listOf { StorageFullNotice() } else emptyList()
 
     GroupedCard(
         modifier = modifier,
-        items = listOf<@Composable () -> Unit>(
+        items = notice + listOf<@Composable () -> Unit>(
             {
                 SettingsToggle(
                     title = stringResource(R.string.settings_auto_download_liked),
@@ -112,6 +117,17 @@ internal fun DownloadSettingsCard(
             onDismiss = { confirmDelete = false }
         )
     }
+}
+
+/** The last download run stopped because the phone is full; see `SecureDownloadPreferences.storageFull`. */
+@Composable
+private fun StorageFullNotice() {
+    SettingsRow(
+        title = stringResource(R.string.settings_downloads_storage_full),
+        subtitle = stringResource(R.string.settings_downloads_storage_full_sub),
+        destructive = true,
+        icon = Icons.Rounded.SdCardAlert
+    )
 }
 
 /** How big the streaming cache may grow. Applies from the next start; the subtitle says so. */

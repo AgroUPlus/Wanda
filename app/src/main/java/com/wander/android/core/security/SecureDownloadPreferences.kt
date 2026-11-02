@@ -33,6 +33,20 @@ internal class SecureDownloadPreferences(private val prefs: SharedPreferences) {
     private val _streamCacheBytes = MutableStateFlow(prefs.getLong(KEY_STREAM_CACHE_BYTES, DEFAULT_STREAM_CACHE_BYTES))
     val streamCacheBytes: StateFlow<Long> = _streamCacheBytes.asStateFlow()
 
+    /**
+     * Set when a download run stopped because the phone had no room left, and cleared by the next
+     * track that fits. Periodic work keeps no output once it is rescheduled, so this is the one
+     * record of why downloading went quiet. Device-local: another phone's disk says nothing here.
+     */
+    private val _storageFull = MutableStateFlow(prefs.getBoolean(KEY_DOWNLOADS_STORAGE_FULL, false))
+    val storageFull: StateFlow<Boolean> = _storageFull.asStateFlow()
+
+    fun setStorageFull(full: Boolean) {
+        if (_storageFull.value == full) return
+        prefs.edit { putBoolean(KEY_DOWNLOADS_STORAGE_FULL, full) }
+        _storageFull.value = full
+    }
+
     fun setAutoDownloadLiked(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_AUTO_DOWNLOAD_LIKED, enabled) }
         _autoDownloadLiked.value = enabled
@@ -65,6 +79,7 @@ internal class SecureDownloadPreferences(private val prefs: SharedPreferences) {
         _wifiOnly.value = prefs.getBoolean(KEY_DOWNLOAD_WIFI_ONLY, true)
         _limitBytes.value = prefs.getLong(KEY_DOWNLOAD_LIMIT_BYTES, UNLIMITED)
         _streamCacheBytes.value = prefs.getLong(KEY_STREAM_CACHE_BYTES, DEFAULT_STREAM_CACHE_BYTES)
+        _storageFull.value = prefs.getBoolean(KEY_DOWNLOADS_STORAGE_FULL, false)
     }
 
     companion object {

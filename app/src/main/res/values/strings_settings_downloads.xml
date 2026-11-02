@@ -15,6 +15,9 @@
     <string name="settings_delete_all_downloads_confirm_title">Delete all downloads?</string>
     <string name="settings_delete_all_downloads_confirm_message">Every downloaded song is removed from this phone and plays by streaming from now on. Liked songs download again later if downloading liked songs stays on.</string>
     <string name="settings_delete_all_downloads_confirm">Delete</string>
+    <!-- Shown above the download settings when the last run found the phone full. -->
+    <string name="settings_downloads_storage_full">Downloads paused: storage full</string>
+    <string name="settings_downloads_storage_full_sub">There is no room left on this phone for more music. Free up some space and downloading picks up again by itself.</string>
 
     <string name="settings_stream_cache_size">Streaming cache size</string>
     <string name="settings_stream_cache_size_sub">How much recently played music is kept to replay without data. Takes effect the next time Wanda starts.</string>
