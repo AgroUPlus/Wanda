@@ -12,4 +12,9 @@
 
     <!-- Now playing menu -->
     <string name="player_equalizer">Equalizer</string>
+
+    <!-- Full-screen lyrics timing correction. %1$+.1f is the offset in seconds, signed: "+0.5 s". -->
+    <string name="lyrics_offset_value">%1$+.1f s</string>
+    <string name="lyrics_offset_earlier">Show lyrics earlier</string>
+    <string name="lyrics_offset_later">Show lyrics later</string>
 </resources>

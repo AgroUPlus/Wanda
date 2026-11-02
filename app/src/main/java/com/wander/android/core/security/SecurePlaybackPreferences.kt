@@ -16,6 +16,9 @@ internal class SecurePlaybackPreferences(private val prefs: SharedPreferences) {
     /** Shuffle, repeat, and speed and pitch per kind of audio — see [SecurePlayerModePreferences]. */
     val modes = SecurePlayerModePreferences(prefs)
 
+    /** Per-track synced-lyrics timing corrections — see [SecureLyricsOffsetPreferences]. */
+    val lyricsOffsets = SecureLyricsOffsetPreferences(prefs)
+
     private val _isOfflineMode = MutableStateFlow(prefs.getBoolean(KEY_OFFLINE_MODE, false))
     val isOfflineMode: StateFlow<Boolean> = _isOfflineMode.asStateFlow()
 
@@ -144,6 +147,7 @@ internal class SecurePlaybackPreferences(private val prefs: SharedPreferences) {
      * store is cleared it is each default, so signing out and restoring share this one path.
      */
     fun reloadFlows() {
+        lyricsOffsets.reloadFlows()
         _isOfflineMode.value = prefs.getBoolean(KEY_OFFLINE_MODE, false)
         _isPreloadNextEnabled.value = prefs.getBoolean(KEY_PRELOAD_NEXT, true)
         _isSkipSilenceEnabled.value = prefs.getBoolean(KEY_SKIP_SILENCE, false)

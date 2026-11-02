@@ -38,6 +38,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.ui.components.BackdropBlurSource
 import com.wander.android.ui.components.backResistance
 import com.wander.android.R
@@ -113,6 +115,9 @@ private fun LyricsScaffold(
     // one rendering, and a toggle with one working side is a control that lies about what it does.
     val hasSynced = lyrics.syncType() != LyricsSyncType.NONE
     var showStatic by remember(lyrics) { mutableStateOf(false) }
+    val offsetViewModel: LyricsOffsetViewModel = hiltViewModel()
+    val trackId = state.currentTrack?.id
+    val offsetMs = offsetViewModel.offsets.collectAsStateWithLifecycle().value[trackId] ?: 0L
 
     // Predictive back, the same shape as `PlayerSheet`'s and `InboxScreen`'s: the screen shrinks
     // and fades under the finger so the player behind it is already visible before the gesture is
@@ -204,6 +209,7 @@ private fun LyricsScaffold(
                 // So the last verse can still be pulled clear of the bar it would otherwise end
                 // behind. Matches the space the transport actually occupies.
                 contentPadding = PaddingValues(bottom = TransportReserve),
+                offsetMs = offsetMs,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
@@ -223,11 +229,22 @@ private fun LyricsScaffold(
         ) {
             LyricsTransport(state = state, playerConnection = playerConnection)
             if (hasSynced) {
-                SyncedStaticToggle(
-                    showStatic = showStatic,
-                    onSelect = { showStatic = it },
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                )
+                ) {
+                    SyncedStaticToggle(
+                        showStatic = showStatic,
+                        onSelect = { showStatic = it },
+                        modifier = Modifier.weight(1f)
+                    )
+                    LyricsOffsetControl(
+                        offsetMs = offsetMs,
+                        enabled = !showStatic && trackId != null,
+                        onAdjust = { delta -> trackId?.let { offsetViewModel.adjust(it, delta) } },
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
             }
         }
     }

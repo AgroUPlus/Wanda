@@ -89,6 +89,7 @@ internal const val KEY_MUSIC_SPEED = "key_music_speed"
 internal const val KEY_MUSIC_PITCH = "key_music_pitch"
 internal const val KEY_EPISODE_SPEED = "key_episode_speed"
 internal const val KEY_EPISODE_PITCH = "key_episode_pitch"
+internal const val KEY_LYRICS_OFFSETS = "key_lyrics_offsets"
 
 internal const val KEY_AMOLED_BLACK = "key_amoled_black"
 internal const val KEY_BACK_BLUR = "key_back_blur"
