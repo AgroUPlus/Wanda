@@ -1,6 +1,5 @@
 package com.wander.android.ui.screens.player
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -20,6 +19,7 @@ import com.wander.android.ui.screens.social.JamViewModel
 import com.wander.android.ui.theme.CoverTintedTheme
 import com.wander.android.ui.theme.rememberCoverSeedColor
 import com.wander.android.data.repository.artistIdFor
+import com.wander.android.ui.theme.LocalDarkTheme
 
 /**
  * The gap between the rows that belong to the cover: title, artist, bar, transport.
@@ -118,7 +118,7 @@ internal fun NowPlayingScreen(
     // Extract the dominant colour from the cover art and use it to tint the player surface,
     // if enabled in Settings -> Appearance. Until it arrives or if disabled, base scheme is used.
     val coverSeed = if (isCoverArtThemeEnabled) rememberCoverSeedColor(track.artworkUrl) else null
-    val dark = isSystemInDarkTheme()
+    val dark = LocalDarkTheme.current
     val base = MaterialTheme.colorScheme
 
     CoverTintedTheme(seedColor = coverSeed, base = base, dark = dark, amoled = false) {

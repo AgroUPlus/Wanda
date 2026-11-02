@@ -78,6 +78,7 @@ internal const val KEY_RADIO_MODE = "key_radio_mode"
 
 internal const val KEY_AMOLED_BLACK = "key_amoled_black"
 internal const val KEY_BACK_BLUR = "key_back_blur"
+internal const val KEY_THEME_MODE = "key_theme_mode"
 internal const val KEY_MONET_DYNAMIC = "key_monet_dynamic"
 internal const val KEY_REDUCE_MOTION = "key_reduce_motion"
 internal const val KEY_LETTER_BY_LETTER_LYRICS = "key_letter_by_letter_lyrics"

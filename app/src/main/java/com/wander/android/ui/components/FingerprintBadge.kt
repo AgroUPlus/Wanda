@@ -2,7 +2,6 @@ package com.wander.android.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -14,6 +13,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.repository.FingerprintStatus
+import com.wander.android.ui.theme.LocalDarkTheme
 
 /**
  * Whether a track has been measured, as a dot beside its title.
@@ -38,7 +38,7 @@ fun FingerprintBadge(
     // Not taken from the colour scheme: these are a traffic light, and their meaning is the hue
     // itself rather than a role in the theme. A tertiary that happened to be pink would say nothing.
     // Two sets, because a tone legible on white is muddy on near-black and the reverse.
-    val dark = isSystemInDarkTheme()
+    val dark = LocalDarkTheme.current
     val target = when (status) {
         FingerprintStatus.INDEXED -> if (dark) IndexedDark else IndexedLight
         FingerprintStatus.PROCESSING -> if (dark) ProcessingDark else ProcessingLight

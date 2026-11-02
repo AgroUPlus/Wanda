@@ -20,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import com.wander.android.R
 import com.wander.android.ui.components.GroupedCard
 import com.wander.android.ui.components.rememberShelfEntranceScale
+import com.wander.android.ui.theme.ThemeMode
 
 /**
  * Look and feel, in titled sections — one heading and one card each, so a new kind of setting
@@ -56,6 +57,16 @@ internal fun LazyListScope.appearanceTab(
 
     lookSection(key = "colours", title = R.string.settings_section_colours, index = 3) {
         listOf(
+            {
+                SettingsChoiceRow(
+                    title = stringResource(R.string.settings_theme_mode),
+                    subtitle = stringResource(R.string.settings_theme_mode_sub),
+                    options = ThemeMode.entries,
+                    selected = state.themeMode,
+                    label = { stringResource(it.label) },
+                    onSelect = actions.onThemeModeChange
+                )
+            },
             {
                 SettingsToggle(
                     title = stringResource(R.string.settings_match_system_colours),

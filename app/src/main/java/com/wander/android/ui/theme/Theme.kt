@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 fun WanderTheme(
     dynamicColor: Boolean = true,
     amoledBlack: Boolean = false,
+    /** From the Light / Dark / System setting — see [ThemeMode.isDark]. */
     darkTheme: Boolean = isSystemInDarkTheme(),
     /** The in-app "Reduce motion" setting. Or-ed with the phone's own accessibility setting. */
     reduceMotion: Boolean = false,
@@ -47,6 +48,10 @@ fun WanderTheme(
         shapes = WandaShapes,
         typography = WandaTypography
     ) {
-        CompositionLocalProvider(LocalReducedMotion provides effectiveReduceMotion, content = content)
+        CompositionLocalProvider(
+            LocalReducedMotion provides effectiveReduceMotion,
+            LocalDarkTheme provides darkTheme,
+            content = content
+        )
     }
 }

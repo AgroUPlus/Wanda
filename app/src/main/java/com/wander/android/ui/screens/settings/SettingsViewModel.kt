@@ -21,6 +21,7 @@ import com.wander.android.data.repository.IncognitoRepository
 import com.wander.android.data.repository.SyncProgress
 import com.wander.android.data.sources.agro.AgroSyncedSettings
 import com.wander.android.data.sources.agro.AgroVisibility
+import com.wander.android.ui.theme.ThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -122,6 +123,8 @@ internal class SettingsViewModel @Inject constructor(
     val isSkipSilenceEnabled: StateFlow<Boolean> = secureStorage.isSkipSilenceEnabled
     val isIndexOnMobileDataEnabled: StateFlow<Boolean> = secureStorage.isIndexOnMobileDataEnabled
 
+    val themeMode: StateFlow<String> = secureStorage.displayPrefs.themeMode
+    fun setThemeMode(mode: ThemeMode) = secureStorage.displayPrefs.setThemeMode(mode.name)
     fun setMonetDynamic(enabled: Boolean) = secureStorage.setMonetDynamic(enabled)
     fun setAmoledBlack(enabled: Boolean) = secureStorage.setAmoledBlack(enabled)
     fun setBackBlurEnabled(enabled: Boolean) = secureStorage.setBackBlurEnabled(enabled)

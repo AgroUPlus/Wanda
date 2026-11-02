@@ -1,7 +1,6 @@
 package com.wander.android.ui
 
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +45,7 @@ import com.wander.android.ui.screens.social.SocialViewModel
 import com.wander.android.ui.theme.CoverTintedTheme
 import com.wander.android.ui.theme.rememberCoverSeedColor
 import kotlinx.coroutines.launch
+import com.wander.android.ui.theme.LocalDarkTheme
 
 /**
  * The app shell: a bottom bar, the nav graph, and a player sheet overlaying both.
@@ -149,7 +149,7 @@ fun WanderApp(
     CoverTintedTheme(
         seedColor = shellCoverSeed,
         base = MaterialTheme.colorScheme,
-        dark = isSystemInDarkTheme(),
+        dark = LocalDarkTheme.current,
         amoled = isAmoledBlack
     ) {
         CompositionLocalProvider(
