@@ -48,6 +48,7 @@ class PlaybackService : MediaSessionService() {
     @Inject lateinit var sleepTimer: SleepTimer
     @Inject lateinit var loudnessReadout: LoudnessReadout
     @Inject lateinit var jamSkipGate: JamSkipGate
+    @Inject lateinit var bluetoothOutput: BluetoothAudioOutput
     @Inject internal lateinit var scrobbleForwarding: com.wander.android.data.repository.ScrobbleForwarding
     @Inject internal lateinit var sourceNowPlaying: com.wander.android.data.repository.SourceNowPlaying
     @Inject @field:com.wander.android.di.ArtworkHttpClient
@@ -65,6 +66,7 @@ class PlaybackService : MediaSessionService() {
         player.addListener(NextTrackPreloader(player))
         EpisodeSkipSilence(player, secureStorage.isSkipSilenceEnabled, scope)
         EpisodeAudioAttributes(player)
+        BluetoothOffloadVeto(player, bluetoothOutput.connected, scope)
         val volume = PlayerVolume { player.volume = it }
         val loudness = secureStorage.loudness
         LoudnessNormaliser(player, volume, loudness.mode, loudness.preampDb, loudnessReadout, scope)

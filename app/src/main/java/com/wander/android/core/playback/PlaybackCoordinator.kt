@@ -146,12 +146,14 @@ class PlaybackCoordinator @Inject internal constructor(
             .onEach { applyOffload() }
             .launchIn(scope)
 
-        // Livestreams and silence-skipped episodes veto audio offload — see `offloadAllowed`. Both
-        // turn on what is playing, and the second also on the setting.
+        // Livestreams, silence-skipped episodes and a Bluetooth output veto audio offload — see
+        // `offloadAllowed`. The first two turn on what is playing, the second also on the setting,
+        // and the last on earbuds connecting or going away mid-track.
         connection.state
             .map { (it.currentTrack?.isLive == true) to (it.currentTrack?.isEpisode == true) }
             .distinctUntilChanged()
             .combine(secureStorage.isSkipSilenceEnabled) { kind, skip -> kind to skip }
+            .combine(connection.bluetoothConnected) { kind, bluetooth -> kind to bluetooth }
             .onEach { applyOffload() }
             .launchIn(scope)
     }

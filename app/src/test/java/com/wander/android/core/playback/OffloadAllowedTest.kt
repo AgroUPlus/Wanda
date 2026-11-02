@@ -10,25 +10,37 @@ class OffloadAllowedTest {
 
     private val normal = SpeedAndPitch()
 
+    private fun allowed(
+        isLive: Boolean = false,
+        speedAndPitch: SpeedAndPitch = normal,
+        skipsSilence: Boolean = false,
+        onBluetooth: Boolean = false
+    ) = offloadAllowed(isLive, speedAndPitch, skipsSilence, onBluetooth)
+
     @Test
     fun anOrdinaryTrackAtNormalSpeedIsOffloaded() {
-        assertTrue(offloadAllowed(isLive = false, speedAndPitch = normal, skipsSilence = false))
+        assertTrue(allowed(isLive = false, speedAndPitch = normal, skipsSilence = false))
     }
 
     @Test
     fun aLivestreamIsNeverOffloaded() {
-        assertFalse(offloadAllowed(isLive = true, speedAndPitch = normal, skipsSilence = false))
+        assertFalse(allowed(isLive = true, speedAndPitch = normal, skipsSilence = false))
     }
 
     @Test
     fun aChangedSpeedOrPitchKeepsOffloadOffForAnyTrack() {
-        assertFalse(offloadAllowed(isLive = false, speedAndPitch = SpeedAndPitch(speed = 1.5f), skipsSilence = false))
-        assertFalse(offloadAllowed(isLive = false, speedAndPitch = SpeedAndPitch(pitch = 0.8f), skipsSilence = false))
+        assertFalse(allowed(isLive = false, speedAndPitch = SpeedAndPitch(speed = 1.5f), skipsSilence = false))
+        assertFalse(allowed(isLive = false, speedAndPitch = SpeedAndPitch(pitch = 0.8f), skipsSilence = false))
     }
 
     @Test
     fun skippingSilenceKeepsOffloadOff() {
-        assertFalse(offloadAllowed(isLive = false, speedAndPitch = normal, skipsSilence = true))
+        assertFalse(allowed(isLive = false, speedAndPitch = normal, skipsSilence = true))
+    }
+
+    @Test
+    fun aConnectedBluetoothOutputKeepsOffloadOff() {
+        assertFalse(allowed(onBluetooth = true))
     }
 
     @Test

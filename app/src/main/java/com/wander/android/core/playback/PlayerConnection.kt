@@ -29,7 +29,8 @@ class PlayerConnection @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val secureStorage: SecureStorage,
     private val streamResolver: StreamResolver,
-    private val jamSkipGate: JamSkipGate
+    private val jamSkipGate: JamSkipGate,
+    private val bluetoothOutput: BluetoothAudioOutput
 ) {
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private val queueManager = PlayerQueueManager()
@@ -226,10 +227,15 @@ class PlayerConnection @Inject constructor(
     }
 
     fun setSpeedAndPitch(speed: Float, pitch: Float) =
-        speedController.setSpeedAndPitch(_controller.value, speed, pitch, isLiveNow(), skipsSilenceNow())
+        speedController.setSpeedAndPitch(_controller.value, speed, pitch, routeNow())
 
     /** Re-decides audio offload for the current track; see [offloadAllowed] for the rule. */
-    fun refreshOffload() = speedController.applyOffload(_controller.value, isLiveNow(), skipsSilenceNow())
+    fun refreshOffload() = speedController.applyOffload(_controller.value, routeNow())
+
+    /** Whether a Bluetooth output is connected, which vetoes offload; see [BluetoothAudioOutput]. */
+    val bluetoothConnected: StateFlow<Boolean> get() = bluetoothOutput.connected
+
+    private fun routeNow() = OffloadRoute(isLiveNow(), skipsSilenceNow(), bluetoothOutput.connected.value)
 
     private fun isLiveNow() = state.value.currentTrack?.isLive == true
 

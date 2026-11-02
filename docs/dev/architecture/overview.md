@@ -22,7 +22,7 @@ ui/         theme · navigation · components · screens/<screen>
 ## 3. Battery & Hardware Constraints
 
 - No polling loops. Playback position updates are driven by `Player.Listener` combined with a tick timer active only while playing and when the UI lifecycle is `STARTED` (`repeatOnLifecycle`).
-- Hardware audio offload is enabled. `WAKE_MODE_NETWORK` is acquired only during active network streaming (`WAKE_MODE_NONE` for local file playback).
+- Hardware audio offload is enabled, except at a non-1× speed, under silence skipping, for a livestream, or while a Bluetooth output is connected (see `offloadAllowed`). `WAKE_MODE_NETWORK` is acquired only during active network streaming (`WAKE_MODE_NONE` for local file playback).
 - Background jobs run via WorkManager constrained by `UNMETERED + charging + !battery-low`.
 
 ## 4. Security & Privacy

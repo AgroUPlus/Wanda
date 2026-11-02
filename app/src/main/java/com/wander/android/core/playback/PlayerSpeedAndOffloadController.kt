@@ -18,7 +18,7 @@ internal class PlayerSpeedAndOffloadController {
     private val _speedAndPitch = MutableStateFlow(SpeedAndPitch())
     val speedAndPitch: StateFlow<SpeedAndPitch> = _speedAndPitch.asStateFlow()
 
-    fun setSpeedAndPitch(ctrl: MediaController?, speed: Float, pitch: Float, isLive: Boolean, skipsSilence: Boolean) {
+    fun setSpeedAndPitch(ctrl: MediaController?, speed: Float, pitch: Float, route: OffloadRoute) {
         if (ctrl == null) return
         val clamped = SpeedAndPitch(
             speed = speed.coerceIn(SpeedAndPitch.RANGE),
@@ -26,20 +26,23 @@ internal class PlayerSpeedAndOffloadController {
         )
         _speedAndPitch.value = clamped
         // Before the new rate: a rate other than 1x must never reach a player still in offload.
-        applyOffload(ctrl, isLive, skipsSilence)
+        applyOffload(ctrl, route)
         ctrl.playbackParameters = PlaybackParameters(clamped.speed, clamped.pitch)
     }
 
     /** Re-decides offload for what is playing now, at the speed and pitch currently set. */
-    fun applyOffload(ctrl: MediaController?, isLive: Boolean, skipsSilence: Boolean) {
+    fun applyOffload(ctrl: MediaController?, route: OffloadRoute) {
         if (ctrl == null) return
-        val allowed = offloadAllowed(isLive, _speedAndPitch.value, skipsSilence)
+        val allowed = offloadAllowed(route.isLive, _speedAndPitch.value, route.skipsSilence, route.onBluetooth)
         ctrl.trackSelectionParameters = PlayerFactory.withVideoSuppressed(
             PlayerFactory.withOffload(ctrl.trackSelectionParameters, allowed),
-            isLive
+            route.isLive
         )
     }
 }
+
+/** What [offloadAllowed] weighs besides the speed: the item playing, and where its sound goes. */
+internal data class OffloadRoute(val isLive: Boolean, val skipsSilence: Boolean, val onBluetooth: Boolean)
 
 /**
  * Whether audio may be offloaded to the DSP.
@@ -50,6 +53,14 @@ internal class PlayerSpeedAndOffloadController {
  * A livestream is excluded as well, because offload expects a track that ends and an HLS live
  * window is not one. Loudness normalisation does not count: it works through the player's volume
  * (see [PlayerVolume]), which offload honours.
+ *
+ * Nor while a Bluetooth output is connected ([BluetoothAudioOutput]): offloaded playback over
+ * Bluetooth played silence on some phones until a volume key was pressed. The battery cost is
+ * small there — the radio link, not the decoder, is what a Bluetooth session spends power on.
  */
-internal fun offloadAllowed(isLive: Boolean, speedAndPitch: SpeedAndPitch, skipsSilence: Boolean): Boolean =
-    !isLive && speedAndPitch.isDefault && !skipsSilence
+internal fun offloadAllowed(
+    isLive: Boolean,
+    speedAndPitch: SpeedAndPitch,
+    skipsSilence: Boolean,
+    onBluetooth: Boolean
+): Boolean = !isLive && speedAndPitch.isDefault && !skipsSilence && !onBluetooth
