@@ -6,4 +6,13 @@
     <string name="like_sync_gave_up_like">Couldn\'t save your like of “%1$s” to %2$s.</string>
     <!-- %1$s: song title. %2$s: backend name. -->
     <string name="like_sync_gave_up_unlike">Couldn\'t remove your like of “%1$s” from %2$s.</string>
+
+    <!-- Home shelves from the user's Navidrome server. -->
+    <string name="navidrome_shelf_recent">Recently added on your server</string>
+    <string name="navidrome_shelf_frequent">Most played on your server</string>
+    <string name="navidrome_shelf_random">Random picks from your server</string>
+    <string name="navidrome_shelf_top_artists">Top songs from artists you play</string>
+    <string name="navidrome_shelf_radio">Radio stations</string>
+    <!-- Shown under a radio station's name, where a song shows its artist. -->
+    <string name="navidrome_radio_artist">Internet radio</string>
 </resources>

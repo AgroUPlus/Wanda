@@ -4,6 +4,7 @@ import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.LyricsData
+import com.wander.android.data.model.RecommendedShelf
 import com.wander.android.data.model.SearchCatalog
 import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.SourceType
@@ -30,19 +31,9 @@ class NavidromeSource @Inject constructor(
     private val apiClient: SubsonicApiClient,
     private val catalogLoader: NavidromeCatalogLoader,
     /** Which of the two quality settings applies: the metered one or the Wi-Fi one. */
-    private val connectivity: ConnectivityObserver
+    private val connectivity: ConnectivityObserver,
+    private val homeFeed: NavidromeHomeFeed
 ) : IMusicSource {
-
-    constructor(
-        secureStorage: SecureStorage,
-        apiClient: SubsonicApiClient,
-        connectivity: ConnectivityObserver
-    ) : this(
-        secureStorage = secureStorage,
-        apiClient = apiClient,
-        catalogLoader = NavidromeCatalogLoader(apiClient),
-        connectivity = connectivity
-    )
 
     override val sourceType = SourceType.NAVIDROME
     override val displayName = "Navidrome"
@@ -57,6 +48,7 @@ class NavidromeSource @Inject constructor(
         scrobble = true,
         radio = true,
         lyrics = true,
+        recommendations = true,
         share = true,
         collectionSearch = true
     )
@@ -108,6 +100,7 @@ class NavidromeSource @Inject constructor(
 
     override suspend fun getStreamInfo(trackId: String): Result<StreamInfo> {
         if (!apiClient.isConfigured) return Result.failure(IllegalStateException("Navidrome not configured"))
+        if (trackId.startsWith(NavidromeHomeFeed.RADIO_PREFIX)) return homeFeed.radioStream(trackId)
         val quality = if (connectivity.isMetered) {
             secureStorage.playbackPrefs.navidromeQualityMobile.value
         } else {
@@ -125,6 +118,9 @@ class NavidromeSource @Inject constructor(
     /** See [NavidromeLyrics] for which call a server is asked. */
     override suspend fun getLyrics(trackId: String): Result<LyricsData?> =
         lyrics.fetch(trackId, trackId.removePrefix(PREFIX))
+
+    /** See [NavidromeHomeFeed] for the shelves. */
+    override suspend fun getRecommendations(): Result<List<RecommendedShelf>> = homeFeed.shelves()
 
     override suspend fun getRadio(seedTrackId: String, count: Int): Result<List<UnifiedTrack>> =
         catalogLoader.getRadio(seedTrackId, count)

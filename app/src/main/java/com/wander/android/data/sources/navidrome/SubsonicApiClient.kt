@@ -35,7 +35,7 @@ class SubsonicApiClient @Inject constructor(
     private fun authParams(): Map<String, String> = credentials.authParams()
 
     /** Every endpoint funnels through here, so auth and error mapping exist in exactly one place. */
-    private suspend fun call(
+    internal suspend fun call(
         endpoint: String,
         vararg params: Pair<String, Any?>
     ): Result<SubsonicResponse> = withContext(Dispatchers.IO) {
