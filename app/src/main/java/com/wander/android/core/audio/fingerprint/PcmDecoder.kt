@@ -3,10 +3,9 @@ package com.wander.android.core.audio.fingerprint
 import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
+import android.util.Log
 import javax.inject.Inject
-import kotlin.math.min
+import android.media.AudioFormat as PlatformAudioFormat
 
 /**
  * Decodes a local audio file to the mono 8 kHz float PCM the fingerprinter expects.
@@ -76,40 +75,12 @@ class PcmDecoder @Inject constructor() {
             decodeTrack(extractor, format, maxSeconds)
         } catch (e: java.io.IOException) {
             // An unreadable file is a fact about the file, not an error worth propagating: the
-            // indexer simply has nothing to add for it and moves on to the next one.
+            // indexer records the attempt, backs off, and moves on to the next one. Logged by
+            // class only — the message can carry the path or the stream URL.
+            Log.w(TAG, "Could not open source: ${e.javaClass.simpleName}")
             null
         } catch (e: IllegalArgumentException) {
-            null
-        } finally {
-            extractor.release()
-        }
-    }
-
-    /**
-     * How long [path] is, in seconds, or null when that cannot be read.
-     *
-     * Asked of the container rather than of the library row, because the row is often wrong: a
-     * YouTube Music track arrives with no duration at all, and 175 of them in one real library had
-     * `durationMs = 0`. Anything deciding how much of a track to read from that field silently does
-     * nothing for every one of them.
-     *
-     * Cheap: the extractor reads headers, which for a remote source is one small range request.
-     */
-    fun durationSeconds(path: String, headers: Map<String, String> = emptyMap()): Int? {
-        val extractor = MediaExtractor()
-        return try {
-            if (headers.isEmpty()) extractor.setDataSource(path)
-            else extractor.setDataSource(path, headers)
-            (0 until extractor.trackCount)
-                .map { extractor.getTrackFormat(it) }
-                .firstOrNull { it.getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true }
-                ?.takeIf { it.containsKey(MediaFormat.KEY_DURATION) }
-                ?.getLong(MediaFormat.KEY_DURATION)
-                ?.let { (it / 1_000_000L).toInt() }
-                ?.takeIf { it > 0 }
-        } catch (e: java.io.IOException) {
-            null
-        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "Could not open source: ${e.javaClass.simpleName}")
             null
         } finally {
             extractor.release()
@@ -122,21 +93,27 @@ class PcmDecoder @Inject constructor() {
         maxSeconds: Int
     ): FloatArray? {
         val mime = format.getString(MediaFormat.KEY_MIME) ?: return null
-        val sourceRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
-        val channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+        // The container's description, until the codec says otherwise. It often does: HE-AAC
+        // declares half its real rate (the SBR layer doubles it) and parametric stereo declares
+        // one channel and decodes to two, so trusting the input format played those tracks into
+        // the fingerprint at the wrong speed, or read every frame as two.
+        var shape = OutputShape(
+            rate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE),
+            channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT),
+            encoding = pcmEncodingOf(format, PlatformAudioFormat.ENCODING_PCM_16BIT)
+        )
 
         val codec = MediaCodec.createDecoderByType(mime)
-        // A primitive buffer, not `ArrayList<Float>`. The list boxed every sample — around 2.6
-        // million objects for a single minute of 44.1 kHz audio — and indexing a library is
-        // thousands of tracks of that, which is GC pressure measured in whole seconds of CPU.
+        // A primitive buffer, at the fingerprint rate, filled as the decode runs. Samples are
+        // downmixed and resampled the moment they leave the codec, so the decode never holds
+        // source-rate audio: at 44.1 kHz stereo that was 5.5 times the floats kept, 127 MB at the
+        // twelve-minute embedding bound, all of it garbage the moment the resample finished.
         //
-        // Sized from the *track*, bounded by [maxSeconds], rather than from [maxSeconds] alone.
-        // Sizing it from the cap is fine while the cap is a minute and catastrophic once it is
-        // long enough to hold a whole track: at a 20-minute bound and a 44.1 kHz source it
-        // reserves 212 MB for every decode, whatever the song's actual length — enough to hold
-        // the main thread in garbage collection until the platform declares the app unresponsive.
-        val mono = FloatBuffer(sourceRate * expectedSeconds(format, maxSeconds))
-        val wanted = sourceRate.toLong() * maxSeconds
+        // Sized from the *track*, bounded by [maxSeconds], rather than from [maxSeconds] alone,
+        // so a three-minute song does not reserve twelve minutes of buffer.
+        val out = FloatBuffer(AudioFormat.SAMPLE_RATE * expectedSeconds(format, maxSeconds))
+        var resampler = StreamingResampler(shape.rate, out)
+        val wanted = AudioFormat.SAMPLE_RATE.toLong() * maxSeconds
 
         try {
             codec.configure(format, null, null, 0)
@@ -144,9 +121,8 @@ class PcmDecoder @Inject constructor() {
             val info = MediaCodec.BufferInfo()
             var sawInputEnd = false
             var sawOutputEnd = false
-            var framesRead = 0L
 
-            while (!sawOutputEnd && framesRead < wanted) {
+            while (!sawOutputEnd && out.size < wanted) {
                 if (!sawInputEnd) {
                     val inputIndex = codec.dequeueInputBuffer(TIMEOUT_US)
                     if (inputIndex >= 0) {
@@ -167,27 +143,57 @@ class PcmDecoder @Inject constructor() {
                 }
 
                 val outputIndex = codec.dequeueOutputBuffer(info, TIMEOUT_US)
-                if (outputIndex >= 0) {
+                if (outputIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                    val next = OutputShape.of(codec.outputFormat, shape)
+                    if (!PcmDownmix.supports(next.encoding) || next.channels <= 0 || next.rate <= 0) {
+                        Log.w(TAG, "Unsupported decoder output: encoding ${next.encoding}")
+                        return null
+                    }
+                    if (next.rate != shape.rate) {
+                        resampler.finish()
+                        resampler = StreamingResampler(next.rate, out)
+                    }
+                    shape = next
+                } else if (outputIndex >= 0) {
                     val buffer = codec.getOutputBuffer(outputIndex)
                     if (buffer != null && info.size > 0) {
-                        val shorts = buffer.order(ByteOrder.nativeOrder()).asShortBuffer()
-                        framesRead += downmix(shorts, channels, mono)
+                        buffer.position(info.offset)
+                        buffer.limit(info.offset + info.size)
+                        PcmDownmix.mix(buffer, shape.channels, shape.encoding, resampler)
                     }
                     codec.releaseOutputBuffer(outputIndex, false)
                     if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) sawOutputEnd = true
                 }
             }
-        } catch (e: MediaCodec.CodecException) {
-            return null
+            resampler.finish()
         } catch (e: IllegalStateException) {
+            // Includes MediaCodec.CodecException. Logged by class: the codec gave up on this
+            // stream, and the caller records the attempt and backs off.
+            Log.w(TAG, "Decoder failed: ${e.javaClass.simpleName}")
             return null
         } finally {
-            runCatching { codec.stop() }
-            codec.release()
+            stopAndRelease(codec)
         }
 
-        if (mono.isEmpty) return null
-        return Resampler.toFingerprintRate(mono.toFloatArray(), sourceRate)
+        if (out.isEmpty) return null
+        return out.toFloatArray()
+    }
+
+    /**
+     * Releases [codec] whatever state it ended in.
+     *
+     * `stop()` throws `IllegalStateException` from the error state a failed decode leaves behind;
+     * that is expected there, and `release()` must still run or the codec instance leaks — and the
+     * device has only a handful, shared with playback.
+     */
+    private fun stopAndRelease(codec: MediaCodec) {
+        try {
+            codec.stop()
+        } catch (e: IllegalStateException) {
+            Log.d(TAG, "Codec stop after failure: ${e.javaClass.simpleName}")
+        } finally {
+            codec.release()
+        }
     }
 
     /**
@@ -198,33 +204,39 @@ class PcmDecoder @Inject constructor() {
      * is far cheaper than reserving for the worst case every time.
      */
     private fun expectedSeconds(format: MediaFormat, maxSeconds: Int): Int {
-        val declared = runCatching {
-            if (format.containsKey(MediaFormat.KEY_DURATION)) {
-                (format.getLong(MediaFormat.KEY_DURATION) / 1_000_000L).toInt()
-            } else {
-                0
-            }
-        }.getOrDefault(0)
+        val declared = if (format.containsKey(MediaFormat.KEY_DURATION)) {
+            (format.getLong(MediaFormat.KEY_DURATION) / 1_000_000L).toInt()
+        } else {
+            0
+        }
         if (declared <= 0) return minOf(UNDECLARED_SECONDS, maxSeconds).coerceAtLeast(1)
         // A second of slack: a container's duration and what decodes out of it routinely disagree
         // by a frame or two, and one doubling to hold the difference costs the whole buffer again.
         return minOf(declared + 1, maxSeconds).coerceAtLeast(1)
     }
 
-    /** Averages channels down to one, appending to [into]. Returns the frames written. */
-    private fun downmix(shorts: java.nio.ShortBuffer, channels: Int, into: FloatBuffer): Int {
-        val frames = shorts.remaining() / channels
-        for (frame in 0 until frames) {
-            var sum = 0f
-            for (channel in 0 until channels) {
-                sum += shorts[frame * channels + channel] / Short.MAX_VALUE.toFloat()
-            }
-            into.add(sum / channels)
+    /** What the codec is producing: the shape [PcmDownmix] reads each output buffer in. */
+    private data class OutputShape(val rate: Int, val channels: Int, val encoding: Int) {
+        companion object {
+            /** [format]'s values, keeping [previous]'s for any key it leaves out. */
+            fun of(format: MediaFormat, previous: OutputShape) = OutputShape(
+                rate = if (format.containsKey(MediaFormat.KEY_SAMPLE_RATE)) {
+                    format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+                } else {
+                    previous.rate
+                },
+                channels = if (format.containsKey(MediaFormat.KEY_CHANNEL_COUNT)) {
+                    format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+                } else {
+                    previous.channels
+                },
+                encoding = pcmEncodingOf(format, previous.encoding)
+            )
         }
-        return frames
     }
 
     companion object {
+        private const val TAG = "PcmDecoder"
         private const val TIMEOUT_US = 10_000L
 
         /** Buffer to reserve for a source that declares no duration. See [expectedSeconds]. */
@@ -232,62 +244,13 @@ class PcmDecoder @Inject constructor() {
 
         /** See [decode]. A window's worth, not a whole track. */
         const val DEFAULT_MAX_SECONDS = 60
-    }
-}
 
-/**
- * A growable `FloatArray`.
- *
- * `ArrayList<Float>` is the obvious thing to reach for and is the wrong one here: it stores boxed
- * `java.lang.Float` objects, and the decoder appends one per sample per channel-frame. Kotlin has
- * no primitive list in its standard library, so this is fifteen lines rather than a dependency.
- */
-private class FloatBuffer(initialCapacity: Int) {
-
-    private var data = FloatArray(initialCapacity.coerceAtLeast(1))
-    private var size = 0
-
-    val isEmpty: Boolean get() = size == 0
-
-    fun add(value: Float) {
-        if (size == data.size) data = data.copyOf(data.size * 2)
-        data[size++] = value
-    }
-
-    /**
-     * A right-sized array the caller keeps for the life of the fingerprint.
-     *
-     * Hands back the buffer itself when it happens to be exactly full — which is the common case
-     * now that it is sized from the track's declared duration. Copying there would double the
-     * peak footprint of a decode for no purpose, and the buffer has no other owner.
-     */
-    fun toFloatArray(): FloatArray = if (size == data.size) data else data.copyOf(size)
-}
-
-/** Linear resampling to [AudioFormat.SAMPLE_RATE]. */
-internal object Resampler {
-
-    /**
-     * Linear interpolation, not a windowed-sinc filter.
-     *
-     * Downsampling this way aliases anything above the new Nyquist back into the band. That is a
-     * real defect and it is tolerable here for one reason: *both* sides of a match go through this
-     * same function, so the artefacts land in the same places in the file and in the microphone
-     * clip, and the peaks still line up. A proper filter would be strictly better audio and no
-     * better matching.
-     */
-    fun toFingerprintRate(samples: FloatArray, sourceRate: Int): FloatArray {
-        if (sourceRate == AudioFormat.SAMPLE_RATE) return samples
-        val ratio = sourceRate.toDouble() / AudioFormat.SAMPLE_RATE
-        val outputSize = (samples.size / ratio).toInt()
-        if (outputSize <= 0) return FloatArray(0)
-        return FloatArray(outputSize) { i ->
-            val position = i * ratio
-            val index = position.toInt()
-            val fraction = (position - index).toFloat()
-            val a = samples[index]
-            val b = samples[min(index + 1, samples.lastIndex)]
-            a + (b - a) * fraction
-        }
+        /** A decoder that names no encoding is producing the 16-bit default. */
+        private fun pcmEncodingOf(format: MediaFormat, fallback: Int): Int =
+            if (format.containsKey(MediaFormat.KEY_PCM_ENCODING)) {
+                format.getInteger(MediaFormat.KEY_PCM_ENCODING)
+            } else {
+                fallback
+            }
     }
 }
