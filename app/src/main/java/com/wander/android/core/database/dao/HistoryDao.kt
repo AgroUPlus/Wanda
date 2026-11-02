@@ -61,9 +61,19 @@ interface HistoryDao {
     )
     fun pagedHistory(): PagingSource<Int, HistoryTrackEntry>
 
-    /** Plays that could not be scrobbled yet — retried when the source comes back online. */
-    @Query("SELECT * FROM history WHERE scrobbled = 0 ORDER BY playedAt ASC LIMIT :limit")
-    suspend fun getPendingScrobbles(limit: Int = 100): List<HistoryEntity>
+    /**
+     * Plays of one source's tracks ([idPrefix], e.g. `navidrome:`) it has not been told about yet —
+     * retried when it comes back online. Filtered by source because the flag is never set for a
+     * source that does not scrobble, so its plays would otherwise sit at the head forever.
+     */
+    @Query(
+        """
+        SELECT * FROM history
+        WHERE scrobbled = 0 AND substr(trackId, 1, length(:idPrefix)) = :idPrefix
+        ORDER BY playedAt ASC LIMIT :limit
+        """
+    )
+    suspend fun getPendingScrobbles(idPrefix: String, limit: Int = 100): List<HistoryEntity>
 
     @Query("UPDATE history SET scrobbled = 1 WHERE historyId IN (:ids)")
     suspend fun markScrobbled(ids: List<Long>)
