@@ -4,6 +4,7 @@ import com.wander.android.core.network.HttpClientFactory
 import io.ktor.client.HttpClient
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.header
+import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -36,10 +37,16 @@ internal class InnerTubeTransport @Inject constructor(
         endpoint: String,
         payload: JsonObject,
         client: InnerTubeVariant = InnerTubeVariant.WEB_REMIX,
-        visitorIdOverride: String? = null
+        visitorIdOverride: String? = null,
+        /**
+         * Query parameters, kept apart from [endpoint] so they never reach an error message —
+         * a continuation token in the query string is still a query string.
+         */
+        query: Map<String, String> = emptyMap()
     ): Result<JsonObject> = withContext(Dispatchers.IO) {
         runCatching {
             val response = this@InnerTubeTransport.client.post("${client.apiBaseUrl}/$endpoint") {
+                query.forEach { (name, value) -> parameter(name, value) }
                 applyHeaders(client, visitorIdOverride)
                 setBody(payload.toString())
             }

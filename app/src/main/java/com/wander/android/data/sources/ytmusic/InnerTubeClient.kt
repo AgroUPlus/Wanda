@@ -18,7 +18,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class InnerTubeClient @Inject internal constructor(
-    private val transport: InnerTubeTransport,
+    internal val transport: InnerTubeTransport,
     private val playerResolver: InnerTubePlayerResolver
 ) {
     constructor(accountManager: GoogleAccountManager, client: HttpClient) : this(
@@ -64,6 +64,24 @@ class InnerTubeClient @Inject internal constructor(
                 put("context", transport.webContext())
                 put("browseId", browseId)
                 params?.takeIf { it.isNotBlank() }?.let { put("params", it) }
+            }
+        )
+
+    /**
+     * The next page of a long shelf. A legacy token rides in the query string, as the web player
+     * sends it; a modern one in the body. See [InnerTubeContinuation].
+     */
+    internal suspend fun browseContinuation(next: InnerTubeContinuation): Result<JsonObject> =
+        transport.post(
+            "browse",
+            buildJsonObject {
+                put("context", transport.webContext())
+                if (!next.legacy) put("continuation", next.token)
+            },
+            query = if (next.legacy) {
+                mapOf("ctoken" to next.token, "continuation" to next.token, "type" to "next")
+            } else {
+                emptyMap()
             }
         )
 

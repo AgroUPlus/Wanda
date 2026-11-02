@@ -79,18 +79,26 @@ class YTMusicCatalogLoader @Inject constructor(
         )
     }
 
+    private val likedShelf = trackShelf(LIKED_BROWSE_ID)
+
+    private val albumShelf = InnerTubeShelfCursor(
+        firstPage = { innerTube.browse(LIBRARY_ALBUMS_BROWSE_ID) },
+        nextPage = { innerTube.browseContinuation(it) },
+        parse = { it.libraryAlbums() }
+    )
+
     suspend fun getLikedTracks(limit: Int, offset: Int): Result<List<UnifiedTrack>> =
-        innerTube.browse(LIKED_BROWSE_ID).map { root ->
-            root.responsiveListItems().mapNotNull(::parseResponsiveListItem).drop(offset).take(limit)
-        }
+        likedShelf.slice(offset, limit)
 
     suspend fun getAlbums(limit: Int, offset: Int): Result<List<UnifiedAlbum>> =
-        innerTube.browse(LIBRARY_ALBUMS_BROWSE_ID).map { root ->
-            root.responsiveListItems()
-                .mapNotNull(::parseLibraryAlbum)
-                .drop(offset)
-                .take(limit)
-        }
+        albumShelf.slice(offset, limit)
+
+    /** A shelf of track rows — liked songs, a playlist — read through its continuations. */
+    private fun trackShelf(browseId: String) = InnerTubeShelfCursor(
+        firstPage = { innerTube.browse(browseId) },
+        nextPage = { innerTube.browseContinuation(it) },
+        parse = { page -> page.responsiveListItems().mapNotNull(::parseResponsiveListItem) }
+    )
 
     suspend fun getArtist(artistId: String): Result<ArtistDetails> {
         val browseId = artistId.removePrefix(YTM_PREFIX)
@@ -141,10 +149,9 @@ class YTMusicCatalogLoader @Inject constructor(
         )
     )
 
+    /** Every track, not the first page: a fresh walk each time, since a playlist is edited. */
     suspend fun getPlaylistTracks(playlistId: String): Result<List<UnifiedTrack>> =
-        innerTube.browse(playlistId.removePrefix(YTM_PREFIX)).map { root ->
-            root.responsiveListItems().mapNotNull(::parseResponsiveListItem)
-        }
+        trackShelf(playlistId.removePrefix(YTM_PREFIX)).all()
 
     companion object {
         const val LIKED_BROWSE_ID = "FEmusic_liked_videos"
