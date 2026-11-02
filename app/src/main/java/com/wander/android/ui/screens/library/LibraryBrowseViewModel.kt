@@ -121,9 +121,19 @@ class LibraryBrowseViewModel @Inject constructor(
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** Whether the Tracks tab has anything for Play all to play. */
+    val hasTracks: StateFlow<Boolean> = sources
+        .flatMapLatest { filter -> browse.hasTracks(filter) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    private val tracksSort: LibrarySort
+        get() = _sorts.value[LibraryTab.TRACKS] ?: LibraryTab.TRACKS.defaultSort
+
     /** Plays [track] with the rest of the Tracks tab, in the order and filter it is shown in. */
-    fun playFromLibrary(track: UnifiedTrack) {
-        val sort = _sorts.value[LibraryTab.TRACKS] ?: LibraryTab.TRACKS.defaultSort
-        libraryPlayback.playFromLibrary(viewModelScope, track, sort, sources.value)
-    }
+    fun playFromLibrary(track: UnifiedTrack) =
+        libraryPlayback.playFromLibrary(viewModelScope, track, tracksSort, sources.value)
+
+    fun playAllTracks() = libraryPlayback.playLibrary(viewModelScope, tracksSort, sources.value, shuffled = false)
+
+    fun shuffleAllTracks() = libraryPlayback.playLibrary(viewModelScope, tracksSort, sources.value, shuffled = true)
 }

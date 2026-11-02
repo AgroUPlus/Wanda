@@ -71,6 +71,7 @@ fun LibraryScreen(
     }
     val likedTracks by browse.likedTracks.collectAsStateWithLifecycle()
     val downloadedTracks by browse.downloadedTracks.collectAsStateWithLifecycle()
+    val hasLibraryTracks by browse.hasTracks.collectAsStateWithLifecycle()
 
     val pagerState = rememberPagerState(
         initialPage = tabs.indexOf(tab).coerceAtLeast(0),
@@ -140,10 +141,15 @@ fun LibraryScreen(
             LibraryTab.DOWNLOADS -> downloadedTracks
             else -> emptyList()
         }
+        // The Tracks tab is paged and may be far larger than memory should hold, so it plays from
+        // the database rather than from a list on screen — see `LibraryPlaybackCoordinator`.
+        val playsLibrary = currentTab == LibraryTab.TRACKS
         LibraryPlayShufflePill(
-            visible = activeTracks.isNotEmpty(),
-            onPlayAll = { viewModel.play(activeTracks, 0) },
-            onShuffle = { viewModel.play(activeTracks.shuffled(), 0) },
+            visible = if (playsLibrary) hasLibraryTracks else activeTracks.isNotEmpty(),
+            onPlayAll = { if (playsLibrary) browse.playAllTracks() else viewModel.play(activeTracks, 0) },
+            onShuffle = {
+                if (playsLibrary) browse.shuffleAllTracks() else viewModel.play(activeTracks.shuffled(), 0)
+            },
             bottomInset = contentPadding.calculateBottomPadding()
         )
     }

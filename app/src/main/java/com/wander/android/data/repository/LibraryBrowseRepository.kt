@@ -46,6 +46,20 @@ class LibraryBrowseRepository @Inject constructor(private val dao: LibraryBrowse
     suspend fun trackIds(sort: LibrarySort, sources: Set<SourceType>): List<String> =
         withContext(Dispatchers.IO) { dao.libraryTrackIds(sort.name, sources.orEvery()) }
 
+    /** [limit] rows of the Tracks tab from [offset], in [sort]. */
+    suspend fun tracksSlice(sort: LibrarySort, sources: Set<SourceType>, offset: Int, limit: Int): List<UnifiedTrack> =
+        withContext(Dispatchers.IO) {
+            dao.libraryTracksSlice(sort.name, sources.orEvery(), limit, offset).map(TrackEntity::toUnifiedTrack)
+        }
+
+    suspend fun randomTracks(sources: Set<SourceType>, limit: Int): List<UnifiedTrack> =
+        withContext(Dispatchers.IO) {
+            dao.randomLibraryTracks(sources.orEvery(), limit).map(TrackEntity::toUnifiedTrack)
+        }
+
+    fun hasTracks(sources: Set<SourceType>): Flow<Boolean> =
+        dao.observeHasLibraryTracks(sources.orEvery()).distinctUntilChanged()
+
     fun likedTracks(sort: LibrarySort, sources: Set<SourceType>): Flow<List<UnifiedTrack>> =
         dao.observeLikedTracks(sort.name, sources.orEvery()).toTracks()
 

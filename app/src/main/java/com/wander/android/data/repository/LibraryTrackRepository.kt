@@ -52,10 +52,6 @@ internal class LibraryTrackRepository(
         pagingSourceFactory = { historyDao.pagedHistory() }
     ).flow.map { page -> page.map { entry -> entry.toHistoryTrack() } }
 
-    suspend fun tracksByIds(ids: List<String>): List<UnifiedTrack> = withContext(Dispatchers.IO) {
-        trackDao.getTracksByIds(ids).map(TrackEntity::toUnifiedTrack)
-    }
-
     suspend fun trackById(trackId: String): UnifiedTrack? = withContext(Dispatchers.IO) {
         trackDao.getTrackById(trackId)?.toUnifiedTrack()
     }

@@ -48,6 +48,23 @@ interface LibraryBrowseDao {
     @Query("SELECT id FROM tracks WHERE $LIBRARY_TRACKS ORDER BY $TRACK_ORDER")
     suspend fun libraryTrackIds(sort: String, sources: List<SourceType>): List<String>
 
+    /** A slice of [pagedLibraryTracks]: what Play all, or a tap on one row, actually queues. */
+    @Query("SELECT * FROM tracks WHERE $LIBRARY_TRACKS ORDER BY $TRACK_ORDER LIMIT :limit OFFSET :offset")
+    suspend fun libraryTracksSlice(
+        sort: String,
+        sources: List<SourceType>,
+        limit: Int,
+        offset: Int
+    ): List<TrackEntity>
+
+    /** Shuffle all: a random [limit] of the Tracks tab, drawn by SQLite rather than in memory. */
+    @Query("SELECT * FROM tracks WHERE $LIBRARY_TRACKS ORDER BY RANDOM() LIMIT :limit")
+    suspend fun randomLibraryTracks(sources: List<SourceType>, limit: Int): List<TrackEntity>
+
+    /** Whether the Tracks tab has anything to play, without reading any of it. */
+    @Query("SELECT EXISTS(SELECT 1 FROM tracks WHERE $LIBRARY_TRACKS)")
+    fun observeHasLibraryTracks(sources: List<SourceType>): Flow<Boolean>
+
     @Query(
         "SELECT * FROM tracks WHERE isLiked = 1 AND isEpisode = 0 AND source IN (:sources) ORDER BY $TRACK_ORDER"
     )

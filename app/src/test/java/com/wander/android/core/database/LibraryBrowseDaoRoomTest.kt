@@ -83,6 +83,20 @@ class LibraryBrowseDaoRoomTest {
     }
 
     @Test
+    fun aSliceKeepsTheChosenOrder() = runBlocking {
+        val slice = db.libraryBrowseDao()
+            .libraryTracksSlice(LibrarySort.TITLE.name, SourceType.entries, limit = 2, offset = 1)
+            .map { it.id }
+        assertEquals(listOf("local:1", "navidrome:3"), slice)
+    }
+
+    @Test
+    fun shuffleAllHonoursItsLimitAndFilter() = runBlocking {
+        val shuffled = db.libraryBrowseDao().randomLibraryTracks(listOf(SourceType.LOCAL), limit = 5)
+        assertEquals(setOf("local:1", "local:2"), shuffled.map { it.id }.toSet())
+    }
+
+    @Test
     fun albumsSortByTheirTracksPlays() = runBlocking {
         db.albumDao().insertAlbums(
             listOf(album("local:B", "B"), album("local:C", "C"), album("navidrome:A", "A"))
