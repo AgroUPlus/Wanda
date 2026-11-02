@@ -48,9 +48,9 @@ internal class PlayRequestResolver @Inject constructor(
     ): MediaItemsWithStartPosition {
         val single = items.singleOrNull()?.takeIf { it.localConfiguration == null }
         // "Play … on Wanda": Media3 hands a voice request over as an item holding only the query.
-        single?.requestMetadata?.searchQuery?.let { query ->
-            return fromSearch(VoiceQuery.of(query, single.requestMetadata.extras))
-        }
+        val request = single?.requestMetadata
+        val query = request?.searchQuery
+        if (request != null && query != null) return fromSearch(VoiceQuery.of(query, request.extras))
         val picked = single?.let { BrowseId.decode(it.mediaId) }
         return when (picked) {
             is BrowseId.Track -> fromFolder(picked, startPositionMs)
