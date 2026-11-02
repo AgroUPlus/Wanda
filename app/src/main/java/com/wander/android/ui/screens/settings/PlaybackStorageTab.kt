@@ -121,6 +121,9 @@ internal fun LazyListScope.playbackStorageTab(
         )
     }
 
+    item(key = "sec_downloads") { SettingsSection(stringResource(R.string.settings_section_downloads)) }
+    item(key = "downloads") { DownloadSettingsCard(modifier = Modifier.scale(rememberShelfEntranceScale(5))) }
+
     item(key = "sec_storage") { SettingsSection(stringResource(R.string.settings_section_storage)) }
     item(key = "storage") {
         GroupedCard(
@@ -152,7 +155,8 @@ internal fun LazyListScope.playbackStorageTab(
                         onClick = actions.onClearCache,
                         icon = Icons.Rounded.DeleteSweep
                     )
-                }
+                },
+                { StreamCacheSizeRow(modifier = Modifier.scale(rememberShelfEntranceScale(6))) }
             )
         )
     }

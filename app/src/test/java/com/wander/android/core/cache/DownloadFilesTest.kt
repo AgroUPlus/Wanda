@@ -74,4 +74,25 @@ class DownloadFilesTest {
         assertEquals(0, deleted)
         assertTrue(inProgress.exists())
     }
+
+    @Test
+    fun `the limit counts finished downloads and not part files`() {
+        val dir = dir()
+        File(dir, "ytm_a.opus").writeBytes(ByteArray(600))
+        File(dir, "ytm_b.123.part").writeBytes(ByteArray(900))
+        val files = DownloadFiles(dir)
+
+        assertEquals(600L, files.usedBytes())
+        assertTrue(files.withinLimit(1_000L, 400L))
+        assertFalse(files.withinLimit(1_000L, 401L))
+        assertFalse("already over", files.withinLimit(500L, -1L))
+    }
+
+    @Test
+    fun `no limit lets anything through`() {
+        val dir = dir()
+        File(dir, "ytm_a.opus").writeBytes(ByteArray(600))
+
+        assertTrue(DownloadFiles(dir).withinLimit(0L, Long.MAX_VALUE / 2))
+    }
 }

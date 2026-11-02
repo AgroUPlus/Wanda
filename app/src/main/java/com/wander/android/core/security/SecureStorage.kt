@@ -19,6 +19,7 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
     private val accountPrefs = SecureAccountPreferences(prefs)
     private val agroPrefs = SecureAgroPreferences(prefs)
     internal val appPrefs = SecureAppPreferences(prefs)
+    internal val downloads = SecureDownloadPreferences(prefs)
     /** The scrobbling services' accounts — see [SecureScrobblePreferences]. */
     internal val scrobbling = SecureScrobblePreferences(prefs)
     internal val loudness = SecureLoudnessPreferences(prefs)
@@ -244,7 +245,6 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
 
     fun workPaused(kindName: String): StateFlow<Boolean> = appPrefs.workPaused(kindName)
     fun setWorkPaused(kindName: String, paused: Boolean) = appPrefs.setWorkPaused(kindName, paused)
-
     // ── Sharing ─────────────────────────────────────────────────────────────────────────────
     val shareDomain: StateFlow<String> = appPrefs.shareDomain
     val agroShareDomain: StateFlow<String> = appPrefs.agroShareDomain
@@ -277,6 +277,7 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
         scrobbling.reloadFlows()
         loudness.reloadFlows()
         searchHistory.reloadFlows()
+        downloads.reloadFlows()
     }
 
     companion object {

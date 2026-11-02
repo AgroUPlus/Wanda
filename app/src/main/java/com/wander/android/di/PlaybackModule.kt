@@ -3,6 +3,7 @@ package com.wander.android.di
 import android.content.Context
 import com.wander.android.core.cache.AudioCacheManager
 import com.wander.android.core.security.IdentityKeyManager
+import com.wander.android.core.security.SecureStorage
 import com.wander.android.core.playback.PlayerFactory
 import com.wander.android.core.playback.StreamResolver
 import dagger.Module
@@ -22,8 +23,16 @@ object PlaybackModule {
     fun provideAudioCacheManager(
         @ApplicationContext context: Context,
         okHttpClient: OkHttpClient,
-        identityKeyManager: IdentityKeyManager
-    ): AudioCacheManager = AudioCacheManager(context, okHttpClient, identityKeyManager)
+        identityKeyManager: IdentityKeyManager,
+        secureStorage: SecureStorage
+    ): AudioCacheManager = AudioCacheManager(
+        context,
+        okHttpClient,
+        identityKeyManager,
+        // Read once: the size is fixed for the life of the cache, so a new choice takes effect at
+        // the next start — which the setting says.
+        maxSizeBytes = secureStorage.downloads.streamCacheBytes.value
+    )
 
     @Provides
     @Singleton

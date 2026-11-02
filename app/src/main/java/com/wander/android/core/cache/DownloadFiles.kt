@@ -21,6 +21,10 @@ private const val PART_SUFFIX = ".part"
 class InsufficientStorageException(val requiredBytes: Long, val usableBytes: Long) :
     IOException("Not enough free space to download: need $requiredBytes bytes, $usableBytes usable")
 
+/** Thrown when a download would take the downloads past the user's storage limit. */
+class DownloadLimitReachedException(val limitBytes: Long) :
+    IOException("Downloads would exceed the storage limit of $limitBytes bytes")
+
 /**
  * The files side of [DownloadWorker]: where a download is written, and how it gets into place.
  *
@@ -37,6 +41,21 @@ internal class DownloadFiles(private val dir: File) {
         if (!hasRoomFor(bytes)) {
             throw InsufficientStorageException(bytes.coerceAtLeast(0L) + MIN_FREE_SPACE_BYTES, dir.usableSpace)
         }
+    }
+
+    /** What finished downloads take up now; part files in flight are not counted. */
+    fun usedBytes(): Long =
+        dir.listFiles()?.filter { it.isFile && !it.name.endsWith(PART_SUFFIX) }?.sumOf { it.length() } ?: 0L
+
+    /**
+     * True when [bytes] more (unknown length: `-1`, counted as nothing) keeps the downloads within
+     * [limitBytes]. A limit of zero or less is no limit.
+     */
+    fun withinLimit(limitBytes: Long, bytes: Long): Boolean =
+        limitBytes <= 0L || usedBytes() + bytes.coerceAtLeast(0L) <= limitBytes
+
+    fun requireWithinLimit(limitBytes: Long, bytes: Long) {
+        if (!withinLimit(limitBytes, bytes)) throw DownloadLimitReachedException(limitBytes)
     }
 
     /**

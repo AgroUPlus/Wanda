@@ -11,6 +11,7 @@ import com.wander.android.core.notification.WorkEta
 import com.wander.android.core.notification.WorkProgressNotification
 import com.wander.android.core.playback.DeezerDecryptingDataSource
 import com.wander.android.core.security.DeezerStreamCipher
+import com.wander.android.core.security.SecureStorage
 import com.wander.android.core.work.WorkControls
 import com.wander.android.data.model.isOneShotTrackId
 import com.wander.android.data.repository.MusicRepository
@@ -37,7 +38,8 @@ class DownloadWorker @AssistedInject constructor(
     private val smartMixRepository: SmartMixRepository,
     private val okHttpClient: OkHttpClient,
     private val notifications: WorkProgressNotification,
-    private val workControls: WorkControls
+    private val workControls: WorkControls,
+    private val secureStorage: SecureStorage
 ) : CoroutineWorker(context, params) {
 
     private val downloadsDir = File(context.filesDir, "downloads")
@@ -64,18 +66,23 @@ class DownloadWorker @AssistedInject constructor(
         // whose row has since gone. Nothing else would ever delete them.
         files.sweepOrphans(trackDao.localFilePaths(), System.currentTimeMillis())
 
-        // A single explicit request from the context menu, or the periodic liked-tracks sweep.
+        val prefs = secureStorage.downloads
+        // A single explicit request from the context menu, or the liked-tracks sweep.
         val requestedId = inputData.getString(KEY_TRACK_ID)
         val candidates = if (requestedId != null) {
             listOfNotNull(trackDao.getTrackById(requestedId)).filterNot { it.isDownloaded }
         } else {
-            // Liked tracks, not most-played: the user explicitly asked to keep these.
-            val liked = trackDao.getLikedNotDownloaded(BATCH_SIZE)
-            // Room left in the batch is spent on the top smart mix rather than left idle — this
-            // only ever runs on the periodic sweep (unmetered, charging, battery not low), so the
-            // cost is a few tracks of data on a connection that was otherwise sitting unused.
-            if (liked.size < BATCH_SIZE) (liked + predictiveCandidates(BATCH_SIZE - liked.size)).distinctBy { it.id }
-            else liked
+            // Liked tracks, not most-played: the user explicitly asked to keep these. "Download
+            // liked tracks now" asks for them by name, so it does not wait on the auto switch.
+            val wantLiked = prefs.autoDownloadLiked.value || inputData.getBoolean(KEY_ON_REQUEST, false)
+            val liked = if (wantLiked) trackDao.getLikedNotDownloaded(BATCH_SIZE) else emptyList()
+            // Room left in the batch is spent on the top smart mix rather than left idle, when the
+            // user allows it: the cost is a few tracks of data on songs nobody picked.
+            if (liked.size < BATCH_SIZE && prefs.autoDownloadPredicted.value) {
+                (liked + predictiveCandidates(BATCH_SIZE - liked.size)).distinctBy { it.id }
+            } else {
+                liked
+            }
         }
         // A peer's or relayed track is borrowed for one playback: its session serves once, and
         // writing it to disk would turn the loan into a copy (and save the relay's ciphertext).
@@ -93,8 +100,11 @@ class DownloadWorker @AssistedInject constructor(
         val eta = WorkEta(System.currentTimeMillis())
         runCatching { setForeground(notifying(eta, 0, pending.size)) }
 
+        val limitBytes = prefs.limitBytes.value
         for ((index, entity) in pending.withIndex()) {
             if (isStopped) break
+            // Stop queueing at the cap rather than starting a track that is bound to overshoot it.
+            if (!files.withinLimit(limitBytes, 0L)) break
             runCatching { setForeground(notifying(eta, index, pending.size, entity.title)) }
             val streamInfo = musicRepository.getStreamInfo(entity.id).getOrElse {
                 failures++
@@ -107,6 +117,9 @@ class DownloadWorker @AssistedInject constructor(
             } else if (downloaded.exceptionOrNull() is InsufficientStorageException) {
                 // Every later track would hit the same wall.
                 return@withContext Result.failure(noSpace())
+            } else if (downloaded.exceptionOrNull() is DownloadLimitReachedException) {
+                // The user's own cap, not a fault: the rest of the batch waits for room.
+                break
             } else {
                 failures++
             }
@@ -148,6 +161,7 @@ class DownloadWorker @AssistedInject constructor(
             }
             // Checked against the real size where the server sends one, before any byte lands.
             files.requireRoomFor(response.body.contentLength())
+            files.requireWithinLimit(secureStorage.downloads.limitBytes.value, response.body.contentLength())
             files.write(response.body.byteStream(), destination) { input, out ->
                 if (deezerTrackId != null) {
                     DeezerStreamCipher(deezerTrackId).decryptStream(input, out)
@@ -170,6 +184,9 @@ class DownloadWorker @AssistedInject constructor(
     companion object {
         /** Set to download one specific track instead of sweeping liked tracks. */
         const val KEY_TRACK_ID = "track_id"
+
+        /** Set by "Download liked tracks now": liked tracks are fetched even with auto-download off. */
+        const val KEY_ON_REQUEST = "on_request"
 
         /** Output key naming why a run failed; see [FAILURE_INSUFFICIENT_STORAGE]. */
         const val KEY_FAILURE_REASON = "failure_reason"

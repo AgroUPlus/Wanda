@@ -77,6 +77,23 @@ class StorageButlerRepository @Inject constructor(
     }
 
     /**
+     * Deletes every download's file and clears its row, as [cleanStaleDownloads] does for the stale
+     * ones. Liked tracks included: this is the "delete all" the user confirmed, and a liked track
+     * that is no longer downloaded still plays as a stream. The next sweep fetches liked tracks
+     * again if auto-download is still on.
+     *
+     * @return how many downloads were removed.
+     */
+    suspend fun deleteAllDownloads(): Int = withContext(Dispatchers.IO) {
+        val downloads = trackDao.getDownloadedTracksOnce()
+        downloads.forEach { track ->
+            track.localFilePath?.let { File(it).delete() }
+            trackDao.setDownloaded(track.id, isDownloaded = false, localPath = null)
+        }
+        downloads.size
+    }
+
+    /**
      * `playCount` is lifetime, not "since this download" — there is no per-download counter, so a
      * track played heavily before ever being downloaded reads as "played" here even if it has sat
      * untouched since. That is the conservative direction to be wrong in: it undercounts what

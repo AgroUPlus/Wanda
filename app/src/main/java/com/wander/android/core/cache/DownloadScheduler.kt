@@ -2,6 +2,7 @@ package com.wander.android.core.cache
 
 import com.wander.android.core.work.WorkControls
 import com.wander.android.core.notification.WorkProgressNotification
+import com.wander.android.core.security.SecureStorage
 import android.content.Context
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -11,6 +12,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.workDataOf
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -18,12 +20,26 @@ import javax.inject.Singleton
 
 @Singleton
 class DownloadScheduler @Inject constructor(
-    @param:ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context,
+    private val secureStorage: SecureStorage
 ) {
-    /** Wi-Fi, charging, battery not low: offline sync should cost the user nothing. */
+    /**
+     * Charging, battery not low, and Wi-Fi unless the user allowed mobile data: offline sync
+     * should cost the user nothing they did not agree to.
+     *
+     * Follows the download settings: with both auto-download switches off there is no sweep at
+     * all, and a changed network rule replaces the scheduled one rather than waiting behind it.
+     * Called at every start and whenever one of those settings changes.
+     */
     fun scheduleAutoDownload() {
+        val prefs = secureStorage.downloads
+        val workManager = WorkManager.getInstance(context)
+        if (!prefs.autoDownloadLiked.value && !prefs.autoDownloadPredicted.value) {
+            workManager.cancelUniqueWork(WORK_NAME)
+            return
+        }
         val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.UNMETERED)
+            .setRequiredNetworkType(if (prefs.wifiOnly.value) NetworkType.UNMETERED else NetworkType.CONNECTED)
             .setRequiresCharging(true)
             .setRequiresBatteryNotLow(true)
             .build()
@@ -34,17 +50,17 @@ class DownloadScheduler @Inject constructor(
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES)
             .build()
 
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-            WORK_NAME,
-            ExistingPeriodicWorkPolicy.KEEP,
-            request
-        )
+        // UPDATE rather than KEEP: KEEP held on to whatever constraints the first schedule had, so
+        // turning Wi-Fi only off would never have reached the queued sweep. UPDATE keeps its
+        // place in the period, so an app start does not push the next run back.
+        workManager.enqueueUniquePeriodicWork(WORK_NAME, ExistingPeriodicWorkPolicy.UPDATE, request)
     }
 
     /** "Download now" from Settings — the user asked, so only connectivity is required. */
     fun downloadNow() {
         val request = OneTimeWorkRequestBuilder<DownloadWorker>()
-                    .addTag(WorkControls.tagFor(WorkProgressNotification.Kind.DOWNLOAD))
+            .addTag(WorkControls.tagFor(WorkProgressNotification.Kind.DOWNLOAD))
+            .setInputData(workDataOf(DownloadWorker.KEY_ON_REQUEST to true))
             .setConstraints(
                 Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
             )

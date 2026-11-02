@@ -24,7 +24,8 @@ class AudioCacheManager(
     private val context: Context,
     private val okHttpClient: OkHttpClient,
     private val identityKeyManager: IdentityKeyManager,
-    maxSizeBytes: Long = DEFAULT_MAX_SIZE
+    /** From the "Streaming cache size" setting; see `SecureDownloadPreferences.streamCacheBytes`. */
+    maxSizeBytes: Long
 ) {
     private val cacheDir = File(context.cacheDir, "audio_stream_cache")
 
@@ -84,9 +85,5 @@ class AudioCacheManager(
 
     fun clearCache() {
         simpleCache.keys.toList().forEach { simpleCache.removeResource(it) }
-    }
-
-    private companion object {
-        const val DEFAULT_MAX_SIZE = 2L * 1024 * 1024 * 1024 // 2 GB
     }
 }
