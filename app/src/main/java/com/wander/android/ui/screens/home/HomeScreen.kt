@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
+import com.wander.android.data.model.nameRes
 import com.wander.android.data.model.shortNameRes
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
@@ -233,8 +234,9 @@ fun HomeScreen(
                         item(key = "filtered_empty", contentType = "empty") {
                             EmptyState(
                                 title = stringResource(R.string.home_nothing_here_yet),
-                                message = "${state.selectedSource?.displayName ?: "This source"} " +
-                                    "has no tracks. Tap the filter again to see everything.",
+                                message = state.selectedSource
+                                    ?.let { stringResource(R.string.home_source_has_no_tracks, stringResource(it.nameRes)) }
+                                    ?: stringResource(R.string.home_filter_has_no_tracks),
                                 modifier = Modifier.fillMaxWidth().padding(top = 48.dp)
                             )
                         }

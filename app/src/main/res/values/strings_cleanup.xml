@@ -15,4 +15,19 @@
     <!-- Short source names for the Home filter chips, where four have to fit on one line -->
     <string name="source_short_name_local">Local</string>
     <string name="source_short_name_agro">Shared</string>
+
+    <!-- Home: the greeting at the top, by time of day -->
+    <string name="home_greeting_morning">Good morning</string>
+    <string name="home_greeting_afternoon">Good afternoon</string>
+    <string name="home_greeting_evening">Good evening</string>
+    <!-- Home: shelf titles -->
+    <string name="home_quick_picks">Quick picks</string>
+    <string name="home_recently_played">Recently Played</string>
+    <string name="home_your_favorites">Your Favorites</string>
+    <string name="home_discover">Discover</string>
+    <!-- Home: a shelf of suggestions built from the last track played; %1$s is its title -->
+    <string name="home_because_you_listened">Because you listened to %1$s</string>
+    <!-- Home, filtered to one source that has nothing to show; %1$s is the source's name -->
+    <string name="home_source_has_no_tracks">%1$s has no tracks. Tap the filter again to see everything.</string>
+    <string name="home_filter_has_no_tracks">This source has no tracks. Tap the filter again to see everything.</string>
 </resources>

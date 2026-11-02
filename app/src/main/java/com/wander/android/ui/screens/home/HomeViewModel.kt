@@ -150,7 +150,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(
                         allSections = state.allSections.withSection(
-                            shelf(SectionLiked, "Your Favorites", HomeSectionStyle.HERO_CAROUSEL, liked)
+                            shelf(SectionLiked, context.getString(R.string.home_your_favorites), HomeSectionStyle.HERO_CAROUSEL, liked)
                         )
                     )
                 }
@@ -179,7 +179,7 @@ class HomeViewModel @Inject constructor(
             // Read before the shelves rather than beside them: the lead shelf is built across
             // whichever backends are configured, so it cannot start until that is known.
             val sources: List<SourceType> = musicRepository.configuredSources()
-            val localSections = homeShelfRepository.localShelves(sources, continueListening.value)
+            val localSections = homeShelfRepository.localShelves(sources, continueListening.value, context)
             // Added shelves already on screen stay there until their rebuild below replaces them.
             val keptExtras = _uiState.value.allSections.filter { isAddedShelf(it.id) }
 
@@ -187,7 +187,7 @@ class HomeViewModel @Inject constructor(
             _uiState.value = HomeUiState(
                 isLoading = false,
                 isRefreshing = false,
-                greeting = greeting(LocalTime.now()),
+                greeting = context.getString(greeting(LocalTime.now())),
                 layout = _uiState.value.layout,
                 editing = _uiState.value.editing,
                 allSections = (localSections + keptExtras).withLikes(likedTrackIds.value),
@@ -219,7 +219,7 @@ class HomeViewModel @Inject constructor(
                         if (feed.isNotEmpty() || (seed != null && suggestions.isNotEmpty())) {
                             _uiState.update { state ->
                                 state.copy(
-                                    allSections = state.allSections.withFeed(feed, seed, suggestions)
+                                    allSections = state.allSections.withFeed(feed, seed, suggestions, ::becauseTitle)
                                         .withLikes(likedTrackIds.value)
                                 )
                             }
@@ -235,6 +235,9 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
+
+    private fun becauseTitle(seed: UnifiedTrack) =
+        context.getString(R.string.home_because_you_listened, seed.title)
 
     fun playMix(mix: SmartMix) = playerConnection.play(mix.tracks)
 
