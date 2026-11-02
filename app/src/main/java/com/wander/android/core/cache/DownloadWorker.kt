@@ -7,7 +7,11 @@ import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.wander.android.core.cache.predict.OfflinePredictor
+import com.wander.android.core.cache.predict.PastPlay
+import com.wander.android.core.database.dao.HistoryDao
 import com.wander.android.core.database.dao.TrackDao
+import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.notification.WorkEta
 import com.wander.android.core.notification.WorkProgressNotification
 import com.wander.android.core.playback.DeezerDecryptingDataSource
@@ -16,7 +20,6 @@ import com.wander.android.core.security.SecureStorage
 import com.wander.android.core.work.WorkControls
 import com.wander.android.data.model.isOneShotTrackId
 import com.wander.android.data.repository.MusicRepository
-import com.wander.android.data.repository.SmartMixRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +28,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.IOException
+import java.time.ZoneId
 
 /**
  * Downloads liked tracks for offline listening. Runs only on unmetered networks while charging
@@ -36,7 +40,7 @@ class DownloadWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val trackDao: TrackDao,
     private val musicRepository: MusicRepository,
-    private val smartMixRepository: SmartMixRepository,
+    private val historyDao: HistoryDao,
     private val okHttpClient: OkHttpClient,
     private val notifications: WorkProgressNotification,
     private val workControls: WorkControls,
@@ -77,8 +81,9 @@ class DownloadWorker @AssistedInject constructor(
             // liked tracks now" asks for them by name, so it does not wait on the auto switch.
             val wantLiked = prefs.autoDownloadLiked.value || inputData.getBoolean(KEY_ON_REQUEST, false)
             val liked = if (wantLiked) trackDao.getLikedNotDownloaded(BATCH_SIZE) else emptyList()
-            // Room left in the batch is spent on the top smart mix rather than left idle, when the
-            // user allows it: the cost is a few tracks of data on songs nobody picked.
+            // Room left in the batch is spent on what this listener is likely to play next rather
+            // than left idle, when the user allows it: the cost is a few tracks of data on songs
+            // nobody picked.
             if (liked.size < BATCH_SIZE && prefs.autoDownloadPredicted.value) {
                 (liked + predictiveCandidates(BATCH_SIZE - liked.size)).distinctBy { it.id }
             } else {
@@ -131,13 +136,18 @@ class DownloadWorker @AssistedInject constructor(
         if (failures == pending.size) Result.retry() else Result.success()
     }
 
-    /** The top smart mix's own tracks, not yet downloaded — see the comment where this is called. */
-    private suspend fun predictiveCandidates(limit: Int): List<com.wander.android.core.database.entity.TrackEntity> {
-        val topMix = smartMixRepository.getSmartMixes().firstOrNull() ?: return emptyList()
-        return topMix.tracks
-            .take(limit)
-            .mapNotNull { trackDao.getTrackById(it.id) }
-            .filterNot { it.isDownloaded }
+    /**
+     * The tracks [OfflinePredictor] expects to be played next, from this device's own history and
+     * library. Downloaded, local and one-shot tracks are excluded there; the storage cap is
+     * enforced by the download loop like any other track's.
+     */
+    private suspend fun predictiveCandidates(limit: Int): List<TrackEntity> {
+        val now = System.currentTimeMillis()
+        val plays = historyDao.getPlaysBetween(now - OfflinePredictor.WINDOW_MS, now + 1)
+            .map { PastPlay(it.trackId, it.playedAt) }
+        val tracks = trackDao.tracksWithUserState()
+        val byId = tracks.associateBy { it.id }
+        return OfflinePredictor(ZoneId.systemDefault()).rank(tracks, plays, now, limit).mapNotNull { byId[it] }
     }
 
     /**

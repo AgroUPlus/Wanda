@@ -5,7 +5,7 @@
     <string name="settings_auto_download_liked">Download liked songs</string>
     <string name="settings_auto_download_liked_sub">Keeps the songs you like on this phone, a few at a time, while it charges.</string>
     <string name="settings_auto_download_predicted">Also download predicted songs</string>
-    <string name="settings_auto_download_predicted_sub">Fills spare room with songs from your top mix that you are likely to play next.</string>
+    <string name="settings_auto_download_predicted_sub">Fills spare room with songs you are likely to play next, judged from when and how often you play them.</string>
     <string name="settings_download_wifi_only">Only on Wi-Fi</string>
     <string name="settings_download_wifi_only_sub">Turn off to let downloads use mobile data too. Downloading still waits for the phone to charge.</string>
     <string name="settings_download_limit">Storage limit</string>

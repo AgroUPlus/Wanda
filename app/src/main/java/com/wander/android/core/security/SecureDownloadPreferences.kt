@@ -18,7 +18,7 @@ internal class SecureDownloadPreferences(private val prefs: SharedPreferences) {
     private val _autoDownloadLiked = MutableStateFlow(prefs.getBoolean(KEY_AUTO_DOWNLOAD_LIKED, true))
     val autoDownloadLiked: StateFlow<Boolean> = _autoDownloadLiked.asStateFlow()
 
-    /** Fill what is left of a batch from the top smart mix — songs the app predicts, not ones chosen. */
+    /** Fill what is left of a batch with what `OfflinePredictor` expects next — songs the app predicts, not ones chosen. */
     private val _autoDownloadPredicted = MutableStateFlow(prefs.getBoolean(KEY_AUTO_DOWNLOAD_PREDICTED, true))
     val autoDownloadPredicted: StateFlow<Boolean> = _autoDownloadPredicted.asStateFlow()
 
