@@ -92,7 +92,7 @@ internal fun OffGridScreen(
                             .padding(horizontal = 20.dp, vertical = 8.dp)
                     ) {
                         Text(
-                            text = message,
+                            text = stringResource(message),
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(12.dp)
                         )

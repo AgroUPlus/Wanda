@@ -97,7 +97,7 @@ internal fun UserSearchSheet(
 
             state.error?.let { message ->
                 Text(
-                    text = message,
+                    text = stringResource(message),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )

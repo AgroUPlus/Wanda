@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.network.userMessageRes
 import com.wander.android.data.repository.ListenAlongController
 import com.wander.android.data.repository.SocialRepository
 import com.wander.android.data.sources.agro.AgroFriendNowPlaying
@@ -37,7 +38,8 @@ internal data class ProfileUiState(
     val isLoading: Boolean = true,
     val isListeningAlong: Boolean = false,
     val notFound: Boolean = false,
-    val error: String? = null
+    /** A @StringRes saying what went wrong, or null. Never an exception's own text. */
+    val error: Int? = null
 )
 
 @HiltViewModel
@@ -96,7 +98,7 @@ internal class ProfileViewModel @Inject constructor(
                 onFailure = { error ->
                     _state.value = _state.value.copy(
                         isLoading = false,
-                        error = error.message ?: "Could not load that profile"
+                        error = error.userMessageRes()
                     )
                 }
             )
@@ -144,7 +146,7 @@ internal class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             listenAlong.start(username).onFailure { error ->
                 _state.value = _state.value.copy(
-                    error = error.message ?: "Could not listen along"
+                    error = error.userMessageRes()
                 )
             }
         }

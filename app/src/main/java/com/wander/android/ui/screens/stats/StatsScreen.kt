@@ -75,7 +75,7 @@ fun StatsScreen(
                     modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = message, style = MaterialTheme.typography.bodyMedium)
+                        Text(text = stringResource(message), style = MaterialTheme.typography.bodyMedium)
                         TextButton(onClick = viewModel::retry, shapes = ButtonDefaults.shapes()) {
                             Text(stringResource(R.string.common_try_again))
                         }

@@ -21,7 +21,8 @@ internal data class SocialUiState(
     val outgoing: List<AgroProfile> = emptyList(),
     val nowPlaying: List<AgroFriendNowPlaying> = emptyList(),
     val isRefreshing: Boolean = false,
-    val error: String? = null,
+    /** A @StringRes saying what went wrong, or null. Never an exception's own text. */
+    val error: Int? = null,
     val session: ListenAlongSession? = null,
     /** What friends have been into lately. Empty while offline, and that is not an error. */
     val feed: List<AgroFeedItem> = emptyList(),
@@ -58,7 +59,8 @@ internal data class UserSearchState(
     val isSearching: Boolean = false,
     /** Usernames just requested, so a row can say so before the next refresh lands. */
     val requested: Set<String> = emptySet(),
-    val error: String? = null,
+    /** A @StringRes saying what went wrong, or null. Never an exception's own text. */
+    val error: Int? = null,
     /** True while the QR panel is showing. Never persisted — the code dies with the sheet. */
     val showingCode: Boolean = false,
     /** Null while one is being minted, or when minting failed ([friendCodeError]). */

@@ -1,7 +1,10 @@
 package com.wander.android.ui.screens.social
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.R
+import com.wander.android.core.network.loggableMessage
 import com.wander.android.core.p2p.NearbyPeers
 import com.wander.android.core.p2p.OffGridLink
 import com.wander.android.core.p2p.OffGridPairing
@@ -87,9 +90,9 @@ internal class OffGridViewModel @Inject constructor(
             if (serving.isFailure) {
                 _state.value = _state.value.copy(
                     isAdvertising = false,
-                    error = serving.exceptionOrNull()?.message
-                        ?: "This phone could not start serving audio."
+                    error = R.string.offgrid_error_serve
                 )
+                serving.exceptionOrNull()?.let { Log.w(TAG, "Serving failed: ${it.loggableMessage()}") }
                 return@launch
             }
 
@@ -100,11 +103,11 @@ internal class OffGridViewModel @Inject constructor(
             val advertising = transport.startAdvertising(servesAudio = true)
             _state.value = _state.value.copy(
                 isAdvertising = advertising.isSuccess,
-                // A radio that refused is worth saying plainly, in its own words: "this chipset has
-                // no peripheral mode" and "Bluetooth is off" are not the same problem, and neither
-                // is something the user can guess from an empty list.
+                // A radio that refused is worth saying plainly rather than leaving an empty list.
+                // The radio's own reason is English from the platform, so it goes to the log.
                 error = advertising.exceptionOrNull()?.let {
-                    "This phone could not start broadcasting: ${it.message}"
+                    Log.w(TAG, "Advertising failed: ${it.loggableMessage()}")
+                    R.string.offgrid_error_broadcast
                 }
             )
             startScanning()
@@ -190,7 +193,10 @@ internal class OffGridViewModel @Inject constructor(
             val started = listenAlong.startOffGrid()
             _state.value = _state.value.copy(
                 isFollowing = started.isSuccess,
-                error = started.exceptionOrNull()?.message
+                error = started.exceptionOrNull()?.let {
+                    Log.w(TAG, "Off-grid listen-along failed: ${it.loggableMessage()}")
+                    R.string.offgrid_error_listen_along
+                }
             )
         }
     }
@@ -207,17 +213,19 @@ internal class OffGridViewModel @Inject constructor(
         _state.value = _state.value.copy(error = null)
     }
 
-    private fun describe(error: Throwable): String = when {
-        // The link never came up. `WifiDirectLink` now says which way — a refused scan names the
-        // permission, an empty room says so — where this used to advise moving closer whatever the
-        // cause, including a nearby-devices grant the user had declined.
-        error !is OffGridPairing.PairingException ->
-            error.message ?: "No direct link could be formed. Try again, or move closer."
-        error.failure is OffGridPairing.Failure.WrongPeer ->
-            "The link reached a different device than the one you picked, so it was dropped."
-        error.failure is OffGridPairing.Failure.Unreadable ->
-            "That device answered with something this phone could not open."
-        else -> "That device did not answer."
+    /**
+     * What to say about a failed connection. The link never coming up is logged with its reason
+     * (`WifiDirectLink` names a refused permission or an empty room) and told as one message that
+     * points at the settings involved; the reason itself is English from the platform.
+     */
+    private fun describe(error: Throwable): Int = when {
+        error !is OffGridPairing.PairingException -> {
+            Log.w(TAG, "No direct link: ${error.loggableMessage()}")
+            R.string.offgrid_error_no_link
+        }
+        error.failure is OffGridPairing.Failure.WrongPeer -> R.string.offgrid_error_wrong_peer
+        error.failure is OffGridPairing.Failure.Unreadable -> R.string.offgrid_error_unreadable
+        else -> R.string.offgrid_error_no_answer
     }
 
     /**
@@ -235,10 +243,13 @@ internal class OffGridViewModel @Inject constructor(
             // Those two states look identical on screen — nobody here — and only one of them is
             // something the user can act on.
             .catch { error ->
-                _state.value = _state.value.copy(
-                    error = "This phone could not look for others: ${error.message}"
-                )
+                Log.w(TAG, "Scan failed: ${error.loggableMessage()}")
+                _state.value = _state.value.copy(error = R.string.offgrid_error_scan)
             }
             .launchIn(viewModelScope)
+    }
+
+    private companion object {
+        const val TAG = "OffGrid"
     }
 }

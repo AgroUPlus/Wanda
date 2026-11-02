@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.social
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.network.userMessageRes
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.repository.SocialRepository
 import com.wander.android.data.sources.agro.AgroProfile
@@ -26,7 +27,8 @@ internal data class MyProfileUiState(
     val profile: AgroProfile? = null,
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
-    val error: String? = null
+    /** A @StringRes saying what went wrong, or null. Never an exception's own text. */
+    val error: Int? = null
 ) {
     val isPaired: Boolean get() = username.isNotBlank()
 }
@@ -56,7 +58,7 @@ internal class MyProfileViewModel @Inject constructor(
                 onFailure = { error ->
                     _state.value = _state.value.copy(
                         isLoading = false,
-                        error = error.message ?: "Could not load your profile"
+                        error = error.userMessageRes()
                     )
                 }
             )
@@ -89,7 +91,7 @@ internal class MyProfileViewModel @Inject constructor(
                 onFailure = { error ->
                     _state.value = _state.value.copy(
                         isSaving = false,
-                        error = error.message ?: "Could not save your profile"
+                        error = error.userMessageRes()
                     )
                 }
             )

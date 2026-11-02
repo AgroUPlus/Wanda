@@ -52,7 +52,7 @@ internal fun AccessStep(
         ImportDirectLinkContent(
             manualInput = state.manualInput,
             isLoadingPlaylist = state.isLoadingPlaylist,
-            error = state.error,
+            error = state.error?.let { stringResource(it) },
             onInputChange = actions.onInputChange,
             onLoadPlaylist = actions.onLoadPlaylist,
             modifier = linkModifier

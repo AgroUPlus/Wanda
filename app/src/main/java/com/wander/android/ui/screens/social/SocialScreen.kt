@@ -121,7 +121,7 @@ internal fun SocialScreen(
         ) {
             state.error?.let { message ->
                 item(key = "error") {
-                    SocialErrorCard(message = message)
+                    SocialErrorCard(message = stringResource(message))
                 }
             }
 

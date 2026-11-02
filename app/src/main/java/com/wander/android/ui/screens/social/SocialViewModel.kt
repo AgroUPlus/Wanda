@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.social
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.R
 import com.wander.android.core.network.userMessageRes
 import com.wander.android.data.repository.ListenAlongController
 import com.wander.android.data.repository.ListenAlongSession
@@ -110,7 +111,7 @@ internal class SocialViewModel @Inject constructor(
             val result = repository.refresh()
             _state.value = _state.value.copy(
                 isRefreshing = false,
-                error = result.exceptionOrNull()?.message
+                error = result.exceptionOrNull()?.userMessageRes()
             )
         }
     }
@@ -186,7 +187,7 @@ internal class SocialViewModel @Inject constructor(
             onFailure = { error ->
                 _search.value = _search.value.copy(
                     isSearching = false,
-                    error = error.message ?: "Could not search"
+                    error = error.userMessageRes()
                 )
             }
         )
@@ -205,7 +206,7 @@ internal class SocialViewModel @Inject constructor(
                 _search.value = if (sent) {
                     _search.value.copy(requested = _search.value.requested + username)
                 } else {
-                    _search.value.copy(error = "That request could not be sent.")
+                    _search.value.copy(error = R.string.social_request_not_sent)
                 }
             }
         }
@@ -224,7 +225,7 @@ internal class SocialViewModel @Inject constructor(
         viewModelScope.launch {
             listenAlong.start(host).onFailure { error ->
                 _state.value = _state.value.copy(
-                    error = error.message ?: "Could not listen along with that friend"
+                    error = error.userMessageRes()
                 )
             }
         }

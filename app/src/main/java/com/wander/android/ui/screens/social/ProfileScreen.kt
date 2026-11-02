@@ -74,7 +74,7 @@ internal fun ProfileScreen(
                         Text(
                             // Not found and not visible are the same answer from the server, on
                             // purpose, so this cannot become a way to test whether an account exists.
-                            text = state.error ?: stringResource(R.string.social_no_such_account),
+                            text = stringResource(state.error ?: R.string.social_no_such_account),
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(24.dp)
                         )

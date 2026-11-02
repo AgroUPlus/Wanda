@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.importer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.network.userMessageRes
 import com.wander.android.data.importer.ImportProgress
 import com.wander.android.data.importer.PlatformType
 import com.wander.android.data.repository.PlaylistImportRepository
@@ -89,7 +90,7 @@ class PlaylistImportViewModel @Inject constructor(
                     error = null
                 )
             }.onFailure { err ->
-                _state.value = _state.value.copy(isDiscovering = false, hasCheckedDiscovery = true, error = err.message)
+                _state.value = _state.value.copy(isDiscovering = false, hasCheckedDiscovery = true, error = err.userMessageRes())
             }
         }
     }
@@ -119,7 +120,7 @@ class PlaylistImportViewModel @Inject constructor(
             }.onFailure { err ->
                 _state.value = _state.value.copy(
                     isLoadingPlaylist = false,
-                    error = err.message ?: "Failed to read playlist"
+                    error = err.userMessageRes()
                 )
             }
         }

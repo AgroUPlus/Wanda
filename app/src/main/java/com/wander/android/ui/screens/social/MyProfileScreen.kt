@@ -150,7 +150,7 @@ internal fun MyProfileScreen(
         state.error?.let { message ->
             Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp)) {
                 Text(
-                    text = message,
+                    text = stringResource(message),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(12.dp)

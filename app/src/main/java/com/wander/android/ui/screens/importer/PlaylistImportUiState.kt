@@ -22,7 +22,8 @@ data class PlaylistImportUiState(
     val loadedPlaylist: RawImportPlaylist? = null,
     val selectedIndices: Set<Int> = emptySet(),
     val manualInput: String = "",
-    val error: String? = null,
+    /** A @StringRes saying what went wrong, or null. Never an exception's own text. */
+    val error: Int? = null,
     /** Set when the pasted link is for a different platform than the one chosen in step 1. */
     val mismatchedPlatform: PlatformType? = null
 )

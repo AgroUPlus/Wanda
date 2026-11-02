@@ -36,7 +36,8 @@ internal data class OffGridUiState(
     val followingNowPlaying: String? = null,
     /** Set when the peer is playing something no source here can supply. */
     val followingUnresolvable: String? = null,
-    val error: String? = null
+    /** A @StringRes saying what went wrong, or null. Never an exception's own text. */
+    val error: Int? = null
 ) {
     /** True when scanning has found nobody yet, which is the ordinary state for the first seconds. */
     val isSearching: Boolean
