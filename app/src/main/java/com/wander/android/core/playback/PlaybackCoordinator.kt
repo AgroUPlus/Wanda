@@ -1,5 +1,6 @@
 package com.wander.android.core.playback
 
+import com.wander.android.R
 import com.wander.android.data.model.LyricsState
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.EpisodeProgressRepository
@@ -56,6 +57,15 @@ class PlaybackCoordinator @Inject internal constructor(
      */
     private var resumedTrackId: String? = null
 
+    /**
+     * True while [startRadio] is building its first batch.
+     *
+     * The seed alone is a one-track queue, which trips the endless top-up below; without this the
+     * two fetched a station for the same seed side by side and queued both.
+     */
+    @Volatile
+    private var stationStarting = false
+
     private val _lyrics = MutableStateFlow<LyricsState>(LyricsState.Loading)
     val lyrics: StateFlow<LyricsState> = _lyrics.asStateFlow()
 
@@ -90,13 +100,13 @@ class PlaybackCoordinator @Inject internal constructor(
             .map { RadioTrigger(it.isRadioMode, it.currentIndex, it.queue.size) }
             .distinctUntilChanged()
             .onEach { trigger ->
-                if (!trigger.enabled) return@onEach
+                if (!trigger.enabled || stationStarting) return@onEach
                 if (jamRepository.jam.value != null) return@onEach
                 if (trigger.size - trigger.index > RADIO_LOOKAHEAD) return@onEach
                 val seed = connection.state.value.currentTrack ?: return@onEach
                 // An episode is no seed for a music station: it would queue songs "like" a podcast.
                 if (seed.isEpisode) return@onEach
-                val more = musicRepository.generateRadio(seed, RADIO_BATCH)
+                val more = notQueued(musicRepository.generateRadio(seed, RADIO_BATCH))
                 if (more.isNotEmpty()) scope.launch(Dispatchers.Main) { connection.addToQueue(more) }
             }
             .launchIn(scope)
@@ -155,17 +165,34 @@ class PlaybackCoordinator @Inject internal constructor(
      * Here it sits beside the endless top-up, which is the same job on a different trigger and
      * already stands down for a room that owns its order.
      *
-     * The radio is one shot. `connection.play` clears radio mode deliberately — see the note there
-     * about a short list tripping the endless top-up — and a station somebody asked for by name
-     * should be the length they were given, not a mode left switched on behind them.
+     * The station is endless: radio mode is switched on once the first batch is queued, so the
+     * top-up keeps extending it from whatever is playing as the queue runs low. It used to be one
+     * batch of twenty and then silence. When nothing similar can be found the listener is told,
+     * rather than left with the seed alone and no idea why.
      */
     suspend fun startRadio(seed: UnifiedTrack) {
-        connection.play(listOf(seed))
-        // In a Jam the queue belongs to the room, and `play` above has already proposed the seed
-        // to it rather than playing it here.
-        if (jamRepository.jam.value != null) return
-        val radio = musicRepository.generateRadio(seed)
-        if (radio.isNotEmpty()) connection.addToQueue(radio)
+        stationStarting = true
+        try {
+            connection.play(listOf(seed))
+            // In a Jam the queue belongs to the room, and `play` above has already proposed the
+            // seed to it rather than playing it here.
+            if (jamRepository.jam.value != null) return
+            val radio = musicRepository.generateRadio(seed)
+            if (radio.isEmpty()) {
+                connection.notify(context.getString(R.string.radio_nothing_similar))
+                return
+            }
+            connection.addToQueue(radio)
+            connection.setRadioMode(true)
+        } finally {
+            stationStarting = false
+        }
+    }
+
+    /** [tracks] minus anything already in the queue, so a top-up never repeats what is lined up. */
+    private fun notQueued(tracks: List<UnifiedTrack>): List<UnifiedTrack> {
+        val queued = connection.state.value.queue.mapTo(HashSet()) { it.id }
+        return tracks.filterNot { it.id in queued }
     }
 
     /**
