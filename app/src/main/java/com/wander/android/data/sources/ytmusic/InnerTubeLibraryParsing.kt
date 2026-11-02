@@ -3,6 +3,7 @@ package com.wander.android.data.sources.ytmusic
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UNKNOWN_ARTIST
 import com.wander.android.data.model.UnifiedAlbum
+import com.wander.android.data.model.UnifiedPlaylist
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
@@ -62,6 +63,47 @@ internal fun parseLibraryAlbumTile(renderer: JsonObject): UnifiedAlbum? {
     )
 }
 
+/**
+ * The playlists on one page of `FEmusic_liked_playlists`: the account's own, the ones it saved,
+ * and YouTube's automatic ones (Liked Music, Episodes for later), each under the name YouTube
+ * gives it in the account's language.
+ *
+ * Grid tiles and list rows both, like [libraryAlbums]. The grid opens with a "New playlist" tile
+ * that creates rather than opens, which the page-type check leaves out.
+ */
+internal fun JsonObject.libraryPlaylists(): List<UnifiedPlaylist> =
+    (renderers("musicTwoRowItemRenderer").mapNotNull { tile ->
+        libraryPlaylist(
+            endpoint = tile.path("navigationEndpoint", "browseEndpoint"),
+            title = tile["title"].runText(),
+            cover = tile.path("thumbnailRenderer", "musicThumbnailRenderer", "thumbnail")
+                .bestThumbnail()
+        )
+    } + responsiveListItems().mapNotNull { row ->
+        libraryPlaylist(
+            endpoint = row.path("navigationEndpoint", "browseEndpoint"),
+            title = row["flexColumns"]?.array()?.firstOrNull()
+                .path("musicResponsiveListItemFlexColumnRenderer", "text").runText(),
+            cover = row.path("thumbnail", "musicThumbnailRenderer", "thumbnail").bestThumbnail()
+        )
+    }).distinctBy { it.id }
+
+/**
+ * No track count: YouTube prints it as translated prose ("25 songs", "25 titres") in a subtitle
+ * that may or may not carry it, and a number read off the wrong token would be stated as fact.
+ * The playlist screen counts the tracks it loads instead.
+ */
+private fun libraryPlaylist(endpoint: JsonElement?, title: String?, cover: String?): UnifiedPlaylist? {
+    if (endpoint.browsePageType() != MUSIC_PLAYLIST_PAGE) return null
+    val browseId = endpoint.path("browseId").text()?.takeIf { it.isNotBlank() } ?: return null
+    return UnifiedPlaylist(
+        id = "$YTM_PREFIX$browseId",
+        source = SourceType.YTMUSIC,
+        name = title?.takeIf { it.isNotBlank() } ?: return null,
+        coverArtUrl = cover
+    )
+}
+
 /** The page type a `browseEndpoint` says it opens, e.g. `MUSIC_PAGE_TYPE_ALBUM`. */
 internal fun JsonElement?.browsePageType(): String? = path(
     "browseEndpointContextSupportedConfigs",
@@ -70,3 +112,4 @@ internal fun JsonElement?.browsePageType(): String? = path(
 ).text()
 
 internal const val MUSIC_ALBUM_PAGE = "MUSIC_PAGE_TYPE_ALBUM"
+internal const val MUSIC_PLAYLIST_PAGE = "MUSIC_PAGE_TYPE_PLAYLIST"

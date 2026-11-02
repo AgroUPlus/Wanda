@@ -3,7 +3,6 @@ package com.wander.android.data.sources.ytmusic
 import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.RecommendedShelf
 import com.wander.android.data.model.SearchKind
-import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UNKNOWN_ARTIST
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
@@ -151,16 +150,12 @@ class YTMusicCatalogLoader @Inject constructor(
                 }
         }
 
-    fun getPlaylists(): Result<List<UnifiedPlaylist>> = Result.success(
-        listOf(
-            UnifiedPlaylist(
-                id = "$YTM_PREFIX$LIKED_BROWSE_ID",
-                source = SourceType.YTMUSIC,
-                name = "Liked Music",
-                comment = "Tracks you have liked on YouTube Music"
-            )
-        )
-    )
+    /** The library's playlists, every page of them, read afresh since they change. */
+    suspend fun getPlaylists(): Result<List<UnifiedPlaylist>> = InnerTubeShelfCursor(
+        firstPage = { innerTube.browse(LIBRARY_PLAYLISTS_BROWSE_ID) },
+        nextPage = { innerTube.browseContinuation(it) },
+        parse = { it.libraryPlaylists() }
+    ).all().map { playlists -> playlists.distinctBy { it.id } }
 
     /** Every track, not the first page: a fresh walk each time, since a playlist is edited. */
     suspend fun getPlaylistTracks(playlistId: String): Result<List<UnifiedTrack>> =
@@ -170,6 +165,7 @@ class YTMusicCatalogLoader @Inject constructor(
         const val LIKED_BROWSE_ID = "FEmusic_liked_videos"
         const val LIBRARY_ALBUMS_BROWSE_ID = "FEmusic_liked_albums"
         const val HISTORY_BROWSE_ID = "FEmusic_history"
+        const val LIBRARY_PLAYLISTS_BROWSE_ID = "FEmusic_liked_playlists"
         const val WATCH_URL = "https://music.youtube.com/watch?v="
         const val BROWSE_URL = "https://music.youtube.com/browse/"
         const val PLAYLIST_URL = "https://music.youtube.com/playlist?list="
