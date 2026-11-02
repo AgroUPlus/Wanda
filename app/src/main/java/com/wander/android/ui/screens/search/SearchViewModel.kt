@@ -110,6 +110,9 @@ class SearchViewModel @Inject constructor(
 
     fun retry() { attempt.update { it + 1 } }
 
+    /** Empties the dock's field, which is what ends a search — see `LibrarySurface`. */
+    fun clearQuery() = queryHolder.set("")
+
     // Re-runs when the sources change as well as the query: toggling a backend on has to go and
     // ask it, not just unhide results that were never fetched.
     private val searchResults: StateFlow<SearchUiState> = combine(
