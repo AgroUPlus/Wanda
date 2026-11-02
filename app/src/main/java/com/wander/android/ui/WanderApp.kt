@@ -8,7 +8,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,27 +62,9 @@ fun WanderApp(
     WanderAppLaunchGate(viewModel = viewModel, setupDone = setupDone)
 
     val navController = rememberNavController()
-
-    // Routes asked for from outside the composition — a tapped notification. Consumed once
-    // navigated, so bringing the app forward later does not send the user back to the inbox.
-    LaunchedEffect(navController) {
-        viewModel.deepLinkRoutes.collect { route ->
-            navController.navigate(route)
-            viewModel.consumeDeepLink()
-        }
-    }
-
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-
-    // The query is held outside any one screen so it survives the trip into an artist or album and
-    // back. Reaching another tab is the end of that search, and without this the field was still
-    // full, and Library still showing results, the next time the tab opened.
-    LaunchedEffect(currentRoute) {
-        if (currentRoute in Routes.topLevel && currentRoute != TopLevelDestination.LIBRARY.route) {
-            viewModel.setSearchQuery("")
-        }
-    }
+    ShellRouteEffects(navController, viewModel, currentRoute)
 
     val playbackState = playerConnection.state.collectAsStateWithLifecycle()
     val playback = playbackState.value
