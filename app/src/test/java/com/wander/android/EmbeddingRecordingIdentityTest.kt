@@ -140,6 +140,7 @@ class EmbeddingRecordingIdentityTest {
         override suspend fun getPlayedTracksOnce(): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun getForgottenFavorites(thresholdTimestamp: Long, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun getNeverPlayedTracks(limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
+        override suspend fun getSeedNeighbours(seedId: String, artist: String, genre: String?, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override fun observeGenres(): kotlinx.coroutines.flow.Flow<List<String>> = kotlinx.coroutines.flow.flowOf(emptyList())
         override suspend fun getTracksByGenres(genres: List<String>, limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun getRandomTracks(limit: Int): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()

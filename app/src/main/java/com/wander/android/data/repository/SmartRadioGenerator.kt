@@ -10,7 +10,17 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 
 /**
- * Generates continuous smart radio queues using acoustic vector embeddings and multi-backend stations.
+ * Builds a station around one seed track.
+ *
+ * Candidates come only from signals that mean "sounds like this", never from a text match on the
+ * seed's name or the last search:
+ * - each backend's own radio endpoint for the seed's rendition there (Navidrome `getSimilarSongs2`,
+ *   YouTube Music's watch-playlist radio, Deezer's track radio);
+ * - the user's own collection sharing the seed's primary artist or genre — what keeps a station
+ *   going when a backend answers with nothing, as Navidrome does without a metadata agent.
+ *
+ * [RadioPool] then drops the seed, its renditions and other uploads of the same song, and the
+ * acoustic vectors order what is left.
  */
 internal class SmartRadioGenerator(
     private val trackDao: TrackDao,
@@ -25,12 +35,13 @@ internal class SmartRadioGenerator(
             val fromSource = radioAcrossSources(seed, count * 2)
             if (fromSource.isNotEmpty()) persist(fromSource, false)
 
-            val fromLibrary = trackDao.getTopPlayedTracks(count * 2)
-                .map(TrackEntity::toUnifiedTrack)
+            val fromLibrary = libraryNeighbours(seed, count * 2)
 
-            val pool = recordingRules.current()
-                .distinct(interleaveBySource(fromSource) + fromLibrary)
-                .filter { it.id != seed.id }
+            val pool = RadioPool.of(
+                seed = seed,
+                candidates = interleaveBySource(fromSource) + fromLibrary,
+                rules = recordingRules.current()
+            )
             if (pool.isEmpty()) return@withContext emptyList()
 
             val vectors = acousticFeatures.allFeatures()
@@ -40,6 +51,26 @@ internal class SmartRadioGenerator(
                 count = count
             )
         }
+
+    /**
+     * The seed's artist and genre in the user's own collection.
+     *
+     * A credit that may be one act's name ("Simon & Garfunkel") is matched whole rather than by its
+     * first name, which would otherwise pull in every song by anyone called Simon.
+     */
+    private suspend fun libraryNeighbours(seed: UnifiedTrack, limit: Int): List<UnifiedTrack> {
+        val artist = if (ArtistCredits.isAmbiguous(seed.artist)) {
+            seed.artist.trim()
+        } else {
+            ArtistCredits.split(seed.artist).firstOrNull().orEmpty()
+        }
+        return trackDao.getSeedNeighbours(
+            seedId = seed.id,
+            artist = artist,
+            genre = seed.genre?.trim()?.takeIf { it.isNotEmpty() },
+            limit = limit
+        ).map(TrackEntity::toUnifiedTrack)
+    }
 
     private suspend fun radioAcrossSources(seed: UnifiedTrack, count: Int): List<UnifiedTrack> =
         coroutineScope {

@@ -7,6 +7,16 @@ import com.wander.android.data.model.SourceType
 import kotlinx.coroutines.flow.Flow
 
 /**
+ * The rows that are the user's own music: owned, liked, downloaded, or played at least once.
+ *
+ * Every search — the user's own and the ones the app makes to resolve a link, a friend's pick or a
+ * rendition — persists its results so a later like or play has a row to land on. Those rows are
+ * not the user's music, and a shelf that reads `tracks` without this filter showed them: "Discover"
+ * sorted never-played rows newest first, so the latest search's matches led Home by name.
+ */
+internal const val IN_COLLECTION = "(isLibrary = 1 OR isLiked = 1 OR isDownloaded = 1 OR playCount > 0)"
+
+/**
  * Read queries for tracks in the library, albums, artists, search, and playback ranking.
  */
 interface TrackLibraryQueries {
@@ -118,10 +128,10 @@ interface TrackLibraryQueries {
     @Query("SELECT * FROM tracks WHERE source = :source AND isEpisode = 0 ORDER BY RANDOM() LIMIT :limit")
     suspend fun getRandomTracksInSource(source: SourceType, limit: Int): List<TrackEntity>
 
-    @Query("SELECT * FROM tracks WHERE source = :source AND isEpisode = 0 ORDER BY addedTimestamp DESC LIMIT :limit")
+    @Query("SELECT * FROM tracks WHERE source = :source AND isEpisode = 0 AND $IN_COLLECTION ORDER BY addedTimestamp DESC LIMIT :limit")
     suspend fun getRecentlyAddedInSource(source: SourceType, limit: Int): List<TrackEntity>
 
-    @Query("SELECT * FROM tracks ORDER BY addedTimestamp DESC LIMIT :limit")
+    @Query("SELECT * FROM tracks WHERE $IN_COLLECTION ORDER BY addedTimestamp DESC LIMIT :limit")
     suspend fun getRecentlyAddedTracks(limit: Int = 30): List<TrackEntity>
 
     @Query(
@@ -162,7 +172,7 @@ interface TrackLibraryQueries {
     @Query(
         """
         SELECT genre FROM tracks
-        WHERE isEpisode = 0 AND genre IS NOT NULL AND TRIM(genre) != ''
+        WHERE isEpisode = 0 AND genre IS NOT NULL AND TRIM(genre) != '' AND $IN_COLLECTION
         GROUP BY genre COLLATE NOCASE HAVING COUNT(*) >= 3
         ORDER BY COUNT(*) DESC LIMIT 40
         """
@@ -170,13 +180,13 @@ interface TrackLibraryQueries {
     fun observeGenres(): Flow<List<String>>
 
     /** [genres] must already be lower-case. */
-    @Query("SELECT * FROM tracks WHERE isEpisode = 0 AND LOWER(genre) IN (:genres) ORDER BY RANDOM() LIMIT :limit")
+    @Query("SELECT * FROM tracks WHERE isEpisode = 0 AND $IN_COLLECTION AND LOWER(genre) IN (:genres) ORDER BY RANDOM() LIMIT :limit")
     suspend fun getTracksByGenres(genres: List<String>, limit: Int): List<TrackEntity>
 
-    @Query("SELECT * FROM tracks WHERE isEpisode = 0 ORDER BY RANDOM() LIMIT :limit")
+    @Query("SELECT * FROM tracks WHERE isEpisode = 0 AND $IN_COLLECTION ORDER BY RANDOM() LIMIT :limit")
     suspend fun getRandomTracks(limit: Int): List<TrackEntity>
 
-    @Query("SELECT * FROM tracks WHERE playCount = 0 AND isEpisode = 0 ORDER BY addedTimestamp DESC LIMIT :limit")
+    @Query("SELECT * FROM tracks WHERE playCount = 0 AND isEpisode = 0 AND $IN_COLLECTION ORDER BY addedTimestamp DESC LIMIT :limit")
     suspend fun getNeverPlayedTracks(limit: Int = 30): List<TrackEntity>
 
     @Query("SELECT * FROM tracks WHERE isLiked = 1 AND isDownloaded = 0 AND source != 'LOCAL' LIMIT :limit")

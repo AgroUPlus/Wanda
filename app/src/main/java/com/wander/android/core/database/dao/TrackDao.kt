@@ -14,7 +14,7 @@ import com.wander.android.data.model.isOneShotTrackId
 private const val CONFLICT_ROW_ID = -1L
 
 @Dao
-interface TrackDao : TrackLibraryQueries, TrackSyncQueries {
+interface TrackDao : TrackLibraryQueries, TrackSyncQueries, TrackRadioQueries {
 
     /**
      * Records that a track turned out to be a livestream.
