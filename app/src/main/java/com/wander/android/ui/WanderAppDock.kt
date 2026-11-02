@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +39,7 @@ import com.wander.android.ui.components.player.MiniPlayerGap
 import com.wander.android.ui.components.player.PlayerSheetState
 import com.wander.android.ui.navigation.DockItem
 import com.wander.android.ui.navigation.NavLayoutViewModel
+import com.wander.android.ui.navigation.ShellRequest
 import com.wander.android.ui.navigation.TopLevelDestination
 import com.wander.android.ui.navigation.navigateSettled
 import com.wander.android.ui.navigation.WanderDock
@@ -148,6 +150,15 @@ internal fun rememberWanderDockState(
             micLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
     }
+    // A launcher shortcut's request: the listen sheet straight away, through the same permission
+    // gate as the dock's own button. Search focus is carried out by the field itself, once shown.
+    val shellRequest by viewModel.shellRequest.collectAsStateWithLifecycle()
+    LaunchedEffect(shellRequest) {
+        if (shellRequest == ShellRequest.LISTEN) {
+            viewModel.consumeShellRequest(ShellRequest.LISTEN)
+            onListen()
+        }
+    }
     if (showListen) {
         ListenSheet(
             onDismiss = { showListen = false },
@@ -205,7 +216,9 @@ internal fun rememberWanderDockState(
                 progress = { sheetState.rawProgress },
                 // Whether the mini player is (or is about to be) floating above this — see
                 // `WanderDock`'s own doc on why that changes its corners, not just its position.
-                pairedWithMiniPlayer = hasTrack
+                pairedWithMiniPlayer = hasTrack,
+                focusSearch = shellRequest == ShellRequest.FOCUS_SEARCH,
+                onSearchFocusRequested = { viewModel.consumeShellRequest(ShellRequest.FOCUS_SEARCH) }
             )
         }
     }

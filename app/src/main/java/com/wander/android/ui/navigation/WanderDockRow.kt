@@ -71,7 +71,9 @@ fun WanderDockRow(
     onListen: () -> Unit,
     /** Told when the field gains or loses focus — the library offers recent searches meanwhile. */
     onSearchFocusChanged: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    focusSearch: Boolean = false,
+    onSearchFocusRequested: () -> Unit = {}
 ) {
     var focused by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
@@ -98,6 +100,8 @@ fun WanderDockRow(
                 onSearchFocusChanged(hasFocus)
                 if (hasFocus) onOpenLibrary()
             },
+            focusRequested = focusSearch,
+            onFocusRequestHandled = onSearchFocusRequested,
             modifier = Modifier
                 .weight(1f)
                 .height(DockControlSize)

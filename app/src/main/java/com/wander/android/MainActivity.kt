@@ -37,6 +37,7 @@ class MainActivity : ComponentActivity() {
     @Inject internal lateinit var agroHandoffPublisher: AgroHandoffPublisher
     @Inject internal lateinit var intentHandler: AppIntentHandler
     @Inject internal lateinit var sharedText: SharedTextHandler
+    @Inject internal lateinit var shortcuts: LauncherShortcutHandler
 
     /**
      * Applies the chosen display language before a single resource is resolved.
@@ -56,7 +57,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         databaseTooOld = DatabaseCompatibility.isTooOld(this)
         if (!databaseTooOld) {
-            intentHandler.handleIntent(lifecycleScope, sharedText.resolve(intent, savedInstanceState == null))
+            route(intent, firstDelivery = savedInstanceState == null)
             // Announces the device once per launch. Without it the server only ever heard from Wanda
             // at pairing time, so a device that had been restarted looked gone.
             agroHandoffPublisher.register()
@@ -93,9 +94,13 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (!databaseTooOld) {
-            intentHandler.handleIntent(lifecycleScope, sharedText.resolve(intent, firstDelivery = true))
-        }
+        if (!databaseTooOld) route(intent, firstDelivery = true)
+    }
+
+    /** A launcher shortcut, else a share, else a link — see each handler for what it takes. */
+    private fun route(intent: Intent?, firstDelivery: Boolean) {
+        if (shortcuts.handle(lifecycleScope, intent, firstDelivery)) return
+        intentHandler.handleIntent(lifecycleScope, sharedText.resolve(intent, firstDelivery))
     }
 
     override fun onStart() {

@@ -9,7 +9,7 @@ import com.wander.android.data.importer.SpotifyPlaylistParser
 import com.wander.android.data.repository.LinkRepository
 import com.wander.android.ui.navigation.DeepLinkRouter
 import com.wander.android.ui.navigation.Routes
-import com.wander.android.ui.navigation.SharedLinkNotices
+import com.wander.android.ui.navigation.LaunchNotices
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -28,7 +28,7 @@ internal class SharedTextHandler @Inject constructor(
     private val spotifyParser: SpotifyPlaylistParser,
     private val deezerParser: DeezerPlaylistParser,
     private val deepLinkRouter: DeepLinkRouter,
-    private val notices: SharedLinkNotices
+    private val notices: LaunchNotices
 ) {
 
     /**

@@ -21,11 +21,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -44,12 +47,22 @@ internal fun DockSearchField(
     onSearch: () -> Unit,
     onListen: () -> Unit,
     onFocusChanged: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Set to put the cursor here from outside; [onFocusRequestHandled] is called once it has. */
+    focusRequested: Boolean = false,
+    onFocusRequestHandled: () -> Unit = {}
 ) {
     val keyboard = LocalSoftwareKeyboardController.current
     val searching = query.isNotEmpty()
     val haptics = rememberHaptics()
     var isFocused by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(focusRequested) {
+        if (focusRequested) {
+            focusRequester.requestFocus()
+            onFocusRequestHandled()
+        }
+    }
 
     TextField(
         value = query,
@@ -111,7 +124,7 @@ internal fun DockSearchField(
             unfocusedIndicatorColor = Color.Transparent,
             disabledIndicatorColor = Color.Transparent
         ),
-        modifier = modifier.onFocusChanged { state ->
+        modifier = modifier.focusRequester(focusRequester).onFocusChanged { state ->
             if (isFocused != state.isFocused) {
                 isFocused = state.isFocused
                 haptics.toggled(isFocused)

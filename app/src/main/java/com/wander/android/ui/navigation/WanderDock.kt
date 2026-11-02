@@ -53,6 +53,9 @@ private val AloneCorner = 32.dp
  * [pairedWithMiniPlayer] is a plain composition-time boolean, not a per-frame signal, so its own
  * shape change (alone ↔ paired) is a normal animated value, eased on the same spec `PlayerSheet`
  * uses for the identical decision on its own side.
+ *
+ * [focusSearch] asks for the cursor in the search field (a launcher shortcut); the field calls
+ * [onSearchFocusRequested] once it has taken it, so the request is carried out once.
  */
 @Composable
 fun WanderDock(
@@ -67,7 +70,9 @@ fun WanderDock(
     onSearchFocusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     progress: () -> Float = { 0f },
-    pairedWithMiniPlayer: Boolean = false
+    pairedWithMiniPlayer: Boolean = false,
+    focusSearch: Boolean = false,
+    onSearchFocusRequested: () -> Unit = {}
 ) {
     val pairedness by animateFloatAsState(
         targetValue = if (pairedWithMiniPlayer) 1f else 0f,
@@ -104,7 +109,9 @@ fun WanderDock(
             onQueryChange = onQueryChange,
             onSearch = onSearch,
             onListen = onListen,
-            onSearchFocusChanged = onSearchFocusChanged
+            onSearchFocusChanged = onSearchFocusChanged,
+            focusSearch = focusSearch,
+            onSearchFocusRequested = onSearchFocusRequested
         )
     }
 }

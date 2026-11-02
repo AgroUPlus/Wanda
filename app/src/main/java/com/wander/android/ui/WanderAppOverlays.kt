@@ -198,7 +198,7 @@ internal fun BoxScope.WanderAppOverlays(
 
     val context = androidx.compose.ui.platform.LocalContext.current
     androidx.compose.runtime.LaunchedEffect(viewModel, context) {
-        viewModel.sharedLinkMessages.collect { message ->
+        viewModel.launchMessages.collect { message ->
             snackbarHostState.showSnackbar(context.getString(message), withDismissAction = true)
         }
     }
