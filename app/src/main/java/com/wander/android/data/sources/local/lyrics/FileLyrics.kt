@@ -40,6 +40,6 @@ internal data class FileLyrics(
     companion object {
         /** [text] as lyrics, or null when it is blank. A leading byte-order mark is dropped. */
         fun ofText(text: String?): FileLyrics? =
-            text?.removePrefix("﻿")?.takeIf { it.isNotBlank() }?.let { FileLyrics(text = it) }
+            text?.removePrefix("\uFEFF")?.takeIf { it.isNotBlank() }?.let { FileLyrics(text = it) }
     }
 }

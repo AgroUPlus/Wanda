@@ -34,7 +34,7 @@ class PlayNextShuffleOrderTest {
         val before = shuffleOf(10, startIndex = 3) { 3 }
         val playing = before.order()
 
-        val after = before.cloneAndInsert(insertionIndex = 4, insertionCount = 2).order()
+        val after = before.cloneAndInsert(/* insertionIndex = */ 4, /* insertionCount = */ 2).order()
 
         val at = after.indexOf(3)
         assertEquals(listOf(4, 5), after.subList(at + 1, at + 3))
@@ -47,7 +47,7 @@ class PlayNextShuffleOrderTest {
     fun anInsertAnywhereElseKeepsTheLengthAndEveryItem() {
         val before = shuffleOf(6, startIndex = 0) { 0 }
 
-        val after = before.cloneAndInsert(insertionIndex = 6, insertionCount = 3).order()
+        val after = before.cloneAndInsert(/* insertionIndex = */ 6, /* insertionCount = */ 3).order()
 
         assertEquals((0 until 9).toSet(), after.toSet())
         assertEquals(9, after.size)
@@ -61,7 +61,7 @@ class PlayNextShuffleOrderTest {
 
         // Item 1 moves to index 3: a, c, d, b, e.
         val movedItems = listOf("a", "c", "d", "b", "e")
-        val after = before.cloneAndMove(indexFrom = 1, indexToExclusive = 2, newIndexFrom = 3)
+        val after = before.cloneAndMove(/* indexFrom = */ 1, /* indexToExclusive = */ 2, /* newIndexFrom = */ 3)
 
         assertEquals(playedBefore, after.order().map(movedItems::get))
     }
