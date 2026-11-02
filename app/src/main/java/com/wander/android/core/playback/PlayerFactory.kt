@@ -11,6 +11,7 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.extractor.DefaultExtractorsFactory
 import com.wander.android.core.cache.AudioCacheManager
 import javax.inject.Inject
@@ -42,7 +43,8 @@ class PlayerFactory @Inject constructor(
                 // A live window moves on whether or not this device kept up. Letting the player
                 // re-join at the edge is what the chunkless preparation and the rolling playlist
                 // are for; refusing to would strand it behind a window that no longer exists.
-                .setAllowChunklessPreparation(true)
+                .setAllowChunklessPreparation(true),
+            uncachedProgressive = ProgressiveMediaSource.Factory(liveUpstream)
         )
 
         val renderersFactory = DefaultRenderersFactory(context)

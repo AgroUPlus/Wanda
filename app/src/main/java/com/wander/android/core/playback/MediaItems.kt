@@ -7,6 +7,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import com.wander.android.core.network.HttpClientFactory
+import com.wander.android.data.model.HLS_LIVE_FORMAT
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 
@@ -23,12 +24,21 @@ private const val EXTRA_TRACK_JSON = "wanda.track"
 private const val UNIDENTIFIED_ITEM_PREFIX = "unidentified-item:"
 
 /**
- * Appended to a livestream's placeholder URI so the container can be inferred from it.
+ * Appended to an HLS livestream's placeholder URI so the container can be inferred from it.
  *
  * `Util.inferContentTypeForUriAndMimeType` falls back to the last path segment's extension when no
  * MIME type reaches it, which is what happens across the controller-to-service boundary.
  */
 internal const val LIVE_SUFFIX = ".m3u8"
+
+/**
+ * The same hint for a livestream that is not a manifest: an Icecast or Shoutcast station.
+ *
+ * Not an extension the player knows, so it infers nothing from it and the progressive extractors
+ * sniff the stream; it only marks the item as live, as [LIVE_SUFFIX] does for HLS. See
+ * [isHlsLive] for which suffix a live track gets.
+ */
+internal const val PROGRESSIVE_LIVE_SUFFIX = ".live"
 
 /**
  * How far behind the live edge to sit.
@@ -53,7 +63,15 @@ internal fun liveConfiguration(): MediaItem.LiveConfiguration =
         .setTargetOffsetMs(LIVE_TARGET_OFFSET_MS)
         .build()
 
+/**
+ * Whether a livestream is an HLS manifest. YouTube only ever serves HLS; a Navidrome station is
+ * whatever its broadcaster runs, and its track says which — see [HLS_LIVE_FORMAT].
+ */
+internal fun UnifiedTrack.isHlsLive(): Boolean =
+    isLive && (source != SourceType.NAVIDROME || format == HLS_LIVE_FORMAT)
+
 internal fun UnifiedTrack.toMediaItem(): MediaItem {
+    val hls = isHlsLive()
     val extras = Bundle().apply {
         putString(EXTRA_TRACK_JSON, HttpClientFactory.jsonConfig.encodeToString(this@toMediaItem))
     }
@@ -69,15 +87,20 @@ internal fun UnifiedTrack.toMediaItem(): MediaItem {
 
     // Local and already-downloaded files can be addressed directly; everything else is resolved.
     //
-    // A livestream's placeholder carries an `.m3u8` suffix. The media-source factory picks
-    // progressive or HLS *before* anything is fetched, and it decides from the MIME type or, with
-    // no MIME type, from the URI — and the MIME type lives in `localConfiguration`, which is the
-    // part of a MediaItem that does not survive the trip across IPC to the playback service. The
-    // suffix does, because the URI is the one field that must arrive or nothing plays at all.
+    // An HLS livestream's placeholder carries an `.m3u8` suffix, a progressive one `.live`. The
+    // media-source factory picks progressive or HLS *before* anything is fetched, and it decides
+    // from the MIME type or, with no MIME type, from the URI — and the MIME type lives in
+    // `localConfiguration`, which is the part of a MediaItem that does not survive the trip across
+    // IPC to the playback service. The suffix does, because the URI is the one field that must
+    // arrive or nothing plays at all.
     val uri = streamUri?.takeIf { it.startsWith("/") || it.startsWith("file:") || it.startsWith("content:") }
         ?.toUri()
         ?: Uri.parse(
-            "$WANDA_SCHEME://track/${Uri.encode(id)}" + if (isLive) LIVE_SUFFIX else ""
+            "$WANDA_SCHEME://track/${Uri.encode(id)}" + when {
+                hls -> LIVE_SUFFIX
+                isLive -> PROGRESSIVE_LIVE_SUFFIX
+                else -> ""
+            }
         )
 
     return MediaItem.Builder()
@@ -87,7 +110,8 @@ internal fun UnifiedTrack.toMediaItem(): MediaItem {
         // Set as well as the URI suffix above. This is the hint the factory prefers when it
         // survives; the suffix is what makes it work when it does not.
         .apply {
-            if (isLive) {
+            // HLS only: a progressive station's container is left for the extractors to sniff.
+            if (hls) {
                 setMimeType(MimeTypes.APPLICATION_M3U8)
                 // Without this the player treats the manifest's window as the item's duration and
                 // calls it finished when it reaches the end of it — which is exactly what a
@@ -166,13 +190,17 @@ private fun MediaItem.fromItemFields(trackId: String, live: Boolean): UnifiedTra
  * playback service.
  */
 internal fun MediaItem.isLiveUri(): Boolean =
-    requestMetadata.mediaUri?.toString()?.endsWith(LIVE_SUFFIX) == true ||
-        localConfiguration?.uri?.toString()?.endsWith(LIVE_SUFFIX) == true
+    requestMetadata.mediaUri?.toString().hasLiveSuffix() ||
+        localConfiguration?.uri?.toString().hasLiveSuffix()
+
+/** Whether this URI carries either live hint, the HLS one or the progressive one. */
+private fun String?.hasLiveSuffix(): Boolean =
+    this != null && (endsWith(LIVE_SUFFIX) || endsWith(PROGRESSIVE_LIVE_SUFFIX))
 
 /** Extracts the track id from a placeholder URI produced by [toMediaItem]. */
 internal fun Uri.wandaTrackId(): String? {
     if (scheme != WANDA_SCHEME) return null
     // The suffix is a hint to the media-source factory, not part of the id — see [toMediaItem].
-    val segment = lastPathSegment?.removeSuffix(LIVE_SUFFIX) ?: return null
+    val segment = lastPathSegment?.removeSuffix(LIVE_SUFFIX)?.removeSuffix(PROGRESSIVE_LIVE_SUFFIX) ?: return null
     return Uri.decode(segment)
 }

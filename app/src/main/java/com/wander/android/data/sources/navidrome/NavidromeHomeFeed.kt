@@ -3,6 +3,7 @@ package com.wander.android.data.sources.navidrome
 import android.content.Context
 import androidx.media3.common.MimeTypes
 import com.wander.android.R
+import com.wander.android.data.model.HLS_LIVE_FORMAT
 import com.wander.android.data.model.RecommendedShelf
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
@@ -55,7 +56,11 @@ class NavidromeHomeFeed @Inject constructor(
         return apiClient.getInternetRadioStations().mapCatching { stations ->
             val station = stations.firstOrNull { it.id == id }
                 ?: throw IOException("This radio station is no longer on the server")
-            StreamInfo(uri = station.streamUrl, format = MimeTypes.APPLICATION_M3U8)
+            // A progressive station's container is only known once its first bytes arrive.
+            StreamInfo(
+                uri = station.streamUrl,
+                format = if (station.isHls()) MimeTypes.APPLICATION_M3U8 else MimeTypes.AUDIO_UNKNOWN
+            )
         }
     }
 
@@ -95,17 +100,18 @@ class NavidromeHomeFeed @Inject constructor(
         }
 
     /**
-     * Only HLS stations. Playback treats every live track as an HLS manifest, and a plain Icecast
-     * stream handed over as one fails to parse; those stay off the shelf rather than failing.
+     * Every station, each saying whether it is HLS: playback parses only those as a manifest and
+     * lets the progressive extractors take a plain Icecast or Shoutcast stream. See [HLS_LIVE_FORMAT].
      */
     private suspend fun radioShelf(): Result<RecommendedShelf> =
         apiClient.getInternetRadioStations().map { stations ->
-            val tracks = stations.filter { it.isHls() }.map { station ->
+            val tracks = stations.map { station ->
                 UnifiedTrack(
                     id = "$RADIO_PREFIX${station.id}",
                     source = SourceType.NAVIDROME,
                     title = station.name,
                     artist = context.getString(R.string.navidrome_radio_artist),
+                    format = HLS_LIVE_FORMAT.takeIf { station.isHls() },
                     isLive = true
                 )
             }

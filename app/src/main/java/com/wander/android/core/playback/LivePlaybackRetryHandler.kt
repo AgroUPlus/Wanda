@@ -41,8 +41,10 @@ internal class LivePlaybackRetryHandler(
         val isHls = uri?.toString()?.endsWith(LIVE_SUFFIX) == true ||
             item.localConfiguration?.mimeType == MimeTypes.APPLICATION_M3U8
 
+        // A manifest that would not parse is a livestream all the same: retried as a progressive
+        // one, so it keeps its live hint rather than becoming a track that ends.
         val newUri = if (isHls) {
-            Uri.parse("$WANDA_SCHEME://track/${Uri.encode(id)}")
+            Uri.parse("$WANDA_SCHEME://track/${Uri.encode(id)}$PROGRESSIVE_LIVE_SUFFIX")
         } else {
             Uri.parse("$WANDA_SCHEME://track/${Uri.encode(id)}$LIVE_SUFFIX")
         }
