@@ -42,6 +42,7 @@ class MusicRepository @Inject constructor(
     private val recordingRules: RecordingRulesRepository,
     private val acousticFeatures: AcousticFeatureRepository,
     private val embeddingDao: TrackEmbeddingDao,
+    private val likeOutbox: LikeOutbox,
     val sources: Set<@JvmSuppressWildcards IMusicSource>
 ) {
     private val reachability = SourceReachability(connectivity, secureStorage)
@@ -119,7 +120,8 @@ class MusicRepository @Inject constructor(
         secureStorage = secureStorage,
         scrobbleSuppression = scrobbleSuppression,
         scrobbleSyncScheduler = scrobbleSyncScheduler,
-        scrobbleForwardScheduler = scrobbleForwardScheduler
+        scrobbleForwardScheduler = scrobbleForwardScheduler,
+        likeOutbox = likeOutbox
     )
 
     private val radioGenerator = SmartRadioGenerator(
@@ -177,7 +179,7 @@ class MusicRepository @Inject constructor(
         activeSources().filter { it.capabilities.holdsTracks }.map { it.sourceType }
 
     // ── Likes & History ─────────────────────────────────────────────────────────────────────
-    val writeErrors: SharedFlow<String> = likesAndHistory.writeErrors
+    val writeErrors: SharedFlow<String> = likeOutbox.failures
     fun getLikedTrackIdsFlow(): Flow<Set<String>> = likesAndHistory.getLikedTrackIdsFlow()
     suspend fun toggleLike(track: UnifiedTrack) = likesAndHistory.toggleLike(track)
     suspend fun unifySplitLikes() = likesAndHistory.unifySplitLikes()

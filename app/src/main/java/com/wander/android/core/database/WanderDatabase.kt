@@ -98,4 +98,5 @@ abstract class WanderDatabase : RoomDatabase() {
     abstract fun catalogRecordingDao(): com.wander.android.core.database.dao.CatalogRecordingDao
     abstract fun libraryBrowseDao(): com.wander.android.core.database.dao.LibraryBrowseDao
     abstract fun remotePlaylistDao(): com.wander.android.core.database.dao.RemotePlaylistDao
+    abstract fun likeSyncDao(): com.wander.android.core.database.dao.LikeSyncDao
 }

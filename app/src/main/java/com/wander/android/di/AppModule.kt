@@ -65,6 +65,7 @@ object AppModule {
     @Provides fun providePlaylistDao(db: WanderDatabase): com.wander.android.core.database.dao.PlaylistDao = db.playlistDao()
     @Provides fun provideRemotePlaylistDao(db: WanderDatabase): com.wander.android.core.database.dao.RemotePlaylistDao =
         db.remotePlaylistDao()
+    @Provides fun provideLikeSyncDao(db: WanderDatabase): com.wander.android.core.database.dao.LikeSyncDao = db.likeSyncDao()
 
     @Provides fun provideRecordingSplitDao(db: WanderDatabase): com.wander.android.core.database.dao.RecordingSplitDao = db.recordingSplitDao()
     @Provides fun provideRecordingLinkDao(db: WanderDatabase): com.wander.android.core.database.dao.RecordingLinkDao = db.recordingLinkDao()

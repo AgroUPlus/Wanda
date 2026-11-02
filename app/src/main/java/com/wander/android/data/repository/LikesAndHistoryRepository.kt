@@ -11,9 +11,6 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.IMusicSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -29,16 +26,18 @@ internal class LikesAndHistoryRepository(
     private val secureStorage: SecureStorage,
     private val scrobbleSuppression: ScrobbleSuppression,
     private val scrobbleSyncScheduler: ScrobbleSyncScheduler,
-    private val scrobbleForwardScheduler: com.wander.android.core.sync.ScrobbleForwardScheduler
+    private val scrobbleForwardScheduler: com.wander.android.core.sync.ScrobbleForwardScheduler,
+    private val likeOutbox: LikeOutbox
 ) {
-    private val _writeErrors = MutableSharedFlow<String>(extraBufferCapacity = 1)
-    val writeErrors: SharedFlow<String> = _writeErrors.asSharedFlow()
-
     private fun sourceFor(type: SourceType) = sources.firstOrNull { it.sourceType == type }
 
     fun getLikedTrackIdsFlow(): Flow<Set<String>> =
         trackDao.getLikedTrackIdsFlow().map { it.toSet() }.flowOn(Dispatchers.Default)
 
+    /**
+     * Room's like changes at once; the backend hears through [LikeOutbox], which keeps retrying
+     * a like it could not send and says so once if it gives up.
+     */
     suspend fun toggleLike(track: UnifiedTrack): Result<Unit> = withContext(Dispatchers.IO) {
         val liked = !isLiked(track)
         trackDao.upsertTracks(listOf(TrackEntity.fromUnifiedTrack(track)))
@@ -47,11 +46,7 @@ internal class LikesAndHistoryRepository(
         val source = sourceFor(track.source)
         if (source == null || !source.capabilities.likes) return@withContext Result.success(Unit)
 
-        source.setLiked(track.id, liked).onFailure { cause ->
-            _writeErrors.tryEmit(
-                cause.message ?: "Couldn't sync that like to ${source.displayName}."
-            )
-        }
+        likeOutbox.submit(track.id, liked)
         Result.success(Unit)
     }
 
