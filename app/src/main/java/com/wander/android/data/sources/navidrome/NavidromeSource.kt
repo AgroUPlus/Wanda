@@ -218,6 +218,11 @@ class NavidromeSource @Inject constructor(
         return apiClient.scrobble(trackId.removePrefix(PREFIX), submissionTime / 1000L)
     }
 
+    override suspend fun nowPlaying(trackId: String): Result<Unit> {
+        if (secureStorage.isIncognitoMode) return Result.success(Unit)
+        return apiClient.nowPlaying(trackId.removePrefix(PREFIX))
+    }
+
     suspend fun resolveShare(shareUrlOrId: String): Result<UnifiedTrack> =
         apiClient.getShares().mapCatching { shares ->
             val share = shares.firstOrNull {

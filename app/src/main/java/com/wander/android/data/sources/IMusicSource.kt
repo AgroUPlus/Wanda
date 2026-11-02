@@ -194,4 +194,8 @@ interface IMusicSource {
     suspend fun setLiked(trackId: String, liked: Boolean): Result<Unit> = Result.success(Unit)
     suspend fun scrobble(trackId: String, submissionTime: Long = System.currentTimeMillis()): Result<Unit> =
         Result.success(Unit)
+
+    /** Tells the backend [trackId] is playing now, without counting a play. See [SourceCapabilities.scrobble]. */
+    suspend fun nowPlaying(trackId: String): Result<Unit> =
+        Result.failure(UnsupportedOperationException("$displayName has no now playing"))
 }

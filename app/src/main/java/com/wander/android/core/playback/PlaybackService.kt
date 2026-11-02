@@ -49,6 +49,7 @@ class PlaybackService : MediaSessionService() {
     @Inject lateinit var loudnessReadout: LoudnessReadout
     @Inject lateinit var jamSkipGate: JamSkipGate
     @Inject internal lateinit var scrobbleForwarding: com.wander.android.data.repository.ScrobbleForwarding
+    @Inject internal lateinit var sourceNowPlaying: com.wander.android.data.repository.SourceNowPlaying
     @Inject @field:com.wander.android.di.ArtworkHttpClient
     lateinit var artworkHttpClient: okhttp3.OkHttpClient
 
@@ -60,7 +61,7 @@ class PlaybackService : MediaSessionService() {
         val player = playerFactory.create()
         player.addListener(PlayCountRecorder(player))
         player.addListener(AgroHandoffReporter(player, agroHandoffPublisher))
-        player.addListener(NowPlayingForwarder(player, scope, scrobbleForwarding))
+        player.addListener(NowPlayingForwarder(player, scope, scrobbleForwarding, sourceNowPlaying))
         player.addListener(NextTrackPreloader(player))
         EpisodeSkipSilence(player, secureStorage.isSkipSilenceEnabled, scope)
         val volume = PlayerVolume { player.volume = it }

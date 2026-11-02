@@ -195,6 +195,10 @@ class SubsonicApiClient @Inject constructor(
     suspend fun scrobble(id: String, timeSeconds: Long): Result<Unit> =
         call("scrobble.view", "id" to id, "time" to timeSeconds, "submission" to true).map { }
 
+    /** `submission=false`: shown as playing now, without counting as a play. */
+    suspend fun nowPlaying(id: String): Result<Unit> =
+        call("scrobble.view", "id" to id, "submission" to false).map { }
+
     /**
      * Stream and cover URLs carry credentials in the query string, so they are built on demand
      * and never persisted or logged.
