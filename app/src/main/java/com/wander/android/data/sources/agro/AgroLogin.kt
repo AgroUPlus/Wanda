@@ -1,7 +1,10 @@
 package com.wander.android.data.sources.agro
 
+import android.content.Context
+import com.wander.android.R
 import com.wander.android.core.network.HttpClientFactory
 import com.wander.android.core.security.SecureStorage
+import dagger.hilt.android.qualifiers.ApplicationContext
 import io.ktor.client.HttpClient
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -53,8 +56,13 @@ internal data class AgroLoginResult(
 @Singleton
 class AgroLogin @Inject constructor(
     private val client: HttpClient,
-    private val secureStorage: SecureStorage
+    private val secureStorage: SecureStorage,
+    @ApplicationContext private val context: Context
 ) {
+    /** The name this device goes by on the server: the user's own, or the default one. */
+    private val deviceLabel: String
+        get() = secureStorage.agroDevicePetname.ifEmpty { context.getString(R.string.agro_default_device_name) }
+
     internal suspend fun exchange(
         serverUrl: String,
         username: String,
@@ -64,7 +72,7 @@ class AgroLogin @Inject constructor(
         body = buildJsonObject {
             put("username", username.trim())
             put("passphrase", passphrase)
-            put("label", secureStorage.agroDevicePetname.ifEmpty { "Wanda Android" })
+            put("label", deviceLabel)
         }
     ).mapCatching { json ->
         val token = json["token"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
@@ -97,7 +105,7 @@ class AgroLogin @Inject constructor(
         body = buildJsonObject {
             put("username", username.trim())
             inviteCode?.takeIf { it.isNotBlank() }?.let { put("inviteCode", it.trim()) }
-            put("label", secureStorage.agroDevicePetname.ifEmpty { "Wanda Android" })
+            put("label", deviceLabel)
         }
     ).mapCatching { json ->
         val passphrase = json["passphrase"]?.jsonPrimitive?.contentOrNull

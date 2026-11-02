@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.IntentSender
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.R
 import com.wander.android.core.audio.fingerprint.FingerprintIndexing
 import com.wander.android.core.audio.fingerprint.FingerprintProgress
 import com.wander.android.core.cache.DownloadScheduler
@@ -21,6 +22,7 @@ import com.wander.android.data.repository.IncognitoRepository
 import com.wander.android.data.repository.SyncProgress
 import com.wander.android.data.sources.agro.AgroSyncedSettings
 import com.wander.android.data.sources.agro.AgroVisibility
+import com.wander.android.ui.theme.ThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -105,6 +107,8 @@ internal class SettingsViewModel @Inject constructor(
     fun disconnectDeezer() = accountCoordinator.disconnectDeezer()
     fun rescanLocalLibrary() = accountCoordinator.rescanLocalLibrary(viewModelScope)
     fun forgetEverything() = accountCoordinator.forgetEverything(viewModelScope) { resetAgroPairing() }
+    val forgetFailures: StateFlow<List<Int>> = accountCoordinator.forgetFailures
+    fun dismissForgetFailures() = accountCoordinator.dismissForgetFailures()
 
     // ── Display & Playback Preferences ─────────────────────────────────────────────────────
 
@@ -120,6 +124,8 @@ internal class SettingsViewModel @Inject constructor(
     val isSkipSilenceEnabled: StateFlow<Boolean> = secureStorage.isSkipSilenceEnabled
     val isIndexOnMobileDataEnabled: StateFlow<Boolean> = secureStorage.isIndexOnMobileDataEnabled
 
+    val themeMode: StateFlow<String> = secureStorage.displayPrefs.themeMode
+    fun setThemeMode(mode: ThemeMode) = secureStorage.displayPrefs.setThemeMode(mode.name)
     fun setMonetDynamic(enabled: Boolean) = secureStorage.setMonetDynamic(enabled)
     fun setAmoledBlack(enabled: Boolean) = secureStorage.setAmoledBlack(enabled)
     fun setBackBlurEnabled(enabled: Boolean) = secureStorage.setBackBlurEnabled(enabled)
@@ -154,6 +160,9 @@ internal class SettingsViewModel @Inject constructor(
         } else {
             if (kind == WorkProgressNotification.Kind.FINGERPRINT) fingerprintProgress.retryFailures()
             workControls.resume(kind)
+            // Pausing cancels by tag, which removes the periodic sweep along with the run in
+            // flight; without this it only came back at the next app start.
+            if (kind == WorkProgressNotification.Kind.DOWNLOAD) downloadScheduler.scheduleAutoDownload()
         }
     }
 
@@ -174,7 +183,8 @@ internal class SettingsViewModel @Inject constructor(
     fun setIncognito(enabled: Boolean) { viewModelScope.launch { incognitoRepository.set(enabled) } }
 
     val navidromeServer: String get() = secureStorage.navidromeServerUrl
-    val agroDevicePetname: String get() = secureStorage.agroDevicePetname.ifEmpty { "Wanda Android" }
+    val agroDevicePetname: String
+        get() = secureStorage.agroDevicePetname.ifEmpty { context.getString(R.string.agro_default_device_name) }
     val agroDeviceId: String get() = secureStorage.agroDeviceId
     val agroServer: String get() = secureStorage.agroServerUrl
 

@@ -1,5 +1,6 @@
 package com.wander.android.data.sources.agro
 
+import com.wander.android.BuildConfig
 import com.wander.android.core.security.SecureStorage
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -75,7 +76,7 @@ class AgroStreamFetcher @Inject constructor(
         for (source in track.peerSources) {
             val lan = source.lanAddress ?: continue
             try {
-                android.util.Log.i("P2P", "Attempting direct LAN P2P fetch from $lan for \"${track.title}\"")
+                trace { "Attempting direct LAN P2P fetch from $lan for \"${track.title}\"" }
                 val p2pClient = uploadClient.newBuilder()
                     .connectTimeout(3, TimeUnit.SECONDS)
                     .readTimeout(60, TimeUnit.SECONDS)
@@ -85,15 +86,15 @@ class AgroStreamFetcher @Inject constructor(
                 val request = Request.Builder().url("http://$lan/p2p/fetch/${track.contentHash}").get().build()
                 val response = p2pClient.newCall(request).execute()
                 if (response.isSuccessful && response.body != null) {
-                    android.util.Log.i("P2P", "Direct LAN P2P streaming connected from $lan for \"${track.title}\"")
+                    trace { "Direct LAN P2P streaming connected from $lan for \"${track.title}\"" }
                     return FetchedStream(response, SyncRoute.DIRECT)
                 }
                 response.close()
             } catch (e: IOException) {
-                android.util.Log.w("P2P", "LAN P2P connection to $lan failed: ${e.javaClass.simpleName}")
+                android.util.Log.w("P2P", "LAN P2P connection failed: ${e.javaClass.simpleName}")
             } catch (e: IllegalArgumentException) {
                 // A peer advertising a LAN address OkHttp cannot build a URL from.
-                android.util.Log.w("P2P", "LAN P2P address $lan is not usable")
+                android.util.Log.w("P2P", "A peer's LAN address is not usable")
             }
         }
         return null
@@ -102,18 +103,18 @@ class AgroStreamFetcher @Inject constructor(
     /** 2. Ephemeral server relay through the first peer that is not the server archive. */
     private fun fetchViaRelay(track: MissingTrack): FetchedStream? {
         val remotePeer = track.peerSources.firstOrNull { !it.isServerArchive } ?: return null
-        android.util.Log.i("P2P", "Relaying \"${track.title}\" via ${remotePeer.petname}")
+        trace { "Relaying \"${track.title}\" via ${remotePeer.petname}" }
         return try {
             openRelaySession(track, remotePeer)?.let { receiveRelay(it) }
         } catch (error: IOException) {
             // Swallowed silently until now, which is why a relay that never worked looked
             // exactly like one that was never tried. It still falls through to the archive —
             // this only makes the reason visible.
-            android.util.Log.w("P2P", "Relay failed for \"${track.title}\": ${error.javaClass.simpleName}")
+            android.util.Log.w("P2P", "Relay failed: ${error.javaClass.simpleName}")
             null
         } catch (error: IllegalArgumentException) {
             // The relay's open response was not the JSON object it should be.
-            android.util.Log.w("P2P", "Relay answered something unreadable for \"${track.title}\"")
+            android.util.Log.w("P2P", "Relay answered something unreadable")
             null
         }
     }
@@ -128,9 +129,9 @@ class AgroStreamFetcher @Inject constructor(
         // Tried once per missing track, so a dead token must stop here rather than be refused for each.
         val token = secureStorage.agroApiKey
         if (AgroTokenGate.refusing(token) != null) return null
-        android.util.Log.i("P2P", "Opening a relay session …")
+        trace { "Opening a relay session …" }
         val openRes = relayClient.newCall(authorized("$base/api/v1/relay/open").post(openBody).build()).execute()
-        android.util.Log.i("P2P", "Relay open answered HTTP ${openRes.code}")
+        trace { "Relay open answered HTTP ${openRes.code}" }
         if (!openRes.isSuccessful) {
             AgroTokenGate.recordRestStatus(token, openRes.code)
             android.util.Log.w("P2P", "Relay open refused: HTTP ${openRes.code}")
@@ -146,10 +147,10 @@ class AgroStreamFetcher @Inject constructor(
     }
 
     private fun receiveRelay(sessionId: String): FetchedStream? {
-        android.util.Log.i("P2P", "Receiving from the relay session …")
+        trace { "Receiving from the relay session …" }
         val recvRes = relayClient.newCall(authorized("$base/api/v1/relay/$sessionId/receive").get().build()).execute()
         if (recvRes.isSuccessful && recvRes.body != null) {
-            android.util.Log.i("P2P", "Relay stream open")
+            trace { "Relay stream open" }
             return FetchedStream(recvRes, SyncRoute.RELAY)
         }
         android.util.Log.w("P2P", "Relay receive refused: HTTP ${recvRes.code}")
@@ -165,7 +166,7 @@ class AgroStreamFetcher @Inject constructor(
                     "and the relay."
             )
         }
-        android.util.Log.i("P2P", "Falling back to the server archive for \"${track.title}\"")
+        trace { "Falling back to the server archive for \"${track.title}\"" }
         return FetchedStream(fetch(track.contentHash).getOrThrow(), SyncRoute.ARCHIVE)
     }
 
@@ -175,4 +176,13 @@ class AgroStreamFetcher @Inject constructor(
     private companion object {
         const val RELAY_STALL_TIMEOUT_SECONDS = 45L
     }
+}
+
+/**
+ * Route tracing for debug builds only. It names LAN addresses, peer petnames and track titles —
+ * what the user is listening to and where their devices sit — which a release build's logcat,
+ * readable by bug-report tooling, must not carry.
+ */
+private inline fun trace(message: () -> String) {
+    if (BuildConfig.DEBUG) android.util.Log.d("P2P", message())
 }

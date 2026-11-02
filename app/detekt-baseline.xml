@@ -1631,7 +1631,7 @@
     <ID>ReturnCount:NavTransitions.kt:private fun tabDirection: Int?</ID>
     <ID>ReturnCount:NavidromeShareReuse.kt:private fun SubsonicShare.isOpenAt: Boolean</ID>
     <ID>ReturnCount:NavidromeSource.kt:NavidromeSource$override suspend fun createPlaylist: Result&lt;String&gt;</ID>
-    <ID>ReturnCount:NotificationLikeButton.kt:NotificationLikeButton$fun handle: Boolean</ID>
+    <ID>ReturnCount:NotificationButtons.kt:NotificationButtons$fun handle: Boolean</ID>
     <ID>ReturnCount:NowPlayingForwarder.kt:NowPlayingForwarder$private fun consider</ID>
     <ID>ReturnCount:OffGridBeacon.kt:OffGridBeacon.Companion$fun fromBytes: OffGridBeacon?</ID>
     <ID>ReturnCount:OffGridListenAlongPoller.kt:OffGridListenAlongPoller$fun startPolling: Result&lt;Unit&gt;</ID>

@@ -28,10 +28,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.core.playback.PlayerConnection
-import com.wander.android.data.model.UnifiedTrack
-import com.wander.android.data.repository.artistIdFor
 import com.wander.android.ui.components.AddToPlaylistHost
-import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.screens.social.JamViewModel
 
 @Composable
@@ -40,47 +37,29 @@ internal fun QueueScreen(
     onClose: () -> Unit,
     onOpenJam: () -> Unit = {},
     onOpenArtist: ((String, String?) -> Unit)? = null,
+    onOpenAlbum: ((String) -> Unit)? = null,
     jamViewModel: JamViewModel = hiltViewModel(),
     queueViewModel: QueueViewModel = hiltViewModel()
 ) {
     val state by playerConnection.state.collectAsStateWithLifecycle()
     val jamState by jamViewModel.state.collectAsStateWithLifecycle()
     val jam = jamState.jam
-    var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
+    var actionsFor by remember { mutableStateOf<QueueEntry?>(null) }
     val addToPlaylist = AddToPlaylistHost()
+    val entries = rememberQueueEntries(state)
 
-    actionsFor?.let { track ->
-        TrackActionsSheet(
-            track = track,
-            isLiked = track.isLiked,
-            onPlayNext = {
-                queueViewModel.playNext(track)
-                actionsFor = null
-            },
-            onAddToQueue = {
-                queueViewModel.addToQueue(track)
-                actionsFor = null
-            },
-            onStartRadio = {
-                queueViewModel.startRadio(track)
-                actionsFor = null
-            },
-            onToggleLike = { queueViewModel.toggleLike(track) },
-            onRemove = {
-                val idx = state.queue.indexOfFirst { it.id == track.id }
-                if (idx >= 0) queueViewModel.removeFromQueue(idx)
-                actionsFor = null
-            },
-            onOpenArtist = track.artist
-                .takeIf { it.isNotBlank() }
-                ?.let { onOpenArtist?.let { open -> { name -> open(name, track.artistIdFor(name)) } } },
+    actionsFor?.let { pressed ->
+        QueueTrackActions(
+            pressed = pressed,
+            entries = entries,
+            queue = state.queue,
+            // As in the drawer: a move under shuffle would not do what the rows suggest.
+            canReorder = !state.orderLocked && !state.isShuffle,
+            queueViewModel = queueViewModel,
+            addToPlaylist = addToPlaylist,
+            onOpenArtist = onOpenArtist,
             onDismiss = { actionsFor = null },
-            onShare = if (queueViewModel.canShare(track)) {
-                { queueViewModel.share(track) }
-            } else null,
-            onAddToPlaylist = if (addToPlaylist.canAdd(track)) {
-                { addToPlaylist.open(track) }
-            } else null
+            onOpenAlbum = onOpenAlbum
         )
     }
 
@@ -106,7 +85,11 @@ internal fun QueueScreen(
                     .then(if (jam != null) Modifier.clickable(onClick = onOpenJam) else Modifier)
             ) {
                 Text(
-                    text = if (jam != null) "Jam Queue · ${jam.code}" else "Up next",
+                    text = if (jam != null) {
+                        stringResource(R.string.queue_jam_title, jam.code)
+                    } else {
+                        stringResource(R.string.queue_screen_title_up_next)
+                    },
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -119,7 +102,8 @@ internal fun QueueScreen(
                 }
             }
 
-            if (jam == null && state.queue.isNotEmpty()) {
+            // Not while following someone: the queue is theirs, and the drawer hides it too.
+            if (jam == null && !state.orderLocked && state.queue.isNotEmpty()) {
                 ClearQueueButton(state.queue.size, playerConnection::clearQueue)
             }
         }
@@ -132,7 +116,7 @@ internal fun QueueScreen(
             )
         } else {
             LocalQueueContent(
-                state = state,
+                entries = entries,
                 playerConnection = playerConnection,
                 onTrackLongPress = { actionsFor = it },
                 onToggleLike = { queueViewModel.toggleLike(it) }

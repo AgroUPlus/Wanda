@@ -66,7 +66,7 @@ internal fun AgroPairingForm(
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK
                         })
                     }.onFailure {
-                        Toast.makeText(context, "Could not open camera app", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, R.string.agro_pairing_camera_failed, Toast.LENGTH_SHORT).show()
                     }
                 }
             },
@@ -164,11 +164,13 @@ internal fun AgroPairingForm(
         shapes = ButtonDefaults.shapes()
     ) {
         Text(
-            if (mode == AgroPairingMode.CREATE) {
-                "I already have an account"
-            } else {
-                "Create an account on this server"
-            }
+            stringResource(
+                if (mode == AgroPairingMode.CREATE) {
+                    R.string.agro_pairing_have_account
+                } else {
+                    R.string.agro_pairing_create_on_server
+                }
+            )
         )
     }
 }

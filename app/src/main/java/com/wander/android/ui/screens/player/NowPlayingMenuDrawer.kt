@@ -1,5 +1,8 @@
 package com.wander.android.ui.screens.player
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,12 +12,12 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.Equalizer
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Groups
@@ -70,7 +73,6 @@ internal fun NowPlayingMenuDrawer(
     onAddToPlaylist: () -> Unit,
     onToggleRadio: () -> Unit,
     onOpenSpeedPitch: () -> Unit,
-    onPlayNext: () -> Unit,
     onAddToQueue: () -> Unit,
     onToggleLike: () -> Unit,
     onShare: (() -> Unit)?,
@@ -81,8 +83,11 @@ internal fun NowPlayingMenuDrawer(
     onOpenArtist: ((String) -> Unit)?,
     onOpenAlbum: (() -> Unit)?,
     onJamAction: (() -> Unit)?,
+    equalizerIntent: Intent?,
     onDismiss: () -> Unit
 ) {
+    // The panel is documented as started for a result; nothing in that result is needed here.
+    val equalizerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
     WandaSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -111,7 +116,6 @@ internal fun NowPlayingMenuDrawer(
                 }
                 val radioLabel = stringResource(R.string.menu_radio)
                 val strings = MenuStrings(
-                    playNext = stringResource(R.string.action_play_next),
                     addToQueue = stringResource(R.string.action_add_to_queue),
                     addToPlaylist = stringResource(R.string.action_add_to_playlist),
                     speed = stringResource(R.string.action_speed_and_pitch),
@@ -121,6 +125,7 @@ internal fun NowPlayingMenuDrawer(
                     share = stringResource(R.string.action_share),
                     like = stringResource(R.string.menu_like),
                     sleepTimer = stringResource(R.string.sleep_timer),
+                    equalizer = stringResource(R.string.player_equalizer),
                     chapters = stringResource(R.string.chapters_title),
                     transcript = stringResource(R.string.transcript_title)
                 )
@@ -149,13 +154,20 @@ internal fun NowPlayingMenuDrawer(
                             onOpenSleepTimer(); animatedDismiss()
                         }
                     )
+                    // Only when an equalizer is installed to open: no entry beats one that does nothing.
+                    equalizerIntent?.let { intent ->
+                        add(MenuAction(Icons.Rounded.Equalizer, strings.equalizer, ActionEmphasis.ICON) {
+                            equalizerLauncher.launch(intent); animatedDismiss()
+                        })
+                    }
                     onOpenChapters?.let { open ->
                         add(MenuAction(Icons.Rounded.Bookmark, strings.chapters, ActionEmphasis.ICON) { open(); animatedDismiss() })
                     }
                     onOpenTranscript?.let { open ->
                         add(MenuAction(Icons.AutoMirrored.Rounded.Notes, strings.transcript, ActionEmphasis.ICON) { open(); animatedDismiss() })
                     }
-                    add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, strings.playNext) { onPlayNext(); animatedDismiss() })
+                    // No "Play next": this track is the one playing, so it would only queue a copy
+                    // of itself straight behind itself.
                     add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, strings.addToQueue) { onAddToQueue(); animatedDismiss() })
                     // One entry per credited artist: "A, B & C" is nobody's page.
                     onOpenArtist?.let { open ->
@@ -204,7 +216,6 @@ internal fun NowPlayingMenuDrawer(
 
 /** Resolved once in composition, since the action list is built in a plain lambda. */
 private class MenuStrings(
-    val playNext: String,
     val addToQueue: String,
     val addToPlaylist: String,
     val speed: String,
@@ -214,6 +225,7 @@ private class MenuStrings(
     val share: String,
     val like: String,
     val sleepTimer: String,
+    val equalizer: String,
     val chapters: String,
     val transcript: String
 )

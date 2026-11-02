@@ -12,6 +12,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.wander.android.core.notification.PodcastEpisodeNotifier
 import com.wander.android.data.repository.PodcastRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -25,11 +26,13 @@ import javax.inject.Singleton
 internal class PodcastSyncWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val podcasts: PodcastRepository
+    private val podcasts: PodcastRepository,
+    private val notifier: PodcastEpisodeNotifier
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
         val summary = podcasts.refreshAll()
+        notifier.notifyNewEpisodes(summary.newEpisodes)
         // Retried only when nothing at all got through, which means the network is the problem.
         // A feed that keeps failing alone must not keep the whole pass in backoff.
         return if (summary.failed > 0 && summary.updated + summary.unchanged == 0) Result.retry() else Result.success()
@@ -54,6 +57,11 @@ class PodcastSyncScheduler @Inject constructor(
             .build()
         WorkManager.getInstance(context)
             .enqueueUniquePeriodicWork(PERIODIC_WORK, ExistingPeriodicWorkPolicy.KEEP, request)
+    }
+
+    /** Stops the periodic pass once there is no feed left to check. */
+    fun disable() {
+        WorkManager.getInstance(context).cancelUniqueWork(PERIODIC_WORK)
     }
 
     /** A pass now, for an import or a pull-to-refresh. */

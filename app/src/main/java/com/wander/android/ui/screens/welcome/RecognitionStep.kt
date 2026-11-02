@@ -46,8 +46,7 @@ internal fun RecognitionStep(
             modifier = Modifier.size(28.dp)
         )
         Text(
-            text = "It needs a one-time ${EmbeddingModelManager.APPROX_MB} MB model. " +
-                "After that it works fully offline.",
+            text = stringResource(R.string.welcome_recognition_model_size, EmbeddingModelManager.APPROX_MB),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(start = 16.dp)
         )

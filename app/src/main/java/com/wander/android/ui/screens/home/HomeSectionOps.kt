@@ -1,17 +1,27 @@
 package com.wander.android.ui.screens.home
 
+import androidx.annotation.StringRes
+import com.wander.android.R
 import com.wander.android.data.model.RecommendedShelf
 import com.wander.android.data.model.UnifiedTrack
 import java.time.LocalTime
 
 // Pure list operations on Home's shelves, shared by [HomeViewModel].
 
+/**
+ * One shelf, holding each track once.
+ *
+ * Every shelf layout keys its cards by `"<shelf id>-<track id>"`, and a lazy list that is handed
+ * the same key twice throws ("Key … was already used"), which took Home down. Not every source
+ * promises distinct rows — two friends' drops can resolve to the same song — so the shelf makes
+ * sure, rather than every source having to.
+ */
 internal fun shelf(
     id: String,
     title: String,
     style: HomeSectionStyle,
     tracks: List<UnifiedTrack>
-) = HomeSection(id = id, title = title, style = style, tracks = tracks)
+) = HomeSection(id = id, title = title, style = style, tracks = tracks.distinctBy { it.id })
 
 internal fun carousel(id: String, title: String, tracks: List<UnifiedTrack>) =
     shelf(id, title, HomeSectionStyle.TRACK_CAROUSEL, tracks)
@@ -45,18 +55,22 @@ internal fun List<HomeSection>.withSection(section: HomeSection): List<HomeSecti
 
 /**
  * Home with the online feed folded in: Quick picks and Recently Played stay on top, the feed's
- * shelves follow them, then the rest, then "Because you listened to" built from [seed]'s radio.
+ * shelves follow them, then the rest, then "Because you listened to" built from [seed]'s radio,
+ * titled by [becauseTitle].
  */
 internal fun List<HomeSection>.withFeed(
     feed: List<RecommendedShelf>,
     seed: UnifiedTrack?,
-    suggestions: List<UnifiedTrack>
+    suggestions: List<UnifiedTrack>,
+    becauseTitle: (UnifiedTrack) -> String
 ): List<HomeSection> {
-    val feedIds = feed.map { it.id }.toSet()
+    // One shelf per id: the shelf id is a lazy-list key, and a repeated key crashes the list.
+    val uniqueFeed = feed.distinctBy { it.id }
+    val feedIds = uniqueFeed.map { it.id }.toSet()
     return buildList {
         this@withFeed.find { it.id == SectionOnRepeat }?.let { add(it) }
         this@withFeed.find { it.id == SectionRecentlyPlayed }?.let { add(it) }
-        feed.forEach { shelf -> add(carousel(shelf.id, shelf.title, shelf.tracks.take(CarouselSize))) }
+        uniqueFeed.forEach { shelf -> add(carousel(shelf.id, shelf.title, shelf.tracks.distinctBy { it.id }.take(CarouselSize))) }
         // The rest, without duplicating the feed or the "because" shelf rebuilt below.
         this@withFeed.filterNot {
             it.id == SectionOnRepeat || it.id == SectionRecentlyPlayed || it.id in feedIds || it.id == SectionBecause
@@ -65,7 +79,7 @@ internal fun List<HomeSection>.withFeed(
             add(
                 shelf(
                     id = SectionBecause,
-                    title = "Because you listened to ${seed.title}",
+                    title = becauseTitle(seed),
                     style = HomeSectionStyle.FEATURED_HERO,
                     tracks = suggestions
                         .filter { it.id != seed.id }
@@ -78,8 +92,9 @@ internal fun List<HomeSection>.withFeed(
 }
 
 /** Time of day the user is most likely reading this. */
-internal fun greeting(time: LocalTime): String = when (time.hour) {
-    in 5..11 -> "Good morning"
-    in 12..17 -> "Good afternoon"
-    else -> "Good evening"
+@StringRes
+internal fun greeting(time: LocalTime): Int = when (time.hour) {
+    in 5..11 -> R.string.home_greeting_morning
+    in 12..17 -> R.string.home_greeting_afternoon
+    else -> R.string.home_greeting_evening
 }

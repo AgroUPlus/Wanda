@@ -7,6 +7,7 @@ import com.wander.android.data.model.ArtistAlbumSection
 import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
+import com.wander.android.data.model.SearchCatalog
 import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +22,12 @@ data class StreamInfo(
     /** The InnerTube identity that minted this stream, for YouTube Music only. */
     val client: String? = null,
     /** Why a preferred client was skipped; debug mode only. */
-    val note: String? = null
+    val note: String? = null,
+    /**
+     * A ReplayGain 2.0 track gain in dB the source measured for this stream, where it reports one
+     * only at resolve time (YouTube Music's `loudnessDb`). The fallback after the file's own tags.
+     */
+    val loudnessGainDb: Float? = null
 )
 
 /**
@@ -56,9 +62,10 @@ interface IMusicSource {
     /**
      * Whether a track from this source can be *played* right now.
      *
-     * Usually the same as [isSearchable]. They differ for a backend that shows its catalogue to
-     * anyone but only streams to a signed-in account (Deezer): offering such a source as an
-     * alternative copy of a song would hand the user a choice that fails the moment they take it.
+     * Usually the same as [isSearchable]. They would differ for a backend that shows its catalogue
+     * to anyone but only streams to a signed-in account: offering such a source as an alternative
+     * copy of a song would hand the user a choice that fails the moment they take it. Playback
+     * checks this before asking a source for a stream, and looks for a connected copy instead.
      */
     val isStreamable: StateFlow<Boolean> get() = isSearchable
 
@@ -74,6 +81,17 @@ interface IMusicSource {
      */
     suspend fun search(query: String, kind: SearchKind): Result<List<UnifiedTrack>> =
         if (kind == SearchKind.TRACKS) search(query) else Result.success(emptyList())
+
+    /**
+     * [search], with the albums and artists the backend matched as well — for the search screen.
+     *
+     * Only meaningful when [SourceCapabilities.collectionSearch] is set. The default answers with
+     * [search]'s songs and no records or artists: a source that cannot search those has none to
+     * report, and records pieced together from its songs would be a search it never ran.
+     */
+    suspend fun searchCatalog(query: String, kind: SearchKind): Result<SearchCatalog> =
+        search(query, kind).map { SearchCatalog(tracks = it) }
+
     suspend fun getStreamInfo(trackId: String): Result<StreamInfo>
 
     /** The video-only stream of a clip; only meaningful when [SourceCapabilities.videoClips] is set. */
@@ -167,9 +185,24 @@ interface IMusicSource {
     suspend fun addToPlaylist(playlistId: String, trackIds: List<String>): Result<Unit> =
         Result.failure(UnsupportedOperationException("$displayName cannot modify playlists"))
 
+    /**
+     * Renames a playlist and replaces its description; a null or blank [comment] clears it.
+     * See [createPlaylist].
+     */
+    suspend fun updatePlaylistDetails(playlistId: String, name: String, comment: String?): Result<Unit> =
+        Result.failure(UnsupportedOperationException("$displayName cannot modify playlists"))
+
     /** Deletes a playlist. */
     suspend fun deletePlaylist(playlistId: String): Result<Unit> =
         Result.failure(UnsupportedOperationException("$displayName cannot delete playlists"))
+
+    /** Removes the entry at [index] of a playlist this source holds. See [createPlaylist]. */
+    suspend fun removeFromPlaylist(playlistId: String, index: Int): Result<Unit> =
+        Result.failure(UnsupportedOperationException("$displayName cannot modify playlists"))
+
+    /** Moves the entry at [from] to [to]. See [createPlaylist]. */
+    suspend fun moveInPlaylist(playlistId: String, from: Int, to: Int): Result<Unit> =
+        Result.failure(UnsupportedOperationException("$displayName cannot modify playlists"))
 
     /**
      * A public link to [target] that anyone can open, for sharing.
@@ -182,7 +215,18 @@ interface IMusicSource {
     suspend fun createShareLink(target: ShareTarget): Result<String> =
         Result.failure(UnsupportedOperationException("$displayName cannot create share links"))
 
-    suspend fun setLiked(trackId: String, liked: Boolean): Result<Unit> = Result.success(Unit)
+    /**
+     * Likes or unlikes [trackId] on the backend. Only meaningful when [SourceCapabilities.likes] is
+     * set; the default fails, since a like reported as synced that went nowhere is a quiet lie.
+     */
+    suspend fun setLiked(trackId: String, liked: Boolean): Result<Unit> =
+        Result.failure(UnsupportedOperationException("$displayName cannot store likes"))
+
+    /** Records a play on the backend. Only meaningful when [SourceCapabilities.scrobble] is set. */
     suspend fun scrobble(trackId: String, submissionTime: Long = System.currentTimeMillis()): Result<Unit> =
-        Result.success(Unit)
+        Result.failure(UnsupportedOperationException("$displayName does not record plays"))
+
+    /** Tells the backend [trackId] is playing now, without counting a play. See [SourceCapabilities.scrobble]. */
+    suspend fun nowPlaying(trackId: String): Result<Unit> =
+        Result.failure(UnsupportedOperationException("$displayName has no now playing"))
 }

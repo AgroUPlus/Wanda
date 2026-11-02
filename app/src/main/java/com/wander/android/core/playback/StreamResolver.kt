@@ -39,7 +39,8 @@ import javax.inject.Singleton
 @Singleton
 @OptIn(UnstableApi::class)
 class StreamResolver @Inject constructor(
-    private val musicRepository: MusicRepository
+    private val musicRepository: MusicRepository,
+    private val loudnessHints: LoudnessHints
 ) : ResolvingDataSource.Resolver {
 
     /**
@@ -97,6 +98,7 @@ class StreamResolver @Inject constructor(
             streamInfo.route, streamInfo.client, streamInfo.format, streamInfo.bitRateKbps, host, streamInfo.note
         )
         _resolvedStreams.update { it.withBound(trackId, entry) }
+        loudnessHints.record(trackId, streamInfo.loudnessGainDb)
 
         if (streamInfo.format == MimeTypes.APPLICATION_M3U8) {
             _resolvedLive.update { if (trackId in it) it else it + trackId }

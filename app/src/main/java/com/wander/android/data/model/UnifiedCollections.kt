@@ -38,5 +38,10 @@ data class UnifiedPlaylist(
     val songCount: Int = 0,
     val durationMs: Long = 0L,
     val isPublic: Boolean = false,
-    val isAutoDownload: Boolean = false
+    val isAutoDownload: Boolean = false,
+    /**
+     * Whether this account may rename it or change its entries. False for a playlist someone else
+     * owns that the account merely follows or saved, and for a backend's own automatic lists.
+     */
+    val isEditable: Boolean = true
 )

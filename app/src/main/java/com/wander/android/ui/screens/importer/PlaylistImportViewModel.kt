@@ -1,7 +1,9 @@
 package com.wander.android.ui.screens.importer
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.network.userMessageRes
 import com.wander.android.data.importer.ImportProgress
 import com.wander.android.data.importer.PlatformType
 import com.wander.android.data.repository.PlaylistImportRepository
@@ -23,7 +25,8 @@ import javax.inject.Inject
 class PlaylistImportViewModel @Inject constructor(
     private val importRepository: PlaylistImportRepository,
     private val googleAccountManager: GoogleAccountManager,
-    private val parserCoordinator: PlaylistParserCoordinator
+    private val parserCoordinator: PlaylistParserCoordinator,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(PlaylistImportUiState())
@@ -31,6 +34,22 @@ class PlaylistImportViewModel @Inject constructor(
 
     val progress: StateFlow<ImportProgress> = importRepository.progress
     val isYouTubeLoggedIn: StateFlow<Boolean> = googleAccountManager.isLoggedIn
+
+    init {
+        // A playlist link shared into the app (`Routes.importPlaylist`): read once, by this
+        // ViewModel's own creation, so returning to the screen does not load it again.
+        savedStateHandle.get<String>(SHARED_URL_ARG)?.takeIf { it.isNotBlank() }?.let(::openSharedLink)
+    }
+
+    /** Straight to the link's platform with the link already loading, past the picker and guide. */
+    private fun openSharedLink(url: String) {
+        _state.value = _state.value.copy(
+            platform = PlatformType.detect(url),
+            discoveryDismissed = true,
+            manualInput = url
+        )
+        loadPlaylist(url)
+    }
 
     private fun isLoggedInElsewhere(platform: PlatformType): Boolean =
         platform == PlatformType.YOUTUBE && googleAccountManager.isLoggedIn.value
@@ -89,7 +108,7 @@ class PlaylistImportViewModel @Inject constructor(
                     error = null
                 )
             }.onFailure { err ->
-                _state.value = _state.value.copy(isDiscovering = false, hasCheckedDiscovery = true, error = err.message)
+                _state.value = _state.value.copy(isDiscovering = false, hasCheckedDiscovery = true, error = err.userMessageRes())
             }
         }
     }
@@ -119,7 +138,7 @@ class PlaylistImportViewModel @Inject constructor(
             }.onFailure { err ->
                 _state.value = _state.value.copy(
                     isLoadingPlaylist = false,
-                    error = err.message ?: "Failed to read playlist"
+                    error = err.userMessageRes()
                 )
             }
         }
@@ -162,5 +181,10 @@ class PlaylistImportViewModel @Inject constructor(
             selectedIndices = emptySet(),
             error = null
         )
+    }
+
+    private companion object {
+        /** The `url` argument of `Routes.IMPORT_PLAYLIST_ROUTE`. */
+        const val SHARED_URL_ARG = "url"
     }
 }

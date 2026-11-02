@@ -34,8 +34,11 @@ internal class CloudBackupStore @Inject constructor(
     val isAvailable: Boolean get() = api.isAvailable
     val access: VaultAccess get() = api.access
 
-    /** What a backup made now carries. */
-    fun sections(): Set<BackupSection> = BackupSection.entries
+    /**
+     * What a backup made now carries. Never the fingerprints: a daily upload of that size would
+     * cost more than measuring them again, so they travel only in a file export that asks for them.
+     */
+    fun sections(): Set<BackupSection> = BackupSection.defaults
         .filter { it != BackupSection.ACCOUNTS || secureStorage.cloudBackupAccounts.value }
         .toSet()
 

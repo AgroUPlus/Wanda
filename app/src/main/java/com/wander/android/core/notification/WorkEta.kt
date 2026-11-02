@@ -1,5 +1,7 @@
 package com.wander.android.core.notification
 
+import android.content.res.Resources
+import com.wander.android.R
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -19,14 +21,27 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 internal class WorkEta(private val startedAtMs: Long) {
 
+    /** [estimate], as the phrase the notification shows; null when it is too early to say. */
+    fun describe(resources: Resources, done: Int, total: Int, nowMs: Long): String? =
+        when (val left = estimate(done, total, nowMs)) {
+            null -> null
+            Estimate.UnderAMinute -> resources.getString(R.string.work_eta_under_minute)
+            is Estimate.Minutes -> resources.getQuantityString(R.plurals.work_eta_minutes, left.minutes, left.minutes)
+            is Estimate.Hours -> if (left.minutes == 0) {
+                resources.getQuantityString(R.plurals.work_eta_hours, left.hours, left.hours)
+            } else {
+                resources.getString(R.string.work_eta_hours_minutes, left.hours, left.minutes)
+            }
+        }
+
     /**
-     * A human phrase for the time left after [done] of [total], or null when it is too early to say.
+     * How long is left after [done] of [total], or null when it is too early to say.
      *
      * Deliberately coarse. Rounding to the minute above ten minutes says "this is an estimate" in a
      * way that "17 min 42 s" does not, and the extra precision is spurious — it is an average over
      * items whose real cost varies wildly.
      */
-    fun describe(done: Int, total: Int, nowMs: Long): String? {
+    fun estimate(done: Int, total: Int, nowMs: Long): Estimate? {
         if (done < MIN_SAMPLES || done >= total) return null
 
         val elapsed = nowMs - startedAtMs
@@ -36,18 +51,26 @@ internal class WorkEta(private val startedAtMs: Long) {
         val minutes = remaining.inWholeMinutes
 
         return when {
-            minutes < 1L -> "under a minute left"
-            minutes < 60L -> "about $minutes min left"
+            minutes < 1L -> Estimate.UnderAMinute
+            minutes < MINUTES_PER_HOUR -> Estimate.Minutes(minutes.toInt())
             else -> {
                 val hours = remaining.inWholeHours
-                val rest = minutes - hours * 60
-                if (rest == 0L) "about $hours h left" else "about $hours h $rest min left"
+                Estimate.Hours(hours.toInt(), (minutes - hours * MINUTES_PER_HOUR).toInt())
             }
         }
+    }
+
+    /** The time left, in the units the notification speaks in. */
+    sealed interface Estimate {
+        data object UnderAMinute : Estimate
+        data class Minutes(val minutes: Int) : Estimate
+        /** [minutes] is what is left over after the whole hours, 0 to 59. */
+        data class Hours(val hours: Int, val minutes: Int) : Estimate
     }
 
     private companion object {
         /** Enough completed items for the average to mean something rather than echo the first. */
         const val MIN_SAMPLES = 3
+        const val MINUTES_PER_HOUR = 60L
     }
 }

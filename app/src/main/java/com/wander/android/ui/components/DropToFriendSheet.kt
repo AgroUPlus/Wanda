@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -46,6 +47,7 @@ internal fun DropToFriendSheet(
     val friends by viewModel.friends.collectAsStateWithLifecycle()
     val sending by viewModel.sending.collectAsStateWithLifecycle()
     var note by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
     WandaSheet(
         onDismissRequest = onDismiss,
@@ -114,9 +116,9 @@ internal fun DropToFriendSheet(
                                 viewModel.send(friend.username, track, note) { error ->
                                     onSent(
                                         if (error == null) {
-                                            "Sent to ${friend.name}"
+                                            context.getString(R.string.drop_sent_to, friend.name)
                                         } else {
-                                            error.message ?: "That could not be sent"
+                                            error.message ?: context.getString(R.string.drop_not_sent)
                                         }
                                     )
                                     onDismiss()

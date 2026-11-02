@@ -86,4 +86,20 @@ class ReplayGainTagsTest {
         assertEquals(ReplayGainInfo.NONE, ReplayGainTags.read(null))
         assertEquals(ReplayGainInfo.NONE, ReplayGainTags.read(Metadata()))
     }
+
+    @Test
+    fun rejectsGainsNoRealTrackCouldCarry() {
+        // Below about -21 dB a track would be louder than a full-scale square wave.
+        assertNull(ReplayGainTags.parseDb("-40 dB"))
+        assertNull(ReplayGainTags.plausible(-40f))
+        assertNull(ReplayGainTags.plausible(Float.NEGATIVE_INFINITY))
+        assertNull(ReplayGainTags.plausible(Float.NaN))
+        assertEquals(-14f, ReplayGainTags.plausible(-14f)!!, 0f)
+    }
+
+    @Test
+    fun anR128GainBeyondTheFloorIsRejected() {
+        // -10240 / 256 = -40 dB against -23 LUFS, -35 dB against -18 LUFS.
+        assertNull(ReplayGainTags.parseR128("-10240"))
+    }
 }

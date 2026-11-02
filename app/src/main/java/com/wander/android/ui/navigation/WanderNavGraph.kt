@@ -63,7 +63,8 @@ fun NavGraphBuilder.wanderNavGraph(
         HistoryScreen(
             contentPadding = contentPadding,
             onBack = navController::popBackStack,
-            onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) }
+            onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) },
+            onOpenAlbum = { navController.navigateSettled(Routes.album(it)) }
         )
     }
 
@@ -87,6 +88,7 @@ fun NavGraphBuilder.wanderNavGraph(
         PlaylistScreen(
             contentPadding = contentPadding,
             onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) },
+            onOpenAlbum = { navController.navigateSettled(Routes.album(it)) },
             // The converted copy replaces the original on the stack: Back from it leads where the
             // original was opened from, not to the playlist that was just copied.
             onOpenPlaylist = { id ->
@@ -123,6 +125,7 @@ fun NavGraphBuilder.wanderNavGraph(
             playerConnection = playerConnection,
             onClose = navController::popBackStack,
             onOpenArtist = { name, id -> navController.navigateSettled(Routes.artist(name, id)) },
+            onOpenAlbum = { navController.navigateSettled(Routes.album(it)) },
             onOpenJam = {
                 onCollapsePlayer()
                 navController.popBackStack()

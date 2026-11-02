@@ -1,5 +1,6 @@
 package com.wander.android.data.sources.agro
 
+import com.wander.android.core.network.loggableMessage
 import android.util.Log
 import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.CoroutineScope
@@ -171,7 +172,7 @@ internal class AgroHandoffPublisher @Inject constructor(
 
     /** Only the failure text — never the server URL or key, both of which are credentials. */
     private fun log(what: String, error: Throwable) {
-        Log.w(TAG, "Agro $what failed: ${error.message}")
+        Log.w(TAG, "Agro $what failed: ${error.loggableMessage()}")
     }
 
     /** Position is deliberately excluded: it changes constantly and must not trigger a send. */

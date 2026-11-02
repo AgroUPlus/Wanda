@@ -3,26 +3,25 @@ package com.wander.android.core.security
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import com.wander.android.data.model.PlaybackMediaType
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * The only place credentials live. Backed by the Android Keystore via
- * [EncryptedSharedPreferences] — nothing here is ever written to Room, to logs, or to backups.
+ * The only place credentials live. Backed by the Android Keystore via EncryptedSharedPreferences
+ * (see [openEncryptedPrefs]) — nothing here is ever written to Room, to logs, or to backups.
  */
 class SecureStorage internal constructor(private val prefs: SharedPreferences) {
 
     internal val displayPrefs = SecureDisplayPreferences(prefs)
-    private val playbackPrefs = SecurePlaybackPreferences(prefs)
+    internal val playbackPrefs = SecurePlaybackPreferences(prefs)
     private val accountPrefs = SecureAccountPreferences(prefs)
     private val agroPrefs = SecureAgroPreferences(prefs)
     internal val appPrefs = SecureAppPreferences(prefs)
-
+    internal val downloads = SecureDownloadPreferences(prefs)
     /** The scrobbling services' accounts — see [SecureScrobblePreferences]. */
     internal val scrobbling = SecureScrobblePreferences(prefs)
     internal val loudness = SecureLoudnessPreferences(prefs)
+    internal val searchHistory = SecureSearchHistory(prefs)
 
     // ── Display Preferences ─────────────────────────────────────────────────────────────────
     val isAmoledBlack: StateFlow<Boolean> = displayPrefs.isAmoledBlack
@@ -244,7 +243,6 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
 
     fun workPaused(kindName: String): StateFlow<Boolean> = appPrefs.workPaused(kindName)
     fun setWorkPaused(kindName: String, paused: Boolean) = appPrefs.setWorkPaused(kindName, paused)
-
     // ── Sharing ─────────────────────────────────────────────────────────────────────────────
     val shareDomain: StateFlow<String> = appPrefs.shareDomain
     val agroShareDomain: StateFlow<String> = appPrefs.agroShareDomain
@@ -276,24 +274,14 @@ class SecureStorage internal constructor(private val prefs: SharedPreferences) {
         appPrefs.reloadFlows()
         scrobbling.reloadFlows()
         loudness.reloadFlows()
+        searchHistory.reloadFlows()
+        downloads.reloadFlows()
     }
 
     companion object {
         const val KEY_CATALOG_CURSOR = com.wander.android.core.security.KEY_CATALOG_CURSOR
         const val KEY_CATALOG_PUBLISHED_AT = com.wander.android.core.security.KEY_CATALOG_PUBLISHED_AT
 
-        fun create(context: Context): SecureStorage {
-            val masterKey = MasterKey.Builder(context.applicationContext)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            val prefs = EncryptedSharedPreferences.create(
-                context.applicationContext,
-                PREFS_NAME,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
-            return SecureStorage(prefs)
-        }
+        fun create(context: Context): SecureStorage = SecureStorage(openEncryptedPrefs(context))
     }
 }

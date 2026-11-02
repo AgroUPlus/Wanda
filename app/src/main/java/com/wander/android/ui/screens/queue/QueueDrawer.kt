@@ -52,10 +52,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.core.playback.PlayerConnection
-import com.wander.android.data.model.UnifiedTrack
-import com.wander.android.data.repository.artistIdFor
+import com.wander.android.core.playback.playPosition
 import com.wander.android.ui.components.AddToPlaylistHost
-import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.rememberHaptics
 import com.wander.android.ui.components.scrollingTitle
 import kotlinx.coroutines.launch
@@ -80,10 +78,11 @@ internal fun QueueDrawer(
     drawer: QueueDrawerState,
     playerConnection: PlayerConnection,
     onOpenArtist: ((String, String?) -> Unit)? = null,
+    onOpenAlbum: ((String) -> Unit)? = null,
     queueViewModel: QueueViewModel = hiltViewModel()
 ) {
     val state by playerConnection.state.collectAsStateWithLifecycle()
-    var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
+    var actionsFor by remember { mutableStateOf<QueueEntry?>(null) }
     val addToPlaylist = AddToPlaylistHost()
     val haptics = rememberHaptics()
     val scope = rememberCoroutineScope()
@@ -117,38 +116,22 @@ internal fun QueueDrawer(
     val currentSpec by rememberUpdatedState(spec)
     val nestedScroll = remember(drawer) { drawerNestedScroll(drawer) { currentSpec } }
 
-    actionsFor?.let { track ->
-        TrackActionsSheet(
-            track = track,
-            isLiked = track.isLiked,
-            onPlayNext = {
-                queueViewModel.playNext(track)
-                actionsFor = null
-            },
-            onAddToQueue = {
-                queueViewModel.addToQueue(track)
-                actionsFor = null
-            },
-            onStartRadio = {
-                queueViewModel.startRadio(track)
-                actionsFor = null
-            },
-            onToggleLike = { queueViewModel.toggleLike(track) },
-            onRemove = {
-                val idx = state.queue.indexOfFirst { it.id == track.id }
-                if (idx >= 0) queueViewModel.removeFromQueue(idx)
-                actionsFor = null
-            },
-            onOpenArtist = track.artist
-                .takeIf { it.isNotBlank() }
-                ?.let { onOpenArtist?.let { open -> { name -> open(name, track.artistIdFor(name)) } } },
+    val entries = rememberQueueEntries(state, itemGenerations)
+    // Under shuffle the rows are in play order and a move reorders the player's index order,
+    // which is not what the drag would appear to do.
+    val canReorder = !state.orderLocked && !state.isShuffle
+
+    actionsFor?.let { pressed ->
+        QueueTrackActions(
+            pressed = pressed,
+            entries = entries,
+            queue = state.queue,
+            canReorder = canReorder,
+            queueViewModel = queueViewModel,
+            addToPlaylist = addToPlaylist,
+            onOpenArtist = onOpenArtist,
             onDismiss = { actionsFor = null },
-            onShare = if (queueViewModel.canShare(track)) {
-                { queueViewModel.share(track) }
-            } else null,
-            onAddToPlaylist = if (addToPlaylist.canAdd(track)) {
-                { addToPlaylist.open(track) }
-            } else null
+            onOpenAlbum = onOpenAlbum
         )
     }
 
@@ -185,16 +168,16 @@ internal fun QueueDrawer(
                 Column(modifier = Modifier.fillMaxWidth()) {
                     BottomSheetDefaults.DragHandle(modifier = Modifier.align(Alignment.CenterHorizontally))
                     QueueDrawerHeader(
-                        currentIndex = state.currentIndex,
+                        playPosition = state.playPosition,
                         queueSize = state.queue.size,
                         orderLocked = state.orderLocked,
-                        onClearQueue = playerConnection::clearQueue
+                        onClearQueue = playerConnection::clearQueue,
+                        queue = state.queue
                     )
 
-
                     QueueUpNext(
-                        entries = rememberQueueEntries(state.queue, state.currentIndex, itemGenerations),
-                        canReorder = !state.orderLocked,
+                        entries = entries,
+                        canReorder = canReorder,
                         onPlay = { playerConnection.seekToIndex(it) },
                         onMove = { from, to ->
                             playerConnection.moveInQueue(from, to)

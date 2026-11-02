@@ -1,10 +1,14 @@
 package com.wander.android.data.repository
 
+import android.content.Context
+import com.wander.android.R
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.dao.ShelfDao
+import com.wander.android.core.database.dao.getTracksByIdsChunked
 import com.wander.android.core.database.entity.ShelfEntity
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.RecommendedShelf
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import javax.inject.Inject
@@ -26,7 +30,8 @@ class RecommendationRepository @Inject constructor(
     private val musicRepository: MusicRepository,
     private val popularityRepository: PopularityRepository,
     private val trackDao: TrackDao,
-    private val shelfDao: ShelfDao
+    private val shelfDao: ShelfDao,
+    @ApplicationContext private val context: Context
 ) {
 
     /**
@@ -73,7 +78,7 @@ class RecommendationRepository @Inject constructor(
             // Last, so a backend's own recommender leads the feed. This shelf is the household's
             // listening, which is worth showing but is not what the user came to Home for.
             popular.await().takeIf { it.isNotEmpty() }?.let {
-                add(RecommendedShelf(PopularShelfId, "Popular on Agro", it))
+                add(RecommendedShelf(PopularShelfId, context.getString(R.string.shelf_popular_agro), it))
             }
         }
 
@@ -113,7 +118,9 @@ class RecommendationRepository @Inject constructor(
         if (rows.isEmpty()) return emptyList()
 
         val ids = rows.flatMap { it.trackIds.split(",") }.filter { it.isNotBlank() }.distinct()
-        val byId = trackDao.getTracksByIds(ids).associateBy { it.id }
+        // Chunked: a full feed (home plus the discovery pages) can name more tracks than the 999
+        // values SQLite binds in one statement on older Android, and that query threw.
+        val byId = trackDao.getTracksByIdsChunked(ids).associateBy { it.id }
 
         return rows.mapNotNull { row ->
             val tracks = row.trackIds.split(",")

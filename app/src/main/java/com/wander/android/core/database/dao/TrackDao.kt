@@ -14,7 +14,7 @@ import com.wander.android.data.model.isOneShotTrackId
 private const val CONFLICT_ROW_ID = -1L
 
 @Dao
-interface TrackDao : TrackLibraryQueries, TrackSyncQueries {
+interface TrackDao : TrackLibraryQueries, TrackSyncQueries, TrackRadioQueries {
 
     /**
      * Records that a track turned out to be a livestream.
@@ -40,6 +40,36 @@ interface TrackDao : TrackLibraryQueries, TrackSyncQueries {
             updateSourceFields(existing.map { it.toSourceFields() })
             existing.filter { it.isEpisode }.map { it.id }.takeIf { it.isNotEmpty() }?.let { markAsEpisodes(it) }
         }
+    }
+
+    /**
+     * Writes one MediaStore scan and prunes what it says has gone, as a single transaction, so a
+     * rescan interrupted half-way leaves the library as it was rather than half-built.
+     *
+     * Rows are updated in place — never cleared and rebuilt — so a full rescan keeps the likes,
+     * play counts, last-played times and content hashes the user and the hasher put there.
+     *
+     * The set difference is worked out here rather than with `NOT IN (:keepIds)`: a library is
+     * easily larger than the 999 values SQLite binds per statement on Android 11 and older, and
+     * every id statement below is chunked for the same reason.
+     *
+     * @param keepIds the local ids that survive, or null to prune nothing.
+     * @return content hashes of the pruned rows, so the server can be told what went. They are
+     *   read before the delete; afterwards there is nothing left to read them from.
+     */
+    @Transaction
+    suspend fun applyLocalScan(scanned: List<TrackEntity>, keepIds: List<String>?): List<String> {
+        if (scanned.isNotEmpty()) {
+            upsertTracks(scanned)
+            scanned.forEach { refreshLocalFileFields(it.id, it.sizeBytes, it.fileExtension, it.albumArtist) }
+            scanned.map { it.id }.chunked(MAX_BOUND_IDS).forEach { markAsLibrary(it) }
+        }
+        if (keepIds == null) return emptyList()
+        val keep = keepIds.toHashSet()
+        val goneIds = localTrackIds().filterNot { it in keep }.chunked(MAX_BOUND_IDS)
+        val gone = goneIds.flatMap { localContentHashesOf(it) }
+        goneIds.forEach { deleteLocalTracks(it) }
+        return gone
     }
 
     /** Episodes of subscribed feeds whose title, show or author contains [query], newest first. */

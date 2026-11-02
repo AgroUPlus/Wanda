@@ -30,7 +30,18 @@ data class SubsonicResponse(
     /** `getArtist.view` — an artist and their records. */
     val artist: SubsonicArtistDetail? = null,
     /** `getArtistInfo2.view` — the biography and portraits, which the artist row does not carry. */
-    val artistInfo2: SubsonicArtistInfo? = null
+    val artistInfo2: SubsonicArtistInfo? = null,
+    /** `getOpenSubsonicExtensions.view` — what an OpenSubsonic server adds to the classic API. */
+    val openSubsonicExtensions: List<SubsonicExtension>? = null,
+    val randomSongs: SubsonicSongList? = null,
+    val topSongs: SubsonicSongList? = null,
+    val internetRadioStations: SubsonicRadioStations? = null
+)
+
+@Serializable
+data class SubsonicExtension(
+    val name: String,
+    val versions: List<Int> = emptyList()
 )
 
 /** `getArtist.view`: the artist row plus every album credited to them. */
@@ -133,7 +144,20 @@ data class SubsonicSong(
     val path: String? = null,
     val isVideo: Boolean = false,
     val playCount: Int = 0,
-    val starred: String? = null
+    val starred: String? = null,
+    /** OpenSubsonic; absent on plain Subsonic servers. */
+    val replayGain: SubsonicReplayGain? = null
+)
+
+/**
+ * OpenSubsonic's `replayGain`, in dB. Only the gains are read: playback levels through the player
+ * volume, which can only attenuate, so a peak could never change what is applied — see
+ * `LoudnessGain`.
+ */
+@Serializable
+data class SubsonicReplayGain(
+    val trackGain: Float? = null,
+    val albumGain: Float? = null
 )
 
 @Serializable
@@ -170,7 +194,9 @@ data class SubsonicPlaylist(
     val coverArt: String? = null,
     val songCount: Int = 0,
     val duration: Long = 0L,
-    val public: Boolean = false
+    val public: Boolean = false,
+    /** Whose it is. A public playlist of another user is listed too, and only its owner may edit it. */
+    val owner: String? = null
 )
 
 @Serializable

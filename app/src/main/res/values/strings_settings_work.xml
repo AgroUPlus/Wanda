@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings → Playback & storage: stop background work until turned back off. -->
+    <string name="settings_pause_measuring">Pause measuring</string>
+    <string name="settings_pause_measuring_sub">Stops measuring now, and nothing is measured in the background until you turn this off.</string>
+    <string name="settings_pause_downloads">Pause downloads</string>
+    <string name="settings_pause_downloads_sub">Stops downloading now, and nothing downloads in the background until you turn this off.</string>
+</resources>

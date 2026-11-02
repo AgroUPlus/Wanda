@@ -193,6 +193,10 @@ internal fun partName(section: String): String = when (section) {
     "LIBRARY" -> stringResource(R.string.cloud_backup_part_library)
     "MERGES" -> stringResource(R.string.cloud_backup_part_merges)
     "EPISODES" -> stringResource(R.string.cloud_backup_part_episodes)
+    "METADATA" -> stringResource(R.string.cloud_backup_part_metadata)
+    "SHARED" -> stringResource(R.string.cloud_backup_part_shared)
+    "FEATURES" -> stringResource(R.string.cloud_backup_part_features)
+    "EMBEDDINGS" -> stringResource(R.string.cloud_backup_part_embeddings)
     else -> section
 }
 

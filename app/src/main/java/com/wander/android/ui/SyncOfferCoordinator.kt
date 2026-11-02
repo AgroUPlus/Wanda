@@ -1,5 +1,7 @@
 package com.wander.android.ui
 
+import android.util.Log
+import com.wander.android.core.network.loggableMessage
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.repository.FetchProgress
 import com.wander.android.data.repository.LibrarySyncRepository
@@ -71,7 +73,11 @@ class SyncOfferCoordinator @Inject constructor(
         if (dismissedOffer || !librarySync.isEnabled) return
         scope.launch {
             librarySync.flushPendingForget()
-            val offered = librarySync.missingHere().getOrDefault(emptyList())
+            // A failed check is not "nothing missing": the offer already showing stays as it was.
+            val offered = librarySync.missingHere().getOrElse { error ->
+                Log.w(TAG, "Sync offer check failed: ${error.loggableMessage()}")
+                return@launch
+            }
             _syncOffer.value = offered
             _syncCovers.value = syncOfferArtwork.covers(offered)
             _offerRoute.value = routeFor(offered)
@@ -141,4 +147,8 @@ class SyncOfferCoordinator @Inject constructor(
     fun syncErrors(scope: CoroutineScope): SharedFlow<String> =
         merge(_writeErrors.asSharedFlow(), librarySync.errors)
             .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 0)
+
+    private companion object {
+        const val TAG = "SyncOffer"
+    }
 }

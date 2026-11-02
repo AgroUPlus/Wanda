@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The debug identity's package, for res/xml/shortcuts.xml — see the main source set's copy. -->
+<resources>
+    <string name="shortcut_target_package" translatable="false">com.wander.android.debug</string>
+</resources>

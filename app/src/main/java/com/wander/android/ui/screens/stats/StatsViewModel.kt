@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.stats
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.network.userMessageRes
 import com.wander.android.data.repository.ListeningReport
 import com.wander.android.data.repository.StatsRepository
 import com.wander.android.data.repository.StatsWindow
@@ -76,7 +77,7 @@ class StatsViewModel @Inject constructor(
                     _state.update {
                         it.copy(
                             isLoading = false,
-                            error = failure.message ?: "Couldn't load your statistics."
+                            error = failure.userMessageRes()
                         )
                     }
                 }
@@ -90,5 +91,6 @@ data class StatsUiState(
     val isLoading: Boolean = true,
     /** True when the numbers cover every device on the Agro account rather than this one. */
     val isFleetWide: Boolean = false,
-    val error: String? = null
+    /** A @StringRes saying what went wrong, or null. Never an exception's own text. */
+    val error: Int? = null
 )

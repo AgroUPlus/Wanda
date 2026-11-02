@@ -3,6 +3,7 @@ package com.wander.android.core.playback
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -28,7 +29,16 @@ internal class EpisodeSkipSilence(
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) = apply()
 
     private fun apply() {
-        val isEpisode = player.currentMediaItem?.toUnifiedTrack()?.isEpisode == true
-        player.skipSilenceEnabled = enabled.value && isEpisode
+        player.skipSilenceEnabled = skipsSilence(enabled.value, player.currentMediaItem?.toUnifiedTrack())
     }
 }
+
+/**
+ * Whether [track] plays with silence skipped, given the setting is [enabled].
+ *
+ * Shared with the offload decision in [PlayerConnection], because skipping silence is an audio
+ * processor and offload bypasses every one of them: with both on, the setting silently did nothing.
+ * See [offloadAllowed].
+ */
+internal fun skipsSilence(enabled: Boolean, track: UnifiedTrack?): Boolean =
+    enabled && track?.isEpisode == true

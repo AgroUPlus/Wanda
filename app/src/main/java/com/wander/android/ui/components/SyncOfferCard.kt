@@ -106,9 +106,9 @@ internal fun SyncOfferCard(
                             // from the server, and naming the far device would suggest a
                             // connection to it that does not exist.
                             text = if (route == SyncRoute.DIRECT && peerName != null) {
-                                "$peerName · ${route.label}"
+                                stringResource(R.string.sync_route_via_peer, peerName, stringResource(route.labelRes()))
                             } else {
-                                route.label
+                                stringResource(route.labelRes())
                             },
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -16,8 +16,8 @@ data class SourceCapabilities(
     val playlists: Boolean = false,
     /**
      * The backend can be *told* about playlists, not just asked. Reading and writing are separate
-     * because most sources do one without the other: YouTube Music lists playlists it will not let
-     * us build, and a source that cannot write must not offer "add to playlist" at all.
+     * because a source can do one without the other — Agro lists followed playlists whose edits
+     * it leaves to Agro — and a source that cannot write must not offer "add to playlist" at all.
      */
     val playlistWrite: Boolean = false,
     val likes: Boolean = false,
@@ -41,6 +41,13 @@ data class SourceCapabilities(
      * the player is in Video mode. Only YouTube Music files clips alongside songs.
      */
     val videoClips: Boolean = false,
+    /**
+     * A search here also returns the albums and artists matching the query, not only songs —
+     * see `IMusicSource.searchCatalog`. Subsonic's `search3` answers all three in one call, and
+     * YouTube Music answers them as filtered searches; a backend without this contributes songs to
+     * the search screen and nothing else.
+     */
+    val collectionSearch: Boolean = false,
     /**
      * The backend has tracks of its own. Every music backend does; the Agro playlist source does
      * not — its playlists hold tracks from the others — so it is left out wherever the user picks

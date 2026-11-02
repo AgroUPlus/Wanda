@@ -3,8 +3,12 @@ package com.wander.android.data.sources.navidrome
 import android.util.Log
 import com.wander.android.data.model.ArtistAlbumSection
 import com.wander.android.data.model.ArtistDetails
+import com.wander.android.data.model.EXTRA_REPLAYGAIN_ALBUM_DB
+import com.wander.android.data.model.EXTRA_REPLAYGAIN_TRACK_DB
+import com.wander.android.data.model.SearchCatalog
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
+import com.wander.android.data.model.UnifiedArtist
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.async
@@ -24,6 +28,15 @@ class NavidromeCatalogLoader @Inject constructor(
     suspend fun search(query: String): Result<List<UnifiedTrack>> =
         apiClient.search3(query).map { result -> result.song.orEmpty().map { it.toUnified() } }
 
+    suspend fun searchCatalog(query: String): Result<SearchCatalog> =
+        apiClient.search3(query).map { result ->
+            SearchCatalog(
+                tracks = result.song.orEmpty().map { it.toUnified() },
+                albums = result.album.orEmpty().map { it.toUnified() },
+                artists = result.artist.orEmpty().map { it.toUnified() }
+            )
+        }
+
     suspend fun getTrack(trackId: String): Result<UnifiedTrack?> =
         apiClient.getSong(trackId.removePrefix(NAVIDROME_PREFIX)).map { it?.toUnified() }
 
@@ -31,16 +44,26 @@ class NavidromeCatalogLoader @Inject constructor(
         apiClient.getSimilarSongs2(seedTrackId.removePrefix(NAVIDROME_PREFIX), count)
             .map { songs -> songs.map { it.toUnified() } }
 
+    /** `getStarred2` has no paging of its own, so the page is cut from the whole list here. */
     suspend fun getLikedTracks(limit: Int, offset: Int): Result<List<UnifiedTrack>> =
-        apiClient.getStarred2().map { starred -> starred.song.orEmpty().map { it.toUnified() } }
+        apiClient.getStarred2().map { starred ->
+            starred.song.orEmpty().drop(offset).take(limit).map { it.toUnified() }
+        }
 
+    /**
+     * Songs from the newest albums. Subsonic lists recent albums, not songs, so each album has to be
+     * opened; that is done a few at a time and stops once [limit] songs are in hand, rather than
+     * opening all [RECENT_ALBUMS] at once for a shelf that shows twenty.
+     */
     suspend fun getRecentTracks(limit: Int): Result<List<UnifiedTrack>> = coroutineScope {
         apiClient.getAlbumList2(type = "newest", size = RECENT_ALBUMS).mapCatching { albums ->
-            albums
-                .map { album -> async { apiClient.getAlbum(album.id).getOrNull()?.song.orEmpty() } }
-                .flatMap { it.await() }
-                .map { it.toUnified() }
-                .take(limit)
+            val songs = mutableListOf<SubsonicSong>()
+            for (chunk in albums.chunked(ALBUMS_AT_ONCE)) {
+                if (songs.size >= limit) break
+                chunk.map { album -> async { apiClient.getAlbum(album.id) } }
+                    .forEach { songs += it.await().getOrThrow().song.orEmpty() }
+            }
+            songs.take(limit).map { it.toUnified() }
         }
     }
 
@@ -66,7 +89,10 @@ class NavidromeCatalogLoader @Inject constructor(
             ArtistDetails(
                 id = "$NAVIDROME_PREFIX${artist.id}",
                 name = artist.name,
-                imageUrl = null,
+                // The server's own artwork for the artist, fetched from it like every other cover.
+                // `largeImageUrl` is not used: it points at a third party (Last.fm, Spotify), and
+                // loading it would tell them which artists this user browses.
+                imageUrl = apiClient.buildCoverArtUrl(artist.coverArt),
                 bio = info?.biography?.stripBiographyMarkup(),
                 musicBrainzId = info?.musicBrainzId?.takeIf { it.isNotBlank() },
                 sections = if (albums.isEmpty()) {
@@ -88,7 +114,8 @@ class NavidromeCatalogLoader @Inject constructor(
                 coverArtUrl = apiClient.buildCoverArtUrl(playlist.coverArt),
                 songCount = playlist.songCount,
                 durationMs = playlist.duration * 1000L,
-                isPublic = playlist.public
+                isPublic = playlist.public,
+                isEditable = playlist.owner == null || playlist.owner.equals(apiClient.username, ignoreCase = true)
             )
         }
     }
@@ -114,7 +141,11 @@ class NavidromeCatalogLoader @Inject constructor(
         bitRateKbps = bitRate,
         format = suffix ?: contentType,
         isLiked = starred != null,
-        playCount = playCount
+        playCount = playCount,
+        extraData = buildMap {
+            replayGain?.trackGain?.let { put(EXTRA_REPLAYGAIN_TRACK_DB, it.toString()) }
+            replayGain?.albumGain?.let { put(EXTRA_REPLAYGAIN_ALBUM_DB, it.toString()) }
+        }
     )
 
     fun SubsonicAlbum.toUnified() = UnifiedAlbum(
@@ -130,8 +161,17 @@ class NavidromeCatalogLoader @Inject constructor(
         genre = genre
     )
 
+    fun SubsonicArtist.toUnified() = UnifiedArtist(
+        id = "$NAVIDROME_PREFIX$id",
+        source = SourceType.NAVIDROME,
+        name = name,
+        coverArtUrl = apiClient.buildCoverArtUrl(coverArt),
+        albumCount = albumCount
+    )
+
     private companion object {
         const val RECENT_ALBUMS = 25
+        const val ALBUMS_AT_ONCE = 4
         const val TAG = "NavidromeCatalogLoader"
     }
 }

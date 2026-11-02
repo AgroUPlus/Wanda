@@ -1,9 +1,12 @@
 package com.wander.android.data.sources.navidrome
 
+import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.ArtistDetails
-import com.wander.android.data.model.LyricLine
 import com.wander.android.data.model.LyricsData
+import com.wander.android.data.model.RecommendedShelf
+import com.wander.android.data.model.SearchCatalog
+import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
@@ -26,17 +29,11 @@ private const val PREFIX = "navidrome:"
 class NavidromeSource @Inject constructor(
     private val secureStorage: SecureStorage,
     private val apiClient: SubsonicApiClient,
-    private val catalogLoader: NavidromeCatalogLoader
+    private val catalogLoader: NavidromeCatalogLoader,
+    /** Which of the two quality settings applies: the metered one or the Wi-Fi one. */
+    private val connectivity: ConnectivityObserver,
+    private val homeFeed: NavidromeHomeFeed
 ) : IMusicSource {
-
-    constructor(
-        secureStorage: SecureStorage,
-        apiClient: SubsonicApiClient
-    ) : this(
-        secureStorage = secureStorage,
-        apiClient = apiClient,
-        catalogLoader = NavidromeCatalogLoader(apiClient)
-    )
 
     override val sourceType = SourceType.NAVIDROME
     override val displayName = "Navidrome"
@@ -51,10 +48,14 @@ class NavidromeSource @Inject constructor(
         scrobble = true,
         radio = true,
         lyrics = true,
-        share = true
+        recommendations = true,
+        share = true,
+        collectionSearch = true
     )
 
     override val isConfigured: StateFlow<Boolean> = secureStorage.navidromeConfigured
+
+    private val lyrics = NavidromeLyrics(apiClient)
 
     init {
         applyStoredCredentials()
@@ -90,32 +91,36 @@ class NavidromeSource @Inject constructor(
     override suspend fun search(query: String): Result<List<UnifiedTrack>> =
         catalogLoader.search(query)
 
+    /** One `search3` call answers songs, albums and artists together. Music only, like [search]. */
+    override suspend fun searchCatalog(query: String, kind: SearchKind): Result<SearchCatalog> =
+        if (kind == SearchKind.TRACKS) catalogLoader.searchCatalog(query) else Result.success(SearchCatalog())
+
     override suspend fun getTrack(trackId: String): Result<UnifiedTrack?> =
         catalogLoader.getTrack(trackId)
 
     override suspend fun getStreamInfo(trackId: String): Result<StreamInfo> {
         if (!apiClient.isConfigured) return Result.failure(IllegalStateException("Navidrome not configured"))
+        if (trackId.startsWith(NavidromeHomeFeed.RADIO_PREFIX)) return homeFeed.radioStream(trackId)
+        val quality = if (connectivity.isMetered) {
+            secureStorage.playbackPrefs.navidromeQualityMobile.value
+        } else {
+            secureStorage.playbackPrefs.navidromeQualityWifi.value
+        }
         return Result.success(
             StreamInfo(
-                uri = apiClient.buildStreamUrl(trackId.removePrefix(PREFIX)),
-                format = "audio/*",
-                bitRateKbps = 320
+                uri = apiClient.buildStreamUrl(trackId.removePrefix(PREFIX), quality),
+                format = quality.mimeType,
+                bitRateKbps = quality.maxBitRateKbps.takeIf { it > 0 } ?: 320
             )
         )
     }
 
+    /** See [NavidromeLyrics] for which call a server is asked. */
     override suspend fun getLyrics(trackId: String): Result<LyricsData?> =
-        apiClient.getLyricsBySongId(trackId.removePrefix(PREFIX)).map { list ->
-            val structured = list?.structuredLyrics?.firstOrNull() ?: return@map null
-            val lines = structured.line.orEmpty()
-            if (lines.isEmpty()) return@map null
-            LyricsData(
-                trackId = trackId,
-                isSynced = structured.synced,
-                lines = lines.map { LyricLine(timestampMs = it.start ?: 0L, text = it.value) },
-                source = "Navidrome"
-            )
-        }
+        lyrics.fetch(trackId, trackId.removePrefix(PREFIX))
+
+    /** See [NavidromeHomeFeed] for the shelves. */
+    override suspend fun getRecommendations(): Result<List<RecommendedShelf>> = homeFeed.shelves()
 
     override suspend fun getRadio(seedTrackId: String, count: Int): Result<List<UnifiedTrack>> =
         catalogLoader.getRadio(seedTrackId, count)
@@ -165,6 +170,30 @@ class NavidromeSource @Inject constructor(
             songIdsToAdd = trackIds.map { it.removePrefix(PREFIX) }
         )
 
+    override suspend fun updatePlaylistDetails(playlistId: String, name: String, comment: String?): Result<Unit> =
+        apiClient.updatePlaylistDetails(playlistId.removePrefix(PREFIX), name, comment.orEmpty())
+
+    override suspend fun deletePlaylist(playlistId: String): Result<Unit> =
+        apiClient.deletePlaylist(playlistId.removePrefix(PREFIX))
+
+    override suspend fun removeFromPlaylist(playlistId: String, index: Int): Result<Unit> =
+        apiClient.removeFromPlaylist(playlistId.removePrefix(PREFIX), index)
+
+    /**
+     * Reads the entries afresh and writes them back in the new order. The index is the screen's,
+     * which was read from this same list; one that no longer fits is refused, not guessed at.
+     */
+    override suspend fun moveInPlaylist(playlistId: String, from: Int, to: Int): Result<Unit> {
+        val id = playlistId.removePrefix(PREFIX)
+        val songIds = apiClient.getPlaylist(id).getOrElse { return Result.failure(it) }
+            .entry.orEmpty().map { it.id }.toMutableList()
+        if (from !in songIds.indices || to !in songIds.indices) {
+            return Result.failure(IndexOutOfBoundsException("The playlist changed in the meantime"))
+        }
+        songIds.add(to, songIds.removeAt(from))
+        return apiClient.replacePlaylistSongs(id, songIds)
+    }
+
     /**
      * A song already shared on its own gets the share it has; anything else gets a new one. When
      * the server cannot list its shares, the share is made anyway — the user asked for a link, and
@@ -188,6 +217,11 @@ class NavidromeSource @Inject constructor(
     override suspend fun scrobble(trackId: String, submissionTime: Long): Result<Unit> {
         if (secureStorage.isIncognitoMode) return Result.success(Unit)
         return apiClient.scrobble(trackId.removePrefix(PREFIX), submissionTime / 1000L)
+    }
+
+    override suspend fun nowPlaying(trackId: String): Result<Unit> {
+        if (secureStorage.isIncognitoMode) return Result.success(Unit)
+        return apiClient.nowPlaying(trackId.removePrefix(PREFIX))
     }
 
     suspend fun resolveShare(shareUrlOrId: String): Result<UnifiedTrack> =

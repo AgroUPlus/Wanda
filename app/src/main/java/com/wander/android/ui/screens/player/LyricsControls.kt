@@ -2,15 +2,23 @@ package com.wander.android.ui.screens.player
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -20,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.core.playback.PlaybackState
@@ -29,7 +38,8 @@ import com.wander.android.ui.components.rememberHaptics
 import com.wander.android.ui.components.rememberPressScale
 
 /**
- * The two controls the full-screen lyrics carry: which rendering to read, and the transport.
+ * The controls the full-screen lyrics carry: which rendering to read, the timing correction, and
+ * the transport.
  *
  * Split out of `FullScreenLyrics` when that file passed the length where the screen's own
  * structure — the dialog, the header, the scroll and its fade — stopped being the only thing in it.
@@ -162,6 +172,45 @@ internal fun LyricsTransport(
         }
     }
 }
+
+/**
+ * Nudges the lyrics' timing for this track by half a second either way, with the current
+ * correction between the two buttons. Sits beside the synced/static toggle and is disabled while
+ * the static block is showing, since a block has no timing to correct.
+ */
+@Composable
+internal fun LyricsOffsetControl(
+    offsetMs: Long,
+    enabled: Boolean,
+    onAdjust: (deltaMs: Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = ContainerAlpha),
+        shape = RoundedCornerShape(ContainerRadius),
+        modifier = modifier
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(ContainerInset)) {
+            IconButton(onClick = { onAdjust(-OffsetStepMs) }, enabled = enabled) {
+                Icon(Icons.Rounded.Remove, contentDescription = stringResource(R.string.lyrics_offset_earlier))
+            }
+            Text(
+                text = stringResource(R.string.lyrics_offset_value, offsetMs / MsPerSecond),
+                style = MaterialTheme.typography.labelLarge,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.widthIn(min = OffsetLabelWidth)
+            )
+            IconButton(onClick = { onAdjust(OffsetStepMs) }, enabled = enabled) {
+                Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.lyrics_offset_later))
+            }
+        }
+    }
+}
+
+/** Half a second: small enough to land on a word, large enough that a few taps fix most tracks. */
+private const val OffsetStepMs = 500L
+private const val MsPerSecond = 1_000f
+private val OffsetLabelWidth = 52.dp
 
 /** The biggest control on the screen, because it is the only one you press without looking. */
 private val PlayButtonSize = 96.dp

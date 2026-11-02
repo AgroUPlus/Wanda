@@ -1,5 +1,6 @@
 package com.wander.android.data.sources.musicbrainz
 
+import com.wander.android.BuildConfig
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -38,6 +39,9 @@ data class MusicBrainzTag(val name: String, val count: Int = 0)
 class MusicBrainzClient @Inject constructor(
     private val client: HttpClient
 ) {
+    /** One request per second, MusicBrainz's limit for any client — see [RequestThrottle]. */
+    private val throttle = RequestThrottle(intervalMs = 1_000L)
+
     /**
      * The single best match for [name], or null below [MIN_CONFIDENCE_SCORE].
      *
@@ -45,16 +49,21 @@ class MusicBrainzClient @Inject constructor(
      * screen somebody else's genre tags and disambiguation as if they were certain, the exact
      * failure mode `ArtistIdentity` already goes out of its way to avoid for name matching.
      */
-    suspend fun searchArtist(name: String): Result<MusicBrainzArtist?> = runCatching {
+    suspend fun searchArtist(name: String): Result<MusicBrainzArtist?> {
+        throttle.await()
+        return runCatching { search(name) }
+    }
+
+    private suspend fun search(name: String): MusicBrainzArtist? {
         val response: MusicBrainzSearchResponse = client.get(BASE_URL) {
             // Required by MusicBrainz's API usage policy, so a misbehaving client can be traced
             // back to a real maintainer rather than blocked anonymously for everyone using it.
             header("User-Agent", USER_AGENT)
-            parameter("query", "artist:\"$name\"")
+            parameter("query", MusicBrainzQuery.artist(name))
             parameter("fmt", "json")
             parameter("limit", 1)
         }.body()
-        response.artists.firstOrNull()?.takeIf { it.score >= MIN_CONFIDENCE_SCORE }
+        return response.artists.firstOrNull()?.takeIf { it.score >= MIN_CONFIDENCE_SCORE }
     }
 
     /**
@@ -64,17 +73,24 @@ class MusicBrainzClient @Inject constructor(
      * endpoint above already includes tags too, so this is only needed when the id came from
      * somewhere else.
      */
-    suspend fun getArtist(mbid: String): Result<MusicBrainzArtist> = runCatching {
-        client.get("$BASE_URL/$mbid") {
-            header("User-Agent", USER_AGENT)
-            parameter("fmt", "json")
-            parameter("inc", "tags")
-        }.body()
+    suspend fun getArtist(mbid: String): Result<MusicBrainzArtist> {
+        throttle.await()
+        return runCatching {
+            client.get("$BASE_URL/$mbid") {
+                header("User-Agent", USER_AGENT)
+                parameter("fmt", "json")
+                parameter("inc", "tags")
+            }.body()
+        }
     }
 
     private companion object {
         const val BASE_URL = "https://musicbrainz.org/ws/2/artist"
         const val MIN_CONFIDENCE_SCORE = 90
-        const val USER_AGENT = "Wanda-Android-Music-Player/1.0"
+        /**
+         * Name, version and a contact URL, the form MusicBrainz's policy asks for: a fixed `1.0`
+         * hid which release misbehaved, and no contact left blocking as the only remedy.
+         */
+        val USER_AGENT = "Wanda/${BuildConfig.VERSION_NAME} ( https://github.com/AgroUPlus/Wanda )"
     }
 }

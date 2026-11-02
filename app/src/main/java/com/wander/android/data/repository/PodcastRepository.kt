@@ -8,6 +8,7 @@ import com.wander.android.core.database.dao.PodcastDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.PodcastEntity
 import com.wander.android.core.database.entity.TrackEntity
+import com.wander.android.core.database.entity.currentUrl
 import com.wander.android.core.work.PodcastSyncScheduler
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.podcast.FeedFetch
@@ -23,8 +24,19 @@ import java.io.InputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** What one pass over the subscriptions did. [failed] counts feeds that errored; they are tried again next pass. */
-data class PodcastSyncSummary(val updated: Int, val unchanged: Int, val failed: Int)
+/** An episode a sync pass found that was not there before. */
+data class NewEpisode(val trackId: String, val showTitle: String, val title: String)
+
+/**
+ * What one pass over the subscriptions did. [failed] counts feeds that errored; they are tried again
+ * next pass. [newEpisodes] leaves out a new subscription's first episodes, which nobody is waiting for.
+ */
+data class PodcastSyncSummary(
+    val updated: Int,
+    val unchanged: Int,
+    val failed: Int,
+    val newEpisodes: List<NewEpisode> = emptyList()
+)
 
 data class OpmlImportResult(val added: Int, val alreadySubscribed: Int, val invalid: Int)
 
@@ -39,7 +51,8 @@ class PodcastRepository @Inject constructor(
     private val trackDao: TrackDao,
     private val extrasDao: EpisodeExtrasDao,
     private val client: PodcastFeedClient,
-    private val scheduler: PodcastSyncScheduler
+    private val scheduler: PodcastSyncScheduler,
+    private val autoDownloads: PodcastAutoDownloads
 ) {
     val subscriptions: Flow<List<PodcastEntity>> = podcastDao.observeAll()
 
@@ -54,8 +67,11 @@ class PodcastRepository @Inject constructor(
     suspend fun subscribe(rawUrl: String): Result<PodcastEntity> {
         val url = normalizeFeedUrl(rawUrl)
             ?: return Result.failure(IllegalArgumentException("That is not a web address"))
-        return refresh(podcastDao.get(url) ?: stub(url, title = url))
+        return refresh(podcastDao.get(url) ?: podcastDao.getByFetchUrl(url) ?: stub(url, title = url))
     }
+
+    /** Whether [feedUrl]'s new episodes download on their own, on Wi-Fi. */
+    suspend fun setAutoDownload(feedUrl: String, enabled: Boolean) = autoDownloads.setEnabled(feedUrl, enabled)
 
     /** Removes the subscription and its episodes, keeping any the listener liked, downloaded or played. */
     suspend fun unsubscribe(feedUrl: String) {
@@ -71,58 +87,73 @@ class PodcastRepository @Inject constructor(
         var updated = 0
         var unchanged = 0
         var failed = 0
+        val fresh = mutableListOf<NewEpisode>()
         for (podcast in podcastDao.getAll()) {
             val outcome = fetchAndStore(podcast)
             when {
                 outcome.isFailure -> failed++
-                outcome.getOrThrow().second -> updated++
+                outcome.getOrThrow().changed -> updated++
                 else -> unchanged++
             }
+            outcome.getOrNull()?.let { fresh += it.newEpisodes }
         }
-        return PodcastSyncSummary(updated, unchanged, failed)
+        return PodcastSyncSummary(updated, unchanged, failed, fresh)
     }
 
     /** Fetches [podcast]'s feed with its validators and stores whatever is new. */
     suspend fun refresh(podcast: PodcastEntity): Result<PodcastEntity> =
-        fetchAndStore(podcast).map { it.first }
+        fetchAndStore(podcast).map { it.podcast }
 
-    /** The stored podcast, and whether the feed had changed since the last pass. */
-    private suspend fun fetchAndStore(podcast: PodcastEntity): Result<Pair<PodcastEntity, Boolean>> {
+    /** The stored podcast, whether the feed had changed since the last pass, and what it added. */
+    private class Stored(val podcast: PodcastEntity, val changed: Boolean, val newEpisodes: List<NewEpisode>)
+
+    private suspend fun fetchAndStore(podcast: PodcastEntity): Result<Stored> {
         val first = podcast.lastSyncAt == null
         val fetched = try {
-            client.fetch(podcast.feedUrl, podcast.takeUnless { first })
+            client.fetch(podcast.currentUrl, podcast.takeUnless { first })
         } catch (e: IOException) {
             return Result.failure(e)
         }
         val now = System.currentTimeMillis()
+        // Read again rather than trusted from the pass's start: the listener may have toggled
+        // auto-download meanwhile, and the REPLACE below would put the old value back.
+        val autoDownload = podcastDao.get(podcast.feedUrl)?.autoDownload ?: podcast.autoDownload
         return when (fetched) {
-            FeedFetch.NotModified -> {
-                val touched = podcast.copy(lastSyncAt = now)
+            is FeedFetch.NotModified -> {
+                val touched = podcast.redirectedTo(fetched.movedTo).copy(lastSyncAt = now, autoDownload = autoDownload)
                 podcastDao.upsert(touched)
-                Result.success(touched to false)
+                if (touched.autoDownload) autoDownloads.trim(touched.feedUrl)
+                Result.success(Stored(touched, changed = false, newEpisodes = emptyList()))
             }
             is FeedFetch.Updated -> {
                 val limit = if (first) INITIAL_EPISODES else MAX_NEW_EPISODES
                 val parsed = fetched.feed.episodes.sortedByDescending { it.publishedAt ?: 0L }.take(limit)
                 val episodes = parsed.map { PodcastEpisodes.toTrack(podcast.feedUrl, fetched.feed, it, now) }
                 val extras = parsed.zip(episodes).mapNotNull { (episode, track) -> PodcastEpisodes.extrasOf(track.id, episode) }
-                val saved = podcast.copy(
+                val saved = podcast.redirectedTo(fetched.movedTo).copy(
                     title = fetched.feed.title,
                     author = fetched.feed.author,
                     artworkUrl = fetched.feed.artworkUrl,
                     etag = fetched.etag,
                     lastModified = fetched.lastModified,
-                    lastSyncAt = now
-                )
-                database.withTransaction {
+                    lastSyncAt = now,
+                    autoDownload = autoDownload
+                ).announcedAt(fetched.feed.newFeedUrl)
+                val inserted = database.withTransaction {
                     podcastDao.upsert(saved)
                     // IGNORE keeps the state of an episode already here; only new ones are added.
-                    trackDao.insertNewTracks(episodes)
+                    val rowIds = trackDao.insertNewTracks(episodes)
                     extrasDao.upsert(extras)
                     podcastDao.pruneEpisodes(PodcastEpisodes.albumIdOf(podcast.feedUrl), KEEP_EPISODES)
                     extrasDao.deleteOrphans()
+                    episodes.zip(rowIds).filter { (_, rowId) -> rowId != -1L }.map { (track, _) -> track }
                 }
-                Result.success(saved to true)
+                if (saved.autoDownload) {
+                    autoDownloads.trim(saved.feedUrl)
+                    if (!first) autoDownloads.queue(inserted)
+                }
+                val fresh = if (first) emptyList() else inserted.map { NewEpisode(it.id, saved.title, it.title) }
+                Result.success(Stored(saved, changed = true, newEpisodes = fresh))
             }
         }
     }
@@ -142,7 +173,7 @@ class PodcastRepository @Inject constructor(
             return Result.failure(IOException("The file is not valid XML", e))
         }
         val now = System.currentTimeMillis()
-        val known = podcastDao.getAll().mapTo(mutableSetOf()) { it.feedUrl }
+        val known = podcastDao.getAll().flatMapTo(mutableSetOf()) { listOfNotNull(it.feedUrl, it.fetchUrl) }
         var invalid = 0
         val fresh = LinkedHashMap<String, PodcastEntity>()
         for (feed in feeds) {
@@ -155,7 +186,7 @@ class PodcastRepository @Inject constructor(
     }
 
     suspend fun exportOpml(title: String): String =
-        Opml.write(podcastDao.getAll().map { OpmlFeed(it.title, it.feedUrl) }, title)
+        Opml.write(podcastDao.getAll().map { OpmlFeed(it.title, it.currentUrl) }, title)
 
     private fun stub(url: String, title: String, now: Long = System.currentTimeMillis()) = PodcastEntity(
         feedUrl = url, title = title, author = null, artworkUrl = null,
@@ -168,6 +199,24 @@ class PodcastRepository @Inject constructor(
         const val MAX_NEW_EPISODES = 50
         const val KEEP_EPISODES = 100
     }
+}
+
+/**
+ * [this] at the address a permanent redirect led to. The validators stay: they came from the final
+ * answer, at that address.
+ */
+private fun PodcastEntity.redirectedTo(address: String?): PodcastEntity =
+    if (address == null || address == currentUrl) this else copy(fetchUrl = address.takeIf { it != feedUrl })
+
+/**
+ * [this] at the address the feed's own `<itunes:new-feed-url>` names. HTTPS only, since a public
+ * host over plain HTTP would be refused on every later fetch. The validators belong to the old
+ * address, so they go, and the next pass fetches the new one in full.
+ */
+private fun PodcastEntity.announcedAt(raw: String?): PodcastEntity {
+    val address = raw?.let(::normalizeFeedUrl)?.takeIf { it.startsWith("https://") } ?: return this
+    if (address == currentUrl) return this
+    return copy(fetchUrl = address.takeIf { it != feedUrl }, etag = null, lastModified = null)
 }
 
 /** `feed://` and `pcast://` are the same address over https; anything but http(s) is refused. */

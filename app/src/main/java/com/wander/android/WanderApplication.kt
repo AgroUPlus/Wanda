@@ -15,8 +15,6 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.wander.android.core.cache.DownloadScheduler
 import com.wander.android.core.database.DatabaseCompatibility
 import com.wander.android.core.security.LegacyWebViewPurge
-import com.wander.android.core.sync.ScrobbleSyncScheduler
-import com.wander.android.core.sync.SharedPlaylistSyncScheduler
 import com.zemer.cipher.ZemerCipher
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -30,10 +28,7 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var downloadScheduler: DownloadScheduler
-    @Inject lateinit var scrobbleSyncScheduler: ScrobbleSyncScheduler
-    @Inject lateinit var sharedPlaylistSyncScheduler: SharedPlaylistSyncScheduler
-    @Inject lateinit var podcastSyncScheduler: com.wander.android.core.work.PodcastSyncScheduler
-    @Inject lateinit var librarySyncScheduler: com.wander.android.core.sync.LibrarySyncScheduler
+    @Inject internal lateinit var periodicSyncGate: com.wander.android.core.work.PeriodicSyncGate
     @Inject internal lateinit var cloudBackupScheduler: com.wander.android.core.backup.CloudBackupScheduler
     @Inject internal lateinit var artistReleaseScheduler: com.wander.android.core.work.ArtistReleaseScheduler
     @Inject lateinit var p2pServer: com.wander.android.core.sync.P2PServer
@@ -105,16 +100,10 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
             this,
             allowMobileData = secureStorage.isIndexOnMobileDataEnabled.value
         )
-        // Cheap and self-gating: the worker does nothing until an Agro server is paired.
-        scrobbleSyncScheduler.schedule()
-        sharedPlaylistSyncScheduler.schedule()
-        // KEEP, and a pass with no subscriptions does nothing, so this is also what restores syncing
-        // after a backup brings subscriptions back onto a fresh install.
-        podcastSyncScheduler.enable()
+        // Scrobble, shared-playlist, podcast and library passes, each scheduled only while it has
+        // work: pairing, sign-out, subscriptions and a restored setting all take effect without a restart.
+        periodicSyncGate.start(applicationScope)
         likedTrackCacheProtector.start(applicationScope)
-        if (secureStorage.agroCatalogTrade || secureStorage.agroP2pSync || secureStorage.agroServerArchive) {
-            librarySyncScheduler.enablePeriodicSync()
-        }
         // Follows the setting rather than the switch that sets it: a restore can turn it on too, and a
         // fresh install restored from a backup has the setting but never had the daily job.
         applicationScope.launch {

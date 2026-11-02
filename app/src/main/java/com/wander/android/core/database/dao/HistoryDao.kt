@@ -9,7 +9,7 @@ import com.wander.android.core.database.entity.TrackEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface HistoryDao {
+interface HistoryDao : HistoryEditQueries {
 
     /**
      * What was played, most recent first, as tracks rather than as ids.
@@ -24,6 +24,7 @@ interface HistoryDao {
         """
         SELECT t.* FROM history h
         INNER JOIN tracks t ON t.id = h.trackId
+        WHERE h.hidden = 0
         GROUP BY h.trackId
         ORDER BY MAX(h.playedAt) DESC
         LIMIT :limit
@@ -36,6 +37,7 @@ interface HistoryDao {
         """
         SELECT t.* FROM history h
         INNER JOIN tracks t ON t.id = h.trackId
+        WHERE h.hidden = 0
         GROUP BY h.trackId
         ORDER BY MAX(h.playedAt) DESC
         LIMIT :limit
@@ -56,14 +58,25 @@ interface HistoryDao {
         SELECT h.historyId AS historyId, h.playedAt AS playedAt, t.*
         FROM history h
         INNER JOIN tracks t ON t.id = h.trackId
+        WHERE h.hidden = 0
         ORDER BY h.playedAt DESC
         """
     )
     fun pagedHistory(): PagingSource<Int, HistoryTrackEntry>
 
-    /** Plays that could not be scrobbled yet — retried when the source comes back online. */
-    @Query("SELECT * FROM history WHERE scrobbled = 0 ORDER BY playedAt ASC LIMIT :limit")
-    suspend fun getPendingScrobbles(limit: Int = 100): List<HistoryEntity>
+    /**
+     * Plays of one source's tracks ([idPrefix], e.g. `navidrome:`) it has not been told about yet —
+     * retried when it comes back online. Filtered by source because the flag is never set for a
+     * source that does not scrobble, so its plays would otherwise sit at the head forever.
+     */
+    @Query(
+        """
+        SELECT * FROM history
+        WHERE scrobbled = 0 AND substr(trackId, 1, length(:idPrefix)) = :idPrefix
+        ORDER BY playedAt ASC LIMIT :limit
+        """
+    )
+    suspend fun getPendingScrobbles(idPrefix: String, limit: Int = 100): List<HistoryEntity>
 
     @Query("UPDATE history SET scrobbled = 1 WHERE historyId IN (:ids)")
     suspend fun markScrobbled(ids: List<Long>)

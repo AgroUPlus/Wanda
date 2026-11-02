@@ -174,8 +174,8 @@ internal fun InboxScreen(
                             InboxThreadListSkeleton(contentPadding = contentPadding)
 
                         state.threads.isEmpty() -> EmptyState(
-                            title = stringResource(R.string.social_no_conversations_yet),
-                            message = stringResource(R.string.social_press_hold_any_track_send)
+                            title = R.string.social_no_conversations_yet,
+                            message = R.string.social_press_hold_any_track_send
                         )
 
                         else -> InboxThreadList(

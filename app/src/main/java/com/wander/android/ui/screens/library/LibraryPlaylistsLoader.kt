@@ -1,6 +1,7 @@
 package com.wander.android.ui.screens.library
 
 import com.wander.android.core.database.dao.PlaylistDao
+import com.wander.android.core.network.userMessageRes
 import com.wander.android.core.database.dao.SharedPlaylistDao
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedPlaylist
@@ -19,10 +20,11 @@ import javax.inject.Inject
 /**
  * The library's playlists, kept current on their own.
  *
- * Two halves, read differently. Wanda's own playlists and Agro's copies live in Room, so they are
- * re-read whenever Room says one changed — made, deleted, unfollowed, or taken away by its owner —
- * and the list follows without a pull. A backend's playlists are a network call, made only on a
- * refresh. Neither waits on the rest of the library loading.
+ * Two halves, both out of Room. Wanda's own playlists and Agro's copies are re-read whenever Room
+ * says one changed — made, deleted, unfollowed, or taken away by its owner. A backend's playlists
+ * are Room's copy of its last listing, followed as a flow: a refresh asks the backends and writes
+ * what they answer, and the list follows — so they are still listed offline. Neither waits on the
+ * rest of the library loading.
  */
 @OptIn(FlowPreview::class)
 class LibraryPlaylistsLoader @Inject constructor(
@@ -36,6 +38,10 @@ class LibraryPlaylistsLoader @Inject constructor(
     private val _playlists = MutableStateFlow<List<UnifiedPlaylist>>(emptyList())
     val playlists: StateFlow<List<UnifiedPlaylist>> = _playlists.asStateFlow()
 
+    /** A @StringRes saying why the last read failed, or null. A failed half keeps what it showed before. */
+    private val _error = MutableStateFlow<Int?>(null)
+    val error: StateFlow<Int?> = _error.asStateFlow()
+
     /** Starts following Room. Called once, from the owning view model's scope. */
     fun start(scope: CoroutineScope) {
         scope.launch {
@@ -44,17 +50,30 @@ class LibraryPlaylistsLoader @Inject constructor(
                 .debounce(ROOM_SETTLE_MS)
                 .collect { readRoomBacked() }
         }
+        scope.launch {
+            musicRepository.observeRemotePlaylists().collect { stored ->
+                // Kept in Room through a sign-out, but not shown for a backend no longer connected.
+                val connected = musicRepository.sources
+                    .filter { it.isConfigured.value }
+                    .mapTo(HashSet()) { it.sourceType }
+                remote.value = stored.filter { it.source in connected }
+                publish()
+            }
+        }
     }
 
-    /** Both halves. */
+    /** Both halves; the backends' answer reaches the list through Room. */
     suspend fun refresh() {
         readRoomBacked()
-        remote.value = musicRepository.getPlaylists(only = SourceType.entries.toSet() - ROOM_BACKED)
-        publish()
+        musicRepository.getPlaylists(only = SourceType.entries.toSet() - ROOM_BACKED)
+            .onSuccess { _error.value = null }
+            .onFailure { _error.value = it.userMessageRes() }
     }
 
     private suspend fun readRoomBacked() {
-        roomBacked.value = musicRepository.getPlaylists(only = ROOM_BACKED)
+        musicRepository.getPlaylists(only = ROOM_BACKED)
+            .onSuccess { roomBacked.value = it }
+            .onFailure { _error.value = it.userMessageRes() }
         publish()
     }
 

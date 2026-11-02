@@ -36,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
+import com.wander.android.data.model.nameRes
 import com.wander.android.data.model.SourceType
 import com.wander.android.ui.components.ConnectedToggleButtons
 import com.wander.android.ui.components.ConnectedToggleGroup
@@ -99,7 +100,7 @@ internal fun ShelfSettingsSheet(
                         // Nothing picked means every source.
                         isChecked = { it.name in config.sources },
                         role = Role.Checkbox,
-                        label = { it.displayName },
+                        label = { stringResource(it.nameRes) },
                         onSelect = { onSource(it.name) },
                         equalWidth = false,
                         modifier = Modifier.horizontalScroll(rememberScrollState())

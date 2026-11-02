@@ -3,7 +3,6 @@ package com.wander.android.ui.components
 import com.wander.android.data.repository.ListenAlongSession
 import com.wander.android.data.sources.agro.AgroFriendNowPlaying
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -41,8 +40,8 @@ class ListenAlongStatusLineTest {
     @Test
     fun anOrdinarySessionNamesTheTrack() {
         assertEquals(
-            "Kid A — Radiohead",
-            session(track("Kid A", "Radiohead")).statusLine()
+            ListenAlongStatus.Playing("Kid A", "Radiohead"),
+            session(track("Kid A", "Radiohead")).status()
         )
     }
 
@@ -50,29 +49,25 @@ class ListenAlongStatusLineTest {
     fun aSealedSessionThatWillNotOpenSaysSoRatherThanShowingAPlaceholder() {
         // What the server actually sends when it cannot be opened: the placeholder title and an
         // empty artist. Rendered naively that is "Private Session — ", which reads as a bug.
-        val line = session(track("Private Session", "", locked = true)).statusLine()
-
-        assertTrue("the placeholder leaked into the line: $line", !line.endsWith("— "))
-        assertEquals("Can't see what they're playing on this device", line)
+        assertEquals(ListenAlongStatus.Unreadable, session(track("Private Session", "", locked = true)).status())
     }
 
     @Test
     fun aPlaceholderThatCameWithNoSealedCopyIsNotShownAsATitle() {
-        val line = session(track("Private Session", "")).statusLine()
-        assertEquals("Can't see what they're playing on this device", line)
+        assertEquals(ListenAlongStatus.Unreadable, session(track("Private Session", "")).status())
     }
 
     @Test
     fun anUnresolvableTrackStillWinsOverEverythingElse() {
         // Ordered deliberately: not being able to find the track is the more actionable of the two.
         assertEquals(
-            "Can't find “Kid A” in any of your sources",
-            session(track("Kid A", "Radiohead"), unresolvable = "Kid A").statusLine()
+            ListenAlongStatus.Unresolvable("Kid A"),
+            session(track("Kid A", "Radiohead"), unresolvable = "Kid A").status()
         )
     }
 
     @Test
     fun aSessionWithNothingPlayingWaits() {
-        assertEquals("Waiting for them to play something", session(null).statusLine())
+        assertEquals(ListenAlongStatus.Waiting, session(null).status())
     }
 }

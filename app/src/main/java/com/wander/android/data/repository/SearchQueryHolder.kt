@@ -26,4 +26,15 @@ class SearchQueryHolder @Inject constructor() {
     fun set(value: String) {
         _query.value = value
     }
+
+    /**
+     * Whether the field has focus. An empty, focused field is someone about to search, which is
+     * when the library steps aside for their recent searches — see `LibrarySurface`.
+     */
+    private val _isFieldFocused = MutableStateFlow(false)
+    val isFieldFocused: StateFlow<Boolean> = _isFieldFocused.asStateFlow()
+
+    fun setFieldFocused(focused: Boolean) {
+        _isFieldFocused.value = focused
+    }
 }

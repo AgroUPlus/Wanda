@@ -44,7 +44,7 @@ internal fun SourcesStep(
                     description = stringResource(R.string.welcome_plays_offline_costs_nothing_needs),
                     icon = Icons.Rounded.MusicNote,
                     isConfigured = status.localGranted,
-                    actionLabel = "Grant access",
+                    actionLabel = stringResource(R.string.welcome_grant_access),
                     onAction = onGrantLocal
                 )
             },
@@ -55,7 +55,7 @@ internal fun SourcesStep(
                     description = stringResource(R.string.welcome_own_subsonic_compatible_server_full),
                     icon = Icons.Rounded.Cloud,
                     isConfigured = status.navidromeConfigured,
-                    actionLabel = "Sign in",
+                    actionLabel = stringResource(R.string.welcome_sign_in),
                     onAction = onNavidromeLogin
                 )
             },
@@ -66,7 +66,7 @@ internal fun SourcesStep(
                     description = stringResource(R.string.welcome_signs_through_own_session_cookie),
                     icon = Icons.Rounded.LibraryMusic,
                     isConfigured = status.ytMusicConfigured,
-                    actionLabel = "Sign in",
+                    actionLabel = stringResource(R.string.welcome_sign_in),
                     onAction = onYouTubeLogin
                 )
             }

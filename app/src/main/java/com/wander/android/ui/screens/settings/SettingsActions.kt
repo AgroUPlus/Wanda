@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.settings
 import androidx.compose.runtime.Immutable
 import com.wander.android.data.sources.agro.AgroHandoffState
 import com.wander.android.data.sources.agro.AgroVisibility
+import com.wander.android.ui.theme.ThemeMode
 
 /**
  * Everything the settings tabs can do, opposite [SettingsUiState]'s everything they can read.
@@ -36,6 +37,7 @@ internal data class SettingsActions(
     val onSyncNow: () -> Unit,
     val onReviewDeletions: () -> Unit,
     // Appearance
+    val onThemeModeChange: (ThemeMode) -> Unit,
     val onMonetChange: (Boolean) -> Unit,
     val onAmoledChange: (Boolean) -> Unit,
     val onBackBlurChange: (Boolean) -> Unit,

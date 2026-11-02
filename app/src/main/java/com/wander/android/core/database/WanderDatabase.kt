@@ -63,9 +63,12 @@ import com.wander.android.core.database.converter.SourceTypeConverter
         com.wander.android.core.database.entity.SharedPlaylistOpEntity::class,
         com.wander.android.core.database.entity.JamRecapEntity::class,
         com.wander.android.core.database.entity.CatalogRecordingEntity::class,
-        com.wander.android.core.database.entity.CatalogLyricsFtsEntity::class
+        com.wander.android.core.database.entity.CatalogLyricsFtsEntity::class,
+        com.wander.android.core.database.entity.RemotePlaylistEntity::class,
+        com.wander.android.core.database.entity.PendingLikeEntity::class,
+        com.wander.android.core.database.entity.RemoteLikeEntity::class
     ],
-    version = 46,
+    version = 49,
     exportSchema = true
 )
 @TypeConverters(SourceTypeConverter::class)
@@ -93,4 +96,7 @@ abstract class WanderDatabase : RoomDatabase() {
     abstract fun sharedPlaylistDao(): com.wander.android.core.database.dao.SharedPlaylistDao
     abstract fun jamRecapDao(): com.wander.android.core.database.dao.JamRecapDao
     abstract fun catalogRecordingDao(): com.wander.android.core.database.dao.CatalogRecordingDao
+    abstract fun libraryBrowseDao(): com.wander.android.core.database.dao.LibraryBrowseDao
+    abstract fun remotePlaylistDao(): com.wander.android.core.database.dao.RemotePlaylistDao
+    abstract fun likeSyncDao(): com.wander.android.core.database.dao.LikeSyncDao
 }

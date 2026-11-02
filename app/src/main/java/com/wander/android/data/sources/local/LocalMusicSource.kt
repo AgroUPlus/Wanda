@@ -2,19 +2,23 @@ package com.wander.android.data.sources.local
 
 import com.wander.android.core.database.dao.getTracksByIdsChunked
 import android.content.Context
+import android.net.Uri
 import com.wander.android.core.database.dao.PlaylistDao
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.PlaylistEntity
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.permissions.hasAudioPermission
 import com.wander.android.core.security.SecureStorage
+import com.wander.android.data.model.LyricsData
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.ArtistCredits
 import com.wander.android.data.sources.IMusicSource
 import com.wander.android.data.sources.SourceCapabilities
 import com.wander.android.data.sources.StreamInfo
+import com.wander.android.data.sources.local.lyrics.LocalLyricsReader
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,7 +41,8 @@ class LocalMusicSource @Inject constructor(
     private val scanner: MediaStoreScanner,
     private val trackDao: TrackDao,
     private val playlistDao: PlaylistDao,
-    private val secureStorage: SecureStorage
+    private val secureStorage: SecureStorage,
+    private val lyricsReader: LocalLyricsReader
 ) : IMusicSource {
 
     override val sourceType = SourceType.LOCAL
@@ -48,7 +53,8 @@ class LocalMusicSource @Inject constructor(
         albums = true,
         radio = true,
         playlists = true,
-        playlistWrite = true
+        playlistWrite = true,
+        lyrics = true
     )
 
     private val _isConfigured = MutableStateFlow(context.hasAudioPermission())
@@ -65,50 +71,46 @@ class LocalMusicSource @Inject constructor(
         if (full) scanner.indexChosenFolder()
         val since = if (full) 0L else secureStorage.localScanWatermark
         val scan = scanner.scan(since)
-        if (full) trackDao.clearBySource(SourceType.LOCAL)
-        if (scan.tracks.isNotEmpty()) {
-            // A scanned file is by definition part of the user's collection.
-            trackDao.upsertTracks(
-                scan.tracks.map { TrackEntity.fromUnifiedTrack(it, isLibrary = true) }
-            )
-            trackDao.markAsLibrary(scan.tracks.map { it.id })
-        }
-        prune()
-        secureStorage.localScanWatermark = scan.watermarkSeconds
-    }
-
-    /**
-     * Forgets local tracks whose file is no longer on the device.
-     *
-     * An incremental scan only ever *adds*: it asks MediaStore for files modified since the last
-     * watermark, so a file that has been deleted is simply absent from the answer and its row
-     * stays in Room forever. Until this existed the only cure was a full rescan, which throws the
-     * whole local library away and rebuilds it.
-     *
-     * It bit hardest after a peer-to-peer fetch. Each download wrote a new MediaStore row, and
-     * when an older row went the library kept pointing at it — playback then failed with
-     * `FileNotFoundException: No item at content://media/external/audio/media/470` on a song whose
-     * file was sitting on disk perfectly well under a different id.
-     *
-     * A MediaStore that answers with nothing is not evidence that the library is empty — it is far
-     * more likely to be a permission that has just been revoked — so an empty answer prunes
-     * nothing.
-     */
-    private suspend fun prune() {
         val existing = scanner.existingIds()
-        if (existing.isEmpty()) return
-        val keep = existing.map { "${SourceType.LOCAL.idPrefix}$it" }
-        // Read before the delete, so the server can be told what went. Afterwards there is nothing
-        // left to read the hashes from.
-        val gone = trackDao.localContentHashesNotIn(keep)
-        trackDao.deleteLocalTracksNotIn(keep)
+        // A scanned file is by definition part of the user's collection.
+        val scanned = scan.tracks.map { TrackEntity.fromUnifiedTrack(it, isLibrary = true) }
+        // One transaction: an interrupted rescan leaves the library as it was, never half-built.
+        val gone = trackDao.applyLocalScan(scanned, keepIds(full, scan.tracks, existing))
         // Recorded rather than announced. The sync layer drains this when it next talks to the
         // server, which may be much later than now — the file can just as easily have gone while
         // this device was offline.
         if (gone.isNotEmpty()) {
             secureStorage.pendingForget = secureStorage.pendingForget + gone
         }
+        secureStorage.localScanWatermark = scan.watermarkSeconds
     }
+
+    /**
+     * Which local rows survive this scan, or null to prune nothing.
+     *
+     * An incremental scan only ever *adds*: it asks MediaStore for files modified since the last
+     * watermark, so a file that has been deleted is simply absent from the answer and its row
+     * would stay in Room forever. Pruning against every id MediaStore still holds removes it.
+     * It bit hardest after a peer-to-peer fetch: each download wrote a new MediaStore row, and
+     * when an older row went the library kept pointing at it — playback then failed with
+     * `FileNotFoundException: No item at content://media/external/audio/media/470` on a song whose
+     * file was sitting on disk perfectly well under a different id.
+     *
+     * A full rescan is the user asking for exactly what the chosen folder holds, so it keeps only
+     * what that scan found — a track outside a newly narrowed folder leaves the library. The rows
+     * it keeps are updated in place rather than rebuilt, so likes, play counts and content hashes
+     * survive it.
+     *
+     * A MediaStore that answers with nothing is not evidence that the library is empty — it is far
+     * more likely to be a permission that has just been revoked — so an empty answer prunes
+     * nothing.
+     */
+    private fun keepIds(full: Boolean, scanned: List<UnifiedTrack>, existing: Set<Long>): List<String>? =
+        when {
+            existing.isEmpty() -> null
+            full -> scanned.map { it.id }
+            else -> existing.map { "${SourceType.LOCAL.idPrefix}$it" }
+        }
 
     override suspend fun search(query: String): Result<List<UnifiedTrack>> =
         Result.success(
@@ -121,10 +123,33 @@ class LocalMusicSource @Inject constructor(
         return Result.success(StreamInfo(uri = uri, format = "audio/*", isDirectFile = true))
     }
 
-    override suspend fun getRadio(seedTrackId: String, count: Int): Result<List<UnifiedTrack>> =
-        Result.success(
-            trackDao.getRandomTracksInSource(SourceType.LOCAL, count).map(TrackEntity::toUnifiedTrack)
+    /** The file's own lyrics — tagged into it, or in a `.lrc` beside it. See [LocalLyricsReader]. */
+    override suspend fun getLyrics(trackId: String): Result<LyricsData?> {
+        val uri = trackDao.getTrackById(trackId)?.streamUri
+            ?: return Result.failure(IOException("Local track $trackId is no longer on this device"))
+        return lyricsReader.read(trackId, Uri.parse(uri))
+    }
+
+    /**
+     * The device's other songs by the seed's lead artist or in its genre.
+     *
+     * It used to be a random slice of the device, whatever the seed. The sound-alike ranking is not
+     * repeated here: `SmartRadioGenerator` already orders every station by the measured features
+     * and adds the fingerprint index's nearest tracks, local ones included.
+     */
+    override suspend fun getRadio(seedTrackId: String, count: Int): Result<List<UnifiedTrack>> {
+        val seed = trackDao.getTrackById(seedTrackId)
+            ?: return Result.failure(IOException("Local track $seedTrackId is no longer on this device"))
+        return Result.success(
+            trackDao.getSeedNeighboursInSource(
+                source = SourceType.LOCAL,
+                seedId = seed.id,
+                artist = ArtistCredits.leadName(seed.artist),
+                genre = seed.genre?.trim()?.takeIf { it.isNotEmpty() },
+                limit = count
+            ).map(TrackEntity::toUnifiedTrack)
         )
+    }
 
     override suspend fun getRecentTracks(limit: Int): Result<List<UnifiedTrack>> =
         Result.success(
@@ -194,6 +219,19 @@ class LocalMusicSource @Inject constructor(
         playlistDao.updatePlaylist(
             existing.copy(
                 trackIds = updatedIds.joinToString(","),
+                updatedAt = System.currentTimeMillis()
+            )
+        )
+        return Result.success(Unit)
+    }
+
+    override suspend fun updatePlaylistDetails(playlistId: String, name: String, comment: String?): Result<Unit> {
+        val existing = playlistDao.getPlaylistById(playlistId)
+            ?: return Result.failure(IOException("Playlist not found"))
+        playlistDao.updatePlaylist(
+            existing.copy(
+                name = name,
+                comment = comment?.takeIf { it.isNotBlank() },
                 updatedAt = System.currentTimeMillis()
             )
         )

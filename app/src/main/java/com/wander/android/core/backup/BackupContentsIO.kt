@@ -10,6 +10,7 @@ import com.wander.android.core.database.dao.RecordingLinkDao
 import com.wander.android.core.database.dao.RecordingSplitDao
 import com.wander.android.core.database.dao.ReplayRecapDao
 import com.wander.android.core.database.dao.TrackDao
+import com.wander.android.core.i18n.AppLocaleStore
 import com.wander.android.core.security.SecureStorage
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
@@ -32,12 +33,17 @@ internal class BackupContentsIO @Inject constructor(
     private val splitDao: RecordingSplitDao,
     private val linkDao: RecordingLinkDao,
     private val episodeDao: EpisodeProgressDao,
-    private val podcastDao: PodcastDao
+    private val podcastDao: PodcastDao,
+    private val extras: BackupExtrasIO,
+    private val appLocaleStore: AppLocaleStore
 ) {
 
     suspend fun collect(sections: Set<BackupSection>): BackupDocument {
         // Sorted so the same device exports the same bytes twice — easier to compare two backups.
-        val stored = secureStorage.exportAll().toBackupEntries().toSortedMap()
+        // The display language lives outside SecureStorage (see AppLocaleStore), so it joins the
+        // settings by hand; empty means "follow the system", which a restore applies too.
+        val stored = (secureStorage.exportAll() + (KEY_APP_LANGUAGE to appLocaleStore.tag))
+            .toBackupEntries().toSortedMap()
         val (accounts, settings) = stored.entries.partition { secureStorage.isAccountKey(it.key) }
         val on = { section: BackupSection -> section in sections }
 
@@ -56,7 +62,8 @@ internal class BackupContentsIO @Inject constructor(
             links = if (on(BackupSection.MERGES)) linkDao.getAllOnce().map { it.toBackup() } else emptyList(),
             podcasts = if (on(BackupSection.LIBRARY)) podcastDao.getAll().map { it.toBackup() } else emptyList(),
             episodes = if (on(BackupSection.EPISODES)) episodeDao.getAll().map { it.toBackup() } else emptyList()
-        ).let { it.copy(manifest = it.sectionDigests(BackupJson, sections)) }
+        ).let { extras.collectInto(it, sections) }
+            .let { it.copy(manifest = it.sectionDigests(BackupJson, sections)) }
     }
 
     /**
@@ -111,15 +118,23 @@ internal class BackupContentsIO @Inject constructor(
                 val current = episodeDao.get(episode.trackId)
                 if (current == null || current.updatedAt < episode.updatedAt) episodeDao.upsert(episode.toEntity())
             }
+            // Empty in a backup made before these sections existed, which then restores as it did.
+            extras.restore(document)
         }
 
         val values = (document.entries + document.accounts).toPreferenceValues()
         val replaceSettings = BackupSection.SETTINGS in sections
         val replaceAccounts = BackupSection.ACCOUNTS in sections
         if (replaceSettings || replaceAccounts) {
-            secureStorage.importAll(values) { key ->
+            secureStorage.importAll(values - KEY_APP_LANGUAGE) { key ->
                 if (secureStorage.isAccountKey(key)) replaceAccounts else replaceSettings
             }
+        }
+        // Absent from backups made before it was added; those leave the current language alone.
+        // Applied only when it differs, since on API 33+ setting it restarts the activity.
+        val language = values[KEY_APP_LANGUAGE] as? String
+        if (replaceSettings && language != null && language != appLocaleStore.tag) {
+            appLocaleStore.tag = language
         }
 
         return BackupContents(
@@ -167,5 +182,12 @@ internal class BackupContentsIO @Inject constructor(
     private companion object {
         /** A restore can carry tens of thousands of rows; SQLite caps bound parameters per query. */
         const val QUERY_BATCH = 500
+
+        /**
+         * The settings entry carrying [AppLocaleStore.tag]. Not a SecureStorage key, so it is
+         * taken out before the rest are imported there; an older build that does not know it
+         * imports it as one harmless unused preference.
+         */
+        const val KEY_APP_LANGUAGE = "app_locale_tag"
     }
 }

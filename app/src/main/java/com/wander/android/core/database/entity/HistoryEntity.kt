@@ -46,5 +46,15 @@ data class HistoryEntity(
     @ColumnInfo(defaultValue = "1")
     val listenBrainzSynced: Boolean = false,
     @ColumnInfo(defaultValue = "1")
-    val lastFmSynced: Boolean = false
+    val lastFmSynced: Boolean = false,
+    /**
+     * Removed from the History screen by the user, but still a play.
+     *
+     * A flag rather than a delete because this row is also four outboxes: deleting a play that
+     * Last.fm or Agro has not been told about yet would lose it from them outright. A hidden play
+     * still forwards and still counts towards statistics; it just no longer shows in the log or in
+     * Recently played. The recap purge (`HistoryDao.deleteSyncedBefore`) removes it like any other.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val hidden: Boolean = false
 )

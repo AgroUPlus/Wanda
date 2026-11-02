@@ -27,7 +27,9 @@ internal data class PlayerResponse(
     /** The video-only stream shown in place of the cover in Video mode; see [bestVideoFormat]. */
     val videoFormat: JsonObject? = null,
     /** Why a better identity was passed over to reach this one; surfaced by debug mode only. */
-    val fallbackNote: String? = null
+    val fallbackNote: String? = null,
+    /** See `InnerTubeLoudness.kt`. */
+    val loudnessGainDb: Float? = null
 )
 
 /**
@@ -180,7 +182,10 @@ internal class InnerTubePlayerResolver @Inject constructor(
                     ?: throw IOException("YouTube Music returned no playable audio for this track")
             }
             if (format != null) {
-                PlayerResponse(format, variant, poToken?.streamingDataPoToken, videoFormat = body.bestVideoFormat())
+                PlayerResponse(
+                    format, variant, poToken?.streamingDataPoToken,
+                    videoFormat = body.bestVideoFormat(), loudnessGainDb = body.loudnessGainDb()
+                )
             } else {
                 PlayerResponse(null, variant, poToken?.streamingDataPoToken, hls)
             }

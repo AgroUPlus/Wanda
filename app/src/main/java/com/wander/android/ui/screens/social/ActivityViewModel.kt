@@ -1,8 +1,11 @@
 package com.wander.android.ui.screens.social
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.R
+import com.wander.android.core.network.userMessageRes
 import com.wander.android.data.repository.ArtistSubscriptionRepository
 import com.wander.android.data.repository.DropsRepository
 import com.wander.android.data.sources.agro.AgroDrop
@@ -78,11 +81,11 @@ internal sealed interface ActivityItem {
 }
 
 /** Which slice of the feed is showing. */
-internal enum class ActivityFilter(val label: String) {
-    ALL("All"),
-    CIRCLE("Circle"),
-    SHARED("Shared"),
-    RELEASES("Releases")
+internal enum class ActivityFilter(@param:StringRes val label: Int) {
+    ALL(R.string.activity_filter_all),
+    CIRCLE(R.string.activity_filter_circle),
+    SHARED(R.string.activity_filter_shared),
+    RELEASES(R.string.activity_filter_releases)
 }
 
 @Immutable
@@ -99,7 +102,9 @@ internal data class ActivityUiState(
      * follow has released anything" and "this server cannot answer that" are different facts and
      * only one of them is the user's to act on.
      */
-    val releasesUnsupported: Boolean = false
+    val releasesUnsupported: Boolean = false,
+    /** A @StringRes saying why the circle's activity could not be read, or null. What was shown stays. */
+    val error: Int? = null
 ) {
     /** [items] with [filter] applied. Computed here so the screen has nothing to decide. */
     val visible: List<ActivityItem>
@@ -162,7 +167,7 @@ internal class ActivityViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             drops.refresh()
-            val feed = feedApi.friendActivity().getOrElse { emptyList() }
+            val feedResult = feedApi.friendActivity()
             // Recent releases, not every release. Deliberately *not* filtered by the notification
             // watermark — that is the release job's business, and a feed that hid what had already
             // been notified would be empty exactly when the user came to look. But `since = 0L`
@@ -178,8 +183,11 @@ internal class ActivityViewModel @Inject constructor(
             }
             _state.update { current ->
                 current.copy(
-                    items = merge(feed, current.shared(), releaseItems),
+                    // A failed read has not found that nothing happened: the events already on
+                    // screen stay, and the error says why they did not refresh.
+                    items = merge(feedResult.getOrElse { current.milestones() }, current.shared(), releaseItems),
                     releasesUnsupported = releases.isFailure,
+                    error = feedResult.exceptionOrNull()?.userMessageRes(),
                     loading = false
                 )
             }

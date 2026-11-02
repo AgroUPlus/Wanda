@@ -46,18 +46,20 @@ internal fun BackupPassphraseDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(if (confirming) "Choose a passphrase" else "Enter the passphrase")
+            Text(
+                stringResource(if (confirming) R.string.backup_passphrase_choose else R.string.backup_passphrase_enter)
+            )
         },
         text = {
             Column {
                 Text(
-                    text = if (confirming) {
-                        "The backup holds your server passwords and sign-in tokens, so it is " +
-                            "encrypted with this passphrase. Nobody can recover it for you — " +
-                            "without it the file cannot be opened again."
-                    } else {
-                        "The passphrase this backup was created with."
-                    },
+                    text = stringResource(
+                        if (confirming) {
+                            R.string.backup_passphrase_export_explain
+                        } else {
+                            R.string.backup_passphrase_import_explain
+                        }
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -93,7 +95,7 @@ internal fun BackupPassphraseDialog(
                 enabled = valid,
                 shapes = ButtonDefaults.shapes()
             ) {
-                Text(if (confirming) "Export" else "Import")
+                Text(stringResource(if (confirming) R.string.backup_export else R.string.backup_import))
             }
         },
         dismissButton = {

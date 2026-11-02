@@ -1,5 +1,9 @@
 package com.wander.android.ui.screens.library
 
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.wander.android.R
+import com.wander.android.data.model.nameRes
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -53,6 +57,7 @@ fun PlaylistRow(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick,
+                onLongClickLabel = stringResource(R.string.common_more_options),
                 onLongClick = onLongPress
             )
             .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -77,7 +82,7 @@ fun PlaylistRow(
                 modifier = Modifier.scrollingTitle()
             )
             Text(
-                text = subtitle ?: remember(playlist) { playlist.subtitle() },
+                text = subtitle ?: playlist.subtitle(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -89,8 +94,9 @@ fun PlaylistRow(
 }
 
 /** Song count is unknown for some sources, so it is only shown when the source reported one. */
+@Composable
 private fun UnifiedPlaylist.subtitle(): String = listOfNotNull(
-    source.displayName,
-    songCount.takeIf { it > 0 }?.let { "$it tracks" },
+    stringResource(source.nameRes),
+    songCount.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.collection_track_count, it, it) },
     comment?.takeIf { it.isNotBlank() }
 ).joinToString(" · ")

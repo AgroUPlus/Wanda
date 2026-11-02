@@ -2,7 +2,6 @@ package com.wander.android.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -10,10 +9,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.repository.FingerprintStatus
+import com.wander.android.ui.theme.LocalDarkTheme
 
 /**
  * Whether a track has been measured, as a dot beside its title.
@@ -38,7 +40,7 @@ fun FingerprintBadge(
     // Not taken from the colour scheme: these are a traffic light, and their meaning is the hue
     // itself rather than a role in the theme. A tertiary that happened to be pink would say nothing.
     // Two sets, because a tone legible on white is muddy on near-black and the reverse.
-    val dark = isSystemInDarkTheme()
+    val dark = LocalDarkTheme.current
     val target = when (status) {
         FingerprintStatus.INDEXED -> if (dark) IndexedDark else IndexedLight
         FingerprintStatus.PROCESSING -> if (dark) ProcessingDark else ProcessingLight
@@ -47,18 +49,19 @@ fun FingerprintBadge(
     // Animated, so a track finishing its decode fades from blue to green rather than blinking — a
     // hard swap on a list that updates as the worker moves through it reads as flicker.
     val colour by animateColorAsState(target, label = "fingerprintBadge")
+    val description = stringResource(
+        when (status) {
+            FingerprintStatus.INDEXED -> R.string.fingerprint_status_indexed
+            FingerprintStatus.PROCESSING -> R.string.fingerprint_status_processing
+            FingerprintStatus.MISSING -> R.string.fingerprint_status_missing
+        }
+    )
 
     Box(
         modifier = modifier
             .size(DotSize)
             .background(colour, CircleShape)
-            .semantics {
-                contentDescription = when (status) {
-                    FingerprintStatus.INDEXED -> "Fingerprinted"
-                    FingerprintStatus.PROCESSING -> "Fingerprinting now"
-                    FingerprintStatus.MISSING -> "Not fingerprinted"
-                }
-            }
+            .semantics { contentDescription = description }
     )
 }
 

@@ -29,15 +29,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import com.wander.android.R
+import com.wander.android.data.model.LibrarySort
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.ui.components.EmptyState
+import com.wander.android.ui.components.FastScroller
 import com.wander.android.ui.components.SkeletonCard
-import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.fastScrollLetter
+import com.wander.android.ui.components.nestedListInset
 
 private const val ALBUMS_PAGE_SIZE = 24
 private const val PAGE_PREFETCH_DISTANCE = 4
 private const val MIN_RECENT_ALBUMS = 4
+private const val WINDOW_WAIT_MS = 500L
 
 @Composable
 internal fun AlbumGrid(
@@ -45,13 +52,18 @@ internal fun AlbumGrid(
     recentAlbums: List<UnifiedAlbum>,
     contentPadding: PaddingValues,
     onOpenAlbum: (String) -> Unit,
-    onAlbumLongPress: (UnifiedAlbum) -> Unit = {}
+    onAlbumLongPress: (UnifiedAlbum) -> Unit = {},
+    @StringRes loadError: Int? = null,
+    onRetry: () -> Unit = {},
+    letterFor: ((UnifiedAlbum) -> String?)? = null
 ) {
     if (albums.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             EmptyState(
-                title = stringResource(R.string.library_no_albums_yet),
-                message = stringResource(R.string.library_albums_appear_once_connected_source)
+                title = R.string.library_no_albums_yet,
+                message = loadError ?: R.string.library_albums_appear_once_connected_source,
+                actionLabel = loadError?.let { R.string.error_retry },
+                onAction = onRetry.takeIf { loadError != null }
             )
         }
         return
@@ -80,75 +92,105 @@ internal fun AlbumGrid(
             }
     }
 
-    LazyVerticalGrid(
-        state = gridState,
-        columns = GridCells.Adaptive(minSize = 156.dp),
-        contentPadding = contentPadding.listInset(),
-        modifier = Modifier.fillMaxSize()
-    ) {
-        if (showsRecentRow) {
-            item(span = { GridItemSpan(maxLineSpan) }, key = "recent_header") {
-                Text(
-                    text = stringResource(R.string.library_recent),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-            item(span = { GridItemSpan(maxLineSpan) }, key = "recent_row") {
-                // No overscroll here: this row lives inside `LibraryScreen`'s `HorizontalPager`, and
-                // the default stretch/glow overscroll effect swallows a horizontal drag at this
-                // row's own scroll bounds before it can bubble up to the pager — a swipe that starts
-                // (or ends) over the Recent row could never turn into a page change, even sitting
-                // dead on the first or last album. Nested scrolling still hands the pager unconsumed
-                // delta with the effect off; it just no longer eats the delta that would be zero
-                // anyway once the row can't scroll further.
-                CompositionLocalProvider(LocalOverscrollFactory provides null) {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    ) {
-                        itemsIndexed(recentAlbums, key = { _, album -> "recent_${album.id}" }) { index, album ->
-                            AlbumCard(
-                                album = album,
-                                index = index,
-                                onClick = { onOpenAlbum(album.id) },
-                                onLongClick = { onAlbumLongPress(album) },
-                                artworkSize = 132.dp,
-                                // A `LazyRow` gives its items infinite width along the scroll axis,
-                                // so without an explicit width `Artwork`'s own `fillMaxWidth()` was
-                                // a no-op (Compose special-cases `fillMaxWidth` under an infinite
-                                // constraint as doing nothing) and the title never had a bounded box
-                                // to overflow against — it just sat there, uncropped and unscrolled,
-                                // for anything long enough to need either. Same width and artwork
-                                // size the artist page's own album row already uses.
-                                modifier = Modifier.width(148.dp)
-                            )
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyVerticalGrid(
+            state = gridState,
+            columns = GridCells.Adaptive(minSize = 156.dp),
+            contentPadding = contentPadding.nestedListInset(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            if (showsRecentRow) {
+                item(span = { GridItemSpan(maxLineSpan) }, key = "recent_header") {
+                    Text(
+                        text = stringResource(R.string.library_recent),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
+                item(span = { GridItemSpan(maxLineSpan) }, key = "recent_row") {
+                    // No overscroll here: this row lives inside `LibraryScreen`'s `HorizontalPager`, and
+                    // the default stretch/glow overscroll effect swallows a horizontal drag at this
+                    // row's own scroll bounds before it can bubble up to the pager — a swipe that starts
+                    // (or ends) over the Recent row could never turn into a page change, even sitting
+                    // dead on the first or last album. Nested scrolling still hands the pager unconsumed
+                    // delta with the effect off; it just no longer eats the delta that would be zero
+                    // anyway once the row can't scroll further.
+                    CompositionLocalProvider(LocalOverscrollFactory provides null) {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        ) {
+                            itemsIndexed(recentAlbums, key = { _, album -> "recent_${album.id}" }) { index, album ->
+                                AlbumCard(
+                                    album = album,
+                                    index = index,
+                                    onClick = { onOpenAlbum(album.id) },
+                                    onLongClick = { onAlbumLongPress(album) },
+                                    artworkSize = 132.dp,
+                                    // A `LazyRow` gives its items infinite width along the scroll axis,
+                                    // so without an explicit width `Artwork`'s own `fillMaxWidth()` was
+                                    // a no-op (Compose special-cases `fillMaxWidth` under an infinite
+                                    // constraint as doing nothing) and the title never had a bounded box
+                                    // to overflow against — it just sat there, uncropped and unscrolled,
+                                    // for anything long enough to need either. Same width and artwork
+                                    // size the artist page's own album row already uses.
+                                    modifier = Modifier.width(148.dp)
+                                )
+                            }
                         }
                     }
                 }
+                item(span = { GridItemSpan(maxLineSpan) }, key = "all_header") {
+                    Text(
+                        text = stringResource(R.string.library_all_albums),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
             }
-            item(span = { GridItemSpan(maxLineSpan) }, key = "all_header") {
-                Text(
-                    text = stringResource(R.string.library_all_albums),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            itemsIndexed(visibleAlbums, key = { _, album -> album.id }) { index, album ->
+                AlbumCard(
+                    album = album,
+                    index = index,
+                    onClick = { onOpenAlbum(album.id) },
+                    onLongClick = { onAlbumLongPress(album) },
+                    modifier = Modifier.animateItem()
                 )
             }
-        }
-        itemsIndexed(visibleAlbums, key = { _, album -> album.id }) { index, album ->
-            AlbumCard(
-                album = album,
-                index = index,
-                onClick = { onOpenAlbum(album.id) },
-                onLongClick = { onAlbumLongPress(album) },
-                modifier = Modifier.animateItem()
-            )
-        }
-        if (hasMoreAlbums) {
-            items(count = 4, key = { "skeleton_album_$it" }) {
-                SkeletonCard()
+            if (hasMoreAlbums) {
+                items(count = 4, key = { "skeleton_album_$it" }) {
+                    SkeletonCard()
+                }
             }
         }
+        FastScroller(
+            totalItems = albums.size,
+            firstVisibleItem = { (gridState.firstVisibleItemIndex - headerCount).coerceAtLeast(0) },
+            isScrollInProgress = { gridState.isScrollInProgress },
+            onJumpTo = { index ->
+                // The grid only holds the window scrolled through so far; widen it to the target
+                // first, and wait for those tiles to be in the grid before jumping to one of them.
+                if (index >= albumPageSize) {
+                    albumPageSize = (index + ALBUMS_PAGE_SIZE).coerceAtMost(albums.size)
+                    withTimeoutOrNull(WINDOW_WAIT_MS) {
+                        snapshotFlow { gridState.layoutInfo.totalItemsCount }.first { it > headerCount + index }
+                    }
+                }
+                gridState.scrollToItem(headerCount + index)
+            },
+            labelFor = letterFor?.let { letter -> { index -> albums.getOrNull(index)?.let(letter) } },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(contentPadding.nestedListInset())
+                .padding(vertical = 8.dp)
+        )
     }
+}
+
+/** The letter an album is filed under in [sort], or null for an order that is not alphabetical. */
+internal fun albumLetter(sort: LibrarySort?): ((UnifiedAlbum) -> String?)? = when (sort) {
+    LibrarySort.TITLE -> { album -> fastScrollLetter(album.title) }
+    LibrarySort.ARTIST -> { album -> fastScrollLetter(album.artist) }
+    else -> null
 }

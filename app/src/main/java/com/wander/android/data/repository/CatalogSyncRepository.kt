@@ -1,5 +1,6 @@
 package com.wander.android.data.repository
 
+import com.wander.android.core.network.loggableMessage
 import android.util.Log
 import com.wander.android.core.audio.fingerprint.AudioEmbedder
 import com.wander.android.core.database.dao.CatalogRecordingDao
@@ -91,7 +92,7 @@ internal class CatalogSyncRepository @Inject constructor(
             val corrected = canonicalMetadata.applyToLibrary()
             SyncOutcome(published = published, received = received, corrected = corrected)
         }.onFailure { error ->
-            Log.w(TAG, "Catalogue sync did not complete: ${error.message}")
+            Log.w(TAG, "Catalogue sync did not complete: ${error.loggableMessage()}")
         }
     }
 

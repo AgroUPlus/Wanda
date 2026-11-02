@@ -33,8 +33,13 @@ internal class ScrobbleForwarding @Inject constructor(
 ) {
     private val prefs get() = secureStorage.scrobbling
 
-    /** Why a service was signed out on its own, until the user connects it again. */
-    private val _signedOut = MutableStateFlow<Map<ScrobbleService, String>>(emptyMap())
+    /** Why a service was signed out on its own, until the user connects it again; kept across restarts. */
+    private val _signedOut = MutableStateFlow<Map<ScrobbleService, String>>(
+        buildMap {
+            prefs.listenBrainzSignedOut?.let { put(ScrobbleService.LISTENBRAINZ, it) }
+            prefs.lastFmSignedOut?.let { put(ScrobbleService.LASTFM, it) }
+        }
+    )
     val signedOut: StateFlow<Map<ScrobbleService, String>> = _signedOut.asStateFlow()
 
     val isAnyOn: Boolean get() = prefs.listenBrainz.value.enabled || prefs.lastFm.value.enabled
@@ -89,9 +94,13 @@ internal class ScrobbleForwarding @Inject constructor(
         }
     }
 
-    /** Checks the token, then keeps it; only plays from now on are sent. */
+    /**
+     * Checks the token, then keeps it; only plays from now on are sent — unless ListenBrainz
+     * signed this device out itself, in which case the plays queued since are still owed: the user
+     * never withdrew them, the service just stopped taking them for a while.
+     */
     suspend fun connectListenBrainz(token: String): Result<String> = listenBrainz.validate(token.trim()).onSuccess { user ->
-        historyDao.settleListenBrainz()
+        if (prefs.listenBrainzSignedOut == null) historyDao.settleListenBrainz()
         prefs.connectListenBrainz(user, token.trim())
         _signedOut.value = _signedOut.value - ScrobbleService.LISTENBRAINZ
     }
@@ -99,9 +108,9 @@ internal class ScrobbleForwarding @Inject constructor(
     /** A Last.fm token to approve and the page to approve it on. */
     suspend fun beginLastFm(): Result<Pair<String, String>> = lastFm.beginSignIn()
 
-    /** Exchanges an approved token for a session, then keeps it; only plays from now on are sent. */
+    /** Exchanges an approved token for a session, then keeps it. The backlog rule is [connectListenBrainz]'s. */
     suspend fun finishLastFm(token: String): Result<String> = lastFm.finishSignIn(token).map { (user, session) ->
-        historyDao.settleLastFm()
+        if (prefs.lastFmSignedOut == null) historyDao.settleLastFm()
         prefs.connectLastFm(user, session)
         _signedOut.value = _signedOut.value - ScrobbleService.LASTFM
         user
@@ -112,8 +121,8 @@ internal class ScrobbleForwarding @Inject constructor(
 
     private fun signOut(service: ScrobbleService, reason: String) {
         when (service) {
-            ScrobbleService.LISTENBRAINZ -> prefs.disconnectListenBrainz()
-            ScrobbleService.LASTFM -> prefs.disconnectLastFm()
+            ScrobbleService.LISTENBRAINZ -> prefs.disconnectListenBrainz(reason)
+            ScrobbleService.LASTFM -> prefs.disconnectLastFm(reason)
         }
         _signedOut.value = _signedOut.value + (service to reason)
     }

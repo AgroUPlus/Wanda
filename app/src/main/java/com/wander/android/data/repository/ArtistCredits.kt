@@ -36,6 +36,14 @@ object ArtistCredits {
     fun isAmbiguous(raw: String): Boolean = split(raw).size > 1 && AMBIGUOUS.containsMatchIn(raw)
 
     /**
+     * The one name to look a credit's songs up by: the lead artist, or the whole credit when
+     * [isAmbiguous] says it may be one act's name — "Simon & Garfunkel" must not widen to every
+     * song by anyone called Simon. Blank for a blank credit.
+     */
+    fun leadName(raw: String): String =
+        if (isAmbiguous(raw)) raw.trim() else split(raw).firstOrNull().orEmpty()
+
+    /**
      * The names to offer someone choosing whose page to open: each artist, with the whole credit
      * first when [isAmbiguous] says it may be one act's name. A single artist comes back alone.
      */

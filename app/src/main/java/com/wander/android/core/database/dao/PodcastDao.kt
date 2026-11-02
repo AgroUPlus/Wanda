@@ -20,6 +20,34 @@ interface PodcastDao {
     @Query("SELECT * FROM podcasts WHERE feedUrl = :feedUrl")
     suspend fun get(feedUrl: String): PodcastEntity?
 
+    /** A subscription that has moved to [fetchUrl], so subscribing to its new address is not a duplicate. */
+    @Query("SELECT * FROM podcasts WHERE fetchUrl = :fetchUrl LIMIT 1")
+    suspend fun getByFetchUrl(fetchUrl: String): PodcastEntity?
+
+    @Query("UPDATE podcasts SET autoDownload = :enabled WHERE feedUrl = :feedUrl")
+    suspend fun setAutoDownload(feedUrl: String, enabled: Boolean)
+
+    /** A feed's newest episodes, newest first. */
+    @Query("SELECT * FROM tracks WHERE albumId = :albumId AND source = 'PODCAST' ORDER BY addedTimestamp DESC LIMIT :limit")
+    suspend fun newestEpisodes(albumId: String, limit: Int): List<TrackEntity>
+
+    /**
+     * A feed's downloaded episodes beyond the newest [keep] downloads, for an auto-downloading show
+     * to let go of. Never a liked episode, nor one the listener is partway through.
+     */
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE albumId = :albumId AND source = 'PODCAST' AND isDownloaded = 1 AND isLiked = 0
+          AND id NOT IN (SELECT trackId FROM episode_progress WHERE positionMs > 0 AND positionMs < durationMs)
+          AND id NOT IN (
+              SELECT id FROM tracks WHERE albumId = :albumId AND isDownloaded = 1
+              ORDER BY addedTimestamp DESC LIMIT :keep
+          )
+        """
+    )
+    suspend fun downloadedEpisodesBeyond(albumId: String, keep: Int): List<TrackEntity>
+
     /** REPLACE: a re-import of the same feed refreshes its metadata and validators. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(podcast: PodcastEntity)

@@ -98,6 +98,16 @@
         android:protectionLevel="signature" />
 
     <!--
+      Package visibility: lets the now-playing menu see whether an equalizer is installed to hand
+      the audio session to, so it can hide the entry when none is.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.media.action.DISPLAY_AUDIO_EFFECT_CONTROL_PANEL" />
+        </intent>
+    </queries>
+
+    <!--
       No usesCleartextTraffic here: with a networkSecurityConfig declared it is ignored from API 24
       on (minSdk is 26), and leaving it set only advertised a blanket plain-HTTP policy the app
       does not actually run under. @xml/network_security_config is the single source of truth.
@@ -146,6 +156,9 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -207,20 +220,69 @@
                 <data android:scheme="https" android:host="m.youtube.com" />
                 <data android:scheme="https" android:host="youtu.be" />
             </intent-filter>
+            <!--
+              "Share to Wanda" from another app's share sheet. The text is searched for a link and
+              routed like a tapped one, or to the playlist importer — see SharedTextHandler.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <!--
+              "Play … on Wanda" from the Assistant on the phone. A car sends the same request to
+              PlaybackService's session instead; both are answered by VoiceSearch.
+            -->
+            <intent-filter>
+                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <!--
+              "Open with Wanda" for an audio file in a file manager, a download or an attachment.
+              Played once from the URI, never added to the library — see OpenedAudioFile.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="audio/*" />
+            </intent-filter>
         </activity>
 
         <!--
-          Not exported: only this app's own MediaController binds to it. Media3 routes
-          notification and media-button intents internally.
+          Exported so Android Auto, Android Automotive and the Assistant can bind to it: the first
+          action is how Media3 browsers find it, the second how the platform's legacy
+          MediaBrowser protocol — which Android Auto speaks — does. Binding gets an app transport
+          controls, as the platform session always offered; browsing and searching the library is
+          answered only for this app, the car hosts and trusted controllers — see BrowserAccess.
         -->
         <service
             android:name=".core.playback.PlaybackService"
-            android:exported="false"
+            android:exported="true"
             android:foregroundServiceType="mediaPlayback">
             <intent-filter>
-                <action android:name="androidx.media3.session.MediaSessionService" />
+                <action android:name="androidx.media3.session.MediaLibraryService" />
+                <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
         </service>
+
+        <!-- Lists Wanda among Android Auto's media apps; see @xml/automotive_app_desc. -->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
+
+        <!--
+          Lets a headset or car play button reach PlaybackService after the process was killed.
+          Media3 starts the service and asks it for the saved queue (onPlaybackResumption).
+        -->
+        <receiver
+            android:name="androidx.media3.session.MediaButtonReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
+        </receiver>
 
         <!--
           WorkManager runs long jobs through its own foreground service, and on API 34+ a service

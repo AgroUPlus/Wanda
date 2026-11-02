@@ -109,9 +109,12 @@ private fun DeviceRow(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(text = node.petname, style = MaterialTheme.typography.bodyLarge)
+            val presence = stringResource(
+                if (node.isOnline) R.string.agro_device_listening_now else R.string.agro_device_away
+            )
             Text(
                 text = buildString {
-                    append(if (node.isOnline) "Listening now" else "Away")
+                    append(presence)
                     append(" · ")
                     append(node.clientType.replaceFirstChar(Char::uppercase))
                     node.currentTrack?.let { append(" · $it") }
@@ -126,7 +129,9 @@ private fun DeviceRow(
 
         if (onResume != null) {
             Text(
-                text = if (isResuming) "Resuming…" else "Continue here",
+                text = stringResource(
+                    if (isResuming) R.string.agro_device_resuming else R.string.agro_device_continue_here
+                ),
                 style = MaterialTheme.typography.labelLarge,
                 color = ListeningGreen
             )

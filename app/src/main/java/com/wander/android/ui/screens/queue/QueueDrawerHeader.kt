@@ -13,13 +13,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
+import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.ui.components.newplaylist.SaveAsPlaylistButton
 
+/** @param playPosition where the playing track falls in play order, which shuffle makes differ from its index. */
 @Composable
 internal fun QueueDrawerHeader(
-    currentIndex: Int,
+    playPosition: Int,
     queueSize: Int,
     orderLocked: Boolean,
-    onClearQueue: () -> Unit
+    onClearQueue: () -> Unit,
+    /** The queue's tracks, for saving them as a playlist. */
+    queue: List<UnifiedTrack> = emptyList()
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -34,11 +39,14 @@ internal fun QueueDrawerHeader(
             )
             if (queueSize > 0) {
                 Text(
-                    text = stringResource(R.string.queue_tracks, currentIndex + 1, queueSize),
+                    text = stringResource(R.string.queue_tracks, playPosition + 1, queueSize),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+        if (queue.isNotEmpty()) {
+            SaveAsPlaylistButton(queue)
         }
         if (queueSize > 0 && !orderLocked) {
             ClearQueueButton(queueSize, onClearQueue)

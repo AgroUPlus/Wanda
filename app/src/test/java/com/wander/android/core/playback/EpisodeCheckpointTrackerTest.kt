@@ -3,16 +3,10 @@ package com.wander.android.core.playback
 import androidx.media3.common.C
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class EpisodeCheckpointTrackerTest {
     private fun track(id: String, episode: Boolean, durationMs: Long = 0L) = UnifiedTrack(
         id = id,
@@ -23,17 +17,9 @@ class EpisodeCheckpointTrackerTest {
         isEpisode = episode
     )
 
-    /** Runs [act] against a fresh tracker and returns every checkpoint it emitted. */
-    private fun emitted(act: (EpisodeCheckpointTracker) -> Unit): List<EpisodeCheckpoint> {
-        val tracker = EpisodeCheckpointTracker()
-        val seen = mutableListOf<EpisodeCheckpoint>()
-        runTest(UnconfinedTestDispatcher()) {
-            val job = launch { tracker.episodeCheckpoints.toList(seen) }
-            act(tracker)
-            job.cancel()
-        }
-        return seen
-    }
+    /** Runs [act] against a fresh tracker and returns the checkpoint its last reading made, if any. */
+    private fun emitted(act: (EpisodeCheckpointTracker) -> EpisodeCheckpoint?): List<EpisodeCheckpoint> =
+        listOfNotNull(act(EpisodeCheckpointTracker()))
 
     @Test
     fun aSongIsNeverCheckpointed() {

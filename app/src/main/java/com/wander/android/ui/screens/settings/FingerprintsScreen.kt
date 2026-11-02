@@ -19,7 +19,6 @@ import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -27,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -34,10 +34,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
-import com.wander.android.core.audio.fingerprint.EmbeddingModelManager
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.headerInset
-import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.nestedListInset
 
 /**
  * What the fingerprint indexer has measured, track by track.
@@ -90,7 +89,7 @@ internal fun FingerprintsScreen(
         }
 
         LazyColumn(
-            contentPadding = contentPadding.listInset(),
+            contentPadding = contentPadding.nestedListInset(),
             modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection)
         ) {
             item(key = "summary") { Summary(state, viewModel::setPaused) }
@@ -119,64 +118,6 @@ internal fun FingerprintsScreen(
                         modifier = Modifier.animateItem()
                     )
                 }
-            }
-        }
-    }
-}
-
-/**
- * The neural recognition model: downloaded on demand, not shipped in the app.
- *
- * Its own row rather than folded into the summary because it is a different kind of thing — a
- * one-time ~34 MB fetch that unlocks recognition, not a per-track measurement — and until it is
- * present that half of recognition simply is not there.
- */
-@Composable
-private fun RecognitionModelRow(
-    state: EmbeddingModelManager.State,
-    embedded: Int,
-    total: Int,
-    onDownload: () -> Unit,
-    onVerify: () -> Unit
-) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
-        Text(
-            text = stringResource(R.string.settings_recognition_model),
-            style = MaterialTheme.typography.titleMedium
-        )
-        Text(
-            text = when (state) {
-                is EmbeddingModelManager.State.Downloading ->
-                    "Downloading… ${(state.fraction * 100).toInt()}%"
-                is EmbeddingModelManager.State.Failed ->
-                    state.message
-                EmbeddingModelManager.State.Ready ->
-                    "Downloaded and checked. $embedded of $total songs have a neural fingerprint."
-                EmbeddingModelManager.State.Absent ->
-                    "Not downloaded. The recogniser needs a one-time ${EmbeddingModelManager.APPROX_MB} MB model."
-            },
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 4.dp)
-        )
-        when (state) {
-            is EmbeddingModelManager.State.Downloading ->
-                LinearWavyProgressIndicator(
-                    progress = { state.fraction },
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
-                )
-            EmbeddingModelManager.State.Ready ->
-                TextButton(
-                    onClick = onVerify,
-                    shapes = ButtonDefaults.shapes(),
-                    modifier = Modifier.padding(top = 4.dp)
-                ) { Text(stringResource(R.string.settings_re_check_model)) }
-            else -> FilledTonalButton(
-                onClick = onDownload,
-                shapes = ButtonDefaults.shapes(),
-                modifier = Modifier.padding(top = 12.dp)
-            ) {
-                Text(if (state is EmbeddingModelManager.State.Failed) "Retry download" else "Download model")
             }
         }
     }
@@ -221,7 +162,21 @@ private fun Summary(state: FingerprintsUiState, onPausedChange: (Boolean) -> Uni
             shapes = ButtonDefaults.shapes(),
             modifier = Modifier.padding(top = 12.dp)
         ) {
-            Text(if (state.isPaused) "Resume measuring" else "Pause measuring")
+            Text(
+                stringResource(
+                    if (state.isPaused) R.string.fp_resume_measuring else R.string.fp_pause_measuring
+                )
+            )
+        }
+
+        // Why a count can stop moving with work left: these are backed off, not forgotten.
+        if (state.failed > 0) {
+            Text(
+                text = pluralStringResource(R.plurals.fp_failed_count, state.failed, state.failed),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
 
         if (state.isPaused) {

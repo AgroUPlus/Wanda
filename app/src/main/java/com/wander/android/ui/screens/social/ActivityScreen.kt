@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.social
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,6 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.wander.android.ui.components.LoadErrorState
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.ui.components.listInset
@@ -46,6 +49,8 @@ internal fun ActivityScreen(
     LazyColumn(
         contentPadding = contentPadding.listInset(),
         modifier = Modifier.fillMaxSize()
+            // The list carries the side insets; the hero inside it must not add them again.
+            .consumeWindowInsets(contentPadding.listInset())
     ) {
         item(key = "hero") {
             ActivityHero(
@@ -56,6 +61,8 @@ internal fun ActivityScreen(
         }
 
         item(key = "filters") {
+            // Resolved here: the button group's content is not a composable scope.
+            val labels = ActivityFilter.entries.associateWith { stringResource(it.label) }
             ButtonGroup(
                 overflowIndicator = {},
                 modifier = Modifier
@@ -66,7 +73,7 @@ internal fun ActivityScreen(
                 ActivityFilter.entries.forEach { filter ->
                     toggleableItem(
                         checked = state.filter == filter,
-                        label = filter.label,
+                        label = labels.getValue(filter),
                         onCheckedChange = { viewModel.setFilter(filter) }
                     )
                 }
@@ -83,8 +90,18 @@ internal fun ActivityScreen(
             }
         }
 
+        state.error?.let { error ->
+            item(key = "error") {
+                LoadErrorState(
+                    message = error,
+                    onRetry = viewModel::refresh,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+        }
+
         val visible = state.visible
-        if (visible.isEmpty() && !state.loading && !showInvites) {
+        if (visible.isEmpty() && !state.loading && !showInvites && state.error == null) {
             item(key = "empty") {
                 ActivityEmptyState(
                     filter = state.filter,

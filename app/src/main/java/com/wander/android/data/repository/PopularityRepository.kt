@@ -1,5 +1,6 @@
 package com.wander.android.data.repository
 
+import com.wander.android.core.network.loggableMessage
 import android.util.Log
 import com.wander.android.core.database.dao.PendingScrobble
 import com.wander.android.core.database.dao.TrackDao
@@ -53,12 +54,18 @@ class PopularityRepository @Inject constructor(
         if (secureStorage.agroServerUrl.isBlank()) return@withContext PopularOutcome.NotPaired
 
         val entries = popularityApi.popularTracks(limit = limit * OVERFETCH).getOrElse {
-            Log.w(TAG, "popular tracks unavailable: ${it.message}")
+            Log.w(TAG, "popular tracks unavailable: ${it.loggableMessage()}")
             return@withContext PopularOutcome.Unreachable
         }
         if (entries.isEmpty()) return@withContext PopularOutcome.NoData
 
-        val localByKey = trackDao.getAllTracksOnce()
+        // Only the songs credited to the entries' artists are read and keyed, one query per
+        // artist: keying the whole library on every build held all of it in memory at once.
+        val localByKey = entries.map { primaryArtist(it.artist) }
+            .filter { it.isNotBlank() }
+            .distinctBy { it.lowercase() }
+            .flatMap { artist -> trackDao.getTracksByArtistOnce(artist) }
+            .distinctBy { it.id }
             .map(TrackEntity::toUnifiedTrack)
             .groupBy { TrackDeduplicator.recordingKey(it) }
 
@@ -102,7 +109,7 @@ class PopularityRepository @Inject constructor(
             // Dropped, not retried. See AgroPopularityApi.submitPlayCounts: without a submitter
             // identity a retry is indistinguishable from more listening, so re-sending would
             // inflate the very total it is trying to report honestly.
-            Log.w(TAG, "play counts not contributed: ${error.message}")
+            Log.w(TAG, "play counts not contributed: ${error.loggableMessage()}")
         }
     }
 
@@ -154,6 +161,16 @@ private fun PendingScrobble.recordingKey(): String = TrackDeduplicator.recording
         durationMs = durationMs
     )
 )
+
+/**
+ * The first artist an entry credits, as typed: what a library row naming the same artist must
+ * contain. The recording key folds case, accents and "feat." clauses on top of this, and is still
+ * what decides a match; this only narrows which rows are worth keying.
+ */
+internal fun primaryArtist(artist: String): String =
+    CREDIT_SEPARATOR.split(artist, limit = 2).first().trim()
+
+private val CREDIT_SEPARATOR = Regex("""\s+(?:feat\.?|ft\.|featuring|&|x|with)\s+|,\s*""", RegexOption.IGNORE_CASE)
 
 /** What asking Agro for its popular songs came to. */
 sealed interface PopularOutcome {

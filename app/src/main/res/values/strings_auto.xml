@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The browse tree a car shows for Wanda: the root and its folders. -->
+    <string name="browse_home">Home</string>
+    <string name="browse_library">Library</string>
+    <string name="browse_playlists">Playlists</string>
+    <string name="browse_podcasts">Podcasts</string>
+    <string name="browse_recent">Recently played</string>
+    <string name="browse_most_played">Most played</string>
+    <string name="browse_liked">Liked songs</string>
+    <string name="browse_albums">Albums</string>
+    <string name="browse_downloads">Downloads</string>
+    <!-- Title of a car's list of search results. %1$s is what was searched for. -->
+    <string name="browse_search_results">Results for “%1$s”</string>
+</resources>

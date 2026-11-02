@@ -6,6 +6,7 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
+import com.wander.android.R
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.UnifiedTrack
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -20,6 +21,10 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * The UI's handle on playback: a [MediaController] bound to [PlaybackService], exposed as flows.
@@ -29,14 +34,15 @@ class PlayerConnection @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val secureStorage: SecureStorage,
     private val streamResolver: StreamResolver,
-    private val jamSkipGate: JamSkipGate
+    private val jamSkipGate: JamSkipGate,
+    private val bluetoothOutput: BluetoothAudioOutput
 ) {
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
     private val queueManager = PlayerQueueManager()
     private val retryHandler = LivePlaybackRetryHandler()
-    private val checkpointTracker = EpisodeCheckpointTracker()
     private val skipManager = SkipGraceManager()
-    private val speedController = PlayerSpeedAndOffloadController()
+    private val playerModes = secureStorage.playbackPrefs.modes
+    private val speedController = PlayerSpeedAndOffloadController(playerModes)
 
     private val _orderLocked = MutableStateFlow(false)
     private val jamCoordinator = PlayerJamCoordinator(scope, _orderLocked, queueManager)
@@ -47,20 +53,21 @@ class PlayerConnection @Inject constructor(
     private val _actualAudioFormat = MutableStateFlow<ActualAudioFormat?>(null)
     val isRadioMode: StateFlow<Boolean> get() = secureStorage.isRadioMode
 
-    private val _errors = MutableSharedFlow<String>(extraBufferCapacity = 1)
-    val errors: SharedFlow<String> = _errors.asSharedFlow()
+    private val _errors = MutableSharedFlow<PlaybackMessage>(extraBufferCapacity = 1)
+    val errors: SharedFlow<PlaybackMessage> = _errors.asSharedFlow()
 
-    private val _notices = MutableSharedFlow<String>(extraBufferCapacity = 1)
-    val notices: SharedFlow<String> = _notices.asSharedFlow()
+    private val _notices = MutableSharedFlow<PlaybackMessage>(extraBufferCapacity = 1)
+    val notices: SharedFlow<PlaybackMessage> = _notices.asSharedFlow()
 
-    val episodeCheckpoints: SharedFlow<EpisodeCheckpoint> = checkpointTracker.episodeCheckpoints
     val speedAndPitch: StateFlow<SpeedAndPitch> = speedController.speedAndPitch
 
     data class QueueSnapshot(val tracks: List<UnifiedTrack>, val index: Int, val positionMs: Long)
 
     val state: StateFlow<PlaybackState> = PlaybackStateFlowBuilder.create(
         controller = _controller,
-        collaborators = PlaybackCollaborators(queueManager, retryHandler, checkpointTracker, _actualAudioFormat),
+        collaborators = PlaybackCollaborators(
+            queueManager, retryHandler, _actualAudioFormat, TrackErrorRecovery()
+        ),
         orderLocked = _orderLocked,
         isRadioMode = secureStorage.isRadioMode,
         resolvedLive = streamResolver.resolvedLive,
@@ -101,6 +108,15 @@ class PlayerConnection @Inject constructor(
             },
             MoreExecutors.directExecutor()
         )
+    }
+
+    /**
+     * Connects if needed and waits for the controller, for callers that act on playback from a
+     * cold start (the widget's buttons). False if the service did not answer within [timeoutMs].
+     */
+    suspend fun awaitConnected(timeoutMs: Long): Boolean = withContext(Dispatchers.Main.immediate) {
+        connect()
+        withTimeoutOrNull(timeoutMs) { _controller.filterNotNull().first() } != null
     }
 
     fun release() {
@@ -189,6 +205,7 @@ class PlayerConnection @Inject constructor(
         if (isFollowing || isInJam) return
         val ctrl = _controller.value ?: return
         ctrl.shuffleModeEnabled = !ctrl.shuffleModeEnabled
+        playerModes.setShuffle(ctrl.shuffleModeEnabled)
     }
 
     fun toggleRepeat() {
@@ -199,6 +216,7 @@ class PlayerConnection @Inject constructor(
             Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
             else -> Player.REPEAT_MODE_OFF
         }
+        playerModes.setRepeatMode(ctrl.repeatMode)
     }
 
     fun setRadioMode(enabled: Boolean) = secureStorage.setRadioMode(enabled)
@@ -213,19 +231,43 @@ class PlayerConnection @Inject constructor(
     }
 
     /** Raises [message] — already localized by the caller — as a snackbar through [notices]. */
-    fun notify(message: String) = _notices.tryEmit(message)
+    fun notify(message: String) = _notices.tryEmit(PlaybackMessage.Verbatim(message))
 
-    fun notifyNoStation() = _notices.tryEmit("Not enough listening yet — play a few tracks and try again")
+    fun notifyNoStation() = _notices.tryEmit(PlaybackMessage.Resource(R.string.radio_no_station))
 
     fun toggleRadio() {
         val enabled = !secureStorage.isRadioMode.value
         secureStorage.setRadioMode(enabled)
-        _notices.tryEmit(if (enabled) "Radio mode on — the queue keeps going" else "Radio mode off")
+        _notices.tryEmit(PlaybackMessage.Resource(if (enabled) R.string.radio_mode_on else R.string.radio_mode_off))
     }
 
     fun setSpeedAndPitch(speed: Float, pitch: Float) =
-        speedController.setSpeedAndPitch(_controller.value, speed, pitch, state.value.currentTrack?.isLive == true)
+        speedController.setSpeedAndPitch(
+            _controller.value,
+            SpeedAndPitch(speed, pitch),
+            isEpisode = isEpisodeNow(),
+            route = routeNow()
+        )
 
-    fun setOffloadEnabled(enabled: Boolean) =
-        speedController.setOffloadEnabled(_controller.value, enabled, state.value.currentTrack?.isLive == true)
+    /**
+     * Applies the speed and pitch remembered for the current track's kind, and re-decides audio
+     * offload with them; see [offloadAllowed] for the rule.
+     */
+    fun refreshPlaybackParameters() = speedController.applyRemembered(_controller.value, isEpisodeNow(), routeNow())
+
+    /** Whether a Bluetooth output is connected, which vetoes offload; see [BluetoothAudioOutput]. */
+    val bluetoothConnected: StateFlow<Boolean> get() = bluetoothOutput.connected
+
+    private fun routeNow() = OffloadRoute(isLiveNow(), skipsSilenceNow(), bluetoothOutput.connected.value)
+
+    /**
+     * Read from the controller rather than [state]: right after `play`, the controller already
+     * holds the new item while the state flow still describes the old one, and a shared link sets
+     * its speed in exactly that gap.
+     */
+    private fun isEpisodeNow() = _controller.value?.currentMediaItem?.toUnifiedTrack()?.isEpisode == true
+
+    private fun isLiveNow() = state.value.currentTrack?.isLive == true
+
+    private fun skipsSilenceNow() = skipsSilence(secureStorage.isSkipSilenceEnabled.value, state.value.currentTrack)
 }

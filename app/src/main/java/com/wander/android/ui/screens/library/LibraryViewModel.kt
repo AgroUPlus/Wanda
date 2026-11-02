@@ -1,7 +1,9 @@
 package com.wander.android.ui.screens.library
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.network.userMessageRes
 import com.wander.android.core.playback.PlaybackCoordinator
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.SourceType
@@ -17,23 +19,14 @@ import com.wander.android.data.sources.local.LocalMusicSource
 import com.wander.android.ui.components.AddToPlaylistController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import com.wander.android.ui.navigation.NavLayoutStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOn
-import androidx.paging.PagingData
-import androidx.paging.cachedIn
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val musicRepository: MusicRepository,
@@ -44,7 +37,9 @@ class LibraryViewModel @Inject constructor(
     private val playlistWriter: PlaylistWriteRepository,
     private val libraryPlayback: LibraryPlaybackCoordinator,
     private val playlistsLoader: LibraryPlaylistsLoader,
-    navLayout: NavLayoutStore
+    navLayout: NavLayoutStore,
+    private val savedState: SavedStateHandle,
+    private val browsePrefs: LibraryBrowsePrefs
 ) : ViewModel() {
 
     /** Whether any connected source can be written to. Drives the "New playlist" affordance. */
@@ -64,49 +59,23 @@ class LibraryViewModel @Inject constructor(
     val tabs: StateFlow<List<LibraryTab>> =
         navLayout.libraryTabs.stateIn(viewModelScope, SharingStarted.Eagerly, LibraryTab.entries)
 
-    private val _tab = MutableStateFlow(LibraryTab.LIKED)
-    val tab: StateFlow<LibraryTab> = _tab.asStateFlow()
-
-    private val _sourceFilter = MutableStateFlow<SourceType?>(null)
-    val sourceFilter: StateFlow<SourceType?> = _sourceFilter.asStateFlow()
-
-    // Configured sources only — not every registered backend, the same accessor Home's own source
-    // filter uses. A source no one is signed into (Deezer before login, say) has nothing to filter
-    // by and reads as a broken chip that always returns zero tracks.
-    val availableSources: List<SourceType> = musicRepository.configuredSources().sorted()
-
     /**
-     * One flow per tab rather than one flow keyed on the selected tab.
+     * The open section: the saved state first (process death), then the last one chosen (a cold
+     * start), then Liked. The pager drives this on every settle, so it is written back from there.
      */
-    val tracks: Flow<PagingData<UnifiedTrack>> = _sourceFilter
-        .flatMapLatest { filter -> musicRepository.pagedLibraryTracks(filter) }
-        .cachedIn(viewModelScope)
-
-    fun playFromLibrary(track: UnifiedTrack) {
-        libraryPlayback.playFromLibrary(viewModelScope, track, _sourceFilter.value)
-    }
-
-    val likedTracks: StateFlow<List<UnifiedTrack>> = musicRepository.getLikedTracksFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    val downloadedTracks: StateFlow<List<UnifiedTrack>> = musicRepository.getDownloadedTracksFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    val recentAlbums: StateFlow<List<UnifiedAlbum>> = combine(
-        musicRepository.getAlbumsFlow(),
-        musicRepository.getRecentlyAddedAlbumIdsFlow()
-    ) { albums, recentIds ->
-        val byId = albums.associateBy { it.id }
-        recentIds.mapNotNull(byId::get)
-    }
-        .flowOn(kotlinx.coroutines.Dispatchers.Default)
-        .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    val albums: StateFlow<List<UnifiedAlbum>> = musicRepository.getAlbumsFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val tab: StateFlow<LibraryTab> = savedState.getStateFlow(
+        KEY_TAB,
+        browsePrefs.lastTab() ?: LibraryTab.LIKED
+    )
 
     val playlists: StateFlow<List<UnifiedPlaylist>> = playlistsLoader.playlists
+
+    /** A @StringRes saying why the playlists could not be read, or null. */
+    val playlistsError: StateFlow<Int?> = playlistsLoader.error
+
+    /** A @StringRes saying why the albums could not be refreshed, or null. Room's albums stay shown. */
+    private val _albumsError = MutableStateFlow<Int?>(null)
+    val albumsError: StateFlow<Int?> = _albumsError.asStateFlow()
 
     /** A refresh the user asked for by pulling: the only one that shows the spinner. */
     private val _isRefreshing = MutableStateFlow(false)
@@ -142,7 +111,10 @@ class LibraryViewModel @Inject constructor(
                 if (pulled || CatalogueRefreshGate.due()) {
                     localSource.refresh()
                     musicRepository.refreshAlbums()
+                        .onSuccess { _albumsError.value = null }
+                        .onFailure { _albumsError.value = it.userMessageRes() }
                     musicRepository.getRecentTracks(LIBRARY_TRACK_REFRESH)
+                    musicRepository.importRemoteLikes()
                 }
             }
             playlists.join()
@@ -159,9 +131,11 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun selectTab(tab: LibraryTab) { _tab.value = tab }
-
-    fun selectSource(source: SourceType?) { _sourceFilter.value = source }
+    fun selectTab(tab: LibraryTab) {
+        if (tab == this.tab.value) return
+        savedState[KEY_TAB] = tab
+        browsePrefs.setLastTab(tab)
+    }
 
     fun play(tracks: List<UnifiedTrack>, index: Int) = libraryPlayback.play(tracks, index)
 
@@ -223,12 +197,9 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch { musicRepository.toggleLike(track) }
     }
 
-    fun deleteDownloadedTrack(track: UnifiedTrack) {
-        viewModelScope.launch { musicRepository.deleteDownloadedTrack(track.id) }
-    }
-
     private companion object {
         const val LIBRARY_TRACK_REFRESH = 200
+        const val KEY_TAB = "library_tab"
         private const val BACKFILL_SLICES = 12
     }
 }

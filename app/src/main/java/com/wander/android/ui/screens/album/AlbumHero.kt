@@ -8,8 +8,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.CloudDone
-import androidx.compose.material.icons.rounded.LibraryAdd
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.LibraryAdd
+import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -59,8 +60,14 @@ internal fun AlbumHero(
     isShared: Boolean = false,
     /** Playlists only: copy a backend's playlist into a Wanda one. Null when it already is one. */
     onConvert: (() -> Unit)? = null,
-    /** Playlists only: save the tracks as an `.m3u8` file. */
+    /**
+     * Playlists only: save the tracks as an `.m3u8` file. An export, not an offline download, so
+     * it wears an export icon rather than the download arrow the rest of the app uses for that.
+     */
+    onExport: (() -> Unit)? = null,
+    /** Downloads every track for offline listening. Null when there is nothing left to download. */
     onDownload: (() -> Unit)? = null,
+    @StringRes downloadLabel: Int = R.string.album_download_all,
     /** On the title alone — how the page's collapsing bar tracks it. */
     titleModifier: Modifier = Modifier,
     /** What kind of record this is, shown over the title. */
@@ -115,7 +122,7 @@ internal fun AlbumHero(
             )
         }
 
-        if (onShare != null || onConvert != null || onDownload != null) {
+        if (onShare != null || onConvert != null || onExport != null || onDownload != null) {
             HeroActionRow(
                 height = HeroSecondaryRowHeight,
                 modifier = Modifier.padding(top = 14.dp, bottom = 4.dp)
@@ -147,8 +154,19 @@ internal fun AlbumHero(
                 onDownload?.let { download ->
                     HeroActionButton(
                         onClick = download,
-                        contentDescription = stringResource(R.string.playlist_download),
+                        contentDescription = stringResource(downloadLabel),
                         icon = Icons.Rounded.Download,
+                        baseWeight = 1f,
+                        iconSize = HeroActionIconSize,
+                        rowHeight = HeroSecondaryRowHeight,
+                        tint = HeroActionTint.SECONDARY_CONTAINER
+                    )
+                }
+                onExport?.let { export ->
+                    HeroActionButton(
+                        onClick = export,
+                        contentDescription = stringResource(R.string.playlist_export_m3u),
+                        icon = Icons.Rounded.FileUpload,
                         baseWeight = 1f,
                         iconSize = HeroActionIconSize,
                         rowHeight = HeroSecondaryRowHeight,

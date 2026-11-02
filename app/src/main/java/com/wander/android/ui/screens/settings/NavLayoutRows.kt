@@ -3,9 +3,11 @@ package com.wander.android.ui.screens.settings
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.DownloadForOffline
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.LibraryMusic
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Podcasts
@@ -85,6 +87,8 @@ private fun LibraryTab.icon(): ImageVector = when (this) {
     LibraryTab.LIKED -> Icons.Rounded.Favorite
     LibraryTab.TRACKS -> Icons.Rounded.MusicNote
     LibraryTab.ALBUMS -> Icons.Rounded.Album
+    LibraryTab.ARTISTS -> Icons.Rounded.Mic
+    LibraryTab.GENRES -> Icons.Rounded.Category
     LibraryTab.PLAYLISTS -> Icons.Rounded.QueueMusic
     LibraryTab.PODCASTS -> Icons.Rounded.Podcasts
     LibraryTab.DOWNLOADS -> Icons.Rounded.DownloadForOffline

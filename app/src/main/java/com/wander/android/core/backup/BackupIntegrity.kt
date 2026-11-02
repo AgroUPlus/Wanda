@@ -19,7 +19,19 @@ internal enum class BackupSection {
     HISTORY,
     LIBRARY,
     MERGES,
-    EPISODES
+    EPISODES,
+    METADATA,
+    SHARED,
+    FEATURES,
+    EMBEDDINGS;
+
+    companion object {
+        /**
+         * What a backup carries unless the user says otherwise: everything but [EMBEDDINGS], which
+         * can run to megabytes and is chosen on purpose when wanted.
+         */
+        val defaults: Set<BackupSection> get() = entries.toSet() - EMBEDDINGS
+    }
 }
 
 /** How many records a section held and the SHA-256 of exactly those records. */
@@ -66,6 +78,12 @@ private fun BackupDocument.digestOf(json: Json, section: BackupSection): Section
     )
     BackupSection.MERGES -> digest(json, mergesPart, MergesPart(splits, links), splits.size + links.size)
     BackupSection.EPISODES -> digest(json, episodeList, episodes, episodes.size)
+    BackupSection.METADATA -> digest(json, canonicalList, canonical, canonical.size)
+    BackupSection.SHARED -> digest(
+        json, sharedPart, SharedPart(sharedPlaylists, jamRecaps), sharedPlaylists.size + jamRecaps.size
+    )
+    BackupSection.FEATURES -> digest(json, featureList, features, features.size)
+    BackupSection.EMBEDDINGS -> digest(json, embeddingList, embeddings, embeddings.size)
 }
 
 private fun <T> digest(json: Json, serializer: KSerializer<T>, value: T, count: Int): SectionDigest {
@@ -85,6 +103,7 @@ private fun <T> digest(json: Json, serializer: KSerializer<T>, value: T, count: 
     val playlists: List<BackupPlaylist>,
     val podcasts: List<BackupPodcast> = emptyList()
 )
+@Serializable private data class SharedPart(val playlists: List<BackupSharedPlaylist>, val jamRecaps: List<BackupJamRecap>)
 @Serializable private data class MergesPart(val splits: List<BackupRecordingPair>, val links: List<BackupRecordingPair>)
 
 private val entryMap = MapSerializer(String.serializer(), BackupEntry.serializer())
@@ -92,3 +111,7 @@ private val historyPart = HistoryPart.serializer()
 private val libraryPart = LibraryPart.serializer()
 private val mergesPart = MergesPart.serializer()
 private val episodeList = ListSerializer(BackupEpisode.serializer())
+private val canonicalList = ListSerializer(BackupCanonical.serializer())
+private val sharedPart = SharedPart.serializer()
+private val featureList = ListSerializer(BackupFeatures.serializer())
+private val embeddingList = ListSerializer(BackupEmbedding.serializer())

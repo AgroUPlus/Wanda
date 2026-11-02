@@ -25,6 +25,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.core.playback.indexInPlayOrder
+import com.wander.android.core.playback.orderedIndices
+import com.wander.android.core.playback.playPosition
 import com.wander.android.ui.components.LocalBackBlurEnabled
 import com.wander.android.ui.components.backdropBlur
 import com.wander.android.ui.screens.player.NowPlayingScreen
@@ -99,12 +102,14 @@ fun PlayerSheetContent(
     val previousArtwork = if (previousRestartsCurrent) {
         playback.currentTrack?.artworkUrl
     } else {
-        playback.queue.getOrNull(playback.currentIndex - 1)?.artworkUrl
+        playback.indexInPlayOrder(-1)?.let(playback.queue::getOrNull)?.artworkUrl
     }
-    val nextArtwork = playback.queue.getOrNull(playback.currentIndex + 1)?.artworkUrl
+    // The neighbours in play order, not index order: under shuffle the cover a swipe reveals has
+    // to be the track the skip actually lands on.
+    val nextArtwork = playback.indexInPlayOrder(1)?.let(playback.queue::getOrNull)?.artworkUrl
 
-    val hasPreviousSong = playback.currentIndex > 0
-    val hasNextSong = playback.currentIndex in 0 until (playback.queue.size - 1)
+    val hasPreviousSong = playback.indexInPlayOrder(-1) != null
+    val hasNextSong = playback.indexInPlayOrder(1) != null
     val canPreviousMini = if (previousRestartsCurrent) true else hasPreviousSong
 
     val miniSwipe = Modifier.swipeToChangeTrack(
@@ -231,11 +236,13 @@ fun PlayerSheetContent(
                                 .onGloballyPositioned(anchors::onFullPositioned)
                         ) {
                             if (playerCarousel) {
+                                // Laid out in play order, so a swipe lands where a skip would.
+                                val order = playback.orderedIndices
                                 PlayerCoverCarousel(
-                                    queue = playback.queue,
-                                    currentIndex = playback.currentIndex,
-                                    onSeekToIndex = playerConnection::seekToIndex,
-                                    onPreviewIndex = { previewIndex = it },
+                                    queue = remember(playback.queue, order) { order.map(playback.queue::get) },
+                                    currentIndex = playback.playPosition,
+                                    onSeekToIndex = { order.getOrNull(it)?.let(playerConnection::seekToIndex) },
+                                    onPreviewIndex = { previewIndex = it?.let(order::getOrNull) },
                                     isPlaying = playback.isPlaying,
                                     alpha = { carouselHandoff() * artworkAlphaState.value }
                                 )
@@ -256,6 +263,10 @@ fun PlayerSheetContent(
                 onOpenArtist = { artist, artistId ->
                     queueDrawer.snapTo(0f)
                     onOpenArtist(artist, artistId)
+                },
+                onOpenAlbum = { albumId ->
+                    queueDrawer.snapTo(0f)
+                    onOpenAlbum(albumId)
                 }
             )
         }

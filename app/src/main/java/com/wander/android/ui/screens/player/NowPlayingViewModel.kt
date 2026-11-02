@@ -38,13 +38,20 @@ internal class NowPlayingViewModel @Inject constructor(
     private val sleepTimer: com.wander.android.core.playback.SleepTimer,
     private val mediaForms: MediaFormController,
     streamResolver: com.wander.android.core.playback.StreamResolver,
-    loudnessReadout: com.wander.android.core.playback.LoudnessReadout
+    loudnessReadout: com.wander.android.core.playback.LoudnessReadout,
+    private val externalEqualizer: com.wander.android.core.playback.ExternalEqualizer
 ) : ViewModel() {
 
     val sleepTimerState = sleepTimer.state
-    fun startSleepCountdown(minutes: Int) = sleepTimer.startCountdown(minutes)
-    fun sleepAtEndOfItem() = sleepTimer.stopAtEndOfItem()
-    fun cancelSleepTimer() = sleepTimer.cancel()
+    val sleepTimerActions = SleepTimerActions(
+        onCountdown = sleepTimer::startCountdown,
+        onExtend = sleepTimer::extend,
+        onEndOfItem = sleepTimer::stopAtEndOfItem,
+        onCancel = sleepTimer::cancel
+    )
+
+    /** The installed equalizer's panel for this session, or null when there is none to open. */
+    fun equalizerIntent(): android.content.Intent? = externalEqualizer.controlPanelIntent()
 
     val isCoverArtThemeEnabled: StateFlow<Boolean> = secureStorage.isCoverArtThemeEnabled
 

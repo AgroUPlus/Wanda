@@ -30,7 +30,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
+import com.wander.android.data.model.nameRes
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.SpeedAndPitch
@@ -97,10 +99,11 @@ internal fun StandardPlayerLayout(
             onSwapMediaType = onSwapMediaType,
             jam = jam,
             source = PlayerSourceChip(
-                label = track.source.displayName,
+                label = stringResource(track.source.nameRes),
                 mutedColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 onOpenPicker = onOpenSourcePicker
             ),
+            sleepTimer = viewModel.sleepTimerState.collectAsStateWithLifecycle().value,
             onOpenJam = onOpenJam,
             onMinimize = onMinimize,
             onOpenQueue = onOpenQueue,

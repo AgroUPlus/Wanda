@@ -21,9 +21,8 @@ import com.wander.android.ui.screens.home.layout.HomeLayoutStore
 import com.wander.android.ui.screens.home.layout.ShelfUsageStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -88,7 +87,9 @@ class HomeViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.Eagerly, HomeSection(SectionContinueListening, "", HomeSectionStyle.TRACK_CAROUSEL))
 
     init {
-        refresh()
+        // The layout collector builds the added shelves on its first emission; building them
+        // here as well ran every one of their searches twice, side by side, on every open.
+        refresh(rebuildAddedShelves = false)
         observeLibrary()
         observeLikes()
         observeLayout()
@@ -107,8 +108,12 @@ class HomeViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            layoutStore.layout.collect { layout -> _uiState.update { it.copy(layout = layout) } }
+        }
+        // Apart from the layout itself: an online shelf takes seconds to build, and the next saved
+        // layout used to wait behind it, so a shelf dragged in the customizer snapped back.
+        viewModelScope.launch {
             layoutStore.layout.collect { layout ->
-                _uiState.update { it.copy(layout = layout) }
                 // Shelves the user added have no tracks until they are read, or after their settings change.
                 val changes = extras.sync(layout, _uiState.value.allSections)
                 _uiState.update { it.copy(allSections = changes.applyTo(it.allSections)) }
@@ -119,8 +124,13 @@ class HomeViewModel @Inject constructor(
     private fun observeLikes() {
         viewModelScope.launch {
             likedTrackIds.collect { liked ->
-                val updated = withContext(Dispatchers.Default) { _uiState.value.allSections.withLikes(liked) }
-                _uiState.update { it.copy(allSections = updated) }
+                val base = _uiState.value.allSections
+                val updated = withContext(Dispatchers.Default) { base.withLikes(liked) }
+                // Shelves that landed while this ran (the feed, an added shelf) must not be
+                // overwritten by the older list; those get the overlay here instead.
+                _uiState.update {
+                    it.copy(allSections = if (it.allSections === base) updated else it.allSections.withLikes(liked))
+                }
             }
         }
     }
@@ -136,11 +146,11 @@ class HomeViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            musicRepository.getLikedTracksFlow().collect { liked ->
+            musicRepository.getLikedTracksFlow(CarouselSize).collect { liked ->
                 _uiState.update { state ->
                     state.copy(
                         allSections = state.allSections.withSection(
-                            shelf(SectionLiked, "Your Favorites", HomeSectionStyle.HERO_CAROUSEL, liked.take(CarouselSize))
+                            shelf(SectionLiked, context.getString(R.string.home_your_favorites), HomeSectionStyle.HERO_CAROUSEL, liked)
                         )
                     )
                 }
@@ -151,8 +161,12 @@ class HomeViewModel @Inject constructor(
     /** Pull-to-refresh. Same work as [refresh], but the shelves stay on screen while it runs. */
     fun pullToRefresh() = refresh(showSpinner = false)
 
-    fun refresh(showSpinner: Boolean = true) {
-        viewModelScope.launch {
+    /** The load in flight. A new one replaces it: stacked pulls each re-ran every online fetch. */
+    private var refreshJob: Job? = null
+
+    fun refresh(showSpinner: Boolean = true, rebuildAddedShelves: Boolean = true) {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
             // If we already have sections rendered, keep them on screen without showing full spinner
             val hasExisting = _uiState.value.allSections.isNotEmpty()
             if (showSpinner && !hasExisting) {
@@ -162,26 +176,10 @@ class HomeViewModel @Inject constructor(
             }
 
             // Phase 1: Instant Local-First Room Database Read (< 5ms)
-            var sources: List<SourceType> = emptyList()
-            val localSections = coroutineScope {
-                // Read before the shelves rather than beside them: the lead shelf is built across
-                // whichever backends are configured, so it cannot start until that is known.
-                sources = musicRepository.configuredSources()
-                val onRepeat = async { homeShelfRepository.getQuickPicks(CarouselSize, sources) }
-                val recentlyPlayed = async { homeShelfRepository.getRecentlyPlayed(CarouselSize) }
-                val liked = async { homeShelfRepository.getLikedTracks(CarouselSize) }
-                val discover = async { homeShelfRepository.getNeverPlayed(CarouselSize) }
-
-                buildList {
-                    // The lead shelf earns legible full-width rows; the second earns big
-                    // artwork. The rest stay carousels, so the top of Home has a shape to it.
-                    add(shelf(SectionOnRepeat, "Quick picks", HomeSectionStyle.TRACK_PAGER, onRepeat.await()))
-                    add(shelf(SectionRecentlyPlayed, "Recently Played", HomeSectionStyle.HERO_CAROUSEL, recentlyPlayed.await()))
-                    add(continueListening.value)
-                    add(shelf(SectionLiked, "Your Favorites", HomeSectionStyle.HERO_CAROUSEL, liked.await()))
-                    add(shelf(SectionDiscover, "Discover", HomeSectionStyle.DISCOVER_MASONRY, discover.await()))
-                }.filterNot(HomeSection::isEmpty)
-            }
+            // Read before the shelves rather than beside them: the lead shelf is built across
+            // whichever backends are configured, so it cannot start until that is known.
+            val sources: List<SourceType> = musicRepository.configuredSources()
+            val localSections = homeShelfRepository.localShelves(sources, continueListening.value, context)
             // Added shelves already on screen stay there until their rebuild below replaces them.
             val keptExtras = _uiState.value.allSections.filter { isAddedShelf(it.id) }
 
@@ -189,7 +187,7 @@ class HomeViewModel @Inject constructor(
             _uiState.value = HomeUiState(
                 isLoading = false,
                 isRefreshing = false,
-                greeting = greeting(LocalTime.now()),
+                greeting = context.getString(greeting(LocalTime.now())),
                 layout = _uiState.value.layout,
                 editing = _uiState.value.editing,
                 allSections = (localSections + keptExtras).withLikes(likedTrackIds.value),
@@ -202,10 +200,12 @@ class HomeViewModel @Inject constructor(
             // Shelves the user added after the first paint, not before it: several are online
             // (YouTube Music, Popular on Agro, friends' picks), and Home used to wait for every
             // one of them, one after another, before showing even the library's own shelves.
-            launch {
-                val changes = extras.sync(layoutStore.layout.first(), _uiState.value.allSections, force = true)
-                _uiState.update {
-                    it.copy(allSections = changes.applyTo(it.allSections).withLikes(likedTrackIds.value))
+            if (rebuildAddedShelves) {
+                launch {
+                    val changes = extras.sync(layoutStore.layout.first(), _uiState.value.allSections, force = true)
+                    _uiState.update {
+                        it.copy(allSections = changes.applyTo(it.allSections).withLikes(likedTrackIds.value))
+                    }
                 }
             }
 
@@ -213,19 +213,13 @@ class HomeViewModel @Inject constructor(
             launch {
                 runCatching {
                     kotlinx.coroutines.withTimeoutOrNull(7000) {
-                        val feedDeferred = async { recommendationRepository.getShelves() }
-                        val recommendedDeferred = async {
-                            val seed = homeShelfRepository.getRecentlyPlayed(1).firstOrNull()
-                            seed to seed?.let { musicRepository.generateRadio(it, CarouselSize) }.orEmpty()
-                        }
-                        // Only the shelves that are a kind of music; see `RecommendedShelf.isGeneric`.
-                        val feed = feedDeferred.await().filter { it.isGeneric }
-                        val (seed, suggestions) = recommendedDeferred.await()
+                        val (feed, seed, suggestions) =
+                            loadOnlineFeed(recommendationRepository, homeShelfRepository, musicRepository)
 
                         if (feed.isNotEmpty() || (seed != null && suggestions.isNotEmpty())) {
                             _uiState.update { state ->
                                 state.copy(
-                                    allSections = state.allSections.withFeed(feed, seed, suggestions)
+                                    allSections = state.allSections.withFeed(feed, seed, suggestions, ::becauseTitle)
                                         .withLikes(likedTrackIds.value)
                                 )
                             }
@@ -241,6 +235,9 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
+
+    private fun becauseTitle(seed: UnifiedTrack) =
+        context.getString(R.string.home_because_you_listened, seed.title)
 
     fun playMix(mix: SmartMix) = playerConnection.play(mix.tracks)
 

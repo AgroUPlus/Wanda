@@ -44,13 +44,17 @@ internal class DeezerDecryptingDataSource(
         val alignedPosition = originalPosition - skipInChunk
         currentChunkIndex = alignedPosition / DeezerStreamCipher.CHUNK_SIZE
 
+        // The track id header is a note to this class, not part of the request: Deezer's CDN has
+        // no use for it, so it is taken off before anything goes over the network.
+        val withoutMarker = dataSpec.buildUpon()
+            .setHttpRequestHeaders(dataSpec.httpRequestHeaders - DEEZER_TRACK_ID_HEADER)
         val alignedSpec = if (skipInChunk > 0) {
-            dataSpec.buildUpon()
+            withoutMarker
                 .setPosition(alignedPosition)
                 .setLength(if (dataSpec.length != C.LENGTH_UNSET.toLong()) dataSpec.length + skipInChunk else C.LENGTH_UNSET.toLong())
                 .build()
         } else {
-            dataSpec
+            withoutMarker.build()
         }
 
         val resolvedLength = upstream.open(alignedSpec)

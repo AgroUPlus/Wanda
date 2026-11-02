@@ -89,7 +89,12 @@ fun SyncedLyricsView(
      * question has a different answer in each mode — so the caller needs to be able to ask the one
      * that is actually on screen.
      */
-    scrollState: ScrollState = rememberScrollState()
+    scrollState: ScrollState = rememberScrollState(),
+    /**
+     * The listener's timing correction for this track, in ms: positive shows each line that much
+     * later than its timestamp, negative earlier. See `SecureLyricsOffsetPreferences`.
+     */
+    offsetMs: Long = 0L
 ) {
     val lyrics = when (state) {
         is LyricsState.Present -> state.lyrics
@@ -133,9 +138,9 @@ fun SyncedLyricsView(
     // Reads positionState inside the derivation, so it recomputes as playback advances
     // while LazyColumn only re-indexes when the *line* changes. 120ms lead offset ensures
     // the line scroll and visual onset match vocalist attack.
-    val activeIndex by remember(lyrics) {
+    val activeIndex by remember(lyrics, offsetMs) {
         derivedStateOf {
-            val playhead = positionState.value.positionMs + 120L
+            val playhead = positionState.value.positionMs - offsetMs + 120L
             lyrics.lines.indexOfLast { it.timestampMs <= playhead }
                 .coerceAtLeast(0)
         }
@@ -151,9 +156,10 @@ fun SyncedLyricsView(
     // turned auto-scroll off by the time this fires — leaving the view stuck out of sync after
     // exactly the gesture that was supposed to jump back into it. Re-arming it here is what makes
     // "tap a line" mean "follow from here," not "follow until I next touch the screen."
-    val onSeekAndResync: (Long) -> Unit = { positionMs ->
+    // A line's timestamp is in lyric time; the player is in song time, which is that plus the offset.
+    val onSeekAndResync: (Long) -> Unit = { lyricMs ->
         autoScrollEnabled = true
-        onSeek(positionMs)
+        onSeek((lyricMs + offsetMs).coerceAtLeast(0L))
     }
 
     // Taking over is temporary. Once the finger is up and any fling has settled, the list waits a
@@ -214,7 +220,7 @@ fun SyncedLyricsView(
                         line = line,
                         nextLineTimestampMs = nextLineTs,
                         isActive = isActive,
-                        currentPositionMs = if (isActive) positionState.value.positionMs else 0L,
+                        currentPositionMs = if (isActive) positionState.value.positionMs - offsetMs else 0L,
                         onSeek = onSeekAndResync,
                         letterByLetterEnabled = letterByLetterEnabled,
                         textAlign = textAlign

@@ -69,7 +69,8 @@ class PlaylistWriteRepository @Inject constructor(
             val specific = if (type != SourceType.LOCAL) {
                 writableSource(type)?.getPlaylists()?.getOrDefault(emptyList()).orEmpty()
             } else emptyList()
-            (local + specific + shared.writableFollowed()).distinctBy { it.id }
+            // A playlist someone else owns is listed by its backend but refuses additions.
+            (local + specific.filter { it.isEditable } + shared.writableFollowed()).distinctBy { it.id }
         }
 
     suspend fun createPlaylist(
@@ -143,6 +144,9 @@ class PlaylistWriteRepository @Inject constructor(
         shared.editTarget(playlist.id)?.let { agroId ->
             return@withContext sharedOutcome(sharedEditor.remove(agroId, index), R.string.shared_playlist_removed, playlist.name)
         }
+        if (playlist.source != SourceType.LOCAL) {
+            return@withContext remoteEdit(playlist) { it.removeFromPlaylist(playlist.id, index) }
+        }
         rewriteLocal(playlist.id) { ids -> ids.toMutableList().apply { if (index in indices) removeAt(index) } }
     }
 
@@ -151,9 +155,43 @@ class PlaylistWriteRepository @Inject constructor(
         shared.editTarget(playlist.id)?.let { agroId ->
             return@withContext sharedOutcome(sharedEditor.move(agroId, from, to), null, playlist.name)
         }
+        if (playlist.source != SourceType.LOCAL) {
+            return@withContext remoteEdit(playlist) { it.moveInPlaylist(playlist.id, from, to) }
+        }
         rewriteLocal(playlist.id) { ids ->
             ids.toMutableList().apply { if (from in indices && to in indices) add(to, removeAt(from)) }
         }
+    }
+
+    /**
+     * Whether [playlist]'s name and description can be changed here. Agro's own playlists cannot:
+     * Agro has no rename, and a title changed only in the copy would be undone by the next sync.
+     */
+    fun canEditDetails(playlist: UnifiedPlaylist): Boolean =
+        playlist.source != SourceType.AGRO && playlist.isEditable && writableSource(playlist.source) != null
+
+    /** Renames [playlist] and replaces its description, on whichever source holds it. */
+    suspend fun updateDetails(playlist: UnifiedPlaylist, name: String, comment: String?): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            val source = writableSource(playlist.source).takeIf { playlist.source != SourceType.AGRO }
+                ?: return@withContext Result.failure(IllegalStateException("${playlist.source} cannot modify playlists"))
+            source.updatePlaylistDetails(playlist.id, name.trim(), comment?.trim())
+                .onFailure { outcomes.report(R.string.playlist_edit_failed, playlist.name) }
+        }
+
+    /** Whether the entries of a playlist on [type] can be removed and moved, outside Agro. */
+    fun canEditEntries(type: SourceType): Boolean = type == SourceType.LOCAL || writableSource(type) != null
+
+    /** A playlist on a server (Navidrome) is edited there; failure is said, not swallowed. */
+    private suspend fun remoteEdit(
+        playlist: UnifiedPlaylist,
+        edit: suspend (IMusicSource) -> Result<Unit>
+    ): Result<Unit> {
+        val source = writableSource(playlist.source)
+            ?: return Result.failure(IllegalStateException("${playlist.source} cannot modify playlists"))
+        return edit(source)
+            .onSuccess { syncIfPublished(playlist.id) }
+            .onFailure { outcomes.report(R.string.playlist_edit_failed, playlist.name) }
     }
 
     private suspend fun rewriteLocal(playlistId: String, change: (List<String>) -> List<String>): Result<Unit> {

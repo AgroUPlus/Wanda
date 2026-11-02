@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings → Look & feel: light, dark, or follow the phone. -->
+    <string name="settings_theme_mode">Theme</string>
+    <string name="settings_theme_mode_sub">Light, dark, or the same as the rest of your phone.</string>
+    <string name="settings_theme_mode_system">System</string>
+    <string name="settings_theme_mode_light">Light</string>
+    <string name="settings_theme_mode_dark">Dark</string>
+</resources>

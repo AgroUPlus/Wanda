@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.settings
 
+import android.text.format.Formatter
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CloudOff
@@ -7,12 +8,14 @@ import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.MobiledataOff
+import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.Radar
 import androidx.compose.material.icons.rounded.Podcasts
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.wander.android.R
 import com.wander.android.ui.components.GroupedCard
@@ -95,13 +98,22 @@ internal fun LazyListScope.playbackStorageTab(
                     )
                 },
                 {
+                    // The progress notification pauses a pass in flight, but it is only there
+                    // while one runs; this is where the pause is found, and lifted, the rest of
+                    // the time.
+                    SettingsToggle(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(4)),
+                        title = stringResource(R.string.settings_pause_measuring),
+                        subtitle = stringResource(R.string.settings_pause_measuring_sub),
+                        checked = state.measuringPaused,
+                        onCheckedChange = actions.onMeasuringPausedChange,
+                        icon = Icons.Rounded.PauseCircle
+                    )
+                },
+                {
                     SettingsRow(
                         modifier = Modifier.scale(rememberShelfEntranceScale(4)),
                         title = stringResource(R.string.settings_what_has_been_measured),
-                        // Pause/resume of a running pass lives on the progress notification, not
-                        // here: it is an action on work in flight, and the notification is where
-                        // that work is already visible. This screen is the report; that one is
-                        // the remote control.
                         subtitle = stringResource(R.string.settings_see_which_songs_wanda_can),
                         onClick = actions.onOpenFingerprints,
                         icon = Icons.Rounded.Radar
@@ -110,6 +122,9 @@ internal fun LazyListScope.playbackStorageTab(
             )
         )
     }
+
+    item(key = "sec_downloads") { SettingsSection(stringResource(R.string.settings_section_downloads)) }
+    item(key = "downloads") { DownloadSettingsCard(modifier = Modifier.scale(rememberShelfEntranceScale(5))) }
 
     item(key = "sec_storage") { SettingsSection(stringResource(R.string.settings_section_storage)) }
     item(key = "storage") {
@@ -125,14 +140,25 @@ internal fun LazyListScope.playbackStorageTab(
                     )
                 },
                 {
+                    SettingsToggle(
+                        modifier = Modifier.scale(rememberShelfEntranceScale(5)),
+                        title = stringResource(R.string.settings_pause_downloads),
+                        subtitle = stringResource(R.string.settings_pause_downloads_sub),
+                        checked = state.downloadingPaused,
+                        onCheckedChange = actions.onDownloadingPausedChange,
+                        icon = Icons.Rounded.PauseCircle
+                    )
+                },
+                {
                     SettingsRow(
                         modifier = Modifier.scale(rememberShelfEntranceScale(6)),
                         title = stringResource(R.string.settings_clear_streaming_cache),
-                        subtitle = formatBytes(state.cacheBytes) + " in use",
+                        subtitle = stringResource(R.string.settings_cache_in_use, formatBytes(state.cacheBytes)),
                         onClick = actions.onClearCache,
                         icon = Icons.Rounded.DeleteSweep
                     )
-                }
+                },
+                { StreamCacheSizeRow(modifier = Modifier.scale(rememberShelfEntranceScale(6))) }
             )
         )
     }
@@ -142,8 +168,6 @@ internal fun LazyListScope.playbackStorageTab(
     }
 }
 
-internal fun formatBytes(bytes: Long): String = when {
-    bytes >= 1L shl 30 -> "%.1f GB".format(bytes.toDouble() / (1L shl 30))
-    bytes >= 1L shl 20 -> "%.0f MB".format(bytes.toDouble() / (1L shl 20))
-    else -> "0 MB"
-}
+/** A byte count in the reader's own locale and units, as the cloud backup rows already show it. */
+@Composable
+internal fun formatBytes(bytes: Long): String = Formatter.formatShortFileSize(LocalContext.current, bytes)

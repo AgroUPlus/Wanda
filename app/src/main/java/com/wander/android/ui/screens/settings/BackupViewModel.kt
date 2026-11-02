@@ -1,12 +1,15 @@
 package com.wander.android.ui.screens.settings
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.backup.BackupSection
 import com.wander.android.core.backup.SettingsBackupStore
 import com.wander.android.core.security.AgroVault
+import com.wander.android.R
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +27,8 @@ import javax.inject.Inject
  */
 @HiltViewModel
 internal class BackupViewModel @Inject constructor(
-    private val store: SettingsBackupStore
+    private val store: SettingsBackupStore,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _status = MutableStateFlow<BackupStatus?>(null)
@@ -37,7 +41,7 @@ internal class BackupViewModel @Inject constructor(
     fun export(target: Uri, passphrase: String, sections: Set<BackupSection>) {
         run(
             work = { store.export(target, passphrase, sections); BackupStatus.Exported },
-            failure = { "Export failed: ${it.readableMessage()}" }
+            failure = { context.getString(R.string.backup_export_failed, it.readableMessage()) }
         )
     }
 
@@ -49,7 +53,7 @@ internal class BackupViewModel @Inject constructor(
                     contents.settings, contents.plays, contents.recaps, contents.tracks, contents.playlists
                 )
             },
-            failure = { "Import failed: ${it.readableMessage()}" }
+            failure = { context.getString(R.string.backup_import_failed, it.readableMessage()) }
         )
     }
 
@@ -80,19 +84,19 @@ internal class BackupViewModel @Inject constructor(
     fun clearStatus() {
         _status.value = null
     }
-}
 
-/**
- * The message text is built here rather than carrying the exception to the UI, so nothing that
- * reaches the screen can carry a path, a URL or a key — see the logging rule in AGENTS.md.
- *
- * A [AgroVault.VaultException] is reported as a wrong passphrase because that is overwhelmingly
- * what it is. GCM genuinely cannot distinguish a wrong key from a tampered file, and saying
- * "wrong passphrase, or the file is damaged" is both honest and the order the reader should try.
- */
-private fun Throwable.readableMessage(): String = when (this) {
-    is AgroVault.VaultException -> "wrong passphrase, or the file is damaged"
-    else -> message ?: "the file could not be read"
+    /**
+     * The message text is built here rather than carrying the exception to the UI, so nothing that
+     * reaches the screen can carry a path, a URL or a key — see the logging rule in AGENTS.md.
+     *
+     * A [AgroVault.VaultException] is reported as a wrong passphrase because that is overwhelmingly
+     * what it is. GCM genuinely cannot distinguish a wrong key from a tampered file, and saying
+     * "wrong passphrase, or the file is damaged" is both honest and the order the reader should try.
+     */
+    private fun Throwable.readableMessage(): String = when (this) {
+        is AgroVault.VaultException -> context.getString(R.string.backup_wrong_passphrase_or_damaged)
+        else -> message ?: context.getString(R.string.backup_file_unreadable)
+    }
 }
 
 internal sealed interface BackupStatus {

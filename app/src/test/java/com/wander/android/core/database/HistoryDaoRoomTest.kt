@@ -33,32 +33,68 @@ class HistoryDaoRoomTest {
     @Test
     fun aNewPlayWaitsInTheOutbox() = runBlocking {
         val dao = db.historyDao()
-        val id = dao.recordHistory(HistoryEntity(trackId = "t1", playedAt = 1_000))
+        val id = dao.recordHistory(HistoryEntity(trackId = "navidrome:t1", playedAt = 1_000))
 
-        assertEquals(listOf(id), dao.getPendingScrobbles().map { it.historyId })
+        assertEquals(listOf(id), dao.getPendingScrobbles(NAVIDROME).map { it.historyId })
     }
 
     @Test
     fun aScrobbledPlayLeavesTheOutbox() = runBlocking {
         val dao = db.historyDao()
-        val first = dao.recordHistory(HistoryEntity(trackId = "t1", playedAt = 1_000))
-        val second = dao.recordHistory(HistoryEntity(trackId = "t2", playedAt = 2_000))
+        val first = dao.recordHistory(HistoryEntity(trackId = "navidrome:t1", playedAt = 1_000))
+        val second = dao.recordHistory(HistoryEntity(trackId = "navidrome:t2", playedAt = 2_000))
 
         dao.markScrobbled(listOf(first))
 
-        assertEquals(listOf(second), dao.getPendingScrobbles().map { it.historyId })
+        assertEquals(listOf(second), dao.getPendingScrobbles(NAVIDROME).map { it.historyId })
     }
 
     @Test
     fun theOutboxHonoursItsLimit() = runBlocking {
         val dao = db.historyDao()
-        repeat(5) { dao.recordHistory(HistoryEntity(trackId = "t$it", playedAt = it.toLong())) }
+        repeat(5) { dao.recordHistory(HistoryEntity(trackId = "navidrome:t$it", playedAt = it.toLong())) }
 
-        assertEquals(2, dao.getPendingScrobbles(limit = 2).size)
+        assertEquals(2, dao.getPendingScrobbles(NAVIDROME, limit = 2).size)
+    }
+
+    /** Local and YouTube plays are never scrobbled to a source, so they must not queue for one. */
+    @Test
+    fun theOutboxHoldsOnlyThatSourcesPlays() = runBlocking {
+        val dao = db.historyDao()
+        dao.recordHistory(HistoryEntity(trackId = "local:t1", playedAt = 1_000))
+        val ours = dao.recordHistory(HistoryEntity(trackId = "navidrome:t2", playedAt = 2_000))
+
+        assertEquals(listOf(ours), dao.getPendingScrobbles(NAVIDROME).map { it.historyId })
+    }
+
+    /** Removing a play from History must not cancel a scrobble that has not gone yet. */
+    @Test
+    fun aHiddenPlayStaysInTheOutbox() = runBlocking {
+        val dao = db.historyDao()
+        val id = dao.recordHistory(HistoryEntity(trackId = "navidrome:t1", playedAt = 1_000))
+
+        dao.hidePlay(id)
+        assertEquals(0, dao.hideAllPlays())
+
+        assertEquals(listOf(id), dao.getPendingScrobbles(NAVIDROME).map { it.historyId })
+        assertEquals(1, dao.allPlays().size)
+    }
+
+    @Test
+    fun clearingHidesEveryShowingPlay() = runBlocking {
+        val dao = db.historyDao()
+        repeat(3) { dao.recordHistory(HistoryEntity(trackId = "local:t$it", playedAt = it.toLong())) }
+
+        assertEquals(3, dao.hideAllPlays())
+        assertEquals(0, dao.hideAllPlays())
     }
 
     @Test
     fun anEmptyOutboxIsEmpty() = runBlocking {
-        assertTrue(db.historyDao().getPendingScrobbles().isEmpty())
+        assertTrue(db.historyDao().getPendingScrobbles(NAVIDROME).isEmpty())
+    }
+
+    private companion object {
+        const val NAVIDROME = "navidrome:"
     }
 }

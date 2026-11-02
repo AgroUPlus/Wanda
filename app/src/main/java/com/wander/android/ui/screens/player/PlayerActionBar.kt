@@ -90,7 +90,7 @@ internal fun PlayerActionBar(
                 // bug, one that dims reads as "not right now".
                 availability = SegmentAvailability(
                     enabled = !state.orderLocked,
-                    disabledDescription = "Shuffle, unavailable while the room chooses the order"
+                    disabledDescription = stringResource(R.string.player_shuffle_unavailable)
                 ),
                 // The icon itself never changes for shuffle — only its checked colour does — so a
                 // spin on toggle is what gives this segment the same "something happened" motion
@@ -114,7 +114,7 @@ internal fun PlayerActionBar(
                 onClick = connection::toggleRepeat,
                 availability = SegmentAvailability(
                     enabled = !state.orderLocked,
-                    disabledDescription = "Repeat, unavailable while the room chooses the order"
+                    disabledDescription = stringResource(R.string.player_repeat_unavailable)
                 )
             )
             Segment(

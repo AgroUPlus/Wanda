@@ -2,7 +2,6 @@ package com.wander.android.core.playback
 
 import android.app.PendingIntent
 import android.content.Intent
-import android.os.Bundle
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -10,13 +9,12 @@ import androidx.media3.common.Format
 import androidx.media3.common.Timeline
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.session.MediaLibraryService
+import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaSessionService
-import androidx.media3.session.SessionCommand
-import androidx.media3.session.SessionResult
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
 import com.wander.android.MainActivity
+import com.wander.android.core.playback.browse.BrowseTree
+import com.wander.android.core.playback.browse.PlayRequestResolver
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.sources.agro.AgroHandoffPublisher
 import dagger.hilt.android.AndroidEntryPoint
@@ -36,10 +34,14 @@ import javax.inject.Inject
  * Owns the [ExoPlayer] and the [MediaSession]. The UI holds a `MediaController` onto this
  * service, which is what gives us the notification, lockscreen and Bluetooth controls, and lets
  * playback outlive the Activity.
+ *
+ * A [MediaLibraryService] rather than a plain session service so a car can browse the library and
+ * search it — see [BrowseTree]. The session is a [MediaLibraryService.MediaLibrarySession]; to
+ * everything that only controls playback it is the same session it always was.
  */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @AndroidEntryPoint
-class PlaybackService : MediaSessionService() {
+class PlaybackService : MediaLibraryService() {
 
     @Inject lateinit var playerFactory: PlayerFactory
     @Inject lateinit var musicRepository: MusicRepository
@@ -47,28 +49,55 @@ class PlaybackService : MediaSessionService() {
     @Inject lateinit var secureStorage: com.wander.android.core.security.SecureStorage
     @Inject lateinit var sleepTimer: SleepTimer
     @Inject lateinit var loudnessReadout: LoudnessReadout
+    @Inject lateinit var loudnessHints: LoudnessHints
     @Inject lateinit var jamSkipGate: JamSkipGate
+    @Inject lateinit var bluetoothOutput: BluetoothAudioOutput
     @Inject internal lateinit var scrobbleForwarding: com.wander.android.data.repository.ScrobbleForwarding
+    @Inject internal lateinit var sourceNowPlaying: com.wander.android.data.repository.SourceNowPlaying
+    @Inject internal lateinit var savedQueueStore: SavedQueueStore
+    @Inject lateinit var externalEqualizer: ExternalEqualizer
+    @Inject internal lateinit var browseTree: BrowseTree
+    @Inject internal lateinit var playRequests: PlayRequestResolver
+    @Inject lateinit var episodeProgress: com.wander.android.data.repository.EpisodeProgressRepository
     @Inject @field:com.wander.android.di.ArtworkHttpClient
     lateinit var artworkHttpClient: okhttp3.OkHttpClient
 
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
-    private var mediaSession: MediaSession? = null
+    private var mediaSession: MediaLibrarySession? = null
+    private var queueResumption: QueueResumption? = null
+    private var episodeRecorder: EpisodeProgressRecorder? = null
+    private var widgetUpdater: com.wander.android.ui.widget.PlaybackWidgetUpdater? = null
 
     override fun onCreate() {
         super.onCreate()
         val player = playerFactory.create()
+        // As the listener last left them; PlayerConnection records each toggle.
+        secureStorage.playbackPrefs.modes.let { modes ->
+            player.shuffleModeEnabled = modes.shuffle
+            player.repeatMode = modes.repeatMode
+        }
         player.addListener(PlayCountRecorder(player))
+        episodeRecorder = EpisodeProgressRecorder(player, episodeProgress).also(player::addListener)
         player.addListener(AgroHandoffReporter(player, agroHandoffPublisher))
-        player.addListener(NowPlayingForwarder(player, scope, scrobbleForwarding))
+        player.addListener(NowPlayingForwarder(player, scope, scrobbleForwarding, sourceNowPlaying))
         player.addListener(NextTrackPreloader(player))
         EpisodeSkipSilence(player, secureStorage.isSkipSilenceEnabled, scope)
+        EpisodeAudioAttributes(player)
+        PlaybackWakeMode(player)
+        BluetoothOffloadVeto(player, bluetoothOutput.connected, scope)
         val volume = PlayerVolume { player.volume = it }
         val loudness = secureStorage.loudness
-        LoudnessNormaliser(player, volume, loudness.mode, loudness.preampDb, loudnessReadout, scope)
+        LoudnessNormaliser(player, volume, loudness.mode, loudness.preampDb, loudnessReadout, loudnessHints, scope)
         SleepTimerEnforcer(player, volume, sleepTimer, scope)
         player.addAnalyticsListener(AudioFormatReporter())
-        player.addListener(com.wander.android.ui.widget.PlaybackWidgetUpdater(applicationContext, scope))
+        // The session id arrives after the player is built; the listener announces it then.
+        player.addListener(externalEqualizer)
+        externalEqualizer.open(player.audioSessionId)
+        val widget = com.wander.android.ui.widget.PlaybackWidgetUpdater(applicationContext, player)
+        player.addListener(widget)
+        widgetUpdater = widget
+        val resumption = QueueResumption(player, savedQueueStore, scope).also(player::addListener)
+        queueResumption = resumption
 
         val sessionActivity = PendingIntent.getActivity(
             this,
@@ -77,7 +106,7 @@ class PlaybackService : MediaSessionService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val likeButton = NotificationLikeButton(player, musicRepository, scope)
+        val buttons = NotificationButtons(this, player, musicRepository, scope)
 
         val sessionPlayer = JamSkipPlayer(player, jamSkipGate)
         // Skipped while it still holds its first value: the player was built with that state.
@@ -86,7 +115,8 @@ class PlaybackService : MediaSessionService() {
             .onEach { sessionPlayer.onGateChanged() }
             .launchIn(scope)
 
-        mediaSession = MediaSession.Builder(this, sessionPlayer)
+        val callback = PlaybackSessionCallback(packageName, buttons, resumption, browseTree, playRequests, scope)
+        mediaSession = MediaLibrarySession.Builder(this, sessionPlayer, callback)
             .setSessionActivity(sessionActivity)
             // The default loader fetches over a plain HTTP stack. Navidrome artwork URLs carry no
             // credentials, so they are loaded through the client that signs them. Same size cap
@@ -102,39 +132,8 @@ class PlaybackService : MediaSessionService() {
                     .setMaximumOutputDimension(MediaSession.getBitmapDimensionLimit(this) * 2 - 1)
                     .build()
             )
-            .setCallback(object : MediaSession.Callback {
-                override fun onConnect(
-                    session: MediaSession,
-                    controller: MediaSession.ControllerInfo
-                ): MediaSession.ConnectionResult {
-                    return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
-                        .setAvailablePlayerCommands(MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS)
-                        // The defaults plus the heart. Without adding it here the button is drawn
-                        // but every tap on it is rejected as an unavailable command.
-                        .setAvailableSessionCommands(
-                            MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
-                                .add(likeButton.sessionCommand)
-                                .build()
-                        )
-                        // Seeds the controller as it connects; `likeButton` republishes from then on.
-                        .setMediaButtonPreferences(likeButton.preferences())
-                        .build()
-                }
-
-                override fun onCustomCommand(
-                    session: MediaSession,
-                    controller: MediaSession.ControllerInfo,
-                    customCommand: SessionCommand,
-                    args: Bundle
-                ): ListenableFuture<SessionResult> =
-                    if (likeButton.handle(customCommand)) {
-                        Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
-                    } else {
-                        super.onCustomCommand(session, controller, customCommand, args)
-                    }
-            })
             .build()
-            .also(likeButton::attach)
+            .also(buttons::attach)
     }
 
     /**
@@ -190,7 +189,7 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = mediaSession
 
     /** Nothing left playing and the user swiped the task away: don't linger as a foreground service. */
     override fun onTaskRemoved(rootIntent: Intent?) {
@@ -200,6 +199,14 @@ class PlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         agroHandoffPublisher.stop()
+        // Before the release below, which empties the player this reads.
+        queueResumption?.flush()
+        queueResumption = null
+        episodeRecorder?.flush()
+        episodeRecorder = null
+        widgetUpdater?.onServiceStopped()
+        widgetUpdater = null
+        externalEqualizer.close()
         mediaSession?.run {
             player.release()
             release()
@@ -237,7 +244,8 @@ class PlaybackService : MediaSessionService() {
             scrobbleJob?.cancel()
             if (!player.isPlaying) return
             val track = player.currentMediaItem?.toUnifiedTrack() ?: return
-            if (recordedFor == track.id) return
+            // A file opened from another app is played, not added to the library and its history.
+            if (recordedFor == track.id || isOpenedFileId(track.id)) return
 
             scrobbleJob = scope.launch {
                 while (player.isPlaying) {
@@ -278,7 +286,7 @@ class PlaybackService : MediaSessionService() {
          * is fifteen seconds per skip, not a whole song. Preloading remains off for anyone
          * counting megabytes; that is what the switch is for.
          */
-        const val PRELOAD_TARGET_US = 5_000_000L
+        const val PRELOAD_TARGET_US = 15_000_000L
     }
 
 }

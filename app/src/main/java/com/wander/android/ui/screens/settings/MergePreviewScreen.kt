@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -41,7 +42,7 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.KeptApartPair
 import com.wander.android.data.repository.MergeGroup
 import com.wander.android.ui.components.headerInset
-import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.nestedListInset
 
 /**
  * What the recording migration would do to *this* library, before it does any of it.
@@ -107,7 +108,7 @@ internal fun MergePreviewScreen(
         }
 
         LazyColumn(
-            contentPadding = contentPadding.listInset(),
+            contentPadding = contentPadding.nestedListInset(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection)
         ) {
@@ -121,15 +122,24 @@ internal fun MergePreviewScreen(
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Text(
-                            text = "${current.trackRows} rows would become " +
-                                "${current.recordings} recordings",
+                            text = pluralStringResource(
+                                R.plurals.merge_rows_become_recordings,
+                                current.trackRows,
+                                current.trackRows,
+                                current.recordings
+                            ),
                             style = MaterialTheme.typography.titleMedium
                         )
                         Text(
-                            text = "${current.merged} rows folded together · " +
-                                "${current.splitLikes} likes currently split across copies · " +
-                                "${current.reviewable.size} worth checking" +
-                                keptApartSummary(current.keptApart.size),
+                            text = listOf(
+                                pluralStringResource(R.plurals.merge_rows_folded, current.merged, current.merged),
+                                pluralStringResource(R.plurals.merge_split_likes, current.splitLikes, current.splitLikes),
+                                pluralStringResource(
+                                    R.plurals.merge_worth_checking,
+                                    current.reviewable.size,
+                                    current.reviewable.size
+                                )
+                            ).joinToString(" · ") + keptApartSummary(current.keptApart.size),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 6.dp)

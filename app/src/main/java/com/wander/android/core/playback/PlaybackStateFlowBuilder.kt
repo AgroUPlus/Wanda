@@ -25,7 +25,7 @@ internal object PlaybackStateFlowBuilder {
         orderLocked: StateFlow<Boolean>,
         isRadioMode: StateFlow<Boolean>,
         resolvedLive: StateFlow<Set<String>>,
-        onError: (String) -> Unit,
+        onError: (PlaybackMessage) -> Unit,
         scope: CoroutineScope
     ): StateFlow<PlaybackState> {
         lateinit var stateRef: StateFlow<PlaybackState>
@@ -35,7 +35,14 @@ internal object PlaybackStateFlowBuilder {
                 if (ctrl == null) {
                     flowOf(PlaybackState())
                 } else {
-                    snapshots(ctrl, collaborators, isRadioMode, { stateRef.value.currentTrack?.isLive == true }, onError)
+                    snapshots(
+                        ctrl,
+                        collaborators,
+                        isRadioMode,
+                        isLiveNow = { stateRef.value.currentTrack?.isLive == true },
+                        isOrderLocked = { orderLocked.value },
+                        onError = onError
+                    )
                 }
             }
             .combine(isRadioMode) { state, radio -> state.copy(isRadioMode = radio) }
@@ -54,9 +61,10 @@ internal object PlaybackStateFlowBuilder {
         collaborators: PlaybackCollaborators,
         isRadioMode: StateFlow<Boolean>,
         isLiveNow: () -> Boolean,
-        onError: (String) -> Unit
+        isOrderLocked: () -> Boolean,
+        onError: (PlaybackMessage) -> Unit
     ): Flow<PlaybackState> = callbackFlow {
-        val listener = PlaybackEventListener(ctrl, collaborators, isRadioMode, isLiveNow, onError) { trySend(it) }
+        val listener = PlaybackEventListener(ctrl, collaborators, isRadioMode, isLiveNow, isOrderLocked, onError) { trySend(it) }
         ctrl.addListener(listener)
         listener.start()
         awaitClose { ctrl.removeListener(listener) }

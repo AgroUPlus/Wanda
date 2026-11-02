@@ -35,6 +35,9 @@ internal const val KEY_LASTFM_USER = "key_lastfm_user"
 internal const val KEY_LASTFM_ENABLED = "key_lastfm_enabled"
 internal const val KEY_LASTFM_API_KEY = "key_lastfm_api_key"
 internal const val KEY_LASTFM_API_SECRET = "key_lastfm_api_secret"
+/** Why the service signed this device out on its own; present only until the user connects again. */
+internal const val KEY_LISTENBRAINZ_SIGNED_OUT = "key_listenbrainz_signed_out"
+internal const val KEY_LASTFM_SIGNED_OUT = "key_lastfm_signed_out"
 
 internal val ACCOUNT_KEYS = setOf(
     KEY_NAVIDROME_URL, KEY_NAVIDROME_USER, KEY_NAVIDROME_TOKEN, KEY_YTM_COOKIE,
@@ -45,7 +48,7 @@ internal val ACCOUNT_KEYS = setOf(
     KEY_AGRO_IDENTITY_PRIV, KEY_AGRO_IDENTITY_PUB, KEY_PODCASTINDEX_KEY, KEY_PODCASTINDEX_SECRET,
     // Scrobbling services: a token or session is a sign-in, so it travels only with ACCOUNTS.
     KEY_LISTENBRAINZ_TOKEN, KEY_LISTENBRAINZ_USER, KEY_LASTFM_SESSION, KEY_LASTFM_USER,
-    KEY_LASTFM_API_KEY, KEY_LASTFM_API_SECRET
+    KEY_LASTFM_API_KEY, KEY_LASTFM_API_SECRET, KEY_LISTENBRAINZ_SIGNED_OUT, KEY_LASTFM_SIGNED_OUT
 )
 
 internal const val KEY_AGRO_CATALOG_TRADE = "key_agro_catalog_trade"
@@ -72,9 +75,26 @@ internal const val KEY_LOUDNESS_MODE = "key_loudness_mode"
 internal const val KEY_LOUDNESS_PREAMP_DB = "key_loudness_preamp_db"
 internal const val KEY_INDEX_ON_MOBILE_DATA = "key_index_on_mobile_data"
 internal const val KEY_RADIO_MODE = "key_radio_mode"
+internal const val KEY_AUTO_DOWNLOAD_LIKED = "key_auto_download_liked"
+internal const val KEY_AUTO_DOWNLOAD_PREDICTED = "key_auto_download_predicted"
+internal const val KEY_DOWNLOAD_WIFI_ONLY = "key_download_wifi_only"
+internal const val KEY_DOWNLOAD_LIMIT_BYTES = "key_download_limit_bytes"
+internal const val KEY_STREAM_CACHE_BYTES = "key_stream_cache_bytes"
+internal const val KEY_DOWNLOADS_STORAGE_FULL = "key_downloads_storage_full"
+internal const val KEY_MANUAL_DOWNLOAD_IDS = "key_manual_download_ids"
+internal const val KEY_NAVIDROME_QUALITY_WIFI = "key_navidrome_quality_wifi"
+internal const val KEY_NAVIDROME_QUALITY_MOBILE = "key_navidrome_quality_mobile"
+internal const val KEY_SHUFFLE = "key_shuffle"
+internal const val KEY_REPEAT_MODE = "key_repeat_mode"
+internal const val KEY_MUSIC_SPEED = "key_music_speed"
+internal const val KEY_MUSIC_PITCH = "key_music_pitch"
+internal const val KEY_EPISODE_SPEED = "key_episode_speed"
+internal const val KEY_EPISODE_PITCH = "key_episode_pitch"
+internal const val KEY_LYRICS_OFFSETS = "key_lyrics_offsets"
 
 internal const val KEY_AMOLED_BLACK = "key_amoled_black"
 internal const val KEY_BACK_BLUR = "key_back_blur"
+internal const val KEY_THEME_MODE = "key_theme_mode"
 internal const val KEY_MONET_DYNAMIC = "key_monet_dynamic"
 internal const val KEY_REDUCE_MOTION = "key_reduce_motion"
 internal const val KEY_LETTER_BY_LETTER_LYRICS = "key_letter_by_letter_lyrics"

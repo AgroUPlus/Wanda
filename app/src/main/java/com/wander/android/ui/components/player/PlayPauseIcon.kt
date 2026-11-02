@@ -23,7 +23,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
+import com.wander.android.R
 import kotlinx.coroutines.delay
 
 /**
@@ -84,7 +86,7 @@ internal fun PlayPauseIcon(
             }
             Icon(
                 imageVector = icon,
-                contentDescription = if (isPlaying) "Pause" else "Play",
+                contentDescription = stringResource(if (isPlaying) R.string.action_pause else R.string.action_play),
                 modifier = Modifier.size(iconSize)
             )
         }

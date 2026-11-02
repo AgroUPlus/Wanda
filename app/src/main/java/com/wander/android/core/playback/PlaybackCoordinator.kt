@@ -1,5 +1,6 @@
 package com.wander.android.core.playback
 
+import com.wander.android.R
 import com.wander.android.data.model.LyricsState
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.EpisodeProgressRepository
@@ -12,6 +13,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
@@ -56,6 +58,15 @@ class PlaybackCoordinator @Inject internal constructor(
      */
     private var resumedTrackId: String? = null
 
+    /**
+     * True while [startRadio] is building its first batch.
+     *
+     * The seed alone is a one-track queue, which trips the endless top-up below; without this the
+     * two fetched a station for the same seed side by side and queued both.
+     */
+    @Volatile
+    private var stationStarting = false
+
     private val _lyrics = MutableStateFlow<LyricsState>(LyricsState.Loading)
     val lyrics: StateFlow<LyricsState> = _lyrics.asStateFlow()
 
@@ -87,26 +98,24 @@ class PlaybackCoordinator @Inject internal constructor(
         // In a Jam, the queue belongs to the room rather than personal radio top-up.
         connection.state
             .filterNotNull()
-            .map { RadioTrigger(it.isRadioMode, it.currentIndex, it.queue.size) }
+            .map { RadioTrigger(it.isRadioMode, it.playPosition, it.queue.size) }
             .distinctUntilChanged()
             .onEach { trigger ->
-                if (!trigger.enabled) return@onEach
+                if (!trigger.enabled || stationStarting) return@onEach
                 if (jamRepository.jam.value != null) return@onEach
                 if (trigger.size - trigger.index > RADIO_LOOKAHEAD) return@onEach
                 val seed = connection.state.value.currentTrack ?: return@onEach
                 // An episode is no seed for a music station: it would queue songs "like" a podcast.
                 if (seed.isEpisode) return@onEach
-                val more = musicRepository.generateRadio(seed, RADIO_BATCH)
+                val more = notQueued(musicRepository.generateRadio(seed, RADIO_BATCH))
                 if (more.isNotEmpty()) scope.launch(Dispatchers.Main) { connection.addToQueue(more) }
             }
             .launchIn(scope)
 
         // Episodes resume where they were left; songs do not. See EpisodeProgressRepository.
+        // Saved by the service's player (EpisodeProgressRecorder), so a car's listening counts too.
         // Pruned once per process: nothing else ever removes a row for an episode heard once.
         scope.launch { episodeProgress.prune() }
-        connection.episodeCheckpoints
-            .onEach { episodeProgress.save(it.trackId, it.positionMs, it.durationMs) }
-            .launchIn(scope)
 
         // Resumed on the first frame rather than at the moment the track becomes current: a seek
         // issued while the item is still preparing races the initial buffer and lands at zero —
@@ -132,14 +141,19 @@ class PlaybackCoordinator @Inject internal constructor(
 
         connection.controller
             .filterNotNull()
-            .onEach { applyOffload() }
+            .onEach { applyPlaybackParameters() }
             .launchIn(scope)
 
-        // Livestreams veto audio offload — see `applyOffload`.
+        // Livestreams, silence-skipped episodes and a Bluetooth output veto audio offload — see
+        // `offloadAllowed`. The first two turn on what is playing, the second also on the setting,
+        // and the last on earbuds connecting or going away mid-track. A change between episode and
+        // music is also a change of remembered speed.
         connection.state
-            .map { it.currentTrack?.isLive == true }
+            .map { (it.currentTrack?.isLive == true) to (it.currentTrack?.isEpisode == true) }
             .distinctUntilChanged()
-            .onEach { applyOffload() }
+            .combine(secureStorage.isSkipSilenceEnabled) { kind, skip -> kind to skip }
+            .combine(connection.bluetoothConnected) { kind, bluetooth -> kind to bluetooth }
+            .onEach { applyPlaybackParameters() }
             .launchIn(scope)
     }
 
@@ -155,29 +169,44 @@ class PlaybackCoordinator @Inject internal constructor(
      * Here it sits beside the endless top-up, which is the same job on a different trigger and
      * already stands down for a room that owns its order.
      *
-     * The radio is one shot. `connection.play` clears radio mode deliberately — see the note there
-     * about a short list tripping the endless top-up — and a station somebody asked for by name
-     * should be the length they were given, not a mode left switched on behind them.
+     * The station is endless: radio mode is switched on once the first batch is queued, so the
+     * top-up keeps extending it from whatever is playing as the queue runs low. It used to be one
+     * batch of twenty and then silence. When nothing similar can be found the listener is told,
+     * rather than left with the seed alone and no idea why.
      */
     suspend fun startRadio(seed: UnifiedTrack) {
-        connection.play(listOf(seed))
-        // In a Jam the queue belongs to the room, and `play` above has already proposed the seed
-        // to it rather than playing it here.
-        if (jamRepository.jam.value != null) return
-        val radio = musicRepository.generateRadio(seed)
-        if (radio.isNotEmpty()) connection.addToQueue(radio)
+        stationStarting = true
+        try {
+            connection.play(listOf(seed))
+            // In a Jam the queue belongs to the room, and `play` above has already proposed the
+            // seed to it rather than playing it here.
+            if (jamRepository.jam.value != null) return
+            val radio = musicRepository.generateRadio(seed)
+            if (radio.isEmpty()) {
+                connection.notify(context.getString(R.string.radio_nothing_similar))
+                return
+            }
+            connection.addToQueue(radio)
+            connection.setRadioMode(true)
+        } finally {
+            stationStarting = false
+        }
+    }
+
+    /** [tracks] minus anything already in the queue, so a top-up never repeats what is lined up. */
+    private fun notQueued(tracks: List<UnifiedTrack>): List<UnifiedTrack> {
+        val queued = connection.state.value.queue.mapTo(HashSet()) { it.id }
+        return tracks.filterNot { it.id in queued }
     }
 
     /**
-     * Decides whether offload is on.
-     *
-     * A livestream wants offload off because offload hands a fixed buffer to the DSP and
-     * expects a track that ends, and an HLS live window is not one.
+     * Has the connection apply the speed remembered for what is playing (episodes and music keep
+     * their own) and re-decide offload with it. The decision itself is `offloadAllowed`, which also
+     * weighs the speed and pitch: deciding it here from the livestream flag alone switched offload
+     * back on under a track playing at 1.5x.
      */
-    private fun applyOffload() {
-        val live = connection.state.value.currentTrack?.isLive == true
-        val offload = !live
-        scope.launch(Dispatchers.Main) { connection.setOffloadEnabled(offload) }
+    private fun applyPlaybackParameters() {
+        scope.launch(Dispatchers.Main) { connection.refreshPlaybackParameters() }
     }
 
     private data class RadioTrigger(val enabled: Boolean, val index: Int, val size: Int)

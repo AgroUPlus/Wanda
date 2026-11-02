@@ -123,6 +123,11 @@ interface TrackEmbeddingDao {
      * [coverageToleranceMs] absorbs the half-second the segmentation rounds off and the ordinary
      * disagreement between a container's declared duration and its decoded length. A track with no
      * declared duration is judged on existence alone; there is nothing to compare against.
+     *
+     * The target is capped at [maxCoverageMs], the most the indexer ever decodes. Without the cap a
+     * track longer than that — a DJ mix, a live set, an audiobook chapter — could never reach its
+     * own end, so it came back as unfinished on every run and was decoded in full, twelve minutes
+     * of audio, every time, ahead of tracks that had never been measured at all.
      */
     @Query(
         """
@@ -135,7 +140,7 @@ interface TrackEmbeddingDao {
                 OR (
                     t.durationMs > 0
                     AND (length(e.vector) / :bytesPerSegment) * :segmentHopMs
-                        < t.durationMs - :coverageToleranceMs
+                        < MIN(t.durationMs, :maxCoverageMs) - :coverageToleranceMs
                 )
               )
         LIMIT :limit
@@ -147,7 +152,8 @@ interface TrackEmbeddingDao {
         limit: Int,
         bytesPerSegment: Int,
         segmentHopMs: Int,
-        coverageToleranceMs: Int
+        coverageToleranceMs: Int,
+        maxCoverageMs: Long
     ): List<String>
 
     /**

@@ -28,10 +28,12 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
+import com.wander.android.data.model.nameRes
 import com.wander.android.data.model.UnifiedPlaylist
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,7 +57,7 @@ fun PlaylistActionsSheet(
             message = stringResource(
                 if (playlist.source == SourceType.LOCAL) R.string.confirm_delete_playlist_local
                 else R.string.confirm_delete_playlist_remote,
-                playlist.source.displayName
+                stringResource(playlist.source.nameRes)
             ),
             confirmLabel = stringResource(R.string.common_delete_playlist),
             onConfirm = onDelete,
@@ -96,7 +98,11 @@ fun PlaylistActionsSheet(
                         modifier = Modifier.scrollingTitle()
                     )
                     Text(
-                        text = "${playlist.source.displayName}${if (playlist.songCount > 0) " • ${playlist.songCount} tracks" else ""}",
+                        text = listOfNotNull(
+                            stringResource(playlist.source.nameRes),
+                            playlist.songCount.takeIf { it > 0 }
+                                ?.let { pluralStringResource(R.plurals.collection_track_count, it, it) }
+                        ).joinToString(" • "),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

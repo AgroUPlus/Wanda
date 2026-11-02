@@ -8,6 +8,7 @@ import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MusicRepository
+import com.wander.android.data.repository.SearchHistoryRepository
 import com.wander.android.data.repository.SearchQueryHolder
 import com.wander.android.data.repository.ShareRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -32,11 +33,12 @@ import com.wander.android.data.repository.LyricsRepository
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class SearchUiState(
-    val isSearching: Boolean = false,
-    val results: List<UnifiedTrack> = emptyList(),
-    val lyricMatches: List<LyricMatch> = emptyList(),
-    val hasQuery: Boolean = false
+/** One search to run: what was typed, where to look, for what, and which attempt this is. */
+private data class SearchRequest(
+    val query: String,
+    val sources: Set<SourceType>,
+    val kind: SearchKind,
+    val attempt: Int
 )
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -48,7 +50,8 @@ class SearchViewModel @Inject constructor(
     private val playbackCoordinator: PlaybackCoordinator,
     private val shareRepository: ShareRepository,
     private val queryHolder: SearchQueryHolder,
-    private val catalogTracks: CatalogTrackResolver
+    private val catalogTracks: CatalogTrackResolver,
+    private val searchHistory: SearchHistoryRepository
 ) : ViewModel() {
 
     /**
@@ -102,6 +105,14 @@ class SearchViewModel @Inject constructor(
 
     fun selectKind(kind: SearchKind) { _kind.value = kind }
 
+    /** Bumped by [retry], so the same query, sources and kind are asked again. */
+    private val attempt = MutableStateFlow(0)
+
+    fun retry() { attempt.update { it + 1 } }
+
+    /** Empties the dock's field, which is what ends a search — see `LibrarySurface`. */
+    fun clearQuery() = queryHolder.set("")
+
     // Re-runs when the sources change as well as the query: toggling a backend on has to go and
     // ask it, not just unhide results that were never fetched.
     private val searchResults: StateFlow<SearchUiState> = combine(
@@ -111,9 +122,10 @@ class SearchViewModel @Inject constructor(
         // changed what "everything" means without this flow noticing — the results stayed as they
         // were until the next keystroke.
         selectedSources,
-        _kind
-    ) { query, sources, kind -> Triple(query, sources, kind) }
-        .debounce { (query, _, _) -> if (query.isBlank()) 0L else DEBOUNCE_MS }
+        _kind,
+        attempt
+    ) { text, sources, kind, tries -> SearchRequest(text, sources, kind, tries) }
+        .debounce { request -> if (request.query.isBlank()) 0L else DEBOUNCE_MS }
         .flatMapLatest { (query, sources, kind) ->
             flow {
                 if (query.isBlank()) {
@@ -121,7 +133,7 @@ class SearchViewModel @Inject constructor(
                     return@flow
                 }
                 emit(SearchUiState(isSearching = true, hasQuery = true))
-                val tracks = musicRepository.searchAllSources(query, sources, kind)
+                val outcome = musicRepository.searchWithStatus(query, sources, kind)
                 val lyricMatches = if (kind == SearchKind.TRACKS) {
                     resolveCatalogue(lyricsRepository.searchByLyrics(query))
                 } else {
@@ -130,9 +142,13 @@ class SearchViewModel @Inject constructor(
                 emit(
                     SearchUiState(
                         isSearching = false,
-                        results = tracks,
+                        results = outcome.tracks,
+                        albums = outcome.albums,
+                        artists = outcome.artists,
                         lyricMatches = lyricMatches,
-                        hasQuery = true
+                        hasQuery = true,
+                        unansweredSources = outcome.failedSources,
+                        allSourcesFailed = outcome.allFailed
                     )
                 )
             }
@@ -182,10 +198,15 @@ class SearchViewModel @Inject constructor(
     /** Back to "everything", including sources that connect later — see [_selectedSources]. */
     fun selectAllSources() { _selectedSources.value = null }
 
-    fun play(tracks: List<UnifiedTrack>, index: Int) = playerConnection.play(tracks, index)
+    /**
+     * Files the current query under recent searches. Called when a result is used — played, or
+     * opened — so what is kept is the searches that found something; see [SearchHistoryRepository].
+     */
+    fun rememberQuery() = searchHistory.record(query.value)
 
     /** Plays the track and seeks directly to the matched lyric line's timestamp offset. */
     fun playTrackAtTimestamp(track: UnifiedTrack, timestampMs: Long?) {
+        rememberQuery()
         playerConnection.play(
             tracks = listOf(track),
             startIndex = 0,
@@ -199,6 +220,7 @@ class SearchViewModel @Inject constructor(
 
     /** Plays the track, then fills the queue behind it with its source's radio. */
     fun startRadio(track: UnifiedTrack) {
+        rememberQuery()
         viewModelScope.launch { playbackCoordinator.startRadio(track) }
     }
 

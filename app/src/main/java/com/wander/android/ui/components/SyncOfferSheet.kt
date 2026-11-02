@@ -1,5 +1,7 @@
 package com.wander.android.ui.components
 
+import android.content.Context
+import android.text.format.Formatter
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +28,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -57,8 +61,9 @@ internal fun SyncOfferSheet(
 ) {
     if (tracks.isEmpty()) return
 
-    val albums = remember(tracks) {
-        tracks.groupBy { it.album?.takeIf(String::isNotBlank) ?: "Unknown album" }
+    val unknownAlbum = stringResource(R.string.sync_offer_unknown_album)
+    val albums = remember(tracks, unknownAlbum) {
+        tracks.groupBy { it.album?.takeIf(String::isNotBlank) ?: unknownAlbum }
             .toList()
             .sortedByDescending { (_, songs) -> songs.size }
     }
@@ -69,19 +74,19 @@ internal fun SyncOfferSheet(
     ) {
         Column(modifier = Modifier.padding(horizontal = 20.dp)) {
             Text(
-                text = if (tracks.size == 1) "1 track available" else "${tracks.size} tracks available",
+                text = pluralStringResource(R.plurals.sync_offer_tracks_available, tracks.size, tracks.size),
                 style = MaterialTheme.typography.headlineSmall
             )
             Text(
                 text = if (progress.total > 0 && isFetching) {
-                    "${progress.done.size} of ${progress.total} downloaded" +
-                        (progress.route?.let { " · ${it.label}" } ?: "")
+                    listOfNotNull(
+                        stringResource(R.string.sync_offer_progress, progress.done.size, progress.total),
+                        progress.route?.let { stringResource(it.labelRes()) }
+                    ).joinToString(" · ")
                 } else if (route != null) {
-                    "From ${route.label.lowercase()}, across " +
-                        if (albums.size == 1) "1 album" else "${albums.size} albums"
+                    pluralStringResource(R.plurals.sync_offer_route_albums, albums.size, stringResource(route.labelRes()), albums.size)
                 } else {
-                    "From your other devices, across " +
-                        if (albums.size == 1) "1 album" else "${albums.size} albums"
+                    pluralStringResource(R.plurals.sync_offer_devices_albums, albums.size, albums.size)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -172,7 +177,7 @@ internal fun SyncOfferSheet(
                             )
                         }
                         Text(
-                            text = formatSize(track.sizeBytes),
+                            text = formatSize(LocalContext.current, track.sizeBytes),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(start = 12.dp)
@@ -191,7 +196,11 @@ internal fun SyncOfferSheet(
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
             Text(
-                text = if (isFetching) "Syncing…" else "Get all ${tracks.size}",
+                text = if (isFetching) {
+                    stringResource(R.string.sync_offer_syncing)
+                } else {
+                    pluralStringResource(R.plurals.sync_offer_get_all, tracks.size, tracks.size)
+                },
                 style = MaterialTheme.typography.labelLarge,
                 textAlign = TextAlign.Center
             )
@@ -199,13 +208,12 @@ internal fun SyncOfferSheet(
     }
 }
 
-/** Sizes are here to give a sense of the download, so one decimal is plenty. */
-private fun formatSize(bytes: Long): String = when {
-    bytes >= 1_000_000_000 -> "%.1f GB".format(bytes / 1_000_000_000.0)
-    bytes >= 1_000_000 -> "%.0f MB".format(bytes / 1_000_000.0)
-    bytes > 0 -> "%.0f KB".format(bytes / 1_000.0)
-    else -> ""
-}
+/**
+ * Sizes are here to give a sense of the download, in the units and digits of the user's locale.
+ * Nothing at all for a size the offer did not state.
+ */
+private fun formatSize(context: Context, bytes: Long): String =
+    if (bytes > 0) Formatter.formatShortFileSize(context, bytes) else ""
 
 /** Where one track has got to in a run. */
 private enum class TrackFetchState { DONE, FETCHING, WAITING }

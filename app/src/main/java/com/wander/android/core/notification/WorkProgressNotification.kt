@@ -8,6 +8,7 @@ import android.content.Intent
 import android.net.Uri
 import android.content.pm.ServiceInfo
 import android.os.Build
+import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import androidx.work.ForegroundInfo
 import com.wander.android.R
@@ -42,15 +43,15 @@ class WorkProgressNotification @Inject constructor(
     /** A kind of long-running work, with the channel and notification slot that belong to it. */
     enum class Kind(
         val channelId: String,
-        val channelName: String,
+        @param:StringRes val channelName: Int,
         val notificationId: Int,
         /** The `wanda://` host this notification opens, or null to just bring the app forward. */
         val deepLinkHost: String?
     ) {
-        LIBRARY_SYNC("wanda_library_sync", "Library sync", 4711, deepLinkHost = null),
-        FINGERPRINT("wanda_fingerprint", "Measuring your library", 4713, "fingerprints"),
-        DOWNLOAD("wanda_downloads", "Downloads", 4714, deepLinkHost = null),
-        PLAYLIST_IMPORT("wanda_playlist_import", "Playlist imports", 4715, deepLinkHost = null)
+        LIBRARY_SYNC("wanda_library_sync", R.string.work_channel_library_sync, 4711, deepLinkHost = null),
+        FINGERPRINT("wanda_fingerprint", R.string.work_channel_fingerprint, 4713, "fingerprints"),
+        DOWNLOAD("wanda_downloads", R.string.work_channel_downloads, 4714, deepLinkHost = null),
+        PLAYLIST_IMPORT("wanda_playlist_import", R.string.work_channel_playlist_import, 4715, deepLinkHost = null)
     }
 
     /**
@@ -83,8 +84,16 @@ class WorkProgressNotification @Inject constructor(
             // "not now, and do not quietly start again" — the failure a bare cancel has, since the
             // next periodic trigger would restart it minutes later and look like the button not
             // working. Cancel means "stop this run", leaving the schedule intact.
-            .addAction(0, "Pause", actionIntent(kind, WorkActionReceiver.ACTION_PAUSE))
-            .addAction(0, "Cancel", actionIntent(kind, WorkActionReceiver.ACTION_CANCEL))
+            .addAction(
+                0,
+                context.getString(R.string.work_action_pause),
+                actionIntent(kind, WorkActionReceiver.ACTION_PAUSE)
+            )
+            .addAction(
+                0,
+                context.getString(R.string.common_cancel),
+                actionIntent(kind, WorkActionReceiver.ACTION_CANCEL)
+            )
             .build()
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -154,7 +163,7 @@ class WorkProgressNotification @Inject constructor(
         manager.createNotificationChannel(
             NotificationChannel(
                 kind.channelId,
-                kind.channelName,
+                context.getString(kind.channelName),
                 NotificationManager.IMPORTANCE_LOW
             )
         )

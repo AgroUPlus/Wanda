@@ -22,22 +22,33 @@ class AcousticFeatureRepository @Inject constructor(
     private val extractor: FeatureExtractor
 ) {
 
-    /** Measures [samples] and stores the result. A track that measures to nothing is skipped. */
-    suspend fun measure(trackId: String, samples: FloatArray) = withContext(Dispatchers.IO) {
-        val features = extractor.extract(samples) ?: return@withContext
-        featureDao.upsert(
-            TrackFeatureEntity(
-                trackId = trackId,
-                tempo = features.tempo,
-                energy = features.energy,
-                brightness = features.brightness,
-                danceability = features.danceability,
-                keyX = features.keyX,
-                keyY = features.keyY,
-                version = EXTRACTOR_VERSION,
-                measuredAt = System.currentTimeMillis()
+    /**
+     * Measures [samples] and stores the result.
+     *
+     * False when the track measures to nothing (too short, silent, no usable pulse) and nothing
+     * was stored: such a track stays in [needingMeasurement], and the caller must back off from it
+     * rather than decode it again on every run.
+     */
+    suspend fun measure(trackId: String, samples: FloatArray): Boolean {
+        // The spectrogram is CPU work and belongs on Default; only the write is I/O.
+        val features = withContext(Dispatchers.Default) { extractor.extract(samples) }
+            ?: return false
+        withContext(Dispatchers.IO) {
+            featureDao.upsert(
+                TrackFeatureEntity(
+                    trackId = trackId,
+                    tempo = features.tempo,
+                    energy = features.energy,
+                    brightness = features.brightness,
+                    danceability = features.danceability,
+                    keyX = features.keyX,
+                    keyY = features.keyY,
+                    version = EXTRACTOR_VERSION,
+                    measuredAt = System.currentTimeMillis()
+                )
             )
-        )
+        }
+        return true
     }
 
     /** Which of the tracks on this device still need measuring. */

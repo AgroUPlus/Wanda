@@ -2,14 +2,17 @@ package com.wander.android.data.sources.deezer
 
 import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.SourceType
-import com.wander.android.data.model.UnifiedAlbum
-import com.wander.android.data.model.UnifiedArtist
 import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -41,45 +44,11 @@ class DeezerApiClient @Inject constructor(
         }
     }
 
-    suspend fun searchAlbums(query: String, limit: Int = 20): Result<List<UnifiedAlbum>> = withContext(Dispatchers.IO) {
-        val url = BASE_URL.toHttpUrl().newBuilder()
-            .addPathSegment("search")
-            .addPathSegment("album")
-            .addQueryParameter("q", query)
-            .addQueryParameter("limit", limit.toString())
-            .build()
-        fetchJson(url.toString()).map { root ->
-            val data = root.jsonObject["data"]?.jsonArray ?: return@map emptyList()
-            DeezerParsing.parseAlbumList(data)
-        }
-    }
-
-    suspend fun searchArtists(query: String, limit: Int = 20): Result<List<UnifiedArtist>> = withContext(Dispatchers.IO) {
-        val url = BASE_URL.toHttpUrl().newBuilder()
-            .addPathSegment("search")
-            .addPathSegment("artist")
-            .addQueryParameter("q", query)
-            .addQueryParameter("limit", limit.toString())
-            .build()
-        fetchJson(url.toString()).map { root ->
-            val data = root.jsonObject["data"]?.jsonArray ?: return@map emptyList()
-            data.mapNotNull { it.jsonObject.let(DeezerParsing::parseArtist) }
-        }
-    }
-
     suspend fun getTrack(trackId: String): Result<UnifiedTrack?> = withContext(Dispatchers.IO) {
         val cleanId = trackId.removePrefix(ID_PREFIX)
         val url = "$BASE_URL/track/$cleanId"
         fetchJson(url).map { root ->
             DeezerParsing.parseTrack(root.jsonObject)
-        }
-    }
-
-    suspend fun getAlbum(albumId: String): Result<UnifiedAlbum?> = withContext(Dispatchers.IO) {
-        val cleanId = albumId.removePrefix(ID_PREFIX)
-        val url = "$BASE_URL/album/$cleanId"
-        fetchJson(url).map { root ->
-            DeezerParsing.parseAlbum(root.jsonObject)
         }
     }
 
@@ -117,16 +86,25 @@ class DeezerApiClient @Inject constructor(
         }
     }
 
-    suspend fun getTrackRadio(trackId: String): Result<List<UnifiedTrack>> = withContext(Dispatchers.IO) {
+    /** [count] is asked for and enforced: the endpoint answers with its own default size. */
+    suspend fun getTrackRadio(trackId: String, count: Int): Result<List<UnifiedTrack>> = withContext(Dispatchers.IO) {
         val cleanId = trackId.removePrefix(ID_PREFIX)
-        val url = "$BASE_URL/track/$cleanId/radio"
+        val url = "$BASE_URL/track/$cleanId/radio?limit=$count"
         fetchJson(url).map { root ->
             val data = root.jsonObject["data"]?.jsonArray ?: return@map emptyList()
-            DeezerParsing.parseTrackList(data)
+            DeezerParsing.parseTrackList(data).take(count)
         }
     }
 
-    private fun fetchJson(url: String): Result<kotlinx.serialization.json.JsonElement> {
+    /**
+     * One API call's JSON, or a failure.
+     *
+     * Deezer reports its own errors — a quota hit, an id that names nothing — as HTTP 200 with an
+     * `error` object in place of the data. Read as data, that came out as an empty list: a search
+     * throttled into silence looked exactly like a search with no matches. The URL is kept out of
+     * the messages, since it carries the user's query.
+     */
+    private fun fetchJson(url: String): Result<JsonElement> {
         val request = Request.Builder()
             .url(url)
             .header("Accept", "application/json")
@@ -135,16 +113,32 @@ class DeezerApiClient @Inject constructor(
         return runCatching {
             okHttpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    throw IOException("Deezer API error: ${response.code} for $url")
+                    throw IOException("Deezer API error: ${response.code}")
                 }
-                val body = response.body?.string() ?: throw IOException("Empty response from $url")
-                json.parseToJsonElement(body)
+                val body = response.body?.string() ?: throw IOException("Empty response from Deezer API")
+                json.parseToJsonElement(body).also { root ->
+                    apiError(root)?.let { throw it }
+                }
             }
         }
     }
 
-    private companion object {
-        const val BASE_URL = "https://api.deezer.com"
-        val ID_PREFIX = SourceType.DEEZER.idPrefix
+    internal companion object {
+        private const val BASE_URL = "https://api.deezer.com"
+        private val ID_PREFIX = SourceType.DEEZER.idPrefix
+
+        /** The error a 200 response carries instead of data, e.g. `{"error":{"code":4,"message":"Quota limit exceeded"}}`. */
+        fun apiError(root: JsonElement): IOException? {
+            val error = (root as? JsonObject)?.get("error") as? JsonObject ?: return null
+            val code = error["code"]?.jsonPrimitive?.intOrNull
+            val message = error["message"]?.jsonPrimitive?.contentOrNull
+            val type = error["type"]?.jsonPrimitive?.contentOrNull
+            val detail = listOfNotNull(type, message, code?.let { "code $it" })
+                .joinToString(": ")
+                .takeIf { it.isNotEmpty() }
+                ?.let { " ($it)" }
+                .orEmpty()
+            return IOException("Deezer API refused the request$detail")
+        }
     }
 }

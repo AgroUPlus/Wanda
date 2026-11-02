@@ -116,7 +116,7 @@ internal fun GuideStep(
         ImportDirectLinkContent(
             manualInput = state.manualInput,
             isLoadingPlaylist = state.isLoadingPlaylist,
-            error = mismatch ?: state.error,
+            error = mismatch ?: state.error?.let { stringResource(it) },
             onInputChange = actions.onInputChange,
             onLoadPlaylist = actions.onLoadPlaylist,
             modifier = Modifier.fillMaxWidth()

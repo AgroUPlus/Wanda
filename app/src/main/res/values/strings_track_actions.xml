@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Manual offline downloads -->
+    <string name="track_action_download">Download</string>
+    <string name="track_action_remove_download">Remove download</string>
+    <string name="track_download_state_downloaded">Downloaded</string>
+    <string name="track_download_state_queued">Waiting to download</string>
+    <string name="album_download_all">Download album</string>
+    <string name="playlist_download_all">Download playlist</string>
+
+    <!-- Selecting several tracks -->
+    <string name="selection_select">Select</string>
+    <string name="selection_exit">Cancel selection</string>
+    <string name="selection_selected">Selected</string>
+    <string name="common_more_options">More options</string>
+    <plurals name="selection_count">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
+
+    <!-- Row accessibility -->
+    <string name="common_more_options_for">More options for %1$s</string>
+
+    <!-- Swiping a track row -->
+    <string name="swipe_playing_next">“%1$s” plays next</string>
+    <string name="swipe_added_to_queue">“%1$s” added to the queue</string>
+</resources>

@@ -34,7 +34,7 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.groupedListItem
-import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.nestedListInset
 import com.wander.android.ui.components.rememberShelfEntranceScale
 import com.wander.android.ui.screens.home.HorizontalTrackCard
 import com.wander.android.ui.screens.home.SectionTitle
@@ -60,17 +60,17 @@ internal fun LibraryPodcastsPage(
     if (state.hasNoEpisodes && inbox.isEmpty() && !hasSubscriptions) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             EmptyState(
-                title = stringResource(R.string.podcasts_empty_title),
-                message = stringResource(R.string.podcasts_empty_message),
+                title = R.string.podcasts_empty_title,
+                message = R.string.podcasts_empty_message,
                 icon = Icons.Rounded.Podcasts,
-                actionLabel = stringResource(R.string.podcasts_empty_action),
+                actionLabel = R.string.podcasts_empty_action,
                 onAction = onOpenSubscriptions
             )
         }
         return
     }
 
-    LazyColumn(contentPadding = contentPadding.listInset(), modifier = Modifier.fillMaxSize()) {
+    LazyColumn(contentPadding = contentPadding.nestedListInset(), modifier = Modifier.fillMaxSize()) {
         inboxSection(inbox, hasSubscriptions, onOpenSubscriptions, viewModel::play, onToggleLike, onLongPress)
         if (state.continueListening.isNotEmpty()) {
             continueListening(state.continueListening, viewModel::play, onLongPress)

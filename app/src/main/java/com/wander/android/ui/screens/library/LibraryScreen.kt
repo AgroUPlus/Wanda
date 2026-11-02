@@ -1,23 +1,12 @@
 package com.wander.android.ui.screens.library
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.History
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryScrollableTabRow
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -30,20 +19,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.paging.compose.collectAsLazyPagingItems
-import com.wander.android.R
+import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
-import com.wander.android.data.repository.artistIdFor
 import com.wander.android.ui.components.AddToPlaylistHost
-import com.wander.android.ui.components.AlbumActionsSheet
 import com.wander.android.ui.components.ExpressiveRefreshIndicator
-import com.wander.android.ui.components.TrackActionsSheet
 import com.wander.android.ui.components.headerInset
+import com.wander.android.ui.components.selection.SelectedTrack
+import com.wander.android.ui.components.selection.TrackSelectionBar
+import com.wander.android.ui.components.selection.rememberTrackSelectionState
 
 @Composable
 fun LibraryScreen(
@@ -54,73 +40,48 @@ fun LibraryScreen(
     onOpenPlaylist: (String) -> Unit = {},
     onOpenImport: () -> Unit = {},
     onOpenSubscriptions: () -> Unit = {},
-    viewModel: LibraryViewModel = hiltViewModel()
+    viewModel: LibraryViewModel = hiltViewModel(),
+    browse: LibraryBrowseViewModel = hiltViewModel()
 ) {
     val tab by viewModel.tab.collectAsStateWithLifecycle()
     val tabs by viewModel.tabs.collectAsStateWithLifecycle()
     // The same instance the Podcasts page resolves: both sit under this destination.
     val podcastsViewModel: PodcastsViewModel = hiltViewModel()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
-    val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
-    var actionsFor by remember { mutableStateOf<com.wander.android.data.model.UnifiedTrack?>(null) }
-    var albumActionsFor by remember { mutableStateOf<com.wander.android.data.model.UnifiedAlbum?>(null) }
+    var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
+    var albumActionsFor by remember { mutableStateOf<UnifiedAlbum?>(null) }
 
     val addToPlaylist = AddToPlaylistHost()
+    // One selection for every track page; a different tab is a different list, so it starts over.
+    val selection = rememberTrackSelectionState()
+    LaunchedEffect(tab) { selection.clear() }
 
     albumActionsFor?.let { album ->
-        AlbumActionsSheet(
-            album = album,
-            onPlay = { viewModel.playAlbum(album) },
-            onPlayNext = { viewModel.playAlbumNext(album) },
-            onAddToQueue = { viewModel.addAlbumToQueue(album) },
-            onAddToPlaylist = { viewModel.addAlbumToPlaylist(album, addToPlaylist) },
-            onGoToArtist = album.artist
-                .takeIf { it.isNotBlank() }
-                ?.let { artist -> { onOpenArtist(artist, album.artistId) } },
-            // No `canShare` gate: an album link describes the record rather than naming a server,
-            // so it works from every source including the local library.
-            onShare = { viewModel.shareAlbum(album) },
-            onDismiss = { albumActionsFor = null }
-        )
+        LibraryAlbumActions(album, viewModel, addToPlaylist, onOpenArtist) { albumActionsFor = null }
     }
-
     actionsFor?.let { track ->
-        TrackActionsSheet(
-            track = track,
-            isLiked = track.isLiked,
-            onPlayNext = { viewModel.playNext(track) },
-            onAddToQueue = { viewModel.addToQueue(track) },
-            onStartRadio = { viewModel.startRadio(track) },
-            onToggleLike = { viewModel.toggleLike(track) },
-            onRemove = null,
-            onOpenArtist = track.artist
-                .takeIf { it.isNotBlank() }
-                ?.let { { name -> onOpenArtist(name, track.artistIdFor(name)) } },
-            onDismiss = { actionsFor = null },
-            onShare = if (viewModel.canShare(track)) {
-                { viewModel.share(track) }
-            } else {
-                null
-            },
-            onAddToPlaylist = if (addToPlaylist.canAdd(track)) {
-                { addToPlaylist.open(track) }
-            } else {
-                null
-            },
-            onDeleteDownload = if (tab == LibraryTab.DOWNLOADS || track.isDownloaded) {
-                { viewModel.deleteDownloadedTrack(track) }
-            } else null,
-            onResetProgress = if (tab == LibraryTab.PODCASTS && track.isEpisode) {
-                { podcastsViewModel.resetProgress(track) }
-            } else null
+        LibraryTrackActions(
+            track, tab, viewModel, podcastsViewModel, addToPlaylist, onOpenArtist, onOpenAlbum,
+            onSelect = { selection.toggle(SelectedTrack(track.id, track)) }.takeIf { tab.selectsTracks }
+        ) {
+            actionsFor = null
+        }
+    }
+    val pageActions = remember(onOpenAlbum, onOpenArtist, onOpenPlaylist, onOpenImport, onOpenSubscriptions, selection) {
+        LibraryPageActions(
+            onOpenAlbum = onOpenAlbum,
+            onOpenArtist = onOpenArtist,
+            onOpenPlaylist = onOpenPlaylist,
+            onOpenImport = onOpenImport,
+            onOpenSubscriptions = onOpenSubscriptions,
+            onTrackLongPress = { actionsFor = it },
+            onAlbumLongPress = { albumActionsFor = it },
+            selection = selection
         )
     }
-    val tracks = viewModel.tracks.collectAsLazyPagingItems()
-    val likedTracks by viewModel.likedTracks.collectAsStateWithLifecycle()
-    val downloadedTracks by viewModel.downloadedTracks.collectAsStateWithLifecycle()
-    val albums by viewModel.albums.collectAsStateWithLifecycle()
-    val recentAlbums by viewModel.recentAlbums.collectAsStateWithLifecycle()
-    val playlists by viewModel.playlists.collectAsStateWithLifecycle()
+    val likedTracks by browse.likedTracks.collectAsStateWithLifecycle()
+    val downloadedTracks by browse.downloadedTracks.collectAsStateWithLifecycle()
+    val hasLibraryTracks by browse.hasTracks.collectAsStateWithLifecycle()
 
     val pagerState = rememberPagerState(
         initialPage = tabs.indexOf(tab).coerceAtLeast(0),
@@ -144,122 +105,42 @@ fun LibraryScreen(
     // reading it directly recomposed the title, tab row and chip row for each of those frames.
     val selectedPage by remember { derivedStateOf { pagerState.currentPage } }
 
-    androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 // Top inset here rather than on the lists, so the title and tabs clear the status bar.
                 .padding(contentPadding.headerInset())
         ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 20.dp, end = 8.dp, top = 16.dp, bottom = 8.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.nav_library),
-                style = MaterialTheme.typography.headlineLarge,
-                modifier = Modifier.weight(1f)
-            )
-            // Where Home keeps Settings. History is a log rather than a collection, so it reads
-            // better as one thing you can go and look at than as a sixth tab competing with them.
-            IconButton(onClick = onOpenHistory) {
-                Icon(Icons.Rounded.History, contentDescription = stringResource(R.string.library_listening_history))
-            }
-        }
+            LibraryTitleRow(onOpenHistory)
+            LibraryTabRow(tabs, selectedPage, viewModel::selectTab)
 
-        // The expressive indicator, and the reason it is worth spelling out: the stock one is a bar
-        // spanning the whole tab, which on a row of six clipped labels read as a highlight on a
-        // column rather than as a marker under a word. `matchContentSize` shrinks it to the label
-        // it belongs to, and a rounded shape makes it a pill instead of a rule — so the selected
-        // tab is legible from its silhouette before any text is read.
-        // Scrollable since Podcasts made it six: a fixed row split the width six ways and clipped
-        // every label. Scrolling keeps each one whole and lets the selected tab stay in view.
-        PrimaryScrollableTabRow(
-            selectedTabIndex = selectedPage,
-            edgePadding = 12.dp,
-            divider = {},
-            indicator = {
-                TabRowDefaults.PrimaryIndicator(
-                    modifier = Modifier.tabIndicatorOffset(selectedPage, matchContentSize = true),
-                    width = Dp.Unspecified,
-                    height = 4.dp,
-                    shape = MaterialTheme.shapes.large
-                )
-            }
-        ) {
-            tabs.forEachIndexed { index, entry ->
-                val isSelected = index == selectedPage
-                Tab(
-                    selected = isSelected,
-                    onClick = { viewModel.selectTab(entry) },
-                    selectedContentColor = MaterialTheme.colorScheme.primary,
-                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    text = {
-                        Text(
-                            text = stringResource(entry.label),
-                            style = if (isSelected) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyMedium,
-                            maxLines = 1,
-                            softWrap = false
+            HorizontalPager(
+                state = pagerState,
+                key = { tabs[it] },
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(top = 4.dp)
+            ) { page ->
+                // `refresh()` and `isRefreshing` already existed on the ViewModel with nothing
+                // driving them — the library could only be refreshed by leaving and coming back.
+                val refreshState = rememberPullToRefreshState()
+                PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = viewModel::refresh,
+                    state = refreshState,
+                    indicator = {
+                        ExpressiveRefreshIndicator(
+                            isRefreshing = isRefreshing,
+                            state = refreshState,
+                            modifier = Modifier.align(Alignment.TopCenter)
                         )
-                    }
-                )
-            }
-        }
-
-        HorizontalPager(
-            state = pagerState,
-            key = { tabs[it] },
-            modifier = Modifier
-                .weight(1f)
-                .padding(top = 4.dp)
-        ) { page ->
-            // `refresh()` and `isRefreshing` already existed on the ViewModel with nothing driving
-            // them — the library could only be refreshed by leaving and coming back.
-            val refreshState = rememberPullToRefreshState()
-            PullToRefreshBox(
-                isRefreshing = isRefreshing,
-                onRefresh = viewModel::refresh,
-                state = refreshState,
-                indicator = {
-                    ExpressiveRefreshIndicator(
-                        isRefreshing = isRefreshing,
-                        state = refreshState,
-                        modifier = Modifier.align(Alignment.TopCenter)
-                    )
-                },
-                modifier = Modifier.fillMaxSize()
-            ) {
-                when (val pageTab = tabs[page]) {
-                    LibraryTab.ALBUMS ->
-                        AlbumGrid(
-                            albums = albums,
-                            recentAlbums = recentAlbums,
-                            contentPadding = contentPadding,
-                            onOpenAlbum = onOpenAlbum,
-                            onAlbumLongPress = { albumActionsFor = it }
-                        )
-                    LibraryTab.PLAYLISTS ->
-                        PlaylistList(playlists, contentPadding, viewModel, addToPlaylist, onOpenPlaylist, onOpenImport)
-                    LibraryTab.LIKED ->
-                        TrackList(likedTracks, pageTab, isSyncing, contentPadding, viewModel) { actionsFor = it }
-                    LibraryTab.DOWNLOADS ->
-                        TrackList(downloadedTracks, pageTab, isSyncing, contentPadding, viewModel) { actionsFor = it }
-                    LibraryTab.PODCASTS ->
-                        LibraryPodcastsPage(
-                            contentPadding,
-                            viewModel::toggleLike,
-                            onLongPress = { actionsFor = it },
-                            onOpenSubscriptions = onOpenSubscriptions
-                        )
-                    LibraryTab.TRACKS ->
-                        AllTracksPage(tracks, isSyncing, contentPadding, viewModel) { actionsFor = it }
-                    LibraryTab.FOLLOWED -> FollowedArtistsPage(contentPadding, onOpenArtist)
+                    },
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    LibraryPage(tabs[page], contentPadding, viewModel, browse, addToPlaylist, pageActions)
                 }
             }
-        }
-
         }
 
         // Outside the Column, inside the Box: the pill floats over the list rather than taking a
@@ -270,11 +151,24 @@ fun LibraryScreen(
             LibraryTab.DOWNLOADS -> downloadedTracks
             else -> emptyList()
         }
+        // The Tracks tab is paged and may be far larger than memory should hold, so it plays from
+        // the database rather than from a list on screen — see `LibraryPlaybackCoordinator`.
+        val playsLibrary = currentTab == LibraryTab.TRACKS
         LibraryPlayShufflePill(
-            visible = activeTracks.isNotEmpty(),
-            onPlayAll = { viewModel.play(activeTracks, 0) },
-            onShuffle = { viewModel.play(activeTracks.shuffled(), 0) },
+            visible = if (playsLibrary) hasLibraryTracks else activeTracks.isNotEmpty(),
+            onPlayAll = { if (playsLibrary) browse.playAllTracks() else viewModel.play(activeTracks, 0) },
+            onShuffle = {
+                if (playsLibrary) browse.shuffleAllTracks() else viewModel.play(activeTracks.shuffled(), 0)
+            },
             bottomInset = contentPadding.calculateBottomPadding()
+        )
+
+        // Over the title and tabs: while selecting, those are not what the screen is about.
+        TrackSelectionBar(
+            selection = selection,
+            addToPlaylist = addToPlaylist,
+            topInset = contentPadding.calculateTopPadding(),
+            modifier = Modifier.align(Alignment.TopStart)
         )
     }
 }

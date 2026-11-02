@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- An audio file opened from another app ("Open with Wanda"). -->
+    <string name="opened_file_untitled">Audio file</string>
+    <string name="opened_file_unknown_artist">Unknown artist</string>
+    <string name="opened_file_no_access">Wanda wasn\'t given access to that file.</string>
+</resources>

@@ -1,7 +1,6 @@
 package com.wander.android.ui
 
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -9,11 +8,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
@@ -29,7 +29,9 @@ import com.wander.android.ui.components.attachedBarOf
 import com.wander.android.ui.components.height
 import com.wander.android.ui.components.LocalBackBlurEnabled
 import com.wander.android.ui.components.LocalBackdropBlur
+import com.wander.android.ui.components.LocalDownloadMarks
 import com.wander.android.ui.components.LocalOfflinePlayback
+import com.wander.android.ui.components.TrackDownloadViewModel
 import com.wander.android.ui.components.backdropBlur
 import com.wander.android.ui.components.dockSpec
 import com.wander.android.ui.components.player.MiniPlayerShadowInset
@@ -46,6 +48,7 @@ import com.wander.android.ui.screens.social.SocialViewModel
 import com.wander.android.ui.theme.CoverTintedTheme
 import com.wander.android.ui.theme.rememberCoverSeedColor
 import kotlinx.coroutines.launch
+import com.wander.android.ui.theme.LocalDarkTheme
 
 /**
  * The app shell: a bottom bar, the nav graph, and a player sheet overlaying both.
@@ -59,27 +62,9 @@ fun WanderApp(
     WanderAppLaunchGate(viewModel = viewModel, setupDone = setupDone)
 
     val navController = rememberNavController()
-
-    // Routes asked for from outside the composition — a tapped notification. Consumed once
-    // navigated, so bringing the app forward later does not send the user back to the inbox.
-    LaunchedEffect(navController) {
-        viewModel.deepLinkRoutes.collect { route ->
-            navController.navigate(route)
-            viewModel.consumeDeepLink()
-        }
-    }
-
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-
-    // The query is held outside any one screen so it survives the trip into an artist or album and
-    // back. Reaching another tab is the end of that search, and without this the field was still
-    // full, and Library still showing results, the next time the tab opened.
-    LaunchedEffect(currentRoute) {
-        if (currentRoute in Routes.topLevel && currentRoute != TopLevelDestination.LIBRARY.route) {
-            viewModel.setSearchQuery("")
-        }
-    }
+    ShellRouteEffects(navController, viewModel, currentRoute)
 
     val playbackState = playerConnection.state.collectAsStateWithLifecycle()
     val playback = playbackState.value
@@ -134,8 +119,13 @@ fun WanderApp(
         animationSpec = dockSpec(),
         label = "dockBottomInset"
     )
+    // A wide window trades the dock's buttons for a rail at the start edge; see `rememberUseNavRail`.
+    val useRail = rememberUseNavRail() && showChrome
+    var railWidth by remember { mutableStateOf(0.dp) }
+    val railInset = if (useRail) railWidth else 0.dp
 
     val offlinePlayback by viewModel.offlinePlayback.collectAsStateWithLifecycle()
+    val downloadMarks by hiltViewModel<TrackDownloadViewModel>().marks.collectAsStateWithLifecycle()
     val isCoverArtThemeEnabled by viewModel.isCoverArtThemeEnabled.collectAsStateWithLifecycle()
     val isAmoledBlack by viewModel.isAmoledBlack.collectAsStateWithLifecycle()
     val isBackBlurEnabled by viewModel.isBackBlurEnabled.collectAsStateWithLifecycle()
@@ -149,11 +139,12 @@ fun WanderApp(
     CoverTintedTheme(
         seedColor = shellCoverSeed,
         base = MaterialTheme.colorScheme,
-        dark = isSystemInDarkTheme(),
+        dark = LocalDarkTheme.current,
         amoled = isAmoledBlack
     ) {
         CompositionLocalProvider(
             LocalOfflinePlayback provides offlinePlayback,
+            LocalDownloadMarks provides downloadMarks,
             LocalBackBlurEnabled provides isBackBlurEnabled,
             LocalBackdropBlur provides backdropBlur
         ) {
@@ -164,6 +155,7 @@ fun WanderApp(
             ) {
                 Scaffold(
                     containerColor = MaterialTheme.colorScheme.background,
+                    contentWindowInsets = shellContentInsets(),
                     modifier = Modifier.backdropBlur(isBackBlurEnabled) {
                         val back = sheetState.predictiveBackProgress
                         val covered = sheetState.progress
@@ -187,8 +179,8 @@ fun WanderApp(
                         else -> dockBottom + attachedBar.height + MiniPlayerShadowInset
                     }
                     val direction = LocalLayoutDirection.current
-                    val contentPadding = remember(padding, extraBottom, direction) {
-                        padding.plusBottom(extraBottom, direction)
+                    val contentPadding = remember(padding, extraBottom, direction, railInset) {
+                        padding.plusBottom(extraBottom, direction).withMinStart(railInset, direction)
                     }
                     NavHost(
                         navController = navController,
@@ -206,11 +198,15 @@ fun WanderApp(
                     }
                 }
 
+                if (useRail) {
+                    ShellNavRail(navController, currentRoute, bottomClearance = dockBottom) { railWidth = it }
+                }
+
                 val dockState = rememberWanderDockState(
                     navController = navController,
                     viewModel = viewModel,
                     motionScheme = motionScheme,
-                    visibility = DockVisibility(currentRoute, showDockRow, hasTrack),
+                    visibility = DockVisibility(currentRoute, showDockRow, hasTrack, railInset),
                     sheetState = sheetState,
                     dockInset = dockInset
                 )

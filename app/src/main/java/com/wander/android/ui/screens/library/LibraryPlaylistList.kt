@@ -51,7 +51,7 @@ import com.wander.android.ui.components.newplaylist.NewPlaylistSheet
 import com.wander.android.ui.screens.library.blend.BlendInvites
 import com.wander.android.ui.components.PlaylistActionsSheet
 import com.wander.android.ui.components.SkeletonRow
-import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.nestedListInset
 
 private const val PLAYLISTS_PAGE_SIZE = 30
 private const val PAGE_PREFETCH_DISTANCE = 4
@@ -70,6 +70,7 @@ internal fun PlaylistList(
     val sharedViewModel: SharedWithMeViewModel = hiltViewModel()
     val shared by sharedViewModel.state.collectAsStateWithLifecycle()
     val sharedError by sharedViewModel.error.collectAsStateWithLifecycle()
+    val loadError by viewModel.playlistsError.collectAsStateWithLifecycle()
     var removing by remember { mutableStateOf<AgroSharedListing?>(null) }
     val selectScope = { picked: PlaylistScope ->
         scope = picked
@@ -117,8 +118,10 @@ internal fun PlaylistList(
             ) {
                 BlendInvites(onJoined = onOpenPlaylist, modifier = Modifier.padding(horizontal = 16.dp))
                 EmptyState(
-                    title = stringResource(R.string.library_no_playlists),
-                    message = stringResource(R.string.library_playlists_from_sources_imported_playlists)
+                    title = R.string.library_no_playlists,
+                    message = loadError ?: R.string.library_playlists_from_sources_imported_playlists,
+                    actionLabel = loadError?.let { R.string.error_retry },
+                    onAction = if (loadError != null) ({ viewModel.refreshPlaylists() }) else null
                 )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -171,7 +174,7 @@ internal fun PlaylistList(
 
     LazyColumn(
         state = listState,
-        contentPadding = contentPadding.listInset(),
+        contentPadding = contentPadding.nestedListInset(),
         modifier = Modifier.fillMaxSize()
     ) {
         item(key = "playlist_actions", contentType = "action") {

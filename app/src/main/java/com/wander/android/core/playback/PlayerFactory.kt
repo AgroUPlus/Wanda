@@ -2,7 +2,6 @@ package com.wander.android.core.playback
 
 import android.content.Context
 import androidx.annotation.OptIn
-import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences
@@ -12,6 +11,7 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.extractor.DefaultExtractorsFactory
 import com.wander.android.core.cache.AudioCacheManager
 import javax.inject.Inject
@@ -43,23 +43,28 @@ class PlayerFactory @Inject constructor(
                 // A live window moves on whether or not this device kept up. Letting the player
                 // re-join at the edge is what the chunkless preparation and the rolling playlist
                 // are for; refusing to would strand it behind a window that no longer exists.
-                .setAllowChunklessPreparation(true)
+                .setAllowChunklessPreparation(true),
+            uncachedProgressive = ProgressiveMediaSource.Factory(liveUpstream)
         )
 
         val renderersFactory = DefaultRenderersFactory(context)
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
 
-        val audioAttributes = AudioAttributes.Builder()
-            .setUsage(C.USAGE_MEDIA)
-            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-            .build()
-
+        // Music until an item says otherwise; see [EpisodeAudioAttributes].
         return ExoPlayer.Builder(context, renderersFactory, mediaSourceFactory)
-            .setAudioAttributes(audioAttributes, /* handleAudioFocus = */ true)
+            .setAudioAttributes(audioAttributesFor(isEpisode = false), /* handleAudioFocus = */ true)
             .setHandleAudioBecomingNoisy(true)
+            // Until [PlaybackWakeMode] sees the queue: drops to a CPU-only lock for on-device files.
             .setWakeMode(C.WAKE_MODE_NETWORK)
+            // What the notification's episode jumps and a headset's rewind and fast-forward keys
+            // do — see [NotificationButtons]. The in-app jumps use the same [EpisodeJumps] values.
+            .setSeekBackIncrementMs(EpisodeJumps.BACK_MS)
+            .setSeekForwardIncrementMs(EpisodeJumps.FORWARD_MS)
             .build()
-            .apply { trackSelectionParameters = withOffload(trackSelectionParameters, enabled = true) }
+            .apply {
+                trackSelectionParameters = withOffload(trackSelectionParameters, enabled = true)
+                PlayNextShuffleOrder.install(this)
+            }
     }
 
     /**
@@ -89,8 +94,8 @@ class PlayerFactory @Inject constructor(
         /**
          * Audio offload lets the DSP play the stream while the CPU sleeps — a large battery win —
          * but decoded PCM never reaches the processor chain, so anything that must process audio
-         * needs it off. [PlayerSpeedAndOffloadController] turns it off for a speed or pitch other
-         * than 1×, and for livestreams.
+         * needs it off. [offloadAllowed] is the one rule for when: never at a speed or pitch other
+         * than 1×, under silence skipping, or for a livestream.
          */
         fun withOffload(
             parameters: androidx.media3.common.TrackSelectionParameters,

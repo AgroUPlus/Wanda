@@ -54,6 +54,7 @@ class MusicSourceContractTest {
         assertFalse(none.recommendations)
         assertFalse(none.share)
         assertFalse(none.videoClips)
+        assertFalse(none.collectionSearch)
         assertTrue(none.holdsTracks)
     }
 
@@ -84,6 +85,17 @@ class MusicSourceContractTest {
     }
 
     @Test
+    fun catalogSearchIsTheTrackSearchWithNoRecordsOrArtists() = runTest {
+        val source = BareSource()
+
+        val catalog = source.searchCatalog("anything", SearchKind.TRACKS).getOrThrow()
+
+        assertEquals(1, source.searches)
+        assertTrue(catalog.albums.isEmpty())
+        assertTrue(catalog.artists.isEmpty())
+    }
+
+    @Test
     fun readsAreEmptyRatherThanInvented() = runTest {
         val source = BareSource()
 
@@ -108,22 +120,22 @@ class MusicSourceContractTest {
             source.createPlaylist("x", emptyList()),
             source.addToPlaylist("p", listOf("t")),
             source.deletePlaylist("p"),
+            source.updatePlaylistDetails("p", "name", null),
             source.getVideoStreamInfo("t"),
             source.getArtist("a"),
-            source.getArtistAlbumPage("b", null, "artist")
+            source.getArtistAlbumPage("b", null, "artist"),
+            source.removeFromPlaylist("p", 0),
+            source.moveInPlaylist("p", 0, 1),
+            // Callers check `likes` and `scrobble` first; a source without them must not claim
+            // a like or a play went through.
+            source.setLiked("t", true),
+            source.scrobble("t"),
+            source.nowPlaying("t")
         )
 
         failures.forEach { result ->
             assertTrue(result.isFailure)
             assertTrue(result.exceptionOrNull() is UnsupportedOperationException)
         }
-    }
-
-    @Test
-    fun likingAndScrobblingAreHarmlessNoOpsWhenUnsupported() = runTest {
-        val source = BareSource()
-
-        assertTrue(source.setLiked("t", true).isSuccess)
-        assertTrue(source.scrobble("t").isSuccess)
     }
 }

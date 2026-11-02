@@ -1,9 +1,10 @@
 package com.wander.android.data.sources.ytmusic
 
 import com.wander.android.data.model.ArtistDetails
+import com.wander.android.data.model.LyricsData
 import com.wander.android.data.model.RecommendedShelf
+import com.wander.android.data.model.SearchCatalog
 import com.wander.android.data.model.SearchKind
-import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UNKNOWN_ARTIST
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
@@ -32,6 +33,28 @@ class YTMusicCatalogLoader @Inject constructor(
                 .map { if (episodes) it.copy(isEpisode = true) else it }
         }
 
+    /**
+     * Songs, records and artists for one query, as three filtered searches side by side — InnerTube
+     * has no single call that answers all three in full. Any of them failing fails the lot: songs
+     * shown without the records the user may have been looking for would read as "no records".
+     * Videos and episodes are only ever tracks, so they stay a single search.
+     */
+    suspend fun searchCatalog(query: String, kind: SearchKind): Result<SearchCatalog> {
+        if (kind != SearchKind.TRACKS) return search(query, kind).map { SearchCatalog(tracks = it) }
+        return coroutineScope {
+            val tracks = async { search(query, kind) }
+            val albums = async { innerTube.search(query, ALBUMS_FILTER).map { it.albumSearchResults() } }
+            val artists = async { innerTube.search(query, ARTISTS_FILTER).map { it.artistSearchResults() } }
+            runCatching {
+                SearchCatalog(
+                    tracks = tracks.await().getOrThrow(),
+                    albums = albums.await().getOrThrow(),
+                    artists = artists.await().getOrThrow()
+                )
+            }
+        }
+    }
+
     suspend fun getTrack(trackId: String): Result<UnifiedTrack?> {
         val videoId = trackId.removePrefix(YTM_PREFIX)
         return innerTube.next(videoId).map { root ->
@@ -39,6 +62,17 @@ class YTMusicCatalogLoader @Inject constructor(
                 .mapNotNull(::parsePlaylistPanelVideo)
                 .firstOrNull { it.id == "$YTM_PREFIX$videoId" }
         }
+    }
+
+    /**
+     * Two requests: `next` names the track's Lyrics tab, and browsing that tab returns the text.
+     * A track whose tab is disabled has no lyrics here, which is a success with nothing in it.
+     */
+    suspend fun getLyrics(trackId: String): Result<LyricsData?> {
+        val next = innerTube.next(trackId.removePrefix(YTM_PREFIX))
+            .getOrElse { return Result.failure(it) }
+        val browseId = next.lyricsBrowseId() ?: return Result.success(null)
+        return innerTube.browse(browseId).mapCatching { it.parseLyrics(trackId) }
     }
 
     suspend fun getRadio(seedTrackId: String, count: Int): Result<List<UnifiedTrack>> =
@@ -73,24 +107,46 @@ class YTMusicCatalogLoader @Inject constructor(
         return Result.success(
             when (target.kind) {
                 ShareKind.TRACK -> "$WATCH_URL$id"
-                ShareKind.PLAYLIST -> "$PLAYLIST_URL$id"
+                // Library playlists are named by their `VL…` browse id; a link wants the list id.
+                ShareKind.PLAYLIST -> "$PLAYLIST_URL${id.removePrefix("VL")}"
                 ShareKind.ALBUM, ShareKind.ARTIST -> "$BROWSE_URL$id"
             }
         )
     }
 
+    private val likedShelf = trackShelf(LIKED_BROWSE_ID)
+
+    private val albumShelf = InnerTubeShelfCursor(
+        firstPage = { innerTube.browse(LIBRARY_ALBUMS_BROWSE_ID) },
+        nextPage = { innerTube.browseContinuation(it) },
+        parse = { it.libraryAlbums() }
+    )
+
     suspend fun getLikedTracks(limit: Int, offset: Int): Result<List<UnifiedTrack>> =
-        innerTube.browse(LIKED_BROWSE_ID).map { root ->
-            root.responsiveListItems().mapNotNull(::parseResponsiveListItem).drop(offset).take(limit)
+        likedShelf.slice(offset, limit)
+
+    /**
+     * What the account actually played, newest first, from `FEmusic_history` — one shelf per day.
+     * A song played on two days appears on both, so only its latest play is kept. The first page
+     * holds a few hundred rows, well beyond what any caller asks for, so no continuation is read.
+     */
+    suspend fun getRecentTracks(limit: Int): Result<List<UnifiedTrack>> =
+        innerTube.browse(HISTORY_BROWSE_ID).map { root ->
+            root.responsiveListItems()
+                .mapNotNull(::parseResponsiveListItem)
+                .distinctBy { it.id }
+                .take(limit)
         }
 
     suspend fun getAlbums(limit: Int, offset: Int): Result<List<UnifiedAlbum>> =
-        innerTube.browse(LIBRARY_ALBUMS_BROWSE_ID).map { root ->
-            root.responsiveListItems()
-                .mapNotNull(::parseLibraryAlbum)
-                .drop(offset)
-                .take(limit)
-        }
+        albumShelf.slice(offset, limit)
+
+    /** A shelf of track rows — liked songs, a playlist — read through its continuations. */
+    private fun trackShelf(browseId: String) = InnerTubeShelfCursor(
+        firstPage = { innerTube.browse(browseId) },
+        nextPage = { innerTube.browseContinuation(it) },
+        parse = { page -> page.responsiveListItems().mapNotNull(::parseResponsiveListItem) }
+    )
 
     suspend fun getArtist(artistId: String): Result<ArtistDetails> {
         val browseId = artistId.removePrefix(YTM_PREFIX)
@@ -130,25 +186,22 @@ class YTMusicCatalogLoader @Inject constructor(
                 }
         }
 
-    fun getPlaylists(): Result<List<UnifiedPlaylist>> = Result.success(
-        listOf(
-            UnifiedPlaylist(
-                id = "$YTM_PREFIX$LIKED_BROWSE_ID",
-                source = SourceType.YTMUSIC,
-                name = "Liked Music",
-                comment = "Tracks you have liked on YouTube Music"
-            )
-        )
-    )
+    /** The library's playlists, every page of them, read afresh since they change. */
+    suspend fun getPlaylists(): Result<List<UnifiedPlaylist>> = InnerTubeShelfCursor(
+        firstPage = { innerTube.browse(LIBRARY_PLAYLISTS_BROWSE_ID) },
+        nextPage = { innerTube.browseContinuation(it) },
+        parse = { it.libraryPlaylists() }
+    ).all().map { playlists -> playlists.distinctBy { it.id } }
 
+    /** Every track, not the first page: a fresh walk each time, since a playlist is edited. */
     suspend fun getPlaylistTracks(playlistId: String): Result<List<UnifiedTrack>> =
-        innerTube.browse(playlistId.removePrefix(YTM_PREFIX)).map { root ->
-            root.responsiveListItems().mapNotNull(::parseResponsiveListItem)
-        }
+        trackShelf(playlistId.removePrefix(YTM_PREFIX)).all()
 
     companion object {
         const val LIKED_BROWSE_ID = "FEmusic_liked_videos"
         const val LIBRARY_ALBUMS_BROWSE_ID = "FEmusic_liked_albums"
+        const val HISTORY_BROWSE_ID = "FEmusic_history"
+        const val LIBRARY_PLAYLISTS_BROWSE_ID = "FEmusic_liked_playlists"
         const val WATCH_URL = "https://music.youtube.com/watch?v="
         const val BROWSE_URL = "https://music.youtube.com/browse/"
         const val PLAYLIST_URL = "https://music.youtube.com/playlist?list="

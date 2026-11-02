@@ -41,11 +41,4 @@ class SyncRouteLabelTest {
     fun `a reachable peer beats the archive`() {
         assertEquals(SyncRoute.DIRECT, route(reachable = true, isServerArchive = true))
     }
-
-    @Test
-    fun `labels read the way they are shown`() {
-        assertEquals("Direct Wi-Fi", SyncRoute.DIRECT.label)
-        assertEquals("Relay", SyncRoute.RELAY.label)
-        assertEquals("Server archive", SyncRoute.ARCHIVE.label)
-    }
 }

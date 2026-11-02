@@ -7,6 +7,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.core.update.UpdateCheckResult
 import com.wander.android.data.repository.SyncProgress
 import com.wander.android.data.sources.agro.AgroSyncedSettings
+import com.wander.android.ui.theme.ThemeMode
 import com.wander.android.ui.theme.rememberSystemAnimationsDisabled
 
 /**
@@ -26,6 +27,7 @@ internal data class SettingsUiState(
     val deezerTier: String = "FREE",
     val localReady: Boolean,
     val syncedNavidrome: AgroSyncedSettings?,
+    val themeMode: ThemeMode,
     val monet: Boolean,
     val amoled: Boolean,
     val backBlur: Boolean,
@@ -100,6 +102,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
     val deezer by viewModel.deezerConnected.collectAsStateWithLifecycle()
     val localReady by viewModel.localAvailable.collectAsStateWithLifecycle()
     val syncedNavidrome by viewModel.syncedNavidrome.collectAsStateWithLifecycle()
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val monet by viewModel.isMonetDynamic.collectAsStateWithLifecycle()
     val amoled by viewModel.isAmoledBlack.collectAsStateWithLifecycle()
     val backBlur by viewModel.isBackBlurEnabled.collectAsStateWithLifecycle()
@@ -160,6 +163,7 @@ internal fun rememberSettingsUiState(viewModel: SettingsViewModel): SettingsUiSt
         deezerTier = viewModel.deezerTier,
         localReady = localReady,
         syncedNavidrome = syncedNavidrome,
+        themeMode = ThemeMode.fromKey(themeMode),
         monet = monet,
         amoled = amoled,
         backBlur = backBlur,

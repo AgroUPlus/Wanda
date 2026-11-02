@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
+import com.wander.android.data.model.nameRes
 import com.wander.android.data.importer.M3uWriter
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedPlaylist
@@ -29,14 +30,15 @@ import com.wander.android.data.repository.PlaylistFileExporter
 internal class PlaylistShareActions(
     val onShare: (() -> Unit)?,
     val onConvert: (() -> Unit)?,
-    val onDownload: (() -> Unit)?,
+    /** Saves the tracks as an `.m3u8` file through the system save dialog. */
+    val onExport: (() -> Unit)?,
     /** Who can open the playlist's Agro copy, for the header to say it is shared; null when not. */
     val sharedWith: PlaylistVisibility? = null
 )
 
 /**
- * Hosts the playlist's share, visibility and convert sheets, the system save dialog for a
- * download, and the share sheet for a file, and returns the header actions that open them.
+ * Hosts the playlist's share, visibility and convert sheets, the system save dialog for an
+ * M3U export, and the share sheet for a file, and returns the header actions that open them.
  */
 @Composable
 internal fun PlaylistShareHost(
@@ -66,7 +68,7 @@ internal fun PlaylistShareHost(
 
     when (sheet) {
         PlaylistSheet.SHARE -> PlaylistShareSheet(
-            originalSource = playlist.source.displayName.takeIf { viewModel.canShareOriginal(playlist) },
+            originalSource = stringResource(playlist.source.nameRes).takeIf { viewModel.canShareOriginal(playlist) },
             publishesACopy = viewModel.publishesACopy(playlist),
             publication = publication,
             choices = PlaylistShareChoices(
@@ -103,7 +105,7 @@ internal fun PlaylistShareHost(
             )
         }
         PlaylistSheet.CONVERT -> ConvertPlaylistSheet(
-            sourceName = playlist.source.displayName,
+            sourceName = stringResource(playlist.source.nameRes),
             onConvert = { viewModel.convert(playlist, tracks) },
             onDismiss = viewModel::dismiss
         )
@@ -126,7 +128,7 @@ internal fun PlaylistShareHost(
     return PlaylistShareActions(
         onShare = { viewModel.open(PlaylistSheet.SHARE) }.takeIf { hasTracks },
         onConvert = { viewModel.open(PlaylistSheet.CONVERT) }.takeIf { viewModel.canConvert(playlist, tracks) },
-        onDownload = { saveFile.launch(M3uWriter.fileName(playlist.name)) }.takeIf { hasTracks },
+        onExport = { saveFile.launch(M3uWriter.fileName(playlist.name)) }.takeIf { hasTracks },
         sharedWith = publication?.visibility
     )
 }

@@ -53,6 +53,8 @@ object AppModule {
         db.jamRecapDao()
     @Provides fun provideTrackDao(db: WanderDatabase): TrackDao = db.trackDao()
     @Provides fun provideAlbumDao(db: WanderDatabase): AlbumDao = db.albumDao()
+    @Provides fun provideLibraryBrowseDao(db: WanderDatabase): com.wander.android.core.database.dao.LibraryBrowseDao =
+        db.libraryBrowseDao()
     @Provides fun provideArtistDao(db: WanderDatabase): ArtistDao = db.artistDao()
     @Provides fun provideHistoryDao(db: WanderDatabase): HistoryDao = db.historyDao()
     @Provides fun provideReplayRecapDao(db: WanderDatabase): com.wander.android.core.database.dao.ReplayRecapDao =
@@ -61,6 +63,9 @@ object AppModule {
     @Provides fun provideFriendDao(db: WanderDatabase): FriendDao = db.friendDao()
     @Provides fun provideDropDao(db: WanderDatabase): DropDao = db.dropDao()
     @Provides fun providePlaylistDao(db: WanderDatabase): com.wander.android.core.database.dao.PlaylistDao = db.playlistDao()
+    @Provides fun provideRemotePlaylistDao(db: WanderDatabase): com.wander.android.core.database.dao.RemotePlaylistDao =
+        db.remotePlaylistDao()
+    @Provides fun provideLikeSyncDao(db: WanderDatabase): com.wander.android.core.database.dao.LikeSyncDao = db.likeSyncDao()
 
     @Provides fun provideRecordingSplitDao(db: WanderDatabase): com.wander.android.core.database.dao.RecordingSplitDao = db.recordingSplitDao()
     @Provides fun provideRecordingLinkDao(db: WanderDatabase): com.wander.android.core.database.dao.RecordingLinkDao = db.recordingLinkDao()

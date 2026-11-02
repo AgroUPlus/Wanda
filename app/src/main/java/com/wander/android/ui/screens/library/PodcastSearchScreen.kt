@@ -57,6 +57,7 @@ import com.wander.android.data.podcast.PodcastHit
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.listInset
+import com.wander.android.ui.components.nestedListInset
 
 private val ArtworkSize = 56.dp
 
@@ -145,7 +146,7 @@ private fun SearchBody(
         is PodcastSearchState.Results -> if (shown.hits.isEmpty()) {
             Message(stringResource(R.string.podcasts_search_none))
         } else {
-            LazyColumn(contentPadding = contentPadding.listInset(), modifier = Modifier.fillMaxSize()) {
+            LazyColumn(contentPadding = contentPadding.nestedListInset(), modifier = Modifier.fillMaxSize()) {
                 itemsIndexed(shown.hits, key = { _, hit -> hit.feedUrl }) { index, hit ->
                     HitRow(
                         hit,

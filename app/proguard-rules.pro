@@ -29,3 +29,12 @@
 -dontwarn org.bouncycastle.**
 -dontwarn org.openjsse.**
 -dontwarn kotlinx.coroutines.debug.**
+
+# Release builds keep only warnings and errors in logcat. Verbose, debug and info lines trace
+# what the user plays and where their devices sit; bug-report tooling and other apps with log
+# access can read logcat, so those calls are stripped rather than trusted to stay harmless.
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+}

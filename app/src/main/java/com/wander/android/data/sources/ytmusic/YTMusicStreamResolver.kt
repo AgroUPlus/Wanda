@@ -82,7 +82,8 @@ class YTMusicStreamResolver @Inject constructor(
             bitRateKbps = bitrateKbps,
             headers = mapOf("User-Agent" to response.variant.userAgent),
             client = response.variant.name,
-            note = response.fallbackNote
+            note = response.fallbackNote,
+            loudnessGainDb = response.loudnessGainDb
         )
     }
 }

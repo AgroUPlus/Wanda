@@ -93,7 +93,7 @@ internal fun MyProfileScreen(
                 size = 88.dp
             )
             Text(
-                text = state.profile?.name ?: state.username.ifBlank { "Not signed in" },
+                text = state.profile?.name ?: state.username.ifBlank { stringResource(R.string.profile_not_signed_in) },
                 style = MaterialTheme.typography.headlineSmall
             )
             if (state.isPaired) {
@@ -150,7 +150,7 @@ internal fun MyProfileScreen(
         state.error?.let { message ->
             Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp)) {
                 Text(
-                    text = message,
+                    text = stringResource(message),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(12.dp)
@@ -166,7 +166,7 @@ internal fun MyProfileScreen(
                 .padding(horizontal = 20.dp, vertical = 12.dp),
             shapes = ButtonDefaults.shapes()
         ) {
-            Text(if (state.isSaving) "Saving…" else "Save")
+            Text(stringResource(if (state.isSaving) R.string.profile_saving else R.string.profile_save))
         }
     }
 }

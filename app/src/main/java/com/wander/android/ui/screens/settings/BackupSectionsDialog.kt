@@ -27,14 +27,15 @@ import com.wander.android.core.backup.BackupSection
 
 /**
  * Which parts go into the backup. Everything is ticked to start with — a backup that silently
- * leaves something behind is the failure this exists to prevent — and at least one must stay on.
+ * leaves something behind is the failure this exists to prevent — except the audio fingerprints,
+ * which are large and listed so they can be chosen on purpose. At least one must stay on.
  */
 @Composable
 internal fun BackupSectionsDialog(
     onConfirm: (Set<BackupSection>) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var chosen by remember { mutableStateOf(BackupSection.entries.toSet()) }
+    var chosen by remember { mutableStateOf(BackupSection.defaults) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -95,6 +96,10 @@ private val BackupSection.label: Int
         BackupSection.LIBRARY -> R.string.backup_section_library
         BackupSection.MERGES -> R.string.backup_section_merges
         BackupSection.EPISODES -> R.string.backup_section_episodes
+        BackupSection.METADATA -> R.string.backup_section_metadata
+        BackupSection.SHARED -> R.string.backup_section_shared
+        BackupSection.FEATURES -> R.string.backup_section_features
+        BackupSection.EMBEDDINGS -> R.string.backup_section_embeddings
     }
 
 @get:StringRes
@@ -106,4 +111,8 @@ private val BackupSection.detail: Int
         BackupSection.LIBRARY -> R.string.backup_section_library_detail
         BackupSection.MERGES -> R.string.backup_section_merges_detail
         BackupSection.EPISODES -> R.string.backup_section_episodes_detail
+        BackupSection.METADATA -> R.string.backup_section_metadata_detail
+        BackupSection.SHARED -> R.string.backup_section_shared_detail
+        BackupSection.FEATURES -> R.string.backup_section_features_detail
+        BackupSection.EMBEDDINGS -> R.string.backup_section_embeddings_detail
     }

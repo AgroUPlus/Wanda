@@ -2,7 +2,6 @@ package com.wander.android.core.database.dao
 
 import androidx.room.Query
 import com.wander.android.core.database.entity.TrackEntity
-import com.wander.android.data.model.SourceType
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -66,19 +65,46 @@ interface TrackSyncQueries {
     @Query("SELECT COUNT(*) FROM tracks WHERE source = 'LOCAL'")
     fun countLocalFlow(): Flow<Int>
 
+    /** Every file a row points at, which is what keeps a download from being swept as an orphan. */
+    @Query("SELECT localFilePath FROM tracks WHERE localFilePath IS NOT NULL")
+    suspend fun localFilePaths(): List<String>
+
+    @Query("SELECT id FROM tracks WHERE source = 'LOCAL'")
+    suspend fun localTrackIds(): List<String>
+
+    /** At most [MAX_BOUND_IDS] ids per call — see [TrackDao.applyLocalScan]. */
+    @Query("SELECT contentHash FROM tracks WHERE source = 'LOCAL' AND id IN (:ids) AND contentHash IS NOT NULL")
+    suspend fun localContentHashesOf(ids: List<String>): List<String>
+
+    /** At most [MAX_BOUND_IDS] ids per call — see [TrackDao.applyLocalScan]. */
+    @Query("DELETE FROM tracks WHERE source = 'LOCAL' AND id IN (:ids)")
+    suspend fun deleteLocalTracks(ids: List<String>): Int
+
+    /**
+     * Refreshes the file facts a rescan reads, which [TrackDao.upsertTracks] leaves alone on an
+     * existing row. A size that changed means the bytes did, so the content hash and the server's
+     * confirmation of it no longer describe this file and are cleared for the hasher to redo.
+     * SQLite evaluates every right-hand side against the row as it was, so the comparison sees the
+     * old size.
+     */
     @Query(
         """
-        SELECT contentHash FROM tracks
-        WHERE source = 'LOCAL' AND id NOT IN (:keepIds) AND contentHash IS NOT NULL
+        UPDATE tracks SET
+            contentHash = CASE
+                WHEN sizeBytes IS NOT NULL AND :sizeBytes IS NOT NULL AND sizeBytes != :sizeBytes THEN NULL
+                ELSE contentHash
+            END,
+            syncedAt = CASE
+                WHEN sizeBytes IS NOT NULL AND :sizeBytes IS NOT NULL AND sizeBytes != :sizeBytes THEN NULL
+                ELSE syncedAt
+            END,
+            sizeBytes = COALESCE(:sizeBytes, sizeBytes),
+            fileExtension = COALESCE(:fileExtension, fileExtension),
+            albumArtist = :albumArtist
+        WHERE id = :id
         """
     )
-    suspend fun localContentHashesNotIn(keepIds: List<String>): List<String>
-
-    @Query("DELETE FROM tracks WHERE source = 'LOCAL' AND id NOT IN (:keepIds)")
-    suspend fun deleteLocalTracksNotIn(keepIds: List<String>): Int
-
-    @Query("DELETE FROM tracks WHERE source = :source")
-    suspend fun clearBySource(source: SourceType)
+    suspend fun refreshLocalFileFields(id: String, sizeBytes: Long?, fileExtension: String?, albumArtist: String?)
 
     @Query("SELECT * FROM tracks WHERE isLiked = 1 OR isLibrary = 1 OR playCount > 0")
     suspend fun tracksWithUserState(): List<TrackEntity>

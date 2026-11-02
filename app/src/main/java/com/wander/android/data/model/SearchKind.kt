@@ -1,5 +1,8 @@
 package com.wander.android.data.model
 
+import androidx.annotation.StringRes
+import com.wander.android.R
+
 /**
  * What a search is looking for.
  *
@@ -11,8 +14,8 @@ package com.wander.android.data.model
  * Everything here still resolves to audio: an episode and a video both enter the one queue as a
  * [UnifiedTrack] and play through the same player. There is no video surface.
  */
-enum class SearchKind(val label: String) {
-    TRACKS("Music"),
-    VIDEOS("Videos"),
-    EPISODES("Podcasts")
+enum class SearchKind(@StringRes val label: Int) {
+    TRACKS(R.string.search_kind_music),
+    VIDEOS(R.string.search_kind_videos),
+    EPISODES(R.string.search_kind_podcasts)
 }

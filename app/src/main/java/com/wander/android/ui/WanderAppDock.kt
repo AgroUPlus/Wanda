@@ -15,9 +15,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,14 +39,19 @@ import com.wander.android.ui.components.player.MiniPlayerGap
 import com.wander.android.ui.components.player.PlayerSheetState
 import com.wander.android.ui.navigation.DockItem
 import com.wander.android.ui.navigation.NavLayoutViewModel
+import com.wander.android.ui.navigation.ShellRequest
 import com.wander.android.ui.navigation.TopLevelDestination
 import com.wander.android.ui.navigation.navigateSettled
 import com.wander.android.ui.navigation.WanderDock
 
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.ui.unit.dp
 import com.wander.android.ui.components.player.MiniStripHeight
 import com.wander.android.ui.navigation.DockRowHeight
@@ -95,8 +102,16 @@ internal fun calculateDockMetrics(
     return WanderDockMetrics(dockInset, sheetBottomInset, dockedPlayerHeight, dockBottom)
 }
 
-/** What decides whether and how the dock shows: the current route, whether it has a dock row, and whether a track is loaded. */
-internal class DockVisibility(val currentRoute: String?, val showDockRow: Boolean, val hasTrack: Boolean)
+/**
+ * What decides whether and how the dock shows: the current route, whether it has a dock row,
+ * whether a track is loaded, and how wide the navigation rail beside it is (zero with no rail).
+ */
+internal class DockVisibility(
+    val currentRoute: String?,
+    val showDockRow: Boolean,
+    val hasTrack: Boolean,
+    val railInset: Dp = 0.dp
+)
 
 /**
  * Creates and remembers the dock state, handling search query updates, microphone recognition
@@ -116,6 +131,11 @@ internal fun rememberWanderDockState(
     val currentRoute = visibility.currentRoute
     val showDockRow = visibility.showDockRow
     val hasTrack = visibility.hasTrack
+    val railInset = visibility.railInset
+    // Beside a rail the dock is only the search field: the rail carries its buttons, and it starts
+    // past the rail, which has already cleared the start inset.
+    val withRail = railInset > 0.dp
+    val dockSides = if (withRail) WindowInsetsSides.End else WindowInsetsSides.Horizontal
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val dockRoute = currentRoute?.substringBefore("?")
     val context = LocalContext.current
@@ -128,6 +148,15 @@ internal fun rememberWanderDockState(
             showListen = true
         } else {
             micLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+    // A launcher shortcut's request: the listen sheet straight away, through the same permission
+    // gate as the dock's own button. Search focus is carried out by the field itself, once shown.
+    val shellRequest by viewModel.shellRequest.collectAsStateWithLifecycle()
+    LaunchedEffect(shellRequest) {
+        if (shellRequest == ShellRequest.LISTEN) {
+            viewModel.consumeShellRequest(ShellRequest.LISTEN)
+            onListen()
         }
     }
     if (showListen) {
@@ -160,12 +189,16 @@ internal fun rememberWanderDockState(
                 scaleOut(dockSpec(), targetScale = 0.85f),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = dockInset + MiniPlayerGap)
+                // A side navigation bar or cutout in landscape: the dock spans the width, so it
+                // has to clear them itself — nothing above it in this full-bleed Box does.
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(dockSides))
+                .padding(start = railInset, bottom = dockInset + MiniPlayerGap)
+                .widthIn(max = if (withRail) RailDockMaxWidth else Dp.Unspecified)
         ) {
             WanderDock(
                 currentRoute = dockRoute,
                 query = searchQuery,
-                items = dockItems,
+                items = if (withRail) emptyList() else dockItems,
                 onOpenItem = { item ->
                     when (item) {
                         DockItem.LIBRARY -> navController.switchTab(TopLevelDestination.LIBRARY)
@@ -177,12 +210,15 @@ internal fun rememberWanderDockState(
                 onQueryChange = onQueryChange,
                 onSearch = openLibrary,
                 onListen = onListen,
+                onSearchFocusChanged = viewModel::setSearchFocused,
                 // The raw signal, overshoot and all — see `WanderDock`'s own doc for why this is
                 // read straight off the sheet rather than animated again.
                 progress = { sheetState.rawProgress },
                 // Whether the mini player is (or is about to be) floating above this — see
                 // `WanderDock`'s own doc on why that changes its corners, not just its position.
-                pairedWithMiniPlayer = hasTrack
+                pairedWithMiniPlayer = hasTrack,
+                focusSearch = shellRequest == ShellRequest.FOCUS_SEARCH,
+                onSearchFocusRequested = { viewModel.consumeShellRequest(ShellRequest.FOCUS_SEARCH) }
             )
         }
     }
@@ -191,6 +227,9 @@ internal fun rememberWanderDockState(
         WanderDockState(standaloneDock)
     }
 }
+
+/** Past this the search field beside a rail is wider than anything typed into it. */
+private val RailDockMaxWidth = 640.dp
 
 internal fun PaddingValues.plusBottom(
     extra: Dp,
@@ -201,29 +240,6 @@ internal fun PaddingValues.plusBottom(
         top = calculateTopPadding(),
         end = calculateEndPadding(direction),
         bottom = calculateBottomPadding() + extra
-    )
-}
-
-/**
- * Checks for updates on launch and manages initial audio permission gates.
- */
-@Composable
-internal fun WanderAppLaunchGate(
-    viewModel: WanderAppViewModel,
-    setupDone: Boolean
-) {
-    androidx.compose.runtime.LaunchedEffect(Unit) { viewModel.checkForUpdateOnLaunch() }
-    val launchUpdate by viewModel.launchUpdateAvailable.collectAsStateWithLifecycle()
-    launchUpdate?.let { update ->
-        com.wander.android.ui.components.UpdateAvailableDialog(
-            update = update,
-            onDismiss = viewModel::dismissLaunchUpdate
-        )
-    }
-
-    com.wander.android.core.permissions.rememberPermissionGate(
-        onAudioGranted = viewModel::onAudioPermissionGranted,
-        requestOnStart = setupDone
     )
 }
 

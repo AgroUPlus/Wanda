@@ -3,6 +3,7 @@ package com.wander.android.data.repository
 import com.wander.android.core.cache.AudioCacheManager
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.TrackEntity
+import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.SourceType
 import java.io.File
 import javax.inject.Inject
@@ -37,7 +38,8 @@ data class StorageBreakdown(
 @Singleton
 class StorageButlerRepository @Inject constructor(
     private val trackDao: TrackDao,
-    private val audioCacheManager: AudioCacheManager
+    private val audioCacheManager: AudioCacheManager,
+    private val secureStorage: SecureStorage
 ) {
 
     suspend fun breakdown(): StorageBreakdown = withContext(Dispatchers.IO) {
@@ -77,13 +79,36 @@ class StorageButlerRepository @Inject constructor(
     }
 
     /**
+     * Deletes every download's file and clears its row, as [cleanStaleDownloads] does for the stale
+     * ones. Liked tracks included: this is the "delete all" the user confirmed, and a liked track
+     * that is no longer downloaded still plays as a stream. The next sweep fetches liked tracks
+     * again if auto-download is still on.
+     *
+     * @return how many downloads were removed.
+     */
+    suspend fun deleteAllDownloads(): Int = withContext(Dispatchers.IO) {
+        val downloads = trackDao.getDownloadedTracksOnce()
+        downloads.forEach { track ->
+            track.localFilePath?.let { File(it).delete() }
+            trackDao.setDownloaded(track.id, isDownloaded = false, localPath = null)
+        }
+        // Nothing left to keep, and nothing still waiting: "delete all" covers the queue too.
+        secureStorage.downloads.unmarkManual(secureStorage.downloads.manualTrackIds.value)
+        downloads.size
+    }
+
+    /**
      * `playCount` is lifetime, not "since this download" — there is no per-download counter, so a
      * track played heavily before ever being downloaded reads as "played" here even if it has sat
      * untouched since. That is the conservative direction to be wrong in: it undercounts what
      * cleanup would offer to delete rather than deleting something recently listened to.
+     *
+     * A download the user asked for by hand is never stale, played or not: the user chose to keep
+     * that one, which is the whole difference between it and a predicted download.
      */
     private fun isStale(track: TrackEntity): Boolean =
-        StorageButlerRules.isStale(track.downloadedAt, track.isLiked, track.playCount, System.currentTimeMillis())
+        track.id !in secureStorage.downloads.manualTrackIds.value &&
+            StorageButlerRules.isStale(track.downloadedAt, track.isLiked, track.playCount, System.currentTimeMillis())
 
     private fun fileSizeOf(path: String?): Long =
         path?.let { runCatching { File(it).length() }.getOrDefault(0L) } ?: 0L

@@ -13,6 +13,9 @@ import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 /**
  * Sends livestreams down an uncached path and everything else down the cached one.
  *
+ * A progressive livestream — an Icecast station — goes uncached too: it has no end and no length,
+ * so the cache would keep writing it for as long as it played.
+ *
  * The cache is right for a recording and wrong for a broadcast. A live HLS media playlist is
  * re-fetched at an unchanging URL every few seconds — that is how the player learns which segments
  * exist now — so a cache in front of it answers every reload with the copy it took the first time.
@@ -26,7 +29,8 @@ import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 @OptIn(UnstableApi::class)
 internal class LiveAwareMediaSourceFactory(
     private val cached: MediaSource.Factory,
-    private val uncachedHls: HlsMediaSource.Factory
+    private val uncachedHls: HlsMediaSource.Factory,
+    private val uncachedProgressive: MediaSource.Factory
 ) : MediaSource.Factory {
 
     override fun getSupportedTypes(): IntArray = cached.supportedTypes
@@ -36,6 +40,7 @@ internal class LiveAwareMediaSourceFactory(
     ): MediaSource.Factory = apply {
         cached.setDrmSessionManagerProvider(provider)
         uncachedHls.setDrmSessionManagerProvider(provider)
+        uncachedProgressive.setDrmSessionManagerProvider(provider)
     }
 
     override fun setLoadErrorHandlingPolicy(
@@ -43,18 +48,18 @@ internal class LiveAwareMediaSourceFactory(
     ): MediaSource.Factory = apply {
         cached.setLoadErrorHandlingPolicy(policy)
         uncachedHls.setLoadErrorHandlingPolicy(policy)
+        uncachedProgressive.setLoadErrorHandlingPolicy(policy)
     }
 
     override fun setCmcdConfigurationFactory(
         factory: CmcdConfiguration.Factory
     ): MediaSource.Factory = apply { cached.setCmcdConfigurationFactory(factory) }
 
-    override fun createMediaSource(mediaItem: MediaItem): MediaSource =
-        if (mediaItem.isHlsItem()) {
-            uncachedHls.createMediaSource(mediaItem)
-        } else {
-            cached.createMediaSource(mediaItem)
-        }
+    override fun createMediaSource(mediaItem: MediaItem): MediaSource = when {
+        mediaItem.isHlsItem() -> uncachedHls.createMediaSource(mediaItem)
+        mediaItem.isProgressiveLiveItem() -> uncachedProgressive.createMediaSource(mediaItem)
+        else -> cached.createMediaSource(mediaItem)
+    }
 }
 
 /**
@@ -66,3 +71,7 @@ internal class LiveAwareMediaSourceFactory(
 private fun MediaItem.isHlsItem(): Boolean =
     localConfiguration?.mimeType == MimeTypes.APPLICATION_M3U8 ||
         localConfiguration?.uri?.toString()?.endsWith(LIVE_SUFFIX) == true
+
+/** A livestream that is not a manifest; see [PROGRESSIVE_LIVE_SUFFIX]. */
+private fun MediaItem.isProgressiveLiveItem(): Boolean =
+    localConfiguration?.uri?.toString()?.endsWith(PROGRESSIVE_LIVE_SUFFIX) == true

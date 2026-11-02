@@ -8,15 +8,15 @@ package com.wander.android.data.sources.agro
  * from `peerSources` *before* anything was attempted, so it said "Direct Wi-Fi" while every
  * transfer was quietly falling back to the relay — or failing.
  */
-enum class SyncRoute(val label: String) {
+enum class SyncRoute {
     /** Straight to the peer over the local network. */
-    DIRECT("Direct Wi-Fi"),
+    DIRECT,
 
     /** Through the server, which is passing bytes between two devices that cannot see each other. */
-    RELAY("Relay"),
+    RELAY,
 
     /** From the server's own copy of the file. */
-    ARCHIVE("Server archive")
+    ARCHIVE
 }
 
 /** A stream being fetched, and the path it came by. */

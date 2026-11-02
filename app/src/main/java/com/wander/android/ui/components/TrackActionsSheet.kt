@@ -60,8 +60,6 @@ fun TrackActionsSheet(
     onAddToPlaylist: (() -> Unit)? = null,
     /** Told what to say once a drop has been sent, or failed to be. */
     onDropSent: (String) -> Unit = {},
-    /** Deletes an offline downloaded file from device storage. */
-    onDeleteDownload: (() -> Unit)? = null,
     /**
      * Opens the artist's page. Null when the track names no artist — there is nowhere to go.
      *
@@ -72,13 +70,20 @@ fun TrackActionsSheet(
      * Given the name to open: a track credited to several artists offers each of them.
      */
     onOpenArtist: ((String) -> Unit)? = null,
+    /**
+     * Opens the track's album, given its id. Offered only when the track names an album — see
+     * [UnifiedTrack.albumId] — so callers pass it wherever they can navigate, without checking.
+     */
+    onOpenAlbum: ((String) -> Unit)? = null,
     /** Forgets how far into an episode the listener got. Null for anything but a podcast episode. */
     onResetProgress: (() -> Unit)? = null,
     /** What [onRemove] is called, when it removes from something other than the queue. */
     removeLabel: String? = null,
     /** Reorders a playlist the caller may rearrange; null at either end, or when it may not. */
     onMoveUp: (() -> Unit)? = null,
-    onMoveDown: (() -> Unit)? = null
+    onMoveDown: (() -> Unit)? = null,
+    /** Starts selection mode on the list behind the sheet, with this track selected. */
+    onSelect: (() -> Unit)? = null
 ) {
     val playable = track.isPlayableNow()
     // Held here and flipped optimistically: callers pass the track as it was when the menu opened,
@@ -88,8 +93,8 @@ fun TrackActionsSheet(
     val removeFromQueue = removeLabel ?: stringResource(R.string.action_remove_from_queue)
     val moveUp = stringResource(R.string.action_move_up)
     val moveDown = stringResource(R.string.action_move_down)
-    val deleteOffline = stringResource(R.string.common_delete_offline_file)
     val resetProgress = stringResource(R.string.podcasts_reset_progress)
+    val openAlbum = stringResource(R.string.track_action_go_to_album)
 
     // Resolved here rather than passed in by each caller. This sheet is opened from a dozen
     // screens, and threading a jam callback through all of them would mean the action quietly
@@ -105,6 +110,7 @@ fun TrackActionsSheet(
     var pickingFriend by remember { mutableStateOf(false) }
     var choosingShare by remember { mutableStateOf(false) }
     var confirming by remember { mutableStateOf<ConfirmRequest?>(null) }
+    val downloads = rememberTrackSheetDownloads(track) { confirming = it }
 
     // A destructive entry replaces the sheet with its confirmation, and either answer closes both.
     confirming?.let { request ->
@@ -114,13 +120,8 @@ fun TrackActionsSheet(
         })
         return
     }
-    val deleteTitle = stringResource(R.string.confirm_delete_download_title)
-    val deleteMessage = stringResource(R.string.confirm_delete_download_message, track.title)
     val resetTitle = stringResource(R.string.confirm_reset_progress_title)
     val resetMessage = stringResource(R.string.confirm_reset_progress_message, track.title)
-    val askDeleteDownload = onDeleteDownload?.let { delete ->
-        { confirming = ConfirmRequest(deleteTitle, deleteMessage, deleteOffline, delete) }
-    }
     val askResetProgress = onResetProgress?.let { reset ->
         { confirming = ConfirmRequest(resetTitle, resetMessage, resetProgress, reset) }
     }
@@ -186,7 +187,18 @@ fun TrackActionsSheet(
                         hasDropFriends = dropFriends.isNotEmpty(),
                         jamState = jamState
                     ),
-                    labels = TrackActionLabels(likeLabel, removeFromQueue, deleteOffline, resetProgress, moveUp, moveDown),
+                    labels = TrackActionLabels(
+                        like = likeLabel,
+                        removeFromQueue = removeFromQueue,
+                        download = stringResource(R.string.track_action_download),
+                        removeDownload = stringResource(R.string.track_action_remove_download),
+                        resetProgress = resetProgress,
+                        moveUp = moveUp,
+                        moveDown = moveDown,
+                        openAlbum = openAlbum,
+                        select = stringResource(R.string.selection_select),
+                        names = trackActionNames()
+                    ),
                     callbacks = TrackActionCallbacks(
                         onPlayNext = onPlayNext,
                         onAddToQueue = onAddToQueue,
@@ -195,11 +207,15 @@ fun TrackActionsSheet(
                         onAddToPlaylist = onAddToPlaylist,
                         onStartRadio = onStartRadio,
                         onOpenArtist = onOpenArtist,
+                        onOpenAlbum = onOpenAlbum,
                         onRemove = onRemove,
-                        onDeleteDownload = askDeleteDownload,
+                        onDownload = downloads.download,
+                        onRemoveDownload = downloads.remove,
+                        confirmsRemoveDownload = downloads.removeAsks,
                         onResetProgress = askResetProgress,
                         onMoveUp = onMoveUp,
-                        onMoveDown = onMoveDown
+                        onMoveDown = onMoveDown,
+                        onSelect = onSelect
                     ),
                     jamViewModel = jamViewModel,
                     sheet = TrackActionSheetFlow(

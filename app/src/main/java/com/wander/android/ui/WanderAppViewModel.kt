@@ -21,8 +21,12 @@ import com.wander.android.data.sources.local.LocalMusicSource
 import com.wander.android.ui.navigation.DeepLinkRouter
 import com.wander.android.ui.navigation.LinkConfirmation
 import com.wander.android.ui.navigation.LinkConfirmations
+import com.wander.android.ui.navigation.LaunchNotices
+import com.wander.android.ui.navigation.ShellRequest
+import com.wander.android.ui.navigation.ShellRequests
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -44,6 +48,8 @@ class WanderAppViewModel @Inject constructor(
     private val secureStorage: SecureStorage,
     private val deepLinkRouter: DeepLinkRouter,
     private val linkConfirmations: LinkConfirmations,
+    launchNotices: LaunchNotices,
+    private val shellRequests: ShellRequests,
     private val updateChecker: UpdateChecker,
     private val instantRadio: InstantRadioRepository,
     private val playerConnection: PlayerConnection,
@@ -64,6 +70,8 @@ class WanderAppViewModel @Inject constructor(
     val searchQuery: StateFlow<String> = searchQueryHolder.query
 
     fun setSearchQuery(value: String) = searchQueryHolder.set(value)
+
+    fun setSearchFocused(focused: Boolean) = searchQueryHolder.setFieldFocused(focused)
 
     val isImmersivePlayer: StateFlow<Boolean> = secureStorage.isImmersivePlayer
 
@@ -89,6 +97,14 @@ class WanderAppViewModel @Inject constructor(
 
     /** Routes asked for from outside the composition — a tapped notification. */
     val deepLinkRoutes = deepLinkRouter.routes
+
+    /** String resources to show about a share or shortcut from outside — see `LaunchNotices`. */
+    val launchMessages: Flow<Int> = launchNotices.messages
+
+    /** What a launcher shortcut asked the dock to do — see `ShellRequests`. */
+    val shellRequest: StateFlow<ShellRequest?> = shellRequests.pending
+
+    fun consumeShellRequest(request: ShellRequest) = shellRequests.consume(request)
 
     fun consumeDeepLink() = deepLinkRouter.consume()
 

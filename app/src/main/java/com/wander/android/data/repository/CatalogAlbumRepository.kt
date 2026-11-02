@@ -44,9 +44,9 @@ internal class CatalogAlbumRepository(
      * [album] returns null for it, and this used to return here without ever asking the backend —
      * leaving every YouTube Music album opened from an artist page permanently empty.
      */
-    suspend fun refreshAlbum(albumId: String) {
+    suspend fun refreshAlbum(albumId: String): Result<List<UnifiedTrack>> {
         val album = album(albumId)
-        if (album != null) {
+        return if (album != null) {
             musicRepository.getAlbumTracks(album)
         } else {
             musicRepository.getAlbumTracksById(albumId)

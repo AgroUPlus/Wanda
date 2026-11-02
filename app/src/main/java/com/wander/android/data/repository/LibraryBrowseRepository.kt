@@ -1,0 +1,100 @@
+package com.wander.android.data.repository
+
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.map
+import com.wander.android.core.database.dao.LibraryArtistRow
+import com.wander.android.core.database.dao.LibraryBrowseDao
+import com.wander.android.core.database.dao.LibraryGenreRow
+import com.wander.android.core.database.entity.AlbumEntity
+import com.wander.android.core.database.entity.TrackEntity
+import com.wander.android.data.model.LibrarySort
+import com.wander.android.data.model.SourceType
+import com.wander.android.data.model.UnifiedAlbum
+import com.wander.android.data.model.UnifiedTrack
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+
+/**
+ * The Library's lists, read from Room in the order and for the sources the user picked.
+ *
+ * An empty [sources] set means every source — see [LibraryBrowseDao] for why the query is always
+ * handed an explicit list.
+ */
+@Singleton
+class LibraryBrowseRepository @Inject constructor(private val dao: LibraryBrowseDao) {
+
+    /**
+     * Placeholders on, so the list is its whole length from the first page and a fast-scroll jump
+     * lands on a real index; [PagingConfig.jumpThreshold] makes a far jump reload around where it
+     * landed instead of paging through every row in between.
+     */
+    fun pagedTracks(sort: LibrarySort, sources: Set<SourceType>): Flow<PagingData<UnifiedTrack>> = Pager(
+        config = PagingConfig(
+            pageSize = PAGE_SIZE,
+            enablePlaceholders = true,
+            jumpThreshold = PAGE_SIZE * JUMP_PAGES
+        ),
+        pagingSourceFactory = { dao.pagedLibraryTracks(sort.name, sources.orEvery()) }
+    ).flow.map { page -> page.map(TrackEntity::toUnifiedTrack) }
+
+    suspend fun trackIds(sort: LibrarySort, sources: Set<SourceType>): List<String> =
+        withContext(Dispatchers.IO) { dao.libraryTrackIds(sort.name, sources.orEvery()) }
+
+    /** [limit] rows of the Tracks tab from [offset], in [sort]. */
+    suspend fun tracksSlice(sort: LibrarySort, sources: Set<SourceType>, offset: Int, limit: Int): List<UnifiedTrack> =
+        withContext(Dispatchers.IO) {
+            dao.libraryTracksSlice(sort.name, sources.orEvery(), limit, offset).map(TrackEntity::toUnifiedTrack)
+        }
+
+    suspend fun randomTracks(sources: Set<SourceType>, limit: Int): List<UnifiedTrack> =
+        withContext(Dispatchers.IO) {
+            dao.randomLibraryTracks(sources.orEvery(), limit).map(TrackEntity::toUnifiedTrack)
+        }
+
+    fun hasTracks(sources: Set<SourceType>): Flow<Boolean> =
+        dao.observeHasLibraryTracks(sources.orEvery()).distinctUntilChanged()
+
+    fun likedTracks(sort: LibrarySort, sources: Set<SourceType>): Flow<List<UnifiedTrack>> =
+        dao.observeLikedTracks(sort.name, sources.orEvery()).toTracks()
+
+    fun downloadedTracks(sort: LibrarySort, sources: Set<SourceType>): Flow<List<UnifiedTrack>> =
+        dao.observeDownloadedTracks(sort.name, sources.orEvery()).toTracks()
+
+    fun albums(sort: LibrarySort, sources: Set<SourceType>): Flow<List<UnifiedAlbum>> {
+        val rows = if (sort.needsTrackActivity) {
+            // Re-runs on every write to `tracks`; most of those (a play elsewhere) change nothing here.
+            dao.observeLibraryAlbumsByActivity(sort.name, sources.orEvery()).distinctUntilChanged()
+        } else {
+            dao.observeLibraryAlbums(sort.name, sources.orEvery())
+        }
+        return rows.map { list -> list.map(AlbumEntity::toUnifiedAlbum) }.flowOn(Dispatchers.Default)
+    }
+
+    fun artists(sources: Set<SourceType>): Flow<List<LibraryArtistRow>> =
+        dao.observeLibraryArtists(sources.orEvery()).distinctUntilChanged()
+
+    fun genres(sources: Set<SourceType>): Flow<List<LibraryGenreRow>> =
+        dao.observeLibraryGenres(sources.orEvery()).distinctUntilChanged()
+
+    fun genreTracks(genre: String, sources: Set<SourceType>): Flow<List<UnifiedTrack>> =
+        dao.observeGenreTracks(genre, sources.orEvery()).toTracks()
+
+    private fun Flow<List<TrackEntity>>.toTracks(): Flow<List<UnifiedTrack>> =
+        map { list -> list.map(TrackEntity::toUnifiedTrack) }.flowOn(Dispatchers.Default)
+
+    private fun Set<SourceType>.orEvery(): List<SourceType> =
+        if (isEmpty()) SourceType.entries else toList()
+
+    private companion object {
+        const val PAGE_SIZE = 60
+        const val JUMP_PAGES = 3
+    }
+}

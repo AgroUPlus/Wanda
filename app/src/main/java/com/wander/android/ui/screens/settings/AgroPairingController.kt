@@ -1,10 +1,13 @@
 package com.wander.android.ui.screens.settings
 
+import android.content.Context
+import com.wander.android.R
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.sources.agro.AgroAuthError
 import com.wander.android.data.sources.agro.explain
 import com.wander.android.data.sources.agro.AgroClient
 import com.wander.android.data.sources.agro.AgroLogin
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,7 +26,8 @@ import javax.inject.Singleton
 internal class AgroPairingController @Inject constructor(
     private val agroClient: AgroClient,
     private val agroLogin: AgroLogin,
-    private val secureStorage: SecureStorage
+    private val secureStorage: SecureStorage,
+    @ApplicationContext private val context: Context
 ) {
     private val _state = MutableStateFlow<AgroPairingState>(AgroPairingState.Idle)
     val state: StateFlow<AgroPairingState> = _state.asStateFlow()
@@ -37,7 +41,9 @@ internal class AgroPairingController @Inject constructor(
             onSuccess = { petname ->
                 AgroPairingState.Paired(
                     username = secureStorage.agroUsername.ifEmpty { username },
-                    petname = petname ?: secureStorage.agroDevicePetname.ifEmpty { "Wanda Android" }
+                    petname = petname ?: secureStorage.agroDevicePetname.ifEmpty {
+                        context.getString(R.string.agro_default_device_name)
+                    }
                 )
             },
             onFailure = { AgroPairingState.Failed(AgroAuthError.from(it)) }

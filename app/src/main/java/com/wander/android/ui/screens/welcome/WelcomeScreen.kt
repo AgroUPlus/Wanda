@@ -61,7 +61,11 @@ fun WelcomeScreen(
     val status by viewModel.status.collectAsStateWithLifecycle()
     val permissionGate = rememberPermissionGate(
         onAudioGranted = viewModel::refreshLocal,
-        requestOnStart = false
+        requestOnStart = false,
+        // The card explains music files and nothing else. Notifications are asked for on their
+        // own by the app-wide gate once setup is done, rather than as a second, unexplained dialog
+        // behind "Grant access".
+        askNotifications = false
     )
     val pager = rememberPagerState(pageCount = { STEP_COUNT })
     val scope = rememberCoroutineScope()

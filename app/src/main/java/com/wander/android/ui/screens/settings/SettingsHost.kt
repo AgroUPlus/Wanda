@@ -112,6 +112,7 @@ internal fun rememberSettingsHost(
                     }
                 }
             },
+            onThemeModeChange = viewModel::setThemeMode,
             onMonetChange = viewModel::setMonetDynamic,
             onAmoledChange = viewModel::setAmoledBlack,
             onBackBlurChange = viewModel::setBackBlurEnabled,

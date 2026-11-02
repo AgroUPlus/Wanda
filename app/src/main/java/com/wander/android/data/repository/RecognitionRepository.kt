@@ -219,9 +219,6 @@ class RecognitionRepository @Inject constructor(
     internal suspend fun fingerprintableTracks(): List<TrackEntity> =
         withContext(Dispatchers.IO) { trackDao.getFingerprintableTracks() }
 
-    internal suspend fun fingerprintableTrackIds(): List<String> =
-        withContext(Dispatchers.IO) { trackDao.getFingerprintableTrackIds() }
-
     private companion object {
         /**
          * How long to listen.

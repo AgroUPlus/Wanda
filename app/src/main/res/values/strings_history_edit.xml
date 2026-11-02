@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Listening history: removing plays -->
+    <string name="history_remove_entry">Remove from history</string>
+    <string name="history_clear_all">Clear history</string>
+    <string name="history_clear_confirm_title">Clear your listening history?</string>
+    <string name="history_clear_confirm_message">Your plays disappear from History and Recently played. Plays not yet sent to a scrobbling service are still sent, and your stats still count them.</string>
+    <string name="history_clear_confirm_action">Clear</string>
+</resources>

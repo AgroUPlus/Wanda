@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
+import com.wander.android.data.model.nameRes
 import com.wander.android.data.model.UnifiedTrack
 
 private data class InfoItem(
@@ -52,6 +53,7 @@ private data class InfoItem(
  */
 @Composable
 internal fun TrackInfoPage(track: UnifiedTrack, modifier: Modifier = Modifier) {
+    val sourceName = stringResource(track.source.nameRes)
     val items = buildList {
         add(InfoItem(Icons.Rounded.Person, R.string.track_info_artist, track.artist))
         track.album?.takeIf { it.isNotBlank() }?.let {
@@ -72,7 +74,7 @@ internal fun TrackInfoPage(track: UnifiedTrack, modifier: Modifier = Modifier) {
         track.audioQualityLabel?.let {
             add(InfoItem(Icons.Rounded.GraphicEq, R.string.track_info_quality, it))
         }
-        add(InfoItem(Icons.Rounded.Cloud, R.string.track_info_source, track.source.displayName))
+        add(InfoItem(Icons.Rounded.Cloud, R.string.track_info_source, sourceName))
         statusLabel(track)?.let {
             add(InfoItem(Icons.Rounded.Favorite, R.string.track_info_status, it))
         }

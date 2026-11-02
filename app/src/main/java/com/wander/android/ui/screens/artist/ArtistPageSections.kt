@@ -110,7 +110,7 @@ internal fun LazyListScope.artistPageSections(
     albumShelf(page.singles, "singles", expandedShelves, loadingShelf, onExpandShelf, onOpenAlbum, onLongPressAlbum)
 
     if (page.videos.isNotEmpty()) {
-        item(key = "videos-title", contentType = SECTION_TITLE) { ArtistSectionTitle("Videos") }
+        item(key = "videos-title", contentType = SECTION_TITLE) { ArtistSectionTitle(stringResource(R.string.artist_videos_title)) }
         itemsIndexed(page.videos, key = { _, it -> "video-${it.id}" }, contentType = { _, _ -> "track" }) { index, track ->
             TrackRow(
                 track = track,
@@ -150,7 +150,7 @@ internal fun LazyListScope.artistPageSections(
 
     if (page.related.isNotEmpty()) {
         item(key = "related-title", contentType = SECTION_TITLE) {
-            ArtistSectionTitle("Fans might also like")
+            ArtistSectionTitle(stringResource(R.string.artist_related_title))
         }
         item(key = "related", contentType = "artist-row") {
             LazyRow(
@@ -187,7 +187,7 @@ private fun LazyListScope.albumShelf(
     item(key = "$keyPrefix-title", contentType = SECTION_TITLE) {
         ArtistSectionTitle(
             text = section.title,
-            action = "See all".takeIf { canExpand },
+            action = stringResource(R.string.artist_see_all).takeIf { canExpand },
             isBusy = loadingShelf == section.title,
             onAction = { onExpandShelf(section) }
         )

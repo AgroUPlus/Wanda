@@ -2,7 +2,6 @@ package com.wander.android.data.sources.ytmusic
 
 import com.wander.android.data.model.UNKNOWN_ARTIST
 import com.wander.android.data.model.SourceType
-import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -154,26 +153,6 @@ internal fun parsePlaylistPanelVideo(renderer: JsonObject): UnifiedTrack? {
 
 private fun viewsExtra(views: String?): Map<String, String> =
     if (views != null) mapOf("views" to views) else emptyMap()
-
-/** A library album row: the same renderer shape, but the endpoint points at a browse id. */
-internal fun parseLibraryAlbum(renderer: JsonObject): UnifiedAlbum? {
-    val columns = renderer["flexColumns"]?.array() ?: return null
-    fun column(i: Int) = columns.getOrNull(i)
-        .path("musicResponsiveListItemFlexColumnRenderer", "text")
-
-    val browseId = renderer.path("navigationEndpoint", "browseEndpoint", "browseId").text()
-        ?: return null
-    val title = column(0).runText() ?: return null
-
-    return UnifiedAlbum(
-        id = "$YTM_PREFIX$browseId",
-        source = SourceType.YTMUSIC,
-        title = title,
-        artist = InnerTubeSubtitle.of(column(1).path("runs")?.array()).artist ?: UNKNOWN_ARTIST,
-        coverArtUrl = renderer.path("thumbnail", "musicThumbnailRenderer", "thumbnail")
-            .bestThumbnail()
-    )
-}
 
 /**
  * The signed-in account's display name, out of an `account/account_menu` response.

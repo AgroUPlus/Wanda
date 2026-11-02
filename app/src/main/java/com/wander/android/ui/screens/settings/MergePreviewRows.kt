@@ -16,10 +16,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
+import com.wander.android.data.model.nameRes
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.KeptApartPair
 import com.wander.android.data.repository.MergeGroup
@@ -53,7 +55,7 @@ internal fun MergeGroupRow(group: MergeGroup, onKeepApart: (UnifiedTrack) -> Uni
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "· ${rendition.source.displayName} — ${format(rendition.durationMs)}" +
+                        text = "· ${stringResource(rendition.source.nameRes)} — ${format(rendition.durationMs)}" +
                             if (rendition.isLiked) "  ♥" else "",
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier
@@ -112,8 +114,8 @@ internal fun KeptApartRow(pair: KeptApartPair, onRejoin: () -> Unit) {
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${pair.a.source.displayName} — ${format(pair.a.durationMs)}  ·  " +
-                        "${pair.b.source.displayName} — ${format(pair.b.durationMs)}",
+                    text = "${stringResource(pair.a.source.nameRes)} — ${format(pair.a.durationMs)}  ·  " +
+                        "${stringResource(pair.b.source.nameRes)} — ${format(pair.b.durationMs)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -130,16 +132,15 @@ internal fun KeptApartRow(pair: KeptApartPair, onRejoin: () -> Unit) {
 }
 
 /** "1 pair", not "1 pairs". Omitted entirely when the user has pinned nothing. */
-internal fun keptApartSummary(count: Int): String = when (count) {
-    0 -> ""
-    1 -> " · 1 pair kept apart"
-    else -> " · $count pairs kept apart"
-}
+@Composable
+internal fun keptApartSummary(count: Int): String =
+    if (count == 0) "" else " · " + pluralStringResource(R.plurals.merge_kept_apart, count, count)
 
 /** Says which signal tripped, so the row can be judged without opening anything. */
+@Composable
 private fun reviewReason(group: MergeGroup): String = when {
-    group.albums.size > 1 -> "Different albums: ${group.albums.joinToString(", ")}"
-    else -> "Lengths differ by ${group.durationSpreadMs / 1000}s"
+    group.albums.size > 1 -> stringResource(R.string.merge_review_different_albums, group.albums.joinToString(", "))
+    else -> stringResource(R.string.merge_review_lengths_differ, (group.durationSpreadMs / 1000).toInt())
 }
 
 private fun format(ms: Long): String = "%d:%02d".format(ms / 60_000, (ms % 60_000) / 1000)

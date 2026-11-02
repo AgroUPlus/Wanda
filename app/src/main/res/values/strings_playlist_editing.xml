@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The playlist page's overflow menu, at the end of its collapsing bar. -->
+    <string name="playlist_more_options">More options</string>
+    <!-- Opens a dialog to rename the playlist and change its description. -->
+    <string name="playlist_edit_details">Edit details</string>
+    <string name="playlist_details_name">Name</string>
+    <string name="playlist_details_description">Description</string>
+    <string name="playlist_details_save">Save</string>
+    <!-- Shown in the edit dialog when the playlist has been shared through Agro, which has no rename. -->
+    <!-- Accessibility label of the drag grip on a playlist row; %1$s is the song's title. -->
+    <string name="playlist_reorder">Reorder %1$s</string>
+    <string name="playlist_details_shared_note">Friends who follow it on Agro keep seeing the name it was shared with.</string>
+    <!-- Header button that saves the playlist as an .m3u8 file — not an offline download. -->
+    <string name="playlist_export_m3u">Export as M3U</string>
+    <!-- Queue drawer header button that makes a new playlist from the queue's tracks. -->
+    <string name="queue_save_as_playlist">Save queue as playlist</string>
+    <!-- The filter field over a long playlist's tracks. -->
+    <string name="playlist_filter_hint">Find in playlist</string>
+    <string name="playlist_filter_clear">Clear</string>
+    <!-- %1$s is what was typed into the filter field. -->
+    <string name="playlist_filter_no_matches">No songs in this playlist match “%1$s”</string>
+</resources>

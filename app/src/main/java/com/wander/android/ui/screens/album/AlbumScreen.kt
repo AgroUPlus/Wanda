@@ -6,6 +6,7 @@ import androidx.compose.ui.draw.scale
 import com.wander.android.ui.components.groupedListItem
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -34,6 +36,11 @@ import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.listInset
 import com.wander.android.ui.components.collapsingTitleSource
 import com.wander.android.ui.components.rememberCollapsingTitleState
+import com.wander.android.ui.components.rememberDownloadAll
+import com.wander.android.ui.components.selection.SelectedTrack
+import com.wander.android.ui.components.selection.TrackSelectionBar
+import com.wander.android.ui.components.selection.TrackSwipeBox
+import com.wander.android.ui.components.selection.rememberTrackSelectionState
 
 /**
  * One record, with its actual tracklist — reached by tapping the album name in the player, which
@@ -49,12 +56,16 @@ fun AlbumScreen(
     val album by viewModel.album.collectAsStateWithLifecycle()
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val loadError by viewModel.loadError.collectAsStateWithLifecycle()
     var actionsFor by remember { mutableStateOf<UnifiedTrack?>(null) }
 
     val listState = rememberLazyListState()
     val titleState = rememberCollapsingTitleState(listState)
 
     val addToPlaylist = AddToPlaylistHost()
+    val downloadAlbum = rememberDownloadAll(tracks)
+    val selection = rememberTrackSelectionState()
 
     actionsFor?.let { track ->
         TrackActionsSheet(
@@ -78,11 +89,16 @@ fun AlbumScreen(
                 { addToPlaylist.open(track) }
             } else {
                 null
-            }
+            },
+            onSelect = { selection.toggle(SelectedTrack(track.id, track)) }
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    DetailRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = viewModel::pullToRefresh,
+        topInset = contentPadding.calculateTopPadding()
+    ) {
         when {
             isLoading && album == null && tracks.isEmpty() -> {
                 AlbumSkeleton(contentPadding.listInset())
@@ -97,7 +113,9 @@ fun AlbumScreen(
                 ) {
                     EmptyState(
                         title = stringResource(R.string.album_album_unavailable),
-                        message = stringResource(R.string.album_album_isn_t_any_connected)
+                        message = stringResource(loadError ?: R.string.album_album_isn_t_any_connected),
+                        actionLabel = stringResource(R.string.common_try_again),
+                        onAction = viewModel::refresh
                     )
                 }
             }
@@ -107,6 +125,8 @@ fun AlbumScreen(
                     state = listState,
                     contentPadding = contentPadding.listInset(),
                     modifier = Modifier.fillMaxSize()
+                        // The list carries the side insets; the hero inside it must not add them again.
+                        .consumeWindowInsets(contentPadding.listInset())
                 ) {
                     item(key = "header", contentType = "header") {
                         val current = album
@@ -124,10 +144,23 @@ fun AlbumScreen(
                             // No `canShare` gate: an album link describes the record rather than
                             // naming a server, so it works from every source.
                             onShare = viewModel::shareAlbum.takeIf { current != null },
+                            onDownload = downloadAlbum,
                             modifier = Modifier
                                 .padding(bottom = 16.dp),
                             titleModifier = Modifier.collapsingTitleSource(titleState)
                         )
+                    }
+
+                    loadError?.let { error ->
+                        item(key = "load-error", contentType = "load-error") {
+                            EmptyState(
+                                title = stringResource(R.string.collection_tracks_load_failed),
+                                message = stringResource(error),
+                                actionLabel = stringResource(R.string.error_retry),
+                                onAction = viewModel::refresh,
+                                modifier = Modifier.padding(vertical = 24.dp)
+                            )
+                        }
                     }
 
                     // The artist name is a way *out* of this page, into the rest of their work.
@@ -146,15 +179,22 @@ fun AlbumScreen(
                         key = { _, track -> track.id },
                         contentType = { _, _ -> "track" }
                     ) { index, track ->
-                        TrackRow(
+                        val item = SelectedTrack(track.id, track)
+                        TrackSwipeBox(
                             track = track,
-                            onPlay = { viewModel.play(index) },
-                            onLongPress = { actionsFor = track },
+                            enabled = !selection.isActive,
                             modifier = Modifier
                                 .animateItem()
                                 .scale(rememberShelfEntranceScale(index))
                                 .groupedListItem(index, tracks.size)
-                        )
+                        ) {
+                            TrackRow(
+                                track = track,
+                                onPlay = selection.onTap(item) { viewModel.play(index) },
+                                onLongPress = selection.onLongPress(item) { actionsFor = track },
+                                selected = selection.stateOf(item.key)
+                            )
+                        }
                     }
                 }
             }
@@ -170,12 +210,19 @@ fun AlbumScreen(
             topInset = contentPadding.calculateTopPadding(),
             modifier = Modifier.align(Alignment.TopStart)
         )
+        TrackSelectionBar(
+            selection = selection,
+            addToPlaylist = addToPlaylist,
+            topInset = contentPadding.calculateTopPadding(),
+            modifier = Modifier.align(Alignment.TopStart)
+        )
     }
 }
 
 /** "Nirvana · 1991 · 13 tracks", skipping whatever is unknown. */
+@Composable
 private fun albumSubtitle(artist: String, year: Int?, trackCount: Int): String = listOfNotNull(
     artist.takeIf { it.isNotBlank() },
     year?.toString(),
-    trackCount.takeIf { it > 0 }?.let { "$it track${if (it == 1) "" else "s"}" }
+    trackCount.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.collection_track_count, it, it) }
 ).joinToString(" · ")

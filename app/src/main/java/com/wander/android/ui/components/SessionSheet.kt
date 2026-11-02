@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -110,12 +111,14 @@ internal fun SessionSheet(
             }
 
             Text(
-                text = buildString {
-                    append("Picks up at ${handoff.positionMs.asClock()}")
+                text = listOfNotNull(
+                    stringResource(R.string.session_picks_up_at, handoff.positionMs.asClock()),
                     if (handoff.queue.size > 1) {
-                        append(" · ${handoff.queue.size} tracks in the queue")
+                        pluralStringResource(R.plurals.session_queue_tracks, handoff.queue.size, handoff.queue.size)
+                    } else {
+                        null
                     }
-                },
+                ).joinToString(" · "),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -132,7 +135,7 @@ internal fun SessionSheet(
                     Icon(Icons.Rounded.PlayArrow, contentDescription = null)
                 }
                 Text(
-                    text = if (isResuming) "Finding it here…" else "Continue on this device",
+                    text = stringResource(if (isResuming) R.string.session_finding_here else R.string.session_continue_here),
                     modifier = Modifier.padding(start = 8.dp)
                 )
             }
@@ -169,7 +172,7 @@ private fun LiveBadge(deviceName: String, isLive: Boolean) {
                     )
             ) {}
             Text(
-                text = if (isLive) "Listening on $deviceName" else "Last played on $deviceName",
+                text = stringResource(if (isLive) R.string.session_listening_on else R.string.session_last_played_on, deviceName),
                 style = MaterialTheme.typography.labelLarge,
                 color = if (isLive) ListeningGreen else MaterialTheme.colorScheme.onSurfaceVariant
             )

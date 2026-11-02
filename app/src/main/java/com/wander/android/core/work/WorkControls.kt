@@ -6,10 +6,15 @@ import com.wander.android.core.audio.fingerprint.FingerprintIndexing
 import com.wander.android.core.audio.fingerprint.FingerprintProgress
 import com.wander.android.core.notification.WorkProgressNotification.Kind
 import com.wander.android.core.security.SecureStorage
+import com.wander.android.data.repository.ManualDownloadRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 /**
  * Stopping and suspending the long-running work, from one place.
@@ -37,8 +42,11 @@ import kotlinx.coroutines.flow.StateFlow
 class WorkControls @Inject constructor(
     @ApplicationContext private val context: Context,
     private val secureStorage: SecureStorage,
-    private val fingerprintProgress: FingerprintProgress
+    private val fingerprintProgress: FingerprintProgress,
+    private val manualDownloads: ManualDownloadRepository
 ) {
+    /** For taking back waiting manual downloads, which reads Room; see [cancel]. */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** Whether [kind] is suspended. Read by the UI, and by every enqueue point before scheduling. */
     fun isPaused(kind: Kind): StateFlow<Boolean> = secureStorage.workPaused(kind.name)
@@ -51,7 +59,8 @@ class WorkControls @Inject constructor(
      */
     fun pause(kind: Kind) {
         secureStorage.setWorkPaused(kind.name, true)
-        cancel(kind)
+        // Not [cancel]: a paused download is still wanted, and resuming picks it up again.
+        stopRuns(kind)
     }
 
     /**
@@ -64,6 +73,8 @@ class WorkControls @Inject constructor(
      */
     fun resume(kind: Kind) {
         secureStorage.setWorkPaused(kind.name, false)
+        // A pause cancelled the manual job along with the rest; what it had left is still wanted.
+        if (kind == Kind.DOWNLOAD) scope.launch { manualDownloads.requeueWaiting() }
         if (kind == Kind.FINGERPRINT) {
             // The same network rule the sweep is normally scheduled under; resuming must not
             // quietly become permission to measure a streamed library over mobile data.
@@ -76,8 +87,17 @@ class WorkControls @Inject constructor(
      *
      * What a user means by "cancel" on a notification: stop doing this now. The work is still
      * expected to happen on its own schedule later, which is the whole difference from [pause].
+     *
+     * Tracks downloaded by hand have no schedule to come back on: the job was their only queue.
+     * So the ones still waiting are taken back, and offer "Download" again instead of reading as
+     * waiting for a download nothing will start.
      */
     fun cancel(kind: Kind) {
+        stopRuns(kind)
+        if (kind == Kind.DOWNLOAD) scope.launch { manualDownloads.dropWaiting() }
+    }
+
+    private fun stopRuns(kind: Kind) {
         WorkManager.getInstance(context).cancelAllWorkByTag(tagFor(kind))
         // Cancellation unwinds asynchronously; the marker is what the badges and the wave read, and
         // it must not outlive the decision.

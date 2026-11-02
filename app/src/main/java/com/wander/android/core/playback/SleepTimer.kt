@@ -34,6 +34,18 @@ class SleepTimer @Inject constructor() {
         _state.value = SleepTimerState.Countdown(SystemClock.elapsedRealtime() + minutes * 60_000L)
     }
 
+    /**
+     * Pushes a running countdown back by [minutes]. Counted from now if the end has already been
+     * reached — the fade is under way — so the extension always buys the full amount. Does nothing
+     * unless a countdown is running.
+     */
+    fun extend(minutes: Int) {
+        val current = _state.value as? SleepTimerState.Countdown ?: return
+        _state.value = SleepTimerState.Countdown(
+            extendedEnd(current.endsAtElapsedMs, SystemClock.elapsedRealtime(), minutes)
+        )
+    }
+
     fun stopAtEndOfItem() {
         _state.value = SleepTimerState.EndOfItem
     }
@@ -42,3 +54,7 @@ class SleepTimer @Inject constructor() {
         _state.value = SleepTimerState.Off
     }
 }
+
+/** Where a countdown ending at [endsAtMs] ends once [minutes] are added at [nowMs]. */
+internal fun extendedEnd(endsAtMs: Long, nowMs: Long, minutes: Int): Long =
+    maxOf(endsAtMs, nowMs) + minutes * 60_000L

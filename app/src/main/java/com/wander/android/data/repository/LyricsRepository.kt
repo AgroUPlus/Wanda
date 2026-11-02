@@ -122,18 +122,24 @@ class LyricsRepository @Inject constructor(
             }
         }
 
-        // Step 2: Check source-native lyrics (e.g. Navidrome embedded synced lyrics)
+        // Step 2: Check source-native lyrics — for a local file its own tags and a `.lrc` beside
+        // it; for a server, what the server holds (Navidrome's structured lyrics, Deezer's).
         val matchingSource = sources.firstOrNull {
             it.capabilities.lyrics && trackId.startsWith(it.sourceType.idPrefix)
         }
-        val nativeLyrics = matchingSource?.getLyrics(trackId)?.getOrNull()
+        val nativeResult = matchingSource?.getLyrics(trackId)
+        // The source could not be asked (offline, server down). Nothing below may then claim the
+        // track has no lyrics, and no absence is remembered: the next open has to ask it again.
+        val nativeUnreachable = nativeResult?.exceptionOrNull() is IOException
+        val nativeLyrics = nativeResult?.getOrNull()
         if (nativeLyrics != null && nativeLyrics.lines.isNotEmpty()) {
             val plain = nativeLyrics.plainLyrics ?: nativeLyrics.lines.joinToString("\n") { it.text }
             trackLyricsDao.saveLyricsWithFts(
                 TrackLyricsEntity(
                     trackId = trackId,
                     plainLyrics = plain,
-                    syncedLyrics = null,
+                    // Kept as LRC so the cached copy still scrolls in time, as the first one did.
+                    syncedLyrics = if (nativeLyrics.isSynced) LrcFormatter.format(nativeLyrics.lines) else null,
                     source = nativeLyrics.source ?: "Native"
                 )
             )
@@ -143,7 +149,7 @@ class LyricsRepository @Inject constructor(
         // Step 3: Fallback to privacy-friendly LRCLIB — never called without explicit consent,
         // since this sends local track metadata to a third party.
         if (!secureStorage.isExternalLyricsEnabled.value) {
-            return@withContext LyricsState.Absent
+            return@withContext if (nativeUnreachable) LyricsState.Unreachable else LyricsState.Absent
         }
         try {
             val response: LrclibResponse = client.get(lrclibBaseUrl) {
@@ -193,7 +199,9 @@ class LyricsRepository @Inject constructor(
             }
             // Answered, with nothing in it. LRCLIB knows this recording and is telling us it has
             // no words, or none it holds — either way that is an answer worth remembering.
-            return@withContext if (response.instrumental) {
+            return@withContext if (nativeUnreachable && !response.instrumental) {
+                LyricsState.Unreachable
+            } else if (response.instrumental) {
                 rememberAbsence(trackId, INSTRUMENTAL_SOURCE)
                 LyricsState.Instrumental
             } else {
@@ -201,7 +209,9 @@ class LyricsRepository @Inject constructor(
                 LyricsState.Absent
             }
         } catch (e: ClientRequestException) {
-            // 404 is LRCLIB saying it has no match, which is a fact about the track and keeps.
+            // 404 is LRCLIB saying it has no match, which is a fact about the track and keeps —
+            // unless the track's own server, which may still hold some, could not be asked.
+            if (nativeUnreachable) return@withContext LyricsState.Unreachable
             rememberAbsence(trackId, ABSENT_SOURCE)
             return@withContext LyricsState.Absent
         } catch (e: IOException) {

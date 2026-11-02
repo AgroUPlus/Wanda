@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shown for any failure to reach a server: no connection, timeout, unknown host -->
+    <string name="error_network">Couldn\'t connect. Check your connection and try again.</string>
+    <!-- Shown when a server refused the account: sign-in expired, wrong credentials, not active -->
+    <string name="error_auth">Your sign-in was refused. Sign in again in Settings.</string>
+    <!-- Shown when a server answered but couldn't complete the request -->
+    <string name="error_server">The server couldn\'t complete that. Try again later.</string>
+    <!-- Shown for any other failure -->
+    <string name="error_unknown">Something went wrong. Try again.</string>
+    <!-- Title over the reason when an album's or playlist's tracks could not be loaded -->
+    <string name="collection_tracks_load_failed">Couldn\'t load the tracks</string>
+    <!-- Title of an error state when something could not be loaded -->
+    <string name="error_load_title">Couldn\'t load this</string>
+    <!-- Friend search: the server would not take the friend request (existing, blocked or unknown alike) -->
+    <string name="social_request_not_sent">That request could not be sent.</string>
+
+    <!-- Off-grid sharing errors -->
+    <string name="offgrid_error_serve">This phone could not start serving audio.</string>
+    <string name="offgrid_error_broadcast">This phone could not start broadcasting. Check that Bluetooth is on and Wanda may use nearby devices.</string>
+    <string name="offgrid_error_scan">This phone could not look for others. Check that Bluetooth is on and Wanda may use nearby devices.</string>
+    <string name="offgrid_error_no_link">No direct link could be formed. Check that Wi-Fi is on and Wanda may use nearby devices, then try again.</string>
+    <string name="offgrid_error_wrong_peer">The link reached a different device than the one you picked, so it was dropped.</string>
+    <string name="offgrid_error_unreadable">That device answered with something this phone could not open.</string>
+    <string name="offgrid_error_no_answer">That device did not answer.</string>
+    <string name="offgrid_error_listen_along">Could not follow what that device is playing.</string>
+
+    <!-- Retry button on an error state -->
+    <string name="error_retry">Try again</string>
+</resources>

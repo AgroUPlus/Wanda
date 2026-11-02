@@ -1,10 +1,19 @@
 package com.wander.android.core.database.dao
 
-import androidx.paging.PagingSource
 import androidx.room.Query
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.SourceType
 import kotlinx.coroutines.flow.Flow
+
+/**
+ * The rows that are the user's own music: owned, liked, downloaded, or played at least once.
+ *
+ * Every search — the user's own and the ones the app makes to resolve a link, a friend's pick or a
+ * rendition — persists its results so a later like or play has a row to land on. Those rows are
+ * not the user's music, and a shelf that reads `tracks` without this filter showed them: "Discover"
+ * sorted never-played rows newest first, so the latest search's matches led Home by name.
+ */
+internal const val IN_COLLECTION = "(isLibrary = 1 OR isLiked = 1 OR isDownloaded = 1 OR playCount > 0)"
 
 /**
  * Read queries for tracks in the library, albums, artists, search, and playback ranking.
@@ -13,18 +22,6 @@ interface TrackLibraryQueries {
 
     @Query("SELECT * FROM tracks WHERE isLibrary = 1 ORDER BY title ASC")
     fun getAllTracksFlow(): Flow<List<TrackEntity>>
-
-    @Query("SELECT * FROM tracks WHERE isLibrary = 1 AND isEpisode = 0 ORDER BY title ASC")
-    fun pagedTracks(): PagingSource<Int, TrackEntity>
-
-    @Query("SELECT * FROM tracks WHERE isLibrary = 1 AND isEpisode = 0 AND source = :source ORDER BY title ASC")
-    fun pagedTracksBySource(source: SourceType): PagingSource<Int, TrackEntity>
-
-    @Query("SELECT id FROM tracks WHERE isLibrary = 1 AND isEpisode = 0 ORDER BY title ASC")
-    suspend fun libraryTrackIds(): List<String>
-
-    @Query("SELECT id FROM tracks WHERE isLibrary = 1 AND isEpisode = 0 AND source = :source ORDER BY title ASC")
-    suspend fun libraryTrackIdsBySource(source: SourceType): List<String>
 
     @Query("SELECT * FROM tracks WHERE source != 'UNRESOLVED'")
     suspend fun getAllTracksOnce(): List<TrackEntity>
@@ -35,11 +32,16 @@ interface TrackLibraryQueries {
     @Query("SELECT * FROM tracks WHERE isLiked = 1 AND isEpisode = 0 ORDER BY lastPlayedTimestamp DESC")
     fun getLikedTracksFlow(): Flow<List<TrackEntity>>
 
+    /** Home's Favourites shelf: [getLikedTracksList]'s order and limit, kept up to date. */
+    @Query("SELECT * FROM tracks WHERE isLiked = 1 AND isEpisode = 0 ORDER BY lastPlayedTimestamp DESC, addedTimestamp DESC LIMIT :limit")
+    fun observeLikedTracks(limit: Int): Flow<List<TrackEntity>>
+
     @Query("SELECT id FROM tracks WHERE isLiked = 1")
     fun getLikedTrackIdsFlow(): Flow<List<String>>
 
-    @Query("SELECT * FROM tracks WHERE isDownloaded = 1 AND isEpisode = 0 AND source != 'LOCAL' ORDER BY title ASC")
-    fun getDownloadedTracksFlow(): Flow<List<TrackEntity>>
+    /** Every row's download state at once, for the badge each track row draws. */
+    @Query("SELECT id FROM tracks WHERE isDownloaded = 1")
+    fun getDownloadedTrackIdsFlow(): Flow<List<String>>
 
     @Query("SELECT * FROM tracks WHERE isDownloaded = 1 AND source != 'LOCAL'")
     suspend fun getDownloadedTracksOnce(): List<TrackEntity>
@@ -115,13 +117,10 @@ interface TrackLibraryQueries {
     )
     suspend fun searchTracksInSource(source: SourceType, query: String, limit: Int = 50): List<TrackEntity>
 
-    @Query("SELECT * FROM tracks WHERE source = :source AND isEpisode = 0 ORDER BY RANDOM() LIMIT :limit")
-    suspend fun getRandomTracksInSource(source: SourceType, limit: Int): List<TrackEntity>
-
-    @Query("SELECT * FROM tracks WHERE source = :source AND isEpisode = 0 ORDER BY addedTimestamp DESC LIMIT :limit")
+    @Query("SELECT * FROM tracks WHERE source = :source AND isEpisode = 0 AND $IN_COLLECTION ORDER BY addedTimestamp DESC LIMIT :limit")
     suspend fun getRecentlyAddedInSource(source: SourceType, limit: Int): List<TrackEntity>
 
-    @Query("SELECT * FROM tracks ORDER BY addedTimestamp DESC LIMIT :limit")
+    @Query("SELECT * FROM tracks WHERE $IN_COLLECTION ORDER BY addedTimestamp DESC LIMIT :limit")
     suspend fun getRecentlyAddedTracks(limit: Int = 30): List<TrackEntity>
 
     @Query(
@@ -162,7 +161,7 @@ interface TrackLibraryQueries {
     @Query(
         """
         SELECT genre FROM tracks
-        WHERE isEpisode = 0 AND genre IS NOT NULL AND TRIM(genre) != ''
+        WHERE isEpisode = 0 AND genre IS NOT NULL AND TRIM(genre) != '' AND $IN_COLLECTION
         GROUP BY genre COLLATE NOCASE HAVING COUNT(*) >= 3
         ORDER BY COUNT(*) DESC LIMIT 40
         """
@@ -170,13 +169,13 @@ interface TrackLibraryQueries {
     fun observeGenres(): Flow<List<String>>
 
     /** [genres] must already be lower-case. */
-    @Query("SELECT * FROM tracks WHERE isEpisode = 0 AND LOWER(genre) IN (:genres) ORDER BY RANDOM() LIMIT :limit")
+    @Query("SELECT * FROM tracks WHERE isEpisode = 0 AND $IN_COLLECTION AND LOWER(genre) IN (:genres) ORDER BY RANDOM() LIMIT :limit")
     suspend fun getTracksByGenres(genres: List<String>, limit: Int): List<TrackEntity>
 
-    @Query("SELECT * FROM tracks WHERE isEpisode = 0 ORDER BY RANDOM() LIMIT :limit")
+    @Query("SELECT * FROM tracks WHERE isEpisode = 0 AND $IN_COLLECTION ORDER BY RANDOM() LIMIT :limit")
     suspend fun getRandomTracks(limit: Int): List<TrackEntity>
 
-    @Query("SELECT * FROM tracks WHERE playCount = 0 AND isEpisode = 0 ORDER BY addedTimestamp DESC LIMIT :limit")
+    @Query("SELECT * FROM tracks WHERE playCount = 0 AND isEpisode = 0 AND $IN_COLLECTION ORDER BY addedTimestamp DESC LIMIT :limit")
     suspend fun getNeverPlayedTracks(limit: Int = 30): List<TrackEntity>
 
     @Query("SELECT * FROM tracks WHERE isLiked = 1 AND isDownloaded = 0 AND source != 'LOCAL' LIMIT :limit")
@@ -187,9 +186,6 @@ interface TrackLibraryQueries {
 
     @Query("SELECT COUNT(*) FROM tracks WHERE isLive = 0 AND (isLibrary = 1 OR playCount > 0 OR lastPlayedTimestamp IS NOT NULL)")
     suspend fun getFingerprintableTrackCount(): Int
-
-    @Query("SELECT id FROM tracks WHERE isLive = 0 AND (isLibrary = 1 OR playCount > 0 OR lastPlayedTimestamp IS NOT NULL)")
-    suspend fun getFingerprintableTrackIds(): List<String>
 
     @Query("SELECT * FROM tracks WHERE isLive = 0 AND (isLibrary = 1 OR playCount > 0 OR lastPlayedTimestamp IS NOT NULL)")
     fun getFingerprintableTracksFlow(): Flow<List<TrackEntity>>

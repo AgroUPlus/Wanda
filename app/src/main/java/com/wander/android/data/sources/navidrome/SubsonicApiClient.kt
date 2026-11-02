@@ -22,7 +22,12 @@ class SubsonicApiClient @Inject constructor(
 ) {
     private val baseUrl: String get() = credentials.baseUrl
 
+    /** Which server answers, for remembering what it supports. Not a URL to log or send. */
+    internal val serverKey: String get() = baseUrl
+
     val isConfigured: Boolean get() = credentials.isConfigured
+
+    val username: String get() = credentials.username
 
     fun configure(serverUrl: String, user: String, pass: String) =
         credentials.configure(serverUrl, user, pass)
@@ -30,7 +35,7 @@ class SubsonicApiClient @Inject constructor(
     private fun authParams(): Map<String, String> = credentials.authParams()
 
     /** Every endpoint funnels through here, so auth and error mapping exist in exactly one place. */
-    private suspend fun call(
+    internal suspend fun call(
         endpoint: String,
         vararg params: Pair<String, Any?>
     ): Result<SubsonicResponse> = withContext(Dispatchers.IO) {
@@ -44,7 +49,7 @@ class SubsonicApiClient @Inject constructor(
             }.body()
             val body = root.response
             if (body.status != "ok") {
-                throw IOException(body.error?.message ?: "Server rejected the request")
+                throw SubsonicServerException(body.error?.code, body.error?.message ?: "Server rejected the request")
             }
             body
         }
@@ -92,36 +97,16 @@ class SubsonicApiClient @Inject constructor(
             it.playlist ?: throw IOException("Playlist $playlistId not found")
         }
 
-    /**
-     * Creates a playlist and returns its id.
-     *
-     * Subsonic overloads this endpoint: passing `playlistId` *replaces* an existing playlist
-     * rather than making a new one, so only `name` is ever sent here. Older servers answer with an
-     * empty body instead of the new playlist, which is why the id is looked up by name as a
-     * fallback rather than assumed — see [NavidromeSource].
-     */
-    suspend fun createPlaylist(name: String, songIds: List<String>): Result<String?> =
-        call(
-            "createPlaylist.view",
-            "name" to name,
-            *songIds.map { "songId" to it as Any? }.toTypedArray()
-        ).map { it.playlist?.id }
-
-    /**
-     * Appends tracks to an existing playlist.
-     *
-     * `updatePlaylist` adds rather than replaces, so this is safe to call repeatedly; the server
-     * keeps duplicates if the same track is added twice, which matches what the web UI does.
-     */
-    suspend fun updatePlaylist(playlistId: String, songIdsToAdd: List<String>): Result<Unit> =
-        call(
-            "updatePlaylist.view",
-            "playlistId" to playlistId,
-            *songIdsToAdd.map { "songIdToAdd" to it as Any? }.toTypedArray()
-        ).map { }
-
     suspend fun getLyricsBySongId(id: String): Result<SubsonicLyricsList?> =
         call("getLyricsBySongId.view", "id" to id).map { it.lyricsList }
+
+    /** Classic Subsonic lyrics, matched by name: what a server without `songLyrics` offers. */
+    suspend fun getLyrics(artist: String, title: String): Result<SubsonicLyrics?> =
+        call("getLyrics.view", "artist" to artist, "title" to title).map { it.lyrics }
+
+    /** The OpenSubsonic extensions the server declares. Fails on a classic Subsonic server. */
+    suspend fun getOpenSubsonicExtensions(): Result<List<SubsonicExtension>> =
+        call("getOpenSubsonicExtensions.view").map { it.openSubsonicExtensions.orEmpty() }
 
     suspend fun getArtist(artistId: String): Result<SubsonicArtistDetail> =
         call("getArtist.view", "id" to artistId).mapCatching {
@@ -177,6 +162,10 @@ class SubsonicApiClient @Inject constructor(
     suspend fun scrobble(id: String, timeSeconds: Long): Result<Unit> =
         call("scrobble.view", "id" to id, "time" to timeSeconds, "submission" to true).map { }
 
+    /** `submission=false`: shown as playing now, without counting as a play. */
+    suspend fun nowPlaying(id: String): Result<Unit> =
+        call("scrobble.view", "id" to id, "submission" to false).map { }
+
     /**
      * Stream and cover URLs carry credentials in the query string, so they are built on demand
      * and never persisted or logged.
@@ -190,16 +179,18 @@ class SubsonicApiClient @Inject constructor(
      * where it was. It only happens to the formats a given server is configured to convert, which
      * is why FLAC would not scrub while MP3 did.
      *
-     * `estimateContentLength` stays for the case where a server transcodes anyway despite `raw`:
-     * without it such a response carries no `Content-Length`, Media3 reports `TIME_UNSET` and the
-     * duration falls back to the metadata's — see the resolution in `PlayerConnection.snapshot`.
+     * `estimateContentLength` stays for the case where a server transcodes anyway despite `raw`,
+     * and for a [quality] the user chose to have converted: without it such a response carries no
+     * `Content-Length`, Media3 reports `TIME_UNSET` and the duration falls back to the metadata's —
+     * see the resolution in `PlayerConnection.snapshot`. A converted stream still cannot seek
+     * reliably, for the reason above; that is the cost the quality setting's description states.
      */
-    fun buildStreamUrl(trackId: String): String =
-        buildUrl("stream.view", mapOf(
-            "id" to trackId,
-            "format" to "raw",
-            "estimateContentLength" to "true"
-        ))
+    fun buildStreamUrl(trackId: String, quality: NavidromeStreamQuality): String {
+        val conversion = quality.format?.let { format ->
+            mapOf("format" to format, "maxBitRate" to quality.maxBitRateKbps.toString())
+        } ?: mapOf("format" to "raw")
+        return buildUrl("stream.view", mapOf("id" to trackId) + conversion + ("estimateContentLength" to "true"))
+    }
 
     /**
      * 500 px was fine for a list row and soft as a full-screen player cover on a 1080 px-wide

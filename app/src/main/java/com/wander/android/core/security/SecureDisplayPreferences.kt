@@ -14,6 +14,10 @@ internal class SecureDisplayPreferences(private val prefs: SharedPreferences) {
     private val _isAmoledBlack = MutableStateFlow(prefs.getBoolean(KEY_AMOLED_BLACK, false))
     val isAmoledBlack: StateFlow<Boolean> = _isAmoledBlack.asStateFlow()
 
+    /** A [com.wander.android.ui.theme.ThemeMode] name; empty until chosen, which follows the system. */
+    private val _themeMode = MutableStateFlow(prefs.getString(KEY_THEME_MODE, "").orEmpty())
+    val themeMode: StateFlow<String> = _themeMode.asStateFlow()
+
     private val _isBackBlurEnabled = MutableStateFlow(prefs.getBoolean(KEY_BACK_BLUR, true))
     val isBackBlurEnabled: StateFlow<Boolean> = _isBackBlurEnabled.asStateFlow()
 
@@ -55,6 +59,11 @@ internal class SecureDisplayPreferences(private val prefs: SharedPreferences) {
     fun setAmoledBlack(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_AMOLED_BLACK, enabled) }
         _isAmoledBlack.value = enabled
+    }
+
+    fun setThemeMode(mode: String) {
+        prefs.edit { putString(KEY_THEME_MODE, mode) }
+        _themeMode.value = mode
     }
 
     fun setBackBlurEnabled(enabled: Boolean) {
@@ -118,6 +127,7 @@ internal class SecureDisplayPreferences(private val prefs: SharedPreferences) {
      */
     fun reloadFlows() {
         _isAmoledBlack.value = prefs.getBoolean(KEY_AMOLED_BLACK, false)
+        _themeMode.value = prefs.getString(KEY_THEME_MODE, "").orEmpty()
         _isBackBlurEnabled.value = prefs.getBoolean(KEY_BACK_BLUR, true)
         _isMonetDynamic.value = prefs.getBoolean(KEY_MONET_DYNAMIC, true)
         _isImmersivePlayer.value = prefs.getBoolean(KEY_IMMERSIVE_PLAYER, false)

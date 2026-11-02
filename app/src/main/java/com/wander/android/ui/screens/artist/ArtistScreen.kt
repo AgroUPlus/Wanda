@@ -3,6 +3,7 @@ package com.wander.android.ui.screens.artist
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -32,6 +34,7 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.AddToPlaylistController
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.AlbumActionsSheet
+import com.wander.android.ui.components.rememberAlbumDownload
 import com.wander.android.ui.components.CompactHeroTopBar
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.TrackActionsSheet
@@ -102,6 +105,8 @@ internal fun ArtistScreen(
                 // No blanket item spacing: it also landed between the grouped song rows, which
                 // are meant to sit 2 dp apart as one group. Section titles carry the room instead.
                 modifier = Modifier.fillMaxSize()
+                    // The list carries the side insets; the hero inside it must not add them again.
+                    .consumeWindowInsets(contentPadding.listInset())
             ) {
                 item(key = "header", contentType = "header") {
                     ArtistHero(
@@ -193,9 +198,10 @@ internal fun ArtistScreen(
     }
 }
 
+@Composable
 private fun artistSubtitle(albumCount: Int, trackCount: Int): String = listOfNotNull(
-    albumCount.takeIf { it > 0 }?.let { "$it album${if (it == 1) "" else "s"}" },
-    trackCount.takeIf { it > 0 }?.let { "$it track${if (it == 1) "" else "s"}" }
+    albumCount.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.collection_album_count, it, it) },
+    trackCount.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.collection_track_count, it, it) }
 ).joinToString(" · ")
 
 @Composable
@@ -251,6 +257,7 @@ private fun ArtistAlbumActions(
         onDismiss = onDismiss,
         // No `canShare` gate: an album link describes the record rather than naming a server.
         onShare = { viewModel.shareAlbum(album) },
+        onDownload = rememberAlbumDownload(album),
         onAddToPlaylist = {
             viewModel.getAlbumTracks(album) { tracks ->
                 addToPlaylist.openForTracks(tracks, album.source)
