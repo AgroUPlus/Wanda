@@ -5,14 +5,12 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.work.WorkControls
 import com.wander.android.data.repository.AcousticFeatureRepository
 import com.wander.android.core.notification.WorkEta
 import com.wander.android.core.notification.WorkProgressNotification
 import com.wander.android.data.repository.MusicRepository
 import com.wander.android.data.repository.EmbeddingRepository
-import com.wander.android.data.repository.RecognitionRepository
 import com.wander.android.data.repository.RecordingIdentityRepository
 import com.wander.android.data.repository.RecordingLinkRepository
 import dagger.assisted.Assisted
@@ -40,7 +38,6 @@ import kotlinx.coroutines.withContext
 class FingerprintIndexWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val recognitionRepository: RecognitionRepository,
     private val recordingIdentity: RecordingIdentityRepository,
     private val recordingLinks: RecordingLinkRepository,
     private val secureStorage: com.wander.android.core.security.SecureStorage,
@@ -52,7 +49,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
     private val workControls: WorkControls,
     musicRepository: MusicRepository,
     private val trackDao: com.wander.android.core.database.dao.TrackDao,
-    trackAttemptDao: com.wander.android.core.database.dao.TrackAttemptDao
+    private val trackAttemptDao: com.wander.android.core.database.dao.TrackAttemptDao
 ) : CoroutineWorker(context, params) {
 
     private val trackProcessor = FingerprintTrackProcessor(
@@ -75,31 +72,30 @@ class FingerprintIndexWorker @AssistedInject constructor(
 
         // One named track when the player asked for it, the whole library otherwise.
         val requestedId = inputData.getString(FingerprintIndexing.KEY_TRACK_ID)
-        val candidateIds = recognitionRepository.fingerprintableTrackIds()
-            .let { all -> if (requestedId == null) all else all.filter { it == requestedId } }
 
-        val needsFeatures = acousticFeatures.needingMeasurement(FEATURE_BATCH_LIMIT).toSet()
+        // Every pending id, not a page of them: see [FingerprintBatchPlanner] for what a `LIMIT`
+        // taken before the backoff filter did to a library with a few hundred failing tracks.
+        val needsFeatures = acousticFeatures.needingMeasurement(NO_LIMIT)
         embeddingSearch.backfillCentroids()
         recordingIdentity.linkDuplicates(recordingLinks, secureStorage)
+        val needsEmbedding = embeddingSearch.needingIndex(NO_LIMIT)
 
-        val needsEmbedding = embeddingSearch.needingIndex(EMBEDDING_BATCH_LIMIT)
-            .let { needed -> needed.filterTo(mutableSetOf()) { it in candidateIds } }
+        val ordered = FingerprintBatchPlanner.eligible(
+            candidates = trackAttemptDao.indexCandidates(),
+            pending = needsFeatures + needsEmbedding,
+            requestedId = requestedId,
+            isUnreachable = workerProgress::isUnreachable,
+            now = System.currentTimeMillis()
+        )
+        if (ordered.isEmpty()) return@withContext Result.success()
 
-        val now = System.currentTimeMillis()
-        val pendingIds = (needsFeatures + needsEmbedding).intersect(candidateIds.toSet())
-        val candidates = if (pendingIds.isEmpty()) emptyList() else trackDao.getTracksByIds(pendingIds.toList())
-        val pending = candidates.filter {
-            !workerProgress.isUnreachable(it.id) && !isBackedOff(it, now)
-        }
-        if (pending.isEmpty()) return@withContext Result.success()
-
-        val ordered = pending.sortedBy { track ->
-            if (track.localFilePath != null || track.isDownloaded) 0 else 1
-        }
-        val batch = ordered.take(BATCH_SIZE)
+        // Full rows only for the batch itself, in the planner's order.
+        val batchIds = ordered.take(BATCH_SIZE)
+        val byId = trackDao.getTracksByIds(batchIds).associateBy { it.id }
+        val batch = batchIds.mapNotNull { byId[it] }
         val started = System.currentTimeMillis()
         val eta = WorkEta(started)
-        val foreground = promote(notifying(eta, 0, batch.size, remaining = pending.size))
+        val foreground = promote(notifying(eta, 0, batch.size, remaining = ordered.size))
 
         var processed = 0
         for ((index, track) in batch.withIndex()) {
@@ -109,7 +105,7 @@ class FingerprintIndexWorker @AssistedInject constructor(
             // not in the foreground; the rest goes to the continuation below, not to a kill.
             if (System.currentTimeMillis() - started > RUN_BUDGET_MS) break
             if (foreground) {
-                promote(notifying(eta, index, batch.size, track.title, pending.size))
+                promote(notifying(eta, index, batch.size, track.title, ordered.size))
             }
 
             trackProcessor.processTrack(
@@ -177,8 +173,9 @@ class FingerprintIndexWorker @AssistedInject constructor(
 
         /** Wall time after which a run stops taking new tracks; under WorkManager's 10 minutes. */
         private const val RUN_BUDGET_MS = 8 * 60 * 1000L
-        private const val FEATURE_BATCH_LIMIT = BATCH_SIZE * 2
-        private const val EMBEDDING_BATCH_LIMIT = BATCH_SIZE * 2
+
+        /** For the pending-id queries: ids are cheap, and the planner needs all of them. */
+        private const val NO_LIMIT = Int.MAX_VALUE
 
         const val BASE_BACKOFF_MS = 5 * 60 * 1000L // 5 minutes
         const val MAX_BACKOFF_MS = 24 * 60 * 60 * 1000L // 24 hours
@@ -188,12 +185,5 @@ class FingerprintIndexWorker @AssistedInject constructor(
             val shift = minOf(attempts - 1, 10)
             return minOf(MAX_BACKOFF_MS, BASE_BACKOFF_MS * (1L shl shift))
         }
-    }
-
-    internal fun isBackedOff(track: TrackEntity, now: Long): Boolean {
-        if (track.attempts <= 0) return false
-        val backoffMs = calculateBackoff(track.attempts)
-        val last = track.lastAttemptAt ?: return false
-        return (now - last) < backoffMs
     }
 }

@@ -199,9 +199,6 @@ interface TrackLibraryQueries {
     @Query("SELECT COUNT(*) FROM tracks WHERE isLive = 0 AND (isLibrary = 1 OR playCount > 0 OR lastPlayedTimestamp IS NOT NULL)")
     suspend fun getFingerprintableTrackCount(): Int
 
-    @Query("SELECT id FROM tracks WHERE isLive = 0 AND (isLibrary = 1 OR playCount > 0 OR lastPlayedTimestamp IS NOT NULL)")
-    suspend fun getFingerprintableTrackIds(): List<String>
-
     @Query("SELECT * FROM tracks WHERE isLive = 0 AND (isLibrary = 1 OR playCount > 0 OR lastPlayedTimestamp IS NOT NULL)")
     fun getFingerprintableTracksFlow(): Flow<List<TrackEntity>>
 

@@ -181,6 +181,5 @@ class EmbeddingRecordingIdentityTest {
         override suspend fun markAsEpisodes(trackIds: List<String>) = Unit
         override suspend fun findByContentHash(hash: String): com.wander.android.core.database.entity.TrackEntity? = null
         override suspend fun getFingerprintableTrackCount(): Int = 0
-        override suspend fun getFingerprintableTrackIds(): List<String> = emptyList()
     }
 }

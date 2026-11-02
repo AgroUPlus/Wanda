@@ -1,8 +1,8 @@
 package com.wander.android
 
+import com.wander.android.core.audio.fingerprint.FingerprintBatchPlanner
 import com.wander.android.core.audio.fingerprint.FingerprintIndexWorker
-import com.wander.android.core.database.entity.TrackEntity
-import com.wander.android.data.model.SourceType
+import com.wander.android.core.database.dao.IndexCandidate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -27,50 +27,69 @@ class FingerprintBackoffTest {
 
     @Test
     fun `isBackedOff returns false for zero attempts`() {
-        val track = fakeTrack(attempts = 0, lastAttemptAt = null)
-        assertFalse(mockIsBackedOff(track, System.currentTimeMillis()))
+        assertFalse(FingerprintBatchPlanner.isBackedOff(0, null, System.currentTimeMillis()))
     }
 
     @Test
     fun `isBackedOff returns true when within backoff window and false after expiry`() {
         val now = 1_000_000_000L
-        val baseBackoff = 5 * 60 * 1000L // 300,000 ms
-
-        // 1 minute ago: within 5-minute backoff -> backed off
-        val recentFailure = fakeTrack(attempts = 1, lastAttemptAt = now - 60_000L)
-        assertTrue(mockIsBackedOff(recentFailure, now))
-
-        // 10 minutes ago: past 5-minute backoff -> eligible for retry
-        val expiredFailure = fakeTrack(attempts = 1, lastAttemptAt = now - 600_000L)
-        assertFalse(mockIsBackedOff(expiredFailure, now))
+        // 1 minute ago: within the 5-minute backoff
+        assertTrue(FingerprintBatchPlanner.isBackedOff(1, now - 60_000L, now))
+        // 10 minutes ago: past it, eligible again
+        assertFalse(FingerprintBatchPlanner.isBackedOff(1, now - 600_000L, now))
     }
 
-    private fun mockIsBackedOff(track: TrackEntity, now: Long): Boolean {
-        if (track.attempts <= 0) return false
-        val backoffMs = FingerprintIndexWorker.calculateBackoff(track.attempts)
-        val last = track.lastAttemptAt ?: return false
-        return (now - last) < backoffMs
+    @Test
+    fun `backed-off tracks do not hide the tracks behind them`() {
+        val now = 1_000_000_000L
+        // The regression: 300 failing tracks ahead of the healthy one used to fill a LIMIT 200
+        // page, the backoff filter emptied it, and the run ended with work left.
+        val failing = (0 until 300).map { candidate("fail$it", attempts = 3, lastAttemptAt = now) }
+        val healthy = candidate("ok")
+        val ids = FingerprintBatchPlanner.eligible(
+            candidates = failing + healthy,
+            pending = (failing + healthy).map { it.id }.toSet(),
+            requestedId = null,
+            isUnreachable = { false },
+            now = now
+        )
+        assertEquals(listOf("ok"), ids)
     }
 
-    private fun fakeTrack(attempts: Int, lastAttemptAt: Long?) = TrackEntity(
-        id = "test-track-1",
-        sourceTrackId = "st1",
-        source = SourceType.LOCAL,
-        title = "Track",
-        artist = "Artist",
-        album = "Album",
-        albumId = "al1",
-        artistId = "ar1",
-        durationMs = 180_000L,
-        artworkUrl = null,
-        streamUri = null,
-        trackNumber = 1,
-        discNumber = 1,
-        year = 2024,
-        genre = null,
-        bitRateKbps = null,
-        format = null,
-        attempts = attempts,
-        lastAttemptAt = lastAttemptAt
-    )
+    @Test
+    fun `eligible puts on-device tracks first and keeps order otherwise`() {
+        val ids = FingerprintBatchPlanner.eligible(
+            candidates = listOf(
+                candidate("remote1"),
+                candidate("local1", onDevice = true),
+                candidate("remote2"),
+                candidate("done"),
+                candidate("unreachable", onDevice = true)
+            ),
+            pending = setOf("remote1", "local1", "remote2", "unreachable"),
+            requestedId = null,
+            isUnreachable = { it == "unreachable" },
+            now = 0L
+        )
+        assertEquals(listOf("local1", "remote1", "remote2"), ids)
+    }
+
+    @Test
+    fun `a requested track narrows the run to that track`() {
+        val ids = FingerprintBatchPlanner.eligible(
+            candidates = listOf(candidate("a"), candidate("b")),
+            pending = setOf("a", "b"),
+            requestedId = "b",
+            isUnreachable = { false },
+            now = 0L
+        )
+        assertEquals(listOf("b"), ids)
+    }
+
+    private fun candidate(
+        id: String,
+        attempts: Int = 0,
+        lastAttemptAt: Long? = null,
+        onDevice: Boolean = false
+    ) = IndexCandidate(id, attempts, lastAttemptAt, onDevice)
 }
