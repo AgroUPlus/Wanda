@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shown when "play … on Wanda" found nothing in the library or the connected sources. -->
+    <string name="voice_search_nothing_found">Couldn\'t find anything to play for that.</string>
+</resources>

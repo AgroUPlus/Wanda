@@ -22,10 +22,15 @@ import javax.inject.Singleton
  *
  * A single id picked from a folder of the browse tree plays that folder from it on — see
  * [BrowseId.Track] — except an in-progress episode, which plays alone from where it was left.
+ * A voice request ("play … on Wanda", from a car or the Assistant) plays what [VoiceSearch]
+ * finds for it.
  */
 @UnstableApi
 @Singleton
-internal class PlayRequestResolver @Inject constructor(private val tracks: BrowseTracks) {
+internal class PlayRequestResolver @Inject constructor(
+    private val tracks: BrowseTracks,
+    private val voiceSearch: VoiceSearch
+) {
 
     /** Whether [items] are all ready to load as they stand, which is every request the app makes. */
     fun isReady(items: List<MediaItem>): Boolean = items.all { it.localConfiguration != null }
@@ -42,6 +47,10 @@ internal class PlayRequestResolver @Inject constructor(private val tracks: Brows
         startPositionMs: Long
     ): MediaItemsWithStartPosition {
         val single = items.singleOrNull()?.takeIf { it.localConfiguration == null }
+        // "Play … on Wanda": Media3 hands a voice request over as an item holding only the query.
+        single?.requestMetadata?.searchQuery?.let { query ->
+            return fromSearch(VoiceQuery.of(query, single.requestMetadata.extras))
+        }
         val picked = single?.let { BrowseId.decode(it.mediaId) }
         return when (picked) {
             is BrowseId.Track -> fromFolder(picked, startPositionMs)
@@ -61,6 +70,12 @@ internal class PlayRequestResolver @Inject constructor(private val tracks: Brows
         val from = (index - MAX_QUEUE / 2).coerceAtLeast(0)
         val queue = folder.subList(from, (from + MAX_QUEUE).coerceAtMost(folder.size))
         return MediaItemsWithStartPosition(queue.map(UnifiedTrack::toMediaItem), index - from, startPositionMs)
+    }
+
+    private suspend fun fromSearch(query: VoiceQuery): MediaItemsWithStartPosition {
+        val found = voiceSearch.tracksFor(query)
+        if (found.isEmpty()) throw NoSuchElementException("Nothing matched the voice search")
+        return MediaItemsWithStartPosition(found.map(UnifiedTrack::toMediaItem), 0, C.TIME_UNSET)
     }
 
     private suspend fun wholeFolder(node: BrowseId.Node): MediaItemsWithStartPosition {

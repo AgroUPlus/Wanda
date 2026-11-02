@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
     /** A launcher shortcut, else a share, else a link — see each handler for what it takes. */
     private fun route(intent: Intent?, firstDelivery: Boolean) {
         if (shortcuts.handle(lifecycleScope, intent, firstDelivery)) return
-        intentHandler.handleIntent(lifecycleScope, sharedText.resolve(intent, firstDelivery))
+        intentHandler.handleIntent(lifecycleScope, sharedText.resolve(intent, firstDelivery), firstDelivery)
     }
 
     override fun onStart() {
