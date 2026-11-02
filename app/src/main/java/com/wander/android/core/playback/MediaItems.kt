@@ -19,6 +19,9 @@ internal const val WANDA_SCHEME = "wanda"
 
 private const val EXTRA_TRACK_JSON = "wanda.track"
 
+/** Prefix of the id given to a queue item that arrived with none — see [toUnidentifiedTrack]. */
+private const val UNIDENTIFIED_ITEM_PREFIX = "unidentified-item:"
+
 /**
  * Appended to a livestream's placeholder URI so the container can be inferred from it.
  *
@@ -115,6 +118,22 @@ internal fun MediaItem.toUnifiedTrack(): UnifiedTrack? {
 
     // Robust fallback: Reconstruct UnifiedTrack from MediaItem standard fields when IPC drops extras Bundle
     val trackId = mediaId.takeIf { it.isNotBlank() } ?: requestMetadata.mediaUri?.wandaTrackId() ?: return null
+    return fromItemFields(trackId, live)
+}
+
+/**
+ * The queue row for an item that carries no track id at all — no media id and no placeholder URI.
+ *
+ * Kept rather than dropped, because the queue mirror is read by the player's own item indices:
+ * removing, seeking to and highlighting a row all pass its position straight to the player. One
+ * dropped item shifted every row after it by one, so "remove" took out the neighbour of the track
+ * the listener picked. The id names the item's slot and nothing else.
+ */
+internal fun MediaItem.toUnidentifiedTrack(index: Int): UnifiedTrack =
+    fromItemFields("$UNIDENTIFIED_ITEM_PREFIX$index", isLiveUri())
+
+/** Rebuilds a track from the item's standard fields, for when the queued track did not survive. */
+private fun MediaItem.fromItemFields(trackId: String, live: Boolean): UnifiedTrack {
     // Every other prefix lookup in the codebase matches against the full SourceType.entries list;
     // a hand-picked subset here silently fell back to LOCAL for any source added after it was
     // written (Deezer), mislabeling the track and corrupting the Room row once played.

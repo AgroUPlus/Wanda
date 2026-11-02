@@ -79,11 +79,20 @@ internal object PlaybackSnapshotBuilder {
         )
     }
 
+    /**
+     * The player's items as tracks: one per item, in the player's index order.
+     *
+     * Always as long as the timeline, because every reader indexes this by player item index. An
+     * item that cannot be resolved still takes its slot — see [toUnidentifiedTrack].
+     */
     fun queueTracks(
         player: Player,
         cache: ConcurrentHashMap<String, UnifiedTrack>
     ): List<UnifiedTrack> =
-        (0 until player.mediaItemCount).mapNotNull { player.getMediaItemAt(it).resolveTrack(cache) }
+        (0 until player.mediaItemCount).map { index ->
+            val item = player.getMediaItemAt(index)
+            item.resolveTrack(cache) ?: item.toUnidentifiedTrack(index)
+        }
 
     fun MediaItem.resolveTrack(cache: ConcurrentHashMap<String, UnifiedTrack>): UnifiedTrack? {
         cache[mediaId]?.let { return it }
