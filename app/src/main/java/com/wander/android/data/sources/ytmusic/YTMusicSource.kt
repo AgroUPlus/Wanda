@@ -1,6 +1,7 @@
 package com.wander.android.data.sources.ytmusic
 
 import com.wander.android.data.model.ArtistDetails
+import com.wander.android.data.model.LyricsData
 import com.wander.android.data.model.RecommendedShelf
 import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.SourceType
@@ -52,6 +53,7 @@ class YTMusicSource @Inject constructor(
         playlistWrite = true,
         likes = true,
         radio = true,
+        lyrics = true,
         recommendations = true,
         share = true,
         videoClips = true
@@ -95,6 +97,9 @@ class YTMusicSource @Inject constructor(
 
     override suspend fun getTrack(trackId: String): Result<UnifiedTrack?> =
         catalogLoader.getTrack(trackId)
+
+    override suspend fun getLyrics(trackId: String): Result<LyricsData?> =
+        catalogLoader.getLyrics(trackId)
 
     override suspend fun getRadio(seedTrackId: String, count: Int): Result<List<UnifiedTrack>> =
         catalogLoader.getRadio(seedTrackId, count)

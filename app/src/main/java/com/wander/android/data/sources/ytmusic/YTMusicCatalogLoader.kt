@@ -1,6 +1,7 @@
 package com.wander.android.data.sources.ytmusic
 
 import com.wander.android.data.model.ArtistDetails
+import com.wander.android.data.model.LyricsData
 import com.wander.android.data.model.RecommendedShelf
 import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.UNKNOWN_ARTIST
@@ -38,6 +39,17 @@ class YTMusicCatalogLoader @Inject constructor(
                 .mapNotNull(::parsePlaylistPanelVideo)
                 .firstOrNull { it.id == "$YTM_PREFIX$videoId" }
         }
+    }
+
+    /**
+     * Two requests: `next` names the track's Lyrics tab, and browsing that tab returns the text.
+     * A track whose tab is disabled has no lyrics here, which is a success with nothing in it.
+     */
+    suspend fun getLyrics(trackId: String): Result<LyricsData?> {
+        val next = innerTube.next(trackId.removePrefix(YTM_PREFIX))
+            .getOrElse { return Result.failure(it) }
+        val browseId = next.lyricsBrowseId() ?: return Result.success(null)
+        return innerTube.browse(browseId).mapCatching { it.parseLyrics(trackId) }
     }
 
     suspend fun getRadio(seedTrackId: String, count: Int): Result<List<UnifiedTrack>> =
