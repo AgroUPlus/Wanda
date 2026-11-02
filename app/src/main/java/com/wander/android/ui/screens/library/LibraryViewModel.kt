@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.library
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.network.userMessageRes
@@ -45,7 +46,9 @@ class LibraryViewModel @Inject constructor(
     private val playlistWriter: PlaylistWriteRepository,
     private val libraryPlayback: LibraryPlaybackCoordinator,
     private val playlistsLoader: LibraryPlaylistsLoader,
-    navLayout: NavLayoutStore
+    navLayout: NavLayoutStore,
+    private val savedState: SavedStateHandle,
+    private val browsePrefs: LibraryBrowsePrefs
 ) : ViewModel() {
 
     /** Whether any connected source can be written to. Drives the "New playlist" affordance. */
@@ -65,8 +68,14 @@ class LibraryViewModel @Inject constructor(
     val tabs: StateFlow<List<LibraryTab>> =
         navLayout.libraryTabs.stateIn(viewModelScope, SharingStarted.Eagerly, LibraryTab.entries)
 
-    private val _tab = MutableStateFlow(LibraryTab.LIKED)
-    val tab: StateFlow<LibraryTab> = _tab.asStateFlow()
+    /**
+     * The open section: the saved state first (process death), then the last one chosen (a cold
+     * start), then Liked. The pager drives this on every settle, so it is written back from there.
+     */
+    val tab: StateFlow<LibraryTab> = savedState.getStateFlow(
+        KEY_TAB,
+        browsePrefs.lastTab() ?: LibraryTab.LIKED
+    )
 
     private val _sourceFilter = MutableStateFlow<SourceType?>(null)
     val sourceFilter: StateFlow<SourceType?> = _sourceFilter.asStateFlow()
@@ -169,7 +178,11 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun selectTab(tab: LibraryTab) { _tab.value = tab }
+    fun selectTab(tab: LibraryTab) {
+        if (tab == this.tab.value) return
+        savedState[KEY_TAB] = tab
+        browsePrefs.setLastTab(tab)
+    }
 
     fun selectSource(source: SourceType?) { _sourceFilter.value = source }
 
@@ -239,6 +252,7 @@ class LibraryViewModel @Inject constructor(
 
     private companion object {
         const val LIBRARY_TRACK_REFRESH = 200
+        const val KEY_TAB = "library_tab"
         private const val BACKFILL_SLICES = 12
     }
 }
