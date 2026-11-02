@@ -4,6 +4,8 @@ import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.LyricLine
 import com.wander.android.data.model.LyricsData
+import com.wander.android.data.model.SearchCatalog
+import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
@@ -51,7 +53,8 @@ class NavidromeSource @Inject constructor(
         scrobble = true,
         radio = true,
         lyrics = true,
-        share = true
+        share = true,
+        collectionSearch = true
     )
 
     override val isConfigured: StateFlow<Boolean> = secureStorage.navidromeConfigured
@@ -89,6 +92,10 @@ class NavidromeSource @Inject constructor(
 
     override suspend fun search(query: String): Result<List<UnifiedTrack>> =
         catalogLoader.search(query)
+
+    /** One `search3` call answers songs, albums and artists together. Music only, like [search]. */
+    override suspend fun searchCatalog(query: String, kind: SearchKind): Result<SearchCatalog> =
+        if (kind == SearchKind.TRACKS) catalogLoader.searchCatalog(query) else Result.success(SearchCatalog())
 
     override suspend fun getTrack(trackId: String): Result<UnifiedTrack?> =
         catalogLoader.getTrack(trackId)

@@ -54,6 +54,7 @@ class MusicSourceContractTest {
         assertFalse(none.recommendations)
         assertFalse(none.share)
         assertFalse(none.videoClips)
+        assertFalse(none.collectionSearch)
         assertTrue(none.holdsTracks)
     }
 
@@ -81,6 +82,17 @@ class MusicSourceContractTest {
         source.search("anything", SearchKind.TRACKS)
 
         assertEquals(1, source.searches)
+    }
+
+    @Test
+    fun catalogSearchIsTheTrackSearchWithNoRecordsOrArtists() = runTest {
+        val source = BareSource()
+
+        val catalog = source.searchCatalog("anything", SearchKind.TRACKS).getOrThrow()
+
+        assertEquals(1, source.searches)
+        assertTrue(catalog.albums.isEmpty())
+        assertTrue(catalog.artists.isEmpty())
     }
 
     @Test

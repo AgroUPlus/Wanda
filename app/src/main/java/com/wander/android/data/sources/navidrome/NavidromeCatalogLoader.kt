@@ -5,8 +5,10 @@ import com.wander.android.data.model.ArtistAlbumSection
 import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.EXTRA_REPLAYGAIN_ALBUM_DB
 import com.wander.android.data.model.EXTRA_REPLAYGAIN_TRACK_DB
+import com.wander.android.data.model.SearchCatalog
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
+import com.wander.android.data.model.UnifiedArtist
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.async
@@ -25,6 +27,15 @@ class NavidromeCatalogLoader @Inject constructor(
 ) {
     suspend fun search(query: String): Result<List<UnifiedTrack>> =
         apiClient.search3(query).map { result -> result.song.orEmpty().map { it.toUnified() } }
+
+    suspend fun searchCatalog(query: String): Result<SearchCatalog> =
+        apiClient.search3(query).map { result ->
+            SearchCatalog(
+                tracks = result.song.orEmpty().map { it.toUnified() },
+                albums = result.album.orEmpty().map { it.toUnified() },
+                artists = result.artist.orEmpty().map { it.toUnified() }
+            )
+        }
 
     suspend fun getTrack(trackId: String): Result<UnifiedTrack?> =
         apiClient.getSong(trackId.removePrefix(NAVIDROME_PREFIX)).map { it?.toUnified() }
@@ -147,6 +158,14 @@ class NavidromeCatalogLoader @Inject constructor(
         durationMs = duration * 1000L,
         year = year,
         genre = genre
+    )
+
+    fun SubsonicArtist.toUnified() = UnifiedArtist(
+        id = "$NAVIDROME_PREFIX$id",
+        source = SourceType.NAVIDROME,
+        name = name,
+        coverArtUrl = apiClient.buildCoverArtUrl(coverArt),
+        albumCount = albumCount
     )
 
     private companion object {

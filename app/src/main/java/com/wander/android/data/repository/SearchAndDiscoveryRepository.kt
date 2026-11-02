@@ -64,10 +64,11 @@ internal class SearchAndDiscoveryRepository(
         if (query.isBlank()) return@coroutineScope SearchOutcome()
 
         val allowed = allowedSources(onlySources)
-        val cached = cachedTracks(query, kind, allowed.map(IMusicSource::sourceType).toSet())
+        val allowedTypes = allowed.map(IMusicSource::sourceType).toSet()
+        val cached = cachedTracks(query, kind, allowedTypes)
         val answers = allowed
             .filter { it.capabilities.search }
-            .map { source -> source.sourceType to async { source.search(query, kind) } }
+            .map { source -> source.sourceType to async { source.searchCatalog(query, kind) } }
             .map { (type, answer) -> type to answer.await() }
 
         // The type and a redacted message only: the exception text can carry the request URL,
@@ -75,14 +76,41 @@ internal class SearchAndDiscoveryRepository(
         answers.forEach { (type, answer) ->
             answer.onFailure { Log.w(TAG, "Search on $type failed: ${it.loggableMessage()}") }
         }
-        val remote = answers.flatMap { (_, answer) -> answer.getOrNull().orEmpty() }
+        val found = answers.mapNotNull { (_, answer) -> answer.getOrNull() }
+        val remote = found.flatMap { it.tracks }
+        val remoteAlbums = found.flatMap { it.albums }
         persist(remote, false)
+        rememberAlbums(remoteAlbums)
+
+        // Your own records, from Room, ahead of what the backends returned. Music searches only:
+        // an album is not an answer to a search for videos or episodes.
+        val libraryAlbums = if (kind == SearchKind.TRACKS) {
+            albumDao.searchLibraryAlbums(query, MAX_LIBRARY_ALBUMS)
+                .map(AlbumEntity::toUnifiedAlbum)
+                .filter { it.source in allowedTypes }
+        } else {
+            emptyList()
+        }
 
         SearchOutcome(
             tracks = TrackDeduplicator.deduplicate((cached + remote).distinctBy { it.id }),
+            albums = (libraryAlbums + remoteAlbums).distinctBy { it.id },
+            artists = found.flatMap { it.artists }.distinctBy { it.id },
             askedSources = answers.map { it.first },
             failedSources = answers.filter { it.second.isFailure }.map { it.first }
         )
+    }
+
+    /**
+     * Writes the records a search turned up that Room has never seen, so the album screen they
+     * open into has a header before its tracks land. Non-library, and never over a known row: a
+     * search hit is a record you looked for, not one you own, and it carries less than a browsed
+     * album does.
+     */
+    private suspend fun rememberAlbums(albums: List<UnifiedAlbum>) {
+        val unknown = albums.filter { albumDao.getAlbumById(it.id) == null }
+        if (unknown.isEmpty()) return
+        albumDao.insertAlbums(unknown.map { AlbumEntity.fromUnifiedAlbum(it, isLibrary = false) })
     }
 
     private fun allowedSources(onlySources: Set<SourceType>?): List<IMusicSource> =
@@ -174,5 +202,6 @@ internal class SearchAndDiscoveryRepository(
 
     private companion object {
         const val TAG = "SearchAndDiscovery"
+        const val MAX_LIBRARY_ALBUMS = 20
     }
 }

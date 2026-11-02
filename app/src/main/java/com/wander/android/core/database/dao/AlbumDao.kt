@@ -53,6 +53,18 @@ interface AlbumDao {
     @Query("SELECT * FROM albums WHERE id = :albumId LIMIT 1")
     suspend fun getAlbumById(albumId: String): AlbumEntity?
 
+    /** Library records whose title or artist contains [query], for the search screen. */
+    @Query(
+        """
+        SELECT * FROM albums
+        WHERE isLibrary = 1
+          AND (title LIKE '%' || :query || '%' OR artist LIKE '%' || :query || '%')
+        ORDER BY title ASC
+        LIMIT :limit
+        """
+    )
+    suspend fun searchLibraryAlbums(query: String, limit: Int): List<AlbumEntity>
+
     /**
      * An artist's records, matched on the printed name rather than on `artistId`.
      *

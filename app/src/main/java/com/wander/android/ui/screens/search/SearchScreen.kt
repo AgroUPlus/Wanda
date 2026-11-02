@@ -41,6 +41,7 @@ import com.wander.android.ui.components.rememberShelfEntranceScale
 @Composable
 fun SearchScreen(
     contentPadding: PaddingValues,
+    onOpenAlbum: (String) -> Unit,
     onOpenArtist: (String, String?) -> Unit,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
@@ -153,6 +154,8 @@ fun SearchScreen(
                     contentPadding = contentPadding.listInset(),
                     modifier = Modifier.fillMaxSize()
                 ) {
+                    artistResultsSection(state.artists, onOpenArtist)
+                    albumResultsSection(state.albums, onOpenAlbum)
                     lyricMatchesSection(
                         matches = state.lyricMatches,
                         query = query,
@@ -161,7 +164,9 @@ fun SearchScreen(
                         onPlay = { match -> viewModel.playTrackAtTimestamp(match.track, match.timestampMs) },
                         onLongPress = { track -> actionsFor = track }
                     )
-                    if (state.lyricMatches.isNotEmpty() && state.results.isNotEmpty()) {
+                    val hasOtherSections = state.lyricMatches.isNotEmpty() ||
+                        state.albums.isNotEmpty() || state.artists.isNotEmpty()
+                    if (hasOtherSections && state.results.isNotEmpty()) {
                         searchSectionHeader(key = "header_tracks", title = R.string.search_songs)
                     }
 

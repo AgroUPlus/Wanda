@@ -2,11 +2,15 @@ package com.wander.android.ui.screens.search
 
 import com.wander.android.data.model.LyricMatch
 import com.wander.android.data.model.SourceType
+import com.wander.android.data.model.UnifiedAlbum
+import com.wander.android.data.model.UnifiedArtist
 import com.wander.android.data.model.UnifiedTrack
 
 data class SearchUiState(
     val isSearching: Boolean = false,
     val results: List<UnifiedTrack> = emptyList(),
+    val albums: List<UnifiedAlbum> = emptyList(),
+    val artists: List<UnifiedArtist> = emptyList(),
     val lyricMatches: List<LyricMatch> = emptyList(),
     val hasQuery: Boolean = false,
     /** Backends that were asked and did not answer; see `SearchOutcome`. */
@@ -14,7 +18,8 @@ data class SearchUiState(
     /** None of the backends asked answered at all. */
     val allSourcesFailed: Boolean = false
 ) {
-    val isEmpty: Boolean get() = results.isEmpty() && lyricMatches.isEmpty()
+    val isEmpty: Boolean
+        get() = results.isEmpty() && albums.isEmpty() && artists.isEmpty() && lyricMatches.isEmpty()
 
     /**
      * The search failed rather than came back empty: nothing to show and nobody answered, so

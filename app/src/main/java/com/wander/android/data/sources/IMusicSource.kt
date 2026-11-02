@@ -7,6 +7,7 @@ import com.wander.android.data.model.ArtistAlbumSection
 import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
+import com.wander.android.data.model.SearchCatalog
 import com.wander.android.data.model.SearchKind
 import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.flow.StateFlow
@@ -75,6 +76,17 @@ interface IMusicSource {
      */
     suspend fun search(query: String, kind: SearchKind): Result<List<UnifiedTrack>> =
         if (kind == SearchKind.TRACKS) search(query) else Result.success(emptyList())
+
+    /**
+     * [search], with the albums and artists the backend matched as well — for the search screen.
+     *
+     * Only meaningful when [SourceCapabilities.collectionSearch] is set. The default answers with
+     * [search]'s songs and no records or artists: a source that cannot search those has none to
+     * report, and records pieced together from its songs would be a search it never ran.
+     */
+    suspend fun searchCatalog(query: String, kind: SearchKind): Result<SearchCatalog> =
+        search(query, kind).map { SearchCatalog(tracks = it) }
+
     suspend fun getStreamInfo(trackId: String): Result<StreamInfo>
 
     /** The video-only stream of a clip; only meaningful when [SourceCapabilities.videoClips] is set. */

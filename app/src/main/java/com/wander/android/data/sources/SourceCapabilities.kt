@@ -42,6 +42,12 @@ data class SourceCapabilities(
      */
     val videoClips: Boolean = false,
     /**
+     * A search here also returns the albums and artists matching the query, not only songs —
+     * see `IMusicSource.searchCatalog`. Subsonic's `search3` answers all three in one call;
+     * a backend without this contributes songs to the search screen and nothing else.
+     */
+    val collectionSearch: Boolean = false,
+    /**
      * The backend has tracks of its own. Every music backend does; the Agro playlist source does
      * not — its playlists hold tracks from the others — so it is left out wherever the user picks
      * which sources' tracks to see, where it could only ever filter down to nothing.

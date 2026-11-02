@@ -1,6 +1,8 @@
 package com.wander.android.data.repository
 
 import com.wander.android.data.model.SourceType
+import com.wander.android.data.model.UnifiedAlbum
+import com.wander.android.data.model.UnifiedArtist
 import com.wander.android.data.model.UnifiedTrack
 
 /**
@@ -13,6 +15,10 @@ import com.wander.android.data.model.UnifiedTrack
  */
 data class SearchOutcome(
     val tracks: List<UnifiedTrack> = emptyList(),
+    /** Library records matching the query, then those the backends returned for it. */
+    val albums: List<UnifiedAlbum> = emptyList(),
+    /** Only from backends that search artists — see `SourceCapabilities.collectionSearch`. */
+    val artists: List<UnifiedArtist> = emptyList(),
     /** Every backend this search went out to, whether or not it answered. */
     val askedSources: List<SourceType> = emptyList(),
     /** The ones among [askedSources] whose search failed. */

@@ -59,6 +59,7 @@ fun LibrarySurface(
         if (searching) {
             SearchScreen(
                 contentPadding = contentPadding,
+                onOpenAlbum = onOpenAlbum,
                 onOpenArtist = onOpenArtist,
                 viewModel = searchViewModel
             )

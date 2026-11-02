@@ -17,6 +17,10 @@
         <item quantity="other">Show %1$d more lyric matches</item>
     </plurals>
 
+    <!-- Section headings in the search results. -->
+    <string name="search_section_artists">Artists</string>
+    <string name="search_section_albums">Albums</string>
+
     <!-- Every source the search asked failed to answer, and nothing on the device matched. -->
     <string name="search_failed_title">Search didn\'t go through</string>
     <string name="search_failed_message">None of your sources answered. Check your connection and try again.</string>

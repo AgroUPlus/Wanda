@@ -138,6 +138,8 @@ class SearchViewModel @Inject constructor(
                     SearchUiState(
                         isSearching = false,
                         results = outcome.tracks,
+                        albums = outcome.albums,
+                        artists = outcome.artists,
                         lyricMatches = lyricMatches,
                         hasQuery = true,
                         unansweredSources = outcome.failedSources,
