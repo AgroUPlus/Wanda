@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -162,7 +163,15 @@ fun SearchScreen(
                                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                                     ) {
                                         Text(
-                                            text = if (isLyricsExpanded) "Show less" else "See all (${state.lyricMatches.size})",
+                                            text = if (isLyricsExpanded) {
+                                                stringResource(R.string.search_lyrics_show_less)
+                                            } else {
+                                                pluralStringResource(
+                                                    R.plurals.search_lyrics_see_all,
+                                                    state.lyricMatches.size,
+                                                    state.lyricMatches.size
+                                                )
+                                            },
                                             style = MaterialTheme.typography.labelMedium
                                         )
                                     }
@@ -193,7 +202,12 @@ fun SearchScreen(
                                         .animateItem()
                                 ) {
                                     Text(
-                                        text = if (isLyricsExpanded) "Show fewer" else "Show ${state.lyricMatches.size - 5} more lyric matches",
+                                        text = if (isLyricsExpanded) {
+                                            stringResource(R.string.search_lyrics_show_fewer)
+                                        } else {
+                                            val hidden = state.lyricMatches.size - 5
+                                            pluralStringResource(R.plurals.search_lyrics_show_more, hidden, hidden)
+                                        },
                                         style = MaterialTheme.typography.labelMedium
                                     )
                                 }

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The search kind toggle above the results: what the search is for. -->
+    <string name="search_kind_music">Music</string>
+    <string name="search_kind_videos">Videos</string>
+    <string name="search_kind_podcasts">Podcasts</string>
+
+    <!-- The lyric matches section, when it has more than it shows by default. -->
+    <string name="search_lyrics_show_less">Show less</string>
+    <plurals name="search_lyrics_see_all">
+        <item quantity="one">See all (%1$d)</item>
+        <item quantity="other">See all (%1$d)</item>
+    </plurals>
+    <string name="search_lyrics_show_fewer">Show fewer</string>
+    <plurals name="search_lyrics_show_more">
+        <item quantity="one">Show %1$d more lyric match</item>
+        <item quantity="other">Show %1$d more lyric matches</item>
+    </plurals>
+</resources>

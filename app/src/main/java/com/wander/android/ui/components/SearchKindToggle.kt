@@ -2,6 +2,7 @@ package com.wander.android.ui.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import com.wander.android.data.model.SearchKind
 
 /**
@@ -19,7 +20,7 @@ fun SearchKindToggle(
     ConnectedToggleGroup(
         options = SearchKind.entries,
         selected = selected,
-        label = { it.label },
+        label = { stringResource(it.label) },
         onSelect = onSelect,
         modifier = modifier
     )
