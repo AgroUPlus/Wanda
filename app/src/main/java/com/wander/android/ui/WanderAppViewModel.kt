@@ -21,8 +21,10 @@ import com.wander.android.data.sources.local.LocalMusicSource
 import com.wander.android.ui.navigation.DeepLinkRouter
 import com.wander.android.ui.navigation.LinkConfirmation
 import com.wander.android.ui.navigation.LinkConfirmations
+import com.wander.android.ui.navigation.SharedLinkNotices
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -44,6 +46,7 @@ class WanderAppViewModel @Inject constructor(
     private val secureStorage: SecureStorage,
     private val deepLinkRouter: DeepLinkRouter,
     private val linkConfirmations: LinkConfirmations,
+    sharedLinkNotices: SharedLinkNotices,
     private val updateChecker: UpdateChecker,
     private val instantRadio: InstantRadioRepository,
     private val playerConnection: PlayerConnection,
@@ -91,6 +94,9 @@ class WanderAppViewModel @Inject constructor(
 
     /** Routes asked for from outside the composition — a tapped notification. */
     val deepLinkRoutes = deepLinkRouter.routes
+
+    /** String resources to show about something shared into the app — see `SharedTextHandler`. */
+    val sharedLinkMessages: Flow<Int> = sharedLinkNotices.messages
 
     fun consumeDeepLink() = deepLinkRouter.consume()
 

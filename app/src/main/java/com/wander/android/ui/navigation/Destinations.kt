@@ -73,6 +73,10 @@ object Routes {
     const val DEEZER_LOGIN = "login/deezer"
     const val IMPORT_PLAYLIST = "import/playlist"
 
+    /** The importer opened on a playlist link shared into the app — see `SharedTextHandler`. */
+    const val IMPORT_PLAYLIST_ROUTE = "import/playlist?url={url}"
+    fun importPlaylist(url: String): String = "import/playlist?url=${url.encodeForRoute()}"
+
     const val ALBUM = "album/{albumId}"
     const val PLAYLIST = "playlist/{playlistId}"
     const val ARTIST = "artist/{artist}?artistId={artistId}"

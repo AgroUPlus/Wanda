@@ -103,7 +103,17 @@ internal fun NavGraphBuilder.settingsNavGraph(
         }
     }
 
-    detailDestination(motion, Routes.IMPORT_PLAYLIST) {
+    detailDestination(
+        motion,
+        Routes.IMPORT_PLAYLIST_ROUTE,
+        arguments = listOf(
+            navArgument("url") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            }
+        )
+    ) {
         PlaylistImportScreen(
             onBack = navController::popBackStack,
             onOpenPlaylist = { navController.navigateSettled(Routes.playlist(it)) },

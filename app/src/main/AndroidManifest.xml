@@ -217,6 +217,15 @@
                 <data android:scheme="https" android:host="m.youtube.com" />
                 <data android:scheme="https" android:host="youtu.be" />
             </intent-filter>
+            <!--
+              "Share to Wanda" from another app's share sheet. The text is searched for a link and
+              routed like a tapped one, or to the playlist importer — see SharedTextHandler.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
         </activity>
 
         <!--

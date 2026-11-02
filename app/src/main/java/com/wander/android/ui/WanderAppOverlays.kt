@@ -196,6 +196,13 @@ internal fun BoxScope.WanderAppOverlays(
         }
     }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(viewModel, context) {
+        viewModel.sharedLinkMessages.collect { message ->
+            snackbarHostState.showSnackbar(context.getString(message), withDismissAction = true)
+        }
+    }
+
     PlayerAttachedBarSlot(
         bar = shell.attachedBar,
         showChrome = showChrome,

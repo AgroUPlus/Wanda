@@ -36,6 +36,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var secureStorage: SecureStorage
     @Inject internal lateinit var agroHandoffPublisher: AgroHandoffPublisher
     @Inject internal lateinit var intentHandler: AppIntentHandler
+    @Inject internal lateinit var sharedText: SharedTextHandler
 
     /**
      * Applies the chosen display language before a single resource is resolved.
@@ -55,7 +56,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         databaseTooOld = DatabaseCompatibility.isTooOld(this)
         if (!databaseTooOld) {
-            intentHandler.handleIntent(lifecycleScope, intent)
+            intentHandler.handleIntent(lifecycleScope, sharedText.resolve(intent, savedInstanceState == null))
             // Announces the device once per launch. Without it the server only ever heard from Wanda
             // at pairing time, so a device that had been restarted looked gone.
             agroHandoffPublisher.register()
@@ -92,7 +93,9 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (!databaseTooOld) intentHandler.handleIntent(lifecycleScope, intent)
+        if (!databaseTooOld) {
+            intentHandler.handleIntent(lifecycleScope, sharedText.resolve(intent, firstDelivery = true))
+        }
     }
 
     override fun onStart() {
