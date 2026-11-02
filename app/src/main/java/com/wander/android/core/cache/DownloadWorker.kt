@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.notification.WorkEta
 import com.wander.android.core.notification.WorkProgressNotification
@@ -37,6 +38,7 @@ class DownloadWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     private val downloadsDir = File(context.filesDir, "downloads")
+    private val files = DownloadFiles(downloadsDir)
 
     private fun notifying(eta: WorkEta, done: Int, total: Int, title: String? = null) =
         notifications.foregroundInfo(
@@ -55,6 +57,9 @@ class DownloadWorker @AssistedInject constructor(
         if (workControls.isPaused(WorkProgressNotification.Kind.DOWNLOAD).value) {
             return@withContext Result.success()
         }
+        // Whatever an earlier run left behind: a part file from a killed process, or a download
+        // whose row has since gone. Nothing else would ever delete them.
+        files.sweepOrphans(trackDao.localFilePaths(), System.currentTimeMillis())
 
         // A single explicit request from the context menu, or the periodic liked-tracks sweep.
         val requestedId = inputData.getString(KEY_TRACK_ID)
@@ -72,6 +77,8 @@ class DownloadWorker @AssistedInject constructor(
         if (pending.isEmpty()) return@withContext Result.success()
 
         downloadsDir.mkdirs()
+        // Retrying would not help: the user has to free space first.
+        if (!files.hasRoomFor(0L)) return@withContext Result.failure(noSpace())
         var failures = 0
 
         // Downloading a batch of liked tracks is minutes of network, and it was doing it with no
@@ -91,8 +98,10 @@ class DownloadWorker @AssistedInject constructor(
             val downloaded = runCatching { download(streamInfo.uri, streamInfo.headers, destination) }
             if (downloaded.isSuccess) {
                 trackDao.setDownloaded(entity.id, true, destination.absolutePath)
+            } else if (downloaded.exceptionOrNull() is InsufficientStorageException) {
+                // Every later track would hit the same wall.
+                return@withContext Result.failure(noSpace())
             } else {
-                destination.delete()
                 failures++
             }
         }
@@ -119,9 +128,13 @@ class DownloadWorker @AssistedInject constructor(
             if (!response.isSuccessful) {
                 throw IOException("Download failed with HTTP ${response.code}")
             }
-            destination.outputStream().use { out -> response.body.byteStream().copyTo(out) }
+            // Checked against the real size where the server sends one, before any byte lands.
+            files.requireRoomFor(response.body.contentLength())
+            files.write(response.body.byteStream(), destination)
         }
     }
+
+    private fun noSpace() = workDataOf(KEY_FAILURE_REASON to FAILURE_INSUFFICIENT_STORAGE)
 
     private fun extensionFor(format: String): String = when {
         format.contains("opus") || format.contains("webm") -> "opus"
@@ -133,6 +146,12 @@ class DownloadWorker @AssistedInject constructor(
     companion object {
         /** Set to download one specific track instead of sweeping liked tracks. */
         const val KEY_TRACK_ID = "track_id"
+
+        /** Output key naming why a run failed; see [FAILURE_INSUFFICIENT_STORAGE]. */
+        const val KEY_FAILURE_REASON = "failure_reason"
+
+        /** The volume holding downloads is too full to fit a track plus the free-space reserve. */
+        const val FAILURE_INSUFFICIENT_STORAGE = "insufficient_storage"
 
         private const val BATCH_SIZE = 10
     }

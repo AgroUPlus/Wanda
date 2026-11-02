@@ -168,6 +168,7 @@ class EmbeddingRecordingIdentityTest {
         override fun countPendingUploadFlow(): kotlinx.coroutines.flow.Flow<Int> = kotlinx.coroutines.flow.emptyFlow()
         override fun countSyncedFlow(): kotlinx.coroutines.flow.Flow<Int> = kotlinx.coroutines.flow.emptyFlow()
         override fun countLocalFlow(): kotlinx.coroutines.flow.Flow<Int> = kotlinx.coroutines.flow.emptyFlow()
+        override suspend fun localFilePaths(): List<String> = emptyList()
         override suspend fun localTrackIds(): List<String> = emptyList()
         override suspend fun localContentHashesOf(ids: List<String>): List<String> = emptyList()
         override suspend fun deleteLocalTracks(ids: List<String>): Int = 0

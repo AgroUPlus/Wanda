@@ -65,6 +65,10 @@ interface TrackSyncQueries {
     @Query("SELECT COUNT(*) FROM tracks WHERE source = 'LOCAL'")
     fun countLocalFlow(): Flow<Int>
 
+    /** Every file a row points at, which is what keeps a download from being swept as an orphan. */
+    @Query("SELECT localFilePath FROM tracks WHERE localFilePath IS NOT NULL")
+    suspend fun localFilePaths(): List<String>
+
     @Query("SELECT id FROM tracks WHERE source = 'LOCAL'")
     suspend fun localTrackIds(): List<String>
 
