@@ -2,8 +2,6 @@ package com.wander.android.data.sources.deezer
 
 import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.SourceType
-import com.wander.android.data.model.UnifiedAlbum
-import com.wander.android.data.model.UnifiedArtist
 import com.wander.android.data.model.UnifiedTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -46,45 +44,11 @@ class DeezerApiClient @Inject constructor(
         }
     }
 
-    suspend fun searchAlbums(query: String, limit: Int = 20): Result<List<UnifiedAlbum>> = withContext(Dispatchers.IO) {
-        val url = BASE_URL.toHttpUrl().newBuilder()
-            .addPathSegment("search")
-            .addPathSegment("album")
-            .addQueryParameter("q", query)
-            .addQueryParameter("limit", limit.toString())
-            .build()
-        fetchJson(url.toString()).map { root ->
-            val data = root.jsonObject["data"]?.jsonArray ?: return@map emptyList()
-            DeezerParsing.parseAlbumList(data)
-        }
-    }
-
-    suspend fun searchArtists(query: String, limit: Int = 20): Result<List<UnifiedArtist>> = withContext(Dispatchers.IO) {
-        val url = BASE_URL.toHttpUrl().newBuilder()
-            .addPathSegment("search")
-            .addPathSegment("artist")
-            .addQueryParameter("q", query)
-            .addQueryParameter("limit", limit.toString())
-            .build()
-        fetchJson(url.toString()).map { root ->
-            val data = root.jsonObject["data"]?.jsonArray ?: return@map emptyList()
-            data.mapNotNull { it.jsonObject.let(DeezerParsing::parseArtist) }
-        }
-    }
-
     suspend fun getTrack(trackId: String): Result<UnifiedTrack?> = withContext(Dispatchers.IO) {
         val cleanId = trackId.removePrefix(ID_PREFIX)
         val url = "$BASE_URL/track/$cleanId"
         fetchJson(url).map { root ->
             DeezerParsing.parseTrack(root.jsonObject)
-        }
-    }
-
-    suspend fun getAlbum(albumId: String): Result<UnifiedAlbum?> = withContext(Dispatchers.IO) {
-        val cleanId = albumId.removePrefix(ID_PREFIX)
-        val url = "$BASE_URL/album/$cleanId"
-        fetchJson(url).map { root ->
-            DeezerParsing.parseAlbum(root.jsonObject)
         }
     }
 

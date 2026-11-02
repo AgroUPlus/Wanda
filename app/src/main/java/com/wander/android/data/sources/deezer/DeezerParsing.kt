@@ -5,7 +5,6 @@ import com.wander.android.data.model.ArtistDetails
 import com.wander.android.data.model.ArtistTrackSection
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedAlbum
-import com.wander.android.data.model.UnifiedArtist
 import com.wander.android.data.model.UnifiedTrack
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -93,22 +92,6 @@ internal object DeezerParsing {
 
     fun parseAlbumList(dataArray: JsonArray): List<UnifiedAlbum> =
         dataArray.mapNotNull { it.jsonObject.let(::parseAlbum) }
-
-    fun parseArtist(json: JsonObject): UnifiedArtist? {
-        val id = json["id"]?.jsonPrimitive?.content ?: return null
-        val name = json["name"]?.jsonPrimitive?.content ?: return null
-        val picture = json["picture_big"]?.jsonPrimitive?.content
-            ?: json["picture_medium"]?.jsonPrimitive?.content
-        val nbAlbums = json["nb_album"]?.jsonPrimitive?.intOrNull ?: 0
-
-        return UnifiedArtist(
-            id = "deezer:$id",
-            source = SourceType.DEEZER,
-            name = name,
-            coverArtUrl = picture,
-            albumCount = nbAlbums
-        )
-    }
 
     fun parseArtistDetails(
         artistJson: JsonObject,
