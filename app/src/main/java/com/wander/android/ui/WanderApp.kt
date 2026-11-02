@@ -30,7 +30,9 @@ import com.wander.android.ui.components.attachedBarOf
 import com.wander.android.ui.components.height
 import com.wander.android.ui.components.LocalBackBlurEnabled
 import com.wander.android.ui.components.LocalBackdropBlur
+import com.wander.android.ui.components.LocalDownloadMarks
 import com.wander.android.ui.components.LocalOfflinePlayback
+import com.wander.android.ui.components.TrackDownloadViewModel
 import com.wander.android.ui.components.backdropBlur
 import com.wander.android.ui.components.dockSpec
 import com.wander.android.ui.components.player.MiniPlayerShadowInset
@@ -142,6 +144,7 @@ fun WanderApp(
     val railInset = if (useRail) railWidth else 0.dp
 
     val offlinePlayback by viewModel.offlinePlayback.collectAsStateWithLifecycle()
+    val downloadMarks by hiltViewModel<TrackDownloadViewModel>().marks.collectAsStateWithLifecycle()
     val isCoverArtThemeEnabled by viewModel.isCoverArtThemeEnabled.collectAsStateWithLifecycle()
     val isAmoledBlack by viewModel.isAmoledBlack.collectAsStateWithLifecycle()
     val isBackBlurEnabled by viewModel.isBackBlurEnabled.collectAsStateWithLifecycle()
@@ -160,6 +163,7 @@ fun WanderApp(
     ) {
         CompositionLocalProvider(
             LocalOfflinePlayback provides offlinePlayback,
+            LocalDownloadMarks provides downloadMarks,
             LocalBackBlurEnabled provides isBackBlurEnabled,
             LocalBackdropBlur provides backdropBlur
         ) {

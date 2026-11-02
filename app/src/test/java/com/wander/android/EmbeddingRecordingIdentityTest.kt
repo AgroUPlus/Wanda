@@ -112,6 +112,7 @@ class EmbeddingRecordingIdentityTest {
         override fun getLikedTracksFlow(): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
         override fun observeLikedTracks(limit: Int): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()
         override fun getLikedTrackIdsFlow(): kotlinx.coroutines.flow.Flow<List<String>> = kotlinx.coroutines.flow.emptyFlow()
+        override fun getDownloadedTrackIdsFlow(): kotlinx.coroutines.flow.Flow<List<String>> = kotlinx.coroutines.flow.emptyFlow()
         override suspend fun getDownloadedTracksOnce(): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun getOfflineTracksOnce(): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override fun getTracksByAlbumFlow(albumId: String): kotlinx.coroutines.flow.Flow<List<com.wander.android.core.database.entity.TrackEntity>> = kotlinx.coroutines.flow.emptyFlow()

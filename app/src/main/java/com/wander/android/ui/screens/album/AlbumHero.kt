@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.CloudDone
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.LibraryAdd
 import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.Shuffle
@@ -64,6 +65,9 @@ internal fun AlbumHero(
      * it wears an export icon rather than the download arrow the rest of the app uses for that.
      */
     onExport: (() -> Unit)? = null,
+    /** Downloads every track for offline listening. Null when there is nothing left to download. */
+    onDownload: (() -> Unit)? = null,
+    @StringRes downloadLabel: Int = R.string.album_download_all,
     /** On the title alone — how the page's collapsing bar tracks it. */
     titleModifier: Modifier = Modifier,
     /** What kind of record this is, shown over the title. */
@@ -118,7 +122,7 @@ internal fun AlbumHero(
             )
         }
 
-        if (onShare != null || onConvert != null || onExport != null) {
+        if (onShare != null || onConvert != null || onExport != null || onDownload != null) {
             HeroActionRow(
                 height = HeroSecondaryRowHeight,
                 modifier = Modifier.padding(top = 14.dp, bottom = 4.dp)
@@ -141,6 +145,17 @@ internal fun AlbumHero(
                         onClick = convert,
                         contentDescription = stringResource(R.string.playlist_convert_action),
                         icon = Icons.Rounded.LibraryAdd,
+                        baseWeight = 1f,
+                        iconSize = HeroActionIconSize,
+                        rowHeight = HeroSecondaryRowHeight,
+                        tint = HeroActionTint.SECONDARY_CONTAINER
+                    )
+                }
+                onDownload?.let { download ->
+                    HeroActionButton(
+                        onClick = download,
+                        contentDescription = stringResource(downloadLabel),
+                        icon = Icons.Rounded.Download,
                         baseWeight = 1f,
                         iconSize = HeroActionIconSize,
                         rowHeight = HeroSecondaryRowHeight,

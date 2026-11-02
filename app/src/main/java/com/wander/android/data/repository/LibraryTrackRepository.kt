@@ -10,7 +10,6 @@ import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.HistoryTrack
 import com.wander.android.data.model.UnifiedTrack
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -54,16 +53,6 @@ internal class LibraryTrackRepository(
 
     suspend fun trackById(trackId: String): UnifiedTrack? = withContext(Dispatchers.IO) {
         trackDao.getTrackById(trackId)?.toUnifiedTrack()
-    }
-
-    suspend fun deleteDownloadedTrack(trackId: String) = withContext(Dispatchers.IO) {
-        val entity = trackDao.getTrackById(trackId)
-        if (entity != null) {
-            entity.localFilePath?.takeIf { it.isNotBlank() }?.let { path ->
-                runCatching { File(path).delete() }
-            }
-            trackDao.setDownloaded(trackId, isDownloaded = false, localPath = null)
-        }
     }
 
     private fun Flow<List<TrackEntity>>.mapToTracks(): Flow<List<UnifiedTrack>> =

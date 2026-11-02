@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Manual offline downloads -->
+    <string name="track_action_download">Download</string>
+    <string name="track_action_remove_download">Remove download</string>
+    <string name="track_download_state_downloaded">Downloaded</string>
+    <string name="track_download_state_queued">Waiting to download</string>
+    <string name="album_download_all">Download album</string>
+    <string name="playlist_download_all">Download playlist</string>
+</resources>

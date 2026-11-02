@@ -160,6 +160,7 @@ fun TrackRow(
                     LiveChip(pulsing = false)
                     Spacer(Modifier.width(6.dp))
                 }
+                TrackDownloadBadge(track)
                 Text(
                     text = track.subtitle(),
                     style = MaterialTheme.typography.bodyMedium,

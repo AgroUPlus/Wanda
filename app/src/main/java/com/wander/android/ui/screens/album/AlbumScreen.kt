@@ -36,6 +36,7 @@ import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.listInset
 import com.wander.android.ui.components.collapsingTitleSource
 import com.wander.android.ui.components.rememberCollapsingTitleState
+import com.wander.android.ui.components.rememberDownloadAll
 
 /**
  * One record, with its actual tracklist — reached by tapping the album name in the player, which
@@ -59,6 +60,7 @@ fun AlbumScreen(
     val titleState = rememberCollapsingTitleState(listState)
 
     val addToPlaylist = AddToPlaylistHost()
+    val downloadAlbum = rememberDownloadAll(tracks)
 
     actionsFor?.let { track ->
         TrackActionsSheet(
@@ -136,6 +138,7 @@ fun AlbumScreen(
                             // No `canShare` gate: an album link describes the record rather than
                             // naming a server, so it works from every source.
                             onShare = viewModel::shareAlbum.takeIf { current != null },
+                            onDownload = downloadAlbum,
                             modifier = Modifier
                                 .padding(bottom = 16.dp),
                             titleModifier = Modifier.collapsingTitleSource(titleState)

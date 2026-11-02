@@ -99,7 +99,33 @@ class DownloadScheduler @Inject constructor(
         )
     }
 
+    /**
+     * Works through the tracks the user downloaded by hand — see `manualTrackIds`, which is the
+     * queue. The user asked, so neither charging nor battery is required, but the Wi-Fi-only
+     * setting is: a download chosen by hand is still not one the user agreed to pay data for.
+     *
+     * One sequential job rather than one per track, so a 200-track playlist is one download at a
+     * time instead of 200 at once. APPEND_OR_REPLACE: a request made while a run is going queues
+     * one more pass behind it, which picks up whatever that run read too early to see; and a chain
+     * that failed (the disk filled) is replaced rather than failing everything appended to it.
+     */
+    fun downloadManual() {
+        val network = if (secureStorage.downloads.wifiOnly.value) NetworkType.UNMETERED else NetworkType.CONNECTED
+        val request = OneTimeWorkRequestBuilder<DownloadWorker>()
+            .addTag(WorkControls.tagFor(WorkProgressNotification.Kind.DOWNLOAD))
+            .setInputData(workDataOf(DownloadWorker.KEY_MANUAL to true))
+            .setConstraints(Constraints.Builder().setRequiredNetworkType(network).build())
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES)
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            MANUAL_WORK,
+            ExistingWorkPolicy.APPEND_OR_REPLACE,
+            request
+        )
+    }
+
     internal companion object {
+        const val MANUAL_WORK = "wanda_manual_download"
         const val WORK_NAME = "wanda_auto_download"
         const val IMMEDIATE_WORK = "wanda_auto_download_now"
         const val EPISODE_WORK_PREFIX = "wanda_episode_download_"

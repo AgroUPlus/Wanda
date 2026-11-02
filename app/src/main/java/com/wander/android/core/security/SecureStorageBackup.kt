@@ -68,5 +68,7 @@ internal val DEVICE_LOCAL_KEYS: Set<String> = setOf(
     // is something people move around and share; nobody restores a device to get it back.
     KEY_SEARCH_HISTORY,
     // Whether this phone's own disk stopped the last download run.
-    KEY_DOWNLOADS_STORAGE_FULL
+    KEY_DOWNLOADS_STORAGE_FULL,
+    // Which tracks were downloaded by hand on this phone: the files are this disk's, not another's.
+    KEY_MANUAL_DOWNLOAD_IDS
 )

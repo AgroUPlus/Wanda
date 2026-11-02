@@ -39,6 +39,10 @@ interface TrackLibraryQueries {
     @Query("SELECT id FROM tracks WHERE isLiked = 1")
     fun getLikedTrackIdsFlow(): Flow<List<String>>
 
+    /** Every row's download state at once, for the badge each track row draws. */
+    @Query("SELECT id FROM tracks WHERE isDownloaded = 1")
+    fun getDownloadedTrackIdsFlow(): Flow<List<String>>
+
     @Query("SELECT * FROM tracks WHERE isDownloaded = 1 AND source != 'LOCAL'")
     suspend fun getDownloadedTracksOnce(): List<TrackEntity>
 

@@ -7,6 +7,7 @@ import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Groups
@@ -33,7 +34,8 @@ internal class TrackActionState(
 internal class TrackActionLabels(
     val like: String,
     val removeFromQueue: String,
-    val deleteOffline: String,
+    val download: String,
+    val removeDownload: String,
     val resetProgress: String,
     val moveUp: String,
     val moveDown: String,
@@ -52,7 +54,12 @@ internal class TrackActionCallbacks(
     /** Given the track's album id; only offered when the track names one. */
     val onOpenAlbum: ((String) -> Unit)?,
     val onRemove: (() -> Unit)?,
-    val onDeleteDownload: (() -> Unit)?,
+    /** Null when the track cannot be downloaded, or already is or is on its way. */
+    val onDownload: (() -> Unit)?,
+    /** Null when there is no download to remove. */
+    val onRemoveDownload: (() -> Unit)?,
+    /** Whether [onRemoveDownload] asks first — and so closes the sheet with its own dialog. */
+    val confirmsRemoveDownload: Boolean,
     val onResetProgress: (() -> Unit)?,
     val onMoveUp: (() -> Unit)? = null,
     val onMoveDown: (() -> Unit)? = null
@@ -87,6 +94,11 @@ internal fun buildTrackActionsList(
     callbacks.onAddToPlaylist?.let {
         add(MenuAction(Icons.Rounded.LibraryAdd, "Add to playlist", ActionEmphasis.ICON) { it(); dismiss() })
     }
+    // Not gated on playability either: offline is exactly when a missing download is noticed, and
+    // the request waits for the network rather than failing for want of it.
+    callbacks.onDownload?.let {
+        add(MenuAction(Icons.Rounded.Download, labels.download, ActionEmphasis.ICON) { it(); dismiss() })
+    }
     if (state.playable) {
         callbacks.onStartRadio?.let { add(MenuAction(Icons.Rounded.Radio, "Radio") { it(); dismiss() }) }
         callbacks.onOpenArtist?.let { addArtistActions(track.artist, it, dismiss) }
@@ -100,7 +112,7 @@ internal fun buildTrackActionsList(
         }
     }
     addJamAction(track, state, jamViewModel, dismiss)
-    // These two ask first, and the confirmation closes the sheet; see `TrackActionsSheet`.
+    // These ask first, and the confirmation closes the sheet; see `TrackActionsSheet`.
     callbacks.onResetProgress?.let {
         add(MenuAction(Icons.Rounded.RestartAlt, labels.resetProgress, ActionEmphasis.ICON) { it() })
     }
@@ -109,8 +121,11 @@ internal fun buildTrackActionsList(
     callbacks.onRemove?.let {
         add(MenuAction(Icons.Rounded.Delete, labels.removeFromQueue, ActionEmphasis.DANGER) { it(); dismiss() })
     }
-    callbacks.onDeleteDownload?.let {
-        add(MenuAction(Icons.Rounded.Delete, labels.deleteOffline, ActionEmphasis.DANGER) { it() })
+    callbacks.onRemoveDownload?.let { remove ->
+        add(MenuAction(Icons.Rounded.Delete, labels.removeDownload, ActionEmphasis.DANGER) {
+            remove()
+            if (!callbacks.confirmsRemoveDownload) dismiss()
+        })
     }
 }
 

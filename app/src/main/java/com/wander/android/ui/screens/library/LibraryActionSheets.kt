@@ -68,9 +68,6 @@ internal fun LibraryTrackActions(
         } else {
             null
         },
-        onDeleteDownload = if (tab == LibraryTab.DOWNLOADS || track.isDownloaded) {
-            { viewModel.deleteDownloadedTrack(track) }
-        } else null,
         onResetProgress = if (tab == LibraryTab.PODCASTS && track.isEpisode) {
             { podcastsViewModel.resetProgress(track) }
         } else null

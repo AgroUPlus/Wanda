@@ -11,6 +11,7 @@ import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.CollapsingTitleState
 import com.wander.android.ui.components.collapsingTitleSource
+import com.wander.android.ui.components.rememberDownloadAll
 import com.wander.android.ui.screens.album.AlbumHero
 
 /** The playlist's cover, title and header actions: "Navidrome · 24 tracks · Shared · its description". */
@@ -41,6 +42,8 @@ internal fun PlaylistHeader(
         isShared = shareActions.sharedWith != null,
         onConvert = shareActions.onConvert,
         onExport = shareActions.onExport,
+        onDownload = rememberDownloadAll(tracks),
+        downloadLabel = R.string.playlist_download_all,
         modifier = Modifier.padding(bottom = 16.dp),
         titleModifier = Modifier.collapsingTitleSource(titleState),
         overline = R.string.hero_overline_playlist

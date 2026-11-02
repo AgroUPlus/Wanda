@@ -41,6 +41,34 @@ internal class SecureDownloadPreferences(private val prefs: SharedPreferences) {
     private val _storageFull = MutableStateFlow(prefs.getBoolean(KEY_DOWNLOADS_STORAGE_FULL, false))
     val storageFull: StateFlow<Boolean> = _storageFull.asStateFlow()
 
+    /**
+     * Tracks the user downloaded by hand — from a track's menu, an album or playlist header, or a
+     * selection. Doubles as the queue the manual download job works through: an id here whose
+     * track is not downloaded yet is still waiting.
+     *
+     * Recorded so the cleanups that let go of downloads the app chose (stale downloads, a show's
+     * keep-last-N episodes) never delete one the user asked for. Device-local, like the files.
+     */
+    private val _manualTrackIds = MutableStateFlow(readManualTrackIds())
+    val manualTrackIds: StateFlow<Set<String>> = _manualTrackIds.asStateFlow()
+
+    fun markManual(trackIds: Collection<String>) = updateManual { it + trackIds }
+
+    fun unmarkManual(trackIds: Collection<String>) = updateManual { it - trackIds.toSet() }
+
+    /** Serialised: a selection's download and a worker's cleanup can land at the same moment. */
+    @Synchronized
+    private fun updateManual(change: (Set<String>) -> Set<String>) {
+        val next = change(_manualTrackIds.value)
+        if (next == _manualTrackIds.value) return
+        prefs.edit { putStringSet(KEY_MANUAL_DOWNLOAD_IDS, next) }
+        _manualTrackIds.value = next
+    }
+
+    // Copied: the set `getStringSet` returns belongs to the preferences and must not be kept.
+    private fun readManualTrackIds(): Set<String> =
+        prefs.getStringSet(KEY_MANUAL_DOWNLOAD_IDS, emptySet()).orEmpty().toSet()
+
     fun setStorageFull(full: Boolean) {
         if (_storageFull.value == full) return
         prefs.edit { putBoolean(KEY_DOWNLOADS_STORAGE_FULL, full) }
@@ -80,6 +108,7 @@ internal class SecureDownloadPreferences(private val prefs: SharedPreferences) {
         _limitBytes.value = prefs.getLong(KEY_DOWNLOAD_LIMIT_BYTES, UNLIMITED)
         _streamCacheBytes.value = prefs.getLong(KEY_STREAM_CACHE_BYTES, DEFAULT_STREAM_CACHE_BYTES)
         _storageFull.value = prefs.getBoolean(KEY_DOWNLOADS_STORAGE_FULL, false)
+        _manualTrackIds.value = readManualTrackIds()
     }
 
     companion object {

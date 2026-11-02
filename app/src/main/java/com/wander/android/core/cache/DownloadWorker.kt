@@ -2,16 +2,13 @@ package com.wander.android.core.cache
 
 import com.wander.android.R
 import android.content.Context
+import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
-import androidx.work.Data
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.wander.android.core.cache.predict.OfflinePredictor
-import com.wander.android.core.cache.predict.PastPlay
 import com.wander.android.core.database.dao.HistoryDao
 import com.wander.android.core.database.dao.TrackDao
-import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.notification.WorkEta
 import com.wander.android.core.notification.WorkProgressNotification
 import com.wander.android.core.playback.DeezerDecryptingDataSource
@@ -28,7 +25,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.IOException
-import java.time.ZoneId
 
 /**
  * Downloads liked tracks for offline listening. Runs only on unmetered networks while charging
@@ -49,6 +45,7 @@ class DownloadWorker @AssistedInject constructor(
 
     private val downloadsDir = File(context.filesDir, "downloads")
     private val files = DownloadFiles(downloadsDir)
+    private val candidates = DownloadCandidates(trackDao, historyDao, secureStorage.downloads)
 
     private fun notifying(eta: WorkEta, done: Int, total: Int, title: String? = null) =
         notifications.foregroundInfo(
@@ -72,33 +69,19 @@ class DownloadWorker @AssistedInject constructor(
         files.sweepOrphans(trackDao.localFilePaths(), System.currentTimeMillis())
 
         val prefs = secureStorage.downloads
-        // A single explicit request from the context menu, or the liked-tracks sweep.
-        val requestedId = inputData.getString(KEY_TRACK_ID)
-        val candidates = if (requestedId != null) {
-            listOfNotNull(trackDao.getTrackById(requestedId)).filterNot { it.isDownloaded }
-        } else {
-            // Liked tracks, not most-played: the user explicitly asked to keep these. "Download
-            // liked tracks now" asks for them by name, so it does not wait on the auto switch.
-            val wantLiked = prefs.autoDownloadLiked.value || inputData.getBoolean(KEY_ON_REQUEST, false)
-            val liked = if (wantLiked) trackDao.getLikedNotDownloaded(BATCH_SIZE) else emptyList()
-            // Room left in the batch is spent on what this listener is likely to play next rather
-            // than left idle, when the user allows it: the cost is a few tracks of data on songs
-            // nobody picked.
-            if (liked.size < BATCH_SIZE && prefs.autoDownloadPredicted.value) {
-                (liked + predictiveCandidates(BATCH_SIZE - liked.size)).distinctBy { it.id }
-            } else {
-                liked
-            }
-        }
+        val manual = inputData.getBoolean(KEY_MANUAL, false)
         // A peer's or relayed track is borrowed for one playback: its session serves once, and
         // writing it to disk would turn the loan into a copy (and save the relay's ciphertext).
-        val pending = candidates.filterNot { isOneShotTrackId(it.id) }
+        val pending = candidates.select(inputData.getString(KEY_TRACK_ID), manual, inputData.getBoolean(KEY_ON_REQUEST, false))
+            .filterNot { isOneShotTrackId(it.id) }
         if (pending.isEmpty()) return@withContext Result.success()
 
         downloadsDir.mkdirs()
         // Retrying would not help: the user has to free space first.
-        if (!files.hasRoomFor(0L)) return@withContext Result.failure(noSpace())
-        var failures = 0
+        if (!files.hasRoomFor(0L)) return@withContext noSpace(manual, pending.map { it.id })
+        val failed = mutableListOf<String>()
+        val done = mutableSetOf<String>()
+        var limitReached = false
 
         // Downloading a batch of liked tracks is minutes of network, and it was doing it with no
         // way to tell it apart from nothing happening — and subject to the same ten-minute ceiling
@@ -109,11 +92,16 @@ class DownloadWorker @AssistedInject constructor(
         val limitBytes = prefs.limitBytes.value
         for ((index, entity) in pending.withIndex()) {
             if (isStopped) break
+            // Taken back with "Remove download" while it was still waiting its turn.
+            if (manual && entity.id !in prefs.manualTrackIds.value) continue
             // Stop queueing at the cap rather than starting a track that is bound to overshoot it.
-            if (!files.withinLimit(limitBytes, 0L)) break
+            if (!files.withinLimit(limitBytes, 0L)) {
+                limitReached = true
+                break
+            }
             runCatching { setForeground(notifying(eta, index, pending.size, entity.title)) }
             val streamInfo = musicRepository.getStreamInfo(entity.id).getOrElse {
-                failures++
+                failed += entity.id
                 continue
             }
             val destination = File(downloadsDir, "${entity.id.replace(':', '_')}.${extensionFor(streamInfo.format)}")
@@ -121,33 +109,46 @@ class DownloadWorker @AssistedInject constructor(
             if (downloaded.isSuccess) {
                 trackDao.setDownloaded(entity.id, true, destination.absolutePath)
                 prefs.setStorageFull(false)
+                done += entity.id
             } else if (downloaded.exceptionOrNull() is InsufficientStorageException) {
                 // Every later track would hit the same wall.
-                return@withContext Result.failure(noSpace())
+                return@withContext noSpace(manual, pending.map { it.id } - done)
             } else if (downloaded.exceptionOrNull() is DownloadLimitReachedException) {
                 // The user's own cap, not a fault: the rest of the batch waits for room.
+                limitReached = true
                 break
             } else {
-                failures++
+                failed += entity.id
             }
         }
 
-        // Retry later rather than reporting success we did not achieve.
-        if (failures == pending.size) Result.retry() else Result.success()
+        when {
+            manual -> finishManual(pending.map { it.id } - done, failed, limitReached)
+            // Retry later rather than reporting success we did not achieve.
+            failed.size == pending.size -> Result.retry()
+            else -> Result.success()
+        }
     }
 
     /**
-     * The tracks [OfflinePredictor] expects to be played next, from this device's own history and
-     * library. Downloaded, local and one-shot tracks are excluded there; the storage cap is
-     * enforced by the download loop like any other track's.
+     * The end of a manual run. A track that failed is tried again a few times; past that, and for
+     * whatever the storage limit left behind, its mark is taken back, so the row stops saying it
+     * is waiting for a download that is not coming and offers "Download" again instead.
+     *
+     * Success rather than failure when giving up: this job is a chain other requests append to,
+     * and a failed link would fail every request queued behind it.
      */
-    private suspend fun predictiveCandidates(limit: Int): List<TrackEntity> {
-        val now = System.currentTimeMillis()
-        val plays = historyDao.getPlaysBetween(now - OfflinePredictor.WINDOW_MS, now + 1)
-            .map { PastPlay(it.trackId, it.playedAt) }
-        val tracks = trackDao.tracksWithUserState()
-        val byId = tracks.associateBy { it.id }
-        return OfflinePredictor(ZoneId.systemDefault()).rank(tracks, plays, now, limit).mapNotNull { byId[it] }
+    private fun finishManual(notDone: List<String>, failed: List<String>, limitReached: Boolean): Result {
+        val prefs = secureStorage.downloads
+        if (limitReached) {
+            prefs.unmarkManual(notDone)
+            return Result.success(workDataOf(KEY_FAILURE_REASON to FAILURE_LIMIT_REACHED))
+        }
+        if (failed.isEmpty()) return Result.success()
+        if (runAttemptCount + 1 < MAX_MANUAL_ATTEMPTS) return Result.retry()
+        Log.w(TAG, "Gave up on ${failed.size} manual downloads")
+        prefs.unmarkManual(failed)
+        return Result.success(workDataOf(KEY_FAILURE_REASON to FAILURE_GAVE_UP))
     }
 
     /**
@@ -184,10 +185,14 @@ class DownloadWorker @AssistedInject constructor(
         }
     }
 
-    /** Also recorded for Settings, which says downloads are paused until there is room. */
-    private fun noSpace(): Data {
+    /**
+     * Also recorded for Settings, which says downloads are paused until there is room. A manual
+     * run lets go of what it had not fetched, so those rows stop claiming to be on their way.
+     */
+    private fun noSpace(manual: Boolean, notDone: List<String>): Result {
         secureStorage.downloads.setStorageFull(true)
-        return workDataOf(KEY_FAILURE_REASON to FAILURE_INSUFFICIENT_STORAGE)
+        if (manual) secureStorage.downloads.unmarkManual(notDone)
+        return Result.failure(workDataOf(KEY_FAILURE_REASON to FAILURE_INSUFFICIENT_STORAGE))
     }
 
     private fun extensionFor(format: String): String = when {
@@ -204,12 +209,23 @@ class DownloadWorker @AssistedInject constructor(
         /** Set by "Download liked tracks now": liked tracks are fetched even with auto-download off. */
         const val KEY_ON_REQUEST = "on_request"
 
+        /** Set for the queue of tracks downloaded by hand; see [DownloadScheduler.downloadManual]. */
+        const val KEY_MANUAL = "manual"
+
         /** Output key naming why a run failed; see [FAILURE_INSUFFICIENT_STORAGE]. */
         const val KEY_FAILURE_REASON = "failure_reason"
 
         /** The volume holding downloads is too full to fit a track plus the free-space reserve. */
         const val FAILURE_INSUFFICIENT_STORAGE = "insufficient_storage"
 
-        private const val BATCH_SIZE = 10
+        /** A manual run stopped at the user's storage limit and let go of the rest. */
+        const val FAILURE_LIMIT_REACHED = "limit_reached"
+
+        /** A manual run kept failing on some tracks and stopped trying them. */
+        const val FAILURE_GAVE_UP = "gave_up"
+
+        private const val MAX_MANUAL_ATTEMPTS = 4
+        private const val TAG = "DownloadWorker"
+
     }
 }

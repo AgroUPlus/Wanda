@@ -197,10 +197,6 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch { musicRepository.toggleLike(track) }
     }
 
-    fun deleteDownloadedTrack(track: UnifiedTrack) {
-        viewModelScope.launch { musicRepository.deleteDownloadedTrack(track.id) }
-    }
-
     private companion object {
         const val LIBRARY_TRACK_REFRESH = 200
         const val KEY_TAB = "library_tab"
