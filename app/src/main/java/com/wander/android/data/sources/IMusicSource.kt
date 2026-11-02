@@ -172,6 +172,14 @@ interface IMusicSource {
     suspend fun deletePlaylist(playlistId: String): Result<Unit> =
         Result.failure(UnsupportedOperationException("$displayName cannot delete playlists"))
 
+    /** Removes the entry at [index] of a playlist this source holds. See [createPlaylist]. */
+    suspend fun removeFromPlaylist(playlistId: String, index: Int): Result<Unit> =
+        Result.failure(UnsupportedOperationException("$displayName cannot modify playlists"))
+
+    /** Moves the entry at [from] to [to]. See [createPlaylist]. */
+    suspend fun moveInPlaylist(playlistId: String, from: Int, to: Int): Result<Unit> =
+        Result.failure(UnsupportedOperationException("$displayName cannot modify playlists"))
+
     /**
      * A public link to [target] that anyone can open, for sharing.
      *

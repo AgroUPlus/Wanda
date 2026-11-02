@@ -143,6 +143,9 @@ class PlaylistWriteRepository @Inject constructor(
         shared.editTarget(playlist.id)?.let { agroId ->
             return@withContext sharedOutcome(sharedEditor.remove(agroId, index), R.string.shared_playlist_removed, playlist.name)
         }
+        if (playlist.source != SourceType.LOCAL) {
+            return@withContext remoteEdit(playlist) { it.removeFromPlaylist(playlist.id, index) }
+        }
         rewriteLocal(playlist.id) { ids -> ids.toMutableList().apply { if (index in indices) removeAt(index) } }
     }
 
@@ -151,9 +154,27 @@ class PlaylistWriteRepository @Inject constructor(
         shared.editTarget(playlist.id)?.let { agroId ->
             return@withContext sharedOutcome(sharedEditor.move(agroId, from, to), null, playlist.name)
         }
+        if (playlist.source != SourceType.LOCAL) {
+            return@withContext remoteEdit(playlist) { it.moveInPlaylist(playlist.id, from, to) }
+        }
         rewriteLocal(playlist.id) { ids ->
             ids.toMutableList().apply { if (from in indices && to in indices) add(to, removeAt(from)) }
         }
+    }
+
+    /** Whether the entries of a playlist on [type] can be removed and moved, outside Agro. */
+    fun canEditEntries(type: SourceType): Boolean = type == SourceType.LOCAL || writableSource(type) != null
+
+    /** A playlist on a server (Navidrome) is edited there; failure is said, not swallowed. */
+    private suspend fun remoteEdit(
+        playlist: UnifiedPlaylist,
+        edit: suspend (IMusicSource) -> Result<Unit>
+    ): Result<Unit> {
+        val source = writableSource(playlist.source)
+            ?: return Result.failure(IllegalStateException("${playlist.source} cannot modify playlists"))
+        return edit(source)
+            .onSuccess { syncIfPublished(playlist.id) }
+            .onFailure { outcomes.report(R.string.playlist_edit_failed, playlist.name) }
     }
 
     private suspend fun rewriteLocal(playlistId: String, change: (List<String>) -> List<String>): Result<Unit> {

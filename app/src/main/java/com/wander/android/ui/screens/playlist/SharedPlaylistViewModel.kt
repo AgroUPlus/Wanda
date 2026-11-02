@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.database.entity.SharedPlaylistItemEntity
-import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.repository.PlaylistWriteRepository
 import com.wander.android.data.repository.sharedplaylist.SharedPlaylistEditor
@@ -24,7 +23,8 @@ import javax.inject.Inject
 
 /**
  * The shared side of the playlist screen: whether the playlist is shared through Agro, where its
- * copy stands, and the edits this account may make — remove and move, for a Wanda playlist too.
+ * copy stands, and the edits this account may make — remove and move, for a Wanda or Navidrome
+ * playlist too.
  *
  * Kept apart from [PlaylistViewModel], which loads and plays the tracks; both are keyed by the
  * same playlist id and read the same copy in Room, so their positions agree.
@@ -69,13 +69,13 @@ class SharedPlaylistViewModel @Inject constructor(
     fun isPending(index: Int): Boolean = items.value.getOrNull(index)?.isPending == true
 
     fun canRemove(playlist: UnifiedPlaylist, index: Int): Boolean {
-        val current = state.value ?: return playlist.source == SourceType.LOCAL
+        val current = state.value ?: return writes.canEditEntries(playlist.source)
         val item = items.value.getOrNull(index) ?: return false
         return editor.canRemove(current.effectiveRole, item)
     }
 
     fun canMove(playlist: UnifiedPlaylist): Boolean {
-        val current = state.value ?: return playlist.source == SourceType.LOCAL
+        val current = state.value ?: return writes.canEditEntries(playlist.source)
         return current.effectiveRole.canRearrange
     }
 

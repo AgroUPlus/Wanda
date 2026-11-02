@@ -172,6 +172,27 @@ class NavidromeSource @Inject constructor(
             songIdsToAdd = trackIds.map { it.removePrefix(PREFIX) }
         )
 
+    override suspend fun deletePlaylist(playlistId: String): Result<Unit> =
+        apiClient.deletePlaylist(playlistId.removePrefix(PREFIX))
+
+    override suspend fun removeFromPlaylist(playlistId: String, index: Int): Result<Unit> =
+        apiClient.removeFromPlaylist(playlistId.removePrefix(PREFIX), index)
+
+    /**
+     * Reads the entries afresh and writes them back in the new order. The index is the screen's,
+     * which was read from this same list; one that no longer fits is refused, not guessed at.
+     */
+    override suspend fun moveInPlaylist(playlistId: String, from: Int, to: Int): Result<Unit> {
+        val id = playlistId.removePrefix(PREFIX)
+        val songIds = apiClient.getPlaylist(id).getOrElse { return Result.failure(it) }
+            .entry.orEmpty().map { it.id }.toMutableList()
+        if (from !in songIds.indices || to !in songIds.indices) {
+            return Result.failure(IndexOutOfBoundsException("The playlist changed in the meantime"))
+        }
+        songIds.add(to, songIds.removeAt(from))
+        return apiClient.replacePlaylistSongs(id, songIds)
+    }
+
     /**
      * A song already shared on its own gets the share it has; anything else gets a new one. When
      * the server cannot list its shares, the share is made anyway — the user asked for a link, and

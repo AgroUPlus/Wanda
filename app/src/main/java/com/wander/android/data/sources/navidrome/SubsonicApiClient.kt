@@ -120,6 +120,24 @@ class SubsonicApiClient @Inject constructor(
             *songIdsToAdd.map { "songIdToAdd" to it as Any? }.toTypedArray()
         ).map { }
 
+    /** Drops the entry at [index] (zero-based, as the server lists them) — one copy, not every one. */
+    suspend fun removeFromPlaylist(playlistId: String, index: Int): Result<Unit> =
+        call("updatePlaylist.view", "playlistId" to playlistId, "songIndexToRemove" to index).map { }
+
+    /**
+     * Replaces the playlist's songs with [songIds], in that order. Subsonic has no "move", so a
+     * reorder is this: `createPlaylist` given an existing `playlistId` overwrites its entries.
+     */
+    suspend fun replacePlaylistSongs(playlistId: String, songIds: List<String>): Result<Unit> =
+        call(
+            "createPlaylist.view",
+            "playlistId" to playlistId,
+            *songIds.map { "songId" to it as Any? }.toTypedArray()
+        ).map { }
+
+    suspend fun deletePlaylist(playlistId: String): Result<Unit> =
+        call("deletePlaylist.view", "id" to playlistId).map { }
+
     suspend fun getLyricsBySongId(id: String): Result<SubsonicLyricsList?> =
         call("getLyricsBySongId.view", "id" to id).map { it.lyricsList }
 
