@@ -8,3 +8,10 @@ base_path: "."
 files:
   - source: "/app/src/main/res/values/strings*.xml"
     translation: "/app/src/main/res/values-%android_code%/%original_file_name%"
+    # Crowdin's default %android_code% carries a region (French → `fr-rFR`), which Android only
+    # matches for that one country: a French speaker in Belgium, Canada or Switzerland would get
+    # English. Map each language Crowdin translates without a regional variant to its bare code
+    # so every locale of that language resolves it. Add a line when a new language is enabled.
+    languages_mapping:
+      android_code:
+        fr: fr

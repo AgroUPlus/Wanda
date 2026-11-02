@@ -20,3 +20,4 @@ Every user-readable string lives in `res/values/strings.xml`. Crowdin translates
 - Per-app language switching uses `LocaleManager` on API 33+ and an `attachBaseContext` configuration wrapper on older versions via `AppLocaleStore`.
 - `MainActivity` is a `ComponentActivity` and must not be converted to AppCompat.
 - New translations arrive from Crowdin on the `l10n_translations` branch.
+- Translations land in bare-language folders (`values-fr`, not `values-fr-rFR`) so every country's locale of that language resolves them. `crowdin.yml`'s `languages_mapping` enforces this; add a mapping when enabling a new language that has no regional variant. Never keep both a base and a regional folder for the same translation — the stale one shadows the other for part of the audience.
