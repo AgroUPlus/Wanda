@@ -25,7 +25,8 @@ class YTMusicSource @Inject constructor(
     private val accountManager: GoogleAccountManager,
     private val innerTube: InnerTubeClient,
     private val streamResolver: YTMusicStreamResolver,
-    private val catalogLoader: YTMusicCatalogLoader
+    private val catalogLoader: YTMusicCatalogLoader,
+    private val playlistWriter: YTMusicPlaylistWriter
 ) : IMusicSource {
 
     constructor(
@@ -36,7 +37,8 @@ class YTMusicSource @Inject constructor(
         accountManager = accountManager,
         innerTube = innerTube,
         streamResolver = YTMusicStreamResolver(innerTube, streamUrlResolver),
-        catalogLoader = YTMusicCatalogLoader(innerTube)
+        catalogLoader = YTMusicCatalogLoader(innerTube),
+        playlistWriter = YTMusicPlaylistWriter(innerTube)
     )
 
     override val sourceType = SourceType.YTMUSIC
@@ -47,6 +49,7 @@ class YTMusicSource @Inject constructor(
         albums = true,
         artists = true,
         playlists = true,
+        playlistWrite = true,
         likes = true,
         radio = true,
         recommendations = true,
@@ -136,4 +139,33 @@ class YTMusicSource @Inject constructor(
         }
         return innerTube.setLiked(trackId.removePrefix(YTM_PREFIX), liked)
     }
+
+    override suspend fun createPlaylist(name: String, trackIds: List<String>): Result<String> =
+        signedIn { playlistWriter.create(name, trackIds) }
+
+    override suspend fun addToPlaylist(playlistId: String, trackIds: List<String>): Result<Unit> =
+        signedIn { playlistWriter.add(playlistId, trackIds) }
+
+    override suspend fun removeFromPlaylist(playlistId: String, index: Int): Result<Unit> =
+        signedIn { playlistWriter.remove(playlistId, index) }
+
+    override suspend fun moveInPlaylist(playlistId: String, from: Int, to: Int): Result<Unit> =
+        signedIn { playlistWriter.move(playlistId, from, to) }
+
+    override suspend fun updatePlaylistDetails(
+        playlistId: String,
+        name: String,
+        comment: String?
+    ): Result<Unit> = signedIn { playlistWriter.updateDetails(playlistId, name, comment) }
+
+    override suspend fun deletePlaylist(playlistId: String): Result<Unit> =
+        signedIn { playlistWriter.delete(playlistId) }
+
+    /** Playlist writes go to the account's own library, so they need one signed in. */
+    private inline fun <T> signedIn(write: () -> Result<T>): Result<T> =
+        if (accountManager.isLoggedIn.value) {
+            write()
+        } else {
+            Result.failure(IllegalStateException("Sign in to YouTube Music to change playlists"))
+        }
 }
