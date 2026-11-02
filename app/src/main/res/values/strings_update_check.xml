@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_update_failed_http">%1$s · GitHub refused the update check (HTTP %2$d). Tap to try again later.</string>
+    <string name="settings_update_failed_parse">%1$s · GitHub\'s latest release couldn\'t be read. Tap to try again.</string>
+</resources>

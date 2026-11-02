@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
 import com.wander.android.R
+import com.wander.android.core.update.UpdateCheckFailure
 import com.wander.android.core.update.UpdateCheckResult
 import com.wander.android.ui.components.GroupedCard
 import com.wander.android.ui.components.rememberShelfEntranceScale
@@ -68,7 +69,7 @@ internal fun LazyListScope.aboutTab(
                             state.updateCheck is UpdateCheckResult.UpToDate ->
                                 stringResource(R.string.settings_update_up_to_date, state.appVersion)
                             state.updateCheck is UpdateCheckResult.Failed ->
-                                stringResource(R.string.settings_update_failed, state.appVersion)
+                                updateFailedText(state.appVersion, state.updateCheck.reason)
                             else -> stringResource(R.string.settings_update_tap_to_check, state.appVersion)
                         },
                         // Every tap checks again, and a newer release opens on its own; see
@@ -131,4 +132,12 @@ internal fun LazyListScope.aboutTab(
             SovereigntyDialog(onDismiss = { showSovereigntyDialog = false })
         }
     }
+}
+
+/** Why the update check failed, in the row's own words: no connection, GitHub said no, or an unreadable answer. */
+@Composable
+private fun updateFailedText(appVersion: String, reason: UpdateCheckFailure): String = when (reason) {
+    UpdateCheckFailure.Network -> stringResource(R.string.settings_update_failed, appVersion)
+    is UpdateCheckFailure.Http -> stringResource(R.string.settings_update_failed_http, appVersion, reason.status)
+    UpdateCheckFailure.Parse -> stringResource(R.string.settings_update_failed_parse, appVersion)
 }
