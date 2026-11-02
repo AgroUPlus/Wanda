@@ -54,14 +54,23 @@ internal fun NavGraphBuilder.settingsNavGraph(
     tabDestination(motion, Routes.SETTINGS) {
         SettingsScreen(
             contentPadding = contentPadding,
-            onOpenCategory = { navController.navigateSettled(Routes.settingsCategory(it.name)) }
+            onOpenCategory = { category, focus ->
+                navController.navigateSettled(Routes.settingsCategory(category.name, focus))
+            }
         )
     }
 
     detailDestination(
         motion,
         route = Routes.SETTINGS_CATEGORY,
-        arguments = listOf(navArgument("category") { type = NavType.StringType })
+        arguments = listOf(
+            navArgument("category") { type = NavType.StringType },
+            navArgument("focus") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            }
+        )
     ) { entry ->
         val category = SettingsCategory.fromRoute(entry.arguments?.getString("category"))
         if (category == null) {
@@ -70,6 +79,7 @@ internal fun NavGraphBuilder.settingsNavGraph(
             val homeEditing = hiltViewModel<HomeEditingViewModel>()
             SettingsCategoryScreen(
                 category = category,
+                focusKey = entry.arguments?.getString("focus"),
                 contentPadding = contentPadding,
                 onBack = navController::popBackStack,
                 onNavidromeLogin = { navController.navigateSettled(Routes.NAVIDROME_LOGIN) },

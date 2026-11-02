@@ -14,6 +14,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
@@ -54,9 +58,12 @@ import com.wander.android.ui.components.rememberShelfEntranceScale
 @Composable
 internal fun SettingsScreen(
     contentPadding: PaddingValues,
-    onOpenCategory: (SettingsCategory) -> Unit
+    /** The page to open, and the list item on it to bring into view — null for the top. */
+    onOpenCategory: (SettingsCategory, String?) -> Unit
 ) {
     val listState = rememberLazyListState()
+    // Saved, so coming back from a page opened from the results lands on the same results.
+    var query by rememberSaveable { mutableStateOf("") }
     val topBarState = rememberTopAppBarState(initialHeightOffset = -Float.MAX_VALUE)
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topBarState)
 
@@ -81,18 +88,24 @@ internal fun SettingsScreen(
             contentPadding = contentPadding.listInset(),
             modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection)
         ) {
-            item(key = "categories") {
-                val categoryItems: List<@Composable () -> Unit> =
-                    SettingsCategory.entries.mapIndexed { index, category ->
-                        {
-                            SettingsCategoryRow(
-                                category = category,
-                                onClick = { onOpenCategory(category) },
-                                modifier = Modifier.scale(rememberShelfEntranceScale(index))
-                            )
+            item(key = "search") { SettingsSearchField(query = query, onQueryChange = { query = it }) }
+
+            if (query.isNotBlank()) {
+                settingsSearchResults(query) { entry -> onOpenCategory(entry.category, entry.focusKey) }
+            } else {
+                item(key = "categories") {
+                    val categoryItems: List<@Composable () -> Unit> =
+                        SettingsCategory.entries.mapIndexed { index, category ->
+                            {
+                                SettingsCategoryRow(
+                                    category = category,
+                                    onClick = { onOpenCategory(category, null) },
+                                    modifier = Modifier.scale(rememberShelfEntranceScale(index))
+                                )
+                            }
                         }
-                    }
-                GroupedCard(items = categoryItems)
+                    GroupedCard(items = categoryItems)
+                }
             }
         }
     }

@@ -58,11 +58,13 @@ object Routes {
      *
      * The settings are a hub of pages rather than a pager of tabs, so each group is somewhere you
      * navigate to and come back from. The argument is the category's enum name, which keeps the
-     * route stable against the labels being reworded.
+     * route stable against the labels being reworded. `focus` is the list item a settings search
+     * result opens the page at.
      */
-    const val SETTINGS_CATEGORY = "settings/{category}"
+    const val SETTINGS_CATEGORY = "settings/{category}?focus={focus}"
 
-    fun settingsCategory(category: String): String = "settings/${category.encodeForRoute()}"
+    fun settingsCategory(category: String, focus: String? = null): String =
+        "settings/${category.encodeForRoute()}" + (focus?.let { "?focus=${it.encodeForRoute()}" } ?: "")
 
     fun replay(year: Int): String = "replay/$year"
 

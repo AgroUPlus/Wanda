@@ -48,6 +48,8 @@ import com.wander.android.ui.components.listInset
 internal fun SettingsCategoryScreen(
     category: SettingsCategory,
     contentPadding: PaddingValues,
+    /** A list item key to bring into view on arrival — see [SettingsSearchEntry.focusKey]. */
+    focusKey: String? = null,
     onBack: () -> Unit,
     onNavidromeLogin: () -> Unit,
     onYouTubeLogin: () -> Unit,
@@ -73,6 +75,7 @@ internal fun SettingsCategoryScreen(
 
     val listState = rememberLazyListState()
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    ScrollToItemOnce(listState, focusKey)
 
     Column(modifier = Modifier.fillMaxSize().padding(contentPadding.headerInset())) {
         TopAppBar(
