@@ -63,17 +63,35 @@ class LibraryBrowseViewModel @Inject constructor(
     private fun sortOf(tab: LibraryTab): Flow<LibrarySort> =
         _sorts.map { it[tab] ?: tab.defaultSort }.distinctUntilChanged()
 
-    private val _sourceFilter = MutableStateFlow<SourceType?>(null)
-    val sourceFilter: StateFlow<SourceType?> = _sourceFilter.asStateFlow()
-
-    fun selectSource(source: SourceType?) { _sourceFilter.value = source }
-
-    private val sources: Flow<Set<SourceType>> = _sourceFilter.map { setOfNotNull(it) }
-
     // Configured sources only — not every registered backend, the same accessor Home's own source
     // filter uses. A source no one is signed into (Deezer before login, say) has nothing to filter
     // by and reads as a broken chip that always returns zero tracks.
     val availableSources: List<SourceType> = musicRepository.configuredSources().sorted()
+
+    /** The sources every list is narrowed to; empty for "every source", see [selectAllSources]. */
+    private val sources = MutableStateFlow<Set<SourceType>>(emptySet())
+
+    /** What the filter row shows as on: every source while nothing is narrowed. */
+    val selectedSources: StateFlow<Set<SourceType>> = sources
+        .map { it.ifEmpty { availableSources.toSet() } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, availableSources.toSet())
+
+    /** Search's rule, so the two rows behave alike: never down to no source at all. */
+    fun toggleSource(source: SourceType) {
+        val current = selectedSources.value
+        val next = if (source in current) current.minus(source).ifEmpty { current } else current + source
+        sources.value = if (next.containsAll(availableSources)) emptySet() else next
+    }
+
+    /** Back to every source, including one that connects later. */
+    fun selectAllSources() { sources.value = emptySet() }
+
+    /**
+     * The narrowing itself, empty for every source. Playlists are not all in Room — a backend's
+     * come from the network — so that page filters what it holds against this, where the other
+     * lists are narrowed in SQL.
+     */
+    val sourceFilter: StateFlow<Set<SourceType>> = sources.asStateFlow()
 
     val tracks: Flow<PagingData<UnifiedTrack>> = combine(sortOf(LibraryTab.TRACKS), sources, ::Pair)
         .flatMapLatest { (sort, filter) -> browse.pagedTracks(sort, filter) }
@@ -106,6 +124,6 @@ class LibraryBrowseViewModel @Inject constructor(
     /** Plays [track] with the rest of the Tracks tab, in the order and filter it is shown in. */
     fun playFromLibrary(track: UnifiedTrack) {
         val sort = _sorts.value[LibraryTab.TRACKS] ?: LibraryTab.TRACKS.defaultSort
-        libraryPlayback.playFromLibrary(viewModelScope, track, sort, setOfNotNull(_sourceFilter.value))
+        libraryPlayback.playFromLibrary(viewModelScope, track, sort, sources.value)
     }
 }

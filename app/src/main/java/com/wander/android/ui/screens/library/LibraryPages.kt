@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -49,8 +50,12 @@ internal fun LibraryPage(
                 onRetry = viewModel::refresh
             )
         }
-        LibraryTab.PLAYLISTS -> {
-            val playlists by viewModel.playlists.collectAsStateWithLifecycle()
+        LibraryTab.PLAYLISTS -> SortablePage(tab, browse) {
+            val all by viewModel.playlists.collectAsStateWithLifecycle()
+            val chosen by browse.sourceFilter.collectAsStateWithLifecycle()
+            val playlists = remember(all, chosen) {
+                if (chosen.isEmpty()) all else all.filter { it.source in chosen }
+            }
             PlaylistList(
                 playlists, contentPadding, viewModel, addToPlaylist, actions.onOpenPlaylist, actions.onOpenImport
             )

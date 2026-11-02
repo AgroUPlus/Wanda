@@ -21,14 +21,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.EmptyState
-import com.wander.android.ui.components.SourceFilterChips
 import com.wander.android.ui.components.SkeletonRow
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.listInset
@@ -187,7 +185,7 @@ private fun Centered(content: @Composable () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { content() }
 }
 
-/** The Tracks tab: [PagedTrackList] under its sort, and a source filter once there is more than one. */
+/** The Tracks tab: [PagedTrackList] under its [LibraryListToolbar]. */
 @Composable
 internal fun AllTracksPage(
     tracks: LazyPagingItems<UnifiedTrack>,
@@ -197,18 +195,8 @@ internal fun AllTracksPage(
     browse: LibraryBrowseViewModel,
     onLongPress: (UnifiedTrack) -> Unit
 ) {
-    val sourceFilter by browse.sourceFilter.collectAsStateWithLifecycle()
     Column(modifier = Modifier.fillMaxSize()) {
-        LibraryListToolbar(LibraryTab.TRACKS, browse) {
-            if (browse.availableSources.size > 1) {
-                SourceFilterChips(
-                    sources = browse.availableSources,
-                    selected = sourceFilter,
-                    onSelect = browse::selectSource,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-            }
-        }
+        LibraryListToolbar(LibraryTab.TRACKS, browse)
         PagedTrackList(
             tracks, LibraryTab.TRACKS, isSyncing, contentPadding,
             onPlay = browse::playFromLibrary,
