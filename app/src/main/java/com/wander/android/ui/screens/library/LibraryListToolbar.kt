@@ -10,19 +10,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.wander.android.ui.components.SourceToggleChips
+import com.wander.android.data.model.SourceType
+import com.wander.android.data.model.shortNameRes
+import com.wander.android.ui.components.SourceFilterChips
 
 /**
  * The row above a Library list: the source filter where there is more than one source to pick
  * from, and the sort button at the end for a list that can be sorted.
  *
- * The filter is the same multi-select row Search uses, and one choice for every tab: picking
- * "Navidrome" on Albums and finding Liked still showing YouTube would read as the filter failing.
+ * The filter is Home's row — "All" or one source, with the same short names — and one choice for
+ * every tab: picking "Subsonic" on Albums and finding Liked still showing YouTube would read as the
+ * filter failing.
  */
 @Composable
 internal fun LibraryListToolbar(tab: LibraryTab, browse: LibraryBrowseViewModel) {
     val sorts by browse.sorts.collectAsStateWithLifecycle()
-    val selectedSources by browse.selectedSources.collectAsStateWithLifecycle()
+    val selectedSource by browse.selectedSource.collectAsStateWithLifecycle()
     val sort = sorts[tab]
     val showsFilter = browse.availableSources.size > 1
     if (!showsFilter && sort == null) return
@@ -34,11 +37,11 @@ internal fun LibraryListToolbar(tab: LibraryTab, browse: LibraryBrowseViewModel)
     ) {
         Box(modifier = Modifier.weight(1f)) {
             if (showsFilter) {
-                SourceToggleChips(
+                SourceFilterChips(
                     sources = browse.availableSources,
-                    selected = selectedSources,
-                    onToggle = browse::toggleSource,
-                    onSelectAll = browse::selectAllSources
+                    selected = selectedSource,
+                    onSelect = browse::selectSource,
+                    label = SourceType::shortNameRes
                 )
             }
         }

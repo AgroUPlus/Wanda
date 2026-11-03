@@ -73,23 +73,21 @@ class LibraryBrowseViewModel @Inject constructor(
     // by and reads as a broken chip that always returns zero tracks.
     val availableSources: List<SourceType> = musicRepository.configuredSources().sorted()
 
-    /** The sources every list is narrowed to; empty for "every source", see [selectAllSources]. */
+    /** The sources every list is narrowed to; empty for "every source". */
     private val sources = MutableStateFlow<Set<SourceType>>(emptySet())
 
-    /** What the filter row shows as on: every source while nothing is narrowed. */
-    val selectedSources: StateFlow<Set<SourceType>> = sources
-        .map { it.ifEmpty { availableSources.toSet() } }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, availableSources.toSet())
+    /**
+     * The one source the filter row shows as chosen, null for "All" — Home's row and its rule, so
+     * the two filters look and answer alike. Kept as a set underneath: every list narrows by one.
+     */
+    val selectedSource: StateFlow<SourceType?> = sources
+        .map { it.singleOrNull() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    /** Search's rule, so the two rows behave alike: never down to no source at all. */
-    fun toggleSource(source: SourceType) {
-        val current = selectedSources.value
-        val next = if (source in current) current.minus(source).ifEmpty { current } else current + source
-        sources.value = if (next.containsAll(availableSources)) emptySet() else next
+    /** [source] alone, or every source (including one that connects later) for null. */
+    fun selectSource(source: SourceType?) {
+        sources.value = source?.let(::setOf) ?: emptySet()
     }
-
-    /** Back to every source, including one that connects later. */
-    fun selectAllSources() { sources.value = emptySet() }
 
     /**
      * The narrowing itself, empty for every source. Playlists are not all in Room — a backend's
