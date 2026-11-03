@@ -135,8 +135,7 @@ fun SyncedLyricsView(
     // the line scroll and visual onset match vocalist attack.
     val activeIndex by remember(lyrics, offsetMs) {
         derivedStateOf {
-            val playhead = positionState.value.positionMs - offsetMs + 120L
-            lyrics.lines.indexOfLast { it.timestampMs <= playhead }
+            lyricLineIndexAt(lyrics.lines, positionState.value.positionMs, offsetMs, leadMs = 120L)
                 .coerceAtLeast(0)
         }
     }

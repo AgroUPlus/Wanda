@@ -246,7 +246,8 @@ internal fun StandardPlayerLayout(
                 modifier = Modifier.padding(top = PlayerRowGap),
                 isLive = track.isLive,
                 isPlaying = state.isPlaying,
-                isSeekable = state.isSeekable
+                isSeekable = state.isSeekable,
+                scrubLyricAt = rememberScrubLyricLookup(viewModel, track.id)
             )
 
             PlayerControls(

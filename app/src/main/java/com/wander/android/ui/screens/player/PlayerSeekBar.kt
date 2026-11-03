@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.rememberPlaybackPosition
@@ -56,7 +57,8 @@ fun PlayerSeekBar(
     isPlaying: Boolean = true,
     isSeekable: Boolean = true,
     inlineLabels: Boolean = false,
-    showScrubTooltip: Boolean = true
+    showScrubTooltip: Boolean = true,
+    scrubLyricAt: ((Long) -> String?)? = null
 ) {
     val position by rememberPlaybackPosition(playerConnection, intervalMs = 250L)
     PlayerSeekBarInternal(
@@ -68,7 +70,8 @@ fun PlayerSeekBar(
         isPlaying = isPlaying,
         isSeekable = isSeekable,
         inlineLabels = inlineLabels,
-        showScrubTooltip = showScrubTooltip
+        showScrubTooltip = showScrubTooltip,
+        scrubLyricAt = scrubLyricAt
     )
 }
 
@@ -82,10 +85,12 @@ fun PlayerSeekBar(
     isPlaying: Boolean = true,
     isSeekable: Boolean = true,
     inlineLabels: Boolean = false,
-    showScrubTooltip: Boolean = true
+    showScrubTooltip: Boolean = true,
+    scrubLyricAt: ((Long) -> String?)? = null
 ) {
     PlayerSeekBarInternal(
-        positionMs, durationMs, onSeek, modifier, isLive, isPlaying, isSeekable, inlineLabels, showScrubTooltip
+        positionMs, durationMs, onSeek, modifier, isLive, isPlaying, isSeekable, inlineLabels, showScrubTooltip,
+        scrubLyricAt
     )
 }
 
@@ -106,13 +111,20 @@ private fun PlayerSeekBarInternal(
      * the bar clear of the words behind it. The track gives up the width the labels take.
      */
     inlineLabels: Boolean = false,
-    showScrubTooltip: Boolean = true
+    showScrubTooltip: Boolean = true,
+    /**
+     * The synced lyric line at a song position, for the scrub bubble; null when the track has no
+     * time-synced lyrics, and the bubble shows the time alone. Asked only while a finger is down.
+     */
+    scrubLyricAt: ((Long) -> String?)? = null
 ) {
     var scrubbing by remember { mutableFloatStateOf(-1f) }
     var lastTickInterval by remember { mutableIntStateOf(-1) }
     // The fraction just released, held onto after the finger lifts so the thumb doesn't fall back
     // to the pre-seek `positionMs` for the frame or two before the player reports the new one.
     var pendingSeekFraction by remember { mutableFloatStateOf(-1f) }
+    // Read only in the bubble's layout pass, so the slider being measured never recomposes it.
+    var sliderWidthPx by remember { mutableIntStateOf(0) }
     val haptics = rememberHaptics()
     val fraction = when {
         scrubbing >= 0f -> scrubbing
@@ -210,15 +222,21 @@ private fun PlayerSeekBarInternal(
                 lastTickInterval = -1
             },
             enabled = durationMs > 0L && isSeekable,
+            modifier = Modifier.onSizeChanged { sliderWidthPx = it.width },
             thumb = {
                 Box(
                     modifier = Modifier.size(ThumbSlotSize),
                     contentAlignment = Alignment.Center
                 ) {
                     if (showScrubTooltip) {
+                        val targetMs = (fraction * durationMs).toLong()
                         ScrubTooltip(
                             visible = isScrubbing,
-                            text = formatTime((fraction * durationMs).toLong())
+                            time = formatTime(targetMs),
+                            line = if (isScrubbing) scrubLyricAt?.invoke(targetMs) else null,
+                            fraction = fraction,
+                            barWidthPx = { sliderWidthPx },
+                            thumbInset = TrackInset
                         )
                     }
                     SeekBarThumb(width = thumbWidth, height = thumbHeight)
@@ -266,18 +284,6 @@ private fun PlayerSeekBarInternal(
  * everything around it. Material's slider is 48.dp of touch target; the labels add the rest.
  */
 private val LiveRowHeight = 68.dp
-
-/**
- * The box the thumb is laid out in, and the dot (or bar, while scrubbing) drawn inside it.
- *
- * The slot is sized for the *largest* the dot ever gets, so growing it under a finger does not
- * change the slider's own measurement and shift the track beneath it.
- */
-private val ThumbSlotSize = 24.dp
-private val RestingThumbSize = 14.dp
-
-/** Half the thumb slot — the padding the slider keeps clear at each end of the track. */
-private val TrackInset = ThumbSlotSize / 2
 
 /** How close `positionMs` must land to the seek target to count as "caught up." */
 private const val SeekSettleToleranceMs = 400L

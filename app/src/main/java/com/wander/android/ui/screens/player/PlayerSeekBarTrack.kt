@@ -18,6 +18,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
+/**
+ * The box the thumb is laid out in, and the dot (or bar, while scrubbing) drawn inside it.
+ *
+ * The slot is sized for the *largest* the dot ever gets, so growing it under a finger does not
+ * change the slider's own measurement and shift the track beneath it.
+ */
+internal val ThumbSlotSize = 24.dp
+internal val RestingThumbSize = 14.dp
+
+/** Half the thumb slot — the padding the slider keeps clear at each end of the track. */
+internal val TrackInset = ThumbSlotSize / 2
+
 /** The dot's width while a finger holds it — narrower than at rest, since it's now a bar. */
 internal val ScrubbingThumbWidth = 6.dp
 
