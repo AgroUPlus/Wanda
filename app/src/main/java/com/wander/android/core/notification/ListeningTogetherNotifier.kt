@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
 import com.wander.android.MainActivity
@@ -22,13 +21,32 @@ import javax.inject.Singleton
  *
  * Someone listening along hears everything you play. That notification carries a way out:
  * "Go incognito" ends every listen-along session following this account, server-side.
+ *
+ * Dressed like the friend notifications ([WandaNotificationStyle]): the accent, one group with a
+ * silent summary, and only "Listening together" on the lock screen — who is listening to you is
+ * as private as who writes to you.
  */
 @Singleton
 internal class ListeningTogetherNotifier @Inject constructor(
     @param:ApplicationContext private val context: Context
 ) {
+    private val style = WandaNotificationStyle(
+        context = context,
+        channelId = CHANNEL_ID,
+        smallIcon = R.drawable.ic_stat_together,
+        group = GROUP,
+        summaryId = SUMMARY_ID
+    ) {
+        NotificationChannel(
+            CHANNEL_ID,
+            context.getString(R.string.together_channel_name),
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply { description = context.getString(R.string.together_channel_description) }
+    }
+
     fun listenerJoined(username: String) = post(
-        id = LISTENER_ID_BASE + username.lowercase().hashCode(),
+        tag = listenerTag(username),
+        id = LISTENER_ID,
         builder = base(context.getString(R.string.together_listener_joined_title, username))
             .setContentText(context.getString(R.string.together_listener_joined_body))
             .setContentIntent(openIntent(PRIVACY_URI, PRIVACY_REQUEST_CODE))
@@ -40,9 +58,7 @@ internal class ListeningTogetherNotifier @Inject constructor(
     )
 
     /** Someone stopped following: their "is listening along" is no longer true, so it goes. */
-    fun listenerLeft(username: String) {
-        manager()?.cancel(LISTENER_ID_BASE + username.lowercase().hashCode())
-    }
+    fun listenerLeft(username: String) = style.cancel(listenerTag(username), LISTENER_ID)
 
     /** Clears every listener notification — after going incognito, none of them is true any more. */
     fun clearListeners(usernames: Collection<String>) = usernames.forEach(::listenerLeft)
@@ -55,7 +71,8 @@ internal class ListeningTogetherNotifier @Inject constructor(
 
     /** One per person: a join followed by a leave replaces rather than stacks. */
     private fun postJam(username: String, title: Int, roomSize: Int) = post(
-        id = JAM_ID_BASE + username.lowercase().hashCode(),
+        tag = "jam:${username.lowercase()}",
+        id = JAM_ID,
         builder = base(context.getString(title, username))
             .setContentText(
                 context.resources.getQuantityString(R.plurals.together_jam_room_size, roomSize, roomSize)
@@ -65,25 +82,13 @@ internal class ListeningTogetherNotifier @Inject constructor(
     )
 
     private fun base(title: String): NotificationCompat.Builder =
-        NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_stat_together)
-            .setContentTitle(title)
-            .setCategory(NotificationCompat.CATEGORY_SOCIAL)
-            .setColor(ACCENT)
-            .setGroup(GROUP)
-            .setOnlyAlertOnce(true)
-            .setAutoCancel(true)
+        style.builder(context.getString(R.string.together_channel_name)).setContentTitle(title)
 
-    private fun post(id: Int, builder: NotificationCompat.Builder) {
-        ensureChannel()
-        // Refused POST_NOTIFICATIONS throws on API 33+; the frame that brought this news still has
-        // the rest of its work to do, so a refusal is logged rather than allowed to propagate.
-        try {
-            manager()?.notify(id, builder.build())
-        } catch (e: SecurityException) {
-            Log.i(TAG, "could not post the listening-together notification", e)
-        }
-    }
+    // A refused POST_NOTIFICATIONS is handled by the style: the frame that brought this news still
+    // has the rest of its work to do.
+    private fun post(tag: String, id: Int, builder: NotificationCompat.Builder) = style.post(tag, id, builder.build())
+
+    private fun listenerTag(username: String) = "listener:${username.lowercase()}"
 
     private fun openIntent(uri: String, requestCode: Int): PendingIntent {
         val intent = Intent(context, MainActivity::class.java).apply {
@@ -104,28 +109,13 @@ internal class ListeningTogetherNotifier @Inject constructor(
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
 
-    private fun manager(): NotificationManager? = context.getSystemService(NotificationManager::class.java)
-
-    private fun ensureChannel() {
-        val manager = manager() ?: return
-        if (manager.getNotificationChannel(CHANNEL_ID) != null) return
-        manager.createNotificationChannel(
-            NotificationChannel(
-                CHANNEL_ID,
-                context.getString(R.string.together_channel_name),
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply { description = context.getString(R.string.together_channel_description) }
-        )
-    }
-
     private companion object {
-        const val TAG = "ListeningTogether"
         const val CHANNEL_ID = "wanda_together"
         const val GROUP = "wanda_together"
-        /** The brand's tertiary tone, so these read as the app's own rather than as system chrome. */
-        const val ACCENT = 0xFF7D5260.toInt()
-        const val LISTENER_ID_BASE = 44_000
-        const val JAM_ID_BASE = 45_000
+        // Tagged by person, so these ids only need to be apart from each other and the summary's.
+        const val LISTENER_ID = 1
+        const val JAM_ID = 2
+        const val SUMMARY_ID = 45_999
         const val JAM_REQUEST_CODE = 4401
         const val PRIVACY_REQUEST_CODE = 4402
         const val INCOGNITO_REQUEST_CODE = 4403
