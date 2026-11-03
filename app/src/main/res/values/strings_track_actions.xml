@@ -28,7 +28,6 @@
     </plurals>
 
     <!-- Row accessibility -->
-    <string name="common_more_options_for">More options for %1$s</string>
 
     <!-- Swiping a track row -->
     <string name="swipe_playing_next">“%1$s” plays next</string>
