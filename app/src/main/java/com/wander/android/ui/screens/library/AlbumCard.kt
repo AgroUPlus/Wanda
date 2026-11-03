@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.ui.components.Artwork
+import com.wander.android.ui.components.CARD_ARTWORK_CORNER
+import com.wander.android.ui.components.HERO_ARTWORK_CORNER
 import com.wander.android.ui.components.rememberPressScale
 import com.wander.android.ui.components.rememberShelfArtworkShape
 import com.wander.android.ui.components.rememberShelfEntranceScale
@@ -71,7 +73,7 @@ fun AlbumCard(
             sizeDp = artworkSize,
             shape = artworkShape,
             modifier = Modifier
-                .sharedArtwork(sharedKey, artworkShape)
+                .sharedArtwork(sharedKey, CARD_ARTWORK_CORNER, HERO_ARTWORK_CORNER)
                 .fillMaxWidth()
                 .aspectRatio(1f)
         )
