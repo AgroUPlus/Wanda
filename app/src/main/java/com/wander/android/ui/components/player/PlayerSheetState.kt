@@ -215,8 +215,9 @@ class PlayerSheetState(
      */
     val isBackHandlerEnabled: Boolean get() = targetValue == PlayerSheetValue.EXPANDED
 
-    internal suspend fun settle(velocity: Float) {
-        if (maxOffsetPx <= 0f) return
+    /** Springs to the anchor the release points at; true when the sheet actually travelled to it. */
+    internal suspend fun settle(velocity: Float): Boolean {
+        if (maxOffsetPx <= 0f) return false
         val target = when {
             velocity < -FLING_VELOCITY -> 0f
             velocity > FLING_VELOCITY -> maxOffsetPx
@@ -229,8 +230,9 @@ class PlayerSheetState(
         // to an offset it already holds still lets the overshoot carry it *past* the anchor, and
         // the whole sheet lifted off the top of the screen for a frame or two on release. There
         // is no travel to animate, so there is nothing to animate.
-        if (offset.value == target) return
+        if (offset.value == target) return false
         offset.animateTo(target, animationSpec, initialVelocity = velocity)
+        return true
     }
 
     companion object {

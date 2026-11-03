@@ -851,6 +851,7 @@
     <string name="queue_from">%1$s · from @%2$s</string>
     <string name="queue_members_tap_open_jam">%1$s members · Tap to open Jam</string>
     <string name="queue_removed">Removed %1$s</string>
+    <string name="player_dismissed">Playback paused</string>
     <string name="queue_reorder">Reorder %1$s</string>
     <string name="queue_now_playing">Now playing</string>
     <string name="queue_section_up_next">Up next</string>

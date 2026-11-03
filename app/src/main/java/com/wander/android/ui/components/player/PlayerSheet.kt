@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -117,6 +118,8 @@ fun PlayerSheet(
      * can leave this at its default, since the flat fallback path never reads it.
      */
     seekProgress: () -> Float = { 0f },
+    /** Lets a pull on the resting strip put the player away; null leaves the strip undismissable. */
+    dockedDismiss: DockedDismiss? = null,
     content: @Composable (progress: () -> Float, rawProgress: () -> Float, expandedHeight: Dp) -> Unit
 ) {
     val bottomInset = dock.bottomInset
@@ -177,6 +180,13 @@ fun PlayerSheet(
 
         SheetBackHandler(sheetState)
 
+        // An undo that lands while the dismiss exit is still running reverses it in place, so this
+        // composition never left and nothing re-measured the travel — bring the strip back up here.
+        val returnSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+        LaunchedEffect(isVisible) {
+            if (isVisible) sheetState.returnToDock(returnSpec)
+        }
+
         // One colour, not two — docked and expanded now paint the same surface, and
         // `drawPlayerSheetBackground` no longer scales the cover tint by how open the sheet is
         // either, so this is genuinely one flat colour at every point of the drag, not just the
@@ -214,7 +224,7 @@ fun PlayerSheet(
                     drawPlayerSheetBackground(baseColor, coverSeed, seekProgress())
                 }
                 .sheetLayout(sheetState, sheetHeight) { dockedHeightState.value }
-                .sheetDraggable(sheetState)
+                .sheetDraggable(sheetState, dockedDismiss, sheetHeight)
         ) {
             // A bare Box, unlike Surface, sets no content colour — so every Text and Icon in the
             // player fell back to the default and rendered black on a dark surface.

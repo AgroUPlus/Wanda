@@ -179,6 +179,9 @@ class PlayerConnection @Inject constructor(
         if (ctrl.isPlaying) ctrl.pause() else ctrl.resumeAtLiveEdge()
     }
 
+    fun pause() { if (!isFollowing) _controller.value?.pause() }
+    fun resume() { if (!isFollowing) _controller.value?.resumeAtLiveEdge() }
+
     private fun MediaController.resumeAtLiveEdge() {
         if (state.value.currentTrack?.isLive == true) seekToDefaultPosition()
         play()

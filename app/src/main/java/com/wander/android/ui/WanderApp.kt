@@ -86,6 +86,8 @@ fun WanderApp(
     val listenAlongSession = socialViewModel.state.collectAsStateWithLifecycle().value.session
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val dismissal = rememberMiniPlayerDismissal(playerConnection, playbackState, snackbarHostState)
+    val showsMiniPlayer = hasTrack && !dismissal.isDismissed
     val jamViewModel: JamViewModel = hiltViewModel()
     val jamState by jamViewModel.state.collectAsStateWithLifecycle()
     val listenersViewModel: ListenersViewModel = hiltViewModel()
@@ -103,7 +105,7 @@ fun WanderApp(
     val motionScheme = MaterialTheme.motionScheme
     val dockMetrics = calculateDockMetrics(
         showDockRow = showDockRow,
-        hasTrack = hasTrack,
+        hasTrack = showsMiniPlayer,
         showChrome = showChrome
     )
     val dockInset = dockMetrics.dockInset
@@ -209,7 +211,7 @@ fun WanderApp(
                     navController = navController,
                     viewModel = viewModel,
                     motionScheme = motionScheme,
-                    visibility = DockVisibility(currentRoute, showDockRow, hasTrack, railInset),
+                    visibility = DockVisibility(currentRoute, showDockRow, showsMiniPlayer, railInset),
                     sheetState = sheetState,
                     dockInset = dockInset
                 )
@@ -223,8 +225,9 @@ fun WanderApp(
                         dockedHeight = dockedPlayerHeight,
                         pairedWithDockRow = showDockRow
                     ),
-                    isVisible = hasTrack && showChrome,
+                    isVisible = showsMiniPlayer && showChrome,
                     coverSeed = shellCoverSeed,
+                    dockedDismiss = dismissal.gesture,
                     seekProgress = {
                         com.wander.android.core.playback.progressOf(
                             playbackPosition.value.positionMs,

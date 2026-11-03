@@ -818,6 +818,7 @@
     <string name="queue_from">%1$s · depuis @%2$s</string>
     <string name="queue_members_tap_open_jam">%1$s membres · Cliquez pour ouvrir la jam</string>
     <string name="queue_removed">%1$s retiré</string>
+    <string name="player_dismissed">Lecture mise en pause</string>
     <string name="queue_reorder">Réorganiser %1$s</string>
     <string name="queue_now_playing">En cours de lecture</string>
     <string name="queue_section_up_next">À suivre</string>
