@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Snackbar when a radio started from a song finds nothing that sounds like it. -->
+    <string name="radio_nothing_similar">Couldn\'t find anything similar to this song yet</string>
+</resources>

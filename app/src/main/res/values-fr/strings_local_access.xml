@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings › Connections › Music on this device: subtitle while audio access is missing; tapping the row asks for it. -->
+    <string name="settings_local_access_needed">Needs permission to read audio files. Tap to allow</string>
+    <!-- Same row once Android no longer shows the permission dialog; tapping opens the app's system settings page. -->
+    <string name="settings_local_access_blocked">Access to audio files is blocked. Tap to allow it in system settings</string>
+    <!-- Same row when no folder is chosen and the whole device is scanned. -->
+    <string name="settings_local_whole_device">Whole device</string>
+</resources>

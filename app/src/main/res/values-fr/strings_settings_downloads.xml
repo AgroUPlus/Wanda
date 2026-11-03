@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings → Playback & storage → Downloads: what the background sweep fetches. -->
+    <string name="settings_section_downloads">Downloads</string>
+    <string name="settings_auto_download_liked">Download liked songs</string>
+    <string name="settings_auto_download_liked_sub">Keeps the songs you like on this phone, a few at a time, while it charges.</string>
+    <string name="settings_auto_download_predicted">Also download predicted songs</string>
+    <string name="settings_auto_download_predicted_sub">Fills spare room with songs you are likely to play next, judged from when and how often you play them.</string>
+    <string name="settings_download_wifi_only">Only on Wi-Fi</string>
+    <string name="settings_download_wifi_only_sub">Turn off to let downloads use mobile data too. Downloading still waits for the phone to charge.</string>
+    <string name="settings_download_limit">Storage limit</string>
+    <string name="settings_download_limit_sub">Downloading stops once downloads take up this much.</string>
+    <string name="settings_delete_all_downloads">Delete all downloads</string>
+    <string name="settings_delete_all_downloads_sub">Removes every downloaded song from this phone. They still play by streaming.</string>
+    <string name="settings_delete_all_downloads_confirm_title">Delete all downloads?</string>
+    <string name="settings_delete_all_downloads_confirm_message">Every downloaded song is removed from this phone and plays by streaming from now on. Liked songs download again later if downloading liked songs stays on.</string>
+    <string name="settings_delete_all_downloads_confirm">Delete</string>
+    <!-- Shown above the download settings when the last run found the phone full. -->
+    <string name="settings_downloads_storage_full">Downloads paused: storage full</string>
+    <string name="settings_downloads_storage_full_sub">There is no room left on this phone for more music. Free up some space and downloading picks up again by itself.</string>
+    <string name="settings_stream_cache_size">Streaming cache size</string>
+    <string name="settings_stream_cache_size_sub">How much recently played music is kept to replay without data. Takes effect the next time Wanda starts.</string>
+    <!-- Size choices: a cap that is not a cap, megabytes, gigabytes. -->
+    <string name="settings_size_unlimited">No limit</string>
+    <string name="settings_size_mb">%1$d MB</string>
+    <string name="settings_size_gb">%1$d GB</string>
+</resources>

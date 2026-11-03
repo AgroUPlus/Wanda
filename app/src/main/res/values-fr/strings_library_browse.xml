@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Library track lists: empty states -->
+    <string name="library_liked_empty_title">Nothing liked yet</string>
+    <string name="library_liked_empty_message">Tap the heart on any track to keep it here.</string>
+    <string name="library_downloads_empty_title">Nothing saved offline</string>
+    <string name="library_downloads_empty_message">Liked tracks download automatically on Wi-Fi while your phone is charging.</string>
+    <string name="library_tracks_empty_title">Your library is empty</string>
+    <string name="library_tracks_empty_message">Connect a source in Settings, or grant access to music on this device.</string>
+    <!-- Library: Artists and Genres -->
+    <string name="library_tab_artists">Artists</string>
+    <string name="library_tab_genres">Genres</string>
+    <plurals name="library_track_count">
+        <item quantity="one">%d track</item>
+        <item quantity="other">%d tracks</item>
+    </plurals>
+    <string name="library_artists_empty_title">No artists yet</string>
+    <string name="library_artists_empty_message">Artists show up here as music arrives from your sources.</string>
+    <string name="library_genres_empty_title">No genres yet</string>
+    <string name="library_genres_empty_message">Genres come from the tags on your tracks. Tracks without one are not listed here.</string>
+    <string name="library_genre_empty_title">No matching tracks</string>
+    <string name="library_genre_empty_message">No tracks in this genre match the sources you picked.</string>
+    <!-- Library list sort orders -->
+    <string name="library_sort_by">Sort: %1$s</string>
+    <string name="library_sort_title">Title</string>
+    <string name="library_sort_artist">Artist</string>
+    <string name="library_sort_album">Album</string>
+    <string name="library_sort_date_added">Date added</string>
+    <string name="library_sort_year">Year</string>
+    <string name="library_sort_most_played">Most played</string>
+    <string name="library_sort_recently_played">Recently played</string>
+</resources>
