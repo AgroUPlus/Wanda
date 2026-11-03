@@ -1,6 +1,5 @@
 package com.wander.android.ui.screens.library
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Icon
@@ -24,7 +22,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -38,23 +35,16 @@ import com.wander.android.R
 import com.wander.android.data.model.HistoryTrack
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.EmptyState
-import com.wander.android.ui.components.GroupedInnerRadius
-import com.wander.android.ui.components.GroupedItemGap
-import com.wander.android.ui.components.GroupedOuterRadius
 import com.wander.android.ui.components.SkeletonRow
-import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.nestedListInset
 import com.wander.android.ui.components.rememberShelfEntranceScale
 import com.wander.android.ui.components.selection.TrackSelectionBar
 import com.wander.android.ui.components.selection.TrackSelectionState
 import com.wander.android.ui.components.selection.rememberTrackSelectionState
-import java.time.Instant
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 private const val SKELETON_ROWS = 8
-private val PlayTime: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 /**
  * Everything you have played, newest first, grouped by the day it happened.
@@ -204,46 +194,8 @@ private fun HistoryEntry(
             onToggleLike = { viewModel.toggleLike(entry.track) },
             onLongPress = selection.onLongPress(item) { onLongPress(entry) },
             selected = selection.stateOf(item.key),
+            swipeEnabled = !selection.isActive,
             zone = zone
         )
     }
-}
-
-@Composable
-private fun HistoryRow(
-    entry: HistoryTrack,
-    isFirstOfDay: Boolean,
-    isLastOfDay: Boolean,
-    onPlay: () -> Unit,
-    onToggleLike: () -> Unit,
-    onLongPress: (() -> Unit)?,
-    selected: Boolean?,
-    zone: ZoneId
-) {
-    TrackRow(
-        track = entry.track,
-        onPlay = onPlay,
-        onToggleLike = onToggleLike,
-        onLongPress = onLongPress,
-        selected = selected,
-        trailingLabel = Instant.ofEpochMilli(entry.playedAt).atZone(zone).toLocalTime().format(PlayTime),
-        modifier = Modifier.dayGroupedItem(isFirstOfDay, isLastOfDay)
-    )
-}
-
-/**
- * The grouped-card look ([groupedListItem][com.wander.android.ui.components.groupedListItem]),
- * driven by day-group edges instead of list position — a day's plays are the "card" here, not the
- * whole page, and a page boundary mid-day must not draw a seam paging alone did not create.
- */
-@Composable
-private fun Modifier.dayGroupedItem(isFirstOfDay: Boolean, isLastOfDay: Boolean): Modifier {
-    val top = if (isFirstOfDay) GroupedOuterRadius else GroupedInnerRadius
-    val bottom = if (isLastOfDay) GroupedOuterRadius else GroupedInnerRadius
-    val shape = RoundedCornerShape(topStart = top, topEnd = top, bottomStart = bottom, bottomEnd = bottom)
-    return this
-        .padding(horizontal = 16.dp)
-        .padding(top = if (isFirstOfDay) 0.dp else GroupedItemGap)
-        .clip(shape)
-        .background(MaterialTheme.colorScheme.surfaceContainer)
 }

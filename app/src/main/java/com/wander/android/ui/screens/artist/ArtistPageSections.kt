@@ -1,8 +1,5 @@
 package com.wander.android.ui.screens.artist
 
-import com.wander.android.ui.components.rememberShelfEntranceScale
-import androidx.compose.ui.draw.scale
-import com.wander.android.ui.components.groupedListItem
 import com.wander.android.data.repository.newestFirst
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,7 +26,6 @@ import com.wander.android.data.model.RelatedArtist
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.SkeletonCard
-import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.screens.library.AlbumCard
 import com.wander.android.ui.components.albumArtKey
 
@@ -83,11 +79,10 @@ internal fun LazyListScope.artistPageSections(
             key = { _, track -> "song-${track.id}" },
             contentType = { _, _ -> "track" }
         ) { index, track ->
-            TrackRow(
-                track = track,
+            ArtistTrackRow(
+                track, index, shown.size,
                 onPlay = { onPlaySong(index) },
-                onLongPress = { onLongPressTrack(track) },
-                modifier = Modifier.animateItem().scale(rememberShelfEntranceScale(index)).groupedListItem(index, shown.size)
+                onLongPress = { onLongPressTrack(track) }
             )
         }
     }
@@ -98,11 +93,10 @@ internal fun LazyListScope.artistPageSections(
         }
         // One at a time, like the Podcasts tab: an episode is not the start of a queue of others.
         itemsIndexed(page.episodes, key = { _, it -> "episode-${it.id}" }, contentType = { _, _ -> "track" }) { index, track ->
-            TrackRow(
-                track = track,
+            ArtistTrackRow(
+                track, index, page.episodes.size,
                 onPlay = { onPlayTrack(track) },
-                onLongPress = { onLongPressTrack(track) },
-                modifier = Modifier.animateItem().scale(rememberShelfEntranceScale(index)).groupedListItem(index, page.episodes.size)
+                onLongPress = { onLongPressTrack(track) }
             )
         }
     }
@@ -113,11 +107,10 @@ internal fun LazyListScope.artistPageSections(
     if (page.videos.isNotEmpty()) {
         item(key = "videos-title", contentType = SECTION_TITLE) { ArtistSectionTitle(stringResource(R.string.artist_videos_title)) }
         itemsIndexed(page.videos, key = { _, it -> "video-${it.id}" }, contentType = { _, _ -> "track" }) { index, track ->
-            TrackRow(
-                track = track,
+            ArtistTrackRow(
+                track, index, page.videos.size,
                 onPlay = { onPlayTrack(track) },
-                onLongPress = { onLongPressTrack(track) },
-                modifier = Modifier.animateItem().scale(rememberShelfEntranceScale(index)).groupedListItem(index, page.videos.size)
+                onLongPress = { onLongPressTrack(track) }
             )
         }
     }
@@ -139,11 +132,10 @@ internal fun LazyListScope.artistPageSections(
                 key = { _, it -> "other-${section.title}-${it.id}" },
                 contentType = { _, _ -> "track" }
             ) { index, track ->
-                TrackRow(
-                    track = track,
+                ArtistTrackRow(
+                    track, index, section.tracks.size,
                     onPlay = { onPlayTrack(track) },
-                    onLongPress = { onLongPressTrack(track) },
-                    modifier = Modifier.animateItem().scale(rememberShelfEntranceScale(index)).groupedListItem(index, section.tracks.size)
+                    onLongPress = { onLongPressTrack(track) }
                 )
             }
         }

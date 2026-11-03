@@ -2,14 +2,9 @@ package com.wander.android.ui.screens.artist
 
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
 import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
-import com.wander.android.ui.components.TrackRow
-import com.wander.android.ui.components.groupedListItem
-import com.wander.android.ui.components.rememberShelfEntranceScale
 
 /**
  * The songs by this artist the user has liked, ahead of everything the backends say about them.
@@ -45,14 +40,6 @@ internal fun LazyListScope.artistLibrarySection(
         key = { _, track -> "liked-${track.id}" },
         contentType = { _, _ -> "track" }
     ) { index, track ->
-        TrackRow(
-            track = track,
-            onPlay = { onPlay(index) },
-            onLongPress = { onLongPress(track) },
-            modifier = Modifier
-                .animateItem()
-                .scale(rememberShelfEntranceScale(index))
-                .groupedListItem(index, shown.size)
-        )
+        ArtistTrackRow(track, index, shown.size, onPlay = { onPlay(index) }, onLongPress = { onLongPress(track) })
     }
 }
