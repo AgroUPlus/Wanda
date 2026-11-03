@@ -78,7 +78,8 @@ fun CompactHeroTopBar(
 ) {
     val collapseDistancePx = with(LocalDensity.current) { CollapseDistance.toPx() }
     SideEffect { titleState.collapseDistancePx = collapseDistancePx }
-    Box(modifier = modifier.fillMaxWidth()) {
+    // Over a cover flying into the hero below it, so the back arrow never disappears under it.
+    Box(modifier = modifier.aboveSharedArtwork(layer = 2f).fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
