@@ -52,6 +52,7 @@ fun WandaSheet(
     val scope = rememberCoroutineScope()
     val backProgress = remember { Animatable(0f) }
     val cancelSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+    val haptics = rememberHaptics()
 
     val animatedDismiss: () -> Unit = {
         scope.launch { sheetState.hide() }.invokeOnCompletion { onDismissRequest() }
@@ -73,8 +74,17 @@ fun WandaSheet(
         }
     ) {
         PredictiveBackHandler(enabled = true) { progress ->
+            // Whether a finger drove this back at all: a back key or the three-button bar completes
+            // the flow without a single event, and an ordinary press stays silent.
+            var swiped = false
             try {
-                progress.collect { backProgress.snapTo(it.progress) }
+                progress.collect {
+                    swiped = true
+                    backProgress.snapTo(it.progress)
+                }
+                // A released swipe that carries the sheet away, answered the same way as every
+                // other committed back swipe ([PredictiveBack]).
+                if (swiped) haptics.settled()
                 animatedDismiss()
             } catch (_: CancellationException) {
                 // An abandoned swipe springs the sheet back to full size rather than snapping.

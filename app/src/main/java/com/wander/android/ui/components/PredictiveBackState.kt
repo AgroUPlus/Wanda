@@ -67,6 +67,7 @@ fun PredictiveBack(state: PredictiveBackState, enabled: Boolean, onBack: () -> U
     val scope = rememberCoroutineScope()
     val settleSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     val currentOnBack by rememberUpdatedState(onBack)
+    val haptics = rememberHaptics()
     // Whatever the last committed swipe left, the next page opens whole.
     LaunchedEffect(enabled) { if (enabled && !state.swiping) state.swipe.snapTo(0f) }
     PredictiveBackHandler(enabled = enabled) { events ->
@@ -76,6 +77,10 @@ fun PredictiveBack(state: PredictiveBackState, enabled: Boolean, onBack: () -> U
                 state.lean = backLean(event.swipeEdge)
                 state.swipe.snapTo(event.progress)
             }
+            // A back key or the three-button bar completes the flow without a single event, so
+            // [swiping] is still false here: only a released swipe is told that it landed. A button
+            // press is an ordinary tap, and those stay silent.
+            if (state.swiping) haptics.settled()
             state.swiping = false
             currentOnBack()
         } catch (_: CancellationException) {
