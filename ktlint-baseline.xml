@@ -2,43 +2,18 @@
 <baseline version="1.0">
     <file name="app/src/main/java/com/wander/android/AppIntentHandler.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="157" column="121" source="standard:max-line-length" />
-        <error line="161" column="121" source="standard:max-line-length" />
-        <error line="184" column="29" source="standard:function-literal" />
-        <error line="184" column="30" source="standard:wrapping" />
-        <error line="184" column="121" source="standard:max-line-length" />
-        <error line="184" column="148" source="standard:function-literal" />
     </file>
-    <file name="app/src/main/java/com/wander/android/MainActivity.kt">
-        <error line="32" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="33" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="34" column="1" source="standard:spacing-between-declarations-with-annotations" />
+    <file name="app/src/main/java/com/wander/android/SharedMediaLinkOpener.kt">
+        <error line="103" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/WanderApplication.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="32" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="33" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="34" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="35" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="36" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="37" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="38" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="39" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="40" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="41" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="42" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="53" column="72" source="standard:function-expression-body" />
-        <error line="159" column="1" source="standard:no-consecutive-blank-lines" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/audio/features/FeatureExtractor.kt">
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/audio/fingerprint/AudioEmbedder.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="92" column="28" source="standard:multiline-if-else" />
-        <error line="93" column="18" source="standard:multiline-if-else" />
-        <error line="132" column="43" source="standard:no-multi-spaces" />
-        <error line="133" column="39" source="standard:no-multi-spaces" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/audio/fingerprint/EmbeddingModelManager.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -47,7 +22,7 @@
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/audio/fingerprint/FingerprintIndexing.kt">
-        <error line="70" column="121" source="standard:max-line-length" />
+        <error line="114" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/audio/fingerprint/FingerprintProgress.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -60,23 +35,11 @@
         <error line="219" column="5" source="standard:kdoc" />
         <error line="220" column="5" source="standard:spacing-between-declarations-with-comments" />
     </file>
-    <file name="app/src/main/java/com/wander/android/core/audio/fingerprint/PcmDecoder.kt">
-        <error line="101" column="36" source="standard:multiline-if-else" />
-        <error line="102" column="18" source="standard:multiline-if-else" />
-    </file>
     <file name="app/src/main/java/com/wander/android/core/audio/recognition/RecognitionActivity.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="135" column="120" source="standard:max-line-length" />
-        <error line="159" column="120" source="standard:max-line-length" />
-        <error line="199" column="69" source="standard:function-literal" />
-        <error line="199" column="70" source="standard:wrapping" />
-        <error line="199" column="121" source="standard:max-line-length" />
-        <error line="199" column="143" source="standard:function-literal" />
-        <error line="210" column="121" source="standard:max-line-length" />
-        <error line="211" column="69" source="standard:function-literal" />
-        <error line="211" column="70" source="standard:wrapping" />
-        <error line="211" column="121" source="standard:max-line-length" />
-        <error line="211" column="140" source="standard:function-literal" />
+        <error line="136" column="120" source="standard:max-line-length" />
+        <error line="160" column="120" source="standard:max-line-length" />
+        <error line="213" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/audio/recognition/RecognitionTileService.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -93,24 +56,19 @@
     </file>
     <file name="app/src/main/java/com/wander/android/core/backup/BackupContentsIO.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="52" column="87" source="standard:function-literal" />
-        <error line="52" column="103" source="standard:function-literal" />
-        <error line="52" column="121" source="standard:max-line-length" />
-        <error line="54" column="90" source="standard:function-literal" />
-        <error line="54" column="106" source="standard:function-literal" />
-        <error line="54" column="121" source="standard:max-line-length" />
-        <error line="82" column="18" source="standard:function-literal" />
-        <error line="82" column="121" source="standard:max-line-length" />
-        <error line="82" column="128" source="standard:function-literal" />
+        <error line="102" column="121" source="standard:max-line-length" />
+    </file>
+    <file name="app/src/main/java/com/wander/android/core/backup/BackupExtras.kt">
+        <error line="12" column="1" source="standard:kdoc" />
+        <error line="77" column="121" source="standard:max-line-length" />
+        <error line="89" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/backup/BackupHistory.kt">
         <error line="7" column="1" source="standard:kdoc" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/backup/BackupIntegrity.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="82" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="82" column="1" source="standard:spacing-between-declarations-with-comments" />
-        <error line="88" column="1" source="standard:spacing-between-declarations-with-annotations" />
+        <error line="108" column="120" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/backup/BackupLibrary.kt">
         <error line="12" column="1" source="standard:kdoc" />
@@ -123,17 +81,17 @@
     </file>
     <file name="app/src/main/java/com/wander/android/core/cache/AudioCacheManager.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="52" column="5" source="standard:kdoc" />
-        <error line="62" column="5" source="standard:spacing-between-declarations-with-comments" />
+        <error line="53" column="5" source="standard:kdoc" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/cache/DownloadScheduler.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="47" column="1" source="standard:indent" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/cache/DownloadWorker.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="69" column="42" source="standard:multiline-if-else" />
-        <error line="70" column="18" source="standard:multiline-if-else" />
+        <error line="75" column="121" source="standard:max-line-length" />
+    </file>
+    <file name="app/src/main/java/com/wander/android/core/cache/predict/OfflinePredictor.kt">
+        <error line="65" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/database/Migrations.kt">
         <error line="12" column="42" source="standard:property-wrapping" />
@@ -154,9 +112,10 @@
         <error line="53" column="120" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/database/dao/HistoryDao.kt">
-        <error line="71" column="5" source="standard:kdoc" />
-        <error line="79" column="5" source="standard:spacing-between-declarations-with-comments" />
-        <error line="233" column="1" source="standard:no-consecutive-blank-lines" />
+        <error line="84" column="5" source="standard:kdoc" />
+    </file>
+    <file name="app/src/main/java/com/wander/android/core/database/dao/PodcastDao.kt">
+        <error line="31" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/database/dao/SharedPlaylistDao.kt">
         <error line="87" column="121" source="standard:max-line-length" />
@@ -165,12 +124,15 @@
         <error line="45" column="1" source="standard:no-consecutive-blank-lines" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/database/dao/TrackLibraryQueries.kt">
-        <error line="138" column="120" source="standard:max-line-length" />
-        <error line="141" column="120" source="standard:max-line-length" />
-        <error line="185" column="120" source="standard:max-line-length" />
-        <error line="188" column="120" source="standard:max-line-length" />
-        <error line="191" column="120" source="standard:max-line-length" />
-        <error line="194" column="120" source="standard:max-line-length" />
+        <error line="36" column="121" source="standard:max-line-length" />
+        <error line="120" column="120" source="standard:max-line-length" />
+        <error line="137" column="120" source="standard:max-line-length" />
+        <error line="140" column="120" source="standard:max-line-length" />
+        <error line="172" column="121" source="standard:max-line-length" />
+        <error line="178" column="120" source="standard:max-line-length" />
+        <error line="184" column="120" source="standard:max-line-length" />
+        <error line="187" column="120" source="standard:max-line-length" />
+        <error line="190" column="120" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/database/dao/TrackLyricsDao.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -195,10 +157,6 @@
     </file>
     <file name="app/src/main/java/com/wander/android/core/notification/GoIncognitoReceiver.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-    </file>
-    <file name="app/src/main/java/com/wander/android/core/notification/ListeningTogetherNotifier.kt">
-        <error line="125" column="9" source="standard:spacing-between-declarations-with-comments" />
-        <error line="134" column="9" source="standard:spacing-between-declarations-with-comments" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/notification/WorkProgressNotification.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -226,14 +184,11 @@
         <error line="113" column="27" source="standard:wrapping" />
         <error line="127" column="5" source="standard:wrapping" />
     </file>
-    <file name="app/src/main/java/com/wander/android/core/permissions/AudioPermission.kt">
-        <error line="11" column="64" source="standard:multiline-if-else" />
-        <error line="12" column="10" source="standard:multiline-if-else" />
-        <error line="16" column="64" source="standard:multiline-if-else" />
-        <error line="17" column="10" source="standard:multiline-if-else" />
-    </file>
     <file name="app/src/main/java/com/wander/android/core/playback/DeezerDecryptingDataSource.kt">
-        <error line="50" column="121" source="standard:max-line-length" />
+        <error line="54" column="121" source="standard:max-line-length" />
+    </file>
+    <file name="app/src/main/java/com/wander/android/core/playback/EpisodeAudioAttributes.kt">
+        <error line="30" column="47" source="standard:comment-wrapping" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/playback/JamSkipGate.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -244,50 +199,22 @@
     </file>
     <file name="app/src/main/java/com/wander/android/core/playback/PlaybackService.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="45" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="46" column="1" source="standard:spacing-between-declarations-with-annotations" />
         <error line="47" column="1" source="standard:spacing-between-declarations-with-annotations" />
         <error line="48" column="1" source="standard:spacing-between-declarations-with-annotations" />
         <error line="49" column="1" source="standard:spacing-between-declarations-with-annotations" />
         <error line="50" column="1" source="standard:spacing-between-declarations-with-annotations" />
         <error line="51" column="1" source="standard:spacing-between-declarations-with-annotations" />
         <error line="52" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="109" column="50" source="standard:function-expression-body" />
-        <error line="283" column="1" source="standard:no-blank-line-before-rbrace" />
-    </file>
-    <file name="app/src/main/java/com/wander/android/core/playback/PlaybackSnapshotBuilder.kt">
-        <error line="52" column="54" source="standard:multiline-if-else" />
-        <error line="53" column="30" source="standard:multiline-if-else" />
-    </file>
-    <file name="app/src/main/java/com/wander/android/core/playback/PlaybackStateFlowBuilder.kt">
-        <error line="38" column="65" source="standard:function-literal" />
-        <error line="38" column="111" source="standard:function-literal" />
-        <error line="38" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/playback/PlayerConnection.kt">
-        <error line="41" column="17" source="standard:backing-property-naming" />
         <error line="47" column="17" source="standard:backing-property-naming" />
-        <error line="130" column="51" source="standard:wrapping" />
-        <error line="130" column="93" source="standard:function-literal" />
-        <error line="130" column="94" source="standard:wrapping" />
-        <error line="130" column="121" source="standard:max-line-length" />
-        <error line="130" column="138" source="standard:function-literal" />
-        <error line="133" column="81" source="standard:function-literal" />
-        <error line="133" column="82" source="standard:wrapping" />
-        <error line="133" column="121" source="standard:max-line-length" />
-        <error line="133" column="128" source="standard:function-literal" />
-        <error line="134" column="66" source="standard:function-literal" />
-        <error line="134" column="67" source="standard:wrapping" />
-        <error line="134" column="121" source="standard:max-line-length" />
-        <error line="134" column="132" source="standard:function-literal" />
-        <error line="145" column="121" source="standard:max-line-length" />
-        <error line="148" column="121" source="standard:max-line-length" />
+        <error line="53" column="17" source="standard:backing-property-naming" />
+        <error line="173" column="121" source="standard:max-line-length" />
+        <error line="176" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/playback/PlayerFactory.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="58" column="50" source="standard:comment-wrapping" />
-        <error line="102" column="38" source="standard:multiline-if-else" />
-        <error line="103" column="30" source="standard:multiline-if-else" />
+        <error line="55" column="72" source="standard:comment-wrapping" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/playback/RelayDecryptingDataSource.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -299,9 +226,6 @@
     </file>
     <file name="app/src/main/java/com/wander/android/core/playback/StreamResolver.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="83" column="41" source="standard:function-literal" />
-        <error line="83" column="121" source="standard:max-line-length" />
-        <error line="83" column="130" source="standard:function-literal" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/security/AgroVault.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -313,10 +237,10 @@
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/security/DeezerStreamCipher.kt">
-        <error line="34" column="121" source="standard:max-line-length" />
-        <error line="44" column="121" source="standard:max-line-length" />
-        <error line="53" column="121" source="standard:max-line-length" />
-        <error line="60" column="121" source="standard:max-line-length" />
+        <error line="36" column="121" source="standard:max-line-length" />
+        <error line="80" column="121" source="standard:max-line-length" />
+        <error line="89" column="121" source="standard:max-line-length" />
+        <error line="96" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/security/IdentityKeyManager.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -326,12 +250,6 @@
         <error line="3" column="1" source="standard:import-ordering" />
         <error line="134" column="32" source="standard:multiline-if-else" />
         <error line="135" column="18" source="standard:multiline-if-else" />
-    </file>
-    <file name="app/src/main/java/com/wander/android/core/security/SecureDisplayPreferences.kt">
-        <error line="135" column="1" source="standard:no-consecutive-blank-lines" />
-    </file>
-    <file name="app/src/main/java/com/wander/android/core/security/SecurePlaybackPreferences.kt">
-        <error line="140" column="1" source="standard:no-consecutive-blank-lines" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/security/SecureStorage.kt">
         <error line="86" column="121" source="standard:max-line-length" />
@@ -452,10 +370,7 @@
     </file>
     <file name="app/src/main/java/com/wander/android/data/podcast/RssFeedParser.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="45" column="121" source="standard:max-line-length" />
-        <error line="65" column="114" source="standard:function-literal" />
-        <error line="65" column="121" source="standard:function-literal" />
-        <error line="65" column="121" source="standard:max-line-length" />
+        <error line="46" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/podcast/TranscriptParser.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -480,11 +395,6 @@
     <file name="app/src/main/java/com/wander/android/data/repository/AgroSessionRepository.kt">
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
-    <file name="app/src/main/java/com/wander/android/data/repository/AgroSessionWebSocket.kt">
-        <error line="76" column="13" source="standard:wrapping" />
-        <error line="76" column="23" source="standard:wrapping" />
-        <error line="80" column="9" source="standard:wrapping" />
-    </file>
     <file name="app/src/main/java/com/wander/android/data/repository/ArtistFetch.kt">
         <error line="14" column="5" source="standard:spacing-between-declarations-with-comments" />
     </file>
@@ -496,6 +406,7 @@
     </file>
     <file name="app/src/main/java/com/wander/android/data/repository/CatalogCollectionRepository.kt">
         <error line="3" column="1" source="standard:import-ordering" />
+        <error line="106" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/repository/CatalogPublisher.kt">
         <error line="48" column="45" source="standard:function-literal" />
@@ -632,33 +543,21 @@
     </file>
     <file name="app/src/main/java/com/wander/android/data/repository/LyricsRepository.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="258" column="121" source="standard:max-line-length" />
+        <error line="268" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/repository/MusicRepository.kt">
-        <error line="147" column="121" source="standard:max-line-length" />
-        <error line="148" column="121" source="standard:max-line-length" />
-        <error line="157" column="121" source="standard:max-line-length" />
-        <error line="169" column="121" source="standard:max-line-length" />
+        <error line="150" column="121" source="standard:max-line-length" />
+        <error line="151" column="121" source="standard:max-line-length" />
+        <error line="161" column="121" source="standard:max-line-length" />
+        <error line="173" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/repository/OffGridListenAlongPoller.kt">
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/repository/PlaybackStreamResolver.kt">
-        <error line="61" column="47" source="standard:function-literal" />
-        <error line="61" column="121" source="standard:max-line-length" />
-        <error line="61" column="130" source="standard:function-literal" />
-        <error line="62" column="121" source="standard:max-line-length" />
-        <error line="63" column="25" source="standard:property-wrapping" />
-        <error line="63" column="121" source="standard:max-line-length" />
-        <error line="65" column="34" source="standard:function-literal" />
-        <error line="65" column="35" source="standard:wrapping" />
-        <error line="65" column="52" source="standard:function-literal" />
-        <error line="65" column="59" source="standard:function-literal" />
-        <error line="65" column="60" source="standard:wrapping" />
-        <error line="65" column="121" source="standard:max-line-length" />
-        <error line="65" column="135" source="standard:function-literal" />
-        <error line="84" column="121" source="standard:max-line-length" />
-        <error line="122" column="121" source="standard:max-line-length" />
+        <error line="66" column="121" source="standard:max-line-length" />
+        <error line="91" column="121" source="standard:max-line-length" />
+        <error line="172" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/repository/PlaylistImportRepository.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -669,32 +568,22 @@
     <file name="app/src/main/java/com/wander/android/data/repository/PlaylistWriteRepository.kt">
         <error line="3" column="1" source="standard:import-ordering" />
         <error line="71" column="20" source="standard:multiline-if-else" />
-        <error line="110" column="121" source="standard:max-line-length" />
-        <error line="144" column="121" source="standard:max-line-length" />
-        <error line="150" column="121" source="standard:max-line-length" />
+        <error line="111" column="121" source="standard:max-line-length" />
+        <error line="145" column="121" source="standard:max-line-length" />
+        <error line="154" column="121" source="standard:max-line-length" />
+        <error line="177" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/repository/PodcastRepository.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="47" column="81" source="standard:function-literal" />
-        <error line="47" column="121" source="standard:function-literal" />
-        <error line="47" column="121" source="standard:max-line-length" />
-        <error line="108" column="82" source="standard:function-literal" />
-        <error line="108" column="121" source="standard:max-line-length" />
-        <error line="108" column="128" source="standard:function-literal" />
-        <error line="150" column="64" source="standard:multiline-if-else" />
-    </file>
-    <file name="app/src/main/java/com/wander/android/data/repository/PopularityRepository.kt">
-        <error line="83" column="1" source="standard:no-consecutive-blank-lines" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/repository/RecognitionRepository.kt">
         <error line="3" column="1" source="standard:import-ordering" />
         <error line="19" column="1" source="standard:no-consecutive-blank-lines" />
-        <error line="249" column="1" source="standard:no-consecutive-blank-lines" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/repository/RecommendationRepository.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="137" column="19" source="standard:property-naming" />
-        <error line="140" column="19" source="standard:property-naming" />
+        <error line="144" column="19" source="standard:property-naming" />
+        <error line="147" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/repository/RecordingIdentityRepository.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -717,23 +606,8 @@
     </file>
     <file name="app/src/main/java/com/wander/android/data/repository/ScrobbleForwarding.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="49" column="27" source="standard:wrapping" />
-        <error line="49" column="83" source="standard:function-literal" />
-        <error line="49" column="121" source="standard:max-line-length" />
-        <error line="49" column="123" source="standard:function-literal" />
-        <error line="50" column="93" source="standard:wrapping" />
-        <error line="53" column="27" source="standard:wrapping" />
-        <error line="54" column="85" source="standard:wrapping" />
-        <error line="85" column="91" source="standard:function-literal" />
-        <error line="85" column="92" source="standard:wrapping" />
-        <error line="85" column="121" source="standard:max-line-length" />
-        <error line="85" column="142" source="standard:function-literal" />
-        <error line="88" column="87" source="standard:function-literal" />
-        <error line="88" column="121" source="standard:max-line-length" />
-        <error line="88" column="132" source="standard:function-literal" />
-        <error line="93" column="118" source="standard:function-literal" />
-        <error line="93" column="121" source="standard:max-line-length" />
-        <error line="93" column="123" source="standard:function-literal" />
+        <error line="113" column="13" source="standard:function-literal" />
+        <error line="113" column="17" source="standard:function-literal" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/repository/ShareLinkRewriter.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -899,12 +773,8 @@
     </file>
     <file name="app/src/main/java/com/wander/android/data/sources/agro/AgroLogin.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="140" column="121" source="standard:max-line-length" />
         <error line="148" column="121" source="standard:max-line-length" />
-    </file>
-    <file name="app/src/main/java/com/wander/android/data/sources/agro/AgroModels.kt">
-        <error line="71" column="1" source="standard:kdoc" />
-        <error line="78" column="1" source="standard:spacing-between-declarations-with-comments" />
+        <error line="156" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/sources/agro/AgroNodeRegistrar.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -947,7 +817,6 @@
     </file>
     <file name="app/src/main/java/com/wander/android/data/sources/agro/AgroRelayClient.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="125" column="28" source="standard:multiline-if-else" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/sources/agro/AgroReplayApi.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -1013,32 +882,39 @@
     </file>
     <file name="app/src/main/java/com/wander/android/data/sources/deezer/DeezerApiClient.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="57" column="120" source="standard:max-line-length" />
+    </file>
+    <file name="app/src/main/java/com/wander/android/data/sources/deezer/DeezerLyrics.kt">
+        <error line="77" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/sources/deezer/DeezerSource.kt">
         <error line="3" column="1" source="standard:import-ordering" />
+        <error line="106" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/sources/deezer/DeezerStreamResolver.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="77" column="102" source="standard:function-expression-body" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/sources/local/LocalMusicSource.kt">
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/sources/local/MediaStoreScanner.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="55" column="5" source="standard:kdoc" />
+        <error line="56" column="5" source="standard:kdoc" />
+    </file>
+    <file name="app/src/main/java/com/wander/android/data/sources/local/lyrics/LocalLyricsReader.kt">
+        <error line="108" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/sources/navidrome/NavidromeCatalogLoader.kt">
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
+    <file name="app/src/main/java/com/wander/android/data/sources/navidrome/NavidromeHomeFeed.kt">
+        <error line="97" column="121" source="standard:max-line-length" />
+    </file>
+    <file name="app/src/main/java/com/wander/android/data/sources/navidrome/NavidromeLyrics.kt">
+        <error line="42" column="121" source="standard:max-line-length" />
+    </file>
     <file name="app/src/main/java/com/wander/android/data/sources/navidrome/SubsonicApiClient.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="180" column="5" source="standard:kdoc" />
-        <error line="184" column="5" source="standard:spacing-between-declarations-with-comments" />
-        <error line="198" column="18" source="standard:wrapping" />
-        <error line="198" column="32" source="standard:wrapping" />
-        <error line="202" column="9" source="standard:wrapping" />
+        <error line="169" column="5" source="standard:kdoc" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/sources/scrobble/LastFmClient.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -1086,7 +962,6 @@
     </file>
     <file name="app/src/main/java/com/wander/android/data/sources/ytmusic/InnerTubePlayerResolver.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="45" column="1" source="standard:spacing-between-declarations-with-annotations" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/sources/ytmusic/InnerTubeSubtitle.kt">
         <error line="132" column="9" source="standard:kdoc" />
@@ -1107,9 +982,6 @@
     </file>
     <file name="app/src/main/java/com/wander/android/data/sources/ytmusic/YTMusicCatalogLoader.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="65" column="114" source="standard:function-literal" />
-        <error line="65" column="121" source="standard:max-line-length" />
-        <error line="65" column="122" source="standard:function-literal" />
     </file>
     <file name="app/src/main/java/com/wander/android/data/sources/ytmusic/YTMusicStreamResolver.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -1124,30 +996,18 @@
         <error line="54" column="1" source="standard:spacing-between-declarations-with-annotations" />
         <error line="55" column="1" source="standard:spacing-between-declarations-with-annotations" />
         <error line="56" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="57" column="1" source="standard:spacing-between-declarations-with-annotations" />
         <error line="58" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="60" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="61" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="62" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="63" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="63" column="121" source="standard:max-line-length" />
-        <error line="65" column="120" source="standard:max-line-length" />
-        <error line="66" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="66" column="121" source="standard:max-line-length" />
-        <error line="67" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="67" column="121" source="standard:max-line-length" />
-        <error line="68" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="68" column="121" source="standard:max-line-length" />
-        <error line="69" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="69" column="121" source="standard:max-line-length" />
-        <error line="70" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="70" column="121" source="standard:max-line-length" />
-        <error line="71" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="71" column="121" source="standard:max-line-length" />
-        <error line="72" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="72" column="121" source="standard:max-line-length" />
-        <error line="73" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="73" column="121" source="standard:max-line-length" />
+        <error line="71" column="120" source="standard:max-line-length" />
+        <error line="76" column="120" source="standard:max-line-length" />
+        <error line="78" column="120" source="standard:max-line-length" />
+        <error line="80" column="120" source="standard:max-line-length" />
+        <error line="82" column="120" source="standard:max-line-length" />
+        <error line="84" column="120" source="standard:max-line-length" />
+        <error line="86" column="120" source="standard:max-line-length" />
+        <error line="88" column="120" source="standard:max-line-length" />
+        <error line="90" column="120" source="standard:max-line-length" />
+        <error line="92" column="120" source="standard:max-line-length" />
+        <error line="94" column="120" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/di/NetworkModule.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -1174,20 +1034,15 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/SyncOfferCoordinator.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="38" column="17" source="standard:backing-property-naming" />
-        <error line="107" column="45" source="standard:multiline-if-else" />
-        <error line="108" column="34" source="standard:multiline-if-else" />
-        <error line="139" column="17" source="standard:backing-property-naming" />
+        <error line="40" column="17" source="standard:backing-property-naming" />
+        <error line="148" column="17" source="standard:backing-property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/WanderApp.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="195" column="59" source="standard:multiline-if-else" />
-        <error line="196" column="30" source="standard:multiline-if-else" />
-        <error line="266" column="121" source="standard:max-line-length" />
+        <error line="276" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/WanderAppDock.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="198" column="18" source="standard:function-expression-body" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/WanderAppOverlays.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -1198,7 +1053,6 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/agro/AgroSessionViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="162" column="49" source="standard:wrapping" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/ActionButtonGroup.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -1298,7 +1152,7 @@
         <error line="6" column="1" source="standard:kdoc" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/DropToFriendSheet.kt">
-        <error line="75" column="121" source="standard:max-line-length" />
+        <error line="77" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/DropToFriendViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -1309,9 +1163,6 @@
         <error line="35" column="19" source="standard:property-naming" />
         <error line="38" column="19" source="standard:property-naming" />
     </file>
-    <file name="app/src/main/java/com/wander/android/ui/components/EmptyState.kt">
-        <error line="80" column="1" source="standard:no-consecutive-blank-lines" />
-    </file>
     <file name="app/src/main/java/com/wander/android/ui/components/GroupedCardShape.kt">
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
@@ -1321,16 +1172,12 @@
         <error line="185" column="20" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/ImmersiveHero.kt">
-        <error line="162" column="11" source="standard:property-naming" />
+        <error line="164" column="11" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/LikeButton.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="100" column="48" source="standard:multiline-if-else" />
-        <error line="101" column="26" source="standard:multiline-if-else" />
-        <error line="103" column="41" source="standard:multiline-if-else" />
-        <error line="104" column="26" source="standard:multiline-if-else" />
-        <error line="118" column="19" source="standard:property-naming" />
-        <error line="121" column="19" source="standard:property-naming" />
+        <error line="126" column="19" source="standard:property-naming" />
+        <error line="129" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/ListenAlongBar.kt">
         <error line="37" column="1" source="standard:kdoc" />
@@ -1339,13 +1186,9 @@
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/MiniPlayer.kt">
-        <error line="47" column="19" source="standard:property-naming" />
-        <error line="55" column="19" source="standard:property-naming" />
-    </file>
-    <file name="app/src/main/java/com/wander/android/ui/components/NetworkStateDialog.kt">
-        <error line="60" column="79" source="standard:function-literal" />
-        <error line="60" column="121" source="standard:max-line-length" />
-        <error line="60" column="127" source="standard:function-literal" />
+        <error line="51" column="19" source="standard:property-naming" />
+        <error line="59" column="19" source="standard:property-naming" />
+        <error line="186" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/PlayerAttachedBar.kt">
         <error line="31" column="5" source="standard:spacing-between-declarations-with-comments" />
@@ -1354,36 +1197,6 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/PlaylistActionsSheet.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="56" column="58" source="standard:multiline-if-else" />
-        <error line="57" column="22" source="standard:multiline-if-else" />
-        <error line="99" column="121" source="standard:max-line-length" />
-        <error line="117" column="91" source="standard:function-literal" />
-        <error line="117" column="121" source="standard:function-literal" />
-        <error line="117" column="121" source="standard:max-line-length" />
-        <error line="118" column="112" source="standard:function-literal" />
-        <error line="118" column="113" source="standard:wrapping" />
-        <error line="118" column="121" source="standard:max-line-length" />
-        <error line="118" column="146" source="standard:function-literal" />
-        <error line="119" column="34" source="standard:function-literal" />
-        <error line="119" column="100" source="standard:function-literal" />
-        <error line="119" column="121" source="standard:max-line-length" />
-        <error line="119" column="126" source="standard:function-literal" />
-        <error line="119" column="129" source="standard:function-literal" />
-        <error line="120" column="42" source="standard:function-literal" />
-        <error line="120" column="43" source="standard:wrapping" />
-        <error line="120" column="121" source="standard:function-literal" />
-        <error line="120" column="121" source="standard:max-line-length" />
-        <error line="120" column="122" source="standard:wrapping" />
-        <error line="120" column="147" source="standard:function-literal" />
-        <error line="120" column="150" source="standard:function-literal" />
-        <error line="121" column="85" source="standard:function-literal" />
-        <error line="121" column="121" source="standard:function-literal" />
-        <error line="121" column="121" source="standard:max-line-length" />
-        <error line="122" column="35" source="standard:function-literal" />
-        <error line="122" column="105" source="standard:function-literal" />
-        <error line="122" column="121" source="standard:max-line-length" />
-        <error line="122" column="131" source="standard:function-literal" />
-        <error line="122" column="134" source="standard:function-literal" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/PressMorph.kt">
         <error line="27" column="19" source="standard:property-naming" />
@@ -1397,6 +1210,13 @@
     <file name="app/src/main/java/com/wander/android/ui/components/ReplayOfferCard.kt">
         <error line="150" column="19" source="standard:property-naming" />
         <error line="151" column="19" source="standard:property-naming" />
+    </file>
+    <file name="app/src/main/java/com/wander/android/ui/components/ResumeHandoffCard.kt">
+        <error line="82" column="121" source="standard:max-line-length" />
+    </file>
+    <file name="app/src/main/java/com/wander/android/ui/components/SessionSheet.kt">
+        <error line="138" column="121" source="standard:max-line-length" />
+        <error line="175" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/ShapedButtons.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -1412,41 +1232,13 @@
         <error line="109" column="19" source="standard:property-naming" />
         <error line="110" column="19" source="standard:property-naming" />
     </file>
-    <file name="app/src/main/java/com/wander/android/ui/components/TrackActionsBuilder.kt">
-        <error line="78" column="101" source="standard:function-literal" />
-        <error line="78" column="102" source="standard:wrapping" />
-        <error line="78" column="121" source="standard:max-line-length" />
-        <error line="78" column="137" source="standard:function-literal" />
-        <error line="79" column="98" source="standard:function-literal" />
-        <error line="79" column="99" source="standard:wrapping" />
-        <error line="79" column="121" source="standard:max-line-length" />
-        <error line="79" column="136" source="standard:function-literal" />
-        <error line="95" column="29" source="standard:function-literal" />
-        <error line="95" column="30" source="standard:wrapping" />
-        <error line="95" column="109" source="standard:function-literal" />
-        <error line="95" column="110" source="standard:wrapping" />
-        <error line="95" column="121" source="standard:max-line-length" />
-        <error line="95" column="127" source="standard:function-literal" />
-        <error line="95" column="130" source="standard:function-literal" />
-        <error line="96" column="31" source="standard:function-literal" />
-        <error line="96" column="32" source="standard:wrapping" />
-        <error line="96" column="115" source="standard:function-literal" />
-        <error line="96" column="116" source="standard:wrapping" />
-        <error line="96" column="121" source="standard:max-line-length" />
-        <error line="96" column="133" source="standard:function-literal" />
-        <error line="96" column="136" source="standard:function-literal" />
-        <error line="149" column="9" source="standard:wrapping" />
-        <error line="151" column="5" source="standard:wrapping" />
-    </file>
-    <file name="app/src/main/java/com/wander/android/ui/components/TrackActionsSheet.kt">
-        <error line="189" column="121" source="standard:max-line-length" />
+    <file name="app/src/main/java/com/wander/android/ui/components/SyncOfferSheet.kt">
+        <error line="87" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/TrackRow.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="136" column="44" source="standard:multiline-if-else" />
-        <error line="137" column="26" source="standard:multiline-if-else" />
-        <error line="193" column="121" source="standard:max-line-length" />
-        <error line="201" column="19" source="standard:property-naming" />
+        <error line="213" column="121" source="standard:max-line-length" />
+        <error line="221" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/TrackSheetPageIndicator.kt">
         <error line="21" column="20" source="standard:property-naming" />
@@ -1460,7 +1252,7 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/WandaSheet.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="28" column="19" source="standard:property-naming" />
+        <error line="26" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/listen/ListenSheet.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -1488,6 +1280,12 @@
     <file name="app/src/main/java/com/wander/android/ui/components/newplaylist/NewPlaylistViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
+    <file name="app/src/main/java/com/wander/android/ui/components/player/CarouselPlaybackSync.kt">
+        <error line="156" column="19" source="standard:property-naming" />
+        <error line="157" column="19" source="standard:property-naming" />
+        <error line="158" column="19" source="standard:property-naming" />
+        <error line="159" column="19" source="standard:property-naming" />
+    </file>
     <file name="app/src/main/java/com/wander/android/ui/components/player/CircularProgressRing.kt">
         <error line="35" column="19" source="standard:property-naming" />
         <error line="36" column="19" source="standard:property-naming" />
@@ -1501,103 +1299,18 @@
         <error line="143" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/player/PlayPauseIcon.kt">
-        <error line="118" column="19" source="standard:property-naming" />
-        <error line="121" column="19" source="standard:property-naming" />
+        <error line="120" column="19" source="standard:property-naming" />
+        <error line="123" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/player/PlayerCoverCarousel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="274" column="19" source="standard:property-naming" />
-        <error line="275" column="19" source="standard:property-naming" />
-        <error line="276" column="19" source="standard:property-naming" />
-        <error line="277" column="19" source="standard:property-naming" />
-        <error line="280" column="19" source="standard:property-naming" />
+        <error line="128" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/player/PlayerSheet.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="52" column="1" source="standard:kdoc" />
-        <error line="57" column="1" source="standard:spacing-between-declarations-with-comments" />
-        <error line="139" column="1" source="standard:indent" />
-        <error line="140" column="1" source="standard:indent" />
-        <error line="141" column="1" source="standard:indent" />
-        <error line="142" column="1" source="standard:indent" />
-        <error line="143" column="1" source="standard:indent" />
-        <error line="144" column="1" source="standard:indent" />
-        <error line="145" column="1" source="standard:indent" />
-        <error line="146" column="1" source="standard:indent" />
-        <error line="147" column="1" source="standard:indent" />
-        <error line="148" column="1" source="standard:indent" />
-        <error line="149" column="1" source="standard:indent" />
-        <error line="150" column="1" source="standard:indent" />
-        <error line="151" column="1" source="standard:indent" />
-        <error line="153" column="1" source="standard:indent" />
-        <error line="154" column="1" source="standard:indent" />
-        <error line="155" column="1" source="standard:indent" />
-        <error line="156" column="1" source="standard:indent" />
-        <error line="157" column="1" source="standard:indent" />
-        <error line="158" column="1" source="standard:indent" />
-        <error line="159" column="1" source="standard:indent" />
-        <error line="160" column="1" source="standard:indent" />
-        <error line="161" column="1" source="standard:indent" />
-        <error line="162" column="1" source="standard:indent" />
-        <error line="164" column="1" source="standard:indent" />
-        <error line="165" column="1" source="standard:indent" />
-        <error line="166" column="1" source="standard:indent" />
-        <error line="167" column="1" source="standard:indent" />
-        <error line="168" column="1" source="standard:indent" />
-        <error line="169" column="1" source="standard:indent" />
-        <error line="170" column="1" source="standard:indent" />
-        <error line="171" column="1" source="standard:indent" />
+        <error line="53" column="1" source="standard:kdoc" />
         <error line="173" column="1" source="standard:indent" />
-        <error line="174" column="1" source="standard:indent" />
-        <error line="176" column="1" source="standard:indent" />
         <error line="178" column="1" source="standard:indent" />
-        <error line="180" column="1" source="standard:indent" />
-        <error line="181" column="1" source="standard:indent" />
-        <error line="182" column="1" source="standard:indent" />
-        <error line="183" column="1" source="standard:indent" />
-        <error line="184" column="1" source="standard:indent" />
-        <error line="185" column="1" source="standard:indent" />
-        <error line="186" column="1" source="standard:indent" />
-        <error line="187" column="1" source="standard:indent" />
-        <error line="188" column="1" source="standard:indent" />
-        <error line="189" column="1" source="standard:indent" />
-        <error line="190" column="1" source="standard:indent" />
-        <error line="191" column="1" source="standard:indent" />
-        <error line="192" column="1" source="standard:indent" />
-        <error line="194" column="1" source="standard:indent" />
-        <error line="195" column="1" source="standard:indent" />
-        <error line="196" column="1" source="standard:indent" />
-        <error line="197" column="1" source="standard:indent" />
-        <error line="198" column="1" source="standard:indent" />
-        <error line="199" column="1" source="standard:indent" />
-        <error line="200" column="1" source="standard:indent" />
-        <error line="201" column="1" source="standard:indent" />
-        <error line="202" column="1" source="standard:indent" />
-        <error line="203" column="1" source="standard:indent" />
-        <error line="204" column="1" source="standard:indent" />
-        <error line="205" column="1" source="standard:indent" />
-        <error line="206" column="1" source="standard:indent" />
-        <error line="207" column="1" source="standard:indent" />
-        <error line="208" column="1" source="standard:indent" />
-        <error line="209" column="1" source="standard:indent" />
-        <error line="210" column="1" source="standard:indent" />
-        <error line="211" column="1" source="standard:indent" />
-        <error line="212" column="1" source="standard:indent" />
-        <error line="213" column="1" source="standard:indent" />
-        <error line="214" column="1" source="standard:indent" />
-        <error line="215" column="1" source="standard:indent" />
-        <error line="216" column="1" source="standard:indent" />
-        <error line="217" column="1" source="standard:indent" />
-        <error line="218" column="1" source="standard:indent" />
-        <error line="219" column="1" source="standard:indent" />
-        <error line="220" column="1" source="standard:indent" />
-        <error line="221" column="1" source="standard:indent" />
-        <error line="222" column="1" source="standard:indent" />
-        <error line="223" column="1" source="standard:indent" />
-        <error line="224" column="1" source="standard:indent" />
-        <error line="225" column="1" source="standard:indent" />
-        <error line="226" column="1" source="standard:indent" />
-        <error line="227" column="1" source="standard:indent" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/player/PlayerSheetBackground.kt">
         <error line="11" column="19" source="standard:property-naming" />
@@ -1610,20 +1323,6 @@
         <error line="3" column="1" source="standard:import-ordering" />
         <error line="34" column="19" source="standard:property-naming" />
     </file>
-    <file name="app/src/main/java/com/wander/android/ui/components/player/PlayerSheetContent.kt">
-        <error line="88" column="54" source="standard:function-literal" />
-        <error line="88" column="55" source="standard:wrapping" />
-        <error line="88" column="71" source="standard:function-literal" />
-        <error line="88" column="72" source="standard:wrapping" />
-        <error line="88" column="121" source="standard:max-line-length" />
-        <error line="88" column="124" source="standard:function-literal" />
-        <error line="88" column="126" source="standard:function-literal" />
-        <error line="124" column="41" source="standard:multiline-if-else" />
-        <error line="124" column="55" source="standard:multiline-if-else" />
-        <error line="203" column="27" source="standard:function-literal" />
-        <error line="203" column="121" source="standard:max-line-length" />
-        <error line="203" column="127" source="standard:function-literal" />
-    </file>
     <file name="app/src/main/java/com/wander/android/ui/components/player/PlayerSheetGestures.kt">
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
@@ -1635,7 +1334,6 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/player/PlayerSheetState.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="239" column="1" source="standard:no-consecutive-blank-lines" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/player/QueueOpenGesture.kt">
         <error line="55" column="26" source="standard:multiline-if-else" />
@@ -1647,22 +1345,32 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/player/TrackSwipe.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="29" column="20" source="standard:property-naming" />
-        <error line="30" column="19" source="standard:property-naming" />
-        <error line="33" column="19" source="standard:property-naming" />
-        <error line="39" column="20" source="standard:property-naming" />
-        <error line="42" column="20" source="standard:property-naming" />
+        <error line="27" column="20" source="standard:property-naming" />
+        <error line="28" column="19" source="standard:property-naming" />
+        <error line="31" column="19" source="standard:property-naming" />
+        <error line="37" column="20" source="standard:property-naming" />
+        <error line="40" column="20" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/player/VideoClipSurface.kt">
         <error line="3" column="1" source="standard:import-ordering" />
+    </file>
+    <file name="app/src/main/java/com/wander/android/ui/components/selection/SelectedArtworkMark.kt">
+        <error line="25" column="121" source="standard:max-line-length" />
+    </file>
+    <file name="app/src/main/java/com/wander/android/ui/components/selection/TrackSelectionActions.kt">
+        <error line="1" column="1" source="standard:filename" />
+    </file>
+    <file name="app/src/main/java/com/wander/android/ui/components/selection/TrackSelectionBar.kt">
+        <error line="43" column="19" source="standard:property-naming" />
+    </file>
+    <file name="app/src/main/java/com/wander/android/ui/components/selection/TrackSwipeBox.kt">
+        <error line="71" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/navigation/DeepLinkRouter.kt">
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/navigation/Destinations.kt">
         <error line="47" column="5" source="standard:spacing-between-declarations-with-comments" />
-        <error line="190" column="10" source="standard:wrapping" />
-        <error line="193" column="65" source="standard:wrapping" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/navigation/DockItem.kt">
         <error line="29" column="19" source="standard:property-naming" />
@@ -1687,9 +1395,9 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/album/AlbumHero.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="126" column="121" source="standard:max-line-length" />
-        <error line="164" column="20" source="standard:property-naming" />
-        <error line="167" column="20" source="standard:property-naming" />
+        <error line="136" column="121" source="standard:max-line-length" />
+        <error line="185" column="20" source="standard:property-naming" />
+        <error line="188" column="20" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/album/AlbumScreen.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -1707,27 +1415,7 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/artist/ArtistPageSections.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="36" column="20" source="standard:property-naming" />
-        <error line="89" column="121" source="standard:max-line-length" />
-        <error line="99" column="52" source="standard:function-literal" />
-        <error line="99" column="73" source="standard:function-literal" />
-        <error line="99" column="98" source="standard:function-literal" />
-        <error line="99" column="108" source="standard:function-literal" />
-        <error line="99" column="113" source="standard:function-literal" />
-        <error line="99" column="120" source="standard:function-literal" />
-        <error line="99" column="121" source="standard:max-line-length" />
-        <error line="99" column="126" source="standard:function-literal" />
-        <error line="104" column="121" source="standard:max-line-length" />
-        <error line="114" column="50" source="standard:function-literal" />
-        <error line="114" column="69" source="standard:function-literal" />
-        <error line="114" column="94" source="standard:function-literal" />
-        <error line="114" column="104" source="standard:function-literal" />
-        <error line="114" column="109" source="standard:function-literal" />
-        <error line="114" column="116" source="standard:function-literal" />
-        <error line="114" column="121" source="standard:max-line-length" />
-        <error line="114" column="122" source="standard:function-literal" />
-        <error line="119" column="121" source="standard:max-line-length" />
-        <error line="145" column="121" source="standard:max-line-length" />
+        <error line="33" column="20" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/artist/ArtistPlaybackCoordinator.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -1742,11 +1430,10 @@
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/DiscoverMasonryShelf.kt">
-        <error line="131" column="19" source="standard:property-naming" />
         <error line="134" column="19" source="standard:property-naming" />
+        <error line="137" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/ExtraShelves.kt">
-        <error line="30" column="121" source="standard:max-line-length" />
         <error line="31" column="121" source="standard:max-line-length" />
         <error line="32" column="121" source="standard:max-line-length" />
         <error line="33" column="121" source="standard:max-line-length" />
@@ -1754,21 +1441,14 @@
         <error line="35" column="121" source="standard:max-line-length" />
         <error line="36" column="121" source="standard:max-line-length" />
         <error line="37" column="121" source="standard:max-line-length" />
-        <error line="71" column="36" source="standard:function-literal" />
-        <error line="71" column="121" source="standard:function-literal" />
-        <error line="71" column="121" source="standard:max-line-length" />
-        <error line="104" column="20" source="standard:property-wrapping" />
-        <error line="104" column="121" source="standard:max-line-length" />
+        <error line="38" column="121" source="standard:max-line-length" />
+        <error line="112" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/FeaturedHeroShelf.kt">
-        <error line="203" column="19" source="standard:property-naming" />
-        <error line="206" column="19" source="standard:property-naming" />
+        <error line="207" column="19" source="standard:property-naming" />
+        <error line="210" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/HomeScreen.kt">
-        <error line="169" column="1" source="standard:indent" />
-        <error line="170" column="1" source="standard:indent" />
-        <error line="171" column="1" source="standard:indent" />
-        <error line="172" column="1" source="standard:indent" />
         <error line="173" column="1" source="standard:indent" />
         <error line="174" column="1" source="standard:indent" />
         <error line="175" column="1" source="standard:indent" />
@@ -1798,55 +1478,11 @@
         <error line="199" column="1" source="standard:indent" />
         <error line="200" column="1" source="standard:indent" />
         <error line="201" column="1" source="standard:indent" />
-        <error line="201" column="75" source="standard:function-literal" />
-        <error line="201" column="102" source="standard:function-literal" />
-        <error line="201" column="116" source="standard:function-literal" />
-        <error line="201" column="121" source="standard:max-line-length" />
-        <error line="201" column="153" source="standard:function-literal" />
         <error line="202" column="1" source="standard:indent" />
         <error line="203" column="1" source="standard:indent" />
         <error line="204" column="1" source="standard:indent" />
         <error line="205" column="1" source="standard:indent" />
-        <error line="206" column="1" source="standard:indent" />
-        <error line="207" column="1" source="standard:indent" />
-        <error line="208" column="1" source="standard:indent" />
-        <error line="209" column="1" source="standard:indent" />
-        <error line="210" column="1" source="standard:indent" />
-        <error line="211" column="1" source="standard:indent" />
-        <error line="212" column="1" source="standard:indent" />
-        <error line="213" column="1" source="standard:indent" />
-        <error line="214" column="1" source="standard:indent" />
-        <error line="216" column="1" source="standard:indent" />
-        <error line="217" column="1" source="standard:indent" />
-        <error line="218" column="1" source="standard:indent" />
-        <error line="219" column="1" source="standard:indent" />
-        <error line="220" column="1" source="standard:indent" />
-        <error line="221" column="1" source="standard:indent" />
-        <error line="222" column="1" source="standard:indent" />
-        <error line="223" column="1" source="standard:indent" />
-        <error line="224" column="1" source="standard:indent" />
-        <error line="225" column="1" source="standard:indent" />
-        <error line="226" column="1" source="standard:indent" />
-        <error line="227" column="1" source="standard:indent" />
-        <error line="229" column="1" source="standard:indent" />
-        <error line="230" column="1" source="standard:indent" />
-        <error line="231" column="1" source="standard:indent" />
-        <error line="232" column="1" source="standard:indent" />
-        <error line="233" column="1" source="standard:indent" />
-        <error line="234" column="1" source="standard:indent" />
-        <error line="235" column="1" source="standard:indent" />
-        <error line="236" column="1" source="standard:indent" />
-        <error line="237" column="1" source="standard:indent" />
-        <error line="238" column="1" source="standard:indent" />
-        <error line="239" column="1" source="standard:indent" />
-        <error line="240" column="1" source="standard:indent" />
-        <error line="241" column="1" source="standard:indent" />
-        <error line="242" column="1" source="standard:indent" />
-        <error line="243" column="1" source="standard:indent" />
-        <error line="244" column="1" source="standard:indent" />
-        <error line="245" column="1" source="standard:indent" />
-        <error line="246" column="1" source="standard:indent" />
-        <error line="249" column="1" source="standard:no-blank-line-before-rbrace" />
+        <error line="245" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/HomeSection.kt">
         <error line="12" column="5" source="standard:spacing-between-declarations-with-comments" />
@@ -1870,37 +1506,38 @@
         <error line="20" column="20" source="standard:property-naming" />
         <error line="23" column="20" source="standard:property-naming" />
     </file>
-    <file name="app/src/main/java/com/wander/android/ui/screens/home/HomeSectionOps.kt">
-        <error line="34" column="37" source="standard:multiline-if-else" />
-        <error line="35" column="14" source="standard:multiline-if-else" />
+    <file name="app/src/main/java/com/wander/android/ui/screens/home/HomeShelfLoading.kt">
+        <error line="35" column="121" source="standard:max-line-length" />
+        <error line="37" column="121" source="standard:max-line-length" />
+        <error line="40" column="121" source="standard:max-line-length" />
+        <error line="41" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/HomeUiState.kt">
         <error line="36" column="19" source="standard:wrapping" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/HomeViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="86" column="121" source="standard:max-line-length" />
-        <error line="88" column="121" source="standard:max-line-length" />
-        <error line="143" column="121" source="standard:max-line-length" />
-        <error line="179" column="121" source="standard:max-line-length" />
+        <error line="85" column="121" source="standard:max-line-length" />
+        <error line="87" column="121" source="standard:max-line-length" />
+        <error line="153" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/HorizontalTrackCard.kt">
-        <error line="112" column="19" source="standard:property-naming" />
+        <error line="115" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/LargeCardShelf.kt">
-        <error line="132" column="19" source="standard:property-naming" />
         <error line="135" column="19" source="standard:property-naming" />
+        <error line="138" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/QuickPicksHeader.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="218" column="19" source="standard:property-naming" />
-        <error line="225" column="19" source="standard:property-naming" />
-        <error line="251" column="19" source="standard:property-naming" />
+        <error line="219" column="19" source="standard:property-naming" />
+        <error line="226" column="19" source="standard:property-naming" />
+        <error line="252" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/TrackCarouselCard.kt">
-        <error line="102" column="19" source="standard:property-naming" />
-        <error line="103" column="19" source="standard:property-naming" />
-        <error line="104" column="19" source="standard:property-naming" />
+        <error line="105" column="19" source="standard:property-naming" />
+        <error line="106" column="19" source="standard:property-naming" />
+        <error line="107" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/TrackPagerShelf.kt">
         <error line="19" column="11" source="standard:property-naming" />
@@ -1970,9 +1607,9 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/customize/ShelfSettingsSheet.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="89" column="121" source="standard:max-line-length" />
         <error line="90" column="121" source="standard:max-line-length" />
-        <error line="126" column="121" source="standard:max-line-length" />
+        <error line="91" column="121" source="standard:max-line-length" />
+        <error line="127" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/home/customize/ShelfStylePicker.kt">
         <error line="95" column="121" source="standard:max-line-length" />
@@ -2028,167 +1665,43 @@
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/importer/PlaylistImportScreen.kt">
-        <error line="101" column="121" source="standard:max-line-length" />
+        <error line="124" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/importer/PlaylistImportViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
+        <error line="111" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/importer/PlaylistParserCoordinator.kt">
         <error line="3" column="1" source="standard:import-ordering" />
         <error line="52" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/HistoryScreen.kt">
-        <error line="87" column="12" source="standard:wrapping" />
+        <error line="96" column="121" source="standard:max-line-length" />
+        <error line="98" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/HistoryViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
+    </file>
+    <file name="app/src/main/java/com/wander/android/ui/screens/library/LibraryHeader.kt">
+        <error line="84" column="121" source="standard:max-line-length" />
+    </file>
+    <file name="app/src/main/java/com/wander/android/ui/screens/library/LibraryPages.kt">
+        <error line="70" column="121" source="standard:max-line-length" />
+        <error line="74" column="121" source="standard:max-line-length" />
+        <error line="85" column="121" source="standard:max-line-length" />
+        <error line="96" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/LibraryPlaybackCoordinator.kt">
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/LibraryPlaylistList.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="107" column="25" source="standard:function-literal" />
-        <error line="107" column="121" source="standard:max-line-length" />
-        <error line="107" column="133" source="standard:function-literal" />
-        <error line="133" column="121" source="standard:max-line-length" />
-        <error line="181" column="121" source="standard:max-line-length" />
-        <error line="199" column="34" source="standard:wrapping" />
-        <error line="200" column="78" source="standard:wrapping" />
-        <error line="200" column="119" source="standard:wrapping" />
-        <error line="224" column="55" source="standard:function-literal" />
-        <error line="224" column="63" source="standard:function-literal" />
-        <error line="224" column="88" source="standard:function-literal" />
-        <error line="224" column="101" source="standard:function-literal" />
-        <error line="224" column="106" source="standard:function-literal" />
-        <error line="224" column="113" source="standard:function-literal" />
-        <error line="224" column="121" source="standard:max-line-length" />
-        <error line="224" column="122" source="standard:function-literal" />
+        <error line="111" column="121" source="standard:max-line-length" />
+        <error line="140" column="121" source="standard:max-line-length" />
+        <error line="189" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/LibraryPlaylistsLoader.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-    </file>
-    <file name="app/src/main/java/com/wander/android/ui/screens/library/LibraryPodcastsPage.kt">
-        <error line="145" column="51" source="standard:function-literal" />
-        <error line="145" column="73" source="standard:function-literal" />
-        <error line="145" column="98" source="standard:function-literal" />
-        <error line="145" column="116" source="standard:function-literal" />
-        <error line="145" column="121" source="standard:function-literal" />
-        <error line="145" column="121" source="standard:max-line-length" />
-        <error line="145" column="128" source="standard:function-literal" />
-        <error line="145" column="134" source="standard:function-literal" />
-    </file>
-    <file name="app/src/main/java/com/wander/android/ui/screens/library/LibraryScreen.kt">
-        <error line="112" column="20" source="standard:multiline-if-else" />
-        <error line="115" column="20" source="standard:multiline-if-else" />
-        <error line="154" column="1" source="standard:indent" />
-        <error line="155" column="1" source="standard:indent" />
-        <error line="156" column="1" source="standard:indent" />
-        <error line="157" column="1" source="standard:indent" />
-        <error line="158" column="1" source="standard:indent" />
-        <error line="159" column="1" source="standard:indent" />
-        <error line="160" column="1" source="standard:indent" />
-        <error line="161" column="1" source="standard:indent" />
-        <error line="162" column="1" source="standard:indent" />
-        <error line="163" column="1" source="standard:indent" />
-        <error line="164" column="1" source="standard:indent" />
-        <error line="165" column="1" source="standard:indent" />
-        <error line="166" column="1" source="standard:indent" />
-        <error line="167" column="1" source="standard:indent" />
-        <error line="168" column="1" source="standard:indent" />
-        <error line="169" column="1" source="standard:indent" />
-        <error line="170" column="1" source="standard:indent" />
-        <error line="172" column="1" source="standard:indent" />
-        <error line="173" column="1" source="standard:indent" />
-        <error line="174" column="1" source="standard:indent" />
-        <error line="175" column="1" source="standard:indent" />
-        <error line="176" column="1" source="standard:indent" />
-        <error line="177" column="1" source="standard:indent" />
-        <error line="178" column="1" source="standard:indent" />
-        <error line="179" column="1" source="standard:indent" />
-        <error line="180" column="1" source="standard:indent" />
-        <error line="181" column="1" source="standard:indent" />
-        <error line="182" column="1" source="standard:indent" />
-        <error line="183" column="1" source="standard:indent" />
-        <error line="184" column="1" source="standard:indent" />
-        <error line="185" column="1" source="standard:indent" />
-        <error line="186" column="1" source="standard:indent" />
-        <error line="187" column="1" source="standard:indent" />
-        <error line="188" column="1" source="standard:indent" />
-        <error line="189" column="1" source="standard:indent" />
-        <error line="190" column="1" source="standard:indent" />
-        <error line="191" column="1" source="standard:indent" />
-        <error line="192" column="1" source="standard:indent" />
-        <error line="193" column="1" source="standard:indent" />
-        <error line="194" column="1" source="standard:indent" />
-        <error line="195" column="1" source="standard:indent" />
-        <error line="196" column="1" source="standard:indent" />
-        <error line="197" column="1" source="standard:indent" />
-        <error line="198" column="1" source="standard:indent" />
-        <error line="199" column="1" source="standard:indent" />
-        <error line="200" column="1" source="standard:indent" />
-        <error line="201" column="1" source="standard:indent" />
-        <error line="202" column="1" source="standard:indent" />
-        <error line="202" column="121" source="standard:max-line-length" />
-        <error line="203" column="1" source="standard:indent" />
-        <error line="204" column="1" source="standard:indent" />
-        <error line="205" column="1" source="standard:indent" />
-        <error line="206" column="1" source="standard:indent" />
-        <error line="207" column="1" source="standard:indent" />
-        <error line="208" column="1" source="standard:indent" />
-        <error line="209" column="1" source="standard:indent" />
-        <error line="211" column="1" source="standard:indent" />
-        <error line="212" column="1" source="standard:indent" />
-        <error line="213" column="1" source="standard:indent" />
-        <error line="214" column="1" source="standard:indent" />
-        <error line="215" column="1" source="standard:indent" />
-        <error line="216" column="1" source="standard:indent" />
-        <error line="217" column="1" source="standard:indent" />
-        <error line="218" column="1" source="standard:indent" />
-        <error line="219" column="1" source="standard:indent" />
-        <error line="220" column="1" source="standard:indent" />
-        <error line="221" column="1" source="standard:indent" />
-        <error line="222" column="1" source="standard:indent" />
-        <error line="223" column="1" source="standard:indent" />
-        <error line="224" column="1" source="standard:indent" />
-        <error line="225" column="1" source="standard:indent" />
-        <error line="226" column="1" source="standard:indent" />
-        <error line="227" column="1" source="standard:indent" />
-        <error line="228" column="1" source="standard:indent" />
-        <error line="229" column="1" source="standard:indent" />
-        <error line="230" column="1" source="standard:indent" />
-        <error line="231" column="1" source="standard:indent" />
-        <error line="232" column="1" source="standard:indent" />
-        <error line="233" column="1" source="standard:indent" />
-        <error line="234" column="1" source="standard:indent" />
-        <error line="235" column="1" source="standard:indent" />
-        <error line="236" column="1" source="standard:indent" />
-        <error line="237" column="1" source="standard:indent" />
-        <error line="238" column="1" source="standard:indent" />
-        <error line="239" column="1" source="standard:indent" />
-        <error line="240" column="1" source="standard:indent" />
-        <error line="241" column="1" source="standard:indent" />
-        <error line="242" column="1" source="standard:indent" />
-        <error line="243" column="1" source="standard:indent" />
-        <error line="244" column="1" source="standard:indent" />
-        <error line="245" column="1" source="standard:indent" />
-        <error line="246" column="1" source="standard:indent" />
-        <error line="247" column="1" source="standard:indent" />
-        <error line="248" column="1" source="standard:indent" />
-        <error line="249" column="1" source="standard:indent" />
-        <error line="250" column="1" source="standard:indent" />
-        <error line="251" column="1" source="standard:indent" />
-        <error line="252" column="1" source="standard:indent" />
-        <error line="253" column="1" source="standard:indent" />
-        <error line="254" column="1" source="standard:indent" />
-        <error line="255" column="1" source="standard:indent" />
-        <error line="256" column="1" source="standard:indent" />
-        <error line="257" column="1" source="standard:indent" />
-        <error line="258" column="1" source="standard:indent" />
-        <error line="259" column="1" source="standard:indent" />
-        <error line="260" column="1" source="standard:indent" />
-        <error line="261" column="1" source="standard:indent" />
-        <error line="262" column="1" source="standard:no-blank-line-before-rbrace" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/LibraryTrackList.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -2198,49 +1711,23 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/PodcastSearchScreen.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="82" column="121" source="standard:max-line-length" />
-        <error line="90" column="25" source="standard:function-literal" />
-        <error line="90" column="121" source="standard:max-line-length" />
-        <error line="90" column="125" source="standard:function-literal" />
-        <error line="139" column="1" source="standard:indent" />
-        <error line="140" column="1" source="standard:indent" />
-        <error line="141" column="1" source="standard:indent" />
-        <error line="141" column="121" source="standard:max-line-length" />
-        <error line="142" column="1" source="standard:indent" />
-        <error line="143" column="1" source="standard:indent" />
-        <error line="144" column="1" source="standard:indent" />
-        <error line="145" column="1" source="standard:indent" />
-        <error line="146" column="1" source="standard:indent" />
-        <error line="147" column="1" source="standard:indent" />
-        <error line="148" column="1" source="standard:indent" />
-        <error line="149" column="1" source="standard:indent" />
-        <error line="150" column="1" source="standard:indent" />
-        <error line="151" column="1" source="standard:indent" />
-        <error line="152" column="1" source="standard:indent" />
-        <error line="153" column="1" source="standard:indent" />
-        <error line="154" column="1" source="standard:indent" />
-        <error line="155" column="1" source="standard:indent" />
-        <error line="156" column="1" source="standard:indent" />
-        <error line="157" column="1" source="standard:indent" />
-        <error line="158" column="1" source="standard:indent" />
-        <error line="159" column="1" source="standard:indent" />
-        <error line="160" column="1" source="standard:indent" />
-        <error line="185" column="121" source="standard:max-line-length" />
+        <error line="83" column="121" source="standard:max-line-length" />
+        <error line="144" column="121" source="standard:max-line-length" />
+        <error line="188" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/PodcastSearchViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/PodcastSubscriptionsScreen.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="82" column="121" source="standard:max-line-length" />
-        <error line="101" column="25" source="standard:function-literal" />
-        <error line="101" column="121" source="standard:max-line-length" />
-        <error line="101" column="132" source="standard:function-literal" />
+        <error line="87" column="121" source="standard:max-line-length" />
+        <error line="107" column="121" source="standard:max-line-length" />
+        <error line="219" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/PodcastSubscriptionsViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="41" column="17" source="standard:backing-property-naming" />
-        <error line="59" column="121" source="standard:max-line-length" />
+        <error line="42" column="17" source="standard:backing-property-naming" />
+        <error line="72" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/SharedWithMeList.kt">
         <error line="35" column="121" source="standard:max-line-length" />
@@ -2302,22 +1789,18 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/player/FullScreenLyrics.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="162" column="26" source="standard:wrapping" />
-        <error line="162" column="63" source="standard:wrapping" />
-        <error line="163" column="68" source="standard:wrapping" />
-        <error line="235" column="1" source="standard:spacing-between-declarations-with-comments" />
-        <error line="248" column="19" source="standard:property-naming" />
-        <error line="249" column="19" source="standard:property-naming" />
+        <error line="278" column="19" source="standard:property-naming" />
+        <error line="279" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/player/LyricLineItem.kt">
         <error line="213" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/player/LyricsControls.kt">
-        <error line="31" column="1" source="standard:kdoc" />
-        <error line="169" column="1" source="standard:kdoc" />
-        <error line="170" column="1" source="standard:spacing-between-declarations-with-comments" />
-        <error line="171" column="19" source="standard:property-naming" />
-        <error line="173" column="1" source="standard:spacing-between-declarations-with-comments" />
+        <error line="40" column="1" source="standard:kdoc" />
+        <error line="211" column="19" source="standard:property-naming" />
+        <error line="212" column="19" source="standard:property-naming" />
+        <error line="218" column="1" source="standard:kdoc" />
+        <error line="221" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/player/MediaTypeToggle.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -2325,42 +1808,7 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/player/NowPlayingMenuDrawer.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="128" column="111" source="standard:function-literal" />
-        <error line="128" column="112" source="standard:wrapping" />
-        <error line="128" column="121" source="standard:max-line-length" />
-        <error line="128" column="146" source="standard:function-literal" />
-        <error line="131" column="119" source="standard:function-literal" />
-        <error line="131" column="121" source="standard:max-line-length" />
-        <error line="131" column="137" source="standard:function-literal" />
-        <error line="141" column="97" source="standard:function-literal" />
-        <error line="141" column="121" source="standard:max-line-length" />
-        <error line="141" column="128" source="standard:function-literal" />
-        <error line="144" column="110" source="standard:function-literal" />
-        <error line="144" column="111" source="standard:wrapping" />
-        <error line="144" column="121" source="standard:max-line-length" />
-        <error line="144" column="149" source="standard:function-literal" />
-        <error line="146" column="93" source="standard:function-literal" />
-        <error line="146" column="121" source="standard:max-line-length" />
-        <error line="146" column="133" source="standard:function-literal" />
-        <error line="148" column="121" source="standard:max-line-length" />
-        <error line="153" column="103" source="standard:function-literal" />
-        <error line="153" column="121" source="standard:max-line-length" />
-        <error line="153" column="131" source="standard:function-literal" />
-        <error line="156" column="115" source="standard:function-literal" />
-        <error line="156" column="121" source="standard:max-line-length" />
-        <error line="156" column="143" source="standard:function-literal" />
-        <error line="158" column="94" source="standard:function-literal" />
-        <error line="158" column="121" source="standard:max-line-length" />
-        <error line="158" column="128" source="standard:function-literal" />
-        <error line="159" column="95" source="standard:function-literal" />
-        <error line="159" column="121" source="standard:max-line-length" />
-        <error line="159" column="131" source="standard:function-literal" />
-        <error line="172" column="81" source="standard:function-literal" />
-        <error line="172" column="121" source="standard:max-line-length" />
-        <error line="172" column="123" source="standard:function-literal" />
-        <error line="175" column="88" source="standard:function-literal" />
-        <error line="175" column="121" source="standard:max-line-length" />
-        <error line="175" column="134" source="standard:function-literal" />
+        <error line="173" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/player/NowPlayingScreen.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -2442,98 +1890,8 @@
         <error line="205" column="1" source="standard:indent" />
         <error line="206" column="1" source="standard:indent" />
         <error line="207" column="1" source="standard:indent" />
-        <error line="208" column="1" source="standard:indent" />
-        <error line="208" column="32" source="standard:function-literal" />
-        <error line="208" column="73" source="standard:function-literal" />
-        <error line="208" column="82" source="standard:function-literal" />
-        <error line="208" column="121" source="standard:function-literal" />
-        <error line="208" column="121" source="standard:max-line-length" />
-        <error line="209" column="1" source="standard:indent" />
-        <error line="210" column="1" source="standard:indent" />
-        <error line="211" column="1" source="standard:indent" />
-        <error line="212" column="1" source="standard:indent" />
-        <error line="213" column="1" source="standard:indent" />
-        <error line="214" column="1" source="standard:indent" />
-        <error line="216" column="1" source="standard:indent" />
-        <error line="217" column="1" source="standard:indent" />
-        <error line="218" column="1" source="standard:indent" />
-        <error line="219" column="1" source="standard:indent" />
-        <error line="220" column="1" source="standard:indent" />
-        <error line="221" column="1" source="standard:indent" />
-        <error line="223" column="1" source="standard:indent" />
-        <error line="224" column="1" source="standard:indent" />
         <error line="225" column="1" source="standard:indent" />
-        <error line="226" column="1" source="standard:indent" />
-        <error line="227" column="1" source="standard:indent" />
-        <error line="228" column="1" source="standard:indent" />
-        <error line="229" column="1" source="standard:indent" />
-        <error line="230" column="1" source="standard:indent" />
-        <error line="231" column="1" source="standard:indent" />
-        <error line="232" column="1" source="standard:indent" />
-        <error line="234" column="1" source="standard:indent" />
-        <error line="235" column="1" source="standard:indent" />
-        <error line="236" column="1" source="standard:indent" />
-        <error line="237" column="1" source="standard:indent" />
-        <error line="239" column="1" source="standard:indent" />
-        <error line="240" column="1" source="standard:indent" />
-        <error line="241" column="1" source="standard:indent" />
-        <error line="242" column="1" source="standard:indent" />
-        <error line="243" column="1" source="standard:indent" />
-        <error line="244" column="1" source="standard:indent" />
-        <error line="245" column="1" source="standard:indent" />
-        <error line="246" column="1" source="standard:indent" />
-        <error line="247" column="1" source="standard:indent" />
-        <error line="248" column="1" source="standard:indent" />
-        <error line="249" column="1" source="standard:indent" />
-        <error line="250" column="1" source="standard:indent" />
-        <error line="251" column="1" source="standard:indent" />
-        <error line="252" column="1" source="standard:indent" />
-        <error line="253" column="1" source="standard:indent" />
-        <error line="254" column="1" source="standard:indent" />
-        <error line="255" column="1" source="standard:indent" />
-        <error line="256" column="1" source="standard:indent" />
-        <error line="257" column="1" source="standard:indent" />
-        <error line="258" column="1" source="standard:indent" />
-        <error line="259" column="1" source="standard:indent" />
-        <error line="260" column="1" source="standard:indent" />
-        <error line="261" column="1" source="standard:indent" />
         <error line="262" column="1" source="standard:indent" />
-        <error line="263" column="1" source="standard:indent" />
-        <error line="264" column="1" source="standard:indent" />
-        <error line="265" column="1" source="standard:indent" />
-        <error line="266" column="1" source="standard:indent" />
-        <error line="267" column="1" source="standard:indent" />
-        <error line="268" column="1" source="standard:indent" />
-        <error line="269" column="1" source="standard:indent" />
-        <error line="270" column="1" source="standard:indent" />
-        <error line="271" column="1" source="standard:indent" />
-        <error line="272" column="1" source="standard:indent" />
-        <error line="273" column="1" source="standard:indent" />
-        <error line="274" column="1" source="standard:indent" />
-        <error line="275" column="1" source="standard:indent" />
-        <error line="276" column="1" source="standard:indent" />
-        <error line="277" column="1" source="standard:indent" />
-        <error line="278" column="1" source="standard:indent" />
-        <error line="279" column="1" source="standard:indent" />
-        <error line="280" column="1" source="standard:indent" />
-        <error line="281" column="1" source="standard:indent" />
-        <error line="282" column="1" source="standard:indent" />
-        <error line="283" column="1" source="standard:indent" />
-        <error line="284" column="1" source="standard:indent" />
-        <error line="285" column="1" source="standard:indent" />
-        <error line="286" column="1" source="standard:indent" />
-        <error line="287" column="1" source="standard:indent" />
-        <error line="288" column="1" source="standard:indent" />
-        <error line="289" column="1" source="standard:indent" />
-        <error line="290" column="1" source="standard:indent" />
-        <error line="291" column="1" source="standard:indent" />
-        <error line="292" column="1" source="standard:indent" />
-        <error line="293" column="1" source="standard:indent" />
-        <error line="294" column="1" source="standard:indent" />
-        <error line="295" column="1" source="standard:indent" />
-        <error line="296" column="1" source="standard:indent" />
-        <error line="297" column="1" source="standard:indent" />
-        <error line="298" column="1" source="standard:indent" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/player/NowPlayingViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -2552,47 +1910,35 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/player/PlayerControls.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="88" column="82" source="standard:multiline-if-else" />
-        <error line="88" column="105" source="standard:multiline-if-else" />
-        <error line="93" column="82" source="standard:multiline-if-else" />
-        <error line="93" column="105" source="standard:multiline-if-else" />
-        <error line="193" column="19" source="standard:property-naming" />
+        <error line="216" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/player/PlayerSeekBar.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="283" column="19" source="standard:property-naming" />
-        <error line="286" column="19" source="standard:property-naming" />
+        <error line="289" column="19" source="standard:property-naming" />
+        <error line="292" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/player/PlayerSeekBarTrack.kt">
-        <error line="34" column="19" source="standard:property-naming" />
+        <error line="46" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/player/PlayerTopBar.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="135" column="19" source="standard:property-naming" />
+        <error line="137" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/player/QueueRadioButton.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="33" column="19" source="standard:property-naming" />
-        <error line="34" column="19" source="standard:property-naming" />
-        <error line="59" column="40" source="standard:multiline-if-else" />
-        <error line="60" column="14" source="standard:multiline-if-else" />
+        <error line="36" column="19" source="standard:property-naming" />
+        <error line="37" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/player/SeekBarLabels.kt">
-        <error line="22" column="1" source="standard:kdoc" />
+        <error line="10" column="1" source="standard:kdoc" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/player/SleepTimerSheet.kt">
-        <error line="61" column="121" source="standard:max-line-length" />
-        <error line="68" column="121" source="standard:max-line-length" />
-        <error line="113" column="121" source="standard:max-line-length" />
-    </file>
-    <file name="app/src/main/java/com/wander/android/ui/screens/player/SourcePickerDialog.kt">
-        <error line="141" column="40" source="standard:multiline-if-else" />
-        <error line="142" column="22" source="standard:multiline-if-else" />
+        <error line="86" column="121" source="standard:max-line-length" />
+        <error line="102" column="121" source="standard:max-line-length" />
+        <error line="160" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/player/StandardPlayerLayout.kt">
         <error line="46" column="19" source="standard:property-naming" />
-        <error line="224" column="62" source="standard:multiline-if-else" />
-        <error line="225" column="38" source="standard:multiline-if-else" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/player/SyncedLyricsView.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -2609,44 +1955,15 @@
         <error line="33" column="121" source="standard:max-line-length" />
         <error line="64" column="121" source="standard:max-line-length" />
     </file>
+    <file name="app/src/main/java/com/wander/android/ui/screens/playlist/PlaylistFilterField.kt">
+        <error line="25" column="20" source="standard:property-naming" />
+    </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/playlist/PlaylistImportBanner.kt">
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/playlist/PlaylistScreen.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="83" column="40" source="standard:function-literal" />
-        <error line="83" column="41" source="standard:wrapping" />
-        <error line="83" column="63" source="standard:function-literal" />
-        <error line="83" column="70" source="standard:function-literal" />
-        <error line="83" column="71" source="standard:wrapping" />
-        <error line="83" column="72" source="standard:function-literal" />
-        <error line="83" column="73" source="standard:wrapping" />
-        <error line="83" column="121" source="standard:max-line-length" />
-        <error line="83" column="137" source="standard:function-literal" />
-        <error line="83" column="139" source="standard:function-literal" />
-        <error line="84" column="42" source="standard:function-literal" />
-        <error line="84" column="43" source="standard:wrapping" />
-        <error line="84" column="80" source="standard:function-literal" />
-        <error line="84" column="87" source="standard:function-literal" />
-        <error line="84" column="88" source="standard:wrapping" />
-        <error line="84" column="89" source="standard:function-literal" />
-        <error line="84" column="90" source="standard:wrapping" />
-        <error line="84" column="121" source="standard:max-line-length" />
-        <error line="84" column="154" source="standard:function-literal" />
-        <error line="84" column="156" source="standard:function-literal" />
-        <error line="130" column="121" source="standard:max-line-length" />
-        <error line="134" column="58" source="standard:function-literal" />
-        <error line="134" column="121" source="standard:max-line-length" />
-        <error line="134" column="144" source="standard:function-literal" />
-        <error line="157" column="121" source="standard:max-line-length" />
-        <error line="168" column="79" source="standard:function-literal" />
-        <error line="168" column="121" source="standard:max-line-length" />
-        <error line="168" column="129" source="standard:function-literal" />
-        <error line="193" column="43" source="standard:function-literal" />
-        <error line="193" column="85" source="standard:function-literal" />
-        <error line="193" column="98" source="standard:function-literal" />
-        <error line="193" column="121" source="standard:max-line-length" />
-        <error line="193" column="124" source="standard:function-literal" />
+        <error line="166" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/playlist/PlaylistShareHost.kt">
         <error line="1" column="1" source="standard:filename" />
@@ -2679,7 +1996,6 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/playlist/SharedPlaylistViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="104" column="1" source="standard:no-blank-line-before-rbrace" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/playlist/blend/BlendBanner.kt">
         <error line="77" column="121" source="standard:max-line-length" />
@@ -2709,11 +2025,7 @@
     <file name="app/src/main/java/com/wander/android/ui/screens/queue/QueueDrawer.kt">
         <error line="2" column="1" source="standard:no-trailing-spaces" />
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="148" column="20" source="standard:multiline-if-else" />
-        <error line="151" column="20" source="standard:multiline-if-else" />
-        <error line="194" column="1" source="standard:no-consecutive-blank-lines" />
-        <error line="216" column="121" source="standard:max-line-length" />
-        <error line="233" column="1" source="standard:no-consecutive-blank-lines" />
+        <error line="199" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/queue/QueueDrawerHeader.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -2726,29 +2038,15 @@
         <error line="151" column="20" source="standard:property-naming" />
         <error line="154" column="20" source="standard:property-naming" />
     </file>
-    <file name="app/src/main/java/com/wander/android/ui/screens/queue/QueueEntry.kt">
-        <error line="48" column="37" source="standard:string-template" />
-    </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/queue/QueueScreen.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="80" column="20" source="standard:multiline-if-else" />
-        <error line="83" column="20" source="standard:multiline-if-else" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/queue/QueueTrackTile.kt">
-        <error line="95" column="19" source="standard:property-naming" />
+        <error line="115" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/queue/QueueUpNext.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="125" column="32" source="standard:multiline-if-else" />
-        <error line="146" column="121" source="standard:max-line-length" />
-        <error line="151" column="49" source="standard:function-literal" />
-        <error line="151" column="61" source="standard:function-literal" />
-        <error line="151" column="86" source="standard:function-literal" />
-        <error line="151" column="102" source="standard:function-literal" />
-        <error line="151" column="107" source="standard:function-literal" />
-        <error line="151" column="114" source="standard:function-literal" />
-        <error line="151" column="120" source="standard:function-literal" />
-        <error line="151" column="121" source="standard:max-line-length" />
+        <error line="168" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/replay/ReplayCardFrame.kt">
         <error line="90" column="19" source="standard:property-naming" />
@@ -2797,7 +2095,7 @@
         <error line="99" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/replay/ReplayStoryScaffold.kt">
-        <error line="228" column="19" source="standard:property-naming" />
+        <error line="227" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/replay/ReplayStoryScreen.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -2817,16 +2115,12 @@
         <error line="164" column="19" source="standard:property-naming" />
         <error line="165" column="19" source="standard:property-naming" />
     </file>
-    <file name="app/src/main/java/com/wander/android/ui/screens/search/SearchScreen.kt">
-        <error line="165" column="121" source="standard:max-line-length" />
-        <error line="196" column="121" source="standard:max-line-length" />
-    </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/search/SearchViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/settings/AboutTab.kt">
-        <error line="65" column="121" source="standard:max-line-length" />
-        <error line="67" column="121" source="standard:max-line-length" />
+        <error line="66" column="121" source="standard:max-line-length" />
+        <error line="68" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/settings/AgroBadge.kt">
         <error line="44" column="19" source="standard:property-naming" />
@@ -2834,8 +2128,6 @@
     <file name="app/src/main/java/com/wander/android/ui/screens/settings/AgroDevicesSection.kt">
         <error line="105" column="40" source="standard:multiline-if-else" />
         <error line="106" column="26" source="standard:multiline-if-else" />
-        <error line="120" column="44" source="standard:multiline-if-else" />
-        <error line="121" column="22" source="standard:multiline-if-else" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/settings/AgroPairingController.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -2845,26 +2137,13 @@
         <error line="94" column="114" source="standard:wrapping" />
         <error line="94" column="121" source="standard:max-line-length" />
         <error line="94" column="158" source="standard:function-literal" />
-        <error line="137" column="100" source="standard:function-literal" />
-        <error line="137" column="101" source="standard:wrapping" />
-        <error line="137" column="121" source="standard:max-line-length" />
-        <error line="137" column="154" source="standard:function-literal" />
-        <error line="139" column="100" source="standard:function-literal" />
-        <error line="139" column="101" source="standard:wrapping" />
-        <error line="139" column="121" source="standard:max-line-length" />
-        <error line="139" column="147" source="standard:function-literal" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/settings/AgroPairingForm.kt">
         <error line="65" column="47" source="standard:wrapping" />
         <error line="67" column="25" source="standard:wrapping" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/settings/AppearanceTab.kt">
-        <error line="95" column="121" source="standard:max-line-length" />
-    </file>
-    <file name="app/src/main/java/com/wander/android/ui/screens/settings/BackupPassphraseDialog.kt">
-        <error line="100" column="79" source="standard:function-literal" />
-        <error line="100" column="121" source="standard:max-line-length" />
-        <error line="100" column="126" source="standard:function-literal" />
+        <error line="106" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/settings/BackupViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -2888,8 +2167,12 @@
         <error line="102" column="121" source="standard:max-line-length" />
         <error line="136" column="121" source="standard:max-line-length" />
     </file>
+    <file name="app/src/main/java/com/wander/android/ui/screens/settings/ConnectionsTab.kt">
+        <error line="34" column="121" source="standard:max-line-length" />
+        <error line="90" column="121" source="standard:max-line-length" />
+    </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/settings/FingerprintsScreen.kt">
-        <error line="255" column="121" source="standard:max-line-length" />
+        <error line="210" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/settings/FingerprintsViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -2904,12 +2187,8 @@
         <error line="136" column="121" source="standard:max-line-length" />
         <error line="136" column="122" source="standard:function-literal" />
     </file>
-    <file name="app/src/main/java/com/wander/android/ui/screens/settings/MergePreviewRows.kt">
-        <error line="30" column="40" source="standard:multiline-if-else" />
-        <error line="31" column="14" source="standard:multiline-if-else" />
-    </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/settings/MergePreviewScreen.kt">
-        <error line="74" column="12" source="standard:wrapping" />
+        <error line="137" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/settings/MergePreviewViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -2993,18 +2272,13 @@
         <error line="64" column="138" source="standard:function-literal" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/social/ActivityCards.kt">
-        <error line="38" column="19" source="standard:property-naming" />
-        <error line="179" column="26" source="standard:wrapping" />
-        <error line="179" column="63" source="standard:wrapping" />
-        <error line="180" column="60" source="standard:wrapping" />
+        <error line="39" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/social/ActivityScreen.kt">
-        <error line="44" column="121" source="standard:max-line-length" />
+        <error line="47" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/social/ActivityViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="222" column="10" source="standard:wrapping" />
-        <error line="224" column="20" source="standard:wrapping" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/social/CircleAnthemCard.kt">
         <error line="76" column="121" source="standard:max-line-length" />
@@ -3042,12 +2316,6 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/social/InboxScreen.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="112" column="26" source="standard:wrapping" />
-        <error line="112" column="63" source="standard:wrapping" />
-        <error line="113" column="60" source="standard:wrapping" />
-    </file>
-    <file name="app/src/main/java/com/wander/android/ui/screens/social/InboxViewModel.kt">
-        <error line="41" column="5" source="standard:spacing-between-declarations-with-comments" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/social/JamCard.kt">
         <error line="132" column="121" source="standard:max-line-length" />
@@ -3116,16 +2384,6 @@
     <file name="app/src/main/java/com/wander/android/ui/screens/social/ProfileHero.kt">
         <error line="72" column="20" source="standard:property-naming" />
     </file>
-    <file name="app/src/main/java/com/wander/android/ui/screens/social/ProfileScreen.kt">
-        <error line="125" column="93" source="standard:function-literal" />
-        <error line="125" column="94" source="standard:wrapping" />
-        <error line="125" column="121" source="standard:max-line-length" />
-        <error line="125" column="150" source="standard:function-literal" />
-        <error line="133" column="92" source="standard:function-literal" />
-        <error line="133" column="93" source="standard:wrapping" />
-        <error line="133" column="121" source="standard:max-line-length" />
-        <error line="133" column="149" source="standard:function-literal" />
-    </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/social/ProfileStats.kt">
         <error line="54" column="121" source="standard:max-line-length" />
     </file>
@@ -3137,16 +2395,11 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/social/SocialViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="57" column="1" source="standard:spacing-between-declarations-with-annotations" />
         <error line="59" column="1" source="standard:spacing-between-declarations-with-annotations" />
-        <error line="63" column="1" source="standard:spacing-between-declarations-with-annotations" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/social/UserSearchSheet.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="116" column="37" source="standard:function-literal" />
-        <error line="116" column="38" source="standard:wrapping" />
-        <error line="117" column="69" source="standard:wrapping" />
-        <error line="117" column="70" source="standard:function-literal" />
+        <error line="79" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/stats/StatsCharts.kt">
         <error line="149" column="1" source="standard:no-consecutive-blank-lines" />
@@ -3161,8 +2414,8 @@
         <error line="35" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/stats/StatsScreen.kt">
-        <error line="132" column="121" source="standard:max-line-length" />
-        <error line="138" column="121" source="standard:max-line-length" />
+        <error line="131" column="121" source="standard:max-line-length" />
+        <error line="137" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/stats/StatsSummary.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -3200,14 +2453,6 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/welcome/SpeedPitchOverlay.kt">
         <error line="113" column="19" source="standard:property-naming" />
-    </file>
-    <file name="app/src/main/java/com/wander/android/ui/screens/welcome/WelcomeScreen.kt">
-        <error line="89" column="49" source="standard:wrapping" />
-        <error line="90" column="85" source="standard:wrapping" />
-        <error line="91" column="57" source="standard:paren-spacing" />
-        <error line="92" column="84" source="standard:wrapping" />
-        <error line="154" column="43" source="standard:multiline-if-else" />
-        <error line="155" column="30" source="standard:multiline-if-else" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/welcome/WelcomeViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -3321,28 +2566,28 @@
         <error line="71" column="121" source="standard:max-line-length" />
         <error line="73" column="121" source="standard:max-line-length" />
         <error line="74" column="121" source="standard:max-line-length" />
-        <error line="108" column="121" source="standard:max-line-length" />
         <error line="109" column="121" source="standard:max-line-length" />
-        <error line="110" column="121" source="standard:max-line-length" />
+        <error line="111" column="121" source="standard:max-line-length" />
         <error line="112" column="121" source="standard:max-line-length" />
+        <error line="113" column="121" source="standard:max-line-length" />
         <error line="114" column="121" source="standard:max-line-length" />
         <error line="115" column="121" source="standard:max-line-length" />
         <error line="116" column="121" source="standard:max-line-length" />
         <error line="117" column="121" source="standard:max-line-length" />
         <error line="118" column="121" source="standard:max-line-length" />
-        <error line="119" column="121" source="standard:max-line-length" />
-        <error line="120" column="121" source="standard:max-line-length" />
+        <error line="121" column="121" source="standard:max-line-length" />
+        <error line="122" column="121" source="standard:max-line-length" />
         <error line="123" column="121" source="standard:max-line-length" />
         <error line="124" column="121" source="standard:max-line-length" />
         <error line="125" column="121" source="standard:max-line-length" />
         <error line="126" column="121" source="standard:max-line-length" />
         <error line="127" column="121" source="standard:max-line-length" />
-        <error line="128" column="121" source="standard:max-line-length" />
         <error line="129" column="121" source="standard:max-line-length" />
+        <error line="130" column="121" source="standard:max-line-length" />
         <error line="131" column="121" source="standard:max-line-length" />
-        <error line="132" column="121" source="standard:max-line-length" />
         <error line="133" column="121" source="standard:max-line-length" />
         <error line="134" column="121" source="standard:max-line-length" />
+        <error line="135" column="121" source="standard:max-line-length" />
         <error line="136" column="121" source="standard:max-line-length" />
         <error line="137" column="121" source="standard:max-line-length" />
         <error line="138" column="121" source="standard:max-line-length" />
@@ -3353,22 +2598,22 @@
         <error line="143" column="121" source="standard:max-line-length" />
         <error line="144" column="121" source="standard:max-line-length" />
         <error line="145" column="121" source="standard:max-line-length" />
-        <error line="146" column="121" source="standard:max-line-length" />
+        <error line="147" column="121" source="standard:max-line-length" />
         <error line="148" column="121" source="standard:max-line-length" />
-        <error line="149" column="121" source="standard:max-line-length" />
+        <error line="153" column="121" source="standard:max-line-length" />
         <error line="154" column="121" source="standard:max-line-length" />
         <error line="155" column="121" source="standard:max-line-length" />
         <error line="156" column="121" source="standard:max-line-length" />
         <error line="157" column="121" source="standard:max-line-length" />
-        <error line="158" column="121" source="standard:max-line-length" />
+        <error line="159" column="121" source="standard:max-line-length" />
         <error line="160" column="121" source="standard:max-line-length" />
-        <error line="161" column="121" source="standard:max-line-length" />
-        <error line="164" column="121" source="standard:max-line-length" />
-        <error line="166" column="121" source="standard:max-line-length" />
+        <error line="163" column="121" source="standard:max-line-length" />
+        <error line="165" column="121" source="standard:max-line-length" />
         <error line="173" column="121" source="standard:max-line-length" />
-        <error line="174" column="121" source="standard:max-line-length" />
         <error line="175" column="121" source="standard:max-line-length" />
+        <error line="176" column="121" source="standard:max-line-length" />
         <error line="177" column="121" source="standard:max-line-length" />
+        <error line="179" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/test/java/com/wander/android/EpisodeSupportTest.kt">
         <error line="54" column="22" source="standard:property-wrapping" />
@@ -3384,6 +2629,9 @@
         <error line="86" column="19" source="standard:property-wrapping" />
         <error line="86" column="121" source="standard:max-line-length" />
     </file>
+    <file name="app/src/test/java/com/wander/android/ManualDownloadRulesTest.kt">
+        <error line="15" column="120" source="standard:max-line-length" />
+    </file>
     <file name="app/src/test/java/com/wander/android/OffGridBeaconTest.kt">
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
@@ -3393,8 +2641,15 @@
     <file name="app/src/test/java/com/wander/android/ReplayComputerTest.kt">
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
+    <file name="app/src/test/java/com/wander/android/SharedTextTest.kt">
+        <error line="21" column="121" source="standard:max-line-length" />
+    </file>
     <file name="app/src/test/java/com/wander/android/StorageButlerRulesTest.kt">
         <error line="3" column="1" source="standard:import-ordering" />
+    </file>
+    <file name="app/src/test/java/com/wander/android/StreamingResamplerTest.kt">
+        <error line="56" column="121" source="standard:max-line-length" />
+        <error line="66" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/test/java/com/wander/android/TextPlaylistParserTest.kt">
         <error line="58" column="23" source="standard:property-wrapping" />
@@ -3415,6 +2670,18 @@
     <file name="app/src/test/java/com/wander/android/core/backup/BackupCodecTest.kt">
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
+    <file name="app/src/test/java/com/wander/android/core/database/LibraryBrowseDaoRoomTest.kt">
+        <error line="115" column="121" source="standard:max-line-length" />
+    </file>
+    <file name="app/src/test/java/com/wander/android/core/playback/PlayNextShuffleOrderTest.kt">
+        <error line="37" column="43" source="standard:comment-wrapping" />
+        <error line="37" column="69" source="standard:comment-wrapping" />
+        <error line="50" column="43" source="standard:comment-wrapping" />
+        <error line="50" column="69" source="standard:comment-wrapping" />
+        <error line="64" column="41" source="standard:comment-wrapping" />
+        <error line="64" column="62" source="standard:comment-wrapping" />
+        <error line="64" column="90" source="standard:comment-wrapping" />
+    </file>
     <file name="app/src/test/java/com/wander/android/core/security/FakeSharedPreferences.kt">
         <error line="13" column="1" source="standard:spacing-between-declarations-with-annotations" />
     </file>
@@ -3429,17 +2696,33 @@
         <error line="46" column="121" source="standard:max-line-length" />
         <error line="56" column="121" source="standard:max-line-length" />
     </file>
+    <file name="app/src/test/java/com/wander/android/data/podcast/RssFeedParserTest.kt">
+        <error line="93" column="121" source="standard:max-line-length" />
+        <error line="101" column="121" source="standard:max-line-length" />
+    </file>
     <file name="app/src/test/java/com/wander/android/data/repository/sharedplaylist/SharedPlaylistEditsTest.kt">
         <error line="11" column="121" source="standard:max-line-length" />
         <error line="52" column="121" source="standard:max-line-length" />
         <error line="76" column="121" source="standard:max-line-length" />
+    </file>
+    <file name="app/src/test/java/com/wander/android/data/sources/local/lyrics/EmbeddedLyricsTest.kt">
+        <error line="26" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/test/java/com/wander/android/data/sources/scrobble/ListenBrainzClientTest.kt">
         <error line="27" column="47" source="standard:wrapping" />
         <error line="36" column="9" source="standard:wrapping" />
         <error line="59" column="121" source="standard:max-line-length" />
     </file>
+    <file name="app/src/test/java/com/wander/android/data/sources/ytmusic/InnerTubeSearchParsingTest.kt">
+        <error line="29" column="121" source="standard:max-line-length" />
+    </file>
+    <file name="app/src/test/java/com/wander/android/ui/components/newplaylist/PlainSourceForTest.kt">
+        <error line="14" column="121" source="standard:max-line-length" />
+    </file>
     <file name="app/src/test/java/com/wander/android/ui/screens/home/HomeLayoutApplierTest.kt">
         <error line="3" column="1" source="standard:import-ordering" />
+    </file>
+    <file name="app/src/test/java/com/wander/android/ui/screens/playlist/PlaylistEntryTest.kt">
+        <error line="37" column="121" source="standard:max-line-length" />
     </file>
 </baseline>
