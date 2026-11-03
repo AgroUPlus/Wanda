@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="backup_section_metadata">Metadata corrections</string>
+    <string name="backup_section_metadata_detail">Titles, artists and albums corrected from the catalogue</string>
+    <string name="backup_section_shared">Shared playlists and jams</string>
+    <string name="backup_section_shared_detail">Your copies of shared playlists and your jam recaps</string>
+    <string name="backup_section_features">Sound analysis</string>
+    <string name="backup_section_features_detail">Tempo, energy and key measured for each track</string>
+    <string name="backup_section_embeddings">Audio fingerprints</string>
+    <string name="backup_section_embeddings_detail">Saves re-indexing your most-played tracks, but adds up to about 12 MB</string>
+    <string name="cloud_backup_part_metadata">Corrections</string>
+    <string name="cloud_backup_part_shared">Shared</string>
+    <string name="cloud_backup_part_features">Analysis</string>
+    <string name="cloud_backup_part_embeddings">Fingerprints</string>
+</resources>

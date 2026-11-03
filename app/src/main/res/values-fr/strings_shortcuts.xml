@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The package launcher shortcuts open. Not text: overridden for the .debug builds. -->
+    <!-- Launcher shortcuts (long-press the app icon). Short labels: about 10 characters. -->
+    <string name="shortcut_search_short">Search</string>
+    <string name="shortcut_search_long">Search your music</string>
+    <string name="shortcut_shuffle_liked_short">Shuffle</string>
+    <string name="shortcut_shuffle_liked_long">Shuffle liked songs</string>
+    <string name="shortcut_downloads_short">Downloads</string>
+    <string name="shortcut_downloads_long">Open downloaded songs</string>
+    <string name="shortcut_recognize_short">Recognize</string>
+    <string name="shortcut_recognize_long">Recognize a song</string>
+    <!-- Snackbar when the Shuffle liked songs shortcut finds nothing liked. -->
+    <string name="shortcut_no_liked_songs">No liked songs to shuffle yet</string>
+</resources>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Removing or moving a song in a playlist held on a server (Navidrome) did not go through. -->
+    <string name="playlist_edit_failed">Couldn\'t change “%1$s”. Try again.</string>
+</resources>

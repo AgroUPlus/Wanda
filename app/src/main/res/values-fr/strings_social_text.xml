@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Activity screen header and filters -->
+    <string name="activity_subtitle">Your circle, and what people sent you</string>
+    <plurals name="activity_subtitle_unread">
+        <item quantity="one">%d unread · your circle, and what people sent you</item>
+        <item quantity="other">%d unread · your circle, and what people sent you</item>
+    </plurals>
+    <string name="activity_filter_all">All</string>
+    <string name="activity_filter_circle">Circle</string>
+    <string name="activity_filter_shared">Shared</string>
+    <string name="activity_filter_releases">Releases</string>
+    <!-- A new release row with neither a title nor an album name -->
+    <string name="activity_release_something_new">Something new</string>
+    <!-- Activity empty states, one per filter -->
+    <string name="activity_empty_releases_unsupported">This Agro server is too old to know about artist subscriptions. Update the server to follow artists and see their releases here.</string>
+    <string name="activity_empty_all">Nothing yet. Friends show up here once they share activity, or send you something.</string>
+    <string name="activity_empty_circle">No circle activity. Friends appear here once they turn on activity sharing.</string>
+    <string name="activity_empty_shared">Nobody has sent you a song yet.</string>
+    <string name="activity_empty_releases">Subscribe to an artist and new releases will land here.</string>
+    <!-- Inbox conversation: the sender name on your own messages, and the spoken state of a sealed message -->
+    <string name="inbox_sender_you">You</string>
+    <string name="inbox_end_to_end_encrypted">End-to-end encrypted</string>
+    <!-- Off-grid sharing rows -->
+    <string name="offgrid_section_room">In the room</string>
+    <string name="offgrid_connected_encrypted">Connected, encrypted</string>
+    <string name="offgrid_connected_to_you_encrypted">Connected to you, encrypted</string>
+    <string name="offgrid_signal_here">Right here</string>
+    <string name="offgrid_signal_nearby">Nearby</string>
+    <string name="offgrid_signal_far">Further away</string>
+    <string name="offgrid_listening_along">Listening along</string>
+    <string name="offgrid_listen_along">Listen along</string>
+    <string name="offgrid_stop_following">Stop following</string>
+    <!-- %1$s is the track the linked device is playing -->
+    <string name="offgrid_cant_find">Can\'t find “%1$s” on this phone</string>
+    <string name="offgrid_waiting">Waiting for them to play something</string>
+    <string name="offgrid_play_whatever">Play whatever the linked device plays</string>
+    <!-- My profile -->
+    <string name="profile_not_signed_in">Not signed in</string>
+    <string name="profile_save">Save</string>
+    <string name="profile_saving">Saving…</string>
+    <!-- Friend search sheet -->
+    <string name="social_my_code">My code</string>
+    <string name="social_hide_my_code">Hide my code</string>
+    <string name="social_search_asked">Asked</string>
+    <string name="social_search_friends">Friends</string>
+    <string name="social_search_pending">Pending</string>
+    <string name="social_search_add">Add</string>
+    <!-- Session handoff sheet and card; %1$s is a device name, %1$s in picks_up_at is a m:ss position -->
+    <string name="session_picks_up_at">Picks up at %1$s</string>
+    <plurals name="session_queue_tracks">
+        <item quantity="one">%d track in the queue</item>
+        <item quantity="other">%d tracks in the queue</item>
+    </plurals>
+    <string name="session_finding_here">Finding it here…</string>
+    <string name="session_continue_here">Continue on this device</string>
+    <string name="session_listening_on">Listening on %1$s</string>
+    <string name="session_last_played_on">Last played on %1$s</string>
+    <string name="session_playing_on">Playing on %1$s</string>
+    <string name="session_left_off_on">Left off on %1$s</string>
+    <string name="session_finding">Finding…</string>
+    <string name="session_resume">Resume</string>
+    <!-- Listen-along bar; %1$s is a track title, %2$s its artist -->
+    <string name="listen_along_cant_find">Can\'t find “%1$s” in any of your sources</string>
+    <string name="listen_along_waiting">Waiting for them to play something</string>
+    <string name="listen_along_unreadable">Can\'t see what they\'re playing on this device</string>
+    <string name="listen_along_now_playing">%1$s — %2$s</string>
+    <string name="jam_queue_empty">Queue is empty</string>
+    <!-- Library sync offer sheet -->
+    <string name="sync_offer_unknown_album">Unknown album</string>
+    <plurals name="sync_offer_tracks_available">
+        <item quantity="one">%d track available</item>
+        <item quantity="other">%d tracks available</item>
+    </plurals>
+    <!-- %1$d tracks done of %2$d -->
+    <string name="sync_offer_progress">%1$d of %2$d downloaded</string>
+    <!-- %1$s is how the tracks travel (Direct Wi-Fi, Relay, Server archive), %2$d how many albums -->
+    <plurals name="sync_offer_route_albums">
+        <item quantity="one">Via %1$s, across %2$d album</item>
+        <item quantity="other">Via %1$s, across %2$d albums</item>
+    </plurals>
+    <plurals name="sync_offer_devices_albums">
+        <item quantity="one">From your other devices, across %d album</item>
+        <item quantity="other">From your other devices, across %d albums</item>
+    </plurals>
+    <string name="sync_offer_syncing">Syncing…</string>
+    <plurals name="sync_offer_get_all">
+        <item quantity="one">Get %d track</item>
+        <item quantity="other">Get all %d</item>
+    </plurals>
+    <string name="sync_route_direct">Direct Wi-Fi</string>
+    <string name="sync_route_relay">Relay</string>
+    <string name="sync_route_archive">Server archive</string>
+</resources>

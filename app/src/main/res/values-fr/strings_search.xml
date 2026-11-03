@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The search kind toggle above the results: what the search is for. -->
+    <string name="search_kind_music">Music</string>
+    <string name="search_kind_videos">Videos</string>
+    <string name="search_kind_podcasts">Podcasts</string>
+    <!-- The lyric matches section, when it has more than it shows by default. -->
+    <string name="search_lyrics_show_less">Show less</string>
+    <plurals name="search_lyrics_see_all">
+        <item quantity="one">See all (%1$d)</item>
+        <item quantity="other">See all (%1$d)</item>
+    </plurals>
+    <string name="search_lyrics_show_fewer">Show fewer</string>
+    <plurals name="search_lyrics_show_more">
+        <item quantity="one">Show %1$d more lyric match</item>
+        <item quantity="other">Show %1$d more lyric matches</item>
+    </plurals>
+    <!-- Section headings in the search results. -->
+    <string name="search_section_artists">Artists</string>
+    <string name="search_section_albums">Albums</string>
+    <!-- Recent searches, shown while the search field is focused and empty. -->
+    <string name="search_recent_title">Recent searches</string>
+    <string name="search_recent_clear_all">Clear all</string>
+    <!-- Content description of the button that removes one recent search. %1$s is the search. -->
+    <string name="search_recent_remove">Remove %1$s from recent searches</string>
+    <!-- Every source the search asked failed to answer, and nothing on the device matched. -->
+    <string name="search_failed_title">Search didn\'t go through</string>
+    <string name="search_failed_message">None of your sources answered. Check your connection and try again.</string>
+    <string name="search_retry">Try again</string>
+    <!-- Some sources answered and some did not. %1$s is the list of source names that did not. -->
+    <string name="search_sources_unanswered">Some sources didn\'t respond: %1$s</string>
+</resources>

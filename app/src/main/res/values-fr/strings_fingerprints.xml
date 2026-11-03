@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fingerprints screen: the recognition model row. %1$d is a percentage. -->
+    <string name="fp_model_downloading">Downloading… %1$d%%</string>
+    <!-- %1$d songs with a fingerprint, out of %2$d songs (the quantity). -->
+    <plurals name="fp_model_ready">
+        <item quantity="one">Downloaded and checked. %1$d of %2$d song has a neural fingerprint.</item>
+        <item quantity="other">Downloaded and checked. %1$d of %2$d songs have a neural fingerprint.</item>
+    </plurals>
+    <!-- %1$d is the model size in megabytes. -->
+    <string name="fp_model_absent">Not downloaded. The recogniser needs a one-time %1$d MB model.</string>
+    <string name="fp_model_retry_download">Retry download</string>
+    <string name="fp_model_download">Download model</string>
+    <!-- Fingerprints screen: summary. -->
+    <string name="fp_pause_measuring">Pause measuring</string>
+    <string name="fp_resume_measuring">Resume measuring</string>
+    <!-- Songs the indexer tried and could not read; it backs off and tries again later. -->
+    <plurals name="fp_failed_count">
+        <item quantity="one">%1$d song couldn’t be read. It will be tried again later, or now if you pause and resume.</item>
+        <item quantity="other">%1$d songs couldn’t be read. They will be tried again later, or now if you pause and resume.</item>
+    </plurals>
+    <!-- Measuring notification. %1$d songs done of %2$d in this batch (the quantity). -->
+    <plurals name="notif_measuring_progress">
+        <item quantity="one">%1$d of %2$d song</item>
+        <item quantity="other">%1$d of %2$d songs</item>
+    </plurals>
+    <!-- %1$d done of %2$d in this batch, %3$d songs left in the whole library (the quantity). -->
+    <plurals name="notif_measuring_progress_remaining">
+        <item quantity="one">%1$d of %2$d · %3$d song left</item>
+        <item quantity="other">%1$d of %2$d · %3$d songs left</item>
+    </plurals>
+</resources>

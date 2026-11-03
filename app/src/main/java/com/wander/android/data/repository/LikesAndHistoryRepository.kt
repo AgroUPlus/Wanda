@@ -54,23 +54,30 @@ internal class LikesAndHistoryRepository(
         Result.success(Unit)
     }
 
-    suspend fun renditionsOf(track: UnifiedTrack): List<UnifiedTrack> {
-        val candidates = trackDao.getTracksByArtistOnce(track.artist).map(TrackEntity::toUnifiedTrack)
-        return recordingRules.current().renditionsAmong(track, candidates)
-    }
+    suspend fun renditionsOf(track: UnifiedTrack): List<UnifiedTrack> =
+        recordingRules.current().renditionsAmong(track, candidatesFor(track.artist))
 
+    // The artist query is a substring `LIKE`, so a blank artist would match every row and pull
+    // the whole library into memory.
+    private suspend fun candidatesFor(artist: String): List<UnifiedTrack> =
+        if (artist.isBlank()) emptyList()
+        else trackDao.getTracksByArtistOnce(artist).map(TrackEntity::toUnifiedTrack)
+
+    /** Runs at every launch: one artist query per distinct artist, not one per liked track. */
     suspend fun unifySplitLikes(): Int = withContext(Dispatchers.IO) {
-        val liked = trackDao.getLikedTracksOnce().map(TrackEntity::toUnifiedTrack)
-        var repaired = 0
-        for (track in liked) {
-            for (other in renditionsOf(track)) {
-                if (!other.isLiked) {
-                    trackDao.setLiked(other.id, true)
-                    repaired++
+        val rules = recordingRules.current()
+        val repaired = mutableSetOf<String>()
+        trackDao.getLikedTracksOnce().map(TrackEntity::toUnifiedTrack)
+            .groupBy { it.artist }
+            .forEach { (artist, liked) ->
+                val candidates = candidatesFor(artist)
+                for (track in liked) {
+                    for (other in rules.renditionsAmong(track, candidates)) {
+                        if (!other.isLiked && repaired.add(other.id)) trackDao.setLiked(other.id, true)
+                    }
                 }
             }
-        }
-        repaired
+        repaired.size
     }
 
     suspend fun recordPlay(track: UnifiedTrack) = withContext(Dispatchers.IO) {

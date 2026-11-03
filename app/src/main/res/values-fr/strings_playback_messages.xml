@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Playback failures, shown as a snackbar -->
+    <string name="playback_error_youtube_session">Sign in to YouTube Music again — the session expired.</string>
+    <string name="playback_error_youtube_unplayable">This track isn\'t playable from YouTube Music.</string>
+    <string name="playback_error_youtube_prepare">Couldn\'t prepare the YouTube stream. Try again in a moment.</string>
+    <string name="playback_error_youtube_refused">YouTube Music won\'t play this track here.</string>
+    <string name="playback_error_stream_expired">Stream expired. Play it again to refresh it.</string>
+    <string name="playback_error_unreachable">Can\'t reach the source. Check your connection.</string>
+    <!-- %1$s is a Media3 error code name such as ERROR_CODE_DECODING_FAILED; not translated. -->
+    <string name="playback_error_generic">Playback failed (%1$s).</string>
+    <!-- %1$s is a source name such as Deezer -->
+    <string name="playback_source_not_connected">%1$s isn\'t connected. Sign in to it in Settings to play this track.</string>
+    <string name="playback_offline_not_downloaded">Offline mode — this track is not downloaded to this device</string>
+    <string name="playback_offline_no_network">No network — this track is not available on this device</string>
+    <!-- Radio notices -->
+    <string name="radio_no_station">Not enough listening yet — play a few tracks and try again</string>
+    <string name="radio_mode_on">Radio mode on — the queue keeps going</string>
+    <string name="radio_mode_off">Radio mode off</string>
+    <!-- Player action bar, while a jam or listen-along owns the order -->
+    <string name="player_shuffle_unavailable">Shuffle, unavailable while the room chooses the order</string>
+    <string name="player_repeat_unavailable">Repeat, unavailable while the room chooses the order</string>
+    <!-- The queue button, which also toggles radio on long press -->
+    <string name="queue_button_description">Open queue</string>
+    <string name="queue_button_radio_on">Radio on</string>
+    <string name="queue_button_radio_off">Radio off</string>
+    <string name="queue_button_radio_turn_on">Turn on radio</string>
+    <string name="queue_button_radio_turn_off">Turn off radio</string>
+    <!-- Song recognition -->
+    <plurals name="recognition_matching_against">
+        <item quantity="one">Hold it near the music. Matching against %d track measured on this device.</item>
+        <item quantity="other">Hold it near the music. Matching against %d tracks measured on this device.</item>
+    </plurals>
+    <string name="recognition_index_filling">Index is filling…</string>
+    <string name="recognition_model_missing">Model missing</string>
+    <!-- Long-running work notifications -->
+    <string name="work_channel_library_sync">Library sync</string>
+    <string name="work_channel_fingerprint">Measuring your library</string>
+    <string name="work_channel_downloads">Downloads</string>
+    <string name="work_channel_playlist_import">Playlist imports</string>
+    <string name="work_action_pause">Pause</string>
+    <string name="work_eta_under_minute">under a minute left</string>
+    <plurals name="work_eta_minutes">
+        <item quantity="one">about %d min left</item>
+        <item quantity="other">about %d min left</item>
+    </plurals>
+    <plurals name="work_eta_hours">
+        <item quantity="one">about %d h left</item>
+        <item quantity="other">about %d h left</item>
+    </plurals>
+    <!-- %1$d hours, %2$d minutes -->
+    <string name="work_eta_hours_minutes">about %1$d h %2$d min left</string>
+    <!-- Friend notifications. %1$s is a username. -->
+    <string name="friends_channel_name">Friends</string>
+    <string name="friend_request_title">Friend request</string>
+    <string name="friend_request_body">%1$s wants to be your friend</string>
+    <string name="friend_accepted_title">Friend request accepted</string>
+    <string name="friend_accepted_body">%1$s has accepted your friend request!</string>
+    <string name="drop_notification_title">%1$s sent you a track</string>
+</resources>

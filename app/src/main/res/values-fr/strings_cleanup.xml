@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sync offer card: the peer a direct transfer comes from, then the route's name -->
+    <string name="sync_route_via_peer">%1$s · %2$s</string>
+    <!-- Where a track or playlist comes from, as named on screen -->
+    <string name="source_name_local">On this device</string>
+    <string name="source_name_podcast">Podcasts</string>
+    <string name="source_name_agro">Shared on Agro</string>
+    <!-- A pasted playlist's track that has not been matched to a source yet -->
+    <string name="source_name_unresolved">Importing</string>
+    <!-- Short source names for the Home filter chips, where four have to fit on one line -->
+    <string name="source_short_name_local">Local</string>
+    <string name="source_short_name_agro">Shared</string>
+    <!-- Home: the greeting at the top, by time of day -->
+    <string name="home_greeting_morning">Good morning</string>
+    <string name="home_greeting_afternoon">Good afternoon</string>
+    <string name="home_greeting_evening">Good evening</string>
+    <!-- Home: shelf titles -->
+    <string name="home_quick_picks">Quick picks</string>
+    <string name="home_recently_played">Recently Played</string>
+    <string name="home_your_favorites">Your Favorites</string>
+    <string name="home_discover">Discover</string>
+    <!-- Home: a shelf of suggestions built from the last track played; %1$s is its title -->
+    <string name="home_because_you_listened">Because you listened to %1$s</string>
+    <!-- Home, filtered to one source that has nothing to show; %1$s is the source's name -->
+    <string name="home_source_has_no_tracks">%1$s has no tracks. Tap the filter again to see everything.</string>
+    <string name="home_filter_has_no_tracks">This source has no tracks. Tap the filter again to see everything.</string>
+    <!-- Track action sheet: suggesting a track to a Jam that votes on what plays next -->
+    <string name="jam_action_suggest">Suggest</string>
+    <!-- Social feed: a friend sent the user a track; %1$s is their username -->
+    <string name="drop_sent_you_a_song">\@%1$s sent you a song</string>
+    <!-- Title of Android's share sheet for a link -->
+    <string name="share_chooser_track">Share track</string>
+    <string name="share_chooser_album">Share album</string>
+    <string name="share_chooser_artist">Share artist</string>
+    <string name="share_chooser_playlist">Share playlist</string>
+    <!-- Toast while a Jam invite link opens; %1$s is the Jam's code -->
+    <string name="jam_opening_code">Opening Jam %1$s…</string>
+    <!-- Welcome: the recognition step; %1$d is the model's size in megabytes -->
+    <string name="welcome_recognition_model_size">It needs a one-time %1$d MB model. After that it works fully offline.</string>
+    <!-- Welcome: the button on a source card that is not set up yet -->
+    <string name="welcome_grant_access">Grant access</string>
+    <string name="welcome_sign_in">Sign in</string>
+    <!-- Artist page: expands a shelf the backend only sent a sample of -->
+    <string name="artist_see_all">See all</string>
+    <!-- Dialog when the network drops or comes back -->
+    <string name="network_offline_title">You\'re offline</string>
+    <string name="network_online_title">You\'re back online</string>
+    <string name="network_offline_message">No network connection. Turn on offline mode to play only what is already downloaded to this device?</string>
+    <string name="network_online_message">The connection is back. Turn offline mode off and use your streaming sources again?</string>
+    <string name="network_go_offline">Go offline</string>
+    <string name="network_go_online">Go online</string>
+    <!-- After sending a track to a friend; %1$s is the friend's name -->
+    <string name="drop_sent_to">Sent to %1$s</string>
+    <string name="drop_not_sent">That could not be sent</string>
+    <!-- Screen reader description of a track's fingerprint status dot -->
+    <string name="fingerprint_status_indexed">Fingerprinted</string>
+    <string name="fingerprint_status_processing">Fingerprinting now</string>
+    <string name="fingerprint_status_missing">Not fingerprinted</string>
+    <!-- Home: Deezer's chart shelf -->
+    <string name="deezer_shelf_top_charts">Deezer Top Charts</string>
+    <!-- Play/pause button's screen reader label while a track is playing -->
+    <string name="action_pause">Pause</string>
+    <!-- Screen reader: what tapping the docked mini player does -->
+    <string name="player_open">Open player</string>
+</resources>
