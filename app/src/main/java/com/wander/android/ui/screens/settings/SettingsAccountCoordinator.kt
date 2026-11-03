@@ -37,6 +37,7 @@ internal class SettingsAccountCoordinator @Inject constructor(
     private val sessionApi: AgroSessionApi,
     private val socialRepository: SocialRepository,
     private val dropsRepository: DropsRepository,
+    private val dropNotifier: com.wander.android.core.notification.DropNotifier,
     private val jamRecaps: com.wander.android.data.repository.JamRecapRepository,
     private val blends: com.wander.android.data.repository.BlendRepository,
     private val cacheManager: AudioCacheManager
@@ -121,7 +122,11 @@ internal class SettingsAccountCoordinator @Inject constructor(
             deezerStreamResolver.invalidateSession()
             secureStorage.clearAllCredentials()
             failed.attempt(R.string.forget_step_friends) { socialRepository.clear() }
-            failed.attempt(R.string.forget_step_drops) { dropsRepository.clear() }
+            failed.attempt(R.string.forget_step_drops) {
+                dropsRepository.clear()
+                // The conversation shortcuts are friends' names and faces, in the launcher and share sheet.
+                dropNotifier.forgetAll()
+            }
             failed.attempt(R.string.forget_step_jam_recaps) { jamRecaps.clear() }
             blends.clear()
             failed.attempt(R.string.forget_step_audio_cache) {

@@ -122,11 +122,16 @@ internal fun seedHash(seed: String): Long =
  * The two background colours of [seed]'s avatar, for painting something larger in their colours.
  */
 internal fun avatarGradient(seed: String): Pair<Color, Color> {
+    val palette = avatarPaletteOf(seed)
+    return palette.bgStart to palette.bgEnd
+}
+
+/** [seed]'s whole palette, for drawing its avatar somewhere Compose does not reach (a notification). */
+internal fun avatarPaletteOf(seed: String): AvatarPalette {
     val clean = seed.trim()
-    val palette = if (clean.isEmpty()) {
+    return if (clean.isEmpty()) {
         AVATAR_PALETTES[0]
     } else {
         AVATAR_PALETTES[(seedHash(clean) % AVATAR_PALETTES.size).toInt().absoluteValue]
     }
-    return palette.bgStart to palette.bgEnd
 }

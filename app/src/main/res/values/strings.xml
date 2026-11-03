@@ -1526,4 +1526,21 @@
     <string name="debug_gain_album">album gain</string>
     <string name="debug_gain_none">Loudness: no ReplayGain tags · volume ×%1$.2f (pre-amp only)</string>
     <string name="debug_gain_off">Loudness: levelling off</string>
+
+    <!-- Social notifications: drops as conversations, friend requests, blend invites. -->
+    <!-- The account itself, as the conversation names it beside a reaction sent from the shade. -->
+    <string name="notif_self_name">You</string>
+    <!-- A friend's note under the track they sent, in the language's own quotation marks. -->
+    <string name="notif_drop_note">“%1$s”</string>
+    <!-- All the lock screen says about a drop: it names nobody. -->
+    <string name="notif_drop_public">A friend sent you a track</string>
+    <string name="notif_action_play">Play</string>
+    <string name="notif_action_love">Love it</string>
+    <string name="notif_action_mark_read">Mark as read</string>
+    <string name="notif_action_accept">Accept</string>
+    <string name="notif_action_decline">Decline</string>
+    <string name="notif_drop_not_found">Couldn\'t find “%1$s” in your library or on YouTube Music.</string>
+    <string name="notif_drop_play_failed">Couldn\'t start playback.</string>
+    <string name="notif_drop_love_failed">Couldn\'t send your reaction.</string>
+    <string name="notif_friend_answer_failed">Couldn\'t answer the friend request.</string>
 </resources>

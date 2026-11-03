@@ -1468,4 +1468,23 @@
         <item quantity="one">%d titre ajouté à la file d\'attente</item>
         <item quantity="other">%d titres ajoutés à la file d\'attente</item>
     </plurals>
+
+    <!-- Notifications sociales. -->
+    <string name="friends_channel_name">Amis</string>
+    <string name="friend_request_title">Demande d\'ami</string>
+    <string name="friend_request_body">%1$s souhaite devenir votre ami</string>
+    <string name="friend_accepted_title">Demande d\'ami acceptée</string>
+    <string name="friend_accepted_body">%1$s a accepté votre demande d\'ami !</string>
+    <string name="notif_self_name">Vous</string>
+    <string name="notif_drop_note">« %1$s »</string>
+    <string name="notif_drop_public">Un ami vous a envoyé un morceau</string>
+    <string name="notif_action_play">Lire</string>
+    <string name="notif_action_love">J\'adore</string>
+    <string name="notif_action_mark_read">Marquer comme lu</string>
+    <string name="notif_action_accept">Accepter</string>
+    <string name="notif_action_decline">Refuser</string>
+    <string name="notif_drop_not_found">Impossible de trouver « %1$s » dans votre bibliothèque ou sur YouTube Music.</string>
+    <string name="notif_drop_play_failed">Impossible de lancer la lecture.</string>
+    <string name="notif_drop_love_failed">Impossible d\'envoyer votre réaction.</string>
+    <string name="notif_friend_answer_failed">Impossible de répondre à la demande d\'ami.</string>
 </resources>

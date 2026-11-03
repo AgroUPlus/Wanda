@@ -144,6 +144,22 @@
         <receiver
             android:name=".core.notification.GoIncognitoReceiver"
             android:exported="false" />
+        <!--
+            Play, Love it, Mark as read, Accept and Decline on the social notifications. Not
+            exported: only this app's own PendingIntents may answer a friend request for the user.
+        -->
+        <receiver
+            android:name=".core.notification.SocialActionReceiver"
+            android:exported="false" />
+        <!--
+            The covers inside drop notifications, held in memory. Not exported: the system reads
+            them through the grant each notification carries.
+        -->
+        <provider
+            android:name=".core.notification.NotificationPictureProvider"
+            android:authorities="${applicationId}.notificationpictures"
+            android:exported="false"
+            android:grantUriPermissions="true" />
 
 
         <activity

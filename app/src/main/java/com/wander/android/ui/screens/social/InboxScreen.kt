@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.ui.components.BackLayers
@@ -61,6 +62,14 @@ internal fun InboxScreen(
     // immediately reopen the thread the back press just left.
     LaunchedEffect(openWith) {
         if (!openWith.isNullOrBlank()) viewModel.openThread(openWith)
+    }
+    // Only while the thread is open *and* the screen resumed: another screen on top, or the app in
+    // the background, means the user is no longer looking at what that friend sends.
+    state.openWith?.let { username ->
+        LifecycleResumeEffect(username) {
+            viewModel.onThreadShown(username)
+            onPauseOrDispose { viewModel.onThreadHidden(username) }
+        }
     }
     val snackbarHostState = remember { SnackbarHostState() }
 

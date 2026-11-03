@@ -26,6 +26,10 @@ interface FriendDao {
     @Query("SELECT username FROM friends WHERE state = 'accepted'")
     suspend fun friendUsernames(): List<String>
 
+    /** One person, friend or pending, for drawing them in a notification. */
+    @Query("SELECT * FROM friends WHERE username = :username COLLATE NOCASE LIMIT 1")
+    suspend fun find(username: String): FriendEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(friends: List<FriendEntity>)
 

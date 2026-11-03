@@ -45,6 +45,7 @@ internal class AgroSessionViewModel @Inject constructor(
     private val jamPlayback: JamPlaybackController,
     private val dropsRepository: DropsRepository,
     private val friendNotifier: FriendNotifier,
+    private val dropNotifier: com.wander.android.core.notification.DropNotifier,
     private val incognitoRepository: IncognitoRepository,
     private val identityKeyManager: com.wander.android.core.security.IdentityKeyManager,
     private val agroRelayClient: com.wander.android.data.sources.agro.AgroRelayClient,
@@ -179,7 +180,7 @@ internal class AgroSessionViewModel @Inject constructor(
                     // before it does — the frame already carries the whole drop.
                     val decrypted = message.drop.decryptIfNeeded(identityKeyManager)
                     dropsRepository.onPushed(decrypted)
-                    friendNotifier.notifyDrop(decrypted)
+                    dropNotifier.notify(decrypted)
                 }
                 is AgroLiveMessage.RelayRequest -> {
                     agroRelayClient.handleRelayRequest(

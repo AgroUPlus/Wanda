@@ -1,175 +1,153 @@
 package com.wander.android.core.notification
 
 import android.app.NotificationChannel
-import android.app.PendingIntent
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import androidx.core.net.toUri
 import androidx.core.app.NotificationCompat
+import androidx.core.net.toUri
 import com.wander.android.MainActivity
 import com.wander.android.R
-import com.wander.android.data.sources.agro.AgroDrop
 import com.wander.android.data.sources.agro.BlendInfo
 import com.wander.android.data.sources.agro.FriendEvent
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Says out loud when somebody asks to be your friend, or answers when you asked.
+ * Says out loud when somebody asks to be your friend, answers when you asked, or asks you into a
+ * blend. Songs friends send are [DropNotifier]'s; both share this one channel and one group, since
+ * to the user they are the same kind of interruption, and a second channel would mean two switches
+ * to find in settings for one idea.
  *
  * These arrive on the sync socket, which is open only while the app is on screen — the battery
  * rule this app is built around. So this is a notification about something that happened *while
  * you were using Wanda*, not a push: a request sent while the app is closed is seen on the Friends
  * screen at next launch instead. Real background delivery needs a push service, which is a
  * dependency this app does not otherwise have.
+ *
+ * The person is the picture: their face as the large icon, drawn when they have no photo.
  */
 @Singleton
 internal class FriendNotifier @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context,
+    private val avatars: NotificationAvatars
 ) {
+    // Its own scope: the socket is collected with `collectLatest`, and the next frame would
+    // otherwise cancel a notification still waiting on a face.
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val style = style(context)
+
     fun notify(event: FriendEvent) {
-        val (title, body) = when (event) {
-            is FriendEvent.Requested -> context.getString(R.string.friend_request_title) to
-                context.getString(R.string.friend_request_body, event.from)
-            is FriendEvent.Accepted -> context.getString(R.string.friend_accepted_title) to
-                context.getString(R.string.friend_accepted_body, event.by)
+        when (event) {
+            is FriendEvent.Requested -> scope.launch { request(event.from) }
+            is FriendEvent.Accepted -> scope.launch { accepted(event.by) }
             // A decline is deliberately silent. Being turned down is not something to interrupt
             // someone about, and the request simply disappearing from the list says it well enough.
-            is FriendEvent.Declined -> return
-        }
-
-        ensureChannel()
-        val manager = context.getSystemService(NotificationManager::class.java) ?: return
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setSmallIcon(R.drawable.ic_stat_sync)
-            .setAutoCancel(true)
-            .build()
-
-        // Posting without POST_NOTIFICATIONS throws on API 33+. The permission is declared, but the
-        // user may have refused it, and a refused notification must not take the socket down with
-        // it — everything else that frame triggers still has to happen.
-        try {
-            manager.notify(notificationId(event), notification)
-        } catch (e: SecurityException) {
-            android.util.Log.i(TAG, "could not post the friend notification: ${e.javaClass.simpleName}")
+            is FriendEvent.Declined -> Unit
         }
     }
 
-    /**
-     * Says out loud that a friend handed you a song.
-     *
-     * Shares the Friends channel rather than opening its own: from a user's point of view this is
-     * the same kind of interruption as a friend request, and a second channel would mean two
-     * switches to find in settings for one idea.
-     *
-     * Keyed on the drop's id rather than on the sender, unlike the friend events above. Two
-     * requests from the same person are the same news and should replace each other; two songs from
-     * the same person are two songs, and collapsing them would silently hide one.
-     */
-    fun notifyDrop(drop: AgroDrop) {
-        ensureChannel()
-        val manager = context.getSystemService(NotificationManager::class.java) ?: return
-        val body = buildString {
-            append(drop.trackTitle)
-            if (drop.artistName.isNotBlank()) append(" — ").append(drop.artistName)
-            drop.note?.takeIf { it.isNotBlank() }?.let { append("\n\u201C").append(it).append("\u201D") }
-        }
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle(context.getString(R.string.drop_notification_title, drop.fromUser))
-            .setContentText(body)
-            // The note is the reason they sent it, and it is the part that does not fit on one line.
-            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
-            .setSmallIcon(R.drawable.ic_stat_sync)
-            .setAutoCancel(true)
-            // Without this the notification was inert: tapping it did nothing at all, which reads
-            // as the app being broken rather than as the notification being informational.
-            .setContentIntent(inboxIntent())
+    /** One per person, so a repeated frame replaces rather than stacks; answerable from the shade. */
+    private suspend fun request(username: String) {
+        val face = avatars.face(username)
+        val notification = style.builder(context.getString(R.string.friend_request_title))
+            .setContentTitle(context.getString(R.string.friend_request_title))
+            .setContentText(context.getString(R.string.friend_request_body, face.name))
+            .setLargeIcon(face.avatar)
+            .setContentIntent(open(SocialNotificationKeys.profileLink(username)))
+            .addAction(action(R.string.notif_action_accept, SocialActionReceiver.ACTION_ACCEPT, username))
+            .addAction(action(R.string.notif_action_decline, SocialActionReceiver.ACTION_DECLINE, username))
             .build()
-
-        try {
-            manager.notify(DROP_ID_BASE + drop.id.hashCode(), notification)
-        } catch (e: SecurityException) {
-            android.util.Log.i(TAG, "could not post the drop notification: ${e.javaClass.simpleName}")
-        }
+        style.post(SocialNotificationKeys.requestTag(username), SocialNotificationKeys.REQUEST_ID, notification)
     }
+
+    private suspend fun accepted(username: String) {
+        val face = avatars.face(username)
+        val notification = style.builder(context.getString(R.string.friend_accepted_title))
+            .setContentTitle(context.getString(R.string.friend_accepted_title))
+            .setContentText(context.getString(R.string.friend_accepted_body, face.name))
+            .setLargeIcon(face.avatar)
+            .setContentIntent(open(SocialNotificationKeys.profileLink(username)))
+            .build()
+        style.post(SocialNotificationKeys.acceptTag(username), SocialNotificationKeys.ACCEPT_ID, notification)
+    }
+
+    /** The request was answered, here or from the shade; it no longer asks anything. */
+    fun dismissRequest(username: String) =
+        style.cancel(SocialNotificationKeys.requestTag(username), SocialNotificationKeys.REQUEST_ID)
 
     /**
      * Says out loud that someone asked you into a blend. Opens on Activity, where it can be
      * answered. Keyed on the blend, so asking again replaces rather than stacks.
      */
     fun notifyBlendInvite(invite: BlendInfo) {
-        ensureChannel()
-        val manager = context.getSystemService(NotificationManager::class.java) ?: return
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle(context.getString(R.string.notif_blend_invite_title))
-            .setContentText(context.getString(R.string.blend_invite_from, invite.createdBy, invite.title))
-            .setSmallIcon(R.drawable.ic_stat_sync)
-            .setAutoCancel(true)
-            .setContentIntent(inboxIntent())
-            .build()
-
-        try {
-            manager.notify(BLEND_ID_BASE + invite.playlistId.hashCode(), notification)
-        } catch (e: SecurityException) {
-            android.util.Log.i(TAG, "could not post the blend notification: ${e.javaClass.simpleName}")
+        scope.launch {
+            val face = avatars.face(invite.createdBy)
+            val notification = style.builder(context.getString(R.string.notif_blend_invite_title))
+                .setContentTitle(context.getString(R.string.notif_blend_invite_title))
+                .setContentText(context.getString(R.string.blend_invite_from, invite.createdBy, invite.title))
+                .setLargeIcon(face.avatar)
+                .setContentIntent(open(INBOX_URI))
+                .build()
+            val tag = SocialNotificationKeys.blendTag(invite.playlistId)
+            style.post(tag, SocialNotificationKeys.BLEND_ID, notification)
         }
     }
 
-    /** One notification per person per kind, so repeated frames replace rather than stack up. */
-    private fun notificationId(event: FriendEvent): Int = when (event) {
-        is FriendEvent.Requested -> REQUEST_ID_BASE + event.from.hashCode()
-        is FriendEvent.Accepted -> ACCEPT_ID_BASE + event.by.hashCode()
-        is FriendEvent.Declined -> 0
-    }
+    private fun action(label: Int, action: String, username: String) = NotificationCompat.Action.Builder(
+        R.drawable.ic_stat_sync,
+        context.getString(label),
+        SocialActionReceiver.pendingIntent(context, action, username)
+    ).setShowsUserInterface(false).build()
 
     /**
-     * Opens the app on the inbox.
+     * Opens the app on [link].
      *
      * An *explicit* intent — it names `MainActivity` directly — so it does not depend on a manifest
-     * filter matching `wanda://inbox`. `FLAG_IMMUTABLE` because nothing receiving this is meant to
-     * rewrite it, and API 34 refuses a PendingIntent that declares neither.
+     * filter matching the link. `FLAG_IMMUTABLE` because nothing receiving this is meant to rewrite
+     * it, and API 34 refuses a PendingIntent that declares neither. The link is the intent's data,
+     * which keeps one person's PendingIntent apart from the next person's.
      */
-    private fun inboxIntent(): PendingIntent {
+    private fun open(link: String): PendingIntent {
         val intent = Intent(context, MainActivity::class.java).apply {
             action = Intent.ACTION_VIEW
-            data = INBOX_URI.toUri()
+            data = link.toUri()
             // Comes back to the existing task rather than stacking a second copy of the app behind
             // whatever the user was already doing.
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         return PendingIntent.getActivity(
             context,
-            INBOX_REQUEST_CODE,
+            0,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }
 
-    private fun ensureChannel() {
-        val manager = context.getSystemService(NotificationManager::class.java) ?: return
-        if (manager.getNotificationChannel(CHANNEL_ID) != null) return
-        manager.createNotificationChannel(
+    companion object {
+        private const val CHANNEL_ID = "wanda_friends"
+        private const val INBOX_URI = "wanda://inbox"
+
+        /** The Friends channel's look, shared with [DropNotifier] so both post into one group. */
+        fun style(context: Context) = WandaNotificationStyle(
+            context = context,
+            channelId = CHANNEL_ID,
+            smallIcon = R.drawable.ic_stat_sync,
+            group = SocialNotificationKeys.GROUP,
+            summaryId = SocialNotificationKeys.SUMMARY_ID
+        ) {
             NotificationChannel(
                 CHANNEL_ID,
                 context.getString(R.string.friends_channel_name),
                 // Someone waiting on an answer is worth a glance, unlike the sync chores.
                 NotificationManager.IMPORTANCE_DEFAULT
             )
-        )
-    }
-
-    private companion object {
-        const val TAG = "FriendNotifier"
-        const val CHANNEL_ID = "wanda_friends"
-        const val REQUEST_ID_BASE = 41_000
-        const val ACCEPT_ID_BASE = 42_000
-        const val DROP_ID_BASE = 43_000
-        const val BLEND_ID_BASE = 47_000
-        const val INBOX_REQUEST_CODE = 4301
-        const val INBOX_URI = "wanda://inbox"
+        }
     }
 }
