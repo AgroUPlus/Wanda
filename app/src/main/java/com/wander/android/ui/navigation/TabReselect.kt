@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.map
  * is on screen to react, so it is dropped rather than replayed onto a screen opened later.
  */
 internal class TabReselection {
+    /** The tab root the current screen was opened from; kept by `TrackTabOwner`. Not state: read on tap. */
+    var owner: String? = null
     private val taps = MutableSharedFlow<TopLevelDestination>(
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
