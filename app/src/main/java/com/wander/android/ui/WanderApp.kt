@@ -32,6 +32,7 @@ import com.wander.android.ui.components.LocalBackdropBlur
 import com.wander.android.ui.components.LocalDownloadMarks
 import com.wander.android.ui.components.LocalOfflinePlayback
 import com.wander.android.ui.components.SharedArtworkLayout
+import com.wander.android.ui.navigation.clearsTouchOrigin
 import com.wander.android.ui.components.TrackDownloadViewModel
 import com.wander.android.ui.components.backdropBlur
 import com.wander.android.ui.components.dockSpec
@@ -159,6 +160,8 @@ fun WanderApp(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    // A touch outside every destination (dock, rail, player) comes from none.
+                    .clearsTouchOrigin()
                     .backdropBlur(isBackBlurEnabled) { backdropBlur.amount() }
             ) {
                 Scaffold(
