@@ -216,8 +216,10 @@ private val OffsetLabelWidth = 52.dp
 private val PlayButtonSize = 96.dp
 private val PlayIconSize = 46.dp
 /** How far the lyrics dissolve into the background at each end of the list. */
+
 /** Matches `PlayerActionBar`'s container, so the two groups are visibly the same idiom. */
 private const val ContainerAlpha = 0.55f
 private val ContainerInset = 6.dp
+
 /** Explicit, because the inner clip is derived from it — concentric corners need both radii. */
 private val ContainerRadius = 26.dp

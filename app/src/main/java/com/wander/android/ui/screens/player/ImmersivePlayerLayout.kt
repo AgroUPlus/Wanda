@@ -41,11 +41,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
-import com.wander.android.data.model.nameRes
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.SpeedAndPitch
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.model.nameRes
 import com.wander.android.data.sources.agro.Jam
 import com.wander.android.ui.components.scrollingTitle
 import com.wander.android.ui.theme.OnCoverArt

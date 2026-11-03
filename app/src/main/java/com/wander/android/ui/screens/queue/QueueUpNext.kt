@@ -128,9 +128,23 @@ internal fun QueueUpNext(
                                     onDragStopped = { haptics.settled() }
                                 )
                             }
-                        } else null,
-                        onMoveUp = if (canReorder) shown.stepFrom(index, -1)?.let { to -> { onMove(entry.queueIndex, to) } } else null,
-                        onMoveDown = if (canReorder) shown.stepFrom(index, 1)?.let { to -> { onMove(entry.queueIndex, to) } } else null
+                        } else {
+                            null
+                        },
+                        onMoveUp = if (canReorder) {
+                            shown.stepFrom(index, -1)?.let { to ->
+                                { onMove(entry.queueIndex, to) }
+                            }
+                        } else {
+                            null
+                        },
+                        onMoveDown = if (canReorder) {
+                            shown.stepFrom(index, 1)?.let { to ->
+                                { onMove(entry.queueIndex, to) }
+                            }
+                        } else {
+                            null
+                        }
                     )
                 }
             }
@@ -156,7 +170,9 @@ private fun LazyListScope.playedSection(
     if (!expanded) return
     // Most recent first: the track just finished is the one you are likeliest to want back.
     val recentFirst = played.asReversed()
-    itemsIndexed(recentFirst, key = { _, entry -> entry.key }, contentType = { _, _ -> "queue-track" }) { index, entry ->
+    itemsIndexed(recentFirst, key = { _, entry ->
+        entry.key
+    }, contentType = { _, _ -> "queue-track" }) { index, entry ->
         val shape = groupedItemShape(index, recentFirst.size)
         QueueSwipeToRemove(enabled = true, shape = shape, onRemove = { onRemove(entry) }) {
             QueueTrackTile(

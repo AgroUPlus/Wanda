@@ -87,6 +87,7 @@ class MusicBrainzClient @Inject constructor(
     private companion object {
         const val BASE_URL = "https://musicbrainz.org/ws/2/artist"
         const val MIN_CONFIDENCE_SCORE = 90
+
         /**
          * Name, version and a contact URL, the form MusicBrainz's policy asks for: a fixed `1.0`
          * hid which release misbehaved, and no contact left blocking as the only remedy.

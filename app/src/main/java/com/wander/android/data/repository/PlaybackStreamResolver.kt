@@ -60,11 +60,16 @@ internal class PlaybackStreamResolver(
 
     /** Tier 1: Internal / Downloaded local file, or a local copy of the same recording. */
     private suspend fun localStreamFor(cached: TrackEntity?): StreamInfo? {
-        downloadedFileOf(cached)?.let { path -> return StreamInfo(uri = path, isDirectFile = true, route = StreamRoute.DOWNLOAD) }
+        downloadedFileOf(cached)?.let { path ->
+            return StreamInfo(uri = path, isDirectFile = true, route = StreamRoute.DOWNLOAD)
+        }
         if (cached == null || cached.effectiveSource == SourceType.LOCAL || cached.effectiveSource == SourceType.PODCAST) return null
-        val localMatch = sameRecordingAs(cached, trackDao.findLocalOrDownloadedCandidates(cached.title, TITLE_CANDIDATES))
+        val localMatch =
+            sameRecordingAs(cached, trackDao.findLocalOrDownloadedCandidates(cached.title, TITLE_CANDIDATES))
         val localPath = downloadedFileOf(localMatch) ?: localMatch?.streamUri
-        return localPath?.takeIf { it.isNotBlank() }?.let { StreamInfo(uri = it, isDirectFile = true, route = StreamRoute.LOCAL_COPY) }
+        return localPath?.takeIf {
+            it.isNotBlank()
+        }?.let { StreamInfo(uri = it, isDirectFile = true, route = StreamRoute.LOCAL_COPY) }
     }
 
     /**

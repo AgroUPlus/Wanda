@@ -55,9 +55,21 @@ internal class BackupContentsIO @Inject constructor(
             } else {
                 emptyList()
             },
-            recaps = if (on(BackupSection.HISTORY)) recapDao.observeAll().first().map { it.toBackup() } else emptyList(),
+            recaps = if (on(BackupSection.HISTORY)) {
+                recapDao.observeAll().first().map {
+                    it.toBackup()
+                }
+            } else {
+                emptyList()
+            },
             tracks = tracksFor(sections),
-            playlists = if (on(BackupSection.LIBRARY)) playlistDao.getAllPlaylists().map { it.toBackup() } else emptyList(),
+            playlists = if (on(BackupSection.LIBRARY)) {
+                playlistDao.getAllPlaylists().map {
+                    it.toBackup()
+                }
+            } else {
+                emptyList()
+            },
             splits = if (on(BackupSection.MERGES)) splitDao.getAllOnce().map { it.toBackup() } else emptyList(),
             links = if (on(BackupSection.MERGES)) linkDao.getAllOnce().map { it.toBackup() } else emptyList(),
             podcasts = if (on(BackupSection.LIBRARY)) podcastDao.getAll().map { it.toBackup() } else emptyList(),
@@ -86,7 +98,9 @@ internal class BackupContentsIO @Inject constructor(
             if (library) addAll(playlistDao.getAllPlaylists().flatMap { it.trackIds.split(',') })
         }.filter { it.isNotBlank() && it !in known }.distinct()
         val extra = referenced.chunked(QUERY_BATCH).flatMap { trackDao.getTracksByIds(it) }
-            .map { if (library) it else it.copy(isLiked = false, isLibrary = false, playCount = 0, lastPlayedTimestamp = null) }
+            .map {
+                if (library) it else it.copy(isLiked = false, isLibrary = false, playCount = 0, lastPlayedTimestamp = null)
+            }
         return (withState + extra).sortedBy { it.id }.map { it.toBackup() }
     }
 

@@ -1,5 +1,8 @@
 package com.wander.android.data.sources.deezer
 
+import java.io.IOException
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
@@ -19,9 +22,6 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Deezer's private web gateway (`gw-light.php`), which hands out the tokens a stream needs.

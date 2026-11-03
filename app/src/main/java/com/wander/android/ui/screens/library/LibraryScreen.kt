@@ -68,18 +68,19 @@ fun LibraryScreen(
             actionsFor = null
         }
     }
-    val pageActions = remember(onOpenAlbum, onOpenArtist, onOpenPlaylist, onOpenImport, onOpenSubscriptions, selection) {
-        LibraryPageActions(
-            onOpenAlbum = onOpenAlbum,
-            onOpenArtist = onOpenArtist,
-            onOpenPlaylist = onOpenPlaylist,
-            onOpenImport = onOpenImport,
-            onOpenSubscriptions = onOpenSubscriptions,
-            onTrackLongPress = { actionsFor = it },
-            onAlbumLongPress = { albumActionsFor = it },
-            selection = selection
-        )
-    }
+    val pageActions =
+        remember(onOpenAlbum, onOpenArtist, onOpenPlaylist, onOpenImport, onOpenSubscriptions, selection) {
+            LibraryPageActions(
+                onOpenAlbum = onOpenAlbum,
+                onOpenArtist = onOpenArtist,
+                onOpenPlaylist = onOpenPlaylist,
+                onOpenImport = onOpenImport,
+                onOpenSubscriptions = onOpenSubscriptions,
+                onTrackLongPress = { actionsFor = it },
+                onAlbumLongPress = { albumActionsFor = it },
+                selection = selection
+            )
+        }
     val likedTracks by browse.likedTracks.collectAsStateWithLifecycle()
     val downloadedTracks by browse.downloadedTracks.collectAsStateWithLifecycle()
     val hasLibraryTracks by browse.hasTracks.collectAsStateWithLifecycle()

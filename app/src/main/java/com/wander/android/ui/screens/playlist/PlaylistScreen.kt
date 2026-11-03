@@ -174,7 +174,9 @@ fun PlaylistScreen(
                             SharedPlaylistBanner(
                                 state = state,
                                 onRetry = sharedViewModel::retry,
-                                onUnfollow = sharedViewModel::unfollow.takeIf { state.localPlaylistId == null && !state.isBlend }
+                                onUnfollow = sharedViewModel::unfollow.takeIf {
+                                    state.localPlaylistId == null && !state.isBlend
+                                }
                             )
                         }
                     }

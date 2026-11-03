@@ -8,9 +8,9 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.EpisodeProgressRepository
 import com.wander.android.data.repository.LibraryBrowseRepository
 import com.wander.android.data.repository.SmartMixRepository
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.first
 
 /**
  * The tracks behind each folder of the browse tree that lists tracks, read from Room.

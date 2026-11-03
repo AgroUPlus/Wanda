@@ -120,8 +120,11 @@ private fun DeviceRow(
                     node.currentTrack?.let { append(" · $it") }
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = if (node.isOnline) ListeningGreen
-                else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (node.isOnline) {
+                    ListeningGreen
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

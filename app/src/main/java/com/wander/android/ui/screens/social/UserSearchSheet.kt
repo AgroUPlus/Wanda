@@ -115,8 +115,10 @@ internal fun UserSearchSheet(
                         subtitle = "@" + profile.username,
                         actionLabel = stringResource(profile.actionLabel(state.requested)),
                         onAction = { onSendRequest(profile.username) }
-                            .takeIf { profile.friendState == FriendState.NONE &&
-                                profile.username !in state.requested },
+                            .takeIf {
+                                profile.friendState == FriendState.NONE &&
+                                    profile.username !in state.requested
+                            },
                         onClick = { onOpenProfile(profile.username) }
                     )
                 }

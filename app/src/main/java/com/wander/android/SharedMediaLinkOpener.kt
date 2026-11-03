@@ -25,10 +25,10 @@ import com.wander.android.data.sources.ytmusic.YouTubeEntityKind
 import com.wander.android.ui.navigation.DeepLinkRouter
 import com.wander.android.ui.navigation.Routes
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 /**
  * Opens a link to music someone shared — a playlist, an album, a track, or a YouTube page — by

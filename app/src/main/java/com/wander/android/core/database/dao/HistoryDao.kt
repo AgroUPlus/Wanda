@@ -89,6 +89,7 @@ interface HistoryDao : HistoryEditQueries {
      * holds. `INNER JOIN` because a play whose track has since been deleted from the library has
      * nothing to report about.
      */
+
     /** What is played after dark (10 pm to 5 am, local time), most played first. */
     @Query(
         """
@@ -242,4 +243,3 @@ data class PlayIdentity(
     val trackId: String,
     val playedAt: Long
 )
-

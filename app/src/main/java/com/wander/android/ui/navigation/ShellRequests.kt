@@ -1,10 +1,10 @@
 package com.wander.android.ui.navigation
 
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** Something the shell's own chrome should do, asked for from outside it — a launcher shortcut. */
 enum class ShellRequest {

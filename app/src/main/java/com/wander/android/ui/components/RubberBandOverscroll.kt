@@ -147,11 +147,11 @@ private class RubberBandNode(private val effect: RubberBandOverscroll) : Modifie
         val placeable = measurable.measure(constraints)
         return layout(placeable.width, placeable.height) {
             placeable.placeWithLayer(0, 0) {
-                translationY = rubberBand(effect.displacement, size.height * StretchLimit)
+                translationY = rubberBand(effect.displacement, size.height * STRETCH_LIMIT)
             }
         }
     }
 }
 
 /** The furthest the band can carry the content, as a share of the list's height — never reached. */
-private const val StretchLimit = 0.3f
+private const val STRETCH_LIMIT = 0.3f

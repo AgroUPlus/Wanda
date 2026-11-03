@@ -34,8 +34,8 @@ import com.wander.android.ui.components.FastScroller
 import com.wander.android.ui.components.ScrollToTopOnReselect
 import com.wander.android.ui.components.fastScrollLetter
 import com.wander.android.ui.components.groupedListItem
-import com.wander.android.ui.components.nestedListInset
 import com.wander.android.ui.components.monogramOf
+import com.wander.android.ui.components.nestedListInset
 
 /**
  * The library by artist, A to Z, each opening the artist's page.

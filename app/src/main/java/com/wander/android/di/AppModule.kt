@@ -56,24 +56,40 @@ object AppModule {
     @Provides fun provideLibraryBrowseDao(db: WanderDatabase): com.wander.android.core.database.dao.LibraryBrowseDao =
         db.libraryBrowseDao()
     @Provides fun provideArtistDao(db: WanderDatabase): ArtistDao = db.artistDao()
+
     @Provides fun provideHistoryDao(db: WanderDatabase): HistoryDao = db.historyDao()
+
     @Provides fun provideReplayRecapDao(db: WanderDatabase): com.wander.android.core.database.dao.ReplayRecapDao =
         db.replayRecapDao()
+
     @Provides fun provideShelfDao(db: WanderDatabase): ShelfDao = db.shelfDao()
+
     @Provides fun provideFriendDao(db: WanderDatabase): FriendDao = db.friendDao()
+
     @Provides fun provideDropDao(db: WanderDatabase): DropDao = db.dropDao()
+
     @Provides fun providePlaylistDao(db: WanderDatabase): com.wander.android.core.database.dao.PlaylistDao = db.playlistDao()
+
     @Provides fun provideRemotePlaylistDao(db: WanderDatabase): com.wander.android.core.database.dao.RemotePlaylistDao =
         db.remotePlaylistDao()
+
     @Provides fun provideLikeSyncDao(db: WanderDatabase): com.wander.android.core.database.dao.LikeSyncDao = db.likeSyncDao()
 
     @Provides fun provideRecordingSplitDao(db: WanderDatabase): com.wander.android.core.database.dao.RecordingSplitDao = db.recordingSplitDao()
+
     @Provides fun provideRecordingLinkDao(db: WanderDatabase): com.wander.android.core.database.dao.RecordingLinkDao = db.recordingLinkDao()
+
     @Provides fun provideCanonicalMetadataDao(db: WanderDatabase): com.wander.android.core.database.dao.CanonicalMetadataDao = db.canonicalMetadataDao()
+
     @Provides fun provideTrackFeatureDao(db: WanderDatabase): com.wander.android.core.database.dao.TrackFeatureDao = db.trackFeatureDao()
+
     @Provides fun provideTrackEmbeddingDao(db: WanderDatabase): com.wander.android.core.database.dao.TrackEmbeddingDao = db.trackEmbeddingDao()
+
     @Provides fun provideTrackAttemptDao(db: WanderDatabase): com.wander.android.core.database.dao.TrackAttemptDao = db.trackAttemptDao()
+
     @Provides fun provideCatalogRecordingDao(db: WanderDatabase): com.wander.android.core.database.dao.CatalogRecordingDao = db.catalogRecordingDao()
+
     @Provides fun provideTrackLyricsDao(db: WanderDatabase): com.wander.android.core.database.dao.TrackLyricsDao = db.trackLyricsDao()
+
     @Provides fun provideAnnouncedReleaseDao(db: WanderDatabase): com.wander.android.core.database.dao.AnnouncedReleaseDao = db.announcedReleaseDao()
 }

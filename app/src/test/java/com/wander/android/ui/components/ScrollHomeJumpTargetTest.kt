@@ -9,12 +9,12 @@ class ScrollHomeJumpTargetTest {
     @Test
     fun `a list near the top animates the whole way`() {
         assertNull(scrollHomeJumpTarget(0))
-        assertNull(scrollHomeJumpTarget(ScrollHomeJumpIndex))
+        assertNull(scrollHomeJumpTarget(SCROLL_HOME_JUMP_INDEX))
     }
 
     @Test
     fun `a list far down jumps to the last stretch first`() {
-        assertEquals(ScrollHomeJumpIndex, scrollHomeJumpTarget(ScrollHomeJumpIndex + 1))
-        assertEquals(ScrollHomeJumpIndex, scrollHomeJumpTarget(5_000))
+        assertEquals(SCROLL_HOME_JUMP_INDEX, scrollHomeJumpTarget(SCROLL_HOME_JUMP_INDEX + 1))
+        assertEquals(SCROLL_HOME_JUMP_INDEX, scrollHomeJumpTarget(5_000))
     }
 }

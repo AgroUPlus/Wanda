@@ -2,10 +2,10 @@ package com.wander.android.core.cache.predict
 
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.SourceType
-import org.junit.Assert.assertEquals
-import org.junit.Test
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
 class OfflinePredictorTest {
 

@@ -93,8 +93,11 @@ internal fun InboxScreen(
                     // would make the list unreachable without opening the inbox again.
                     onClick = { if (state.openWith != null) viewModel.closeThread() else onBack() }
                 ) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription =
-                        stringResource(R.string.common_back))
+                    Icon(
+                        Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription =
+                            stringResource(R.string.common_back)
+                    )
                 }
                 Text(
                     text = state.openWith?.let { state.nameOf(it) } ?: "Messages",

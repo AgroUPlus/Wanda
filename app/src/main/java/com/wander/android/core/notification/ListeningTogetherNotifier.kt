@@ -112,6 +112,7 @@ internal class ListeningTogetherNotifier @Inject constructor(
     private companion object {
         const val CHANNEL_ID = "wanda_together"
         const val GROUP = "wanda_together"
+
         // Tagged by person, so these ids only need to be apart from each other and the summary's.
         const val LISTENER_ID = 1
         const val JAM_ID = 2
@@ -121,6 +122,7 @@ internal class ListeningTogetherNotifier @Inject constructor(
         const val INCOGNITO_REQUEST_CODE = 4403
         const val JAM_URI = "wanda://jam-room"
         const val PRIVACY_URI = "wanda://privacy"
+
         /** Jam comings and goings are news for a while, not a record to keep in the shade. */
         const val JAM_TIMEOUT_MS = 10 * 60 * 1000L
     }

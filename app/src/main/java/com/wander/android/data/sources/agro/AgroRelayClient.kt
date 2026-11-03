@@ -123,7 +123,9 @@ class AgroRelayClient @Inject constructor(
                     }.getOrDefault(false)
                     if (canOpen) {
                         Pair({ context.contentResolver.openInputStream(uri)!! }, size)
-                    } else null
+                    } else {
+                        null
+                    }
                 }
                 else -> null
             } ?: return@launch

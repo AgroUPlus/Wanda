@@ -193,10 +193,12 @@ object Routes {
      * login flows still take the screen over.
      */
     private val withChrome: Set<String> =
-        (topLevel + ALBUM + PLAYLIST + ARTIST + PROFILE + MY_PROFILE + SETTINGS +
-            SETTINGS_CATEGORY + STATS +
-            HISTORY + MERGE_PREVIEW + JAM + JAM_ROUTE + ACTIVITY + INBOX + CIRCLE + OFFGRID +
-            FINGERPRINTS + PODCAST_SUBSCRIPTIONS + PODCAST_SEARCH)
+        (
+            topLevel + ALBUM + PLAYLIST + ARTIST + PROFILE + MY_PROFILE + SETTINGS +
+                SETTINGS_CATEGORY + STATS +
+                HISTORY + MERGE_PREVIEW + JAM + JAM_ROUTE + ACTIVITY + INBOX + CIRCLE + OFFGRID +
+                FINGERPRINTS + PODCAST_SUBSCRIPTIONS + PODCAST_SEARCH
+            )
             .map { it.withoutArgs() }
             .toSet()
 

@@ -7,11 +7,11 @@ import com.wander.android.core.playback.QueueInsert
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MusicRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * The batch actions every selectable list shares, and the swipe shortcuts on its rows. Screen-only

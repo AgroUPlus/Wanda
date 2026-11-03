@@ -9,10 +9,10 @@ import com.wander.android.data.repository.SocialRepository
 import com.wander.android.data.sources.agro.AgroAuthError
 import com.wander.android.data.sources.agro.AgroClient
 import com.wander.android.data.sources.agro.explain
+import com.wander.android.ui.navigation.DeepLinkRouter
 import com.wander.android.ui.navigation.LinkConfirmation
 import com.wander.android.ui.navigation.LinkConfirmations
 import com.wander.android.ui.navigation.TopLevelDestination
-import com.wander.android.ui.navigation.DeepLinkRouter
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton

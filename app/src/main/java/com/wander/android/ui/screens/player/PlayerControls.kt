@@ -92,12 +92,24 @@ fun PlayerControls(
             label = "skipBase"
         )
         val prevDelta by animateDpAsState(
-            targetValue = if (prevPressed) SkipPressGrowth else if (playPressed) -PlayPressSqueeze else 0.dp,
+            targetValue = if (prevPressed) {
+                SkipPressGrowth
+            } else if (playPressed) {
+                -PlayPressSqueeze
+            } else {
+                0.dp
+            },
             animationSpec = spatial,
             label = "prevDelta"
         )
         val nextDelta by animateDpAsState(
-            targetValue = if (nextPressed) SkipPressGrowth else if (playPressed) -PlayPressSqueeze else 0.dp,
+            targetValue = if (nextPressed) {
+                SkipPressGrowth
+            } else if (playPressed) {
+                -PlayPressSqueeze
+            } else {
+                0.dp
+            },
             animationSpec = spatial,
             label = "nextDelta"
         )

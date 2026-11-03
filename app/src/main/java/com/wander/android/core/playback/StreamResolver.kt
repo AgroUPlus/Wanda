@@ -81,7 +81,9 @@ class StreamResolver @Inject constructor(
 
         val streamInfo = runBlocking { musicRepository.getStreamInfo(trackId) }
             .getOrElse { failure ->
-                _resolvedStreams.update { it.withBound(trackId, StreamDebug(null, null, null, 0, null, error = failure.message)) }
+                _resolvedStreams.update {
+                    it.withBound(trackId, StreamDebug(null, null, null, 0, null, error = failure.message))
+                }
                 throw IOException("Could not resolve stream for track", failure)
             }
 

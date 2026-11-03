@@ -193,8 +193,11 @@ fun WanderApp(
                     SharedArtworkLayout(Modifier.fillMaxSize()) {
                         NavHost(
                             navController = navController,
-                            startDestination = if (setupDone) TopLevelDestination.HOME.route
-                            else Routes.WELCOME,
+                            startDestination = if (setupDone) {
+                                TopLevelDestination.HOME.route
+                            } else {
+                                Routes.WELCOME
+                            },
                             modifier = Modifier.fillMaxSize()
                         ) {
                             wanderNavGraph(

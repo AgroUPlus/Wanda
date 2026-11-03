@@ -197,7 +197,9 @@ private fun MatchedView(recognition: Recognition, onPlay: () -> Unit) {
 @Composable
 private fun NoMatchView(readiness: IndexReadiness, onRetry: () -> Unit) {
     Text(stringResource(R.string.common_no_match), style = MaterialTheme.typography.headlineSmall, color = Color.White)
-    TextButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_listen_again), color = Color.White) }
+    TextButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) {
+        Text(stringResource(R.string.common_listen_again), color = Color.White)
+    }
 }
 
 @Composable
@@ -209,5 +211,7 @@ private fun FailedView(onRetry: () -> Unit) {
         modifier = Modifier.size(56.dp)
     )
     Text(stringResource(R.string.common_could_not_listen), style = MaterialTheme.typography.headlineSmall, color = Color.White)
-    TextButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_try_again), color = Color.White) }
+    TextButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) {
+        Text(stringResource(R.string.common_try_again), color = Color.White)
+    }
 }

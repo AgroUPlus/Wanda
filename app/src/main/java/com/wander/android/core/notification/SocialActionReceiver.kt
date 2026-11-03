@@ -14,12 +14,12 @@ import com.wander.android.data.repository.DropsRepository
 import com.wander.android.data.repository.ListenAlongResolver
 import com.wander.android.data.repository.SocialRepository
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import javax.inject.Inject
 
 /**
  * The buttons on the social notifications: Play, Love it and Mark as read on a drop thread, Accept
@@ -34,10 +34,15 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class SocialActionReceiver : BroadcastReceiver() {
     @Inject internal lateinit var drops: DropsRepository
+
     @Inject internal lateinit var social: SocialRepository
+
     @Inject internal lateinit var resolver: ListenAlongResolver
+
     @Inject internal lateinit var player: PlayerConnection
+
     @Inject internal lateinit var dropNotifier: DropNotifier
+
     @Inject internal lateinit var friendNotifier: FriendNotifier
 
     override fun onReceive(context: Context, intent: Intent) {

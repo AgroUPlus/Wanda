@@ -1,8 +1,8 @@
 package com.wander.android.core.audio.fingerprint
 
+import android.media.AudioFormat as PlatformAudioFormat
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import android.media.AudioFormat as PlatformAudioFormat
 
 /**
  * Turns one `MediaCodec` output buffer into mono samples, straight into a [StreamingResampler].

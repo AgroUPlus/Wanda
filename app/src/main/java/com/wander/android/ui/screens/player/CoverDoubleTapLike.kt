@@ -115,7 +115,7 @@ internal fun CoverHeartOverlay(state: CoverDoubleTapLike, modifier: Modifier = M
 
 @Composable
 private fun PoppingHeart(at: Offset, onFinished: () -> Unit) {
-    val scale = remember { Animatable(StartScale) }
+    val scale = remember { Animatable(START_SCALE) }
     val alpha = remember { Animatable(1f) }
     // Read in composition and held for the effect, which cannot reach the theme itself.
     val popIn = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
@@ -144,7 +144,7 @@ private fun PoppingHeart(at: Offset, onFinished: () -> Unit) {
         Icon(
             imageVector = Icons.Rounded.Favorite,
             contentDescription = null,
-            tint = Color.Black.copy(alpha = ShadowAlpha),
+            tint = Color.Black.copy(alpha = SHADOW_ALPHA),
             modifier = Modifier.fillMaxSize().offset(y = 2.dp)
         )
         Icon(
@@ -159,6 +159,6 @@ private fun PoppingHeart(at: Offset, onFinished: () -> Unit) {
 private val HeartSize = 96.dp
 
 /** Small enough that the spring has room to carry it past full size before it settles. */
-private const val StartScale = 0.3f
+private const val START_SCALE = 0.3f
 
-private const val ShadowAlpha = 0.3f
+private const val SHADOW_ALPHA = 0.3f

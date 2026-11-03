@@ -148,11 +148,21 @@ class PlayerConnection @Inject constructor(
     fun undoInsert(insert: QueueInsert) {
         if (!isFollowing) _controller.value?.let { queueManager.undoInsert(it, insert) }
     }
-    fun replaceCurrentTrack(track: UnifiedTrack) { if (!isFollowing) _controller.value?.let { queueManager.replaceCurrentItem(it, track) } }
+    fun replaceCurrentTrack(track: UnifiedTrack) {
+        if (!isFollowing) {
+            _controller.value?.let {
+                queueManager.replaceCurrentItem(it, track)
+            }
+        }
+    }
 
     fun removeFromQueue(index: Int) = _controller.value?.let { queueManager.removeFromQueue(it, index) }
-    fun insertInQueue(index: Int, track: UnifiedTrack) = _controller.value?.let { queueManager.insertInQueue(it, index, track) }
-    fun moveInQueue(from: Int, to: Int) = _controller.value?.let { queueManager.moveInQueue(it, from, to, state.value.orderLocked) }
+    fun insertInQueue(index: Int, track: UnifiedTrack) = _controller.value?.let {
+        queueManager.insertInQueue(it, index, track)
+    }
+    fun moveInQueue(from: Int, to: Int) = _controller.value?.let {
+        queueManager.moveInQueue(it, from, to, state.value.orderLocked)
+    }
     fun clearQueue() = _controller.value?.let { queueManager.clearQueue(it) }
 
     fun snapshotQueue(): QueueSnapshot? = queueManager.snapshotQueue(_controller.value)

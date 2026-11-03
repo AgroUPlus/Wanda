@@ -33,8 +33,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
-import com.wander.android.data.model.nameRes
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.model.nameRes
 
 private data class InfoItem(
     val icon: ImageVector,

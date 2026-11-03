@@ -69,7 +69,9 @@ internal class ExtraShelves(
 
     /** [force] rebuilds everything, as a refresh does. */
     suspend fun sync(layout: List<ShelfConfig>, current: List<HomeSection>, force: Boolean = false): ShelfChanges {
-        val wanted = layout.filter { it.enabled && (it.id.startsWith(GenreShelfPrefix) || ExtraShelf.of(it.id) != null) }
+        val wanted = layout.filter {
+            it.enabled && (it.id.startsWith(GenreShelfPrefix) || ExtraShelf.of(it.id) != null)
+        }
         val wantedIds = wanted.mapTo(HashSet()) { it.id }
         val gone = current.map { it.id }.filter { isAddedShelf(it) && it !in wantedIds }.toSet()
         builtFrom.keys.retainAll(wantedIds)
@@ -106,7 +108,8 @@ internal class ExtraShelves(
             return shelf(config.id, context.getString(extra.title), extra.style, tracks)
         }
         val tracks = genreTracks(config)
-        val title = genreShelfTitle(config.categories, context.getString(R.string.shelf_christian), context.getString(R.string.shelf_genre))
+        val title =
+            genreShelfTitle(config.categories, context.getString(R.string.shelf_christian), context.getString(R.string.shelf_genre))
         return carousel(config.id, title, tracks)
     }
 

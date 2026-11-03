@@ -10,11 +10,11 @@ import com.wander.android.ui.theme.LocalReducedMotion
  * Past this many items an animated scroll to the top takes long enough to feel like waiting, so
  * the list jumps to here first and animates only the last stretch — still visibly travelling up.
  */
-internal const val ScrollHomeJumpIndex = 24
+internal const val SCROLL_HOME_JUMP_INDEX = 24
 
 /** Where to jump before animating the rest of the way up from [firstVisibleIndex], if at all. */
 internal fun scrollHomeJumpTarget(firstVisibleIndex: Int): Int? =
-    ScrollHomeJumpIndex.takeIf { firstVisibleIndex > it }
+    SCROLL_HOME_JUMP_INDEX.takeIf { firstVisibleIndex > it }
 
 /** Scrolls [state] back to its first item when its tab is tapped again. */
 @Composable

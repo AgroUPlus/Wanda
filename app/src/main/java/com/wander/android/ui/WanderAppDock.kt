@@ -228,11 +228,9 @@ private val RailDockMaxWidth = 640.dp
 internal fun PaddingValues.plusBottom(
     extra: Dp,
     direction: LayoutDirection
-): PaddingValues {
-    return PaddingValues(
-        start = calculateStartPadding(direction),
-        top = calculateTopPadding(),
-        end = calculateEndPadding(direction),
-        bottom = calculateBottomPadding() + extra
-    )
-}
+): PaddingValues = PaddingValues(
+    start = calculateStartPadding(direction),
+    top = calculateTopPadding(),
+    end = calculateEndPadding(direction),
+    bottom = calculateBottomPadding() + extra
+)

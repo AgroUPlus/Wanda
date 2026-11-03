@@ -82,6 +82,7 @@ internal class PodcastEpisodeNotifier @Inject constructor(
 
     private companion object {
         const val CHANNEL_ID = "wanda_new_episodes"
+
         /** Tagged, so the id cannot land on another notifier's numbered range. */
         const val NOTIFICATION_TAG = "podcast_new_episodes"
         const val NOTIFICATION_ID = 1

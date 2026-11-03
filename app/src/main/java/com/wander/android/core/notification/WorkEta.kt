@@ -64,6 +64,7 @@ internal class WorkEta(private val startedAtMs: Long) {
     sealed interface Estimate {
         data object UnderAMinute : Estimate
         data class Minutes(val minutes: Int) : Estimate
+
         /** [minutes] is what is left over after the whole hours, 0 to 59. */
         data class Hours(val hours: Int, val minutes: Int) : Estimate
     }

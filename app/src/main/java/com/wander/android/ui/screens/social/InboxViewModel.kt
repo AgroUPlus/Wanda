@@ -40,6 +40,7 @@ internal class InboxViewModel @Inject constructor(
     private val me: String = secureStorage.agroUsername
 
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 1)
+
     /** Why a drop could not be played. Nothing is said when one plays — the audio says it. */
     val messages: SharedFlow<String> = _messages.asSharedFlow()
 

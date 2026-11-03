@@ -161,7 +161,9 @@ class DownloadWorker @AssistedInject constructor(
      * source, not the CDN — is not sent.
      */
     private fun download(url: String, headers: Map<String, String>, destination: File) {
-        val deezerTrackId = headers[DeezerDecryptingDataSource.DEEZER_TRACK_ID_HEADER]?.trim()?.takeIf { it.isNotEmpty() }
+        val deezerTrackId = headers[DeezerDecryptingDataSource.DEEZER_TRACK_ID_HEADER]?.trim()?.takeIf {
+            it.isNotEmpty()
+        }
         val request = Request.Builder().url(url).apply {
             headers
                 .filterKeys { it != DeezerDecryptingDataSource.DEEZER_TRACK_ID_HEADER }
@@ -226,6 +228,5 @@ class DownloadWorker @AssistedInject constructor(
 
         private const val MAX_MANUAL_ATTEMPTS = 4
         private const val TAG = "DownloadWorker"
-
     }
 }

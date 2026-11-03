@@ -170,6 +170,7 @@ class SubsonicApiClient @Inject constructor(
      * Stream and cover URLs carry credentials in the query string, so they are built on demand
      * and never persisted or logged.
      */
+
     /**
      * `format=raw` is what makes the track seekable.
      *

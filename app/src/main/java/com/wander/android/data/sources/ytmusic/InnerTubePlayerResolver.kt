@@ -44,6 +44,7 @@ internal class InnerTubePlayerResolver @Inject constructor(
     private val fallbackSessionId = UUID.randomUUID().toString()
 
     private val visitorLock = Mutex()
+
     @Volatile private var cachedVisitorId: String? = null
 
     private suspend fun visitorSession(): String? {

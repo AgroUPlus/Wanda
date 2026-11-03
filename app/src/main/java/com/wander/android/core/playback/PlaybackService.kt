@@ -50,15 +50,25 @@ class PlaybackService : MediaLibraryService() {
     @Inject lateinit var sleepTimer: SleepTimer
     @Inject lateinit var loudnessReadout: LoudnessReadout
     @Inject lateinit var loudnessHints: LoudnessHints
+
     @Inject lateinit var jamSkipGate: JamSkipGate
+
     @Inject lateinit var bluetoothOutput: BluetoothAudioOutput
+
     @Inject internal lateinit var scrobbleForwarding: com.wander.android.data.repository.ScrobbleForwarding
+
     @Inject internal lateinit var sourceNowPlaying: com.wander.android.data.repository.SourceNowPlaying
+
     @Inject internal lateinit var savedQueueStore: SavedQueueStore
+
     @Inject lateinit var externalEqualizer: ExternalEqualizer
+
     @Inject internal lateinit var browseTree: BrowseTree
+
     @Inject internal lateinit var playRequests: PlayRequestResolver
+
     @Inject lateinit var episodeProgress: com.wander.android.data.repository.EpisodeProgressRepository
+
     @Inject @field:com.wander.android.di.ArtworkHttpClient
     lateinit var artworkHttpClient: okhttp3.OkHttpClient
 
@@ -288,5 +298,4 @@ class PlaybackService : MediaLibraryService() {
          */
         const val PRELOAD_TARGET_US = 15_000_000L
     }
-
 }

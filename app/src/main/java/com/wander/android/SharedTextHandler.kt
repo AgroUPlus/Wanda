@@ -8,8 +8,8 @@ import com.wander.android.data.importer.ShortLinkExpander
 import com.wander.android.data.importer.SpotifyPlaylistParser
 import com.wander.android.data.repository.LinkRepository
 import com.wander.android.ui.navigation.DeepLinkRouter
-import com.wander.android.ui.navigation.Routes
 import com.wander.android.ui.navigation.LaunchNotices
+import com.wander.android.ui.navigation.Routes
 import javax.inject.Inject
 import javax.inject.Singleton
 

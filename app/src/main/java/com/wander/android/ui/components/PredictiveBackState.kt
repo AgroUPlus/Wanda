@@ -20,8 +20,8 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
-import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.launch
 
 /**
  * A predictive back swipe on an in-screen page (a thread, a genre, an importer step), as the page

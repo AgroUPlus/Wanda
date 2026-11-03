@@ -92,7 +92,9 @@ internal fun LazyListScope.artistPageSections(
             ArtistSectionTitle(stringResource(R.string.artist_episodes))
         }
         // One at a time, like the Podcasts tab: an episode is not the start of a queue of others.
-        itemsIndexed(page.episodes, key = { _, it -> "episode-${it.id}" }, contentType = { _, _ -> "track" }) { index, track ->
+        itemsIndexed(page.episodes, key = { _, it ->
+            "episode-${it.id}"
+        }, contentType = { _, _ -> "track" }) { index, track ->
             ArtistTrackRow(
                 track, index, page.episodes.size,
                 onPlay = { onPlayTrack(track) },
@@ -105,8 +107,12 @@ internal fun LazyListScope.artistPageSections(
     albumShelf(page.singles, "singles", expandedShelves, loadingShelf, onExpandShelf, onOpenAlbum, onLongPressAlbum)
 
     if (page.videos.isNotEmpty()) {
-        item(key = "videos-title", contentType = SECTION_TITLE) { ArtistSectionTitle(stringResource(R.string.artist_videos_title)) }
-        itemsIndexed(page.videos, key = { _, it -> "video-${it.id}" }, contentType = { _, _ -> "track" }) { index, track ->
+        item(key = "videos-title", contentType = SECTION_TITLE) {
+            ArtistSectionTitle(stringResource(R.string.artist_videos_title))
+        }
+        itemsIndexed(page.videos, key = { _, it ->
+            "video-${it.id}"
+        }, contentType = { _, _ -> "track" }) { index, track ->
             ArtistTrackRow(
                 track, index, page.videos.size,
                 onPlay = { onPlayTrack(track) },

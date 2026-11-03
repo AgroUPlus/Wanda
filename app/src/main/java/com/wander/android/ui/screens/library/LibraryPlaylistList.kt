@@ -107,7 +107,9 @@ internal fun PlaylistList(
             onShare = { viewModel.sharePlaylist(playlist) }
                 .takeIf { viewModel.canShare(playlist.source) },
             onDelete = { viewModel.deletePlaylist(playlist) }
-                .takeIf { playlist.source == SourceType.LOCAL || playlist.source == SourceType.AGRO || viewModel.canCreatePlaylists },
+                .takeIf {
+                    playlist.source == SourceType.LOCAL || playlist.source == SourceType.AGRO || viewModel.canCreatePlaylists
+                },
             onDismiss = { actionsForPlaylist = null }
         )
     }
@@ -202,8 +204,11 @@ internal fun PlaylistList(
                             shapes = ButtonDefaults.shapes()
                         ) {
                             Icon(imageVector = Icons.Rounded.Add, contentDescription = null)
-                            Text(text =
-                                stringResource(R.string.common_new_playlist), modifier = Modifier.padding(start = 6.dp))
+                            Text(
+                                text =
+                                    stringResource(R.string.common_new_playlist),
+                                modifier = Modifier.padding(start = 6.dp)
+                            )
                         }
                     }
                     FilledTonalButton(
@@ -227,7 +232,9 @@ internal fun PlaylistList(
             )
             return@LazyColumn
         }
-        itemsIndexed(visiblePlaylists, key = { _, it -> it.id }, contentType = { _, _ -> "playlist" }) { index, playlist ->
+        itemsIndexed(visiblePlaylists, key = { _, it ->
+            it.id
+        }, contentType = { _, _ -> "playlist" }) { index, playlist ->
             PlaylistRow(
                 playlist = playlist,
                 index = index,

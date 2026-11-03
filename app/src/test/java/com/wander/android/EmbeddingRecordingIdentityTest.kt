@@ -170,7 +170,8 @@ class EmbeddingRecordingIdentityTest {
         override suspend fun localTrackIds(): List<String> = emptyList()
         override suspend fun localContentHashesOf(ids: List<String>): List<String> = emptyList()
         override suspend fun deleteLocalTracks(ids: List<String>): Int = 0
-        override suspend fun refreshLocalFileFields(id: String, sizeBytes: Long?, fileExtension: String?, albumArtist: String?) {}
+        override suspend fun refreshLocalFileFields(id: String, sizeBytes: Long?, fileExtension: String?, albumArtist: String?) {
+        }
         override suspend fun getTracksByIds(ids: List<String>): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun tracksWithUserState(): List<com.wander.android.core.database.entity.TrackEntity> = emptyList()
         override suspend fun mergeRestoredState(id: String, liked: Boolean, library: Boolean, playCount: Int, lastPlayed: Long?) = Unit

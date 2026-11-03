@@ -59,8 +59,11 @@ internal fun QueueRadioButton(
 ) {
     val haptics = rememberHaptics()
     val tint by animateColorAsState(
-        targetValue = if (isRadioMode) MaterialTheme.colorScheme.primary
-        else MaterialTheme.colorScheme.onSurfaceVariant,
+        targetValue = if (isRadioMode) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
         label = "queueRadioTint"
     )

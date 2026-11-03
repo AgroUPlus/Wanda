@@ -38,10 +38,10 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
+import com.wander.android.data.importer.ImportProgress
 import com.wander.android.ui.components.backMorph
 import com.wander.android.ui.components.rememberLastLive
 import com.wander.android.ui.components.rememberPredictiveBack
-import com.wander.android.data.importer.ImportProgress
 
 /**
  * Step 1 picks a platform, step 2 gets a playlist (a share link for every platform; YouTube alone

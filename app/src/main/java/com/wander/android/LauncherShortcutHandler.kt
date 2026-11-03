@@ -11,11 +11,11 @@ import com.wander.android.ui.navigation.ShellRequests
 import com.wander.android.ui.navigation.TopLevelDestination
 import com.wander.android.ui.screens.library.LibraryBrowsePrefs
 import com.wander.android.ui.screens.library.LibraryTab
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The launcher's long-press shortcuts (`res/xml/shortcuts.xml`): `wanda://shortcut/<action>`.

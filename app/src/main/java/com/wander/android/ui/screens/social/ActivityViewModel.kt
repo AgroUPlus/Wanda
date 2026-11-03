@@ -227,9 +227,11 @@ internal class ActivityViewModel @Inject constructor(
         releases: List<ActivityItem.Release>
     ): List<ActivityItem> =
         // Distinct, because the same event reported twice would otherwise be two rows with one key.
-        (feed.distinct().map(ActivityItem::Milestone) +
-            incoming.map(ActivityItem::Shared) +
-            releases)
+        (
+            feed.distinct().map(ActivityItem::Milestone) +
+                incoming.map(ActivityItem::Shared) +
+                releases
+            )
             .sortedByDescending { it.at }
 
     private companion object {

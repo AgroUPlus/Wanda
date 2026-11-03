@@ -1,9 +1,9 @@
 package com.wander.android.core.network
 
+import java.io.IOException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
-import java.io.IOException
 
 class LoggableErrorTest {
 

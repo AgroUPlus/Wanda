@@ -55,8 +55,11 @@ fun PlaylistActionsSheet(
         ConfirmDialog(
             title = stringResource(R.string.confirm_delete_playlist_title, playlist.name),
             message = stringResource(
-                if (playlist.source == SourceType.LOCAL) R.string.confirm_delete_playlist_local
-                else R.string.confirm_delete_playlist_remote,
+                if (playlist.source == SourceType.LOCAL) {
+                    R.string.confirm_delete_playlist_local
+                } else {
+                    R.string.confirm_delete_playlist_remote
+                },
                 stringResource(playlist.source.nameRes)
             ),
             confirmLabel = stringResource(R.string.common_delete_playlist),
@@ -120,12 +123,34 @@ fun PlaylistActionsSheet(
             ActionButtonGroup(
                 modifier = Modifier.padding(top = 8.dp),
                 actions = buildList {
-                    add(MenuAction(Icons.Rounded.PlayArrow, play, ActionEmphasis.PRIMARY) { onPlay(); animatedDismiss() })
-                    add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, playNext, ActionEmphasis.SECONDARY) { onPlayNext(); animatedDismiss() })
-                    onShare?.let { add(MenuAction(Icons.Rounded.Share, share, ActionEmphasis.ICON) { it(); animatedDismiss() }) }
-                    onAddToPlaylist?.let { add(MenuAction(Icons.Rounded.LibraryAdd, addToPlaylist, ActionEmphasis.ICON) { it(); animatedDismiss() }) }
-                    add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, addQueue) { onAddToQueue(); animatedDismiss() })
-                    onDelete?.let { add(MenuAction(Icons.Rounded.Delete, delete, ActionEmphasis.DANGER) { confirmingDelete = true }) }
+                    add(
+                        MenuAction(Icons.Rounded.PlayArrow, play, ActionEmphasis.PRIMARY) {
+                            onPlay(); animatedDismiss()
+                        }
+                    )
+                    add(
+                        MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, playNext, ActionEmphasis.SECONDARY) {
+                            onPlayNext(); animatedDismiss()
+                        }
+                    )
+                    onShare?.let {
+                        add(MenuAction(Icons.Rounded.Share, share, ActionEmphasis.ICON) { it(); animatedDismiss() })
+                    }
+                    onAddToPlaylist?.let {
+                        add(
+                            MenuAction(Icons.Rounded.LibraryAdd, addToPlaylist, ActionEmphasis.ICON) {
+                                it(); animatedDismiss()
+                            }
+                        )
+                    }
+                    add(
+                        MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, addQueue) {
+                            onAddToQueue(); animatedDismiss()
+                        }
+                    )
+                    onDelete?.let {
+                        add(MenuAction(Icons.Rounded.Delete, delete, ActionEmphasis.DANGER) { confirmingDelete = true })
+                    }
                 }
             )
         }

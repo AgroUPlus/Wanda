@@ -97,8 +97,11 @@ fun FastScroller(
     }
 
     fun fractionNow(): Float =
-        if (dragging) dragFraction
-        else (currentFirst().toFloat() / (currentTotal - 1).coerceAtLeast(1)).coerceIn(0f, 1f)
+        if (dragging) {
+            dragFraction
+        } else {
+            (currentFirst().toFloat() / (currentTotal - 1).coerceAtLeast(1)).coerceIn(0f, 1f)
+        }
 
     Box(
         modifier = modifier

@@ -142,9 +142,13 @@ internal fun AgroPairingDialog(
             // "Check again" is the only useful move while an account waits for approval: nothing
             // about what was typed is wrong, so re-submitting the form would be theatre.
             if ((state as? AgroPairingState.Failed)?.error is AgroAuthError.NotActive) {
-                TextButton(onClick = onRecheck, enabled = !busy, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.settings_check_again)) }
+                TextButton(onClick = onRecheck, enabled = !busy, shapes = ButtonDefaults.shapes()) {
+                    Text(stringResource(R.string.settings_check_again))
+                }
             } else {
-                TextButton(onClick = onDismiss, enabled = !busy, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_cancel)) }
+                TextButton(onClick = onDismiss, enabled = !busy, shapes = ButtonDefaults.shapes()) {
+                    Text(stringResource(R.string.common_cancel))
+                }
             }
         }
     )

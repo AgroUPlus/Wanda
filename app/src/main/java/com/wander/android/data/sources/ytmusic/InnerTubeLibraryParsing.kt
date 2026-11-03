@@ -15,8 +15,10 @@ import kotlinx.serialization.json.JsonObject
  * rows. Both are read, in document order within each, so neither layout comes back empty.
  */
 internal fun JsonObject.libraryAlbums(): List<UnifiedAlbum> =
-    (renderers("musicTwoRowItemRenderer").mapNotNull(::parseLibraryAlbumTile) +
-        responsiveListItems().mapNotNull(::parseLibraryAlbum))
+    (
+        renderers("musicTwoRowItemRenderer").mapNotNull(::parseLibraryAlbumTile) +
+            responsiveListItems().mapNotNull(::parseLibraryAlbum)
+        )
         .distinctBy { it.id }
 
 /** A library album row: the same renderer shape as a track, but the endpoint points at a browse id. */
@@ -73,21 +75,23 @@ internal fun parseLibraryAlbumTile(renderer: JsonObject): UnifiedAlbum? {
  * that creates rather than opens, which the page-type check leaves out.
  */
 internal fun JsonObject.libraryPlaylists(): List<UnifiedPlaylist> =
-    (renderers("musicTwoRowItemRenderer").mapNotNull { tile ->
-        libraryPlaylist(
-            endpoint = tile.path("navigationEndpoint", "browseEndpoint"),
-            title = tile["title"].runText(),
-            cover = tile.path("thumbnailRenderer", "musicThumbnailRenderer", "thumbnail")
-                .bestThumbnail()
-        )
-    } + responsiveListItems().mapNotNull { row ->
-        libraryPlaylist(
-            endpoint = row.path("navigationEndpoint", "browseEndpoint"),
-            title = row["flexColumns"]?.array()?.firstOrNull()
-                .path("musicResponsiveListItemFlexColumnRenderer", "text").runText(),
-            cover = row.path("thumbnail", "musicThumbnailRenderer", "thumbnail").bestThumbnail()
-        )
-    }).distinctBy { it.id }
+    (
+        renderers("musicTwoRowItemRenderer").mapNotNull { tile ->
+            libraryPlaylist(
+                endpoint = tile.path("navigationEndpoint", "browseEndpoint"),
+                title = tile["title"].runText(),
+                cover = tile.path("thumbnailRenderer", "musicThumbnailRenderer", "thumbnail")
+                    .bestThumbnail()
+            )
+        } + responsiveListItems().mapNotNull { row ->
+            libraryPlaylist(
+                endpoint = row.path("navigationEndpoint", "browseEndpoint"),
+                title = row["flexColumns"]?.array()?.firstOrNull()
+                    .path("musicResponsiveListItemFlexColumnRenderer", "text").runText(),
+                cover = row.path("thumbnail", "musicThumbnailRenderer", "thumbnail").bestThumbnail()
+            )
+        }
+        ).distinctBy { it.id }
 
 /**
  * No track count: YouTube prints it as translated prose ("25 songs", "25 titres") in a subtitle

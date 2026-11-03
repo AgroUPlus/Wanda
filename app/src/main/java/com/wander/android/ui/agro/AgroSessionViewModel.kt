@@ -160,9 +160,10 @@ internal class AgroSessionViewModel @Inject constructor(
                 }
                 // A frame naming listeners is about this account being followed; every other one is
                 // about a host this device is following.
-                is AgroLiveMessage.ListenAlong -> message.listeners
-                    ?.let(listenerPresence::onListeners)
-                    ?: listenAlong.onFrame(message)
+                is AgroLiveMessage.ListenAlong ->
+                    message.listeners
+                        ?.let(listenerPresence::onListeners)
+                        ?: listenAlong.onFrame(message)
                 is AgroLiveMessage.JamUpdated -> jamRepository.refresh()
                 is AgroLiveMessage.JamRecapWritten, is AgroLiveMessage.BlendInvited -> inbox.onMessage(message)
                 // Someone changed a playlist this account shares in; fetched only if it moved on.

@@ -103,7 +103,9 @@ internal fun PodcastSubscriptionsScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().padding(contentPadding.headerInset())) {
             TopAppBar(
-                title = { Text(stringResource(R.string.podcasts_subscriptions_title), style = MaterialTheme.typography.titleLarge) },
+                title = {
+                    Text(stringResource(R.string.podcasts_subscriptions_title), style = MaterialTheme.typography.titleLarge)
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.common_back))

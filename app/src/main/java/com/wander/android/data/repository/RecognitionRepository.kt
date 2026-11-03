@@ -243,7 +243,6 @@ class RecognitionRepository @Inject constructor(
          */
         const val CHECKPOINT_SECONDS = 3
 
-
         /** An embedding cosine as a bar: ~0.8 similarity reads as ~80. */
         const val EMBEDDING_SCORE_SCALE = 100
     }

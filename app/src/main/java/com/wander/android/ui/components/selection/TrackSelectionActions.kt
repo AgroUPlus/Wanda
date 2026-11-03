@@ -57,17 +57,23 @@ internal fun rememberSelectionActions(
     return buildList {
         if (playable.isNotEmpty()) {
             add(SelectionAction(Icons.Rounded.PlayArrow, R.string.action_play) { batch.play(playable) })
-            add(SelectionAction(Icons.AutoMirrored.Rounded.PlaylistAdd, R.string.action_play_next) {
-                batch.playNext(playable, playingNext)
-            })
-            add(SelectionAction(Icons.AutoMirrored.Rounded.QueueMusic, R.string.action_add_to_queue) {
-                batch.addToQueue(playable, queued)
-            })
+            add(
+                SelectionAction(Icons.AutoMirrored.Rounded.PlaylistAdd, R.string.action_play_next) {
+                    batch.playNext(playable, playingNext)
+                }
+            )
+            add(
+                SelectionAction(Icons.AutoMirrored.Rounded.QueueMusic, R.string.action_add_to_queue) {
+                    batch.addToQueue(playable, queued)
+                }
+            )
         }
         if (addToPlaylist != null && source != null && addToPlaylist.canAdd(tracks.first())) {
-            add(SelectionAction(Icons.Rounded.LibraryAdd, R.string.action_add_to_playlist) {
-                addToPlaylist.openForTracks(tracks, source)
-            })
+            add(
+                SelectionAction(Icons.Rounded.LibraryAdd, R.string.action_add_to_playlist) {
+                    addToPlaylist.openForTracks(tracks, source)
+                }
+            )
         }
         add(
             SelectionAction(
@@ -79,7 +85,11 @@ internal fun rememberSelectionActions(
             add(SelectionAction(Icons.Rounded.Download, R.string.track_action_download) { downloads.download(tracks) })
         }
         if (tracks.any { downloads.canRemove(it, marks) }) {
-            add(SelectionAction(Icons.Rounded.Delete, R.string.track_action_remove_download) { downloads.remove(tracks) })
+            add(
+                SelectionAction(Icons.Rounded.Delete, R.string.track_action_remove_download) {
+                    downloads.remove(tracks)
+                }
+            )
         }
         addAll(extra)
     }

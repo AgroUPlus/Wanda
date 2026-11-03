@@ -148,8 +148,11 @@ fun TrackRow(
                 Text(
                     text = track.title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (isPlaying) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurface,
+                    color = if (isPlaying) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
                     maxLines = 1,
                     overflow = TextOverflow.Clip,
                     // `weight` rather than the bare scrolling modifier: the dot needs a reserved

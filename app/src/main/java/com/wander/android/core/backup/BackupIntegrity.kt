@@ -97,13 +97,16 @@ private fun <T> digest(json: Json, serializer: KSerializer<T>, value: T, count: 
     val recaps: List<BackupRecap>,
     val tracks: List<BackupTrack>
 )
+
 /** [podcasts] is defaulted so an empty list is not encoded: digests of backups from before it existed still match. */
 @Serializable private data class LibraryPart(
     val tracks: List<BackupTrack>,
     val playlists: List<BackupPlaylist>,
     val podcasts: List<BackupPodcast> = emptyList()
 )
+
 @Serializable private data class SharedPart(val playlists: List<BackupSharedPlaylist>, val jamRecaps: List<BackupJamRecap>)
+
 @Serializable private data class MergesPart(val splits: List<BackupRecordingPair>, val links: List<BackupRecordingPair>)
 
 private val entryMap = MapSerializer(String.serializer(), BackupEntry.serializer())

@@ -79,9 +79,10 @@ internal fun HistoryScreen(
         ) { actionsFor = null }
     }
 
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(contentPadding.headerInset())
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding.headerInset())
     ) {
         // The header gives way to the selection's bar while one runs; the Column already clears
         // the status bar, so the bar needs no inset of its own.
@@ -91,16 +92,18 @@ internal fun HistoryScreen(
             topInset = 0.dp,
             extraActions = historySelectionActions(viewModel)
         )
-        if (!selection.isActive) Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(end = 8.dp)) {
-            IconButton(onClick = onBack, modifier = Modifier.padding(start = 4.dp)) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
+        if (!selection.isActive) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(end = 8.dp)) {
+                IconButton(onClick = onBack, modifier = Modifier.padding(start = 4.dp)) {
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
+                }
+                Text(
+                    stringResource(R.string.library_history),
+                    style = MaterialTheme.typography.headlineLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                if (plays.itemCount > 0) HistoryClearButton(onClear = viewModel::clearAll)
             }
-            Text(
-                stringResource(R.string.library_history),
-                style = MaterialTheme.typography.headlineLarge,
-                modifier = Modifier.weight(1f)
-            )
-            if (plays.itemCount > 0) HistoryClearButton(onClear = viewModel::clearAll)
         }
 
         if (plays.itemCount == 0) {

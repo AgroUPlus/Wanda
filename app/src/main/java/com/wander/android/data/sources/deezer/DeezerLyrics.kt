@@ -2,14 +2,14 @@ package com.wander.android.data.sources.deezer
 
 import com.wander.android.data.model.LyricLine
 import com.wander.android.data.model.LyricsData
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * A Deezer track's lyrics, as the signed-in account's gateway session serves them.

@@ -1,11 +1,11 @@
 package com.wander.android.ui.navigation
 
 import androidx.annotation.StringRes
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Messages about something another app or the launcher asked of Wanda — a shared link it cannot

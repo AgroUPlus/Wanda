@@ -1,12 +1,12 @@
 package com.wander.android.data.sources.ytmusic
 
+import java.io.IOException
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
-import java.io.IOException
 
 /**
  * The playlist-writing half of InnerTube, as music.youtube.com's own editor calls it. Every call

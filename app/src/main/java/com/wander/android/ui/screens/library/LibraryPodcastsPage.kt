@@ -150,7 +150,9 @@ private fun LazyListScope.inboxSection(
             )
         }
     }
-    itemsIndexed(items = inbox, key = { _, track -> "inbox-${track.id}" }, contentType = { _, _ -> "inbox-episode" }) { index, track ->
+    itemsIndexed(items = inbox, key = { _, track ->
+        "inbox-${track.id}"
+    }, contentType = { _, _ -> "inbox-episode" }) { index, track ->
         TrackRow(
             track = track,
             onPlay = { onPlay(track) },

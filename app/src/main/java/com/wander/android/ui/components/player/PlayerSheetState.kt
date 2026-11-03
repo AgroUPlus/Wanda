@@ -238,7 +238,6 @@ class PlayerSheetState(
     companion object {
         const val FLING_VELOCITY = 1000f
 
-
         val Saver: Saver<PlayerSheetState, PlayerSheetValue> = Saver(
             save = { it.targetValue },
             restore = { PlayerSheetState(it) }

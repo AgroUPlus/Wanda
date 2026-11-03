@@ -1,9 +1,9 @@
 package com.wander.android.data.repository
 
-import com.wander.android.core.network.loggableMessage
 import android.util.Log
 import com.wander.android.core.network.ConnectivityObserver
 import com.wander.android.core.network.HttpClientFactory
+import com.wander.android.core.network.loggableMessage
 import com.wander.android.core.security.IdentityKeyManager
 import com.wander.android.data.sources.agro.AgroGraphQl
 import com.wander.android.data.sources.agro.AgroLiveMessage
@@ -74,11 +74,14 @@ internal class AgroSessionWebSocket(
 
     private fun authFrame() = buildJsonObject {
         put("msg_type", "AUTH")
-        put("payload", buildJsonObject {
-            put("token", graphQl.apiKey)
-            put("device", graphQl.deviceId)
-            put("lan", LocalNetwork.lanAddress())
-        })
+        put(
+            "payload",
+            buildJsonObject {
+                put("token", graphQl.apiKey)
+                put("device", graphQl.deviceId)
+                put("lan", LocalNetwork.lanAddress())
+            }
+        )
     }
 
     private fun handleMessage(webSocket: WebSocket, text: String, emit: (AgroLiveMessage) -> Unit) {

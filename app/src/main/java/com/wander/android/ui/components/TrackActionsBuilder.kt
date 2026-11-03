@@ -118,8 +118,16 @@ internal fun buildTrackActionsList(
     val dismiss = sheet.animatedDismiss
     val names = labels.names
     if (state.playable) {
-        add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, names.playNext, ActionEmphasis.PRIMARY) { callbacks.onPlayNext(); dismiss() })
-        add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, names.queue, ActionEmphasis.SECONDARY) { callbacks.onAddToQueue(); dismiss() })
+        add(
+            MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, names.playNext, ActionEmphasis.PRIMARY) {
+                callbacks.onPlayNext(); dismiss()
+            }
+        )
+        add(
+            MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, names.queue, ActionEmphasis.SECONDARY) {
+                callbacks.onAddToQueue(); dismiss()
+            }
+        )
     }
     addLikeAction(state, labels, callbacks, sheet)
     addShareAction(state, names, callbacks, sheet)
@@ -144,21 +152,29 @@ internal fun buildTrackActionsList(
         }
     }
     addJamAction(track, state, names, jamViewModel, dismiss)
-    callbacks.onSelect?.let { add(MenuAction(Icons.Rounded.CheckCircle, labels.select, ActionEmphasis.ICON) { it(); dismiss() }) }
+    callbacks.onSelect?.let {
+        add(MenuAction(Icons.Rounded.CheckCircle, labels.select, ActionEmphasis.ICON) { it(); dismiss() })
+    }
     // These ask first, and the confirmation closes the sheet; see `TrackActionsSheet`.
     callbacks.onResetProgress?.let {
         add(MenuAction(Icons.Rounded.RestartAlt, labels.resetProgress, ActionEmphasis.ICON) { it() })
     }
-    callbacks.onMoveUp?.let { add(MenuAction(Icons.Rounded.ArrowUpward, labels.moveUp, ActionEmphasis.ICON) { it(); dismiss() }) }
-    callbacks.onMoveDown?.let { add(MenuAction(Icons.Rounded.ArrowDownward, labels.moveDown, ActionEmphasis.ICON) { it(); dismiss() }) }
+    callbacks.onMoveUp?.let {
+        add(MenuAction(Icons.Rounded.ArrowUpward, labels.moveUp, ActionEmphasis.ICON) { it(); dismiss() })
+    }
+    callbacks.onMoveDown?.let {
+        add(MenuAction(Icons.Rounded.ArrowDownward, labels.moveDown, ActionEmphasis.ICON) { it(); dismiss() })
+    }
     callbacks.onRemove?.let {
         add(MenuAction(Icons.Rounded.Delete, labels.removeFromQueue, ActionEmphasis.DANGER) { it(); dismiss() })
     }
     callbacks.onRemoveDownload?.let { remove ->
-        add(MenuAction(Icons.Rounded.Delete, labels.removeDownload, ActionEmphasis.DANGER) {
-            remove()
-            if (!callbacks.confirmsRemoveDownload) dismiss()
-        })
+        add(
+            MenuAction(Icons.Rounded.Delete, labels.removeDownload, ActionEmphasis.DANGER) {
+                remove()
+                if (!callbacks.confirmsRemoveDownload) dismiss()
+            }
+        )
     }
 }
 
@@ -212,9 +228,11 @@ private fun MutableList<MenuAction>.addShareAction(
     sheet: TrackActionSheetFlow
 ) {
     if (callbacks.onShare == null && !state.hasDropFriends) return
-    add(MenuAction(Icons.Rounded.Share, names.share, ActionEmphasis.ICON) {
-        if (callbacks.onShare == null) sheet.onPickFriend() else sheet.onChooseShare()
-    })
+    add(
+        MenuAction(Icons.Rounded.Share, names.share, ActionEmphasis.ICON) {
+            if (callbacks.onShare == null) sheet.onPickFriend() else sheet.onChooseShare()
+        }
+    )
 }
 
 private fun MutableList<MenuAction>.addJamAction(

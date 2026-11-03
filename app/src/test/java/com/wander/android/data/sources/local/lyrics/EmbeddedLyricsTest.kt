@@ -10,11 +10,13 @@ import org.junit.Test
 class EmbeddedLyricsTest {
 
     private fun bytes(vararg parts: Any): ByteArray = ByteArrayOutputStream().apply {
-        for (part in parts) when (part) {
-            is String -> write(part.toByteArray(Charsets.ISO_8859_1))
-            is ByteArray -> write(part)
-            is Int -> write(part)
-            else -> error("unsupported part")
+        for (part in parts) {
+            when (part) {
+                is String -> write(part.toByteArray(Charsets.ISO_8859_1))
+                is ByteArray -> write(part)
+                is Int -> write(part)
+                else -> error("unsupported part")
+            }
         }
     }.toByteArray()
 
@@ -25,7 +27,8 @@ class EmbeddedLyricsTest {
     )
 
     private fun id3v23(vararg frames: Pair<String, ByteArray>): ByteArray {
-        val body = bytes(*frames.flatMap { (id, data) -> listOf(id, be32(data.size), byteArrayOf(0, 0), data) }.toTypedArray())
+        val body =
+            bytes(*frames.flatMap { (id, data) -> listOf(id, be32(data.size), byteArrayOf(0, 0), data) }.toTypedArray())
         return bytes("ID3", 3, 0, 0, syncsafe(body.size), body)
     }
 
@@ -72,10 +75,13 @@ class EmbeddedLyricsTest {
     }
 
     private fun vorbisComments(vararg fields: String): ByteArray =
-        bytes(le32(3), "lib", le32(fields.size), *fields.flatMap {
-            val utf8 = it.toByteArray(Charsets.UTF_8)
-            listOf(le32(utf8.size), utf8)
-        }.toTypedArray())
+        bytes(
+            le32(3), "lib", le32(fields.size),
+            *fields.flatMap {
+                val utf8 = it.toByteArray(Charsets.UTF_8)
+                listOf(le32(utf8.size), utf8)
+            }.toTypedArray()
+        )
 
     @Test
     fun `flac LYRICS comment is read, and the key is case-insensitive`() {
@@ -94,7 +100,13 @@ class EmbeddedLyricsTest {
     fun `ogg opus comment header spanning two pages is reassembled`() {
         val packet = bytes("OpusTags", vorbisComments("LYRICS=" + "a".repeat(300)))
         fun page(serial: Int, segments: List<Int>, body: ByteArray) =
-            bytes("OggS", 0, 0, ByteArray(8), be32(serial), ByteArray(8), segments.size, segments.map { it.toByte() }.toByteArray(), body)
+            bytes(
+                "OggS", 0, 0, ByteArray(8), be32(serial), ByteArray(8), segments.size,
+                segments.map {
+                    it.toByte()
+                }.toByteArray(),
+                body
+            )
         val head = page(7, listOf(19), bytes("OpusHead", ByteArray(11)))
         val first = packet.copyOfRange(0, 255)
         val rest = packet.copyOfRange(255, packet.size)
@@ -112,7 +124,8 @@ class EmbeddedLyricsTest {
         val data = atom("data", be32(1), be32(0), "Words".toByteArray(Charsets.UTF_8))
         val lyr = atom(bytes(0xA9, "lyr"), data)
         val meta = atom("meta", be32(0), atom("hdlr", ByteArray(25)), atom("ilst", lyr))
-        val file = bytes(atom("ftyp", "M4A ".toByteArray()), atom("mdat", ByteArray(64)), atom("moov", atom("udta", meta)))
+        val file =
+            bytes(atom("ftyp", "M4A ".toByteArray()), atom("mdat", ByteArray(64)), atom("moov", atom("udta", meta)))
         assertEquals("Words", read(file)!!.text)
     }
 

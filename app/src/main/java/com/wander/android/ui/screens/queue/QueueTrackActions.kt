@@ -58,10 +58,14 @@ internal fun QueueTrackActions(
         onDismiss = onDismiss,
         onShare = if (queueViewModel.canShare(track)) {
             { queueViewModel.share(track) }
-        } else null,
+        } else {
+            null
+        },
         onAddToPlaylist = if (addToPlaylist.canAdd(track)) {
             { addToPlaylist.open(track) }
-        } else null
+        } else {
+            null
+        }
     )
 }
 

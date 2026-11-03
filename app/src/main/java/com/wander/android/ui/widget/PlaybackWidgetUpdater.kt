@@ -5,14 +5,14 @@ import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import com.wander.android.R
-import com.wander.android.data.model.nameRes
 import com.wander.android.core.playback.toUnifiedTrack
+import com.wander.android.data.model.nameRes
+import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import java.io.IOException
 
 /**
  * Pushes what the player is doing to the Now Playing widget on the events that change what it
@@ -43,7 +43,9 @@ internal class PlaybackWidgetUpdater(
         val track = player.currentMediaItem?.toUnifiedTrack()
         return WidgetSnapshot(
             title = track?.title,
-            subtitle = track?.let { context.getString(R.string.widget_track_line, it.artist, context.getString(it.source.nameRes)) },
+            subtitle = track?.let {
+                context.getString(R.string.widget_track_line, it.artist, context.getString(it.source.nameRes))
+            },
             artworkUrl = track?.artworkUrl,
             isPlaying = player.isPlaying
         )

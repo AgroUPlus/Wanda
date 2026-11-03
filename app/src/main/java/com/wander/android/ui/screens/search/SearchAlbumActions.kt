@@ -14,8 +14,8 @@ import com.wander.android.data.repository.ShareRepository
 import com.wander.android.ui.components.AlbumActionsSheet
 import com.wander.android.ui.components.rememberAlbumDownload
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.coroutines.launch
 
 /**
  * The long-press sheet of an album result: the same sheet, and the same actions, as an album

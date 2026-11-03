@@ -28,7 +28,8 @@ class QueueEntriesTest {
     fun keysDoNotDependOnThePlayOrder() {
         val withRepeat = queue + track("a")
         val plain = queueEntries(withRepeat, order = listOf(0, 1, 2, 3, 4), currentIndex = 0, generations = emptyMap())
-        val shuffled = queueEntries(withRepeat, order = listOf(4, 2, 0, 1, 3), currentIndex = 0, generations = emptyMap())
+        val shuffled =
+            queueEntries(withRepeat, order = listOf(4, 2, 0, 1, 3), currentIndex = 0, generations = emptyMap())
 
         assertEquals(plain.associate { it.queueIndex to it.key }, shuffled.associate { it.queueIndex to it.key })
         assertEquals(5, shuffled.map { it.key }.toSet().size)

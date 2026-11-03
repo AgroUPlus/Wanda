@@ -173,8 +173,11 @@ private fun LyricsScaffold(
                         contentColor = MaterialTheme.colorScheme.onSurface
                     )
                 ) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription =
-                        stringResource(R.string.player_close_lyrics))
+                    Icon(
+                        Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription =
+                            stringResource(R.string.player_close_lyrics)
+                    )
                 }
                 Text(
                     text = stringResource(R.string.player_lyrics),
@@ -258,6 +261,7 @@ private fun LyricsScaffold(
         }
     }
 }
+
 /** Matches `FilledIconButton`'s default footprint, so the title centres against the real gap. */
 private val BackButtonSlot = 40.dp
 

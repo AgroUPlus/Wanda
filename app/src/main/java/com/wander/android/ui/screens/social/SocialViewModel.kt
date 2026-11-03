@@ -58,10 +58,12 @@ internal class SocialViewModel @Inject constructor(
             val friends = values[0] as List<AgroProfile>
             @Suppress("UNCHECKED_CAST")
             val requests = values[1] as List<AgroProfile>
+
             @Suppress("UNCHECKED_CAST")
             val playing = values[2] as List<AgroFriendNowPlaying>
             val paired = values[3] as Boolean
             val session = values[4] as ListenAlongSession?
+
             @Suppress("UNCHECKED_CAST")
             val feed = values[5] as List<AgroFeedItem>
             val feedLoadingMore = values[6] as Boolean

@@ -72,9 +72,10 @@ internal fun MergePreviewScreen(
     val report by viewModel.report.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(contentPadding.headerInset())
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding.headerInset())
     ) {
         TopAppBar(
             title = {

@@ -14,11 +14,11 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
-import com.wander.android.ui.components.LoadErrorState
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.ui.components.LoadErrorState
 import com.wander.android.ui.components.listInset
 import com.wander.android.ui.screens.library.blend.BlendInvites
 import com.wander.android.ui.screens.library.blend.BlendInvitesViewModel

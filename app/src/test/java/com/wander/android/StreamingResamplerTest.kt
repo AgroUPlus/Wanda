@@ -4,13 +4,13 @@ import com.wander.android.core.audio.fingerprint.FloatBuffer
 import com.wander.android.core.audio.fingerprint.PcmDownmix
 import com.wander.android.core.audio.fingerprint.Resampler
 import com.wander.android.core.audio.fingerprint.StreamingResampler
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
-import org.junit.Test
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.sin
 import kotlin.random.Random
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
 /**
  * The decoder resamples as it goes and the microphone resamples a finished clip. Both sides of a

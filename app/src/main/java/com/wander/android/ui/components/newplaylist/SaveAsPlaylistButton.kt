@@ -49,4 +49,11 @@ internal fun SaveAsPlaylistButton(tracks: List<UnifiedTrack>) {
  * a Wanda playlist otherwise, since that is the one kind that holds tracks from any source.
  */
 internal fun plainSourceFor(tracks: List<UnifiedTrack>): SourceType =
-    if (tracks.isNotEmpty() && tracks.all { it.source == SourceType.NAVIDROME }) SourceType.NAVIDROME else SourceType.LOCAL
+    if (tracks.isNotEmpty() && tracks.all {
+            it.source == SourceType.NAVIDROME
+        }
+    ) {
+        SourceType.NAVIDROME
+    } else {
+        SourceType.LOCAL
+    }
