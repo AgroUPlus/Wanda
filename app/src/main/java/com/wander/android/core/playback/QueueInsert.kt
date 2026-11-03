@@ -24,6 +24,15 @@ internal fun MediaItem.taggedWith(insert: QueueInsert): MediaItem {
     return buildUpon().setMediaMetadata(mediaMetadata.buildUpon().setExtras(extras).build()).build()
 }
 
+/**
+ * [this] carrying [from]'s insert token, if it had one: for an item the service rebuilt from its id
+ * alone, so a looked-up copy can still be undone.
+ */
+internal fun MediaItem.keepingInsertOf(from: MediaItem): MediaItem {
+    val token = from.insertToken ?: return this
+    return taggedWith(QueueInsert(token, queueWasEmpty = false))
+}
+
 internal val MediaItem.insertToken: String? get() = mediaMetadata.extras?.getString(EXTRA_INSERT_TOKEN)
 
 /** What undoing a [QueueInsert] does to the queue as it stands now. */

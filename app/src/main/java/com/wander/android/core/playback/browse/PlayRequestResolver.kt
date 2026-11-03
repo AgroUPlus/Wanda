@@ -1,5 +1,6 @@
 package com.wander.android.core.playback.browse
 
+import com.wander.android.core.playback.keepingInsertOf
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
@@ -37,7 +38,7 @@ internal class PlayRequestResolver @Inject constructor(
 
     /** [items] for adding to the queue, each looked up on its own. */
     suspend fun resolveEach(items: List<MediaItem>): List<MediaItem> = items.map { item ->
-        if (item.localConfiguration != null) item else lookUp(item.mediaId).toMediaItem()
+        if (item.localConfiguration != null) item else lookUp(item.mediaId).toMediaItem().keepingInsertOf(item)
     }
 
     /** [items] as the whole new queue, expanded to its folder when it is one pick from the tree. */
