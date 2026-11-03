@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- In an album, playlist or artist subtitle, e.g. "Nirvana · 1991 · 13 tracks". -->
+    <plurals name="collection_track_count">
+        <item quantity="one">%1$d track</item>
+        <item quantity="other">%1$d tracks</item>
+    </plurals>
+    <!-- In an artist's subtitle, e.g. "4 albums · 52 tracks". -->
+    <plurals name="collection_album_count">
+        <item quantity="one">%1$d album</item>
+        <item quantity="other">%1$d albums</item>
+    </plurals>
+    <!-- Title of a playlist page before its name has loaded. -->
+    <string name="playlist_fallback_title">Playlist</string>
+    <!-- Section title on an artist page, over a row of similar artists. -->
+    <string name="artist_related_title">Fans might also like</string>
+    <!-- Section title on an artist page, over their music videos. -->
+    <string name="artist_videos_title">Videos</string>
+</resources>

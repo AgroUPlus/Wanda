@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Snackbar when text shared into the app from another app's share sheet holds no link Wanda understands. -->
+    <string name="share_link_unsupported">Wanda can\'t open this link</string>
+</resources>
