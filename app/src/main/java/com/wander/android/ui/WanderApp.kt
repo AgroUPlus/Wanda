@@ -31,6 +31,7 @@ import com.wander.android.ui.components.LocalBackBlurEnabled
 import com.wander.android.ui.components.LocalBackdropBlur
 import com.wander.android.ui.components.LocalDownloadMarks
 import com.wander.android.ui.components.LocalOfflinePlayback
+import com.wander.android.ui.components.SharedArtworkLayout
 import com.wander.android.ui.components.TrackDownloadViewModel
 import com.wander.android.ui.components.backdropBlur
 import com.wander.android.ui.components.dockSpec
@@ -182,19 +183,21 @@ fun WanderApp(
                     val contentPadding = remember(padding, extraBottom, direction, railInset) {
                         padding.plusBottom(extraBottom, direction).withMinStart(railInset, direction)
                     }
-                    NavHost(
-                        navController = navController,
-                        startDestination = if (setupDone) TopLevelDestination.HOME.route
-                        else Routes.WELCOME,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        wanderNavGraph(
+                    SharedArtworkLayout(Modifier.fillMaxSize()) {
+                        NavHost(
                             navController = navController,
-                            motion = motionScheme,
-                            playerConnection = playerConnection,
-                            contentPadding = contentPadding,
-                            onCollapsePlayer = { scope.launch { sheetState.collapse() } }
-                        )
+                            startDestination = if (setupDone) TopLevelDestination.HOME.route
+                            else Routes.WELCOME,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            wanderNavGraph(
+                                navController = navController,
+                                motion = motionScheme,
+                                playerConnection = playerConnection,
+                                contentPadding = contentPadding,
+                                onCollapsePlayer = { scope.launch { sheetState.collapse() } }
+                            )
+                        }
                     }
                 }
 

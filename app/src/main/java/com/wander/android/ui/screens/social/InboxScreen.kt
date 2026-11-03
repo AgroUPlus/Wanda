@@ -1,12 +1,5 @@
 package com.wander.android.ui.screens.social
 
-import androidx.activity.compose.PredictiveBackHandler
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -26,21 +19,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.wander.android.ui.components.enteringBlur
 import com.wander.android.R
+import com.wander.android.ui.components.BackLayers
 import com.wander.android.ui.components.EmptyState
+import com.wander.android.ui.components.rememberLastLive
 import com.wander.android.ui.components.headerInset
-import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Songs friends handed you, and the ones you handed out, presented as a conversation feed.
@@ -77,21 +67,6 @@ internal fun InboxScreen(
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { message ->
             snackbarHostState.showSnackbar(message)
-        }
-    }
-
-    var backProgress by remember { mutableFloatStateOf(0f) }
-
-    PredictiveBackHandler(enabled = state.openWith != null) { progressFlow ->
-        try {
-            progressFlow.collect { backEvent ->
-                backProgress = backEvent.progress
-            }
-            viewModel.closeThread()
-        } catch (e: CancellationException) {
-            backProgress = 0f
-        } finally {
-            backProgress = 0f
         }
     }
 
@@ -136,40 +111,13 @@ internal fun InboxScreen(
                 }
             }
 
-            AnimatedContent(
-                targetState = state.openWith,
-                transitionSpec = {
-                    if (targetState != null) {
-                        (slideInHorizontally { width -> width / 3 } + fadeIn()) togetherWith
-                            (slideOutHorizontally { width -> -width / 6 } + fadeOut())
-                    } else {
-                        (slideInHorizontally { width -> -width / 6 } + fadeIn()) togetherWith
-                            (slideOutHorizontally { width -> width / 3 } + fadeOut())
-                    }
-                },
-                label = "inbox_thread_transition",
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        if (state.openWith != null && backProgress > 0f) {
-                            val scale = 1f - (backProgress * 0.08f)
-                            scaleX = scale
-                            scaleY = scale
-                            translationX = backProgress * 120f
-                            alpha = 1f - (backProgress * 0.3f)
-                        }
-                    }
-            ) { openWith ->
-                Box(modifier = Modifier.fillMaxSize().enteringBlur(this)) {
+            // The thread opens over the list, which stays composed underneath: a back swipe shrinks
+            // the thread into a card and shows the list coming forward behind it.
+            BackLayers(
+                page = state.openWith,
+                onBack = viewModel::closeThread,
+                base = {
                     when {
-                        openWith != null -> InboxConversation(
-                            state = state,
-                            contentPadding = contentPadding,
-                            onPlay = viewModel::play,
-                            onReact = viewModel::react,
-                            onRemove = viewModel::remove
-                        )
-
                         state.loading && state.threads.isEmpty() ->
                             InboxThreadListSkeleton(contentPadding = contentPadding)
 
@@ -185,6 +133,16 @@ internal fun InboxScreen(
                         )
                     }
                 }
+            ) { username ->
+                // Closing clears the conversation at once; the leaving card keeps what it showed.
+                val shown = rememberLastLive(state, live = state.openWith == username)
+                InboxConversation(
+                    state = shown,
+                    contentPadding = contentPadding,
+                    onPlay = viewModel::play,
+                    onReact = viewModel::react,
+                    onRemove = viewModel::remove
+                )
             }
         }
 

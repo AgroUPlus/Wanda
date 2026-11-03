@@ -14,6 +14,7 @@ import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedArtist
 import com.wander.android.ui.screens.artist.RelatedArtistCard
 import com.wander.android.ui.screens.library.AlbumCard
+import com.wander.android.ui.components.albumArtKey
 
 /**
  * The artists a search matched, as one row of round portraits.
@@ -64,6 +65,7 @@ internal fun LazyListScope.albumResultsSection(
                     onClick = { onOpenAlbum(album.id) },
                     onLongClick = { onLongPressAlbum(album) },
                     artworkSize = 132.dp,
+                    sharedKey = albumArtKey(album.id),
                     modifier = Modifier.width(148.dp)
                 )
             }

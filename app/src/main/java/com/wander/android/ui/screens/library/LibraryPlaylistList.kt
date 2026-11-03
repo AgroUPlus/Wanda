@@ -52,6 +52,7 @@ import com.wander.android.ui.screens.library.blend.BlendInvites
 import com.wander.android.ui.components.PlaylistActionsSheet
 import com.wander.android.ui.components.SkeletonRow
 import com.wander.android.ui.components.nestedListInset
+import com.wander.android.ui.components.playlistArtKey
 
 private const val PLAYLISTS_PAGE_SIZE = 30
 private const val PAGE_PREFETCH_DISTANCE = 4
@@ -230,6 +231,7 @@ internal fun PlaylistList(
                 index = index,
                 onClick = { onOpenPlaylist(playlist.id) },
                 onLongPress = { actionsForPlaylist = playlist },
+                sharedKey = playlistArtKey(playlist.id),
                 modifier = Modifier
                     .animateItem()
                     .scale(rememberShelfEntranceScale(index))

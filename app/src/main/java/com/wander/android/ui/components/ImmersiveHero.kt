@@ -60,6 +60,8 @@ fun ImmersiveHero(
     horizontalPadding: Dp = 24.dp,
     captionAlignment: Alignment.Horizontal = Alignment.Start,
     overlay: @Composable BoxScope.() -> Unit = {},
+    /** Carries the picture in from the card that opened the page; see [sharedArtwork]. */
+    sharedKey: String? = null,
     caption: @Composable ColumnScope.() -> Unit
 ) {
     ImmersiveHero(
@@ -79,7 +81,7 @@ fun ImmersiveHero(
                 // a tablet.
                 sizeDp = DecodeSize,
                 shape = RectangleShape,
-                modifier = Modifier.fillMaxWidth().aspectRatio(aspect)
+                modifier = Modifier.sharedArtwork(sharedKey, RectangleShape).fillMaxWidth().aspectRatio(aspect)
             )
         }
     )

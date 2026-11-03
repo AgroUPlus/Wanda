@@ -33,6 +33,7 @@ import com.wander.android.ui.components.rememberPressScale
 import com.wander.android.ui.components.rememberShelfArtworkShape
 import com.wander.android.ui.components.rememberShelfEntranceScale
 import com.wander.android.ui.components.scrollingTitle
+import com.wander.android.ui.components.sharedArtwork
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -49,7 +50,9 @@ fun AlbumCard(
     /** The line under the title — the artist by default; an artist's own page shows the year. */
     subtitle: String = album.artist,
     /** Nominal cell width. The grid is `Adaptive(156.dp)`, so cells never fall below this. */
-    artworkSize: Dp = 160.dp
+    artworkSize: Dp = 160.dp,
+    /** Carries the cover into the album's page; see [sharedArtwork]. Null where it repeats. */
+    sharedKey: String? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -75,6 +78,7 @@ fun AlbumCard(
             sizeDp = artworkSize,
             shape = artworkShape,
             modifier = Modifier
+                .sharedArtwork(sharedKey, artworkShape)
                 .fillMaxWidth()
                 .aspectRatio(1f)
         )

@@ -5,11 +5,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import com.wander.android.ui.components.LocalDestinationScope
 import com.wander.android.ui.components.enteringBlur
 import com.wander.android.ui.screens.settings.SettingsCategory
 
@@ -52,9 +54,12 @@ internal fun NavGraphBuilder.detailDestination(
 
 /**
  * The screen a back swipe reveals starts blurred and sharpens with the swipe — see
- * [enteringBlur]. Wraps every destination, so it covers every back in the graph.
+ * [enteringBlur]. Wraps every destination, so it covers every back in the graph. It also hands
+ * the destination's own transition to [LocalDestinationScope], which covers travel on.
  */
 @Composable
 internal fun AnimatedContentScope.BlurredWhileEntering(content: @Composable () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize().enteringBlur(this)) { content() }
+    CompositionLocalProvider(LocalDestinationScope provides this) {
+        Box(modifier = Modifier.fillMaxSize().enteringBlur(this)) { content() }
+    }
 }

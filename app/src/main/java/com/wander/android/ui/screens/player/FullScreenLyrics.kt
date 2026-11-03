@@ -24,8 +24,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.Animatable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -48,6 +49,7 @@ import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.data.model.LyricsState
 import com.wander.android.data.model.LyricsSyncType
 import com.wander.android.data.model.syncType
+import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -123,27 +125,34 @@ private fun LyricsScaffold(
     // and fades under the finger so the player behind it is already visible before the gesture is
     // committed, and springs back if it is abandoned. The dialog would dismiss on back anyway —
     // this is what makes it a gesture you can see the result of rather than a switch.
-    var backProgress by remember { mutableFloatStateOf(0f) }
+    // A committed swipe leaves the progress where the finger took it, so the lyrics go from the
+    // shrunk card rather than flashing back to full size on their last frame; an abandoned one
+    // springs back instead of snapping.
+    val backSwipe = remember { Animatable(0f) }
+    val backScope = rememberCoroutineScope()
+    val settleSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
     PredictiveBackHandler(enabled = true) { progressFlow ->
         try {
-            progressFlow.collect { backEvent -> backProgress = backEvent.progress }
+            progressFlow.collect { backEvent -> backSwipe.snapTo(backEvent.progress) }
             onDismiss()
-        } catch (e: CancellationException) {
-            backProgress = 0f
-        } finally {
-            backProgress = 0f
+        } catch (_: CancellationException) {
+            backScope.launch { backSwipe.animateTo(0f, settleSpec) }
         }
     }
 
     // Everything behind the lyrics blurs only while a back swipe is pulling them away — fully at
     // the first pixel, clearing as the swipe goes. The rest of the time the lyrics cover the
     // screen and a blur behind them would cost the GPU for nothing.
-    BackdropBlurSource { if (backProgress > 0f) 1f - backResistance(backProgress) else 0f }
+    BackdropBlurSource {
+        val backProgress = backSwipe.value
+        if (backProgress > 0f) 1f - backResistance(backProgress) else 0f
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .graphicsLayer {
+                val backProgress = backSwipe.value
                 val eased = BackScaleFloor + (1f - BackScaleFloor) * (1f - backProgress)
                 scaleX = eased
                 scaleY = eased

@@ -23,7 +23,8 @@ internal fun PlaylistHeader(
     shareActions: PlaylistShareActions,
     titleState: CollapsingTitleState,
     onPlay: () -> Unit,
-    onShuffle: () -> Unit
+    onShuffle: () -> Unit,
+    sharedKey: String? = null
 ) {
     val trackCount = playlist?.songCount?.takeIf { it > 0 } ?: tracks.size
     val subtitle = listOfNotNull(
@@ -47,6 +48,7 @@ internal fun PlaylistHeader(
         downloadLabel = R.string.playlist_download_all,
         modifier = Modifier.padding(bottom = 16.dp),
         titleModifier = Modifier.collapsingTitleSource(titleState),
-        overline = R.string.hero_overline_playlist
+        overline = R.string.hero_overline_playlist,
+        sharedKey = sharedKey
     )
 }

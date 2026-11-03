@@ -40,6 +40,7 @@ import com.wander.android.ui.components.FastScroller
 import com.wander.android.ui.components.SkeletonCard
 import com.wander.android.ui.components.fastScrollLetter
 import com.wander.android.ui.components.nestedListInset
+import com.wander.android.ui.components.albumArtKey
 
 private const val ALBUMS_PAGE_SIZE = 24
 private const val PAGE_PREFETCH_DISTANCE = 4
@@ -155,6 +156,9 @@ internal fun AlbumGrid(
                     index = index,
                     onClick = { onOpenAlbum(album.id) },
                     onLongClick = { onAlbumLongPress(album) },
+                    // The grid's card is the one that travels; the Recent row above repeats
+                    // albums from it and keeps its own covers where they are.
+                    sharedKey = albumArtKey(album.id),
                     modifier = Modifier.animateItem()
                 )
             }

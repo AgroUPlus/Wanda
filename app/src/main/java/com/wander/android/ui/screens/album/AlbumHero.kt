@@ -71,13 +71,16 @@ internal fun AlbumHero(
     /** On the title alone — how the page's collapsing bar tracks it. */
     titleModifier: Modifier = Modifier,
     /** What kind of record this is, shown over the title. */
-    @StringRes overline: Int = R.string.hero_overline_album
+    @StringRes overline: Int = R.string.hero_overline_album,
+    /** Carries the cover in from the card that opened the page; see `sharedArtwork`. */
+    sharedKey: String? = null
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         ImmersiveHero(
             imageUrl = artworkUrl,
             contentDescription = title,
-            aspect = CoverAspect
+            aspect = CoverAspect,
+            sharedKey = sharedKey
         ) {
             HeroOverline(overline)
             Text(

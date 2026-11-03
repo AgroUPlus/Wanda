@@ -31,6 +31,7 @@ import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.SkeletonCard
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.screens.library.AlbumCard
+import com.wander.android.ui.components.albumArtKey
 
 /** How many songs the page shows before "Show all". */
 internal const val TopSongsPreview = 5
@@ -219,6 +220,7 @@ private fun AlbumRow(
                 // out instead — which is also the order the shelf is in.
                 subtitle = album.year?.toString().orEmpty(),
                 artworkSize = 132.dp,
+                sharedKey = albumArtKey(album.id),
                 modifier = Modifier.width(148.dp).animateItem()
             )
         }
