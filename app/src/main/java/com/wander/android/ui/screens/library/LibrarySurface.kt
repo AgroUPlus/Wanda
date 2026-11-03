@@ -7,6 +7,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.ui.components.BackLayers
+import com.wander.android.ui.navigation.InterceptReselect
 import com.wander.android.ui.screens.search.SearchHistoryViewModel
 import com.wander.android.ui.screens.search.SearchScreen
 import com.wander.android.ui.screens.search.SearchViewModel
@@ -46,33 +47,41 @@ fun LibrarySurface(
     val searching = query.isNotBlank() || (fieldFocused && recentSearches.isNotEmpty())
 
     val focusManager = LocalFocusManager.current
-    // Results open over the shelves, which stay underneath: a back swipe shows them coming
-    // forward as the results shrink away, and the shelves keep their scroll for the return.
-    BackLayers(
-        page = if (searching) Unit else null,
-        onBack = {
-            searchViewModel.clearQuery()
-            // Focus too, or an empty focused field would put the recent searches straight back.
-            focusManager.clearFocus()
-        },
-        base = {
-            LibraryScreen(
+    val endSearch = {
+        searchViewModel.clearQuery()
+        // Focus too, or an empty focused field would put the recent searches straight back.
+        focusManager.clearFocus()
+    }
+
+    // Tapping Library again while results are showing ends the search, as back does, rather than
+    // scrolling the results: the search is a layer over the library the way an album page is over
+    // a tab, and home for this tab is your own music. With no search the tap reaches the library's
+    // pages, which scroll back up.
+    InterceptReselect(consume = { searching.also { if (it) endSearch() } }) {
+        // Results open over the shelves, which stay underneath: a back swipe shows them coming
+        // forward as the results shrink away, and the shelves keep their scroll for the return.
+        BackLayers(
+            page = if (searching) Unit else null,
+            onBack = endSearch,
+            base = {
+                LibraryScreen(
+                    contentPadding = contentPadding,
+                    onOpenAlbum = onOpenAlbum,
+                    onOpenArtist = onOpenArtist,
+                    onOpenHistory = onOpenHistory,
+                    onOpenPlaylist = onOpenPlaylist,
+                    onOpenImport = onOpenImport,
+                    onOpenSubscriptions = onOpenSubscriptions
+                )
+            }
+        ) {
+            SearchScreen(
                 contentPadding = contentPadding,
                 onOpenAlbum = onOpenAlbum,
                 onOpenArtist = onOpenArtist,
-                onOpenHistory = onOpenHistory,
-                onOpenPlaylist = onOpenPlaylist,
-                onOpenImport = onOpenImport,
-                onOpenSubscriptions = onOpenSubscriptions
+                viewModel = searchViewModel,
+                historyViewModel = historyViewModel
             )
         }
-    ) {
-        SearchScreen(
-            contentPadding = contentPadding,
-            onOpenAlbum = onOpenAlbum,
-            onOpenArtist = onOpenArtist,
-            viewModel = searchViewModel,
-            historyViewModel = historyViewModel
-        )
     }
 }

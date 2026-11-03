@@ -25,6 +25,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.core.permissions.rememberLocalNetworkGate
+import com.wander.android.ui.components.ScrollToTopOnReselect
 import com.wander.android.ui.components.SkeletonRow
 import com.wander.android.ui.components.listInset
 
@@ -99,6 +100,7 @@ internal fun SocialScreen(
         }
 
         val listState = rememberLazyListState()
+        ScrollToTopOnReselect(listState)
 
         // Asking near the end rather than at it, so the next page is usually already there by the
         // time the last card is reached.

@@ -1,5 +1,7 @@
 package com.wander.android.ui.screens.library
 
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.wander.android.ui.components.ScrollToTopOnReselect
 import com.wander.android.ui.components.selection.TrackSelectionState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -36,6 +38,7 @@ import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.rememberLastLive
 import com.wander.android.ui.components.groupedListItem
 import com.wander.android.ui.components.nestedListInset
+import com.wander.android.ui.navigation.InterceptReselect
 
 /**
  * The library by genre tag, and one genre's tracks once it is opened.
@@ -54,26 +57,34 @@ internal fun LibraryGenresPage(
     selection: TrackSelectionState
 ) {
     val openGenre by browse.openGenre.collectAsStateWithLifecycle()
-    Column(modifier = Modifier.fillMaxSize()) {
-        LibraryListToolbar(LibraryTab.GENRES, browse)
-        // The genre opens over the list, which stays underneath with its scroll kept, so a back
-        // swipe shows the list coming forward as the genre shrinks away.
-        BackLayers(
-            page = openGenre,
-            onBack = { browse.openGenre(null) },
-            base = { GenreList(contentPadding, browse) }
-        ) { genre ->
-            val live by browse.genreTracks.collectAsStateWithLifecycle()
-            val tracks = rememberLastLive(live, live = openGenre == genre)
-            Column(modifier = Modifier.fillMaxSize()) {
-                GenreHeader(
-                    genre = genre,
-                    canPlay = tracks.isNotEmpty(),
-                    onBack = { browse.openGenre(null) },
-                    onPlay = { viewModel.play(tracks, 0) },
-                    onShuffle = { viewModel.play(tracks.shuffled(), 0) }
-                )
-                TrackList(tracks, LibraryTab.GENRES, isSyncing, contentPadding, viewModel, onLongPress, selection)
+    // An open genre is a page opened over the genre list, so a reselect closes it, as back does —
+    // the same thing a tap does over an album.
+    InterceptReselect(consume = {
+        val open = openGenre != null
+        if (open) browse.openGenre(null)
+        open
+    }) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            LibraryListToolbar(LibraryTab.GENRES, browse)
+            // The genre opens over the list, which stays underneath with its scroll kept, so a back
+            // swipe shows the list coming forward as the genre shrinks away.
+            BackLayers(
+                page = openGenre,
+                onBack = { browse.openGenre(null) },
+                base = { GenreList(contentPadding, browse) }
+            ) { genre ->
+                val live by browse.genreTracks.collectAsStateWithLifecycle()
+                val tracks = rememberLastLive(live, live = openGenre == genre)
+                Column(modifier = Modifier.fillMaxSize()) {
+                    GenreHeader(
+                        genre = genre,
+                        canPlay = tracks.isNotEmpty(),
+                        onBack = { browse.openGenre(null) },
+                        onPlay = { viewModel.play(tracks, 0) },
+                        onShuffle = { viewModel.play(tracks.shuffled(), 0) }
+                    )
+                    TrackList(tracks, LibraryTab.GENRES, isSyncing, contentPadding, viewModel, onLongPress, selection)
+                }
             }
         }
     }
@@ -92,7 +103,13 @@ private fun GenreList(contentPadding: PaddingValues, browse: LibraryBrowseViewMo
         }
         return
     }
-    LazyColumn(contentPadding = contentPadding.nestedListInset(), modifier = Modifier.fillMaxSize()) {
+    val listState = rememberLazyListState()
+    ScrollToTopOnReselect(listState)
+    LazyColumn(
+        state = listState,
+        contentPadding = contentPadding.nestedListInset(),
+        modifier = Modifier.fillMaxSize()
+    ) {
         itemsIndexed(genres, key = { _, genre -> genre.name }) { index, genre ->
             Column(
                 modifier = Modifier

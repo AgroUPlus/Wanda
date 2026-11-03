@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.annotation.StringRes
+import com.wander.android.ui.components.ScrollToTopOnReselect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import com.wander.android.R
@@ -74,6 +75,7 @@ internal fun AlbumGrid(
     val visibleAlbums = remember(albums, albumPageSize) { albums.take(albumPageSize) }
     val hasMoreAlbums = visibleAlbums.size < albums.size
     val gridState = rememberLazyGridState()
+    ScrollToTopOnReselect(gridState)
     // Only the count of recents gates the row. It used to also require `albums.size >
     // recentAlbums.size`, which meant a library no larger than the recent limit — every library
     // during its first sync — never saw the row at all, and the row reappeared later for no

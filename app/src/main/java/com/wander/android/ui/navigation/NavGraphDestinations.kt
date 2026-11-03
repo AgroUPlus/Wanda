@@ -20,7 +20,10 @@ internal val SYNC_SETTINGS = Routes.settingsCategory(SettingsCategory.SYNC.name)
 
 internal fun NavBackStackEntry.route(): String? = destination.route
 
-/** A top-level tab: peers, so they slide along X in the direction of the bar. */
+/**
+ * A top-level tab: peers, so they slide along X in the direction of the bar. A tab's root also
+ * hears its button being tapped again — see [ProvideTabReselect].
+ */
 internal fun NavGraphBuilder.tabDestination(
     motion: MotionScheme,
     route: String,
@@ -33,7 +36,7 @@ internal fun NavGraphBuilder.tabDestination(
     exitTransition = { tabExit(initialState.route(), targetState.route(), motion) },
     popEnterTransition = { tabEnter(initialState.route(), targetState.route(), motion) },
     popExitTransition = { tabExit(initialState.route(), targetState.route(), motion) },
-    content = { entry -> BlurredWhileEntering { content(entry) } }
+    content = { entry -> BlurredWhileEntering { ProvideTabReselect(route) { content(entry) } } }
 )
 
 /** A screen opened on top of another: shared-axis Z. */

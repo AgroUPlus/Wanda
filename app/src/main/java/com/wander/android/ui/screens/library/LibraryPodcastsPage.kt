@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Podcasts
 import androidx.compose.material3.ButtonDefaults
@@ -32,6 +33,7 @@ import com.wander.android.data.model.EpisodeItem
 import com.wander.android.data.model.EpisodeState
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.EmptyState
+import com.wander.android.ui.components.ScrollToTopOnReselect
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.groupedListItem
 import com.wander.android.ui.components.nestedListInset
@@ -70,7 +72,13 @@ internal fun LibraryPodcastsPage(
         return
     }
 
-    LazyColumn(contentPadding = contentPadding.nestedListInset(), modifier = Modifier.fillMaxSize()) {
+    val listState = rememberLazyListState()
+    ScrollToTopOnReselect(listState)
+    LazyColumn(
+        state = listState,
+        contentPadding = contentPadding.nestedListInset(),
+        modifier = Modifier.fillMaxSize()
+    ) {
         inboxSection(inbox, hasSubscriptions, onOpenSubscriptions, viewModel::play, onToggleLike, onLongPress)
         if (state.continueListening.isNotEmpty()) {
             continueListening(state.continueListening, viewModel::play, onLongPress)

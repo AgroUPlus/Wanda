@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.library
 
+import com.wander.android.ui.components.ScrollToTopOnReselect
 import com.wander.android.ui.components.rememberShelfEntranceScale
 import androidx.compose.ui.draw.scale
 import com.wander.android.ui.components.groupedListItem
@@ -159,6 +160,7 @@ internal fun PlaylistList(
     val visiblePlaylists = remember(playlists, playlistPageSize) { playlists.take(playlistPageSize) }
     val hasMorePlaylists = visiblePlaylists.size < playlists.size
     val listState = rememberLazyListState()
+    ScrollToTopOnReselect(listState)
 
     // Driven by the scroll position rather than by a row composing: an effect inside the item
     // lambda keyed on the page size it mutates walks the whole list on the first frame.

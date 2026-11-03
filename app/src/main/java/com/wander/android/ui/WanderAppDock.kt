@@ -37,11 +37,10 @@ import com.wander.android.ui.components.dockSpec
 import com.wander.android.ui.components.listen.ListenSheet
 import com.wander.android.ui.components.player.MiniPlayerGap
 import com.wander.android.ui.components.player.PlayerSheetState
-import com.wander.android.ui.navigation.DockItem
+import com.wander.android.ui.navigation.LocalTabReselection
 import com.wander.android.ui.navigation.NavLayoutViewModel
 import com.wander.android.ui.navigation.ShellRequest
 import com.wander.android.ui.navigation.TopLevelDestination
-import com.wander.android.ui.navigation.navigateSettled
 import com.wander.android.ui.navigation.WanderDock
 
 import androidx.compose.foundation.layout.WindowInsets
@@ -166,6 +165,7 @@ internal fun rememberWanderDockState(
         )
     }
 
+    val tabReselection = LocalTabReselection.current
     val dockItems by hiltViewModel<NavLayoutViewModel>().dockItems.collectAsStateWithLifecycle()
     val openLibrary = { navController.switchTab(TopLevelDestination.LIBRARY) }
     val onQueryChange: (String) -> Unit = { value ->
@@ -199,13 +199,7 @@ internal fun rememberWanderDockState(
                 currentRoute = dockRoute,
                 query = searchQuery,
                 items = if (withRail) emptyList() else dockItems,
-                onOpenItem = { item ->
-                    when (item) {
-                        DockItem.LIBRARY -> navController.switchTab(TopLevelDestination.LIBRARY)
-                        DockItem.FRIENDS -> navController.switchTab(TopLevelDestination.FRIENDS)
-                        else -> navController.navigateSettled(item.route)
-                    }
-                },
+                onOpenItem = { item -> navController.openDockItem(item, tabReselection) },
                 onOpenLibrary = openLibrary,
                 onQueryChange = onQueryChange,
                 onSearch = openLibrary,
@@ -241,16 +235,4 @@ internal fun PaddingValues.plusBottom(
         end = calculateEndPadding(direction),
         bottom = calculateBottomPadding() + extra
     )
-}
-
-/**
- * Tab switching keeps each tab's own state — and lands on the tab itself.
- */
-internal fun NavHostController.switchTab(destination: TopLevelDestination) {
-    navigate(destination.route) {
-        popUpTo(graph.startDestinationId) { saveState = true }
-        launchSingleTop = true
-        restoreState = true
-    }
-    graph.findNode(destination.route)?.id?.let { popBackStack(it, inclusive = false) }
 }

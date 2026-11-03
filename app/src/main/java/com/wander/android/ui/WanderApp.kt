@@ -40,7 +40,9 @@ import com.wander.android.ui.components.player.PlayerSheet
 import com.wander.android.ui.components.player.SheetDock
 import com.wander.android.ui.components.player.PlayerSheetContent
 import com.wander.android.ui.components.player.rememberPlayerSheetState
+import com.wander.android.ui.navigation.LocalTabReselection
 import com.wander.android.ui.navigation.Routes
+import com.wander.android.ui.navigation.TabReselection
 import com.wander.android.ui.navigation.TopLevelDestination
 import com.wander.android.ui.navigation.wanderNavGraph
 import com.wander.android.ui.screens.social.JamViewModel
@@ -133,6 +135,7 @@ fun WanderApp(
     val isAmoledBlack by viewModel.isAmoledBlack.collectAsStateWithLifecycle()
     val isBackBlurEnabled by viewModel.isBackBlurEnabled.collectAsStateWithLifecycle()
     val backdropBlur = remember { BackdropBlurController() }
+    val tabReselection = remember { TabReselection() }
     val shellCoverSeed = if (isCoverArtThemeEnabled) {
         rememberCoverSeedColor(playback.currentTrack?.artworkUrl)
     } else {
@@ -149,7 +152,8 @@ fun WanderApp(
             LocalOfflinePlayback provides offlinePlayback,
             LocalDownloadMarks provides downloadMarks,
             LocalBackBlurEnabled provides isBackBlurEnabled,
-            LocalBackdropBlur provides backdropBlur
+            LocalBackdropBlur provides backdropBlur,
+            LocalTabReselection provides tabReselection
         ) {
             Box(
                 modifier = Modifier

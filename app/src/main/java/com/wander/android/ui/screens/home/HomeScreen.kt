@@ -47,6 +47,7 @@ import com.wander.android.ui.agro.AgroSessionViewModel
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.ExpressiveRefreshIndicator
+import com.wander.android.ui.components.ScrollToTopOnReselect
 import com.wander.android.ui.components.SessionSheet
 import com.wander.android.ui.components.SourceFilterChips
 import com.wander.android.ui.components.TrackActionsSheet
@@ -110,6 +111,7 @@ fun HomeScreen(
     // See [HomeShelfStates].
     val shelfStates = remember { HomeShelfStates() }
     val listState = rememberLazyListState()
+    ScrollToTopOnReselect(listState)
     val editor = rememberHomeEditor(state, viewModel, listState)
     HomeEditorSettingsSheet(editor, state, viewModel)
     HomeEditorAddSheet(editor, state, viewModel)
