@@ -1039,14 +1039,14 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/WanderApp.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="276" column="121" source="standard:max-line-length" />
+        <error line="279" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/WanderAppDock.kt">
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/WanderAppOverlays.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="52" column="19" source="standard:property-naming" />
+        <error line="53" column="19" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/WanderAppViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -1172,7 +1172,7 @@
         <error line="185" column="20" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/ImmersiveHero.kt">
-        <error line="164" column="11" source="standard:property-naming" />
+        <error line="165" column="11" source="standard:property-naming" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/LikeButton.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -1709,18 +1709,18 @@
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/PodcastSearchScreen.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="83" column="121" source="standard:max-line-length" />
-        <error line="144" column="121" source="standard:max-line-length" />
-        <error line="188" column="121" source="standard:max-line-length" />
+        <error line="84" column="121" source="standard:max-line-length" />
+        <error line="145" column="121" source="standard:max-line-length" />
+        <error line="189" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/PodcastSearchViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/PodcastSubscriptionsScreen.kt">
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="87" column="121" source="standard:max-line-length" />
-        <error line="107" column="121" source="standard:max-line-length" />
-        <error line="219" column="121" source="standard:max-line-length" />
+        <error line="88" column="121" source="standard:max-line-length" />
+        <error line="108" column="121" source="standard:max-line-length" />
+        <error line="220" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/library/PodcastSubscriptionsViewModel.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -2023,7 +2023,7 @@
     <file name="app/src/main/java/com/wander/android/ui/screens/queue/QueueDrawer.kt">
         <error line="2" column="1" source="standard:no-trailing-spaces" />
         <error line="3" column="1" source="standard:import-ordering" />
-        <error line="199" column="121" source="standard:max-line-length" />
+        <error line="200" column="121" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/screens/queue/QueueDrawerHeader.kt">
         <error line="3" column="1" source="standard:import-ordering" />
