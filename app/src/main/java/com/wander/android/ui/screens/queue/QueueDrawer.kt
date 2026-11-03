@@ -2,12 +2,14 @@ package com.wander.android.ui.screens.queue
  
 import kotlin.coroutines.cancellation.CancellationException
 import com.wander.android.ui.components.backResistance
+import com.wander.android.ui.components.WandaNoticeHost
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material3.Surface
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -29,7 +31,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
@@ -204,9 +205,9 @@ internal fun QueueDrawer(
                     )
                 }
 
-                SnackbarHost(
+                WandaNoticeHost(
                     hostState = snackbarHostState,
-                    modifier = Modifier.align(Alignment.BottomCenter)
+                    modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding()
                 )
             }
         }

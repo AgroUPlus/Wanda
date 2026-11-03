@@ -1,8 +1,8 @@
 package com.wander.android.ui
 
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -16,6 +16,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.wander.android.core.permissions.rememberLocalNetworkGate
+import com.wander.android.ui.components.WandaNoticeHost
 import com.wander.android.data.repository.MoodPresets
 import com.wander.android.ui.agro.AgroSessionViewModel
 import kotlinx.coroutines.launch
@@ -231,10 +232,10 @@ internal fun BoxScope.WanderAppOverlays(
         }
     }
 
-    SnackbarHost(
+    WandaNoticeHost(
         hostState = snackbarHostState,
         modifier = Modifier
-            .align(Alignment.BottomCenter)
-            .padding(bottom = dockBottom + 8.dp)
+            .align(Alignment.TopCenter)
+            .statusBarsPadding()
     )
 }
