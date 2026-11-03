@@ -20,6 +20,7 @@ import com.wander.android.R
 import com.wander.android.ui.components.GroupedItemGap
 import com.wander.android.ui.components.groupedItemShape
 import com.wander.android.ui.components.rememberHaptics
+import com.wander.android.ui.components.rememberRubberBandOverscroll
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -83,6 +84,12 @@ internal fun QueueUpNext(
         state = listState,
         verticalArrangement = Arrangement.spacedBy(GroupedItemGap),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 24.dp),
+        // Rubber band at the bottom, the drawer at the top. The band only gets what the drawer's
+        // `drawerNestedScroll` leaves: its post-scroll takes every downward pull past the top, so
+        // the top edge still drags the drawer closed and never stretches; upward pulls past the
+        // bottom of an open drawer are left alone, so those stretch. A fling into the top edge can
+        // still bounce the band — the drawer only takes flings while it is partly open.
+        overscrollEffect = rememberRubberBandOverscroll(),
         modifier = modifier.fillMaxWidth()
     ) {
         current?.let { now ->
