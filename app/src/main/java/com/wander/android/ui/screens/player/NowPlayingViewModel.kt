@@ -175,6 +175,16 @@ internal class NowPlayingViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Likes and never unlikes — the double-tap on the cover. A set, not a toggle, so a second
+     * double-tap landing before Room has reported the first cannot flip it back off.
+     */
+    fun like(track: UnifiedTrack) {
+        viewModelScope.launch {
+            musicRepository.like(track)
+        }
+    }
+
     /** Whether this track's backend can mint a public link — decides if the button is shown. */
     fun canShare(track: UnifiedTrack) = shareRepository.canShare(track)
 

@@ -8,14 +8,14 @@ import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
+import java.io.File
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
-import java.io.File
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Downloads the user asks for by name: one track from its menu, an album or playlist from its

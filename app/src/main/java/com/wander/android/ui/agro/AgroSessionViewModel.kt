@@ -45,6 +45,7 @@ internal class AgroSessionViewModel @Inject constructor(
     private val jamPlayback: JamPlaybackController,
     private val dropsRepository: DropsRepository,
     private val friendNotifier: FriendNotifier,
+    private val dropNotifier: com.wander.android.core.notification.DropNotifier,
     private val incognitoRepository: IncognitoRepository,
     private val identityKeyManager: com.wander.android.core.security.IdentityKeyManager,
     private val agroRelayClient: com.wander.android.data.sources.agro.AgroRelayClient,
@@ -159,9 +160,10 @@ internal class AgroSessionViewModel @Inject constructor(
                 }
                 // A frame naming listeners is about this account being followed; every other one is
                 // about a host this device is following.
-                is AgroLiveMessage.ListenAlong -> message.listeners
-                    ?.let(listenerPresence::onListeners)
-                    ?: listenAlong.onFrame(message)
+                is AgroLiveMessage.ListenAlong ->
+                    message.listeners
+                        ?.let(listenerPresence::onListeners)
+                        ?: listenAlong.onFrame(message)
                 is AgroLiveMessage.JamUpdated -> jamRepository.refresh()
                 is AgroLiveMessage.JamRecapWritten, is AgroLiveMessage.BlendInvited -> inbox.onMessage(message)
                 // Someone changed a playlist this account shares in; fetched only if it moved on.
@@ -179,7 +181,7 @@ internal class AgroSessionViewModel @Inject constructor(
                     // before it does — the frame already carries the whole drop.
                     val decrypted = message.drop.decryptIfNeeded(identityKeyManager)
                     dropsRepository.onPushed(decrypted)
-                    friendNotifier.notifyDrop(decrypted)
+                    dropNotifier.notify(decrypted)
                 }
                 is AgroLiveMessage.RelayRequest -> {
                     agroRelayClient.handleRelayRequest(

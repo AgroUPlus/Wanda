@@ -67,7 +67,11 @@ object RssFeedParser {
             val event = parser.next()
             if (event == XmlPullParser.END_DOCUMENT) throw FeedParseException("The feed ends mid-element")
             if (event == XmlPullParser.END_TAG && parser.depth == depth) return url
-            if (event == XmlPullParser.START_TAG && parser.name == "url") url = parser.nextText().trim().ifBlank { null }
+            if (event == XmlPullParser.START_TAG && parser.name == "url") {
+                url = parser.nextText().trim().ifBlank {
+                    null
+                }
+            }
         }
     }
 

@@ -30,6 +30,7 @@ import com.wander.android.ui.components.headerInset
 import com.wander.android.ui.components.selection.SelectedTrack
 import com.wander.android.ui.components.selection.TrackSelectionBar
 import com.wander.android.ui.components.selection.rememberTrackSelectionState
+import com.wander.android.ui.navigation.InterceptReselect
 
 @Composable
 fun LibraryScreen(
@@ -67,18 +68,19 @@ fun LibraryScreen(
             actionsFor = null
         }
     }
-    val pageActions = remember(onOpenAlbum, onOpenArtist, onOpenPlaylist, onOpenImport, onOpenSubscriptions, selection) {
-        LibraryPageActions(
-            onOpenAlbum = onOpenAlbum,
-            onOpenArtist = onOpenArtist,
-            onOpenPlaylist = onOpenPlaylist,
-            onOpenImport = onOpenImport,
-            onOpenSubscriptions = onOpenSubscriptions,
-            onTrackLongPress = { actionsFor = it },
-            onAlbumLongPress = { albumActionsFor = it },
-            selection = selection
-        )
-    }
+    val pageActions =
+        remember(onOpenAlbum, onOpenArtist, onOpenPlaylist, onOpenImport, onOpenSubscriptions, selection) {
+            LibraryPageActions(
+                onOpenAlbum = onOpenAlbum,
+                onOpenArtist = onOpenArtist,
+                onOpenPlaylist = onOpenPlaylist,
+                onOpenImport = onOpenImport,
+                onOpenSubscriptions = onOpenSubscriptions,
+                onTrackLongPress = { actionsFor = it },
+                onAlbumLongPress = { albumActionsFor = it },
+                selection = selection
+            )
+        }
     val likedTracks by browse.likedTracks.collectAsStateWithLifecycle()
     val downloadedTracks by browse.downloadedTracks.collectAsStateWithLifecycle()
     val hasLibraryTracks by browse.hasTracks.collectAsStateWithLifecycle()
@@ -138,7 +140,11 @@ fun LibraryScreen(
                     },
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    LibraryPage(tabs[page], contentPadding, viewModel, browse, addToPlaylist, pageActions)
+                    // Every page the pager keeps composed hears the tap; only the one on screen
+                    // passes it on, so a reselect scrolls the list you are looking at.
+                    InterceptReselect(consume = { pagerState.currentPage != page }) {
+                        LibraryPage(tabs[page], contentPadding, viewModel, browse, addToPlaylist, pageActions)
+                    }
                 }
             }
         }

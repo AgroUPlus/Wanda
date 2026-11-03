@@ -3,14 +3,15 @@ package com.wander.android.ui.components.selection
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.core.playback.QueueInsert
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MusicRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * The batch actions every selectable list shares, and the swipe shortcuts on its rows. Screen-only
@@ -28,24 +29,16 @@ class TrackSelectionViewModel @Inject constructor(
 
     fun play(tracks: List<UnifiedTrack>) = playerConnection.play(tracks)
 
-    fun playNext(tracks: List<UnifiedTrack>) {
-        playerConnection.playNext(tracks)
-    }
-
-    fun addToQueue(tracks: List<UnifiedTrack>) {
-        playerConnection.addToQueue(tracks)
-    }
-
     /**
-     * A row's swipe: queues [track] and says so in a snackbar — but only when there was a player
-     * to queue it on; with nothing playing the swipe has nowhere to go, as from the sheet.
+     * Queues [tracks] to play next and says so with [message], offering to undo it — but only
+     * when there was a player to queue them on; with none the request has nowhere to go.
      */
-    fun swipePlayNext(track: UnifiedTrack, message: String) {
-        if (playerConnection.playNext(listOf(track)) != null) playerConnection.notify(message)
-    }
+    fun playNext(tracks: List<UnifiedTrack>, message: String) = confirm(playerConnection.playNext(tracks), message)
 
-    fun swipeAddToQueue(track: UnifiedTrack, message: String) {
-        if (playerConnection.addToQueue(listOf(track)) != null) playerConnection.notify(message)
+    fun addToQueue(tracks: List<UnifiedTrack>, message: String) = confirm(playerConnection.addToQueue(tracks), message)
+
+    private fun confirm(insert: QueueInsert?, message: String) {
+        if (insert != null) playerConnection.notify(message) { playerConnection.undoInsert(insert) }
     }
 
     /** Likes or unlikes every one of [tracks] not already that way; one at a time, as a tap would. */

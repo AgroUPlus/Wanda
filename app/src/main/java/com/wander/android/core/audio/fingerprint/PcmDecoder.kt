@@ -1,11 +1,11 @@
 package com.wander.android.core.audio.fingerprint
 
+import android.media.AudioFormat as PlatformAudioFormat
 import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.util.Log
 import javax.inject.Inject
-import android.media.AudioFormat as PlatformAudioFormat
 
 /**
  * Decodes a local audio file to the mono 8 kHz float PCM the fingerprinter expects.

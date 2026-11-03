@@ -46,8 +46,11 @@ internal fun LazyItemScope.PlaylistTrackItem(
                 .scale(rememberShelfEntranceScale(position))
                 .groupedListItem(position, count)
                 .then(
-                    if (isDragging) Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                    else Modifier
+                    if (isDragging) {
+                        Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    } else {
+                        Modifier
+                    }
                 )
         ) {
             row(Modifier.weight(1f))

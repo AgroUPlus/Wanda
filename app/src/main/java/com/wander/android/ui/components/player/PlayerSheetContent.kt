@@ -88,7 +88,9 @@ fun PlayerSheetContent(
     val carouselHandoff = { smoothStep(progress(), CarouselHandoffStart, CarouselHandoffEnd) }
     // Keyed on the flag: it flips with Video mode, and a stale `true` hid the travelling cover —
     // and the clip on it — once open, with no carousel drawn in its place.
-    val carouselTookOver by remember(playerCarousel) { derivedStateOf { playerCarousel && progress() >= CarouselHandoffEnd } }
+    val carouselTookOver by remember(playerCarousel) {
+        derivedStateOf { playerCarousel && progress() >= CarouselHandoffEnd }
+    }
 
     LaunchedEffect(playerFullyOpen) { if (!playerFullyOpen) queueDrawer.snapTo(0f) }
     LaunchedEffect(docked) { if (docked) lyricsVisible = false }
@@ -126,15 +128,19 @@ fun PlayerSheetContent(
         canPrevious = canPreviousMini,
         exitDistance = DockedExitDistance
     )
-    val fullSwipe = if (playerCarousel) Modifier else Modifier.swipeToChangeTrack(
-        state = swipe,
-        onNext = playerConnection::next,
-        onPrevious = playerConnection::previousTrack,
-        nextArtworkUrl = nextArtwork,
-        previousArtworkUrl = previousArtwork,
-        canNext = hasNextSong,
-        canPrevious = hasPreviousSong
-    )
+    val fullSwipe = if (playerCarousel) {
+        Modifier
+    } else {
+        Modifier.swipeToChangeTrack(
+            state = swipe,
+            onNext = playerConnection::next,
+            onPrevious = playerConnection::previousTrack,
+            nextArtworkUrl = nextArtwork,
+            previousArtworkUrl = previousArtwork,
+            canNext = hasNextSong,
+            canPrevious = hasPreviousSong
+        )
+    }
 
     val currentArtwork = playback.currentTrack?.artworkUrl
     rememberCoverSeedColor(currentArtwork)
@@ -205,7 +211,9 @@ fun PlayerSheetContent(
                 carouselEnabled = coverCarousel && !playerCarousel,
                 isPlaying = playback.isPlaying,
                 // Out of composition once docked, so the clip stops there and plays while it shrinks.
-                overlay = { VideoClipOverlay(clipTrack, fill = immersivePlayer, active = fullPlayerPresent && !lyricsVisible) }
+                overlay = {
+                    VideoClipOverlay(clipTrack, fill = immersivePlayer, active = fullPlayerPresent && !lyricsVisible)
+                }
             )
 
             if (fullPlayerPresent) {

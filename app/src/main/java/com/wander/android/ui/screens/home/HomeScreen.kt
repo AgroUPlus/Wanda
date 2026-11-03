@@ -38,15 +38,16 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
-import com.wander.android.data.model.nameRes
-import com.wander.android.data.model.shortNameRes
 import com.wander.android.data.model.SourceType
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.model.nameRes
+import com.wander.android.data.model.shortNameRes
 import com.wander.android.data.repository.artistIdFor
 import com.wander.android.ui.agro.AgroSessionViewModel
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.ExpressiveRefreshIndicator
+import com.wander.android.ui.components.ScrollToTopOnReselect
 import com.wander.android.ui.components.SessionSheet
 import com.wander.android.ui.components.SourceFilterChips
 import com.wander.android.ui.components.TrackActionsSheet
@@ -110,6 +111,7 @@ fun HomeScreen(
     // See [HomeShelfStates].
     val shelfStates = remember { HomeShelfStates() }
     val listState = rememberLazyListState()
+    ScrollToTopOnReselect(listState)
     val editor = rememberHomeEditor(state, viewModel, listState)
     HomeEditorSettingsSheet(editor, state, viewModel)
     HomeEditorAddSheet(editor, state, viewModel)
@@ -200,55 +202,60 @@ fun HomeScreen(
                                     onDone = viewModel.layoutActions::stop,
                                     onAddShelf = { editor.setAddingShelf(true) },
                                     suggestion = editor.rarelyUsed.takeIf { it.isNotEmpty() }?.let { ids ->
-                                        val titles = ids.mapNotNull { id -> editor.order.firstOrNull { it.id == id }?.title?.takeIf(String::isNotEmpty) }
-                                        stringResource(R.string.home_edit_suggestion, titles.joinToString())
-                                    }
-                                )
-                            } else {
-                                HomeHeader(
-                                    greeting = state.greeting,
-                                    hasSession = session != null,
-                                    onOpenSessions = { showSessionSheet = true },
-                                    onOpenSettings = onOpenSettings
+                                        val titles = ids.mapNotNull { id ->
+                                                editor.order.firstOrNull {
+                                                    it.id == id
+                                                }?.title?.takeIf(String::isNotEmpty)
+                                            }
+                                            stringResource(R.string.home_edit_suggestion, titles.joinToString())
+                                        }
+                                    )
+                                } else {
+                                    HomeHeader(
+                                        greeting = state.greeting,
+                                        hasSession = session != null,
+                                        onOpenSessions = { showSessionSheet = true },
+                                        onOpenSettings = onOpenSettings
+                                    )
+                                }
+                            }
+                        }
+
+                        // Only earns its row when there is more than one backend to choose between.
+                        if (state.sources.size > 1 && !state.editing) {
+                            item(key = "sources", contentType = "source-chips") {
+                                SourceFilterChips(
+                                    sources = state.sources,
+                                    selected = state.selectedSource,
+                                    onSelect = viewModel::selectSource,
+                                    label = SourceType::shortNameRes,
+                                    modifier = Modifier.padding(vertical = 4.dp)
                                 )
                             }
                         }
-                    }
 
-                    // Only earns its row when there is more than one backend to choose between.
-                    if (state.sources.size > 1 && !state.editing) {
-                        item(key = "sources", contentType = "source-chips") {
-                            SourceFilterChips(
-                                sources = state.sources,
-                                selected = state.selectedSource,
-                                onSelect = viewModel::selectSource,
-                                label = SourceType::shortNameRes,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            )
-                        }
-                    }
-
-                    if (state.editing) {
-                        homeEditorShelves(editor, state, viewModel, shelfStates)
-                    } else if (state.isEmpty) {
-                        item(key = "filtered_empty", contentType = "empty") {
-                            EmptyState(
-                                title = stringResource(R.string.home_nothing_here_yet),
-                                message = state.selectedSource
-                                    ?.let { stringResource(R.string.home_source_has_no_tracks, stringResource(it.nameRes)) }
-                                    ?: stringResource(R.string.home_filter_has_no_tracks),
-                                modifier = Modifier.fillMaxWidth().padding(top = 48.dp)
-                            )
-                        }
-                    } else {
-                        state.sections.forEach { section ->
-                            homeSection(section, viewModel, shelfStates) { actionsFor = it }
+                        if (state.editing) {
+                            homeEditorShelves(editor, state, viewModel, shelfStates)
+                        } else if (state.isEmpty) {
+                            item(key = "filtered_empty", contentType = "empty") {
+                                EmptyState(
+                                    title = stringResource(R.string.home_nothing_here_yet),
+                                    message = state.selectedSource
+                                        ?.let {
+                                            stringResource(R.string.home_source_has_no_tracks, stringResource(it.nameRes))
+                                        }
+                                        ?: stringResource(R.string.home_filter_has_no_tracks),
+                                    modifier = Modifier.fillMaxWidth().padding(top = 48.dp)
+                                )
+                            }
+                        } else {
+                            state.sections.forEach { section ->
+                                homeSection(section, viewModel, shelfStates) { actionsFor = it }
+                            }
                         }
                     }
                 }
             }
-            }
         }
-
     }
 }

@@ -3,12 +3,10 @@ package com.wander.android.ui.screens.player
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -26,20 +24,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import com.wander.android.R
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.rememberPlaybackPosition
 import com.wander.android.data.model.LyricsState
-import com.wander.android.data.model.LyricsSyncType
+import com.wander.android.ui.components.rememberRubberBandOverscroll
 
 /** Distance from the top the active line settles at, so upcoming lines stay visible below it. */
 private val ACTIVE_LINE_OFFSET = 96.dp
@@ -121,7 +116,7 @@ fun SyncedLyricsView(
             style = MaterialTheme.typography.bodyLarge,
             textAlign = textAlign,
             modifier = modifier
-                .verticalScroll(scrollState)
+                .verticalScroll(scrollState, overscrollEffect = rememberRubberBandOverscroll())
                 .padding(vertical = 8.dp)
         )
         return
@@ -140,8 +135,7 @@ fun SyncedLyricsView(
     // the line scroll and visual onset match vocalist attack.
     val activeIndex by remember(lyrics, offsetMs) {
         derivedStateOf {
-            val playhead = positionState.value.positionMs - offsetMs + 120L
-            lyrics.lines.indexOfLast { it.timestampMs <= playhead }
+            lyricLineIndexAt(lyrics.lines, positionState.value.positionMs, offsetMs, leadMs = 120L)
                 .coerceAtLeast(0)
         }
     }
@@ -190,6 +184,8 @@ fun SyncedLyricsView(
             LazyColumn(
                 state = listState,
                 contentPadding = contentPadding,
+                // Pulled past the first or last line, the verse follows the finger and springs back.
+                overscrollEffect = rememberRubberBandOverscroll(),
                 modifier = Modifier
                     .fillMaxSize()
                     // A raw pointer-down is enough to mean "the user is taking over" — waiting for
@@ -228,64 +224,5 @@ fun SyncedLyricsView(
                 }
             }
         }
-    }
-}
-
-/**
- * Says, in words, how closely these lyrics follow the song.
- *
- * The app already knew this and only ever whispered it: the lyrics button's *icon* changes shape
- * with the sync type, and the difference between three glyphs is not something anyone reads. The
- * actual words lived in a `contentDescription`, which only a screen reader ever speaks — and in the
- * immersive layout that button is not drawn at all, so there was nothing to look at either way.
- *
- * Here instead, at the head of the thing it describes, where it is read once and answers the
- * question it is about: is this going to follow along with me, and how finely.
- */
-@Composable
-private fun SyncTypeLabel(syncType: LyricsSyncType) {
-    val label = when (syncType) {
-        LyricsSyncType.WORD_SYNCED -> stringResource(R.string.lyrics_synced_word)
-        else -> null
-    } ?: return
-    Text(
-        text = label,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 8.dp)
-    )
-}
-
-/**
- * What to say when there is nothing to show.
- *
- * Each variant gets its own sentence. Telling someone in a tunnel that their song has no lyrics
- * sends them looking for a fault in the track instead of waiting for signal.
- */
-@Composable
-private fun LyricsState.describe(): String = when (this) {
-    LyricsState.Loading -> stringResource(R.string.lyrics_loading)
-    LyricsState.Absent -> stringResource(R.string.lyrics_absent)
-    LyricsState.Instrumental -> stringResource(R.string.lyrics_instrumental)
-    LyricsState.Unreachable -> stringResource(R.string.lyrics_unreachable)
-    is LyricsState.Present -> ""
-}
-
-@Composable
-private fun CenteredNotice(message: String, modifier: Modifier = Modifier) {
-    Column(
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier.fillMaxSize()
-    ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
     }
 }

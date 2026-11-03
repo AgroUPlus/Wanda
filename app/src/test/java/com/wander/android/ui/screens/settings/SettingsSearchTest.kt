@@ -6,7 +6,8 @@ import org.junit.Test
 
 class SettingsSearchTest {
 
-    private val trueBlack = SettingsSearchEntry(label = 1, category = SettingsCategory.APPEARANCE, focusKey = "look_colours")
+    private val trueBlack =
+        SettingsSearchEntry(label = 1, category = SettingsCategory.APPEARANCE, focusKey = "look_colours")
     private val offline = SettingsSearchEntry(label = 2, category = SettingsCategory.PLAYBACK, focusKey = "playback")
     private val index = listOf(trueBlack, offline)
 

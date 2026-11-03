@@ -3,6 +3,9 @@ package com.wander.android.data.sources.deezer
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
+import java.io.IOException
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
@@ -13,9 +16,6 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
-import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The signed-in account's own Deezer library — favourite songs, playlists, saved albums — and
@@ -110,6 +110,7 @@ class DeezerLibrary @Inject constructor(
     private companion object {
         const val PREFIX = "deezer:"
         const val PROFILE_LIMIT = 500
+
         /** "Every entry", in the gateway's paging. */
         const val ALL = -1
     }

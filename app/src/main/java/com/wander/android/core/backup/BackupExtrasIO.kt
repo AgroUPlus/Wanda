@@ -9,9 +9,9 @@ import com.wander.android.core.database.dao.TrackEmbeddingDao
 import com.wander.android.core.database.dao.TrackFeatureDao
 import com.wander.android.data.repository.AcousticFeatureRepository
 import com.wander.android.data.repository.sharedplaylist.SharedSyncState
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.first
 
 /**
  * Reads and writes the sections in [BackupExtras.kt] — kept out of [BackupContentsIO] so each
@@ -47,7 +47,9 @@ internal class BackupExtrasIO @Inject constructor(
                 emptyList()
             },
             features = if (on(BackupSection.FEATURES)) {
-                featureDao.getAll(AcousticFeatureRepository.EXTRACTOR_VERSION).sortedBy { it.trackId }.map { it.toBackup() }
+                featureDao.getAll(AcousticFeatureRepository.EXTRACTOR_VERSION).sortedBy {
+                    it.trackId
+                }.map { it.toBackup() }
             } else {
                 emptyList()
             },

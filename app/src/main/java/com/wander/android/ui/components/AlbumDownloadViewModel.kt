@@ -12,9 +12,9 @@ import com.wander.android.data.repository.ManualDownloadRepository
 import com.wander.android.data.repository.ManualDownloadRules
 import com.wander.android.data.repository.MusicRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * "Download" on an album's long-press sheet, where the album's tracks are not on screen yet: they

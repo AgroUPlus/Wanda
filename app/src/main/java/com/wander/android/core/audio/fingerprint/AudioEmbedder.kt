@@ -93,8 +93,11 @@ class AudioEmbedder @Inject constructor(
             for (x in output[0]) norm += x * x
             norm = sqrt(norm)
             val row = result[i]
-            if (norm > 0f) for (d in 0 until EMBED_DIM) row[d] = output[0][d] / norm
-            else output[0].copyInto(row)
+            if (norm > 0f) {
+                for (d in 0 until EMBED_DIM) row[d] = output[0][d] / norm
+            } else {
+                output[0].copyInto(row)
+            }
         }
         val elapsed = SystemClock.elapsedRealtime() - started
         Log.i(
@@ -137,8 +140,8 @@ class AudioEmbedder @Inject constructor(
         private const val TAG = "AudioEmbedder"
 
         const val EMBED_DIM = 128
-        const val SEGMENT_SAMPLES = 8_000   // 1.0 s at AudioFormat.SAMPLE_RATE
-        const val HOP_SAMPLES = 4_000       // 0.5 s — the model's training fingerprint rate
+        const val SEGMENT_SAMPLES = 8_000 // 1.0 s at AudioFormat.SAMPLE_RATE
+        const val HOP_SAMPLES = 4_000 // 0.5 s — the model's training fingerprint rate
 
         /**
          * The most of any one track that is decoded and embedded. A track longer than this is

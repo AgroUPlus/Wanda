@@ -31,7 +31,7 @@ class AlbumViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val albumId: String = savedStateHandle.get<String>("albumId")
+    val albumId: String = savedStateHandle.get<String>("albumId")
         .orEmpty()
         .let { runCatching { URLDecoder.decode(it, "UTF-8") }.getOrDefault(it) }
 

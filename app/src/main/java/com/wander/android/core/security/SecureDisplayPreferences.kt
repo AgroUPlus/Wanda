@@ -141,4 +141,3 @@ internal class SecureDisplayPreferences(private val prefs: SharedPreferences) {
         _libraryTabs.value = prefs.getString(KEY_LIBRARY_TABS, null)
     }
 }
-

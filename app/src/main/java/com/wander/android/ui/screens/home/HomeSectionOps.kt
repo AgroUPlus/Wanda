@@ -41,8 +41,11 @@ internal fun List<HomeSection>.withLikes(liked: Set<String>): List<HomeSection> 
 internal fun List<HomeSection>.withSection(section: HomeSection): List<HomeSection> {
     val existing = indexOfFirst { it.id == section.id }
     if (existing >= 0) {
-        return if (section.isEmpty) filterIndexed { index, _ -> index != existing }
-        else toMutableList().also { it[existing] = section }
+        return if (section.isEmpty) {
+            filterIndexed { index, _ -> index != existing }
+        } else {
+            toMutableList().also { it[existing] = section }
+        }
     }
     if (section.isEmpty) return this
 
@@ -70,7 +73,9 @@ internal fun List<HomeSection>.withFeed(
     return buildList {
         this@withFeed.find { it.id == SectionOnRepeat }?.let { add(it) }
         this@withFeed.find { it.id == SectionRecentlyPlayed }?.let { add(it) }
-        uniqueFeed.forEach { shelf -> add(carousel(shelf.id, shelf.title, shelf.tracks.distinctBy { it.id }.take(CarouselSize))) }
+        uniqueFeed.forEach { shelf ->
+            add(carousel(shelf.id, shelf.title, shelf.tracks.distinctBy { it.id }.take(CarouselSize)))
+        }
         // The rest, without duplicating the feed or the "because" shelf rebuilt below.
         this@withFeed.filterNot {
             it.id == SectionOnRepeat || it.id == SectionRecentlyPlayed || it.id in feedIds || it.id == SectionBecause

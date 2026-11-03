@@ -9,12 +9,12 @@ import com.wander.android.core.network.loggableMessage
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.openedFileTrack
 import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Plays an audio file another app opened with Wanda — a file manager, a download, an attachment.

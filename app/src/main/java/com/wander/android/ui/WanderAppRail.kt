@@ -14,10 +14,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.navigation.NavHostController
 import androidx.window.core.layout.WindowSizeClass
-import com.wander.android.ui.navigation.DockItem
+import com.wander.android.ui.navigation.LocalTabReselection
 import com.wander.android.ui.navigation.TopLevelDestination
 import com.wander.android.ui.navigation.WanderNavRail
-import com.wander.android.ui.navigation.navigateSettled
 
 /**
  * Whether the window is wide enough for a navigation rail instead of the dock's buttons.
@@ -45,17 +44,12 @@ internal fun BoxScope.ShellNavRail(
     onWidthChanged: (Dp) -> Unit
 ) {
     val density = LocalDensity.current
+    val reselection = LocalTabReselection.current
     WanderNavRail(
         currentRoute = currentRoute?.substringBefore("?"),
         bottomClearance = bottomClearance,
-        onOpenHome = { navController.switchTab(TopLevelDestination.HOME) },
-        onOpenItem = { item ->
-            when (item) {
-                DockItem.LIBRARY -> navController.switchTab(TopLevelDestination.LIBRARY)
-                DockItem.FRIENDS -> navController.switchTab(TopLevelDestination.FRIENDS)
-                else -> navController.navigateSettled(item.route)
-            }
-        },
+        onOpenHome = { navController.selectTab(TopLevelDestination.HOME, reselection) },
+        onOpenItem = { item -> navController.openDockItem(item, reselection) },
         modifier = Modifier
             .align(Alignment.TopStart)
             .onSizeChanged { size -> onWidthChanged(with(density) { size.width.toDp() }) }

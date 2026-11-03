@@ -7,15 +7,15 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
-import com.wander.android.data.model.nameRes
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.model.nameRes
 import com.wander.android.ui.components.CollapsingTitleState
 import com.wander.android.ui.components.collapsingTitleSource
 import com.wander.android.ui.components.rememberDownloadAll
 import com.wander.android.ui.screens.album.AlbumHero
 
-/** The playlist's cover, title and header actions: "Navidrome · 24 tracks · Shared · its description". */
+/** The playlist's cover, title and header actions: "Subsonic · 24 tracks · Shared · its description". */
 @Composable
 internal fun PlaylistHeader(
     playlist: UnifiedPlaylist?,
@@ -23,13 +23,16 @@ internal fun PlaylistHeader(
     shareActions: PlaylistShareActions,
     titleState: CollapsingTitleState,
     onPlay: () -> Unit,
-    onShuffle: () -> Unit
+    onShuffle: () -> Unit,
+    sharedKey: String? = null
 ) {
     val trackCount = playlist?.songCount?.takeIf { it > 0 } ?: tracks.size
     val subtitle = listOfNotNull(
         playlist?.source?.let { stringResource(it.nameRes) },
         pluralStringResource(R.plurals.collection_track_count, trackCount, trackCount),
-        shareActions.sharedWith?.let { stringResource(R.string.playlist_shared_badge, stringResource(visibilityTitle(it))) },
+        shareActions.sharedWith?.let {
+            stringResource(R.string.playlist_shared_badge, stringResource(visibilityTitle(it)))
+        },
         playlist?.comment?.takeIf { it.isNotBlank() }
     ).joinToString(" · ")
 
@@ -47,6 +50,7 @@ internal fun PlaylistHeader(
         downloadLabel = R.string.playlist_download_all,
         modifier = Modifier.padding(bottom = 16.dp),
         titleModifier = Modifier.collapsingTitleSource(titleState),
-        overline = R.string.hero_overline_playlist
+        overline = R.string.hero_overline_playlist,
+        sharedKey = sharedKey
     )
 }

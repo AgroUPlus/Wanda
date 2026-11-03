@@ -2,11 +2,11 @@ package com.wander.android.core.network
 
 import com.wander.android.data.sources.agro.AgroAuthError
 import com.wander.android.data.sources.navidrome.SubsonicServerException
-import org.junit.Assert.assertEquals
-import org.junit.Test
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
 class UserFacingErrorTest {
 

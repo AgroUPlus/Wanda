@@ -104,8 +104,11 @@ class PlayerFactory @Inject constructor(
             .setAudioOffloadPreferences(
                 AudioOffloadPreferences.Builder()
                     .setAudioOffloadMode(
-                        if (enabled) AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED
-                        else AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED
+                        if (enabled) {
+                            AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED
+                        } else {
+                            AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED
+                        }
                     )
                     .setIsGaplessSupportRequired(true)
                     .build()

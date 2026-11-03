@@ -6,8 +6,8 @@ import com.wander.android.core.database.entity.SharedPlaylistEntity
 import com.wander.android.core.database.entity.SharedPlaylistItemEntity
 import com.wander.android.core.database.entity.TrackEmbeddingEntity
 import com.wander.android.core.database.entity.TrackFeatureEntity
-import kotlinx.serialization.Serializable
 import java.util.Base64
+import kotlinx.serialization.Serializable
 
 /**
  * The sections added after the first backups: catalogue corrections, shared-playlist copies, jam

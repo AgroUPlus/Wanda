@@ -1,7 +1,5 @@
 package com.wander.android.ui.screens.library
 
-import com.wander.android.ui.components.selection.TrackSelectionState
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Category
@@ -32,15 +31,21 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.ui.components.BackLayers
 import com.wander.android.ui.components.EmptyState
+import com.wander.android.ui.components.ScrollToTopOnReselect
 import com.wander.android.ui.components.groupedListItem
 import com.wander.android.ui.components.nestedListInset
+import com.wander.android.ui.components.rememberLastLive
+import com.wander.android.ui.components.selection.TrackSelectionState
+import com.wander.android.ui.navigation.InterceptReselect
 
 /**
  * The library by genre tag, and one genre's tracks once it is opened.
  *
  * The open genre is page state rather than a route: it is a filter on this list, and Back closes
- * it the way it closes the search field, without leaving the Library.
+ * it the way it closes the search field, without leaving the Library. The genre is laid over the
+ * list ([BackLayers]) so a back swipe can show the list coming back.
  */
 @Composable
 internal fun LibraryGenresPage(
@@ -52,22 +57,35 @@ internal fun LibraryGenresPage(
     selection: TrackSelectionState
 ) {
     val openGenre by browse.openGenre.collectAsStateWithLifecycle()
-    BackHandler(enabled = openGenre != null) { browse.openGenre(null) }
-    Column(modifier = Modifier.fillMaxSize()) {
-        LibraryListToolbar(LibraryTab.GENRES, browse)
-        val genre = openGenre
-        if (genre == null) {
-            GenreList(contentPadding, browse)
-        } else {
-            val tracks by browse.genreTracks.collectAsStateWithLifecycle()
-            GenreHeader(
-                genre = genre,
-                canPlay = tracks.isNotEmpty(),
+    // An open genre is a page opened over the genre list, so a reselect closes it, as back does —
+    // the same thing a tap does over an album.
+    InterceptReselect(consume = {
+        val open = openGenre != null
+        if (open) browse.openGenre(null)
+        open
+    }) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            LibraryListToolbar(LibraryTab.GENRES, browse)
+            // The genre opens over the list, which stays underneath with its scroll kept, so a back
+            // swipe shows the list coming forward as the genre shrinks away.
+            BackLayers(
+                page = openGenre,
                 onBack = { browse.openGenre(null) },
-                onPlay = { viewModel.play(tracks, 0) },
-                onShuffle = { viewModel.play(tracks.shuffled(), 0) }
-            )
-            TrackList(tracks, LibraryTab.GENRES, isSyncing, contentPadding, viewModel, onLongPress, selection)
+                base = { GenreList(contentPadding, browse) }
+            ) { genre ->
+                val live by browse.genreTracks.collectAsStateWithLifecycle()
+                val tracks = rememberLastLive(live, live = openGenre == genre)
+                Column(modifier = Modifier.fillMaxSize()) {
+                    GenreHeader(
+                        genre = genre,
+                        canPlay = tracks.isNotEmpty(),
+                        onBack = { browse.openGenre(null) },
+                        onPlay = { viewModel.play(tracks, 0) },
+                        onShuffle = { viewModel.play(tracks.shuffled(), 0) }
+                    )
+                    TrackList(tracks, LibraryTab.GENRES, isSyncing, contentPadding, viewModel, onLongPress, selection)
+                }
+            }
         }
     }
 }
@@ -85,7 +103,13 @@ private fun GenreList(contentPadding: PaddingValues, browse: LibraryBrowseViewMo
         }
         return
     }
-    LazyColumn(contentPadding = contentPadding.nestedListInset(), modifier = Modifier.fillMaxSize()) {
+    val listState = rememberLazyListState()
+    ScrollToTopOnReselect(listState)
+    LazyColumn(
+        state = listState,
+        contentPadding = contentPadding.nestedListInset(),
+        modifier = Modifier.fillMaxSize()
+    ) {
         itemsIndexed(genres, key = { _, genre -> genre.name }) { index, genre ->
             Column(
                 modifier = Modifier

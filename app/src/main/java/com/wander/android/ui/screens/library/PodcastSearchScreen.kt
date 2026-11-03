@@ -88,7 +88,9 @@ internal fun PodcastSearchScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().padding(contentPadding.headerInset())) {
             TopAppBar(
-                title = { Text(stringResource(R.string.podcasts_search_title), style = MaterialTheme.typography.titleLarge) },
+                title = {
+                    Text(stringResource(R.string.podcasts_search_title), style = MaterialTheme.typography.titleLarge)
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.common_back))
@@ -137,28 +139,28 @@ private fun SearchBody(
         transitionSpec = { fadeIn(motion.defaultEffectsSpec()) togetherWith fadeOut(motion.fastEffectsSpec()) },
         label = "podcastSearchBody"
     ) { shown ->
-    // Keyed by the kind of state, so a new set of results does not re-run the transition.
-    when (shown) {
-        PodcastSearchState.Searching -> Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-            LoadingIndicator()
-        }
-        is PodcastSearchState.Failed -> Message(stringResource(R.string.podcasts_search_failed, shown.reason))
-        is PodcastSearchState.Results -> if (shown.hits.isEmpty()) {
-            Message(stringResource(R.string.podcasts_search_none))
-        } else {
-            LazyColumn(contentPadding = contentPadding.nestedListInset(), modifier = Modifier.fillMaxSize()) {
-                itemsIndexed(shown.hits, key = { _, hit -> hit.feedUrl }) { index, hit ->
-                    HitRow(
-                        hit,
-                        isSubscribed = hit.feedUrl in subscribed,
-                        onSubscribe = { onSubscribe(hit) },
-                        modifier = Modifier.animateItem().scale(rememberShelfEntranceScale(index))
-                    )
+        // Keyed by the kind of state, so a new set of results does not re-run the transition.
+        when (shown) {
+            PodcastSearchState.Searching -> Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                LoadingIndicator()
+            }
+            is PodcastSearchState.Failed -> Message(stringResource(R.string.podcasts_search_failed, shown.reason))
+            is PodcastSearchState.Results -> if (shown.hits.isEmpty()) {
+                Message(stringResource(R.string.podcasts_search_none))
+            } else {
+                LazyColumn(contentPadding = contentPadding.nestedListInset(), modifier = Modifier.fillMaxSize()) {
+                    itemsIndexed(shown.hits, key = { _, hit -> hit.feedUrl }) { index, hit ->
+                        HitRow(
+                            hit,
+                            isSubscribed = hit.feedUrl in subscribed,
+                            onSubscribe = { onSubscribe(hit) },
+                            modifier = Modifier.animateItem().scale(rememberShelfEntranceScale(index))
+                        )
+                    }
                 }
             }
+            else -> Unit
         }
-        else -> Unit
-    }
     }
 }
 

@@ -56,5 +56,4 @@
     <string name="friend_request_body">%1$s wants to be your friend</string>
     <string name="friend_accepted_title">Friend request accepted</string>
     <string name="friend_accepted_body">%1$s has accepted your friend request!</string>
-    <string name="drop_notification_title">%1$s sent you a track</string>
 </resources>

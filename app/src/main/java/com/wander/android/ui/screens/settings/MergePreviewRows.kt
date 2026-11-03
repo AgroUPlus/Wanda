@@ -21,16 +21,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
-import com.wander.android.data.model.nameRes
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.model.nameRes
 import com.wander.android.data.repository.KeptApartPair
 import com.wander.android.data.repository.MergeGroup
 
 @Composable
 internal fun MergeGroupRow(group: MergeGroup, onKeepApart: (UnifiedTrack) -> Unit) {
     Surface(
-        color = if (group.needsReview) MaterialTheme.colorScheme.errorContainer
-        else MaterialTheme.colorScheme.surfaceContainerLow,
+        color = if (group.needsReview) {
+            MaterialTheme.colorScheme.errorContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        },
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier
             .fillMaxWidth()

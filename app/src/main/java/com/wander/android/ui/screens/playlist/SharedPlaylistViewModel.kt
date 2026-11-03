@@ -123,5 +123,4 @@ class SharedPlaylistViewModel @Inject constructor(
             _left.tryEmit(Unit)
         }
     }
-
 }

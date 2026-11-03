@@ -1,7 +1,6 @@
 package com.wander.android.ui.screens.player
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,7 +33,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -43,11 +41,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
-import com.wander.android.data.model.nameRes
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.SpeedAndPitch
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.model.nameRes
 import com.wander.android.data.sources.agro.Jam
 import com.wander.android.ui.components.scrollingTitle
 import com.wander.android.ui.theme.OnCoverArt
@@ -97,20 +95,15 @@ internal fun ImmersivePlayerLayout(
     // the sheet passes is a fresh one each time — so the gesture reads the current callback
     // through this rather than capturing the one that happened to exist when the block first ran.
     val toggleLyrics by rememberUpdatedState(onToggleLyrics)
+    val doubleTapLike = rememberCoverDoubleTapLike(track, track.id in likedTrackIds, viewModel::like)
 
     Box(
         modifier = modifier
             .fillMaxSize()
             .then(artworkModifier)
-            // A tap anywhere on the cover shows the lyrics, and a tap on the lyrics puts the
-            // cover back: the lyric lines are children of this box and consume their own taps
-            // to seek, so only the space around them reaches this handler.
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = { toggleLyrics() },
-                    onLongPress = { onOpenSpeedPitch() }
-                )
-            }
+            // A tap anywhere on the cover shows the lyrics and a double tap likes; controls drawn
+            // over it consume their own taps, so only the space around them reaches this handler.
+            .coverTapGestures(doubleTapLike, onTap = { toggleLyrics() }, onLongPress = { onOpenSpeedPitch() })
     ) {
         // Invisible anchor — MorphingArtwork follows these bounds.
         artworkSlot(track.artworkUrl, track.title)
@@ -129,6 +122,7 @@ internal fun ImmersivePlayerLayout(
                     )
                 }
         )
+        CoverHeartOverlay(doubleTapLike)
 
         PlayerTopBar(
             mediaToggle = mediaToggle,
@@ -259,7 +253,8 @@ internal fun ImmersivePlayerLayout(
                 modifier = Modifier.padding(top = PlayerRowGap),
                 isLive = track.isLive,
                 isPlaying = state.isPlaying,
-                isSeekable = state.isSeekable
+                isSeekable = state.isSeekable,
+                scrubLyricAt = rememberScrubLyricLookup(viewModel, track.id)
             )
 
             PlayerControls(

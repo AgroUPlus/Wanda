@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.LoadingIndicator
@@ -19,6 +20,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.ui.components.EmptyState
+import com.wander.android.ui.components.ScrollToTopOnReselect
 import com.wander.android.ui.components.nestedListInset
 import com.wander.android.ui.screens.artist.RelatedArtistCard
 
@@ -60,7 +62,10 @@ internal fun FollowedArtistsPage(
                 )
             }
         } else {
+            val gridState = rememberLazyGridState()
+            ScrollToTopOnReselect(gridState)
             LazyVerticalGrid(
+                state = gridState,
                 columns = GridCells.Adaptive(minSize = 112.dp),
                 contentPadding = contentPadding.nestedListInset(),
                 modifier = Modifier.fillMaxSize()

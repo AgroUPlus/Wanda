@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.library
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,17 +30,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.annotation.StringRes
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeoutOrNull
 import com.wander.android.R
 import com.wander.android.data.model.LibrarySort
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.FastScroller
+import com.wander.android.ui.components.ScrollToTopOnReselect
 import com.wander.android.ui.components.SkeletonCard
+import com.wander.android.ui.components.albumArtKey
 import com.wander.android.ui.components.fastScrollLetter
 import com.wander.android.ui.components.nestedListInset
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 
 private const val ALBUMS_PAGE_SIZE = 24
 private const val PAGE_PREFETCH_DISTANCE = 4
@@ -73,6 +75,7 @@ internal fun AlbumGrid(
     val visibleAlbums = remember(albums, albumPageSize) { albums.take(albumPageSize) }
     val hasMoreAlbums = visibleAlbums.size < albums.size
     val gridState = rememberLazyGridState()
+    ScrollToTopOnReselect(gridState)
     // Only the count of recents gates the row. It used to also require `albums.size >
     // recentAlbums.size`, which meant a library no larger than the recent limit — every library
     // during its first sync — never saw the row at all, and the row reappeared later for no
@@ -155,6 +158,9 @@ internal fun AlbumGrid(
                     index = index,
                     onClick = { onOpenAlbum(album.id) },
                     onLongClick = { onAlbumLongPress(album) },
+                    // The grid's card is the one that travels; the Recent row above repeats
+                    // albums from it and keeps its own covers where they are.
+                    sharedKey = albumArtKey(album.id),
                     modifier = Modifier.animateItem()
                 )
             }

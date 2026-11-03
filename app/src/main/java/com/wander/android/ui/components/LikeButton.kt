@@ -99,11 +99,17 @@ fun LikeButton(
                     }
                 }
                 Icon(
-                    imageVector = if (isLiked) Icons.Rounded.Favorite
-                    else Icons.Rounded.FavoriteBorder,
+                    imageVector = if (isLiked) {
+                        Icons.Rounded.Favorite
+                    } else {
+                        Icons.Rounded.FavoriteBorder
+                    },
                     contentDescription = stringResource(if (isLiked) R.string.action_unlike else R.string.action_like),
-                    tint = if (isLiked) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = if (isLiked) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                     modifier = Modifier
                         .size(size)
                         .graphicsLayer {

@@ -7,6 +7,7 @@ import android.net.Uri
 import android.provider.MediaStore
 import android.widget.Toast
 import com.wander.android.R
+import com.wander.android.core.notification.SocialNotificationKeys
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.browse.VoiceQuery
 import com.wander.android.core.playback.browse.VoiceSearch
@@ -55,7 +56,16 @@ internal class AppIntentHandler @Inject constructor(
             // "Open with": the manifest only routes audio files here on these two schemes.
             uri.scheme == "content" || uri.scheme == "file" -> if (firstDelivery) openedFiles.play(scope, uri)
             uri.scheme == "agro" -> confirmedLinks.handleAgroPairing(uri)
-            uri.scheme == "wanda" && uri.host == "inbox" -> deepLinkRouter.request(Routes.ACTIVITY)
+            // A drop notification, or its conversation shortcut, names whose thread to open.
+            uri.scheme == "wanda" && uri.host == "inbox" -> deepLinkRouter.request(
+                uri.getQueryParameter(SocialNotificationKeys.WITH)?.takeIf { it.isNotBlank() }
+                    ?.let(Routes::inbox)
+                    ?: Routes.ACTIVITY
+            )
+            // A friend request or accept: the person, whose profile can answer the request.
+            uri.scheme == "wanda" && uri.host == "profile" ->
+                uri.getQueryParameter(SocialNotificationKeys.USER)?.takeIf { it.isNotBlank() }
+                    ?.let { deepLinkRouter.request(Routes.profile(it)) }
             uri.scheme == "wanda" && uri.host == "fingerprints" -> deepLinkRouter.request(Routes.FINGERPRINTS)
             // From the listening-together notifications: the room, and where incognito lives.
             uri.scheme == "wanda" && uri.host == "jam-room" -> deepLinkRouter.request(Routes.jam())

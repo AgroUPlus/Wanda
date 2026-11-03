@@ -60,7 +60,7 @@ internal fun queueEntries(
     val seen = mutableMapOf<String, Int>()
     val keys = queue.map { track ->
         val occurrence = seen.merge(track.id, 1, Int::plus)!! - 1
-        "${track.id}#${occurrence}#g${generations[track.id] ?: 0}"
+        "${track.id}#$occurrence#g${generations[track.id] ?: 0}"
     }
     val currentPosition = order.indexOf(currentIndex)
     return order.mapIndexed { position, index ->

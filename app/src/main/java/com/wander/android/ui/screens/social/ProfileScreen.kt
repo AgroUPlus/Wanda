@@ -131,7 +131,9 @@ internal fun ProfileScreen(
                     item(key = "their-artists") {
                         Column {
                             SectionTitle(stringResource(R.string.social_top_artists), top = 32.dp)
-                            RankedList(friendStats.topArtists.take(TOP_COUNT), countLabel = { stringResource(R.string.social_plays_2, it.toString()) })
+                            RankedList(friendStats.topArtists.take(TOP_COUNT), countLabel = {
+                                stringResource(R.string.social_plays_2, it.toString())
+                            })
                         }
                     }
                 }
@@ -139,7 +141,9 @@ internal fun ProfileScreen(
                     item(key = "their-tracks") {
                         Column {
                             SectionTitle(stringResource(R.string.social_top_tracks), top = 32.dp)
-                            RankedList(friendStats.topTracks.take(TOP_COUNT), countLabel = { stringResource(R.string.social_plays_2, it.toString()) })
+                            RankedList(friendStats.topTracks.take(TOP_COUNT), countLabel = {
+                                stringResource(R.string.social_plays_2, it.toString())
+                            })
                         }
                     }
                 }

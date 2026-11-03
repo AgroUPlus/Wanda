@@ -117,10 +117,9 @@ internal fun ReplayStoryScaffold(
     }
 
     // Back steps through the story, and only leaves from the first card — the same shape as every
-    // other stack in the app, so predictive back does not surprise.
-    BackHandler {
-        if (index == 0) onDismiss() else goTo(index - 1)
-    }
+    // other stack in the app, so predictive back does not surprise. On the first card nothing
+    // here takes the gesture, so the screen's own predictive back leaves the story.
+    BackHandler(enabled = index > 0) { goTo(index - 1) }
 
     val palette = replayPaletteFor(deck[index])
     val background by animateColorAsState(

@@ -1,10 +1,10 @@
 package com.wander.android.data.repository
 
-import com.wander.android.core.network.loggableMessage
 import android.util.Log
 import com.wander.android.core.database.dao.PendingScrobble
 import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.TrackEntity
+import com.wander.android.core.network.loggableMessage
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.sources.agro.AgroPlayCount
@@ -86,7 +86,6 @@ class PopularityRepository @Inject constructor(
         }.distinctBy { it.id }.take(limit)
             .let { if (it.isEmpty()) PopularOutcome.NothingInLibrary else PopularOutcome.Tracks(it) }
     }
-
 
     /**
      * Adds a batch of plays to the shared totals, if the user has opted in.

@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.TrackRow
+import com.wander.android.ui.components.selection.TrackSwipeBox
 
 /**
  * Every scroll position Home hangs on to, held above the `LazyColumn`.
@@ -203,11 +204,14 @@ internal fun LazyListScope.homeSection(
             key = { _, track -> "${section.id}-${track.id}" },
             contentType = { _, _ -> "track-row" }
         ) { index, track ->
-            TrackRow(
-                track = track,
-                onPlay = { play(index) },
-                onLongPress = { onLongPress(track) }
-            )
+            // Home has no multi-select, so the swipe shortcuts are always on.
+            TrackSwipeBox(track, enabled = true) {
+                TrackRow(
+                    track = track,
+                    onPlay = { play(index) },
+                    onLongPress = { onLongPress(track) }
+                )
+            }
         }
     }
 }

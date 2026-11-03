@@ -50,12 +50,15 @@ internal object PlaybackSnapshotBuilder {
                 .flatMap { group ->
                     (0 until group.length).mapNotNull { i ->
                         val fmt = group.getTrackFormat(i)
-                        if (!seen.add(fmt.language)) null
-                        else AudioTrackInfo(
-                            language = fmt.language,
-                            label = fmt.label,
-                            isSelected = group.isTrackSelected(i)
-                        )
+                        if (!seen.add(fmt.language)) {
+                            null
+                        } else {
+                            AudioTrackInfo(
+                                language = fmt.language,
+                                label = fmt.label,
+                                isSelected = group.isTrackSelected(i)
+                            )
+                        }
                     }
                 }
         }.getOrDefault(emptyList())

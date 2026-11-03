@@ -77,6 +77,19 @@ interface DropDao {
     @Query("SELECT COUNT(*) FROM drops WHERE incoming = 1 AND archived = 0 AND readAt IS NULL")
     fun observeUnreadCount(): Flow<Int>
 
+    /** One drop, for a notification button that names it. */
+    @Query("SELECT * FROM drops WHERE id = :id LIMIT 1")
+    suspend fun byId(id: String): DropEntity?
+
+    /** What one friend sent that is still unread: what "Mark as read" on their thread covers. */
+    @Query(
+        """
+        SELECT id FROM drops
+        WHERE incoming = 1 AND readAt IS NULL AND archived = 0 AND fromUser = :username COLLATE NOCASE
+        """
+    )
+    suspend fun unreadIdsFrom(username: String): List<String>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(drops: List<DropEntity>)
 

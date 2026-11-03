@@ -51,12 +51,18 @@ internal class ScrobbleForwarding @Inject constructor(
     suspend fun forward(): Boolean {
         var retry = false
         prefs.listenBrainzToken?.takeIf { prefs.listenBrainz.value.enabled }?.let { token ->
-            retry = drain(ScrobbleService.LISTENBRAINZ, ListenBrainzClient.BATCH, { historyDao.getPendingListenBrainz(it) },
-                { listenBrainz.submit(token, it) }, { historyDao.markListenBrainzSynced(it) }) || retry
+            retry = drain(
+                ScrobbleService.LISTENBRAINZ, ListenBrainzClient.BATCH, {
+                    historyDao.getPendingListenBrainz(it)
+                },
+                { listenBrainz.submit(token, it) }, { historyDao.markListenBrainzSynced(it) }
+            ) || retry
         }
         prefs.lastFmSession?.takeIf { prefs.lastFm.value.enabled }?.let { session ->
-            retry = drain(ScrobbleService.LASTFM, LastFmClient.BATCH, { historyDao.getPendingLastFm(it) },
-                { lastFm.scrobble(session, it) }, { historyDao.markLastFmSynced(it) }) || retry
+            retry = drain(
+                ScrobbleService.LASTFM, LastFmClient.BATCH, { historyDao.getPendingLastFm(it) },
+                { lastFm.scrobble(session, it) }, { historyDao.markLastFmSynced(it) }
+            ) || retry
         }
         return retry
     }
@@ -87,10 +93,14 @@ internal class ScrobbleForwarding @Inject constructor(
     suspend fun nowPlaying(track: NowPlaying) {
         if (secureStorage.isIncognitoMode) return
         prefs.listenBrainzToken?.takeIf { prefs.listenBrainz.value.enabled }?.let { token ->
-            (listenBrainz.playingNow(token, track) as? ScrobbleOutcome.Unauthorized)?.let { signOut(ScrobbleService.LISTENBRAINZ, it.reason) }
+            (listenBrainz.playingNow(token, track) as? ScrobbleOutcome.Unauthorized)?.let {
+                signOut(ScrobbleService.LISTENBRAINZ, it.reason)
+            }
         }
         prefs.lastFmSession?.takeIf { prefs.lastFm.value.enabled }?.let { session ->
-            (lastFm.nowPlaying(session, track) as? ScrobbleOutcome.Unauthorized)?.let { signOut(ScrobbleService.LASTFM, it.reason) }
+            (lastFm.nowPlaying(session, track) as? ScrobbleOutcome.Unauthorized)?.let {
+                signOut(ScrobbleService.LASTFM, it.reason)
+            }
         }
     }
 
@@ -99,7 +109,9 @@ internal class ScrobbleForwarding @Inject constructor(
      * signed this device out itself, in which case the plays queued since are still owed: the user
      * never withdrew them, the service just stopped taking them for a while.
      */
-    suspend fun connectListenBrainz(token: String): Result<String> = listenBrainz.validate(token.trim()).onSuccess { user ->
+    suspend fun connectListenBrainz(token: String): Result<String> = listenBrainz.validate(token.trim()).onSuccess {
+            user
+        ->
         if (prefs.listenBrainzSignedOut == null) historyDao.settleListenBrainz()
         prefs.connectListenBrainz(user, token.trim())
         _signedOut.value = _signedOut.value - ScrobbleService.LISTENBRAINZ

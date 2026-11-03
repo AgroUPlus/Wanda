@@ -7,12 +7,12 @@ import androidx.media3.session.MediaSession.MediaItemsWithStartPosition
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.wander.android.data.model.UnifiedTrack
+import java.util.Collections
+import java.util.IdentityHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.Collections
-import java.util.IdentityHashMap
 
 /**
  * Keeps the queue across process death, and hands it back when something asks to play again.
@@ -43,6 +43,7 @@ internal class QueueResumption(
      */
     private var settled = false
     private var pendingSave: Job? = null
+
     /** Decoded tracks by item instance: decoding is a JSON parse per item, and most saves change one. */
     private val decoded = IdentityHashMap<MediaItem, UnifiedTrack>()
 

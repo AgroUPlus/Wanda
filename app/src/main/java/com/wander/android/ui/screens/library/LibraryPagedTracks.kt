@@ -23,6 +23,7 @@ import com.wander.android.data.model.LibrarySort
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.FastScroller
+import com.wander.android.ui.components.ScrollToTopOnReselect
 import com.wander.android.ui.components.SkeletonRow
 import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.fastScrollLetter
@@ -79,6 +80,7 @@ internal fun PagedTrackList(
     }
 
     val listState = rememberLazyListState()
+    ScrollToTopOnReselect(listState)
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,

@@ -33,6 +33,7 @@ import com.wander.android.ui.components.rememberCollapsingTitleState
 import com.wander.android.ui.components.selection.TrackSelectionBar
 import com.wander.android.ui.components.selection.rememberTrackSelectionState
 import com.wander.android.ui.screens.album.AlbumSkeleton
+import com.wander.android.ui.components.playlistArtKey
 import com.wander.android.ui.screens.album.DetailRefreshBox
 import com.wander.android.ui.screens.album.HeroTitleMaxLines
 import com.wander.android.ui.theme.heroTitle
@@ -143,7 +144,8 @@ fun PlaylistScreen(
                             shareActions = shareActions,
                             titleState = titleState,
                             onPlay = viewModel::playAll,
-                            onShuffle = viewModel::shuffle
+                            onShuffle = viewModel::shuffle,
+                            sharedKey = playlistArtKey(viewModel.playlistId)
                         )
                     }
 
@@ -172,7 +174,9 @@ fun PlaylistScreen(
                             SharedPlaylistBanner(
                                 state = state,
                                 onRetry = sharedViewModel::retry,
-                                onUnfollow = sharedViewModel::unfollow.takeIf { state.localPlaylistId == null && !state.isBlend }
+                                onUnfollow = sharedViewModel::unfollow.takeIf {
+                                    state.localPlaylistId == null && !state.isBlend
+                                }
                             )
                         }
                     }

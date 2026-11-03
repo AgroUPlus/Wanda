@@ -177,8 +177,11 @@ internal fun ActivityHero(
                 modifier = Modifier.fillMaxWidth().padding(8.dp)
             ) {
                 FilledTonalIconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription =
-                        stringResource(R.string.common_back))
+                    Icon(
+                        Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription =
+                            stringResource(R.string.common_back)
+                    )
                 }
                 FilledTonalIconButton(onClick = onOpenCircleRecap) {
                     Icon(Icons.Rounded.QueryStats, contentDescription = stringResource(R.string.social_circle_recap))

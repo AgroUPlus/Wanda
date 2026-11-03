@@ -2,8 +2,8 @@ package com.wander.android
 
 import android.content.Context
 import android.content.Intent
-import android.os.Bundle
 import android.graphics.Color
+import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -33,10 +33,15 @@ import javax.inject.Inject
 class MainActivity : ComponentActivity() {
 
     @Inject lateinit var playerConnection: PlayerConnection
+
     @Inject lateinit var secureStorage: SecureStorage
+
     @Inject internal lateinit var agroHandoffPublisher: AgroHandoffPublisher
+
     @Inject internal lateinit var intentHandler: AppIntentHandler
+
     @Inject internal lateinit var sharedText: SharedTextHandler
+
     @Inject internal lateinit var shortcuts: LauncherShortcutHandler
 
     /**

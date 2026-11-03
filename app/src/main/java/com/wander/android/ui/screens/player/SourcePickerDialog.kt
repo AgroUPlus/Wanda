@@ -25,9 +25,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.wander.android.R
-import com.wander.android.data.model.nameRes
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.model.isPlayableOffline
+import com.wander.android.data.model.nameRes
 import com.wander.android.ui.components.AudioQualityBadge
 import com.wander.android.ui.components.SourceIcon
 
@@ -139,8 +139,11 @@ private fun RenditionRow(
             Text(
                 text = stringResource(rendition.source.nameRes),
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (isCurrent) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface
+                color = if (isCurrent) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,

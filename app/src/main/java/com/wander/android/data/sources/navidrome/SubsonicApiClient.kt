@@ -40,7 +40,7 @@ class SubsonicApiClient @Inject constructor(
         vararg params: Pair<String, Any?>
     ): Result<SubsonicResponse> = withContext(Dispatchers.IO) {
         if (!isConfigured) {
-            return@withContext Result.failure(IllegalStateException("Navidrome is not configured"))
+            return@withContext Result.failure(IllegalStateException("Subsonic server is not configured"))
         }
         runCatching {
             val root: SubsonicResponseRoot = client.get("$baseUrl/rest/$endpoint") {
@@ -170,6 +170,7 @@ class SubsonicApiClient @Inject constructor(
      * Stream and cover URLs carry credentials in the query string, so they are built on demand
      * and never persisted or logged.
      */
+
     /**
      * `format=raw` is what makes the track seekable.
      *

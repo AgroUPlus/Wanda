@@ -1,11 +1,11 @@
 package com.wander.android.core.backup
 
 import com.wander.android.core.database.entity.TrackEmbeddingEntity
+import java.io.IOException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Test
-import java.io.IOException
 
 /** The sections added later verify like the first ones, and leave older backups untouched. */
 class BackupExtrasIntegrityTest {
@@ -40,7 +40,8 @@ class BackupExtrasIntegrityTest {
             features = listOf(BackupFeatures("t1", 120f, 0.5f, 0.4f, 0.3f, 0.1f, -0.1f, 1, 9L)),
             embeddings = listOf(embedding().toBackup())
         )
-        val sections = setOf(BackupSection.METADATA, BackupSection.SHARED, BackupSection.FEATURES, BackupSection.EMBEDDINGS)
+        val sections =
+            setOf(BackupSection.METADATA, BackupSection.SHARED, BackupSection.FEATURES, BackupSection.EMBEDDINGS)
         val restored = sealed(document, sections).toVerifiedDocument()
 
         assertEquals(sections, restored.includedSections)
@@ -53,7 +54,8 @@ class BackupExtrasIntegrityTest {
 
     @Test
     fun aNewSectionThatLostARecordIsRefused() {
-        val document = BackupDocument(jamRecaps = listOf(BackupJamRecap("j1", "x", "{}"), BackupJamRecap("j2", "y", "{}")))
+        val document =
+            BackupDocument(jamRecaps = listOf(BackupJamRecap("j1", "x", "{}"), BackupJamRecap("j2", "y", "{}")))
         val manifest = document.sectionDigests(BackupJson, setOf(BackupSection.SHARED))
         val short = document.copy(jamRecaps = document.jamRecaps.take(1), manifest = manifest).toJsonBytes()
         assertThrows(IOException::class.java) { short.toVerifiedDocument() }

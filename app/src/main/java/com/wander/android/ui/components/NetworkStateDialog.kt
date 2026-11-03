@@ -51,7 +51,9 @@ fun NetworkStateDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_not_now)) }
+            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
+                Text(stringResource(R.string.common_not_now))
+            }
         }
     )
 }

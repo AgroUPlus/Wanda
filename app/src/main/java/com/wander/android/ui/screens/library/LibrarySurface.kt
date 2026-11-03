@@ -1,21 +1,13 @@
 package com.wander.android.ui.screens.library
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.ui.components.BackLayers
+import com.wander.android.ui.navigation.InterceptReselect
 import com.wander.android.ui.screens.search.SearchHistoryViewModel
 import com.wander.android.ui.screens.search.SearchScreen
 import com.wander.android.ui.screens.search.SearchViewModel
@@ -55,41 +47,40 @@ fun LibrarySurface(
     val searching = query.isNotBlank() || (fieldFocused && recentSearches.isNotEmpty())
 
     val focusManager = LocalFocusManager.current
-    BackHandler(enabled = searching) {
+    val endSearch = {
         searchViewModel.clearQuery()
         // Focus too, or an empty focused field would put the recent searches straight back.
         focusManager.clearFocus()
     }
 
-    AnimatedContent(
-        targetState = searching,
-        transitionSpec = {
-            // Results rise into place and the shelves settle back down: the direction of travel
-            // says which of the two you asked for. `SizeTransform(clip = false)` because both
-            // sides fill the surface — there is no box to grow, only content to swap.
-            (fadeIn() + scaleIn(initialScale = 0.96f)) togetherWith
-                (fadeOut() + scaleOut(targetScale = 0.96f)) using SizeTransform(clip = false)
-        },
-        label = "librarySurface",
-        modifier = Modifier.fillMaxSize()
-    ) { showingSearch ->
-        if (showingSearch) {
+    // Tapping Library again while results are showing ends the search, as back does, rather than
+    // scrolling the results: the search is a layer over the library the way an album page is over
+    // a tab, and home for this tab is your own music. With no search the tap reaches the library's
+    // pages, which scroll back up.
+    InterceptReselect(consume = { searching.also { if (it) endSearch() } }) {
+        // Results open over the shelves, which stay underneath: a back swipe shows them coming
+        // forward as the results shrink away, and the shelves keep their scroll for the return.
+        BackLayers(
+            page = if (searching) Unit else null,
+            onBack = endSearch,
+            base = {
+                LibraryScreen(
+                    contentPadding = contentPadding,
+                    onOpenAlbum = onOpenAlbum,
+                    onOpenArtist = onOpenArtist,
+                    onOpenHistory = onOpenHistory,
+                    onOpenPlaylist = onOpenPlaylist,
+                    onOpenImport = onOpenImport,
+                    onOpenSubscriptions = onOpenSubscriptions
+                )
+            }
+        ) {
             SearchScreen(
                 contentPadding = contentPadding,
                 onOpenAlbum = onOpenAlbum,
                 onOpenArtist = onOpenArtist,
                 viewModel = searchViewModel,
                 historyViewModel = historyViewModel
-            )
-        } else {
-            LibraryScreen(
-                contentPadding = contentPadding,
-                onOpenAlbum = onOpenAlbum,
-                onOpenArtist = onOpenArtist,
-                onOpenHistory = onOpenHistory,
-                onOpenPlaylist = onOpenPlaylist,
-                onOpenImport = onOpenImport,
-                onOpenSubscriptions = onOpenSubscriptions
             )
         }
     }

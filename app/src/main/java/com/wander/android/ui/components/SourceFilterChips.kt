@@ -11,8 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
-import com.wander.android.data.model.nameRes
 import com.wander.android.data.model.SourceType
+import com.wander.android.data.model.nameRes
 
 /**
  * "All" plus one button per connected backend, as a connected toggle group that scrolls sideways

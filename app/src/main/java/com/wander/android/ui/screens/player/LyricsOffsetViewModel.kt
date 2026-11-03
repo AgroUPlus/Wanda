@@ -3,8 +3,8 @@ package com.wander.android.ui.screens.player
 import androidx.lifecycle.ViewModel
 import com.wander.android.core.security.SecureStorage
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * The full-screen lyrics' timing correction for each track; see

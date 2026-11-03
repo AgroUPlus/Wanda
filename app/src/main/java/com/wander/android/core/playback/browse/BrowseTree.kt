@@ -11,9 +11,9 @@ import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.repository.LibraryBrowseRepository
 import com.wander.android.data.repository.SmartMixRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.first
 
 /**
  * The tree a car, or any other media browser this app lets in, walks:

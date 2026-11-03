@@ -3,9 +3,9 @@ package com.wander.android.data.repository
 import com.wander.android.core.audio.fingerprint.AudioEmbedder
 import com.wander.android.core.database.dao.Centroid
 import com.wander.android.core.database.dao.TrackEmbeddingDao
+import kotlin.math.sqrt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlin.math.sqrt
 
 /**
  * The indexed tracks whose stored audio embedding sits nearest a seed's — "Sonic radio".

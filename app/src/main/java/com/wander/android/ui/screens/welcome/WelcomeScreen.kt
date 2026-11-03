@@ -90,10 +90,11 @@ fun WelcomeScreen(
                 modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
             ) {
                 when (page) {
-                    STEP_SOURCES -> SourcesStep(status, permissionGate::request,
-                        onNavidromeLogin, onYouTubeLogin, onImportedBackup = ::finish)
-                    STEP_RECOGNITION -> RecognitionStep(
-                        status.recognitionModel, viewModel::downloadRecognitionModel)
+                    STEP_SOURCES -> SourcesStep(
+                        status, permissionGate::request,
+                        onNavidromeLogin, onYouTubeLogin, onImportedBackup = ::finish
+                    )
+                    STEP_RECOGNITION -> RecognitionStep(status.recognitionModel, viewModel::downloadRecognitionModel)
                     STEP_GESTURES -> GesturesStep()
                 }
             }
@@ -155,8 +156,11 @@ private fun PageDots(current: Int, count: Int, modifier: Modifier = Modifier) {
                     .size(if (i == current) 10.dp else 8.dp)
                     .clip(CircleShape)
                     .background(
-                        if (i == current) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.surfaceContainerHighest
+                        if (i == current) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerHighest
+                        }
                     )
             )
         }

@@ -39,7 +39,7 @@ class PlaylistViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val playlistId: String = savedStateHandle.get<String>("playlistId")
+    val playlistId: String = savedStateHandle.get<String>("playlistId")
         .orEmpty()
         .let { runCatching { URLDecoder.decode(it, "UTF-8") }.getOrDefault(it) }
 

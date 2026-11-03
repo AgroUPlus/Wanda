@@ -6,8 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.wander.android.R
-import com.wander.android.data.model.nameRes
 import com.wander.android.data.model.SourceType
+import com.wander.android.data.model.nameRes
 
 /**
  * A quiet line naming the backends a search could not reach, when others did answer.

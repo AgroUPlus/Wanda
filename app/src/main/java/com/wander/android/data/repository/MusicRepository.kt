@@ -184,6 +184,7 @@ class MusicRepository @Inject constructor(
     val writeErrors: SharedFlow<String> = likeOutbox.failures
     fun getLikedTrackIdsFlow(): Flow<Set<String>> = likesAndHistory.getLikedTrackIdsFlow()
     suspend fun toggleLike(track: UnifiedTrack) = likesAndHistory.toggleLike(track)
+    suspend fun like(track: UnifiedTrack) = likesAndHistory.setLiked(track, liked = true)
     suspend fun unifySplitLikes() = likesAndHistory.unifySplitLikes()
 
     /** Every connected backend's liked songs into Room, then any like still owed sent on. */

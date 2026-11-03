@@ -96,7 +96,15 @@ class YTMusicCatalogLoader @Inject constructor(
         val pages = (listOf(home) + discovery).map { it.await() }
         val shelves = pages.flatMap { it.getOrDefault(emptyList()) }
         val failure = pages.firstOrNull { it.isFailure }?.exceptionOrNull()
-        if (shelves.isEmpty() && failure != null) Result.failure(failure) else Result.success(shelves.distinctBy { it.id })
+        if (shelves.isEmpty() && failure != null) {
+            Result.failure(failure)
+        } else {
+            Result.success(
+                shelves.distinctBy {
+                    it.id
+                }
+            )
+        }
     }
 
     suspend fun createShareLink(target: ShareTarget): Result<String> {

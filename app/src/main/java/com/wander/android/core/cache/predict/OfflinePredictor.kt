@@ -100,6 +100,7 @@ class OfflinePredictor(private val zone: ZoneId) {
 
     companion object {
         private const val DAY_MS = 86_400_000.0
+
         /** How far back history is read; older plays have decayed below a rounding error anyway. */
         const val WINDOW_MS = 120L * 86_400_000L
         const val HALF_LIFE_DAYS = 14.0

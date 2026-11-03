@@ -64,7 +64,8 @@ internal object PlaybackStateFlowBuilder {
         isOrderLocked: () -> Boolean,
         onError: (PlaybackMessage) -> Unit
     ): Flow<PlaybackState> = callbackFlow {
-        val listener = PlaybackEventListener(ctrl, collaborators, isRadioMode, isLiveNow, isOrderLocked, onError) { trySend(it) }
+        val listener =
+            PlaybackEventListener(ctrl, collaborators, isRadioMode, isLiveNow, isOrderLocked, onError) { trySend(it) }
         ctrl.addListener(listener)
         listener.start()
         awaitClose { ctrl.removeListener(listener) }

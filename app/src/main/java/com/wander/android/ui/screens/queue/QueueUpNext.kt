@@ -20,6 +20,7 @@ import com.wander.android.R
 import com.wander.android.ui.components.GroupedItemGap
 import com.wander.android.ui.components.groupedItemShape
 import com.wander.android.ui.components.rememberHaptics
+import com.wander.android.ui.components.rememberRubberBandOverscroll
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -83,6 +84,12 @@ internal fun QueueUpNext(
         state = listState,
         verticalArrangement = Arrangement.spacedBy(GroupedItemGap),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 24.dp),
+        // Rubber band at the bottom, the drawer at the top. The band only gets what the drawer's
+        // `drawerNestedScroll` leaves: its post-scroll takes every downward pull past the top, so
+        // the top edge still drags the drawer closed and never stretches; upward pulls past the
+        // bottom of an open drawer are left alone, so those stretch. A fling into the top edge can
+        // still bounce the band — the drawer only takes flings while it is partly open.
+        overscrollEffect = rememberRubberBandOverscroll(),
         modifier = modifier.fillMaxWidth()
     ) {
         current?.let { now ->
@@ -121,9 +128,23 @@ internal fun QueueUpNext(
                                     onDragStopped = { haptics.settled() }
                                 )
                             }
-                        } else null,
-                        onMoveUp = if (canReorder) shown.stepFrom(index, -1)?.let { to -> { onMove(entry.queueIndex, to) } } else null,
-                        onMoveDown = if (canReorder) shown.stepFrom(index, 1)?.let { to -> { onMove(entry.queueIndex, to) } } else null
+                        } else {
+                            null
+                        },
+                        onMoveUp = if (canReorder) {
+                            shown.stepFrom(index, -1)?.let { to ->
+                                { onMove(entry.queueIndex, to) }
+                            }
+                        } else {
+                            null
+                        },
+                        onMoveDown = if (canReorder) {
+                            shown.stepFrom(index, 1)?.let { to ->
+                                { onMove(entry.queueIndex, to) }
+                            }
+                        } else {
+                            null
+                        }
                     )
                 }
             }
@@ -149,7 +170,9 @@ private fun LazyListScope.playedSection(
     if (!expanded) return
     // Most recent first: the track just finished is the one you are likeliest to want back.
     val recentFirst = played.asReversed()
-    itemsIndexed(recentFirst, key = { _, entry -> entry.key }, contentType = { _, _ -> "queue-track" }) { index, entry ->
+    itemsIndexed(recentFirst, key = { _, entry ->
+        entry.key
+    }, contentType = { _, _ -> "queue-track" }) { index, entry ->
         val shape = groupedItemShape(index, recentFirst.size)
         QueueSwipeToRemove(enabled = true, shape = shape, onRemove = { onRemove(entry) }) {
             QueueTrackTile(

@@ -1,6 +1,7 @@
 package com.wander.android.ui.components
 
 import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -12,11 +13,8 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
@@ -52,7 +50,9 @@ fun WandaSheet(
     content: @Composable ColumnScope.(animatedDismiss: () -> Unit) -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    var backProgress by remember { mutableFloatStateOf(0f) }
+    val backProgress = remember { Animatable(0f) }
+    val cancelSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+    val haptics = rememberHaptics()
 
     val animatedDismiss: () -> Unit = {
         scope.launch { sheetState.hide() }.invokeOnCompletion { onDismissRequest() }
@@ -67,18 +67,29 @@ fun WandaSheet(
         // The handler below takes the back gesture instead, so the sheet can report its progress.
         properties = ModalBottomSheetProperties(shouldDismissOnBackPress = false),
         modifier = modifier.graphicsLayer {
-            val scale = lerp(1f, BackMinScale, backResistance(backProgress))
+            val scale = lerp(1f, BackMinScale, backResistance(backProgress.value))
             scaleX = scale
             scaleY = scale
             transformOrigin = TransformOrigin(0.5f, 1f)
         }
     ) {
         PredictiveBackHandler(enabled = true) { progress ->
+            // Whether a finger drove this back at all: a back key or the three-button bar completes
+            // the flow without a single event, and an ordinary press stays silent.
+            var swiped = false
             try {
-                progress.collect { backProgress = it.progress }
+                progress.collect {
+                    swiped = true
+                    backProgress.snapTo(it.progress)
+                }
+                // A released swipe that carries the sheet away, answered the same way as every
+                // other committed back swipe ([PredictiveBack]).
+                if (swiped) haptics.settled()
                 animatedDismiss()
             } catch (_: CancellationException) {
-                backProgress = 0f
+                // An abandoned swipe springs the sheet back to full size rather than snapping.
+                // This coroutine is already cancelled, so the settle runs on the sheet's scope.
+                scope.launch { backProgress.animateTo(0f, cancelSpec) }
             }
         }
 

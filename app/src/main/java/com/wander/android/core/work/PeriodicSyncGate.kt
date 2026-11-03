@@ -6,14 +6,14 @@ import com.wander.android.core.security.SecureStorage
 import com.wander.android.core.sync.LibrarySyncScheduler
 import com.wander.android.core.sync.ScrobbleSyncScheduler
 import com.wander.android.core.sync.SharedPlaylistSyncScheduler
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Keeps each periodic background pass scheduled exactly while it has something to do.

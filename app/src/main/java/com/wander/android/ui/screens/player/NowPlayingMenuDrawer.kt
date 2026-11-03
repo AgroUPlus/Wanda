@@ -130,10 +130,18 @@ internal fun NowPlayingMenuDrawer(
                     transcript = stringResource(R.string.transcript_title)
                 )
                 val actions = buildList {
-                    add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, queueLabel, ActionEmphasis.PRIMARY) { onOpenQueue(); animatedDismiss() })
+                    add(
+                        MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, queueLabel, ActionEmphasis.PRIMARY) {
+                            onOpenQueue(); animatedDismiss()
+                        }
+                    )
                     // Settings, not errands: toggling one keeps the menu open, and the button's own colour
                     // and shape say whether it is on.
-                    add(MenuAction(Icons.Rounded.Radio, radioLabel, ActionEmphasis.SECONDARY, selected = isRadioMode) { onToggleRadio() })
+                    add(
+                        MenuAction(Icons.Rounded.Radio, radioLabel, ActionEmphasis.SECONDARY, selected = isRadioMode) {
+                            onToggleRadio()
+                        }
+                    )
                     add(
                         MenuAction(
                             if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
@@ -143,12 +151,24 @@ internal fun NowPlayingMenuDrawer(
                         ) { onToggleLike() }
                     )
                     if (canShare && onShare != null) {
-                        add(MenuAction(Icons.Rounded.Share, strings.share, ActionEmphasis.ICON) { onShare(); animatedDismiss() })
+                        add(
+                            MenuAction(Icons.Rounded.Share, strings.share, ActionEmphasis.ICON) {
+                                onShare(); animatedDismiss()
+                            }
+                        )
                     }
                     if (canAddToPlaylist) {
-                        add(MenuAction(Icons.Rounded.LibraryAdd, strings.addToPlaylist, ActionEmphasis.ICON) { onAddToPlaylist(); animatedDismiss() })
+                        add(
+                            MenuAction(Icons.Rounded.LibraryAdd, strings.addToPlaylist, ActionEmphasis.ICON) {
+                                onAddToPlaylist(); animatedDismiss()
+                            }
+                        )
                     }
-                    add(MenuAction(Icons.Rounded.Speed, strings.speed, ActionEmphasis.ICON) { onOpenSpeedPitch(); animatedDismiss() })
+                    add(
+                        MenuAction(Icons.Rounded.Speed, strings.speed, ActionEmphasis.ICON) {
+                            onOpenSpeedPitch(); animatedDismiss()
+                        }
+                    )
                     add(
                         MenuAction(Icons.Rounded.Bedtime, strings.sleepTimer, ActionEmphasis.ICON, selected = isSleepTimerOn) {
                             onOpenSleepTimer(); animatedDismiss()
@@ -156,19 +176,33 @@ internal fun NowPlayingMenuDrawer(
                     )
                     // Only when an equalizer is installed to open: no entry beats one that does nothing.
                     equalizerIntent?.let { intent ->
-                        add(MenuAction(Icons.Rounded.Equalizer, strings.equalizer, ActionEmphasis.ICON) {
-                            equalizerLauncher.launch(intent); animatedDismiss()
-                        })
+                        add(
+                            MenuAction(Icons.Rounded.Equalizer, strings.equalizer, ActionEmphasis.ICON) {
+                                equalizerLauncher.launch(intent); animatedDismiss()
+                            }
+                        )
                     }
                     onOpenChapters?.let { open ->
-                        add(MenuAction(Icons.Rounded.Bookmark, strings.chapters, ActionEmphasis.ICON) { open(); animatedDismiss() })
+                        add(
+                            MenuAction(Icons.Rounded.Bookmark, strings.chapters, ActionEmphasis.ICON) {
+                                open(); animatedDismiss()
+                            }
+                        )
                     }
                     onOpenTranscript?.let { open ->
-                        add(MenuAction(Icons.AutoMirrored.Rounded.Notes, strings.transcript, ActionEmphasis.ICON) { open(); animatedDismiss() })
+                        add(
+                            MenuAction(Icons.AutoMirrored.Rounded.Notes, strings.transcript, ActionEmphasis.ICON) {
+                                open(); animatedDismiss()
+                            }
+                        )
                     }
                     // No "Play next": this track is the one playing, so it would only queue a copy
                     // of itself straight behind itself.
-                    add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, strings.addToQueue) { onAddToQueue(); animatedDismiss() })
+                    add(
+                        MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, strings.addToQueue) {
+                            onAddToQueue(); animatedDismiss()
+                        }
+                    )
                     // One entry per credited artist: "A, B & C" is nobody's page.
                     onOpenArtist?.let { open ->
                         ArtistCredits.choices(track.artist).take(MAX_ARTIST_ACTIONS).forEach { name ->
@@ -181,10 +215,18 @@ internal fun NowPlayingMenuDrawer(
                         }
                     }
                     if (canSwitchSource && onOpenSourcePicker != null) {
-                        add(MenuAction(Icons.Rounded.SwapHoriz, strings.source) { onOpenSourcePicker(); animatedDismiss() })
+                        add(
+                            MenuAction(Icons.Rounded.SwapHoriz, strings.source) {
+                                onOpenSourcePicker(); animatedDismiss()
+                            }
+                        )
                     }
                     if (hasMultipleAudioTracks && onOpenAudioTrackPicker != null) {
-                        add(MenuAction(Icons.Rounded.Translate, strings.audioLanguage) { onOpenAudioTrackPicker(); animatedDismiss() })
+                        add(
+                            MenuAction(Icons.Rounded.Translate, strings.audioLanguage) {
+                                onOpenAudioTrackPicker(); animatedDismiss()
+                            }
+                        )
                     }
                     onJamAction?.let { add(MenuAction(Icons.Rounded.Groups, strings.jam) { it(); animatedDismiss() }) }
                 }

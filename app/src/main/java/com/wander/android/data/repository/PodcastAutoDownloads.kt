@@ -7,11 +7,11 @@ import com.wander.android.core.database.dao.TrackDao
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.podcast.PodcastEpisodes
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * The per-show "download new episodes" setting: queues what a show publishes for download on

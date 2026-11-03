@@ -1,18 +1,10 @@
 package com.wander.android.ui.screens.library
 
-import androidx.compose.ui.res.stringResource
-import com.wander.android.R
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -21,18 +13,20 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.rememberPressScale
 import com.wander.android.ui.components.rememberShelfArtworkShape
 import com.wander.android.ui.components.rememberShelfEntranceScale
 import com.wander.android.ui.components.scrollingTitle
+import com.wander.android.ui.components.sharedArtwork
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -49,7 +43,9 @@ fun AlbumCard(
     /** The line under the title — the artist by default; an artist's own page shows the year. */
     subtitle: String = album.artist,
     /** Nominal cell width. The grid is `Adaptive(156.dp)`, so cells never fall below this. */
-    artworkSize: Dp = 160.dp
+    artworkSize: Dp = 160.dp,
+    /** Carries the cover into the album's page; see [sharedArtwork]. Null where it repeats. */
+    sharedKey: String? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -75,38 +71,28 @@ fun AlbumCard(
             sizeDp = artworkSize,
             shape = artworkShape,
             modifier = Modifier
+                .sharedArtwork(sharedKey, artworkShape)
                 .fillMaxWidth()
                 .aspectRatio(1f)
         )
-        // The titles beside a ⋮ that opens the same sheet as the long press, so the album's
-        // actions are not behind a gesture alone. Absent where there is no sheet to open.
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = album.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Clip,
-                    modifier = Modifier.scrollingTitle()
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Clip,
-                    modifier = Modifier.scrollingTitle()
-                )
-            }
-            onLongClick?.let { openActions ->
-                IconButton(onClick = openActions, modifier = Modifier.size(48.dp)) {
-                    Icon(
-                        imageVector = Icons.Rounded.MoreVert,
-                        contentDescription = stringResource(R.string.common_more_options_for, album.title),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+        // No ⋮ beside the titles: on a grid of covers it took a third of each title's width, and
+        // the long press (announced to TalkBack as "More options") opens the same sheet.
+        Column(modifier = Modifier.padding(top = 8.dp)) {
+            Text(
+                text = album.title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Clip,
+                modifier = Modifier.scrollingTitle()
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Clip,
+                modifier = Modifier.scrollingTitle()
+            )
         }
     }
 }

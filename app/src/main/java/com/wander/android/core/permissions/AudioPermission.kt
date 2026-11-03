@@ -12,13 +12,19 @@ import androidx.core.content.ContextCompat
 
 /** `READ_MEDIA_AUDIO` on API 33+, `READ_EXTERNAL_STORAGE` below it. */
 val AUDIO_PERMISSION: String =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.READ_MEDIA_AUDIO
-    else Manifest.permission.READ_EXTERNAL_STORAGE
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_AUDIO
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
 
 /** Only meaningful from API 33; below that notifications need no grant. */
 val NOTIFICATION_PERMISSION: String? =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.POST_NOTIFICATIONS
-    else null
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.POST_NOTIFICATIONS
+    } else {
+        null
+    }
 
 /**
  * Reaching another device on the same network, from Android 16 onwards.

@@ -166,4 +166,3 @@ internal class SecurePlaybackPreferences(private val prefs: SharedPreferences) {
                 ?: PlaybackMediaType.SONG
     }
 }
-

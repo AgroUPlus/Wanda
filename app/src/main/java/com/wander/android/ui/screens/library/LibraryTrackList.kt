@@ -1,7 +1,9 @@
 package com.wander.android.ui.screens.library
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.lazy.rememberLazyListState
 import com.wander.android.R
+import com.wander.android.ui.components.ScrollToTopOnReselect
 import com.wander.android.ui.components.groupedListItem
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,7 +68,13 @@ internal fun TrackList(
     val visibleTracks = remember(tracks, pageSize) { tracks.take(pageSize) }
     val hasMore = visibleTracks.size < tracks.size
 
-    LazyColumn(contentPadding = contentPadding.nestedListInset(), modifier = Modifier.fillMaxSize()) {
+    val listState = rememberLazyListState()
+    ScrollToTopOnReselect(listState)
+    LazyColumn(
+        state = listState,
+        contentPadding = contentPadding.nestedListInset(),
+        modifier = Modifier.fillMaxSize()
+    ) {
         itemsIndexed(
             items = visibleTracks,
             key = { _, track -> track.id },

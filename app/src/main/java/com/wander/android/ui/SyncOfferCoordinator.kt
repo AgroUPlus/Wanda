@@ -110,8 +110,11 @@ class SyncOfferCoordinator @Inject constructor(
                     _offerRoute.value = null
                     if (count > 0) {
                         _writeErrors.tryEmit(
-                            if (count == 1) "1 track added to this device"
-                            else "$count tracks added to this device"
+                            if (count == 1) {
+                                "1 track added to this device"
+                            } else {
+                                "$count tracks added to this device"
+                            }
                         )
                     }
                 }

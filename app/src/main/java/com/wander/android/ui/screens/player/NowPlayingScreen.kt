@@ -204,95 +204,97 @@ internal fun NowPlayingScreen(
             onOpenSourcePicker = onOpenSourcePicker,
             onOpenAudioTrackPicker = { showAudioTrackPicker = true }.takeIf { state.audioTracks.size > 1 },
             onOpenChapters = { episodePanel = EpisodePanel.CHAPTERS }.takeIf { episodeExtras?.chaptersUrl != null },
-            onOpenTranscript = { episodePanel = EpisodePanel.TRANSCRIPT }.takeIf { episodeExtras?.transcriptUrl != null },
-            onOpenArtist = onOpenArtist?.let { open -> { name -> open(name, track.artistIdFor(name)) } },
-            onOpenAlbum = track.albumId?.let { albumId -> onOpenAlbum?.let { open -> { open(albumId) } } },
-            onJamAction = jam?.let { { jamViewModel.suggest(track) } },
-            equalizerIntent = viewModel.equalizerIntent(),
-            onDismiss = { showMenuDrawer = false }
-        )
-    }
+            onOpenTranscript = {
+                    episodePanel = EpisodePanel.TRANSCRIPT
+                }.takeIf { episodeExtras?.transcriptUrl != null },
+                onOpenArtist = onOpenArtist?.let { open -> { name -> open(name, track.artistIdFor(name)) } },
+                onOpenAlbum = track.albumId?.let { albumId -> onOpenAlbum?.let { open -> { open(albumId) } } },
+                onJamAction = jam?.let { { jamViewModel.suggest(track) } },
+                equalizerIntent = viewModel.equalizerIntent(),
+                onDismiss = { showMenuDrawer = false }
+            )
+        }
 
-    EpisodePanels(
-        panel = episodePanel,
-        extras = episodeExtras,
-        playerConnection = playerConnection,
-        onDismiss = { episodePanel = null }
-    )
+        EpisodePanels(
+            panel = episodePanel,
+            extras = episodeExtras,
+            playerConnection = playerConnection,
+            onDismiss = { episodePanel = null }
+        )
 
     if (showSleepTimer) {
-        SleepTimerSheet(
-            state = sleepTimerState,
-            isEpisode = track.isEpisode,
-            actions = viewModel.sleepTimerActions,
-            onDismiss = { showSleepTimer = false }
-        )
-    }
+            SleepTimerSheet(
+                state = sleepTimerState,
+                isEpisode = track.isEpisode,
+                actions = viewModel.sleepTimerActions,
+                onDismiss = { showSleepTimer = false }
+            )
+        }
 
-    val onOpenAudioTrackPicker: () -> Unit = { showAudioTrackPicker = true }
-    val onOpenSpeedPitch: () -> Unit = { showSpeedPitch = true }
-    val onDismissSpeedPitch: () -> Unit = { showSpeedPitch = false }
-    val onOpenMenu: () -> Unit = { showMenuDrawer = true }
+        val onOpenAudioTrackPicker: () -> Unit = { showAudioTrackPicker = true }
+        val onOpenSpeedPitch: () -> Unit = { showSpeedPitch = true }
+        val onDismissSpeedPitch: () -> Unit = { showSpeedPitch = false }
+        val onOpenMenu: () -> Unit = { showMenuDrawer = true }
 
-    if (immersivePlayer && artworkSlot != null) {
-        ImmersivePlayerLayout(
-            mediaToggle = mediaToggle,
-            onSwapMediaType = viewModel::swapMediaType,
-            playerConnection = playerConnection,
-            viewModel = viewModel,
-            state = state,
-            track = track,
-            jam = jam,
-            likedTrackIds = likedTrackIds,
-            onOpenJam = onOpenJam,
-            onOpenArtist = onOpenArtist,
-            onOpenAlbum = onOpenAlbum,
-            onOpenQueue = onOpenQueue,
-            onMinimize = onMinimize,
-            onOpenMenu = onOpenMenu,
-            onOpenSourcePicker = onOpenSourcePicker,
-            onToggleLyrics = onToggleLyrics,
-            contentAlpha = contentAlpha,
-            overlayAlpha = overlayAlpha,
-            artworkModifier = artworkModifier,
-            artworkSlot = artworkSlot,
-            onOpenAudioTrackPicker = onOpenAudioTrackPicker,
+        if (immersivePlayer && artworkSlot != null) {
+            ImmersivePlayerLayout(
+                mediaToggle = mediaToggle,
+                onSwapMediaType = viewModel::swapMediaType,
+                playerConnection = playerConnection,
+                viewModel = viewModel,
+                state = state,
+                track = track,
+                jam = jam,
+                likedTrackIds = likedTrackIds,
+                onOpenJam = onOpenJam,
+                onOpenArtist = onOpenArtist,
+                onOpenAlbum = onOpenAlbum,
+                onOpenQueue = onOpenQueue,
+                onMinimize = onMinimize,
+                onOpenMenu = onOpenMenu,
+                onOpenSourcePicker = onOpenSourcePicker,
+                onToggleLyrics = onToggleLyrics,
+                contentAlpha = contentAlpha,
+                overlayAlpha = overlayAlpha,
+                artworkModifier = artworkModifier,
+                artworkSlot = artworkSlot,
+                onOpenAudioTrackPicker = onOpenAudioTrackPicker,
             showSpeedPitch = showSpeedPitch,
-            onOpenSpeedPitch = onOpenSpeedPitch,
-            onDismissSpeedPitch = onDismissSpeedPitch,
-            speedAndPitch = speedAndPitch,
-            modifier = modifier
-        )
-    } else {
-        StandardPlayerLayout(
-            mediaToggle = mediaToggle,
-            onSwapMediaType = viewModel::swapMediaType,
-            playerConnection = playerConnection,
-            viewModel = viewModel,
-            state = state,
-            track = track,
-            previewIndex = previewIndex,
-            jam = jam,
-            likedTrackIds = likedTrackIds,
-            onOpenJam = onOpenJam,
-            onOpenArtist = onOpenArtist,
-            onOpenAlbum = onOpenAlbum,
-            onOpenQueue = onOpenQueue,
-            onMinimize = onMinimize,
-            onOpenMenu = onOpenMenu,
-            onOpenSourcePicker = onOpenSourcePicker,
-            onToggleLyrics = onToggleLyrics,
-            contentAlpha = contentAlpha,
-            overlayAlpha = overlayAlpha,
-            artworkModifier = artworkModifier,
-            artworkSlot = artworkSlot,
-            onOpenAudioTrackPicker = onOpenAudioTrackPicker,
-            showSpeedPitch = showSpeedPitch,
-            onOpenSpeedPitch = onOpenSpeedPitch,
-            onDismissSpeedPitch = onDismissSpeedPitch,
-            speedAndPitch = speedAndPitch,
-            modifier = modifier
-        )
-    }
+                onOpenSpeedPitch = onOpenSpeedPitch,
+                onDismissSpeedPitch = onDismissSpeedPitch,
+                speedAndPitch = speedAndPitch,
+                modifier = modifier
+            )
+        } else {
+            StandardPlayerLayout(
+                mediaToggle = mediaToggle,
+                onSwapMediaType = viewModel::swapMediaType,
+                playerConnection = playerConnection,
+                viewModel = viewModel,
+                state = state,
+                track = track,
+                previewIndex = previewIndex,
+                jam = jam,
+                likedTrackIds = likedTrackIds,
+                onOpenJam = onOpenJam,
+                onOpenArtist = onOpenArtist,
+                onOpenAlbum = onOpenAlbum,
+                onOpenQueue = onOpenQueue,
+                onMinimize = onMinimize,
+                onOpenMenu = onOpenMenu,
+                onOpenSourcePicker = onOpenSourcePicker,
+                onToggleLyrics = onToggleLyrics,
+                contentAlpha = contentAlpha,
+                overlayAlpha = overlayAlpha,
+                artworkModifier = artworkModifier,
+                artworkSlot = artworkSlot,
+                onOpenAudioTrackPicker = onOpenAudioTrackPicker,
+                showSpeedPitch = showSpeedPitch,
+                onOpenSpeedPitch = onOpenSpeedPitch,
+                onDismissSpeedPitch = onDismissSpeedPitch,
+                speedAndPitch = speedAndPitch,
+                modifier = modifier
+            )
+        }
     } // end CoverTintedTheme
 }

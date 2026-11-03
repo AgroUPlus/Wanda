@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.library
 
+import com.wander.android.ui.components.ScrollToTopOnReselect
 import com.wander.android.ui.components.rememberShelfEntranceScale
 import androidx.compose.ui.draw.scale
 import com.wander.android.ui.components.groupedListItem
@@ -52,6 +53,7 @@ import com.wander.android.ui.screens.library.blend.BlendInvites
 import com.wander.android.ui.components.PlaylistActionsSheet
 import com.wander.android.ui.components.SkeletonRow
 import com.wander.android.ui.components.nestedListInset
+import com.wander.android.ui.components.playlistArtKey
 
 private const val PLAYLISTS_PAGE_SIZE = 30
 private const val PAGE_PREFETCH_DISTANCE = 4
@@ -105,7 +107,9 @@ internal fun PlaylistList(
             onShare = { viewModel.sharePlaylist(playlist) }
                 .takeIf { viewModel.canShare(playlist.source) },
             onDelete = { viewModel.deletePlaylist(playlist) }
-                .takeIf { playlist.source == SourceType.LOCAL || playlist.source == SourceType.AGRO || viewModel.canCreatePlaylists },
+                .takeIf {
+                    playlist.source == SourceType.LOCAL || playlist.source == SourceType.AGRO || viewModel.canCreatePlaylists
+                },
             onDismiss = { actionsForPlaylist = null }
         )
     }
@@ -158,6 +162,7 @@ internal fun PlaylistList(
     val visiblePlaylists = remember(playlists, playlistPageSize) { playlists.take(playlistPageSize) }
     val hasMorePlaylists = visiblePlaylists.size < playlists.size
     val listState = rememberLazyListState()
+    ScrollToTopOnReselect(listState)
 
     // Driven by the scroll position rather than by a row composing: an effect inside the item
     // lambda keyed on the page size it mutates walks the whole list on the first frame.
@@ -199,8 +204,11 @@ internal fun PlaylistList(
                             shapes = ButtonDefaults.shapes()
                         ) {
                             Icon(imageVector = Icons.Rounded.Add, contentDescription = null)
-                            Text(text =
-                                stringResource(R.string.common_new_playlist), modifier = Modifier.padding(start = 6.dp))
+                            Text(
+                                text =
+                                    stringResource(R.string.common_new_playlist),
+                                modifier = Modifier.padding(start = 6.dp)
+                            )
                         }
                     }
                     FilledTonalButton(
@@ -224,12 +232,15 @@ internal fun PlaylistList(
             )
             return@LazyColumn
         }
-        itemsIndexed(visiblePlaylists, key = { _, it -> it.id }, contentType = { _, _ -> "playlist" }) { index, playlist ->
+        itemsIndexed(visiblePlaylists, key = { _, it ->
+            it.id
+        }, contentType = { _, _ -> "playlist" }) { index, playlist ->
             PlaylistRow(
                 playlist = playlist,
                 index = index,
                 onClick = { onOpenPlaylist(playlist.id) },
                 onLongPress = { actionsForPlaylist = playlist },
+                sharedKey = playlistArtKey(playlist.id),
                 modifier = Modifier
                     .animateItem()
                     .scale(rememberShelfEntranceScale(index))

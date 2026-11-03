@@ -39,7 +39,11 @@ internal class LikesAndHistoryRepository(
      * a like it could not send and says so once if it gives up.
      */
     suspend fun toggleLike(track: UnifiedTrack): Result<Unit> = withContext(Dispatchers.IO) {
-        val liked = !isLiked(track)
+        setLiked(track, !isLiked(track))
+    }
+
+    /** Sets rather than flips, so a gesture that only ever likes can repeat without undoing itself. */
+    suspend fun setLiked(track: UnifiedTrack, liked: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
         trackDao.upsertTracks(listOf(TrackEntity.fromUnifiedTrack(track)))
         trackDao.setLiked(track.id, liked)
         renditionsOf(track).forEach { trackDao.setLiked(it.id, liked) }
@@ -56,8 +60,11 @@ internal class LikesAndHistoryRepository(
     // The artist query is a substring `LIKE`, so a blank artist would match every row and pull
     // the whole library into memory.
     private suspend fun candidatesFor(artist: String): List<UnifiedTrack> =
-        if (artist.isBlank()) emptyList()
-        else trackDao.getTracksByArtistOnce(artist).map(TrackEntity::toUnifiedTrack)
+        if (artist.isBlank()) {
+            emptyList()
+        } else {
+            trackDao.getTracksByArtistOnce(artist).map(TrackEntity::toUnifiedTrack)
+        }
 
     /** Runs at every launch: one artist query per distinct artist, not one per liked track. */
     suspend fun unifySplitLikes(): Int = withContext(Dispatchers.IO) {

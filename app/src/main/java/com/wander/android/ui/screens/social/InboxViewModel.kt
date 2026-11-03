@@ -2,6 +2,7 @@ package com.wander.android.ui.screens.social
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wander.android.core.notification.DropNotifier
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.repository.DropsRepository
@@ -32,12 +33,14 @@ internal class InboxViewModel @Inject constructor(
     private val resolver: ListenAlongResolver,
     private val playerConnection: PlayerConnection,
     private val social: SocialRepository,
+    private val dropNotifier: DropNotifier,
     secureStorage: SecureStorage
 ) : ViewModel() {
 
     private val me: String = secureStorage.agroUsername
 
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 1)
+
     /** Why a drop could not be played. Nothing is said when one plays — the audio says it. */
     val messages: SharedFlow<String> = _messages.asSharedFlow()
 
@@ -133,6 +136,14 @@ internal class InboxViewModel @Inject constructor(
             }
         }
     }
+
+    /**
+     * [username]'s thread is in front of the user: their drop notification is stale, and new
+     * drops from them go straight into the thread without one.
+     */
+    fun onThreadShown(username: String) = dropNotifier.startViewing(username)
+
+    fun onThreadHidden(username: String) = dropNotifier.stopViewing(username)
 
     fun closeThread() {
         _state.value = _state.value.copy(openWith = null, conversation = emptyList())

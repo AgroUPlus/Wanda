@@ -35,6 +35,7 @@ internal const val KEY_LASTFM_USER = "key_lastfm_user"
 internal const val KEY_LASTFM_ENABLED = "key_lastfm_enabled"
 internal const val KEY_LASTFM_API_KEY = "key_lastfm_api_key"
 internal const val KEY_LASTFM_API_SECRET = "key_lastfm_api_secret"
+
 /** Why the service signed this device out on its own; present only until the user connects again. */
 internal const val KEY_LISTENBRAINZ_SIGNED_OUT = "key_listenbrainz_signed_out"
 internal const val KEY_LASTFM_SIGNED_OUT = "key_lastfm_signed_out"

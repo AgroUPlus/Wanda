@@ -13,6 +13,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
@@ -50,17 +51,29 @@ internal fun rememberSelectionActions(
     val playable = tracks.filter { it.source != SourceType.UNRESOLVED && (!offline || it.isPlayableOffline()) }
     val allLiked = tracks.isNotEmpty() && tracks.all { it.id in liked }
     val source = tracks.map { it.source }.distinct().singleOrNull()
+    val playingNext = pluralStringResource(R.plurals.selection_playing_next, playable.size, playable.size)
+    val queued = pluralStringResource(R.plurals.selection_added_to_queue, playable.size, playable.size)
 
     return buildList {
         if (playable.isNotEmpty()) {
             add(SelectionAction(Icons.Rounded.PlayArrow, R.string.action_play) { batch.play(playable) })
-            add(SelectionAction(Icons.AutoMirrored.Rounded.PlaylistAdd, R.string.action_play_next) { batch.playNext(playable) })
-            add(SelectionAction(Icons.AutoMirrored.Rounded.QueueMusic, R.string.action_add_to_queue) { batch.addToQueue(playable) })
+            add(
+                SelectionAction(Icons.AutoMirrored.Rounded.PlaylistAdd, R.string.action_play_next) {
+                    batch.playNext(playable, playingNext)
+                }
+            )
+            add(
+                SelectionAction(Icons.AutoMirrored.Rounded.QueueMusic, R.string.action_add_to_queue) {
+                    batch.addToQueue(playable, queued)
+                }
+            )
         }
         if (addToPlaylist != null && source != null && addToPlaylist.canAdd(tracks.first())) {
-            add(SelectionAction(Icons.Rounded.LibraryAdd, R.string.action_add_to_playlist) {
-                addToPlaylist.openForTracks(tracks, source)
-            })
+            add(
+                SelectionAction(Icons.Rounded.LibraryAdd, R.string.action_add_to_playlist) {
+                    addToPlaylist.openForTracks(tracks, source)
+                }
+            )
         }
         add(
             SelectionAction(
@@ -72,7 +85,11 @@ internal fun rememberSelectionActions(
             add(SelectionAction(Icons.Rounded.Download, R.string.track_action_download) { downloads.download(tracks) })
         }
         if (tracks.any { downloads.canRemove(it, marks) }) {
-            add(SelectionAction(Icons.Rounded.Delete, R.string.track_action_remove_download) { downloads.remove(tracks) })
+            add(
+                SelectionAction(Icons.Rounded.Delete, R.string.track_action_remove_download) {
+                    downloads.remove(tracks)
+                }
+            )
         }
         addAll(extra)
     }

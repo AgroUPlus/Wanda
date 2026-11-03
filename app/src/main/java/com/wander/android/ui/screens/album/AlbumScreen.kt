@@ -1,6 +1,7 @@
 package com.wander.android.ui.screens.album
 
 import com.wander.android.ui.theme.heroTitle
+import com.wander.android.ui.components.albumArtKey
 import com.wander.android.ui.components.rememberShelfEntranceScale
 import androidx.compose.ui.draw.scale
 import com.wander.android.ui.components.groupedListItem
@@ -139,6 +140,7 @@ fun AlbumScreen(
                             ),
                             artworkUrl = current?.coverArtUrl
                                 ?: tracks.firstNotNullOfOrNull { it.artworkUrl },
+                            sharedKey = albumArtKey(viewModel.albumId),
                             onPlay = viewModel::playAll,
                             onShuffle = viewModel::shuffle,
                             // No `canShare` gate: an album link describes the record rather than

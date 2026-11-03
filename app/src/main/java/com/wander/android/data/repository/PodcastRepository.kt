@@ -57,7 +57,9 @@ class PodcastRepository @Inject constructor(
     val subscriptions: Flow<List<PodcastEntity>> = podcastDao.observeAll()
 
     /** Unplayed episodes of every subscription, newest first. */
-    val inbox: Flow<List<UnifiedTrack>> = podcastDao.observeInbox().map { rows -> rows.map(TrackEntity::toUnifiedTrack) }
+    val inbox: Flow<List<UnifiedTrack>> = podcastDao.observeInbox().map { rows ->
+        rows.map(TrackEntity::toUnifiedTrack)
+    }
 
     /**
      * Subscribes and loads the first episodes now, so the listener sees something on return.
@@ -129,7 +131,9 @@ class PodcastRepository @Inject constructor(
                 val limit = if (first) INITIAL_EPISODES else MAX_NEW_EPISODES
                 val parsed = fetched.feed.episodes.sortedByDescending { it.publishedAt ?: 0L }.take(limit)
                 val episodes = parsed.map { PodcastEpisodes.toTrack(podcast.feedUrl, fetched.feed, it, now) }
-                val extras = parsed.zip(episodes).mapNotNull { (episode, track) -> PodcastEpisodes.extrasOf(track.id, episode) }
+                val extras = parsed.zip(episodes).mapNotNull { (episode, track) ->
+                    PodcastEpisodes.extrasOf(track.id, episode)
+                }
                 val saved = podcast.redirectedTo(fetched.movedTo).copy(
                     title = fetched.feed.title,
                     author = fetched.feed.author,
@@ -178,7 +182,11 @@ class PodcastRepository @Inject constructor(
         val fresh = LinkedHashMap<String, PodcastEntity>()
         for (feed in feeds) {
             val url = normalizeFeedUrl(feed.feedUrl)
-            if (url == null) invalid++ else if (url !in known) fresh.putIfAbsent(url, stub(url, feed.title ?: url, now))
+            if (url == null) {
+                invalid++
+            } else if (url !in known) {
+                fresh.putIfAbsent(url, stub(url, feed.title ?: url, now))
+            }
         }
         database.withTransaction { podcastDao.insertAllIfAbsent(fresh.values.toList()) }
         if (fresh.isNotEmpty()) scheduler.syncNow()

@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="window_background">#FFFDFBFF</color>
+    <!-- The brand's tertiary tone, tinting the social notifications' icon and actions. -->
+    <color name="notification_accent">#FF7D5260</color>
 </resources>

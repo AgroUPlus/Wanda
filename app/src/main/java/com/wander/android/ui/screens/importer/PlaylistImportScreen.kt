@@ -1,12 +1,12 @@
 package com.wander.android.ui.screens.importer
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,7 +22,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +39,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.data.importer.ImportProgress
+import com.wander.android.ui.components.backMorph
+import com.wander.android.ui.components.rememberLastLive
+import com.wander.android.ui.components.rememberPredictiveBack
 
 /**
  * Step 1 picks a platform, step 2 gets a playlist (a share link for every platform; YouTube alone
@@ -89,7 +96,23 @@ fun PlaylistImportScreen(
         }
     }
 
-    BackHandler(enabled = currentStage != ImporterStage.PLATFORM, onBack = handleBack)
+    // Predictive: the step shrinks into a card under the finger and, once committed, slides out
+    // from that card. The first step has no handler, so the screen's own back takes over there.
+    // [swipedFrom] marks the step a swipe took away, so only that one leaves as a card; a step
+    // left by the toolbar's arrow leaves on the plain slide.
+    var swipedFrom by remember { mutableStateOf<ImporterStage?>(null) }
+    val back = rememberPredictiveBack(enabled = currentStage != ImporterStage.PLATFORM) {
+        swipedFrom = currentStage
+        handleBack()
+    }
+    LaunchedEffect(currentStage) {
+        val from = swipedFrom
+        if (from != null && currentStage.step >= from.step) swipedFrom = null
+    }
+
+    // A step on its way out keeps what it showed, rather than going blank as the state clears.
+    val shownPlaylist = rememberLastLive(state.loadedPlaylist, live = state.loadedPlaylist != null)
+    val shownPlatform = rememberLastLive(state.platform, live = state.platform != null)
 
     Scaffold(
         topBar = {
@@ -130,46 +153,55 @@ fun PlaylistImportScreen(
                 },
                 label = "importerStage"
             ) { stage ->
-                when (stage) {
-                    ImporterStage.PROGRESS -> ImportProgressStage(
-                        progress = progress,
-                        onOpenPlaylist = onOpenPlaylist,
-                        onReset = viewModel::reset
-                    )
-
-                    ImporterStage.CHECKLIST -> state.loadedPlaylist?.let { playlist ->
-                        ImportTrackSelector(
-                            playlist = playlist,
-                            selectedIndices = state.selectedIndices,
-                            onToggleTrack = viewModel::toggleTrack,
-                            onSelectAll = viewModel::selectAll,
-                            onDeselectAll = viewModel::deselectAll,
-                            onConfirmImport = { customTitle -> viewModel.startImport(customTitle) },
-                            onCancel = viewModel::clearLoadedPlaylist,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                val morphed = stage == swipedFrom || (stage == currentStage && back.swiping)
+                Box(
+                    if (morphed) {
+                        Modifier.fillMaxSize().backMorph(back).background(MaterialTheme.colorScheme.background)
+                    } else {
+                        Modifier.fillMaxSize()
                     }
+                ) {
+                    when (stage) {
+                        ImporterStage.PROGRESS -> ImportProgressStage(
+                            progress = progress,
+                            onOpenPlaylist = onOpenPlaylist,
+                            onReset = viewModel::reset
+                        )
 
-                    ImporterStage.PLATFORM -> PlatformPickerStep(
-                        onSelect = viewModel::selectPlatform,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                        ImporterStage.CHECKLIST -> shownPlaylist?.let { playlist ->
+                            ImportTrackSelector(
+                                playlist = playlist,
+                                selectedIndices = state.selectedIndices,
+                                onToggleTrack = viewModel::toggleTrack,
+                                onSelectAll = viewModel::selectAll,
+                                onDeselectAll = viewModel::deselectAll,
+                                onConfirmImport = { customTitle -> viewModel.startImport(customTitle) },
+                                onCancel = viewModel::clearLoadedPlaylist,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
 
-                    ImporterStage.ACCESS -> state.platform?.let { platform ->
-                        AccessStep(
-                            platform = platform,
-                            state = state,
-                            isYouTubeLoggedIn = isYouTubeLoggedIn,
-                            actions = AccessStepActions(
-                                onSelectPlaylist = { viewModel.loadPlaylist(it.url, it.name, it.coverUrl) },
-                                onRefreshYouTube = viewModel::checkYouTubePlaylists,
-                                onSwitchToDirectLink = viewModel::switchToDirectLink,
-                                onOpenYouTubeLogin = onOpenYouTubeLogin,
-                                onInputChange = viewModel::setManualInput,
-                                onLoadPlaylist = { viewModel.loadPlaylist(state.manualInput) }
-                            ),
+                        ImporterStage.PLATFORM -> PlatformPickerStep(
+                            onSelect = viewModel::selectPlatform,
                             modifier = Modifier.fillMaxSize()
                         )
+
+                        ImporterStage.ACCESS -> shownPlatform?.let { platform ->
+                            AccessStep(
+                                platform = platform,
+                                state = state,
+                                isYouTubeLoggedIn = isYouTubeLoggedIn,
+                                actions = AccessStepActions(
+                                    onSelectPlaylist = { viewModel.loadPlaylist(it.url, it.name, it.coverUrl) },
+                                    onRefreshYouTube = viewModel::checkYouTubePlaylists,
+                                    onSwitchToDirectLink = viewModel::switchToDirectLink,
+                                    onOpenYouTubeLogin = onOpenYouTubeLogin,
+                                    onInputChange = viewModel::setManualInput,
+                                    onLoadPlaylist = { viewModel.loadPlaylist(state.manualInput) }
+                                ),
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                 }
             }

@@ -31,6 +31,7 @@ import com.wander.android.ui.components.LocalBackBlurEnabled
 import com.wander.android.ui.components.LocalBackdropBlur
 import com.wander.android.ui.components.LocalDownloadMarks
 import com.wander.android.ui.components.LocalOfflinePlayback
+import com.wander.android.ui.components.SharedArtworkLayout
 import com.wander.android.ui.components.TrackDownloadViewModel
 import com.wander.android.ui.components.backdropBlur
 import com.wander.android.ui.components.dockSpec
@@ -39,7 +40,9 @@ import com.wander.android.ui.components.player.PlayerSheet
 import com.wander.android.ui.components.player.SheetDock
 import com.wander.android.ui.components.player.PlayerSheetContent
 import com.wander.android.ui.components.player.rememberPlayerSheetState
+import com.wander.android.ui.navigation.LocalTabReselection
 import com.wander.android.ui.navigation.Routes
+import com.wander.android.ui.navigation.TabReselection
 import com.wander.android.ui.navigation.TopLevelDestination
 import com.wander.android.ui.navigation.wanderNavGraph
 import com.wander.android.ui.screens.social.JamViewModel
@@ -85,6 +88,8 @@ fun WanderApp(
     val listenAlongSession = socialViewModel.state.collectAsStateWithLifecycle().value.session
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val dismissal = rememberMiniPlayerDismissal(playerConnection, playbackState, snackbarHostState)
+    val showsMiniPlayer = hasTrack && !dismissal.isDismissed
     val jamViewModel: JamViewModel = hiltViewModel()
     val jamState by jamViewModel.state.collectAsStateWithLifecycle()
     val listenersViewModel: ListenersViewModel = hiltViewModel()
@@ -102,7 +107,7 @@ fun WanderApp(
     val motionScheme = MaterialTheme.motionScheme
     val dockMetrics = calculateDockMetrics(
         showDockRow = showDockRow,
-        hasTrack = hasTrack,
+        hasTrack = showsMiniPlayer,
         showChrome = showChrome
     )
     val dockInset = dockMetrics.dockInset
@@ -130,6 +135,8 @@ fun WanderApp(
     val isAmoledBlack by viewModel.isAmoledBlack.collectAsStateWithLifecycle()
     val isBackBlurEnabled by viewModel.isBackBlurEnabled.collectAsStateWithLifecycle()
     val backdropBlur = remember { BackdropBlurController() }
+    val tabReselection = remember { TabReselection() }
+    TrackTabOwner(navController, tabReselection)
     val shellCoverSeed = if (isCoverArtThemeEnabled) {
         rememberCoverSeedColor(playback.currentTrack?.artworkUrl)
     } else {
@@ -146,7 +153,8 @@ fun WanderApp(
             LocalOfflinePlayback provides offlinePlayback,
             LocalDownloadMarks provides downloadMarks,
             LocalBackBlurEnabled provides isBackBlurEnabled,
-            LocalBackdropBlur provides backdropBlur
+            LocalBackdropBlur provides backdropBlur,
+            LocalTabReselection provides tabReselection
         ) {
             Box(
                 modifier = Modifier
@@ -182,19 +190,24 @@ fun WanderApp(
                     val contentPadding = remember(padding, extraBottom, direction, railInset) {
                         padding.plusBottom(extraBottom, direction).withMinStart(railInset, direction)
                     }
-                    NavHost(
-                        navController = navController,
-                        startDestination = if (setupDone) TopLevelDestination.HOME.route
-                        else Routes.WELCOME,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        wanderNavGraph(
+                    SharedArtworkLayout(Modifier.fillMaxSize()) {
+                        NavHost(
                             navController = navController,
-                            motion = motionScheme,
-                            playerConnection = playerConnection,
-                            contentPadding = contentPadding,
-                            onCollapsePlayer = { scope.launch { sheetState.collapse() } }
-                        )
+                            startDestination = if (setupDone) {
+                                TopLevelDestination.HOME.route
+                            } else {
+                                Routes.WELCOME
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            wanderNavGraph(
+                                navController = navController,
+                                motion = motionScheme,
+                                playerConnection = playerConnection,
+                                contentPadding = contentPadding,
+                                onCollapsePlayer = { scope.launch { sheetState.collapse() } }
+                            )
+                        }
                     }
                 }
 
@@ -206,7 +219,7 @@ fun WanderApp(
                     navController = navController,
                     viewModel = viewModel,
                     motionScheme = motionScheme,
-                    visibility = DockVisibility(currentRoute, showDockRow, hasTrack, railInset),
+                    visibility = DockVisibility(currentRoute, showDockRow, showsMiniPlayer, railInset),
                     sheetState = sheetState,
                     dockInset = dockInset
                 )
@@ -220,8 +233,9 @@ fun WanderApp(
                         dockedHeight = dockedPlayerHeight,
                         pairedWithDockRow = showDockRow
                     ),
-                    isVisible = hasTrack && showChrome,
+                    isVisible = showsMiniPlayer && showChrome,
                     coverSeed = shellCoverSeed,
+                    dockedDismiss = dismissal.gesture,
                     seekProgress = {
                         com.wander.android.core.playback.progressOf(
                             playbackPosition.value.positionMs,

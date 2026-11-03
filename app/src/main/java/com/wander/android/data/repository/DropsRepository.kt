@@ -125,6 +125,14 @@ internal class DropsRepository @Inject constructor(
         return dropsApi.markRead(id)
     }
 
+    /** Everything [username] sent that is still unread, marked read the way [markRead] marks one. */
+    suspend fun markThreadRead(username: String) {
+        dropDao.unreadIdsFrom(username).forEach { markRead(it) }
+    }
+
+    /** One drop from the cache, for a notification button that carries only its id. */
+    suspend fun find(id: String): AgroDrop? = dropDao.byId(id)?.toDrop()
+
     suspend fun archive(id: String): Result<Boolean> {
         dropDao.markArchived(id)
         return dropsApi.archive(id)

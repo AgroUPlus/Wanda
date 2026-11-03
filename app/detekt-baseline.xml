@@ -2,36 +2,37 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
+    <ID>ComplexCondition:ActivityScreen.kt:visible.isEmpty() &amp;&amp; !state.loading &amp;&amp; !showInvites &amp;&amp; state.error == null</ID>
     <ID>ComplexCondition:AgroPairingCoordinator.kt:AgroPairingCoordinator$trimmedPass.length &gt;= 32 &amp;&amp; !trimmedPass.contains(' ') &amp;&amp; trimmedPass.all { it.isLetterOrDigit() || it in "-_+=/" }</ID>
-    <ID>ComplexCondition:AgroPairingCoordinator.kt:AgroPairingCoordinator$vaultKeyParam.length == 64 &amp;&amp; vaultKeyParam.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }</ID>
-    <ID>ComplexCondition:HttpClientFactory.kt:HttpClientFactory$h.equals("localhost", ignoreCase = true) || h == "127.0.0.1" || h == "::1" || h == "10.0.2.2"</ID>
+    <ID>ComplexCondition:AlbumHero.kt:onShare != null || onConvert != null || onExport != null || onDownload != null</ID>
     <ID>ComplexCondition:MediaFormController.kt:MediaFormController$track == null || track.source != SourceType.YTMUSIC || track.isEpisode || track.isLive</ID>
+    <ID>ComplexCondition:PlaybackWakeMode.kt:PlaybackWakeMode$current != null &amp;&amp; current.isOnDevice() &amp;&amp; (next == null || next.isOnDevice())</ID>
     <ID>ComplexCondition:PlayerSheetState.kt:PlayerSheetState$isFirstMeasure || wasCollapsed || wasAtMax || outOfRange</ID>
     <ID>ComplexCondition:PlaylistImportViewModel.kt:PlaylistImportViewModel$chosen != null &amp;&amp; chosen != PlatformType.PLAIN_TEXT &amp;&amp; pasted != PlatformType.PLAIN_TEXT &amp;&amp; pasted != chosen</ID>
     <ID>ComplexCondition:SkipGraceManager.kt:SkipGraceManager$grace != null &amp;&amp; prevIndex != C.INDEX_UNSET &amp;&amp; grace.fromIndex == prevIndex &amp;&amp; System.currentTimeMillis() - grace.timestampSystemMs &lt;= SKIP_GRACE_WINDOW_MS</ID>
-    <ID>ComplexCondition:TrackSwipe.kt:!enabled || swiped || isSwiping || stepPx &lt;= 0f || (step != 1 &amp;&amp; step != -1)</ID>
+    <ID>ComplexCondition:TrackArrival.kt:!enabled || swiped || isSwiping || stepPx &lt;= 0f || (step != 1 &amp;&amp; step != -1)</ID>
     <ID>CyclomaticComplexMethod:ActivityScreen.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun ActivityScreen</ID>
     <ID>CyclomaticComplexMethod:AgroLibraryApi.kt:AgroLibraryApi$suspend fun reportHoldings: Result&lt;Int&gt;</ID>
     <ID>CyclomaticComplexMethod:AgroLiveMessageParser.kt:AgroLiveMessageParser$fun parse: AgroLiveMessage?</ID>
-    <ID>CyclomaticComplexMethod:AgroPairingCoordinator.kt:AgroPairingCoordinator$suspend fun parseQrCodePayload: Result&lt;String?&gt;</ID>
     <ID>CyclomaticComplexMethod:AgroPairingDialog.kt:@Composable internal fun AgroPairingDialog</ID>
     <ID>CyclomaticComplexMethod:AgroRelayClient.kt:AgroRelayClient$fun handleRelayRequest</ID>
     <ID>CyclomaticComplexMethod:AgroSessionViewModel.kt:AgroSessionViewModel$suspend fun observeLiveUpdates</ID>
     <ID>CyclomaticComplexMethod:AgroUploader.kt:AgroUploader$private fun begin: Result&lt;Begin&gt;</ID>
     <ID>CyclomaticComplexMethod:AlbumScreen.kt:@Composable fun AlbumScreen</ID>
     <ID>CyclomaticComplexMethod:AppIntentHandler.kt:AppIntentHandler$fun handleIntent</ID>
+    <ID>CyclomaticComplexMethod:CarouselPlaybackSync.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun CarouselPlaybackSync</ID>
     <ID>CyclomaticComplexMethod:ConnectionsTab.kt:internal fun LazyListScope.connectionsTab</ID>
+    <ID>CyclomaticComplexMethod:DownloadWorker.kt:DownloadWorker$override suspend fun doWork: Result</ID>
     <ID>CyclomaticComplexMethod:ElasticSwipeBox.kt:@Composable fun ElasticSwipeBox</ID>
     <ID>CyclomaticComplexMethod:EmbeddingMatcher.kt:EmbeddingMatcher$suspend fun match: EmbeddingRepository.Match?</ID>
     <ID>CyclomaticComplexMethod:HomeScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun HomeScreen</ID>
-    <ID>CyclomaticComplexMethod:HomeViewModel.kt:HomeViewModel$fun refresh</ID>
-    <ID>CyclomaticComplexMethod:InboxConversation.kt:@Composable private fun ConversationDropMessage</ID>
-    <ID>CyclomaticComplexMethod:InboxScreen.kt:@Composable internal fun InboxScreen</ID>
+    <ID>CyclomaticComplexMethod:Id3Lyrics.kt:Id3Lyrics$fun read: FileLyrics?</ID>
+    <ID>CyclomaticComplexMethod:Id3Lyrics.kt:Id3Lyrics$internal fun decodeSylt: List&lt;LyricLine&gt;</ID>
+    <ID>CyclomaticComplexMethod:InboxDropBubble.kt:@Composable internal fun ConversationDropMessage</ID>
     <ID>CyclomaticComplexMethod:InnerTubePlayerResolver.kt:InnerTubePlayerResolver$private suspend fun playerAs: Result&lt;PlayerResponse&gt;</ID>
     <ID>CyclomaticComplexMethod:JamPlaybackController.kt:JamPlaybackController$private fun startReconciling</ID>
     <ID>CyclomaticComplexMethod:JamRadioTopUp.kt:JamRadioTopUp$private fun check</ID>
     <ID>CyclomaticComplexMethod:LibraryPlaylistList.kt:@Composable internal fun PlaylistList</ID>
-    <ID>CyclomaticComplexMethod:LibraryScreen.kt:@Composable fun LibraryScreen</ID>
     <ID>CyclomaticComplexMethod:LibrarySyncSection.kt:internal fun LazyListScope.librarySyncSection</ID>
     <ID>CyclomaticComplexMethod:LibrarySyncWorker.kt:LibrarySyncWorker$override suspend fun doWork: Result</ID>
     <ID>CyclomaticComplexMethod:ListenAlongResolver.kt:ListenAlongResolver$suspend fun resolve: ResolvedTrack?</ID>
@@ -44,9 +45,11 @@
     <ID>CyclomaticComplexMethod:NowPlayingScreen.kt:@Composable internal fun NowPlayingScreen</ID>
     <ID>CyclomaticComplexMethod:P2PServer.kt:P2PServer$private suspend fun serve</ID>
     <ID>CyclomaticComplexMethod:PcmDecoder.kt:PcmDecoder$private fun decodeTrack: FloatArray?</ID>
-    <ID>CyclomaticComplexMethod:PlayerCoverCarousel.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable private fun CarouselPlaybackSync</ID>
+    <ID>CyclomaticComplexMethod:PermissionGate.kt:@Composable fun rememberPermissionGate: PermissionGate</ID>
+    <ID>CyclomaticComplexMethod:PlayerControls.kt:@Composable fun PlayerControls</ID>
     <ID>CyclomaticComplexMethod:PlayerSeekBar.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable private fun PlayerSeekBarInternal</ID>
     <ID>CyclomaticComplexMethod:PlayerSheetContent.kt:@Composable fun PlayerSheetContent</ID>
+    <ID>CyclomaticComplexMethod:PlayerSheetGestures.kt:@Composable internal fun Modifier.sheetDraggable: Modifier</ID>
     <ID>CyclomaticComplexMethod:PlaylistImportScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun PlaylistImportScreen</ID>
     <ID>CyclomaticComplexMethod:PlaylistScreen.kt:@Composable fun PlaylistScreen</ID>
     <ID>CyclomaticComplexMethod:QueueOpenGesture.kt:@Composable internal fun Modifier.swipeUpToOpenQueue: Modifier</ID>
@@ -59,14 +62,20 @@
     <ID>CyclomaticComplexMethod:SocialScreen.kt:@Composable internal fun SocialScreen</ID>
     <ID>CyclomaticComplexMethod:SyncOfferSheet.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun SyncOfferSheet</ID>
     <ID>CyclomaticComplexMethod:SyncedLyricsView.kt:@Composable fun SyncedLyricsView</ID>
+    <ID>CyclomaticComplexMethod:TrackActionsBuilder.kt:internal fun buildTrackActionsList: List&lt;MenuAction&gt;</ID>
     <ID>CyclomaticComplexMethod:TrackMatcher.kt:internal fun findBestMatch: UnifiedTrack?</ID>
     <ID>CyclomaticComplexMethod:TrackRow.kt:@OptIn(ExperimentalFoundationApi::class) @Composable fun TrackRow</ID>
     <ID>CyclomaticComplexMethod:TrackSwipe.kt:@Composable internal fun Modifier.swipeToChangeTrack: Modifier</ID>
+    <ID>CyclomaticComplexMethod:VorbisLyrics.kt:VorbisLyrics$fun readOgg: FileLyrics?</ID>
+    <ID>CyclomaticComplexMethod:WanderApp.kt:@Composable fun WanderApp</ID>
     <ID>CyclomaticComplexMethod:WanderAppOverlays.kt:@Composable internal fun BoxScope.WanderAppOverlays</ID>
     <ID>CyclomaticComplexMethod:YouTubeEntityLinks.kt:internal fun youTubeEntity: YouTubeEntity?</ID>
+    <ID>EmptyFunctionBlock:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao${ }</ID>
     <ID>EmptyFunctionBlock:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao${}</ID>
     <ID>EmptyFunctionBlock:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackEmbeddingDao${}</ID>
     <ID>EmptyFunctionBlock:LyricsParserTest.kt:LyricsParserTest.&lt;no name provided&gt;${}</ID>
+    <ID>EmptyFunctionBlock:NativeLyricsTest.kt:NativeLyricsTest.NoCatalogue${}</ID>
+    <ID>EmptyFunctionBlock:NativeLyricsTest.kt:NativeLyricsTest.RecordingDao${}</ID>
     <ID>ExplicitItLambdaMultipleParameters:ArtistPageSections.kt:{ _, it -&gt; "episode-${it.id}" }</ID>
     <ID>ExplicitItLambdaMultipleParameters:ArtistPageSections.kt:{ _, it -&gt; "other-${section.title}-${it.id}" }</ID>
     <ID>ExplicitItLambdaMultipleParameters:ArtistPageSections.kt:{ _, it -&gt; "video-${it.id}" }</ID>
@@ -112,11 +121,13 @@
     <ID>FunctionNaming:ArtistSectionTitle.kt:@Composable internal fun ArtistSectionTitle</ID>
     <ID>FunctionNaming:ArtistSkeleton.kt:@Composable internal fun ArtistSkeleton</ID>
     <ID>FunctionNaming:ArtistSkeleton.kt:@Composable private fun HeroSkeleton</ID>
+    <ID>FunctionNaming:ArtistTrackRow.kt:@Composable internal fun LazyItemScope.ArtistTrackRow</ID>
     <ID>FunctionNaming:Artwork.kt:@Composable fun Artwork</ID>
     <ID>FunctionNaming:Artwork.kt:@Composable private fun NoArtwork</ID>
     <ID>FunctionNaming:AudioQualityBadge.kt:@Composable fun AudioQualityBadge</ID>
     <ID>FunctionNaming:AudioTrackPickerDialog.kt:@Composable internal fun AudioTrackPickerDialog</ID>
     <ID>FunctionNaming:AudioTrackPickerDialog.kt:@Composable private fun AudioTrackRow</ID>
+    <ID>FunctionNaming:BackLayers.kt:@Composable fun &lt;T : Any&gt; BackLayers</ID>
     <ID>FunctionNaming:BackdropBlur.kt:@Composable fun BackdropBlurSource</ID>
     <ID>FunctionNaming:BackupPassphraseDialog.kt:@Composable internal fun BackupPassphraseDialog</ID>
     <ID>FunctionNaming:BackupSection.kt:@Composable internal fun BackupOutcome</ID>
@@ -131,6 +142,7 @@
     <ID>FunctionNaming:BlendOptions.kt:@Composable private fun MixSlider</ID>
     <ID>FunctionNaming:BlendOptions.kt:@OptIn(ExperimentalLayoutApi::class) @Composable internal fun BlendOptions</ID>
     <ID>FunctionNaming:BottomOffers.kt:@Composable internal fun BoxScope.BottomOffers</ID>
+    <ID>FunctionNaming:CarouselPlaybackSync.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun CarouselPlaybackSync</ID>
     <ID>FunctionNaming:CircleAnthemCard.kt:@Composable internal fun AnthemHeroCard</ID>
     <ID>FunctionNaming:CircleAnthemCard.kt:@Composable private fun AnthemChip</ID>
     <ID>FunctionNaming:CircleAnthemCard.kt:@Composable private fun TopListeners</ID>
@@ -155,6 +167,8 @@
     <ID>FunctionNaming:ConvertPlaylistSheet.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun ConvertPlaylistSheet</ID>
     <ID>FunctionNaming:CoverCollage.kt:@Composable internal fun CoverCollage</ID>
     <ID>FunctionNaming:CoverCollage.kt:@Composable private fun Tile</ID>
+    <ID>FunctionNaming:CoverDoubleTapLike.kt:@Composable internal fun CoverHeartOverlay</ID>
+    <ID>FunctionNaming:CoverDoubleTapLike.kt:@Composable private fun PoppingHeart</ID>
     <ID>FunctionNaming:CoverPalette.kt:@Composable fun CoverTintedTheme</ID>
     <ID>FunctionNaming:CuteAvatar.kt:@Composable internal fun AvatarGroup</ID>
     <ID>FunctionNaming:CuteAvatar.kt:@Composable internal fun CuteAvatar</ID>
@@ -163,6 +177,8 @@
     <ID>FunctionNaming:DatabaseTooOldScreen.kt:@Composable internal fun DatabaseTooOldScreen</ID>
     <ID>FunctionNaming:DeezerLoginScreen.kt:@Composable fun DeezerLoginScreen</ID>
     <ID>FunctionNaming:DeezerLoginScreen.kt:@Composable private fun ManualArlSection</ID>
+    <ID>FunctionNaming:DeezerQualityRow.kt:@Composable internal fun DeezerQualityRow</ID>
+    <ID>FunctionNaming:DetailRefreshBox.kt:@Composable internal fun DetailRefreshBox</ID>
     <ID>FunctionNaming:DiscoverMasonryShelf.kt:@Composable internal fun DiscoverMasonryShelf</ID>
     <ID>FunctionNaming:DiscoverMasonryShelf.kt:@OptIn(ExperimentalFoundationApi::class) @Composable private fun MasonryCard</ID>
     <ID>FunctionNaming:DiscoveredPlaylistsGrid.kt:@Composable fun DiscoveredPlaylistsGrid</ID>
@@ -170,6 +186,9 @@
     <ID>FunctionNaming:DiscoveredPlaylistsGrid.kt:@Composable private fun ExpressiveConnectedBanner</ID>
     <ID>FunctionNaming:DiscoveredPlaylistsGrid.kt:@Composable private fun M3MorphingButton</ID>
     <ID>FunctionNaming:DockSearchField.kt:@Composable internal fun DockSearchField</ID>
+    <ID>FunctionNaming:DownloadSettingsCard.kt:@Composable internal fun DownloadSettingsCard</ID>
+    <ID>FunctionNaming:DownloadSettingsCard.kt:@Composable internal fun StreamCacheSizeRow</ID>
+    <ID>FunctionNaming:DownloadSettingsCard.kt:@Composable private fun StorageFullNotice</ID>
     <ID>FunctionNaming:DropActionsSheet.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun DropActionsSheet</ID>
     <ID>FunctionNaming:DropToFriendSheet.kt:@Composable internal fun DropToFriendSheet</ID>
     <ID>FunctionNaming:EditBlendSheet.kt:@Composable internal fun EditBlendSheet</ID>
@@ -186,18 +205,20 @@
     <ID>FunctionNaming:EpisodePanels.kt:@Composable private fun PanelTitle</ID>
     <ID>FunctionNaming:EpisodePanels.kt:@Composable private fun TranscriptSheet</ID>
     <ID>FunctionNaming:ExpressiveRefreshIndicator.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun ExpressiveRefreshIndicator</ID>
+    <ID>FunctionNaming:FastScroller.kt:@Composable fun FastScroller</ID>
+    <ID>FunctionNaming:FastScroller.kt:@Composable private fun LetterBubble</ID>
     <ID>FunctionNaming:FeaturedHeroShelf.kt:@Composable internal fun FeaturedHeroShelf</ID>
     <ID>FunctionNaming:FeaturedHeroShelf.kt:@OptIn(ExperimentalFoundationApi::class) @Composable private fun HeroCard</ID>
     <ID>FunctionNaming:FeaturedHeroShelf.kt:@OptIn(ExperimentalFoundationApi::class) @Composable private fun StripRow</ID>
     <ID>FunctionNaming:FeedItemCard.kt:@Composable internal fun FeedItemCard</ID>
     <ID>FunctionNaming:FeedItemSkeleton.kt:@Composable internal fun FeedItemSkeleton</ID>
     <ID>FunctionNaming:FingerprintBadge.kt:@Composable fun FingerprintBadge</ID>
-    <ID>FunctionNaming:FingerprintsScreen.kt:@Composable private fun RecognitionModelRow</ID>
     <ID>FunctionNaming:FingerprintsScreen.kt:@Composable private fun SectionHeader</ID>
     <ID>FunctionNaming:FingerprintsScreen.kt:@Composable private fun Summary</ID>
     <ID>FunctionNaming:FingerprintsScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun FingerprintsScreen</ID>
     <ID>FunctionNaming:FollowedArtistsPage.kt:@Composable internal fun FollowedArtistsPage</ID>
     <ID>FunctionNaming:FollowedArtistsPage.kt:@Composable private fun Centered</ID>
+    <ID>FunctionNaming:ForgetFailuresDialog.kt:@Composable internal fun ForgetFailuresDialog</ID>
     <ID>FunctionNaming:FriendCodePanel.kt:@Composable internal fun FriendCodePanel</ID>
     <ID>FunctionNaming:FriendRow.kt:@Composable internal fun Avatar</ID>
     <ID>FunctionNaming:FriendRow.kt:@Composable internal fun FriendRow</ID>
@@ -216,13 +237,14 @@
     <ID>FunctionNaming:HeroActionButton.kt:@Composable internal fun HeroActionRow</ID>
     <ID>FunctionNaming:HeroActionButton.kt:@Composable internal fun RowScope.HeroActionButton</ID>
     <ID>FunctionNaming:HeroCarouselShelf.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun HeroCarouselShelf</ID>
+    <ID>FunctionNaming:HistoryActions.kt:@Composable internal fun HistoryClearButton</ID>
+    <ID>FunctionNaming:HistoryActions.kt:@Composable internal fun HistoryTrackActions</ID>
     <ID>FunctionNaming:HistoryDateDivider.kt:@Composable internal fun HistoryDateDivider</ID>
     <ID>FunctionNaming:HistoryDateDivider.kt:@Composable private fun WavyRule</ID>
+    <ID>FunctionNaming:HistoryRow.kt:@Composable internal fun HistoryRow</ID>
     <ID>FunctionNaming:HistoryScreen.kt:@Composable internal fun HistoryScreen</ID>
     <ID>FunctionNaming:HistoryScreen.kt:@Composable private fun HistoryEntry</ID>
     <ID>FunctionNaming:HistoryScreen.kt:@Composable private fun HistoryPlaceholder</ID>
-    <ID>FunctionNaming:HistoryScreen.kt:@Composable private fun HistoryRow</ID>
-    <ID>FunctionNaming:HistoryScreen.kt:@Composable private fun HistoryTrackActions</ID>
     <ID>FunctionNaming:HomeEditBar.kt:@Composable internal fun HomeEditBar</ID>
     <ID>FunctionNaming:HomeEditor.kt:@Composable internal fun HomeEditorAddSheet</ID>
     <ID>FunctionNaming:HomeEditor.kt:@Composable internal fun HomeEditorSettingsSheet</ID>
@@ -242,7 +264,8 @@
     <ID>FunctionNaming:ImportProgressStage.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable fun ImportProgressStage</ID>
     <ID>FunctionNaming:ImportTrackSelector.kt:@Composable fun ImportTrackSelector</ID>
     <ID>FunctionNaming:InboxConversation.kt:@Composable internal fun InboxConversation</ID>
-    <ID>FunctionNaming:InboxConversation.kt:@Composable private fun ConversationDropMessage</ID>
+    <ID>FunctionNaming:InboxDropBubble.kt:@Composable internal fun ConversationDropMessage</ID>
+    <ID>FunctionNaming:InboxDropBubble.kt:@Composable private fun DropTrackCard</ID>
     <ID>FunctionNaming:InboxScreen.kt:@Composable internal fun InboxScreen</ID>
     <ID>FunctionNaming:InboxThreadList.kt:@Composable internal fun InboxThreadList</ID>
     <ID>FunctionNaming:InboxThreadList.kt:@Composable private fun ThreadRow</ID>
@@ -285,16 +308,29 @@
     <ID>FunctionNaming:LanguagePicker.kt:@Composable private fun LanguageOption</ID>
     <ID>FunctionNaming:LargeCardShelf.kt:@Composable internal fun LargeCardShelf</ID>
     <ID>FunctionNaming:LargeCardShelf.kt:@OptIn(ExperimentalFoundationApi::class) @Composable private fun LargeTrackCard</ID>
+    <ID>FunctionNaming:LibraryActionSheets.kt:@Composable internal fun LibraryAlbumActions</ID>
+    <ID>FunctionNaming:LibraryActionSheets.kt:@Composable internal fun LibraryTrackActions</ID>
     <ID>FunctionNaming:LibraryAlbumGrid.kt:@Composable internal fun AlbumGrid</ID>
+    <ID>FunctionNaming:LibraryArtistsPage.kt:@Composable internal fun LibraryArtistsPage</ID>
+    <ID>FunctionNaming:LibraryArtistsPage.kt:@Composable private fun ArtistRow</ID>
+    <ID>FunctionNaming:LibraryGenresPage.kt:@Composable internal fun LibraryGenresPage</ID>
+    <ID>FunctionNaming:LibraryGenresPage.kt:@Composable private fun GenreHeader</ID>
+    <ID>FunctionNaming:LibraryGenresPage.kt:@Composable private fun GenreList</ID>
+    <ID>FunctionNaming:LibraryHeader.kt:@Composable internal fun LibraryTabRow</ID>
+    <ID>FunctionNaming:LibraryHeader.kt:@Composable internal fun LibraryTitleRow</ID>
+    <ID>FunctionNaming:LibraryListToolbar.kt:@Composable internal fun LibraryListToolbar</ID>
+    <ID>FunctionNaming:LibraryPagedTracks.kt:@Composable internal fun AllTracksPage</ID>
+    <ID>FunctionNaming:LibraryPagedTracks.kt:@Composable internal fun PagedTrackList</ID>
+    <ID>FunctionNaming:LibraryPages.kt:@Composable internal fun LibraryPage</ID>
+    <ID>FunctionNaming:LibraryPages.kt:@Composable private fun SortablePage</ID>
     <ID>FunctionNaming:LibraryPlayShufflePill.kt:@Composable internal fun LibraryPlayShufflePill</ID>
     <ID>FunctionNaming:LibraryPlaylistList.kt:@Composable internal fun PlaylistList</ID>
     <ID>FunctionNaming:LibraryPodcastsPage.kt:@Composable internal fun LibraryPodcastsPage</ID>
     <ID>FunctionNaming:LibraryPodcastsPage.kt:@Composable private fun EpisodeRow</ID>
     <ID>FunctionNaming:LibraryScreen.kt:@Composable fun LibraryScreen</ID>
+    <ID>FunctionNaming:LibrarySortMenu.kt:@Composable internal fun LibrarySortMenu</ID>
     <ID>FunctionNaming:LibrarySurface.kt:@Composable fun LibrarySurface</ID>
     <ID>FunctionNaming:LibrarySyncSection.kt:@Composable private fun SyncStatus</ID>
-    <ID>FunctionNaming:LibraryTrackList.kt:@Composable internal fun AllTracksPage</ID>
-    <ID>FunctionNaming:LibraryTrackList.kt:@Composable internal fun PagedTrackList</ID>
     <ID>FunctionNaming:LibraryTrackList.kt:@Composable internal fun TrackList</ID>
     <ID>FunctionNaming:LibraryTrackList.kt:@Composable private fun Centered</ID>
     <ID>FunctionNaming:LikeButton.kt:@Composable fun LikeButton</ID>
@@ -312,14 +348,18 @@
     <ID>FunctionNaming:ListeningNowSection.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun ListeningNowCarousel</ID>
     <ID>FunctionNaming:ListeningNowSection.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable private fun CarouselItemScope.PresenceCard</ID>
     <ID>FunctionNaming:LiveChip.kt:@Composable internal fun LiveChip</ID>
+    <ID>FunctionNaming:LoadErrorState.kt:@Composable fun LoadErrorState</ID>
     <ID>FunctionNaming:LoadingImage.kt:@Composable internal fun LoadingImage</ID>
     <ID>FunctionNaming:LocalQueueContent.kt:@Composable internal fun LocalQueueContent</ID>
     <ID>FunctionNaming:LoudnessSection.kt:@Composable internal fun LoudnessSection</ID>
     <ID>FunctionNaming:LoudnessSection.kt:@Composable private fun PreampSlider</ID>
     <ID>FunctionNaming:LyricLineItem.kt:@Composable fun LyricLineItem</ID>
     <ID>FunctionNaming:LyricMatchRow.kt:@OptIn(ExperimentalFoundationApi::class) @Composable fun LyricMatchRow</ID>
+    <ID>FunctionNaming:LyricsControls.kt:@Composable internal fun LyricsOffsetControl</ID>
     <ID>FunctionNaming:LyricsControls.kt:@Composable internal fun LyricsTransport</ID>
     <ID>FunctionNaming:LyricsControls.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun SyncedStaticToggle</ID>
+    <ID>FunctionNaming:LyricsNotices.kt:@Composable internal fun CenteredNotice</ID>
+    <ID>FunctionNaming:LyricsNotices.kt:@Composable internal fun SyncTypeLabel</ID>
     <ID>FunctionNaming:LyricsOverlay.kt:@Composable internal fun LyricsOverlay</ID>
     <ID>FunctionNaming:LyricsOverlay.kt:@Composable private fun LyricLine</ID>
     <ID>FunctionNaming:MediaTypeToggle.kt:@Composable internal fun AnimatedMediaToggle</ID>
@@ -339,10 +379,16 @@
     <ID>FunctionNaming:NavLayoutRows.kt:@Composable internal fun DockLayoutRow</ID>
     <ID>FunctionNaming:NavLayoutRows.kt:@Composable internal fun LibrarySectionsRow</ID>
     <ID>FunctionNaming:NavidromeLoginScreen.kt:@Composable fun NavidromeLoginScreen</ID>
+    <ID>FunctionNaming:NavidromeQualityRow.kt:@Composable internal fun NavidromeQualityRow</ID>
     <ID>FunctionNaming:NetworkStateDialog.kt:@Composable fun NetworkStateDialog</ID>
     <ID>FunctionNaming:NewPlaylistSheet.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun NewPlaylistSheet</ID>
     <ID>FunctionNaming:NowPlayingMenuDrawer.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun NowPlayingMenuDrawer</ID>
     <ID>FunctionNaming:NowPlayingScreen.kt:@Composable internal fun NowPlayingScreen</ID>
+    <ID>FunctionNaming:NowPlayingWidgetContent.kt:@Composable internal fun NowPlayingWidgetContent</ID>
+    <ID>FunctionNaming:NowPlayingWidgetContent.kt:@Composable private fun Artwork</ID>
+    <ID>FunctionNaming:NowPlayingWidgetContent.kt:@Composable private fun Titles</ID>
+    <ID>FunctionNaming:NowPlayingWidgetContent.kt:@Composable private fun Transport</ID>
+    <ID>FunctionNaming:NowPlayingWidgetContent.kt:@Composable private fun TransportButton</ID>
     <ID>FunctionNaming:OffGridRows.kt:@Composable internal fun ConnectedRow</ID>
     <ID>FunctionNaming:OffGridRows.kt:@Composable internal fun ListenAlongRow</ID>
     <ID>FunctionNaming:OffGridRows.kt:@Composable internal fun OffGridExplainer</ID>
@@ -365,7 +411,6 @@
     <ID>FunctionNaming:PlayerControls.kt:@Composable private fun SkipButton</ID>
     <ID>FunctionNaming:PlayerCoverCarousel.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun PlayerCoverCarousel</ID>
     <ID>FunctionNaming:PlayerCoverCarousel.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable private fun CarouselItemScope.CoverItem</ID>
-    <ID>FunctionNaming:PlayerCoverCarousel.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable private fun CarouselPlaybackSync</ID>
     <ID>FunctionNaming:PlayerOverlayButtons.kt:@Composable internal fun BoxScope.PlayerOverlayButtons</ID>
     <ID>FunctionNaming:PlayerSeekBar.kt:@Composable fun PlayerSeekBar</ID>
     <ID>FunctionNaming:PlayerSeekBar.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable private fun PlayerSeekBarInternal</ID>
@@ -385,16 +430,23 @@
     <ID>FunctionNaming:PlayerTopBar.kt:@Composable internal fun PlayerTopBar</ID>
     <ID>FunctionNaming:PlaylistActionsSheet.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun PlaylistActionsSheet</ID>
     <ID>FunctionNaming:PlaylistCollaborationSheet.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun PlaylistCollaborationSheet</ID>
+    <ID>FunctionNaming:PlaylistDetailsDialog.kt:@Composable internal fun PlaylistDetailsDialog</ID>
     <ID>FunctionNaming:PlaylistFileButton.kt:@Composable internal fun PlaylistFileButton</ID>
+    <ID>FunctionNaming:PlaylistFilterField.kt:@Composable internal fun PlaylistFilterField</ID>
+    <ID>FunctionNaming:PlaylistHeader.kt:@Composable internal fun PlaylistHeader</ID>
     <ID>FunctionNaming:PlaylistImportBanner.kt:@Composable internal fun PlaylistImportBanner</ID>
     <ID>FunctionNaming:PlaylistImportHeroCard.kt:@Composable internal fun PlaylistImportHeroCard</ID>
     <ID>FunctionNaming:PlaylistImportScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun PlaylistImportScreen</ID>
+    <ID>FunctionNaming:PlaylistOverflow.kt:@Composable internal fun PlaylistOverflow</ID>
+    <ID>FunctionNaming:PlaylistOverflow.kt:@Composable private fun OverflowEntry</ID>
     <ID>FunctionNaming:PlaylistRow.kt:@OptIn(ExperimentalFoundationApi::class) @Composable fun PlaylistRow</ID>
     <ID>FunctionNaming:PlaylistScreen.kt:@Composable fun PlaylistScreen</ID>
     <ID>FunctionNaming:PlaylistShareHost.kt:@Composable internal fun PlaylistShareHost: PlaylistShareActions</ID>
     <ID>FunctionNaming:PlaylistShareSheet.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun PlaylistShareSheet</ID>
     <ID>FunctionNaming:PlaylistSheetOption.kt:@Composable internal fun SheetHeading</ID>
     <ID>FunctionNaming:PlaylistSheetOption.kt:@Composable internal fun SheetOption</ID>
+    <ID>FunctionNaming:PlaylistTrackActions.kt:@Composable internal fun PlaylistTrackActions</ID>
+    <ID>FunctionNaming:PlaylistTrackItem.kt:@Composable internal fun LazyItemScope.PlaylistTrackItem</ID>
     <ID>FunctionNaming:PlaylistVisibilitySheet.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun PlaylistVisibilitySheet</ID>
     <ID>FunctionNaming:PlaylistWorkingDialog.kt:@Composable internal fun PlaylistWorkingDialog</ID>
     <ID>FunctionNaming:PodcastSearchGates.kt:@Composable internal fun PodcastSearchConsent</ID>
@@ -405,6 +457,7 @@
     <ID>FunctionNaming:PodcastSearchScreen.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable private fun SearchBody</ID>
     <ID>FunctionNaming:PodcastSubscriptionsScreen.kt:@Composable private fun SubscriptionRow</ID>
     <ID>FunctionNaming:PodcastSubscriptionsScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun PodcastSubscriptionsScreen</ID>
+    <ID>FunctionNaming:PredictiveBackState.kt:@Composable fun PredictiveBack</ID>
     <ID>FunctionNaming:ProfileActions.kt:@Composable internal fun ProfileActions</ID>
     <ID>FunctionNaming:ProfileActions.kt:@Composable private fun RowScope.WideButton</ID>
     <ID>FunctionNaming:ProfileHero.kt:@Composable internal fun ProfileBackdrop</ID>
@@ -432,6 +485,7 @@
     <ID>FunctionNaming:QueueSectionTitle.kt:@Composable private fun CountBadge</ID>
     <ID>FunctionNaming:QueueSwipeToRemove.kt:@Composable internal fun QueueSwipeToRemove</ID>
     <ID>FunctionNaming:QueueSwipeToRemove.kt:@Composable private fun RemoveBackdrop</ID>
+    <ID>FunctionNaming:QueueTrackActions.kt:@Composable internal fun QueueTrackActions</ID>
     <ID>FunctionNaming:QueueTrackTile.kt:@Composable internal fun QueueTrackTile</ID>
     <ID>FunctionNaming:QueueUpNext.kt:@Composable internal fun QueueUpNext</ID>
     <ID>FunctionNaming:QuickPicksHeader.kt:@Composable internal fun QuickPicksHeader</ID>
@@ -445,12 +499,14 @@
     <ID>FunctionNaming:RankRow.kt:@Composable internal fun RankedList</ID>
     <ID>FunctionNaming:RateSection.kt:@Composable private fun RollingRate</ID>
     <ID>FunctionNaming:RateSection.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class) @Composable internal fun RateSection</ID>
+    <ID>FunctionNaming:RecentSearchesList.kt:@Composable internal fun RecentSearchesList</ID>
     <ID>FunctionNaming:RecognitionActivity.kt:@Composable fun RecognitionScreen</ID>
     <ID>FunctionNaming:RecognitionActivity.kt:@Composable private fun FailedView</ID>
     <ID>FunctionNaming:RecognitionActivity.kt:@Composable private fun IdentifyingView</ID>
     <ID>FunctionNaming:RecognitionActivity.kt:@Composable private fun ListeningView</ID>
     <ID>FunctionNaming:RecognitionActivity.kt:@Composable private fun MatchedView</ID>
     <ID>FunctionNaming:RecognitionActivity.kt:@Composable private fun NoMatchView</ID>
+    <ID>FunctionNaming:RecognitionModelRow.kt:@Composable internal fun RecognitionModelRow</ID>
     <ID>FunctionNaming:RecognitionStep.kt:@Composable internal fun RecognitionStep</ID>
     <ID>FunctionNaming:RelatedArtistCard.kt:@Composable internal fun RelatedArtistCard</ID>
     <ID>FunctionNaming:ReleaseNotificationsToggle.kt:@Composable internal fun ReleaseNotificationsToggle</ID>
@@ -492,6 +548,7 @@
     <ID>FunctionNaming:ReplayYearPicker.kt:@Composable internal fun ReplayYearPicker</ID>
     <ID>FunctionNaming:RestoreFromAgroDialog.kt:@Composable internal fun RestoreFromAgroDialog</ID>
     <ID>FunctionNaming:ResumeHandoffCard.kt:@Composable internal fun ResumeHandoffCard</ID>
+    <ID>FunctionNaming:SaveAsPlaylistButton.kt:@Composable internal fun SaveAsPlaylistButton</ID>
     <ID>FunctionNaming:ScrobblingDialogs.kt:@Composable internal fun LastFmApproveDialog</ID>
     <ID>FunctionNaming:ScrobblingDialogs.kt:@Composable internal fun LastFmKeyDialog</ID>
     <ID>FunctionNaming:ScrobblingDialogs.kt:@Composable internal fun ListenBrainzTokenDialog</ID>
@@ -499,22 +556,30 @@
     <ID>FunctionNaming:ScrobblingDialogs.kt:@Composable private fun ErrorLine</ID>
     <ID>FunctionNaming:ScrobblingDialogs.kt:@Composable private fun SecretField</ID>
     <ID>FunctionNaming:ScrobblingSection.kt:@Composable internal fun ScrobblingSection</ID>
+    <ID>FunctionNaming:ScrollToItemOnce.kt:@Composable internal fun ScrollToItemOnce</ID>
+    <ID>FunctionNaming:ScrollToTopOnReselect.kt:@Composable internal fun ScrollToTopOnReselect</ID>
+    <ID>FunctionNaming:ScrubBubble.kt:@Composable internal fun ScrubTooltip</ID>
+    <ID>FunctionNaming:SearchAlbumActions.kt:@Composable internal fun SearchAlbumActions</ID>
     <ID>FunctionNaming:SearchKindToggle.kt:@Composable fun SearchKindToggle</ID>
     <ID>FunctionNaming:SearchScreen.kt:@Composable fun SearchScreen</ID>
-    <ID>FunctionNaming:SeekBarLabels.kt:@Composable internal fun ScrubTooltip</ID>
+    <ID>FunctionNaming:SearchTrackActions.kt:@Composable internal fun SearchTrackActions</ID>
     <ID>FunctionNaming:SeekBarLabels.kt:@Composable internal fun TimeLabel</ID>
+    <ID>FunctionNaming:SelectedArtworkMark.kt:@Composable internal fun SelectedArtworkMark</ID>
     <ID>FunctionNaming:SessionSheet.kt:@Composable private fun LiveBadge</ID>
     <ID>FunctionNaming:SessionSheet.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun SessionSheet</ID>
     <ID>FunctionNaming:SettingsCategoryRow.kt:@Composable internal fun SettingsCategoryRow</ID>
     <ID>FunctionNaming:SettingsCategoryScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun SettingsCategoryScreen</ID>
+    <ID>FunctionNaming:SettingsChoiceRow.kt:@Composable internal fun &lt;T&gt; SettingsChoiceRow</ID>
     <ID>FunctionNaming:SettingsDialogs.kt:@Composable internal fun SettingsDialogs</ID>
     <ID>FunctionNaming:SettingsRows.kt:@Composable fun SettingsRow</ID>
     <ID>FunctionNaming:SettingsRows.kt:@Composable fun SettingsSection</ID>
     <ID>FunctionNaming:SettingsRows.kt:@Composable fun SettingsToggle</ID>
     <ID>FunctionNaming:SettingsRows.kt:@Composable private fun SettingsIconBadge</ID>
     <ID>FunctionNaming:SettingsScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun SettingsScreen</ID>
+    <ID>FunctionNaming:SettingsSearch.kt:@Composable internal fun SettingsSearchField</ID>
     <ID>FunctionNaming:ShareChooserSheet.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun ShareChooserSheet</ID>
     <ID>FunctionNaming:ShareDomainDialog.kt:@Composable internal fun ShareDomainDialog</ID>
+    <ID>FunctionNaming:SharedArtwork.kt:@OptIn(ExperimentalSharedTransitionApi::class) @Composable fun SharedArtworkLayout</ID>
     <ID>FunctionNaming:SharedPlaylistBanner.kt:@Composable internal fun SharedPlaylistBanner</ID>
     <ID>FunctionNaming:SharedWithMeList.kt:@Composable private fun SharedMessage</ID>
     <ID>FunctionNaming:SharedWithMeList.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun PlaylistScopeToggle</ID>
@@ -535,7 +600,9 @@
     <ID>FunctionNaming:Skeleton.kt:@Composable internal fun SkeletonRow</ID>
     <ID>FunctionNaming:SkipCoverSwap.kt:@Composable internal fun BoxScope.SkipCoverSwap</ID>
     <ID>FunctionNaming:SkipCoverSwap.kt:@Composable private fun CoverFace</ID>
+    <ID>FunctionNaming:SleepTimerChip.kt:@Composable internal fun SleepTimerChip</ID>
     <ID>FunctionNaming:SleepTimerSheet.kt:@Composable internal fun SleepTimerSheet</ID>
+    <ID>FunctionNaming:SleepTimerSheet.kt:@Composable private fun CustomDuration</ID>
     <ID>FunctionNaming:SleepTimerSheet.kt:@Composable private fun Remaining</ID>
     <ID>FunctionNaming:SleepTimerSheet.kt:@Composable private fun TimerOption</ID>
     <ID>FunctionNaming:SmartMixCard.kt:@Composable fun SmartMixCard</ID>
@@ -582,19 +649,27 @@
     <ID>FunctionNaming:SyncOfferCard.kt:@Composable internal fun SyncOfferCard</ID>
     <ID>FunctionNaming:SyncOfferSheet.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun SyncOfferSheet</ID>
     <ID>FunctionNaming:SyncedLyricsView.kt:@Composable fun SyncedLyricsView</ID>
-    <ID>FunctionNaming:SyncedLyricsView.kt:@Composable private fun CenteredNotice</ID>
-    <ID>FunctionNaming:SyncedLyricsView.kt:@Composable private fun SyncTypeLabel</ID>
+    <ID>FunctionNaming:TabReselection.kt:@Composable internal fun InterceptReselect</ID>
+    <ID>FunctionNaming:TabReselection.kt:@Composable internal fun ProvideTabReselect</ID>
+    <ID>FunctionNaming:TabReselection.kt:@Composable internal fun ReselectEffect</ID>
+    <ID>FunctionNaming:TabSelection.kt:@Composable internal fun TrackTabOwner</ID>
     <ID>FunctionNaming:Theme.kt:@Composable fun WanderTheme</ID>
     <ID>FunctionNaming:TrackActionsSheet.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun TrackActionsSheet</ID>
     <ID>FunctionNaming:TrackCarouselCard.kt:@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun CarouselItemScope.TrackCarouselCard</ID>
+    <ID>FunctionNaming:TrackDownloadBadge.kt:@Composable internal fun TrackDownloadBadge</ID>
     <ID>FunctionNaming:TrackInfoPage.kt:@Composable internal fun TrackInfoPage</ID>
     <ID>FunctionNaming:TrackInfoPage.kt:@Composable private fun InfoRow</ID>
     <ID>FunctionNaming:TrackPagerShelf.kt:@Composable internal fun TrackPagerShelf</ID>
     <ID>FunctionNaming:TrackRow.kt:@OptIn(ExperimentalFoundationApi::class) @Composable fun TrackRow</ID>
+    <ID>FunctionNaming:TrackSelectionBar.kt:@Composable fun TrackSelectionBar</ID>
+    <ID>FunctionNaming:TrackSelectionBar.kt:@Composable private fun SelectionOverflow</ID>
     <ID>FunctionNaming:TrackSheetHeader.kt:@Composable internal fun TrackSheetHeader</ID>
     <ID>FunctionNaming:TrackSheetPageIndicator.kt:@Composable internal fun MenuSheetPageIndicator</ID>
+    <ID>FunctionNaming:TrackSwipeBox.kt:@Composable fun TrackSwipeBox</ID>
+    <ID>FunctionNaming:TrackSwipeBox.kt:@Composable private fun SwipeHint</ID>
     <ID>FunctionNaming:TrackTextTransition.kt:@Composable internal fun TrackTextTransition</ID>
     <ID>FunctionNaming:TransportBadge.kt:@Composable internal fun TransportBadge</ID>
+    <ID>FunctionNaming:UnansweredSourcesNote.kt:@Composable internal fun UnansweredSourcesNote</ID>
     <ID>FunctionNaming:UnencryptedPresenceNotice.kt:@Composable internal fun UnencryptedPresenceNotice</ID>
     <ID>FunctionNaming:UpdateAvailableDialog.kt:@Composable internal fun UpdateAvailableDialog</ID>
     <ID>FunctionNaming:UserSearchSheet.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun UserSearchSheet</ID>
@@ -603,11 +678,15 @@
     <ID>FunctionNaming:VideoClipSurface.kt:@Composable private fun VideoClip</ID>
     <ID>FunctionNaming:WandaSheet.kt:@Composable fun WandaSheet</ID>
     <ID>FunctionNaming:WanderApp.kt:@Composable fun WanderApp</ID>
-    <ID>FunctionNaming:WanderAppDock.kt:@Composable internal fun WanderAppLaunchGate</ID>
+    <ID>FunctionNaming:WanderAppLaunchGate.kt:@Composable internal fun WanderAppLaunchGate</ID>
     <ID>FunctionNaming:WanderAppOverlays.kt:@Composable internal fun BoxScope.WanderAppOverlays</ID>
+    <ID>FunctionNaming:WanderAppRail.kt:@Composable internal fun BoxScope.ShellNavRail</ID>
+    <ID>FunctionNaming:WanderAppRouteEffects.kt:@Composable internal fun ShellRouteEffects</ID>
     <ID>FunctionNaming:WanderDock.kt:@Composable fun WanderDock</ID>
     <ID>FunctionNaming:WanderDockRow.kt:@Composable fun WanderDockRow</ID>
     <ID>FunctionNaming:WanderDockRow.kt:@Composable private fun DockIconButton</ID>
+    <ID>FunctionNaming:WanderNavRail.kt:@Composable fun WanderNavRail</ID>
+    <ID>FunctionNaming:WanderNavRail.kt:@Composable private fun RailItem</ID>
     <ID>FunctionNaming:WebViewLifecycle.kt:@Composable internal fun WebViewLifecycle</ID>
     <ID>FunctionNaming:WebViewPopup.kt:@Composable internal fun WebViewPopupDialog</ID>
     <ID>FunctionNaming:WelcomeScreen.kt:@Composable fun WelcomeScreen</ID>
@@ -622,6 +701,7 @@
     <ID>LongMethod:AgroPairingForm.kt:@Composable internal fun AgroPairingForm</ID>
     <ID>LongMethod:AlbumHero.kt:@Composable internal fun AlbumHero</ID>
     <ID>LongMethod:AlbumScreen.kt:@Composable fun AlbumScreen</ID>
+    <ID>LongMethod:AppEvents.kt:@Composable internal fun AppEvents</ID>
     <ID>LongMethod:AppearanceTab.kt:internal fun LazyListScope.appearanceTab</ID>
     <ID>LongMethod:ArtistHero.kt:@Composable internal fun ArtistHero</ID>
     <ID>LongMethod:ArtistPageSections.kt:internal fun LazyListScope.artistPageSections</ID>
@@ -629,6 +709,7 @@
     <ID>LongMethod:BackupPassphraseDialog.kt:@Composable internal fun BackupPassphraseDialog</ID>
     <ID>LongMethod:BackupSection.kt:@Composable internal fun BackupSection</ID>
     <ID>LongMethod:BlendBanner.kt:@Composable internal fun BlendBanner</ID>
+    <ID>LongMethod:CarouselPlaybackSync.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun CarouselPlaybackSync</ID>
     <ID>LongMethod:CircleTrendsetterCard.kt:@OptIn(ExperimentalLayoutApi::class) @Composable internal fun TrendsetterCard</ID>
     <ID>LongMethod:CloudBackupSection.kt:@Composable private fun VaultRows</ID>
     <ID>LongMethod:CompactHeroTopBar.kt:@Composable fun CompactHeroTopBar</ID>
@@ -637,18 +718,20 @@
     <ID>LongMethod:DatabaseTooOldScreen.kt:@Composable internal fun DatabaseTooOldScreen</ID>
     <ID>LongMethod:DiscoveredPlaylistsGrid.kt:@Composable private fun ExpressiveConnectedBanner</ID>
     <ID>LongMethod:DockSearchField.kt:@Composable internal fun DockSearchField</ID>
+    <ID>LongMethod:DownloadSettingsCard.kt:@Composable internal fun DownloadSettingsCard</ID>
     <ID>LongMethod:DropActionsSheet.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun DropActionsSheet</ID>
     <ID>LongMethod:DropToFriendSheet.kt:@Composable internal fun DropToFriendSheet</ID>
+    <ID>LongMethod:FastScroller.kt:@Composable fun FastScroller</ID>
     <ID>LongMethod:FingerprintsScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun FingerprintsScreen</ID>
     <ID>LongMethod:FullScreenLyrics.kt:@Composable private fun LyricsScaffold</ID>
     <ID>LongMethod:GesturePreview.kt:@Composable internal fun GesturePreview</ID>
     <ID>LongMethod:HomeEditBar.kt:@Composable internal fun HomeEditBar</ID>
     <ID>LongMethod:HomeScreen.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun HomeScreen</ID>
     <ID>LongMethod:HomeShelves.kt:internal fun LazyListScope.homeSection</ID>
-    <ID>LongMethod:HomeViewModel.kt:HomeViewModel$fun refresh</ID>
     <ID>LongMethod:ImmersivePlayerLayout.kt:@Composable internal fun ImmersivePlayerLayout</ID>
     <ID>LongMethod:ImportTrackSelector.kt:@Composable fun ImportTrackSelector</ID>
-    <ID>LongMethod:InboxConversation.kt:@Composable private fun ConversationDropMessage</ID>
+    <ID>LongMethod:InboxDropBubble.kt:@Composable internal fun ConversationDropMessage</ID>
+    <ID>LongMethod:InboxDropBubble.kt:@Composable private fun DropTrackCard</ID>
     <ID>LongMethod:InboxScreen.kt:@Composable internal fun InboxScreen</ID>
     <ID>LongMethod:InnerTubePlayerResolver.kt:InnerTubePlayerResolver$private suspend fun playerAs: Result&lt;PlayerResponse&gt;</ID>
     <ID>LongMethod:JamCard.kt:@Composable internal fun JamCard</ID>
@@ -656,6 +739,7 @@
     <ID>LongMethod:JamQueueContent.kt:@Composable private fun JamQueueItem</ID>
     <ID>LongMethod:KineticEqualizer.kt:@Composable fun KineticEqualizer</ID>
     <ID>LongMethod:LibraryAlbumGrid.kt:@Composable internal fun AlbumGrid</ID>
+    <ID>LongMethod:LibraryPagedTracks.kt:@Composable internal fun PagedTrackList</ID>
     <ID>LongMethod:LibraryPlaylistList.kt:@Composable internal fun PlaylistList</ID>
     <ID>LongMethod:LibraryPodcastsPage.kt:@Composable internal fun LibraryPodcastsPage</ID>
     <ID>LongMethod:LibraryScreen.kt:@Composable fun LibraryScreen</ID>
@@ -677,12 +761,14 @@
     <ID>LongMethod:NowPlayingScreen.kt:@Composable internal fun NowPlayingScreen</ID>
     <ID>LongMethod:OffGridScreen.kt:@Composable internal fun OffGridScreen</ID>
     <ID>LongMethod:P2PServer.kt:P2PServer$private suspend fun serve</ID>
+    <ID>LongMethod:PcmDecoder.kt:PcmDecoder$private fun decodeTrack: FloatArray?</ID>
+    <ID>LongMethod:PlaybackSnapshotBuilder.kt:PlaybackSnapshotBuilder$fun buildSnapshot: PlaybackState</ID>
     <ID>LongMethod:PlaybackStorageTab.kt:internal fun LazyListScope.playbackStorageTab</ID>
     <ID>LongMethod:PlayerActionBar.kt:@Composable internal fun PlayerActionBar</ID>
     <ID>LongMethod:PlayerActionBar.kt:@Composable private fun RowScope.Segment</ID>
     <ID>LongMethod:PlayerControls.kt:@Composable fun PlayerControls</ID>
-    <ID>LongMethod:PlayerCoverCarousel.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable private fun CarouselPlaybackSync</ID>
     <ID>LongMethod:PlayerSeekBar.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable private fun PlayerSeekBarInternal</ID>
+    <ID>LongMethod:PlayerSheet.kt:@Composable fun PlayerSheet</ID>
     <ID>LongMethod:PlayerSheetContent.kt:@Composable fun PlayerSheetContent</ID>
     <ID>LongMethod:PlaylistActionsSheet.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun PlaylistActionsSheet</ID>
     <ID>LongMethod:PlaylistImportHeroCard.kt:@Composable internal fun PlaylistImportHeroCard</ID>
@@ -707,6 +793,7 @@
     <ID>LongMethod:ReplayStoryScaffold.kt:@Composable internal fun ReplayStoryScaffold</ID>
     <ID>LongMethod:ResumeHandoffCard.kt:@Composable internal fun ResumeHandoffCard</ID>
     <ID>LongMethod:ScrobblingSection.kt:@Composable internal fun ScrobblingSection</ID>
+    <ID>LongMethod:SearchLyricsSection.kt:internal fun LazyListScope.lyricMatchesSection</ID>
     <ID>LongMethod:SearchScreen.kt:@Composable fun SearchScreen</ID>
     <ID>LongMethod:SessionSheet.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun SessionSheet</ID>
     <ID>LongMethod:SettingsCategoryRow.kt:@Composable internal fun SettingsCategoryRow</ID>
@@ -735,9 +822,12 @@
     <ID>LoopWithTooManyJumpStatements:CatalogCollectionRepository.kt:CatalogCollectionRepository$while</ID>
     <ID>LoopWithTooManyJumpStatements:CatalogPublisher.kt:CatalogPublisher$while</ID>
     <ID>LoopWithTooManyJumpStatements:DownloadWorker.kt:DownloadWorker$for</ID>
+    <ID>LoopWithTooManyJumpStatements:Id3Lyrics.kt:Id3Lyrics$while</ID>
+    <ID>LoopWithTooManyJumpStatements:InnerTubeShelfCursor.kt:InnerTubeShelfCursor$while</ID>
     <ID>LoopWithTooManyJumpStatements:InstantPress.kt:while</ID>
     <ID>LoopWithTooManyJumpStatements:JamPlaybackController.kt:JamPlaybackController$while</ID>
     <ID>LoopWithTooManyJumpStatements:LibrarySyncRepository.kt:LibrarySyncRepository$for</ID>
+    <ID>LoopWithTooManyJumpStatements:PodcastAutoDownloads.kt:PodcastAutoDownloads$for</ID>
     <ID>LoopWithTooManyJumpStatements:QueueOpenGesture.kt:while</ID>
     <ID>LoopWithTooManyJumpStatements:RecordingFingerprinter.kt:RecordingFingerprinter$for</ID>
     <ID>LoopWithTooManyJumpStatements:RecordingIdentityRepository.kt:RecordingIdentityRepository$for</ID>
@@ -745,6 +835,7 @@
     <ID>LoopWithTooManyJumpStatements:ShelfGestures.kt:while</ID>
     <ID>LoopWithTooManyJumpStatements:SyncOfferArtwork.kt:SyncOfferArtwork$for</ID>
     <ID>LoopWithTooManyJumpStatements:VideoClipPlayer.kt:VideoClipPlayer$while</ID>
+    <ID>LoopWithTooManyJumpStatements:VorbisLyrics.kt:VorbisLyrics$while</ID>
     <ID>LoopWithTooManyJumpStatements:YouTubePlaylistParser.kt:YouTubePlaylistParser$for</ID>
     <ID>MagicNumber:AboutTab.kt:3</ID>
     <ID>MagicNumber:AboutTab.kt:4</ID>
@@ -829,11 +920,13 @@
     <ID>MagicNumber:DeezerAccountTier.kt:DeezerAccountTier.FREE$128</ID>
     <ID>MagicNumber:DeezerAccountTier.kt:DeezerAccountTier.HIFI$1411</ID>
     <ID>MagicNumber:DeezerAccountTier.kt:DeezerAccountTier.PREMIUM$320</ID>
+    <ID>MagicNumber:DeezerAudioFormat.kt:DeezerAudioFormat.FLAC$1411</ID>
+    <ID>MagicNumber:DeezerAudioFormat.kt:DeezerAudioFormat.MP3_128$128</ID>
+    <ID>MagicNumber:DeezerAudioFormat.kt:DeezerAudioFormat.MP3_320$320</ID>
     <ID>MagicNumber:DeezerStreamCipher.kt:DeezerStreamCipher.Companion$16</ID>
     <ID>MagicNumber:DeezerStreamCipher.kt:DeezerStreamCipher.Companion$3L</ID>
-    <ID>MagicNumber:DeezerStreamResolver.kt:DeezerStreamResolver$128</ID>
-    <ID>MagicNumber:DeezerStreamResolver.kt:DeezerStreamResolver$1411</ID>
-    <ID>MagicNumber:DeezerStreamResolver.kt:DeezerStreamResolver$320</ID>
+    <ID>MagicNumber:DownloadSettingsCard.kt:1024</ID>
+    <ID>MagicNumber:EmbeddedLyrics.kt:EmbeddedLyrics$4</ID>
     <ID>MagicNumber:EpisodeChapters.kt:EpisodeChapters$1000</ID>
     <ID>MagicNumber:ExtraColors.kt:0.14f</ID>
     <ID>MagicNumber:ExtraColors.kt:0.1f</ID>
@@ -855,18 +948,17 @@
     <ID>MagicNumber:HomeSectionOps.kt:5</ID>
     <ID>MagicNumber:HomeViewModel.kt:HomeViewModel$4000</ID>
     <ID>MagicNumber:HomeViewModel.kt:HomeViewModel$7000</ID>
-    <ID>MagicNumber:HttpClientFactory.kt:HttpClientFactory$16</ID>
-    <ID>MagicNumber:HttpClientFactory.kt:HttpClientFactory$31</ID>
-    <ID>MagicNumber:HttpClientFactory.kt:HttpClientFactory$4</ID>
+    <ID>MagicNumber:Id3Lyrics.kt:Id3Lyrics$0xFF</ID>
+    <ID>MagicNumber:Id3Lyrics.kt:Id3Lyrics$3</ID>
+    <ID>MagicNumber:Id3Lyrics.kt:Id3Lyrics$4</ID>
+    <ID>MagicNumber:Id3Lyrics.kt:Id3Lyrics$5</ID>
+    <ID>MagicNumber:Id3Lyrics.kt:Id3Lyrics$6</ID>
+    <ID>MagicNumber:Id3Lyrics.kt:Id3Lyrics$7</ID>
     <ID>MagicNumber:IdentityKeyManager.kt:IdentityKeyManager$12</ID>
     <ID>MagicNumber:IdentityKeyManager.kt:IdentityKeyManager$16</ID>
     <ID>MagicNumber:IdentityKeyManager.kt:IdentityKeyManager$32</ID>
     <ID>MagicNumber:IdentityKeyManager.kt:IdentityKeyManager$44</ID>
     <ID>MagicNumber:ImmersivePlayerLayout.kt:0.45f</ID>
-    <ID>MagicNumber:InboxScreen.kt:0.3f</ID>
-    <ID>MagicNumber:InboxScreen.kt:120f</ID>
-    <ID>MagicNumber:InboxScreen.kt:3</ID>
-    <ID>MagicNumber:InboxScreen.kt:6</ID>
     <ID>MagicNumber:InboxThreadList.kt:99</ID>
     <ID>MagicNumber:InnerTubeParsing.kt:1000L</ID>
     <ID>MagicNumber:InnerTubeParsing.kt:60</ID>
@@ -887,6 +979,11 @@
     <ID>MagicNumber:ListeningReport.kt:365</ID>
     <ID>MagicNumber:ListeningReport.kt:7</ID>
     <ID>MagicNumber:ListeningReport.kt:Trend.Companion$100.0</ID>
+    <ID>MagicNumber:LocalNetworkHost.kt:LocalNetworkHost$100</ID>
+    <ID>MagicNumber:LocalNetworkHost.kt:LocalNetworkHost$127</ID>
+    <ID>MagicNumber:LocalNetworkHost.kt:LocalNetworkHost$255</ID>
+    <ID>MagicNumber:LocalNetworkHost.kt:LocalNetworkHost$4</ID>
+    <ID>MagicNumber:LocalNetworkHost.kt:LocalNetworkHost$64</ID>
     <ID>MagicNumber:LoginWebViewSupport.kt:204</ID>
     <ID>MagicNumber:LrcParser.kt:LrcParser$1000L</ID>
     <ID>MagicNumber:LrcParser.kt:LrcParser$60L</ID>
@@ -900,8 +997,18 @@
     <ID>MagicNumber:MorphingArtwork.kt:0.8f</ID>
     <ID>MagicNumber:MorphingArtwork.kt:12f</ID>
     <ID>MagicNumber:MorphingArtwork.kt:14f</ID>
+    <ID>MagicNumber:Mp4Lyrics.kt:Mp4Lyrics$0xA9</ID>
+    <ID>MagicNumber:Mp4Lyrics.kt:Mp4Lyrics$0xFFFFFF</ID>
+    <ID>MagicNumber:Mp4Lyrics.kt:Mp4Lyrics$16</ID>
+    <ID>MagicNumber:Mp4Lyrics.kt:Mp4Lyrics$4</ID>
+    <ID>MagicNumber:Mp4Lyrics.kt:Mp4Lyrics$5</ID>
+    <ID>MagicNumber:Mp4Lyrics.kt:Mp4Lyrics$8</ID>
     <ID>MagicNumber:NavidromeSource.kt:NavidromeSource$1000L</ID>
+    <ID>MagicNumber:NavidromeStreamQuality.kt:NavidromeStreamQuality.KBPS_128$128</ID>
+    <ID>MagicNumber:NavidromeStreamQuality.kt:NavidromeStreamQuality.KBPS_192$192</ID>
+    <ID>MagicNumber:NavidromeStreamQuality.kt:NavidromeStreamQuality.KBPS_320$320</ID>
     <ID>MagicNumber:NetworkPromptCoordinator.kt:NetworkPromptCoordinator$5_000</ID>
+    <ID>MagicNumber:NowPlayingWidgetContent.kt:4</ID>
     <ID>MagicNumber:OffGridBeacon.kt:OffGridBeacon.Companion$0xFF</ID>
     <ID>MagicNumber:OffGridBeacon.kt:OffGridBeacon.Companion$16</ID>
     <ID>MagicNumber:OffGridBeacon.kt:OffGridBeacon.Companion$24</ID>
@@ -914,6 +1021,15 @@
     <ID>MagicNumber:OpenDataSourceStream.kt:OpenDataSourceStream$0xFF</ID>
     <ID>MagicNumber:P2PServer.kt:P2PServer$5000</ID>
     <ID>MagicNumber:PcmDecoder.kt:PcmDecoder$1_000_000L</ID>
+    <ID>MagicNumber:PcmDownmix.kt:PcmDownmix$0xFF</ID>
+    <ID>MagicNumber:PcmDownmix.kt:PcmDownmix$128</ID>
+    <ID>MagicNumber:PcmDownmix.kt:PcmDownmix$128f</ID>
+    <ID>MagicNumber:PcmDownmix.kt:PcmDownmix$16</ID>
+    <ID>MagicNumber:PcmDownmix.kt:PcmDownmix$2_147_483_648f</ID>
+    <ID>MagicNumber:PcmDownmix.kt:PcmDownmix$3</ID>
+    <ID>MagicNumber:PcmDownmix.kt:PcmDownmix$4</ID>
+    <ID>MagicNumber:PcmDownmix.kt:PcmDownmix$8</ID>
+    <ID>MagicNumber:PcmDownmix.kt:PcmDownmix$8_388_608f</ID>
     <ID>MagicNumber:PeekArtwork.kt:0.5f</ID>
     <ID>MagicNumber:PeekArtwork.kt:0.82f</ID>
     <ID>MagicNumber:PeekArtwork.kt:0.98f</ID>
@@ -939,9 +1055,7 @@
     <ID>MagicNumber:PlatformIcons.kt:0.7f</ID>
     <ID>MagicNumber:PlatformPickerStep.kt:1.15f</ID>
     <ID>MagicNumber:PlaybackService.kt:PlaybackService.PlayCountRecorder$2_000L</ID>
-    <ID>MagicNumber:PlaybackStorageTab.kt:20</ID>
     <ID>MagicNumber:PlaybackStorageTab.kt:3</ID>
-    <ID>MagicNumber:PlaybackStorageTab.kt:30</ID>
     <ID>MagicNumber:PlaybackStorageTab.kt:4</ID>
     <ID>MagicNumber:PlaybackStorageTab.kt:5</ID>
     <ID>MagicNumber:PlaybackStorageTab.kt:6</ID>
@@ -972,16 +1086,17 @@
     <ID>MagicNumber:QueueRadioButton.kt:70</ID>
     <ID>MagicNumber:QuickPicksHeader.kt:0.5f</ID>
     <ID>MagicNumber:RateSection.kt:50</ID>
+    <ID>MagicNumber:RecognitionModelRow.kt:100</ID>
     <ID>MagicNumber:RecognitionStep.kt:100</ID>
     <ID>MagicNumber:RecordingFingerprinter.kt:RecordingFingerprinter$0.5</ID>
     <ID>MagicNumber:RecordingFingerprinter.kt:RecordingFingerprinter$1e-10</ID>
     <ID>MagicNumber:RelayStreamFraming.kt:RelayStreamFraming$0xFF</ID>
     <ID>MagicNumber:RelayStreamFraming.kt:RelayStreamFraming$8</ID>
+    <ID>MagicNumber:RequestThrottle.kt:RequestThrottle$1_000_000L</ID>
     <ID>MagicNumber:RssFeedParser.kt:RssFeedParser$1000</ID>
     <ID>MagicNumber:RssFeedParser.kt:RssFeedParser$3</ID>
     <ID>MagicNumber:RssFeedParser.kt:RssFeedParser$60</ID>
     <ID>MagicNumber:ScrobblePlay.kt:1000</ID>
-    <ID>MagicNumber:SearchScreen.kt:5</ID>
     <ID>MagicNumber:SessionSheet.kt:60</ID>
     <ID>MagicNumber:SettingsCategory.kt:SettingsCategory.ABOUT$0xFF64748B</ID>
     <ID>MagicNumber:SettingsCategory.kt:SettingsCategory.APPEARANCE$0xFF8B5CF6</ID>
@@ -993,8 +1108,8 @@
     <ID>MagicNumber:SettingsLibrarySyncCoordinator.kt:SettingsLibrarySyncCoordinator$5_000</ID>
     <ID>MagicNumber:ShelfStylePicker.kt:3</ID>
     <ID>MagicNumber:SkipGraceManager.kt:SkipGraceManager$1000L</ID>
+    <ID>MagicNumber:SleepTimer.kt:60_000L</ID>
     <ID>MagicNumber:SleepTimer.kt:SleepTimer$60_000L</ID>
-    <ID>MagicNumber:SleepTimerSheet.kt:1_000L</ID>
     <ID>MagicNumber:SmartMixRepository.kt:SmartMixRepository$0xFF10B981</ID>
     <ID>MagicNumber:SmartMixRepository.kt:SmartMixRepository$0xFF3B82F6</ID>
     <ID>MagicNumber:SmartMixRepository.kt:SmartMixRepository$0xFF6366F1</ID>
@@ -1017,19 +1132,28 @@
     <ID>MagicNumber:SubsonicApiClient.kt:SubsonicApiClient$20</ID>
     <ID>MagicNumber:SubsonicApiClient.kt:SubsonicApiClient$50</ID>
     <ID>MagicNumber:SyncOfferCoordinator.kt:SyncOfferCoordinator$5_000</ID>
-    <ID>MagicNumber:SyncOfferSheet.kt:1_000.0</ID>
-    <ID>MagicNumber:SyncOfferSheet.kt:1_000_000</ID>
-    <ID>MagicNumber:SyncOfferSheet.kt:1_000_000.0</ID>
-    <ID>MagicNumber:SyncOfferSheet.kt:1_000_000_000</ID>
-    <ID>MagicNumber:SyncOfferSheet.kt:1_000_000_000.0</ID>
+    <ID>MagicNumber:TagBytes.kt:0x7F</ID>
+    <ID>MagicNumber:TagBytes.kt:0xFF</ID>
+    <ID>MagicNumber:TagBytes.kt:0xFFFF_FFFFL</ID>
+    <ID>MagicNumber:TagBytes.kt:14</ID>
+    <ID>MagicNumber:TagBytes.kt:16</ID>
+    <ID>MagicNumber:TagBytes.kt:21</ID>
+    <ID>MagicNumber:TagBytes.kt:24</ID>
+    <ID>MagicNumber:TagBytes.kt:3</ID>
+    <ID>MagicNumber:TagBytes.kt:32</ID>
+    <ID>MagicNumber:TagBytes.kt:4</ID>
+    <ID>MagicNumber:TagBytes.kt:7</ID>
+    <ID>MagicNumber:TagBytes.kt:8</ID>
     <ID>MagicNumber:TextPlaylistParser.kt:TextPlaylistParser$1000L</ID>
     <ID>MagicNumber:TranscriptParser.kt:TranscriptParser$1000</ID>
     <ID>MagicNumber:TranscriptParser.kt:TranscriptParser$3</ID>
     <ID>MagicNumber:TranscriptParser.kt:TranscriptParser$60</ID>
+    <ID>MagicNumber:VorbisLyrics.kt:VorbisLyrics$255</ID>
+    <ID>MagicNumber:VorbisLyrics.kt:VorbisLyrics$4</ID>
+    <ID>MagicNumber:VorbisLyrics.kt:VorbisLyrics$8</ID>
     <ID>MagicNumber:WandaSheet.kt:0.5f</ID>
     <ID>MagicNumber:WanderApplication.kt:WanderApplication$0.25</ID>
     <ID>MagicNumber:WanderApplication.kt:WanderApplication$50</ID>
-    <ID>MagicNumber:WorkEta.kt:WorkEta$60L</ID>
     <ID>MagicNumber:WorkProgressNotification.kt:WorkProgressNotification$10</ID>
     <ID>MagicNumber:WorkProgressNotification.kt:WorkProgressNotification.Kind.DOWNLOAD$4714</ID>
     <ID>MagicNumber:WorkProgressNotification.kt:WorkProgressNotification.Kind.FINGERPRINT$4713</ID>
@@ -1039,11 +1163,13 @@
     <ID>MatchingDeclarationName:AddToPlaylistHost.kt:AddToPlaylistController</ID>
     <ID>MatchingDeclarationName:AgroPairingDialog.kt:AgroPairingMode</ID>
     <ID>MatchingDeclarationName:CollapsingHeaderState.kt:CollapsingTitleState</ID>
+    <ID>MatchingDeclarationName:DeezerQualityRow.kt:DeezerQualityChoice</ID>
     <ID>MatchingDeclarationName:ElasticSwipeBox.kt:SwipeSide</ID>
     <ID>MatchingDeclarationName:EpisodePanels.kt:EpisodePanel</ID>
     <ID>MatchingDeclarationName:HeroActionButton.kt:HeroActionTint</ID>
     <ID>MatchingDeclarationName:HomeShelves.kt:HomeShelfStates</ID>
     <ID>MatchingDeclarationName:InnerTubeAlbumParsing.kt:AlbumHeader</ID>
+    <ID>MatchingDeclarationName:LibraryPages.kt:LibraryPageActions</ID>
     <ID>MatchingDeclarationName:MediaTypeToggle.kt:MediaToggleState</ID>
     <ID>MatchingDeclarationName:OrderedChoiceSheet.kt:Choice&lt;T&gt;</ID>
     <ID>MatchingDeclarationName:PlayerAttachedBar.kt:AttachedBar</ID>
@@ -1052,7 +1178,10 @@
     <ID>MatchingDeclarationName:PlaylistShareHost.kt:PlaylistShareActions</ID>
     <ID>MatchingDeclarationName:PlaylistShareSheet.kt:PlaylistShareChoices</ID>
     <ID>MatchingDeclarationName:SettingsDialogs.kt:SettingsDialogState</ID>
+    <ID>MatchingDeclarationName:SettingsSearchIndex.kt:SettingsSearchEntry</ID>
     <ID>MatchingDeclarationName:SharedWithMeList.kt:PlaylistScope</ID>
+    <ID>MatchingDeclarationName:TrackSelectionActions.kt:SelectionAction</ID>
+    <ID>MatchingDeclarationName:UserFacingError.kt:ErrorKind</ID>
     <ID>MatchingDeclarationName:WifiP2pCalls.kt:LinkOutcome</ID>
     <ID>MaxLineLength:AboutTab.kt:state.isCheckingForUpdate -&gt; stringResource(R.string.settings_update_checking, state.appVersion)</ID>
     <ID>MaxLineLength:AboutTab.kt:stringResource(R.string.settings_update_available, state.appVersion, state.updateCheck.version)</ID>
@@ -1067,8 +1196,6 @@
     <ID>MaxLineLength:AgroLogin.kt:AgroLogin$errorMsg ?: "Two-factor authentication is enabled. Pair with a Device Token or QR Code from Devices &amp; Sign-ins in the Agro dashboard."</ID>
     <ID>MaxLineLength:AgroLogin.kt:AgroLogin$json ?: throw AgroAuthError.Server(serverMessage = null, diagnostic = "The server did not answer with JSON")</ID>
     <ID>MaxLineLength:AgroPairingCoordinator.kt:AgroPairingCoordinator$if</ID>
-    <ID>MaxLineLength:AgroPairingDialog.kt:TextButton(onClick = onDismiss, enabled = !busy, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_cancel)) }</ID>
-    <ID>MaxLineLength:AgroPairingDialog.kt:TextButton(onClick = onRecheck, enabled = !busy, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.settings_check_again)) }</ID>
     <ID>MaxLineLength:AgroPairingDialog.kt:is AgroPairingState.Paired -&gt; TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.action_done)) }</ID>
     <ID>MaxLineLength:AgroPlaylistApi.kt:AgroPlaylistApi.Companion$IOException("This Agro server is too old for friends-only playlists. Update it, or choose another option.")</ID>
     <ID>MaxLineLength:AgroPlaylistApi.kt:AgroPlaylistApi.Companion$repeat(count) { append(" a").append(it).append(": addTrackToPlaylist(playlistId: \$id, track: \$t").append(it).append(") { id }") }</ID>
@@ -1078,7 +1205,6 @@
     <ID>MaxLineLength:AgroPlaylistTest.kt:AgroPlaylistTest$assertTrue(AgroPlaylistApi.friendlyVisibilityError(old, PlaylistVisibility.FRIENDS).message!!.contains("too old"))</ID>
     <ID>MaxLineLength:AgroPlaylistTest.kt:AgroPlaylistTest$assertTrue(AgroPlaylistApi.updateVisibilityQuery(PlaylistVisibility.FRIENDS).contains("visibility: \$visibility"))</ID>
     <ID>MaxLineLength:AgroSessionApi.kt:AgroSessionApi$serverUsername</ID>
-    <ID>MaxLineLength:AgroStreamFetcher.kt:AgroStreamFetcher$val response = p2pClient.newCall(authorized("http://$lan/p2p/fetch/${track.contentHash}").get().build()).execute()</ID>
     <ID>MaxLineLength:AgroVaultApi.kt:AgroVaultApi$sections = b.objects("sections").map { VaultSection(it.str("name").orEmpty(), it.long("count").toInt()) }</ID>
     <ID>MaxLineLength:AgroVaultApi.kt:AgroVaultApi$secureStorage.agroVaultKey == null &amp;&amp; !graphQl.serverSupports(KEY_CAPABILITY) -&gt; VaultAccess.KEYLESS_SERVER_TOO_OLD</ID>
     <ID>MaxLineLength:AlbumActionsSheet.kt:add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, "Play next", ActionEmphasis.SECONDARY) { onPlayNext(); animatedDismiss() })</ID>
@@ -1089,13 +1215,11 @@
     <ID>MaxLineLength:AlbumActionsSheet.kt:onGoToArtist?.let { add(MenuAction(Icons.Rounded.Person, album.artist) { it(); animatedDismiss() }) }</ID>
     <ID>MaxLineLength:AlbumActionsSheet.kt:onShare?.let { add(MenuAction(Icons.Rounded.Share, "Share", ActionEmphasis.ICON) { it(); animatedDismiss() }) }</ID>
     <ID>MaxLineLength:AlbumHero.kt:contentDescription = stringResource(if (isShared) R.string.playlist_shared_on_agro else R.string.action_share)</ID>
-    <ID>MaxLineLength:AppIntentHandler.kt:AppIntentHandler$Toast.makeText(context, cause.message ?: context.getString(R.string.link_playlist_invalid), Toast.LENGTH_LONG).show()</ID>
-    <ID>MaxLineLength:AppIntentHandler.kt:AppIntentHandler$Toast.makeText(context, context.getString(R.string.link_playlist_saved, link.name), Toast.LENGTH_LONG).show()</ID>
-    <ID>MaxLineLength:AppIntentHandler.kt:AppIntentHandler$onFailure = { Toast.makeText(context, context.getString(R.string.link_playlist_agro_failed, it.message), Toast.LENGTH_LONG).show() }</ID>
     <ID>MaxLineLength:AppModule.kt:AppModule$@Provides</ID>
     <ID>MaxLineLength:AppModule.kt:AppModule$@Provides fun provideAnnouncedReleaseDao: com.wander.android.core.database.dao.AnnouncedReleaseDao</ID>
     <ID>MaxLineLength:AppModule.kt:AppModule$@Provides fun provideCanonicalMetadataDao: com.wander.android.core.database.dao.CanonicalMetadataDao</ID>
     <ID>MaxLineLength:AppModule.kt:AppModule$@Provides fun provideCatalogRecordingDao: com.wander.android.core.database.dao.CatalogRecordingDao</ID>
+    <ID>MaxLineLength:AppModule.kt:AppModule$@Provides fun provideLikeSyncDao: com.wander.android.core.database.dao.LikeSyncDao</ID>
     <ID>MaxLineLength:AppModule.kt:AppModule$@Provides fun providePlaylistDao: com.wander.android.core.database.dao.PlaylistDao</ID>
     <ID>MaxLineLength:AppModule.kt:AppModule$@Provides fun provideRecordingLinkDao: com.wander.android.core.database.dao.RecordingLinkDao</ID>
     <ID>MaxLineLength:AppModule.kt:AppModule$@Provides fun provideRecordingSplitDao: com.wander.android.core.database.dao.RecordingSplitDao</ID>
@@ -1105,18 +1229,13 @@
     <ID>MaxLineLength:AppModule.kt:AppModule$@Provides fun provideTrackLyricsDao: com.wander.android.core.database.dao.TrackLyricsDao</ID>
     <ID>MaxLineLength:AppearanceTab.kt:if (state.systemReduceMotion) R.string.settings_reduce_motion_already_off else R.string.settings_reduce_motion_sub</ID>
     <ID>MaxLineLength:AppleMusicPlaylistParser.kt:AppleMusicPlaylistParser.Companion$val JSON_LD_REGEX = Regex("""&lt;script\s+type=["']application/ld\+json["']&gt;(.*?)&lt;/script&gt;""", RegexOption.DOT_MATCHES_ALL)</ID>
-    <ID>MaxLineLength:ArtistPageSections.kt:itemsIndexed</ID>
-    <ID>MaxLineLength:ArtistPageSections.kt:modifier = Modifier.animateItem().scale(rememberShelfEntranceScale(index)).groupedListItem(index, page.episodes.size)</ID>
-    <ID>MaxLineLength:ArtistPageSections.kt:modifier = Modifier.animateItem().scale(rememberShelfEntranceScale(index)).groupedListItem(index, page.videos.size)</ID>
-    <ID>MaxLineLength:ArtistPageSections.kt:modifier = Modifier.animateItem().scale(rememberShelfEntranceScale(index)).groupedListItem(index, section.tracks.size)</ID>
-    <ID>MaxLineLength:ArtistPageSections.kt:modifier = Modifier.animateItem().scale(rememberShelfEntranceScale(index)).groupedListItem(index, shown.size)</ID>
     <ID>MaxLineLength:AudioEmbedder.kt:AudioEmbedder.Companion$/** Identifies which model produced a stored vector; see [com.wander.android.data.repository.EmbeddingRepository]. */</ID>
     <ID>MaxLineLength:BackupCodec.kt:BackupCodec$private fun gunzip: ByteArray</ID>
     <ID>MaxLineLength:BackupCodec.kt:val</ID>
-    <ID>MaxLineLength:BackupContentsIO.kt:BackupContentsIO$.</ID>
-    <ID>MaxLineLength:BackupContentsIO.kt:BackupContentsIO$playlists = if (on(BackupSection.LIBRARY)) playlistDao.getAllPlaylists().map { it.toBackup() } else emptyList()</ID>
-    <ID>MaxLineLength:BackupContentsIO.kt:BackupContentsIO$recaps = if (on(BackupSection.HISTORY)) recapDao.observeAll().first().map { it.toBackup() } else emptyList()</ID>
-    <ID>MaxLineLength:BackupPassphraseDialog.kt:TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_cancel)) }</ID>
+    <ID>MaxLineLength:BackupContentsIO.kt:BackupContentsIO$if (library) it else it.copy(isLiked = false, isLibrary = false, playCount = 0, lastPlayedTimestamp = null)</ID>
+    <ID>MaxLineLength:BackupExtras.kt:BackupSharedItem(it.itemId, it.position, it.trackId, it.title, it.artist, it.album, it.durationMs, it.addedBy, it.addedAt)</ID>
+    <ID>MaxLineLength:BackupExtras.kt:SharedPlaylistItemEntity(agroId, it.itemId, it.position, it.trackId, it.title, it.artist, it.album, it.durationMs, it.addedBy, it.addedAt)</ID>
+    <ID>MaxLineLength:BackupIntegrity.kt:SharedPart</ID>
     <ID>MaxLineLength:BlendBanner.kt:FilledTonalButton</ID>
     <ID>MaxLineLength:BlendBanner.kt:Icon(Icons.Rounded.Blender, null, tint = colors.onTertiaryContainer, modifier = Modifier.size(14.dp))</ID>
     <ID>MaxLineLength:BlendBanner.kt:OutlinedButton</ID>
@@ -1131,6 +1250,7 @@
     <ID>MaxLineLength:BlendInvites.kt:private</ID>
     <ID>MaxLineLength:BlendInvites.kt:style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)</ID>
     <ID>MaxLineLength:BlendOptions.kt:CuteAvatar(seed = friend.username, avatarUrl = friend.avatarUrl, size = FilterChipDefaults.IconSize, shape = PersonShape)</ID>
+    <ID>MaxLineLength:CatalogCollectionRepository.kt:CatalogCollectionRepository$private suspend</ID>
     <ID>MaxLineLength:CatalogPublisher.kt:CatalogPublisher$outcomes.mapNotNull { it.error }.forEach { Log.w(TAG, "The catalogue would not take one recording: $it") }</ID>
     <ID>MaxLineLength:CatalogRecordingDao.kt:CatalogRecordingDao$@Query("SELECT '$PREFIX' || recordingId AS trackId, centroid FROM catalog_recordings WHERE length(vector) &gt; 0 AND model = :model AND version = :version")</ID>
     <ID>MaxLineLength:CatalogRecordingDao.kt:CatalogRecordingDao$@Query("SELECT recordingId, vector FROM catalog_recordings WHERE recordingId IN (:ids) AND model = :model AND version = :version")</ID>
@@ -1154,6 +1274,8 @@
     <ID>MaxLineLength:CloudBackupViewModel.kt:CloudBackupViewModel$BackupStatus.Failed(context.getString(R.string.cloud_backup_restore_failed, context.getString(R.string.cloud_backup_wrong_key)))</ID>
     <ID>MaxLineLength:CloudBackupViewModel.kt:CloudBackupViewModel$BackupStatus.Failed(context.getString(R.string.cloud_backup_unlock_failed, context.getString(R.string.cloud_backup_wrong_passphrase)))</ID>
     <ID>MaxLineLength:ConfirmDialog.kt:TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_cancel)) }</ID>
+    <ID>MaxLineLength:ConnectionsTab.kt:needsAccess &amp;&amp; audioGate.audioBlocked -&gt; stringResource(R.string.settings_local_access_blocked)</ID>
+    <ID>MaxLineLength:ConnectionsTab.kt:state.syncedNavidrome?.serverUrl != null -&gt; stringResource(R.string.settings_ready_to_sign_in)</ID>
     <ID>MaxLineLength:CuteAvatar.kt:error = { if (cleanSeed.isEmpty()) PlaceholderAvatar(size = size) else ProceduralCanvasAvatar(seed = cleanSeed, size = size) }</ID>
     <ID>MaxLineLength:CuteAvatarFeatures.kt:drawCircle(color = Color.White, radius = glintRadius, center = Offset(leftX + eyeRadius * 0.3f, y - eyeRadius * 0.3f))</ID>
     <ID>MaxLineLength:CuteAvatarFeatures.kt:drawCircle(color = Color.White, radius = glintRadius, center = Offset(rightX + eyeRadius * 0.3f, y - eyeRadius * 0.3f))</ID>
@@ -1168,19 +1290,23 @@
     <ID>MaxLineLength:CuteAvatarFeatures.kt:drawCircle(color = color.copy(alpha = 0.55f), radius = earRadius, center = Offset(width * 0.22f, height * 0.20f))</ID>
     <ID>MaxLineLength:CuteAvatarFeatures.kt:drawCircle(color = color.copy(alpha = 0.55f), radius = earRadius, center = Offset(width * 0.78f, height * 0.20f))</ID>
     <ID>MaxLineLength:CuteAvatarFeatures.kt:drawPath(haloRect, color = color.copy(alpha = 0.7f), style = Stroke(width = width * 0.035f, cap = StrokeCap.Round))</ID>
-    <ID>MaxLineLength:DeezerApiClient.kt:DeezerApiClient$suspend</ID>
+    <ID>MaxLineLength:DeezerApiClient.kt:DeezerApiClient.Companion$/** The error a 200 response carries instead of data, e.g. `{"error":{"code":4,"message":"Quota limit exceeded"}}`. */</ID>
     <ID>MaxLineLength:DeezerDecryptingDataSource.kt:DeezerDecryptingDataSource$.</ID>
+    <ID>MaxLineLength:DeezerLyrics.kt:DeezerLyrics.Companion$return LyricsData(trackId = trackId, isSynced = false, plainLyrics = plain, lines = untimed, source = SOURCE)</ID>
+    <ID>MaxLineLength:DeezerSource.kt:DeezerSource$listOf(RecommendedShelf(id = "deezer_charts", title = context.getString(R.string.deezer_shelf_top_charts), tracks = tracks))</ID>
     <ID>MaxLineLength:DeezerStreamCipher.kt:DeezerStreamCipher$val cipher = Cipher.getInstance(TRANSFORMATION) // NOSONAR: Blowfish is mandated by Deezer's stream format, not our choice</ID>
     <ID>MaxLineLength:DeezerStreamCipher.kt:DeezerStreamCipher.Companion$private const val SECRET = "g4el58wc0zvf9na1" // NOSONAR: public constant of Deezer's key derivation, not a credential of ours</ID>
     <ID>MaxLineLength:DeezerStreamCipher.kt:DeezerStreamCipher.Companion$val</ID>
     <ID>MaxLineLength:DiscoveredPlaylistsGrid.kt:containerColor = if (isSecondary) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surface</ID>
     <ID>MaxLineLength:DiscoveredPlaylistsGrid.kt:contentColor = if (isSecondary) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface</ID>
+    <ID>MaxLineLength:DownloadWorker.kt:DownloadWorker$val</ID>
     <ID>MaxLineLength:DropActionsSheet.kt:actions = listOf(MenuAction(Icons.Rounded.Delete, removeLabel, ActionEmphasis.DANGER, onClick = { confirmingRemove = true }))</ID>
     <ID>MaxLineLength:DropToFriendSheet.kt:color = if (note.length == MAX_NOTE_LENGTH) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant</ID>
+    <ID>MaxLineLength:EmbeddedLyricsTest.kt:EmbeddedLyricsTest$((v shr 21) and 0x7F).toByte()</ID>
     <ID>MaxLineLength:EmbeddingMatcher.kt:EmbeddingMatcher$for</ID>
     <ID>MaxLineLength:EmbeddingMatcher.kt:EmbeddingMatcher$private</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override fun getAllTracksFlow: kotlinx.coroutines.flow.Flow&lt;List&lt;com.wander.android.core.database.entity.TrackEntity&gt;&gt;</ID>
-    <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override fun getDownloadedTracksFlow: kotlinx.coroutines.flow.Flow&lt;List&lt;com.wander.android.core.database.entity.TrackEntity&gt;&gt;</ID>
+    <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override fun getDownloadedTrackIdsFlow: kotlinx.coroutines.flow.Flow&lt;List&lt;String&gt;&gt;</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override fun getFingerprintableTracksFlow: kotlinx.coroutines.flow.Flow&lt;List&lt;com.wander.android.core.database.entity.TrackEntity&gt;&gt;</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override fun getLikedTrackIdsFlow: kotlinx.coroutines.flow.Flow&lt;List&lt;String&gt;&gt;</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override fun getLikedTracksFlow: kotlinx.coroutines.flow.Flow&lt;List&lt;com.wander.android.core.database.entity.TrackEntity&gt;&gt;</ID>
@@ -1188,9 +1314,9 @@
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override fun getTracksByArtistFlow: kotlinx.coroutines.flow.Flow&lt;List&lt;com.wander.android.core.database.entity.TrackEntity&gt;&gt;</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override fun getTracksBySourceFlow: kotlinx.coroutines.flow.Flow&lt;List&lt;com.wander.android.core.database.entity.TrackEntity&gt;&gt;</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override fun observeGenres: kotlinx.coroutines.flow.Flow&lt;List&lt;String&gt;&gt;</ID>
+    <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override fun observeLikedTracks: kotlinx.coroutines.flow.Flow&lt;List&lt;com.wander.android.core.database.entity.TrackEntity&gt;&gt;</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override fun observeRecentlyAddedAlbumIds: kotlinx.coroutines.flow.Flow&lt;List&lt;String&gt;&gt;</ID>
-    <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override fun pagedTracks: androidx.paging.PagingSource&lt;Int, com.wander.android.core.database.entity.TrackEntity&gt;</ID>
-    <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override fun pagedTracksBySource: androidx.paging.PagingSource&lt;Int, com.wander.android.core.database.entity.TrackEntity&gt;</ID>
+    <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun findByContentHash: com.wander.android.core.database.entity.TrackEntity?</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun findLocalOrDownloadedCandidates: List&lt;com.wander.android.core.database.entity.TrackEntity&gt;</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun findNavidromeCandidates: List&lt;com.wander.android.core.database.entity.TrackEntity&gt;</ID>
@@ -1204,10 +1330,11 @@
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun getOfflineTracksOnce: List&lt;com.wander.android.core.database.entity.TrackEntity&gt;</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun getPlayedTracksOnce: List&lt;com.wander.android.core.database.entity.TrackEntity&gt;</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun getRandomTracks: List&lt;com.wander.android.core.database.entity.TrackEntity&gt;</ID>
-    <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun getRandomTracksInSource: List&lt;com.wander.android.core.database.entity.TrackEntity&gt;</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun getRecentlyAddedInSource: List&lt;com.wander.android.core.database.entity.TrackEntity&gt;</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun getRecentlyAddedTracks: List&lt;com.wander.android.core.database.entity.TrackEntity&gt;</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun getRecentlyPlayedTracks: List&lt;com.wander.android.core.database.entity.TrackEntity&gt;</ID>
+    <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun getSeedNeighbours: List&lt;com.wander.android.core.database.entity.TrackEntity&gt;</ID>
+    <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun getSeedNeighboursInSource: List&lt;com.wander.android.core.database.entity.TrackEntity&gt;</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun getSyncedLocalTracks: List&lt;com.wander.android.core.database.entity.TrackEntity&gt;</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun getTopPlayedTracks: List&lt;com.wander.android.core.database.entity.TrackEntity&gt;</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun getTracksByArtistOnce: List&lt;com.wander.android.core.database.entity.TrackEntity&gt;</ID>
@@ -1219,7 +1346,6 @@
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun getUnhashedLocalTracks: List&lt;com.wander.android.core.database.entity.TrackEntity&gt;</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun getUnsyncedLocalTracks: List&lt;com.wander.android.core.database.entity.TrackEntity&gt;</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun insertNewTracks: List&lt;Long&gt;</ID>
-    <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun libraryTrackIdsBySource: List&lt;String&gt;</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun mergeRestoredState</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun searchSubscribedEpisodes: List&lt;com.wander.android.core.database.entity.TrackEntity&gt;</ID>
     <ID>MaxLineLength:EmbeddingRecordingIdentityTest.kt:EmbeddingRecordingIdentityTest.FakeTrackDao$override suspend fun searchTracks: List&lt;com.wander.android.core.database.entity.TrackEntity&gt;</ID>
@@ -1254,30 +1380,33 @@
     <ID>MaxLineLength:ExtraShelves.kt:ExtraShelf$RANDOM : ExtraShelf</ID>
     <ID>MaxLineLength:ExtraShelves.kt:ExtraShelf$REDISCOVER : ExtraShelf</ID>
     <ID>MaxLineLength:ExtraShelves.kt:ExtraShelf$YOUTUBE_MUSIC : ExtraShelf</ID>
-    <ID>MaxLineLength:ExtraShelves.kt:ExtraShelves$val title = genreShelfTitle(config.categories, context.getString(R.string.shelf_christian), context.getString(R.string.shelf_genre))</ID>
-    <ID>MaxLineLength:ExtraShelves.kt:ExtraShelves$val wanted = layout.filter { it.enabled &amp;&amp; (it.id.startsWith(GenreShelfPrefix) || ExtraShelf.of(it.id) != null) }</ID>
+    <ID>MaxLineLength:ExtraShelves.kt:ExtraShelves$genreShelfTitle(config.categories, context.getString(R.string.shelf_christian), context.getString(R.string.shelf_genre))</ID>
     <ID>MaxLineLength:FingerprintIndexing.kt:FingerprintIndexing$val</ID>
     <ID>MaxLineLength:FingerprintsScreen.kt:text = stringResource(R.string.settings_of, stringResource(section.title), section.indexed, section.rows.size)</ID>
     <ID>MaxLineLength:FriendPicksRepository.kt:FriendPicksRepository$*</ID>
     <ID>MaxLineLength:HeroActionButton.kt:HeroActionTint$internal enum</ID>
+    <ID>MaxLineLength:HistoryScreen.kt:Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))</ID>
+    <ID>MaxLineLength:HistoryScreen.kt:Row</ID>
     <ID>MaxLineLength:HomeEditor.kt:itemsIndexed</ID>
     <ID>MaxLineLength:HomeEditor.kt:return HomeEditor(order, reorderState, settingsFor, { settingsFor = it }, addingShelf, { addingShelf = it }, { pending = it }, usage, problems, rarelyUsed)</ID>
     <ID>MaxLineLength:HomeLayoutActions.kt:HomeLayoutActions$fun</ID>
-    <ID>MaxLineLength:HomeScreen.kt:val titles = ids.mapNotNull { id -&gt; editor.order.firstOrNull { it.id == id }?.title?.takeIf(String::isNotEmpty) }</ID>
+    <ID>MaxLineLength:HomeScreen.kt:stringResource(R.string.home_source_has_no_tracks, stringResource(it.nameRes))</ID>
     <ID>MaxLineLength:HomeSectionIds.kt:/** A genre shelf the user added. Its categories live in its `ShelfConfig`; the rest of the id only tells shelves apart. */</ID>
+    <ID>MaxLineLength:HomeShelfLoading.kt:add(shelf(SectionDiscover, context.getString(R.string.home_discover), HomeSectionStyle.DISCOVER_MASONRY, discover.await()))</ID>
+    <ID>MaxLineLength:HomeShelfLoading.kt:add(shelf(SectionLiked, context.getString(R.string.home_your_favorites), HomeSectionStyle.HERO_CAROUSEL, liked.await()))</ID>
+    <ID>MaxLineLength:HomeShelfLoading.kt:add(shelf(SectionOnRepeat, context.getString(R.string.home_quick_picks), HomeSectionStyle.TRACK_PAGER, onRepeat.await()))</ID>
+    <ID>MaxLineLength:HomeShelfLoading.kt:shelf(SectionRecentlyPlayed, context.getString(R.string.home_recently_played), HomeSectionStyle.HERO_CAROUSEL, recentlyPlayed.await())</ID>
     <ID>MaxLineLength:HomeShelfRepository.kt:HomeShelfRepository$trackDao.getRecentlyAddedTracks(limit * OVERFETCH).map(TrackEntity::toUnifiedTrack).filterNot { it.isEpisode }.take(limit)</ID>
-    <ID>MaxLineLength:HomeViewModel.kt:HomeViewModel$add(shelf(SectionRecentlyPlayed, "Recently Played", HomeSectionStyle.HERO_CAROUSEL, recentlyPlayed.await()))</ID>
     <ID>MaxLineLength:HomeViewModel.kt:HomeViewModel$shelf(SectionContinueListening, context.getString(R.string.home_your_episodes), HomeSectionStyle.TRACK_CAROUSEL, tracks.take(CarouselSize))</ID>
-    <ID>MaxLineLength:HomeViewModel.kt:HomeViewModel$shelf(SectionLiked, "Your Favorites", HomeSectionStyle.HERO_CAROUSEL, liked.take(CarouselSize))</ID>
-    <ID>MaxLineLength:HomeViewModel.kt:HomeViewModel$state.allSections.filterNot { it.id == SectionOnRepeat || it.id == SectionRecentlyPlayed || it.id in feedIds || it.id == SectionBecause }.forEach { add(it) }</ID>
+    <ID>MaxLineLength:HomeViewModel.kt:HomeViewModel$shelf(SectionLiked, context.getString(R.string.home_your_favorites), HomeSectionStyle.HERO_CAROUSEL, liked)</ID>
     <ID>MaxLineLength:HomeViewModel.kt:HomeViewModel$}</ID>
-    <ID>MaxLineLength:HttpClientFactory.kt:HttpClientFactory$if</ID>
     <ID>MaxLineLength:IdentityKeyManagerTest.kt:IdentityKeyManagerTest$cipher.init(true, org.bouncycastle.crypto.params.AEADParameters(org.bouncycastle.crypto.params.KeyParameter(symKey), 128, nonce))</ID>
     <ID>MaxLineLength:IdentityKeyManagerTest.kt:IdentityKeyManagerTest$rxCipherMode.init(false, org.bouncycastle.crypto.params.AEADParameters(org.bouncycastle.crypto.params.KeyParameter(rxSymKey), 128, rxNonce))</ID>
     <ID>MaxLineLength:ImportProgressContent.kt:text = stringResource(R.string.importer_saved_matching_background, progress.playlistName, progress.trackCount)</ID>
     <ID>MaxLineLength:ImportTrackSelector.kt:TextButton(onClick = onDeselectAll, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.importer_none)) }</ID>
     <ID>MaxLineLength:ImportTrackSelector.kt:TextButton(onClick = onSelectAll, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_all)) }</ID>
     <ID>MaxLineLength:ImportTrackSelector.kt:text = stringResource(R.string.importer_tracks_found_from, playlist.tracks.size, playlist.platform.displayName)</ID>
+    <ID>MaxLineLength:InnerTubeSearchParsingTest.kt:InnerTubeSearchParsingTest$val artistRun = """{ "text": "Radiohead", "navigationEndpoint": ${endpoint("UCr", "MUSIC_PAGE_TYPE_ARTIST")} }"""</ID>
     <ID>MaxLineLength:InnerTubeVideoFormat.kt:?:</ID>
     <ID>MaxLineLength:JamCard.kt:text = stringResource(if (jam == null) R.string.social_jam_start else R.string.social_jam_open)</ID>
     <ID>MaxLineLength:JamNowPlayingCard.kt:text = stringResource(if (now == null) R.string.jam_between_tracks else R.string.jam_everyone_is_hearing)</ID>
@@ -1301,12 +1430,15 @@
     <ID>MaxLineLength:LastFmClient.kt:LastFmClient$val</ID>
     <ID>MaxLineLength:LastFmClient.kt:LastFmClient$val name = session["name"]?.jsonPrimitive?.contentOrNull ?: throw IOException("Last.fm sent no account name")</ID>
     <ID>MaxLineLength:LastFmSignature.kt:LastFmSignature$return</ID>
-    <ID>MaxLineLength:LibraryPlaylistList.kt:.</ID>
+    <ID>MaxLineLength:LibraryBrowseDaoRoomTest.kt:LibraryBrowseDaoRoomTest$track("local:4", "delta", artist = "A", album = "D", added = 4, plays = 0, played = null, genre = "Rock")</ID>
+    <ID>MaxLineLength:LibraryHeader.kt:style = if (isSelected) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyMedium</ID>
+    <ID>MaxLineLength:LibraryPages.kt:AllTracksPage(tracks, isSyncing, contentPadding, viewModel, browse, actions.onTrackLongPress, actions.selection)</ID>
+    <ID>MaxLineLength:LibraryPages.kt:TrackList(downloadedTracks, tab, isSyncing, contentPadding, viewModel, actions.onTrackLongPress, actions.selection)</ID>
+    <ID>MaxLineLength:LibraryPages.kt:TrackList(likedTracks, tab, isSyncing, contentPadding, viewModel, actions.onTrackLongPress, actions.selection)</ID>
+    <ID>MaxLineLength:LibraryPages.kt:get() = this == LibraryTab.TRACKS || this == LibraryTab.LIKED || this == LibraryTab.DOWNLOADS || this == LibraryTab.GENRES</ID>
     <ID>MaxLineLength:LibraryPlaylistList.kt:BlendInvites(onJoined = onOpenPlaylist, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp))</ID>
     <ID>MaxLineLength:LibraryPlaylistList.kt:Text(stringResource(R.string.common_new_playlist), modifier = Modifier.padding(start = 8.dp))</ID>
-    <ID>MaxLineLength:LibraryPlaylistList.kt:itemsIndexed</ID>
-    <ID>MaxLineLength:LibraryPodcastsPage.kt:itemsIndexed</ID>
-    <ID>MaxLineLength:LibraryScreen.kt:style = if (isSelected) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyMedium</ID>
+    <ID>MaxLineLength:LibraryPlaylistList.kt:playlist.source == SourceType.LOCAL || playlist.source == SourceType.AGRO || viewModel.canCreatePlaylists</ID>
     <ID>MaxLineLength:LibrarySyncSection.kt:state.serverTotalTracks.takeIf { it &gt; 0 }?.let { stringResource(R.string.settings_sync_count_server, it) }</ID>
     <ID>MaxLineLength:LibrarySyncWorker.kt:LibrarySyncWorker$val subtitle = missing.firstOrNull()?.peerSources?.firstOrNull()?.petname?.let { "From $it" } ?: "From your other devices"</ID>
     <ID>MaxLineLength:LinkRepository.kt:LinkRepository$val navSource = musicRepository.sources.firstOrNull { it.sourceType == SourceType.NAVIDROME } as? NavidromeSource</ID>
@@ -1316,36 +1448,29 @@
     <ID>MaxLineLength:ListenBrainzClient.kt:ListenBrainzClient$val request = Request.Builder().url("$API/1/validate-token").header("Authorization", "Token $token").get().build()</ID>
     <ID>MaxLineLength:ListenBrainzClientTest.kt:ListenBrainzClientTest$assertTrue("no release for a play without one", "release_name" !in body["payload"]!!.jsonArray[1].jsonObject["track_metadata"]!!.jsonObject)</ID>
     <ID>MaxLineLength:ListenSheet.kt:TextButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_listen_again)) }</ID>
+    <ID>MaxLineLength:LocalLyricsReader.kt:LocalLyricsReader$if (!c.moveToFirst() || c.getLong(1) &gt; MAX_LRC_BYTES) null else ContentUris.withAppendedId(files, c.getLong(0))</ID>
     <ID>MaxLineLength:LyricLineItem.kt:// Word is actively being sung: progress letter by letter with speed adjusted for spaces and commas</ID>
     <ID>MaxLineLength:LyricsParserTest.kt:LyricsParserTest$val repo = LyricsRepository(emptySet(), cachedDao, noCatalogue, HttpClientFactory.ktorClient, fakeSecureStorage())</ID>
     <ID>MaxLineLength:LyricsParserTest.kt:LyricsParserTest.&lt;no name provided&gt;$override suspend</ID>
     <ID>MaxLineLength:LyricsParserTest.kt:LyricsParserTest.&lt;no name provided&gt;$override suspend fun vectors: List&lt;CatalogVector&gt;</ID>
     <ID>MaxLineLength:LyricsRepository.kt:LyricsRepository$val (line, ts) = findMatchingLine(hit.recording.plainLyrics.orEmpty(), hit.recording.syncedLyrics, query)</ID>
+    <ID>MaxLineLength:ManualDownloadRulesTest.kt:ManualDownloadRulesTest$private</ID>
     <ID>MaxLineLength:MediaTypeToggle.kt:text = stringResource(if (type == PlaybackMediaType.SONG) R.string.media_type_song else R.string.media_type_video)</ID>
+    <ID>MaxLineLength:MergePreviewScreen.kt:pluralStringResource(R.plurals.merge_split_likes, current.splitLikes, current.splitLikes)</ID>
     <ID>MaxLineLength:Migrations.kt:val</ID>
     <ID>MaxLineLength:Migrations41.kt:&lt;no name provided&gt;$db.execSQL("CREATE INDEX IF NOT EXISTS `index_shared_playlist_items_trackId` ON `shared_playlist_items` (`trackId`)")</ID>
     <ID>MaxLineLength:Migrations45.kt:&lt;no name provided&gt;$"`centroid` BLOB NOT NULL, `dim` INTEGER NOT NULL, `model` TEXT NOT NULL, `version` INTEGER NOT NULL, "</ID>
+    <ID>MaxLineLength:MiniPlayer.kt:.</ID>
     <ID>MaxLineLength:MorphingArtwork.kt:PeekArtwork(nextUrl, anchors, mini, progress, rawProgress, swipe, side = 1, carouselEnabled = carouselEnabled)</ID>
     <ID>MaxLineLength:MorphingArtwork.kt:PeekArtwork(previousUrl, anchors, mini, progress, rawProgress, swipe, side = -1, carouselEnabled = carouselEnabled)</ID>
     <ID>MaxLineLength:MusicRepository.kt:MusicRepository$fun</ID>
     <ID>MaxLineLength:MusicRepository.kt:MusicRepository$suspend</ID>
     <ID>MaxLineLength:MusicRepository.kt:MusicRepository$suspend fun importMissingAlbumTracks</ID>
     <ID>MaxLineLength:MusicRepository.kt:MusicRepository$suspend fun refreshAlbums</ID>
-    <ID>MaxLineLength:NetworkStateDialog.kt:TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_not_now)) }</ID>
+    <ID>MaxLineLength:NavidromeHomeFeed.kt:NavidromeHomeFeed$RecommendedShelf(SHELF_TOP_ARTISTS, context.getString(R.string.navidrome_shelf_top_artists), songs.unified())</ID>
+    <ID>MaxLineLength:NavidromeLyrics.kt:NavidromeLyrics$is SubsonicServerException, is ContentConvertException, is NoTransformationFoundException -&gt; emptySet()</ID>
     <ID>MaxLineLength:NowPlayingMenuDrawer.kt:MenuAction</ID>
-    <ID>MaxLineLength:NowPlayingMenuDrawer.kt:add(MenuAction(Icons.AutoMirrored.Rounded.Notes, strings.transcript, ActionEmphasis.ICON) { open(); animatedDismiss() })</ID>
-    <ID>MaxLineLength:NowPlayingMenuDrawer.kt:add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, strings.playNext) { onPlayNext(); animatedDismiss() })</ID>
-    <ID>MaxLineLength:NowPlayingMenuDrawer.kt:add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, queueLabel, ActionEmphasis.PRIMARY) { onOpenQueue(); animatedDismiss() })</ID>
-    <ID>MaxLineLength:NowPlayingMenuDrawer.kt:add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, strings.addToQueue) { onAddToQueue(); animatedDismiss() })</ID>
-    <ID>MaxLineLength:NowPlayingMenuDrawer.kt:add(MenuAction(Icons.Rounded.Bookmark, strings.chapters, ActionEmphasis.ICON) { open(); animatedDismiss() })</ID>
-    <ID>MaxLineLength:NowPlayingMenuDrawer.kt:add(MenuAction(Icons.Rounded.LibraryAdd, strings.addToPlaylist, ActionEmphasis.ICON) { onAddToPlaylist(); animatedDismiss() })</ID>
-    <ID>MaxLineLength:NowPlayingMenuDrawer.kt:add(MenuAction(Icons.Rounded.Radio, radioLabel, ActionEmphasis.SECONDARY, selected = isRadioMode) { onToggleRadio() })</ID>
-    <ID>MaxLineLength:NowPlayingMenuDrawer.kt:add(MenuAction(Icons.Rounded.Share, strings.share, ActionEmphasis.ICON) { onShare(); animatedDismiss() })</ID>
-    <ID>MaxLineLength:NowPlayingMenuDrawer.kt:add(MenuAction(Icons.Rounded.Speed, strings.speed, ActionEmphasis.ICON) { onOpenSpeedPitch(); animatedDismiss() })</ID>
-    <ID>MaxLineLength:NowPlayingMenuDrawer.kt:add(MenuAction(Icons.Rounded.SwapHoriz, strings.source) { onOpenSourcePicker(); animatedDismiss() })</ID>
-    <ID>MaxLineLength:NowPlayingMenuDrawer.kt:add(MenuAction(Icons.Rounded.Translate, strings.audioLanguage) { onOpenAudioTrackPicker(); animatedDismiss() })</ID>
-    <ID>MaxLineLength:NowPlayingMenuDrawer.kt:onOpenArtist?.let { add(MenuAction(Icons.Rounded.Person, track.artist) { it(); animatedDismiss() }) }</ID>
-    <ID>MaxLineLength:NowPlayingScreen.kt:onOpenTranscript = { episodePanel = EpisodePanel.TRANSCRIPT }.takeIf { episodeExtras?.transcriptUrl != null }</ID>
+    <ID>MaxLineLength:OfflinePredictor.kt:OfflinePredictor$scores.merge(it.id, RECENTLY_ADDED_BONUS * decay(now - it.addedTimestamp, ADDED_HALF_LIFE_DAYS), Double::plus)</ID>
     <ID>MaxLineLength:OrderedChoiceSheet.kt:*</ID>
     <ID>MaxLineLength:OrderedChoiceSheet.kt:Surface</ID>
     <ID>MaxLineLength:OrderedChoiceSheet.kt:val strength by animateFloatAsState(if (shown) 1f else HiddenStrength, motion.fastEffectsSpec(), label = "choiceStrength")</ID>
@@ -1359,6 +1484,7 @@
     <ID>MaxLineLength:P2PServer.kt:P2PServer$output.write("HTTP/1.1 400 Bad Request\r\nContent-Length: 11\r\nConnection: close\r\n\r\nBad Request".toByteArray())</ID>
     <ID>MaxLineLength:P2PServer.kt:P2PServer$output.write("HTTP/1.1 404 Not Found\r\nContent-Length: 9\r\nConnection: close\r\n\r\nNot Found".toByteArray())</ID>
     <ID>MaxLineLength:P2PServer.kt:P2PServer$val fetchHash = if (path.startsWith(FETCH_PREFIX)) path.removePrefix(FETCH_PREFIX).substringBefore("?") else null</ID>
+    <ID>MaxLineLength:PlainSourceForTest.kt:PlainSourceForTest$assertEquals(SourceType.NAVIDROME, plainSourceFor(listOf(track(SourceType.NAVIDROME), track(SourceType.NAVIDROME))))</ID>
     <ID>MaxLineLength:PlatformIcons.kt:addOval(androidx.compose.ui.geometry.Rect(size.width * 0.20f, size.height * 0.62f, size.width * 0.42f, size.height * 0.82f))</ID>
     <ID>MaxLineLength:PlatformIcons.kt:addOval(androidx.compose.ui.geometry.Rect(size.width * 0.58f, size.height * 0.50f, size.width * 0.80f, size.height * 0.70f))</ID>
     <ID>MaxLineLength:PlatformIcons.kt:drawLine(tint, Offset(size.width * 0.32f, size.height * 0.35f), Offset(size.width * 0.68f, size.height * 0.35f), strokeWidth = strokeWidth * 0.8f, cap = StrokeCap.Round)</ID>
@@ -1366,42 +1492,22 @@
     <ID>MaxLineLength:PlatformIcons.kt:drawLine(tint, Offset(size.width * 0.32f, size.height * 0.65f), Offset(size.width * 0.52f, size.height * 0.65f), strokeWidth = strokeWidth * 0.8f, cap = StrokeCap.Round)</ID>
     <ID>MaxLineLength:PlatformIcons.kt:drawLine(tint, Offset(size.width * 0.39f, size.height * 0.70f), Offset(size.width * 0.39f, size.height * 0.28f), strokeWidth = size.width * 0.09f, cap = StrokeCap.Round)</ID>
     <ID>MaxLineLength:PlatformIcons.kt:drawLine(tint, Offset(size.width * 0.77f, size.height * 0.58f), Offset(size.width * 0.77f, size.height * 0.18f), strokeWidth = size.width * 0.09f, cap = StrokeCap.Round)</ID>
-    <ID>MaxLineLength:PlaybackStateFlowBuilder.kt:PlaybackStateFlowBuilder$snapshots(ctrl, collaborators, isRadioMode, { stateRef.value.currentTrack?.isLive == true }, onError)</ID>
-    <ID>MaxLineLength:PlaybackStreamResolver.kt:PlaybackStreamResolver$downloadedFileOf(cached)?.let { path -&gt; return StreamInfo(uri = path, isDirectFile = true, route = StreamRoute.DOWNLOAD) }</ID>
     <ID>MaxLineLength:PlaybackStreamResolver.kt:PlaybackStreamResolver$if (cached == null || cached.effectiveSource == SourceType.LOCAL || cached.effectiveSource == SourceType.PODCAST) return null</ID>
     <ID>MaxLineLength:PlaybackStreamResolver.kt:PlaybackStreamResolver$if (cached == null || cached.effectiveSource == SourceType.NAVIDROME || cached.effectiveSource == SourceType.PODCAST) return null</ID>
     <ID>MaxLineLength:PlaybackStreamResolver.kt:PlaybackStreamResolver$return Result.success(StreamInfo(uri = uri, format = cached.format ?: MimeTypes.AUDIO_MPEG, route = StreamRoute.PODCAST))</ID>
-    <ID>MaxLineLength:PlaybackStreamResolver.kt:PlaybackStreamResolver$return localPath?.takeIf { it.isNotBlank() }?.let { StreamInfo(uri = it, isDirectFile = true, route = StreamRoute.LOCAL_COPY) }</ID>
-    <ID>MaxLineLength:PlaybackStreamResolver.kt:PlaybackStreamResolver$val localMatch = sameRecordingAs(cached, trackDao.findLocalOrDownloadedCandidates(cached.title, TITLE_CANDIDATES))</ID>
     <ID>MaxLineLength:PlayerActionBar.kt:val contentDescription = if (availability.enabled) description else availability.disabledDescription ?: description</ID>
-    <ID>MaxLineLength:PlayerConnection.kt:PlayerConnection$fun insertInQueue</ID>
-    <ID>MaxLineLength:PlayerConnection.kt:PlayerConnection$fun moveInQueue</ID>
-    <ID>MaxLineLength:PlayerConnection.kt:PlayerConnection$fun replaceCurrentTrack</ID>
     <ID>MaxLineLength:PlayerConnection.kt:PlayerConnection$fun setFollowing</ID>
     <ID>MaxLineLength:PlayerConnection.kt:PlayerConnection$fun setJamProposal</ID>
-    <ID>MaxLineLength:PlayerSheetContent.kt:overlay = { VideoClipOverlay(clipTrack, fill = immersivePlayer, active = fullPlayerPresent &amp;&amp; !lyricsVisible) }</ID>
-    <ID>MaxLineLength:PlayerSheetContent.kt:val carouselTookOver by remember(playerCarousel) { derivedStateOf { playerCarousel &amp;&amp; progress() &gt;= CarouselHandoffEnd } }</ID>
-    <ID>MaxLineLength:PlaylistActionsSheet.kt:add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, playNext, ActionEmphasis.SECONDARY) { onPlayNext(); animatedDismiss() })</ID>
-    <ID>MaxLineLength:PlaylistActionsSheet.kt:add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, addQueue) { onAddToQueue(); animatedDismiss() })</ID>
-    <ID>MaxLineLength:PlaylistActionsSheet.kt:add(MenuAction(Icons.Rounded.PlayArrow, play, ActionEmphasis.PRIMARY) { onPlay(); animatedDismiss() })</ID>
-    <ID>MaxLineLength:PlaylistActionsSheet.kt:onAddToPlaylist?.let { add(MenuAction(Icons.Rounded.LibraryAdd, addToPlaylist, ActionEmphasis.ICON) { it(); animatedDismiss() }) }</ID>
-    <ID>MaxLineLength:PlaylistActionsSheet.kt:onDelete?.let { add(MenuAction(Icons.Rounded.Delete, delete, ActionEmphasis.DANGER) { confirmingDelete = true }) }</ID>
-    <ID>MaxLineLength:PlaylistActionsSheet.kt:onShare?.let { add(MenuAction(Icons.Rounded.Share, share, ActionEmphasis.ICON) { it(); animatedDismiss() }) }</ID>
-    <ID>MaxLineLength:PlaylistActionsSheet.kt:text = "${playlist.source.displayName}${if (playlist.songCount &gt; 0) " • ${playlist.songCount} tracks" else ""}"</ID>
     <ID>MaxLineLength:PlaylistCollaborationSheet.kt:CollaborationChoice(EditAccess.FRIENDS, Icons.Rounded.Group, R.string.playlist_collab_friends, R.string.playlist_collab_friends_desc)</ID>
     <ID>MaxLineLength:PlaylistCollaborationSheet.kt:CollaborationChoice(EditAccess.OFF, Icons.Rounded.EditOff, R.string.playlist_collab_off, R.string.playlist_collab_off_desc)</ID>
     <ID>MaxLineLength:PlaylistCollaborationSheet.kt:CollaborationChoice(EditAccess.PUBLIC, Icons.Rounded.GroupAdd, R.string.playlist_collab_public, R.string.playlist_collab_public_desc)</ID>
     <ID>MaxLineLength:PlaylistCollaborationSheet.kt:description = stringResource(if (allowed) choice.description else R.string.playlist_collab_needs_wider)</ID>
+    <ID>MaxLineLength:PlaylistEntryTest.kt:PlaylistEntryTest$UnifiedTrack(id = "2", source = SourceType.LOCAL, title = "Song", artist = "Joy Division", album = "Closer")</ID>
     <ID>MaxLineLength:PlaylistImportScreen.kt:Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))</ID>
+    <ID>MaxLineLength:PlaylistImportViewModel.kt:PlaylistImportViewModel$_state.value = _state.value.copy(isDiscovering = false, hasCheckedDiscovery = true, error = err.userMessageRes())</ID>
     <ID>MaxLineLength:PlaylistParserCoordinator.kt:PlaylistParserCoordinator$val</ID>
     <ID>MaxLineLength:PlaylistPublicationRepository.kt:PlaylistPublicationRepository$report(if (stored == EditAccess.OFF) R.string.playlist_collab_turned_off else R.string.playlist_collab_changed)</ID>
     <ID>MaxLineLength:PlaylistScreen.kt:com.wander.android.ui.screens.playlist.blend.BlendBanner(agroId = state.agroId, onLeft = onBack)</ID>
-    <ID>MaxLineLength:PlaylistScreen.kt:onLongPress = { actionsFor = IndexedValue(index, track) }.takeUnless { unmatched &amp;&amp; !removable }</ID>
-    <ID>MaxLineLength:PlaylistScreen.kt:onMoveDown = current?.takeIf { movable &amp;&amp; index &lt; tracks.lastIndex }?.let { { sharedViewModel.move(it, index, index + 1, viewModel::refresh) } }</ID>
-    <ID>MaxLineLength:PlaylistScreen.kt:onMoveUp = current?.takeIf { movable &amp;&amp; index &gt; 0 }?.let { { sharedViewModel.move(it, index, index - 1, viewModel::refresh) } }</ID>
-    <ID>MaxLineLength:PlaylistScreen.kt:onUnfollow = sharedViewModel::unfollow.takeIf { state.localPlaylistId == null &amp;&amp; !state.isBlend }</ID>
-    <ID>MaxLineLength:PlaylistScreen.kt:shareActions.sharedWith?.let { stringResource(R.string.playlist_shared_badge, stringResource(visibilityTitle(it))) }</ID>
-    <ID>MaxLineLength:PlaylistScreen.kt:val trackCount = if (current?.songCount != null &amp;&amp; current.songCount &gt; 0) current.songCount else tracks.size</ID>
     <ID>MaxLineLength:PlaylistShareSheet.kt:if (publishesACopy) R.string.playlist_share_agro_copy_desc else R.string.playlist_share_agro_desc</ID>
     <ID>MaxLineLength:PlaylistShareViewModel.kt:PlaylistShareViewModel$private suspend</ID>
     <ID>MaxLineLength:PlaylistSheetOption.kt:*</ID>
@@ -1411,55 +1517,52 @@
     <ID>MaxLineLength:PlaylistVisibilitySheet.kt:VisibilityChoice(PlaylistVisibility.PRIVATE, Icons.Rounded.Lock, R.string.playlist_visibility_private, R.string.playlist_visibility_private_desc)</ID>
     <ID>MaxLineLength:PlaylistVisibilitySheet.kt:VisibilityChoice(PlaylistVisibility.PUBLIC, Icons.Rounded.Public, R.string.playlist_visibility_public, R.string.playlist_visibility_public_desc)</ID>
     <ID>MaxLineLength:PlaylistWriteRepository.kt:PlaylistWriteRepository$/** Whether tracks from [type] can be put in a playlist at all (either on its source or in local universal playlists). */</ID>
+    <ID>MaxLineLength:PlaylistWriteRepository.kt:PlaylistWriteRepository$?:</ID>
     <ID>MaxLineLength:PlaylistWriteRepository.kt:PlaylistWriteRepository$return@withContext sharedOutcome(sharedEditor.add(agroId, toAdd), R.string.shared_playlist_added, playlist.name)</ID>
     <ID>MaxLineLength:PlaylistWriteRepository.kt:PlaylistWriteRepository$return@withContext sharedOutcome(sharedEditor.remove(agroId, index), R.string.shared_playlist_removed, playlist.name)</ID>
     <ID>MaxLineLength:PlaylistWriteRepository.kt:PlaylistWriteRepository$suspend</ID>
-    <ID>MaxLineLength:PodcastRepository.kt:PodcastRepository$val</ID>
-    <ID>MaxLineLength:PodcastRepository.kt:PodcastRepository$val extras = parsed.zip(episodes).mapNotNull { (episode, track) -&gt; PodcastEpisodes.extrasOf(track.id, episode) }</ID>
+    <ID>MaxLineLength:PodcastDao.kt:PodcastDao$@Query("SELECT * FROM tracks WHERE albumId = :albumId AND source = 'PODCAST' ORDER BY addedTimestamp DESC LIMIT :limit")</ID>
     <ID>MaxLineLength:PodcastSearchScreen.kt:Artwork(url = hit.artworkUrl, contentDescription = null, sizeDp = ArtworkSize, modifier = Modifier.size(ArtworkSize))</ID>
     <ID>MaxLineLength:PodcastSearchScreen.kt:PodcastSearchState.Searching</ID>
     <ID>MaxLineLength:PodcastSearchScreen.kt:snackbar.showSnackbar(context.getString(message.res, *message.args.toTypedArray()), withDismissAction = true)</ID>
-    <ID>MaxLineLength:PodcastSearchScreen.kt:title = { Text(stringResource(R.string.podcasts_search_title), style = MaterialTheme.typography.titleLarge) }</ID>
     <ID>MaxLineLength:PodcastSearchViewModel.kt:PodcastSearchState$/** What the search screen shows. The first two are the gates the listener must pass before anything leaves the device. */</ID>
+    <ID>MaxLineLength:PodcastSubscriptionsScreen.kt:Text(stringResource(R.string.podcasts_subscriptions_title), style = MaterialTheme.typography.titleLarge)</ID>
+    <ID>MaxLineLength:PodcastSubscriptionsScreen.kt:if (podcast.autoDownload) R.string.podcasts_auto_download_on else R.string.podcasts_auto_download_off</ID>
     <ID>MaxLineLength:PodcastSubscriptionsScreen.kt:snackbar.showSnackbar(context.getString(message.res, *message.args.toTypedArray()), withDismissAction = true)</ID>
-    <ID>MaxLineLength:PodcastSubscriptionsScreen.kt:title = { Text(stringResource(R.string.podcasts_subscriptions_title), style = MaterialTheme.typography.titleLarge) }</ID>
     <ID>MaxLineLength:PodcastSubscriptionsViewModel.kt:PodcastSubscriptionsViewModel$if (summary.failed == 0) say(R.string.podcasts_refreshed) else say(R.string.podcasts_refresh_failed, summary.failed)</ID>
     <ID>MaxLineLength:PressMorph.kt:internal</ID>
     <ID>MaxLineLength:ProfileActions.kt:HeroActionRow</ID>
-    <ID>MaxLineLength:ProfileScreen.kt:RankedList(friendStats.topArtists.take(TOP_COUNT), countLabel = { stringResource(R.string.social_plays_2, it.toString()) })</ID>
-    <ID>MaxLineLength:ProfileScreen.kt:RankedList(friendStats.topTracks.take(TOP_COUNT), countLabel = { stringResource(R.string.social_plays_2, it.toString()) })</ID>
     <ID>MaxLineLength:ProfileStats.kt:StatFigure(plays.toString(), stringResource(R.string.social_plays), MaterialTheme.colorScheme.onPrimaryContainer)</ID>
     <ID>MaxLineLength:QueueDrawer.kt:itemGenerations = itemGenerations + (entry.track.id to (itemGenerations[entry.track.id] ?: 0) + 1)</ID>
     <ID>MaxLineLength:QueueUpNext.kt:QueuePlayedToggle(count = played.size, expanded = expanded, onToggle = onToggle, modifier = Modifier.animateItem())</ID>
-    <ID>MaxLineLength:QueueUpNext.kt:itemsIndexed</ID>
     <ID>MaxLineLength:RankRow.kt:style = type.listTitle.copy(fontSize = if (compact) 14.sp else 16.sp, fontWeight = FontWeight.ExtraBold)</ID>
     <ID>MaxLineLength:RankRow.kt:withStyle</ID>
     <ID>MaxLineLength:RecognitionActivity.kt:Text(stringResource(R.string.common_could_not_listen), style = MaterialTheme.typography.headlineSmall, color = Color.White)</ID>
     <ID>MaxLineLength:RecognitionActivity.kt:Text(stringResource(R.string.common_identifying), style = MaterialTheme.typography.headlineSmall, color = Color.White)</ID>
     <ID>MaxLineLength:RecognitionActivity.kt:Text(stringResource(R.string.common_listening_2), style = MaterialTheme.typography.headlineSmall, color = Color.White)</ID>
-    <ID>MaxLineLength:RecognitionActivity.kt:TextButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_listen_again), color = Color.White) }</ID>
-    <ID>MaxLineLength:RecognitionActivity.kt:TextButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_try_again), color = Color.White) }</ID>
     <ID>MaxLineLength:RecordingIdentityRepository.kt:RecordingIdentityRepository$val targetTrack = withContext(Dispatchers.IO) { trackDao.getTrackById(trackId) } ?: return@withContext emptyList()</ID>
     <ID>MaxLineLength:ReplayViewModel.kt:ReplayViewModel$isSaved = saved != null</ID>
     <ID>MaxLineLength:RestoreFromAgroDialog.kt:.</ID>
     <ID>MaxLineLength:RestoreFromAgroDialog.kt:TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_cancel)) }</ID>
     <ID>MaxLineLength:RestoreFromAgroDialog.kt:text = stringResource(R.string.cloud_backup_size, Formatter.formatShortFileSize(context, backup.sealedBytes))</ID>
+    <ID>MaxLineLength:ResumeHandoffCard.kt:text = stringResource(if (isLive) R.string.session_playing_on else R.string.session_left_off_on, deviceName)</ID>
     <ID>MaxLineLength:RssFeedParser.kt:RssFeedParser$"image" -&gt; if (parser.depth == CHANNEL_CHILD_DEPTH &amp;&amp; imageArtwork == null) imageArtwork = readImageUrl(parser)</ID>
-    <ID>MaxLineLength:RssFeedParser.kt:RssFeedParser$if (event == XmlPullParser.START_TAG &amp;&amp; parser.name == "url") url = parser.nextText().trim().ifBlank { null }</ID>
-    <ID>MaxLineLength:ScrobbleForwarding.kt:ScrobbleForwarding$(lastFm.nowPlaying(session, track) as? ScrobbleOutcome.Unauthorized)?.let { signOut(ScrobbleService.LASTFM, it.reason) }</ID>
-    <ID>MaxLineLength:ScrobbleForwarding.kt:ScrobbleForwarding$(listenBrainz.playingNow(token, track) as? ScrobbleOutcome.Unauthorized)?.let { signOut(ScrobbleService.LISTENBRAINZ, it.reason) }</ID>
-    <ID>MaxLineLength:ScrobbleForwarding.kt:ScrobbleForwarding$retry</ID>
-    <ID>MaxLineLength:ScrobbleForwarding.kt:ScrobbleForwarding$suspend</ID>
+    <ID>MaxLineLength:RssFeedParserTest.kt:RssFeedParserTest$val xml = """&lt;rss&gt;&lt;channel&gt;&lt;title&gt;T&lt;/title&gt;&lt;itunes:new-feed-url&gt; https://new.example/feed &lt;/itunes:new-feed-url&gt;&lt;/channel&gt;&lt;/rss&gt;"""</ID>
+    <ID>MaxLineLength:RssFeedParserTest.kt:RssFeedParserTest$val xml = """&lt;rss&gt;&lt;channel&gt;&lt;title&gt;T&lt;/title&gt;&lt;itunes:new-feed-url&gt;file:///sdcard/x&lt;/itunes:new-feed-url&gt;&lt;/channel&gt;&lt;/rss&gt;"""</ID>
+    <ID>MaxLineLength:SavedQueue.kt:SavedQueue.Companion$*</ID>
     <ID>MaxLineLength:ScrobblingDialogs.kt:TextButton</ID>
-    <ID>MaxLineLength:SearchScreen.kt:text = if (isLyricsExpanded) "Show fewer" else "Show ${state.lyricMatches.size - 5} more lyric matches"</ID>
-    <ID>MaxLineLength:SearchScreen.kt:text = if (isLyricsExpanded) "Show less" else "See all (${state.lyricMatches.size})"</ID>
     <ID>MaxLineLength:SecureDisplayPreferences.kt:SecureDisplayPreferences$/** How often songs were played from each Home shelf, as JSON. Never leaves the device except in a backup the user makes. */</ID>
+    <ID>MaxLineLength:SecureDownloadPreferences.kt:SecureDownloadPreferences$/** Fill what is left of a batch with what `OfflinePredictor` expects next — songs the app predicts, not ones chosen. */</ID>
     <ID>MaxLineLength:SecureStorage.kt:SecureStorage$fun setArtistReleaseNotificationEnabled</ID>
     <ID>MaxLineLength:SecureStorage.kt:SecureStorage$fun setNavidromeCredentials</ID>
     <ID>MaxLineLength:SecureStorage.kt:SecureStorage$fun setYtMusicSession</ID>
+    <ID>MaxLineLength:SelectedArtworkMark.kt:modifier = modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f), MaterialTheme.shapes.medium)</ID>
+    <ID>MaxLineLength:SessionSheet.kt:text = stringResource(if (isLive) R.string.session_listening_on else R.string.session_last_played_on, deviceName)</ID>
+    <ID>MaxLineLength:SessionSheet.kt:text = stringResource(if (isResuming) R.string.session_finding_here else R.string.session_continue_here)</ID>
     <ID>MaxLineLength:ShareDomainDialog.kt:TextButton(onClick = { onSave("") }, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.settings_use_default)) }</ID>
     <ID>MaxLineLength:ShareDomainDialog.kt:TextButton(onClick = { onSave(domain) }, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.settings_save)) }</ID>
     <ID>MaxLineLength:ShareRepository.kt:ShareRepository$"A playlist link holds up to ${UniversalPlaylistLink.MAX_TRACKS} tracks, and this one has ${tracks.size}."</ID>
+    <ID>MaxLineLength:SharedMediaLinkOpener.kt:SharedMediaLinkOpener$val message = context.getString(R.string.link_playlist_agro_failed, context.getString(it.userMessageRes()))</ID>
     <ID>MaxLineLength:SharedPlaylistBanner.kt:color = if (status.warn) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceContainerLow</ID>
     <ID>MaxLineLength:SharedPlaylistBanner.kt:contentColor = if (status.warn) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface</ID>
     <ID>MaxLineLength:SharedPlaylistBanner.kt:text = stringResource(R.string.shared_playlist_banner, stringResource(status.label), stringResource(accessLabel(state)))</ID>
@@ -1478,6 +1581,7 @@
     <ID>MaxLineLength:SharedPlaylistRepository.kt:SharedPlaylistRepository$if (copy?.isBlend == true &amp;&amp; copy.syncState == SharedSyncState.REVOKED.name) return Result.success(forget(agroId))</ID>
     <ID>MaxLineLength:SharedPlaylistSync.kt:SharedPlaylistSync$onFailure = { error -&gt; if (error is AgroAuthError.Rejected) refused(entity, ops, upTo) else behind(entity, error) }</ID>
     <ID>MaxLineLength:SharedPlaylistSync.kt:SharedPlaylistSync$write(entity, server, later, if (later.isEmpty()) SharedSyncState.SYNCED else SharedSyncState.PENDING, sent.filterIsInstance&lt;SharedPlaylistOp.Add&gt;())</ID>
+    <ID>MaxLineLength:SharedTextTest.kt:SharedTextTest$SharedText.firstLink("Listen to Today's Top Hits on Spotify: https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M?si=x")</ID>
     <ID>MaxLineLength:SharedWithMeList.kt:SkeletonRow(leadingSize = 48.dp, leadingShape = MaterialTheme.shapes.extraSmall, modifier = Modifier.animateItem())</ID>
     <ID>MaxLineLength:SharedWithMeList.kt:internal</ID>
     <ID>MaxLineLength:SharedWithMeList.kt:item(key = "shared_empty") { SharedMessage(stringResource(R.string.shared_with_me_empty), Modifier.animateItem()) }</ID>
@@ -1514,24 +1618,24 @@
     <ID>MaxLineLength:StatsSummary.kt:Text(stringResource(R.string.stats_total_listened_time), style = label, color = colors.onPrimaryContainer)</ID>
     <ID>MaxLineLength:StatsSummary.kt:text = stringResource(R.string.stats_plays_word) + "\n" + stringResource(R.string.stats_average_per_day)</ID>
     <ID>MaxLineLength:StatsSummary.kt:text = stringResource(if (changePercent &gt; 0) R.string.stats_change_up else R.string.stats_change_down, changePercent)</ID>
-    <ID>MaxLineLength:StreamResolver.kt:StreamResolver$_resolvedStreams.update { it.withBound(trackId, StreamDebug(null, null, null, 0, null, error = failure.message)) }</ID>
+    <ID>MaxLineLength:StreamingResamplerTest.kt:StreamingResamplerTest$val frames = PcmDownmix.mix(bytes, 2, android.media.AudioFormat.ENCODING_PCM_16BIT, StreamingResampler(8_000, out))</ID>
+    <ID>MaxLineLength:StreamingResamplerTest.kt:StreamingResamplerTest$val frames = PcmDownmix.mix(bytes, 2, android.media.AudioFormat.ENCODING_PCM_FLOAT, StreamingResampler(8_000, out))</ID>
+    <ID>MaxLineLength:SyncOfferSheet.kt:pluralStringResource(R.plurals.sync_offer_route_albums, albums.size, stringResource(route.labelRes()), albums.size)</ID>
     <ID>MaxLineLength:TextPlaylistParser.kt:TextPlaylistParser$contains("://") || startsWith("/") || contains('\\') || WINDOWS_DRIVE.containsMatchIn(this) || EXTENSION.containsMatchIn(this)</ID>
     <ID>MaxLineLength:TextPlaylistParser.kt:TextPlaylistParser$label.contains(" - ") -&gt; label.split(" - ", limit = 2).let { RawImportTrack(artist = it[0].trim(), title = it[1].trim(), durationMs = durationMs) }</ID>
     <ID>MaxLineLength:TextPlaylistParser.kt:TextPlaylistParser$label.contains(" – ") -&gt; label.split(" – ", limit = 2).let { RawImportTrack(artist = it[0].trim(), title = it[1].trim(), durationMs = durationMs) }</ID>
     <ID>MaxLineLength:TextPlaylistParser.kt:TextPlaylistParser.Companion$val EXTENSION = Regex("""\.(mp3|m4a|m4b|mp4|aac|flac|alac|ogg|oga|opus|wav|wma|aiff?)$""", RegexOption.IGNORE_CASE)</ID>
     <ID>MaxLineLength:TextPlaylistParserTest.kt:TextPlaylistParserTest$val playlist = parse("# comment\nDaft Punk - One More Time\nAround The World by Daft Punk\nHarder, Better, Faster, Stronger")</ID>
-    <ID>MaxLineLength:TrackActionsBuilder.kt:add(MenuAction(Icons.AutoMirrored.Rounded.PlaylistAdd, "Play next", ActionEmphasis.PRIMARY) { callbacks.onPlayNext(); dismiss() })</ID>
-    <ID>MaxLineLength:TrackActionsBuilder.kt:add(MenuAction(Icons.AutoMirrored.Rounded.QueueMusic, "Queue", ActionEmphasis.SECONDARY) { callbacks.onAddToQueue(); dismiss() })</ID>
-    <ID>MaxLineLength:TrackActionsBuilder.kt:callbacks.onMoveDown?.let { add(MenuAction(Icons.Rounded.ArrowDownward, labels.moveDown, ActionEmphasis.ICON) { it(); dismiss() }) }</ID>
-    <ID>MaxLineLength:TrackActionsBuilder.kt:callbacks.onMoveUp?.let { add(MenuAction(Icons.Rounded.ArrowUpward, labels.moveUp, ActionEmphasis.ICON) { it(); dismiss() }) }</ID>
-    <ID>MaxLineLength:TrackActionsSheet.kt:labels = TrackActionLabels(likeLabel, removeFromQueue, deleteOffline, resetProgress, moveUp, moveDown)</ID>
+    <ID>MaxLineLength:TrackLibraryQueries.kt:TrackLibraryQueries$@Query("SELECT * FROM tracks WHERE isEpisode = 0 AND $IN_COLLECTION AND LOWER(genre) IN (:genres) ORDER BY RANDOM() LIMIT :limit")</ID>
     <ID>MaxLineLength:TrackLibraryQueries.kt:TrackLibraryQueries$@Query("SELECT * FROM tracks WHERE isLiked = 1 AND isEpisode = 0 ORDER BY lastPlayedTimestamp DESC, addedTimestamp DESC LIMIT :limit")</ID>
     <ID>MaxLineLength:TrackLibraryQueries.kt:TrackLibraryQueries$@Query("SELECT * FROM tracks WHERE isLive = 0 AND (isLibrary = 1 OR playCount &gt; 0 OR lastPlayedTimestamp IS NOT NULL)")</ID>
     <ID>MaxLineLength:TrackLibraryQueries.kt:TrackLibraryQueries$@Query("SELECT * FROM tracks WHERE lastPlayedTimestamp IS NOT NULL AND isEpisode = 0 ORDER BY lastPlayedTimestamp DESC LIMIT :limit")</ID>
+    <ID>MaxLineLength:TrackLibraryQueries.kt:TrackLibraryQueries$@Query("SELECT * FROM tracks WHERE playCount = 0 AND isEpisode = 0 AND $IN_COLLECTION ORDER BY addedTimestamp DESC LIMIT :limit")</ID>
+    <ID>MaxLineLength:TrackLibraryQueries.kt:TrackLibraryQueries$@Query("SELECT * FROM tracks WHERE source = :source AND isEpisode = 0 AND $IN_COLLECTION ORDER BY addedTimestamp DESC LIMIT :limit")</ID>
     <ID>MaxLineLength:TrackLibraryQueries.kt:TrackLibraryQueries$@Query("SELECT COUNT(*) FROM tracks WHERE isLive = 0 AND (isLibrary = 1 OR playCount &gt; 0 OR lastPlayedTimestamp IS NOT NULL)")</ID>
-    <ID>MaxLineLength:TrackLibraryQueries.kt:TrackLibraryQueries$@Query("SELECT id FROM tracks WHERE isLive = 0 AND (isLibrary = 1 OR playCount &gt; 0 OR lastPlayedTimestamp IS NOT NULL)")</ID>
     <ID>MaxLineLength:TrackMatcher.kt:TrackMatcher$return findBestMatch(title, artist, durationMs, musicRepository.searchAllSources(query, kind = SearchKind.VIDEOS))</ID>
     <ID>MaxLineLength:TrackRow.kt:modifier = Modifier.padding(top = 2.dp, end = if (onToggleLike == null &amp;&amp; !isPlaying) 4.dp else 0.dp)</ID>
+    <ID>MaxLineLength:TrackSwipeBox.kt:imageVector = if (playNext) Icons.AutoMirrored.Rounded.PlaylistAdd else Icons.AutoMirrored.Rounded.QueueMusic</ID>
     <ID>MaxLineLength:Type.kt:androidx.compose.ui.text.googlefonts.Font(googleFont = PlayfulFont, fontProvider = fontProvider, weight = FontWeight.Bold)</ID>
     <ID>MaxLineLength:Type.kt:androidx.compose.ui.text.googlefonts.Font(googleFont = PlayfulFont, fontProvider = fontProvider, weight = FontWeight.ExtraBold)</ID>
     <ID>MaxLineLength:Type.kt:androidx.compose.ui.text.googlefonts.Font(googleFont = PlayfulFont, fontProvider = fontProvider, weight = FontWeight.Medium)</ID>
@@ -1541,15 +1645,13 @@
     <ID>MaxLineLength:UniversalPlaylistLinkTest.kt:UniversalPlaylistLinkTest$assertEquals(UniversalPlaylistLink.MAX_TRACKS, UniversalPlaylistLink.parse(linkWith(gzipped(many)))!!.tracks.size)</ID>
     <ID>MaxLineLength:UniversalPlaylistLinkTest.kt:UniversalPlaylistLinkTest$assertNull(UniversalPlaylistLink.parse(linkWith(Base64.getUrlEncoder().withoutPadding().encodeToString("plain".toByteArray()))))</ID>
     <ID>MaxLineLength:UpdateAvailableDialog.kt:TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_not_now)) }</ID>
+    <ID>MaxLineLength:UserSearchSheet.kt:Text(stringResource(if (state.showingCode) R.string.social_hide_my_code else R.string.social_my_code))</ID>
     <ID>MaxLineLength:VideoClipFormatTest.kt:VideoClipFormatTest$assertEquals("248", player(format(248, vp9, 1080), format(299, avc, 1440)).bestVideoFormat()?.get("itag")?.toString())</ID>
     <ID>MaxLineLength:VideoClipFormatTest.kt:VideoClipFormatTest$assertEquals("299", player(format(299, avc, 1440), format(400, avc, 2160)).bestVideoFormat()?.get("itag")?.toString())</ID>
     <ID>MaxLineLength:WanderApp.kt:viewModels = ShellViewModels(viewModel, agroViewModel, socialViewModel, jamViewModel, listenersViewModel)</ID>
-    <ID>MaxLineLength:WanderAppDock.kt:DockVisibility$/** What decides whether and how the dock shows: the current route, whether it has a dock row, and whether a track is loaded. */</ID>
-    <ID>MaxLineLength:YTMusicCatalogLoader.kt:YTMusicCatalogLoader$if (shelves.isEmpty() &amp;&amp; failure != null) Result.failure(failure) else Result.success(shelves.distinctBy { it.id })</ID>
     <ID>MaxLineLength:YouTubeLoginScreen.kt:TextButton(onClick = onDone, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.common_cancel)) }</ID>
     <ID>MaxLineLength:YouTubePlaylistParser.kt:YouTubePlaylistParser$?:</ID>
     <ID>MaxLineLength:YouTubePlaylistParser.kt:YouTubePlaylistParser$val</ID>
-    <ID>NestedBlockDepth:LrcParser.kt:LrcParser$fun parse: List&lt;LyricLine&gt;</ID>
     <ID>NestedBlockDepth:PcmDecoder.kt:PcmDecoder$private fun decodeTrack: FloatArray?</ID>
     <ID>ReturnCount:AgroCatalogApi.kt:AgroCatalogApi$private fun JsonObject.toCatalogEntry: AgroCatalogEntry?</ID>
     <ID>ReturnCount:AgroDropParsing.kt:internal fun AgroDrop.decryptIfNeeded: AgroDrop</ID>
@@ -1573,6 +1675,7 @@
     <ID>ReturnCount:AlbumResolution.kt:AlbumResolution$fun bestMatch: UnifiedAlbum?</ID>
     <ID>ReturnCount:AppLocaleStore.kt:AppLocaleStore.Companion$fun wrap: Context</ID>
     <ID>ReturnCount:ArtistReleaseNotifier.kt:ArtistReleaseNotifier$suspend fun notifyReleases</ID>
+    <ID>ReturnCount:BrowsePlaylists.kt:BrowsePlaylists$suspend fun byId: Entry?</ID>
     <ID>ReturnCount:CanonicalMetadataMerge.kt:CanonicalMetadataMerge$fun improvesOnTitle: Boolean</ID>
     <ID>ReturnCount:CatalogSyncRepository.kt:CatalogSyncRepository$private suspend fun applyEntry: Int</ID>
     <ID>ReturnCount:CatalogSyncRepository.kt:CatalogSyncRepository$private suspend fun pullCatalogue: Int</ID>
@@ -1583,27 +1686,38 @@
     <ID>ReturnCount:DecryptingRelayStream.kt:DecryptingRelayStream$override fun read: Int</ID>
     <ID>ReturnCount:DecryptingRelayStream.kt:DecryptingRelayStream$private fun fill: Boolean</ID>
     <ID>ReturnCount:DeezerDecryptingDataSource.kt:DeezerDecryptingDataSource$override fun read: Int</ID>
+    <ID>ReturnCount:DeezerGwParsing.kt:DeezerGwParsing$fun album: UnifiedAlbum?</ID>
+    <ID>ReturnCount:DeezerGwParsing.kt:DeezerGwParsing$fun playlist: UnifiedPlaylist?</ID>
+    <ID>ReturnCount:DeezerGwParsing.kt:DeezerGwParsing$fun track: UnifiedTrack?</ID>
+    <ID>ReturnCount:DeezerLyrics.kt:DeezerLyrics.Companion$fun parse: LyricsData?</ID>
     <ID>ReturnCount:DeezerParsing.kt:DeezerParsing$fun parseAlbum: UnifiedAlbum?</ID>
-    <ID>ReturnCount:DeezerParsing.kt:DeezerParsing$fun parseArtist: UnifiedArtist?</ID>
     <ID>ReturnCount:DeezerParsing.kt:DeezerParsing$fun parseTrack: UnifiedTrack?</ID>
+    <ID>ReturnCount:DownloadCandidates.kt:DownloadCandidates$suspend fun select: List&lt;TrackEntity&gt;</ID>
+    <ID>ReturnCount:DownloadWorker.kt:DownloadWorker$private fun finishManual: Result</ID>
     <ID>ReturnCount:EmbeddingScorer.kt:EmbeddingScorer$suspend fun findCompetitor: EmbeddingRepository.Match?</ID>
     <ID>ReturnCount:EpisodeExtrasRepository.kt:EpisodeExtrasRepository$suspend fun transcript: Result&lt;List&lt;TranscriptCue&gt;&gt;</ID>
     <ID>ReturnCount:FeatureExtractor.kt:FeatureExtractor$fun extract: AcousticFeatures?</ID>
     <ID>ReturnCount:FeatureExtractor.kt:FeatureExtractor$private fun tempoOf: Pair&lt;Float, Float&gt;</ID>
-    <ID>ReturnCount:FingerprintBackoffTest.kt:FingerprintBackoffTest$private fun mockIsBackedOff: Boolean</ID>
-    <ID>ReturnCount:FingerprintIndexWorker.kt:FingerprintIndexWorker$internal fun isBackedOff: Boolean</ID>
+    <ID>ReturnCount:FileLyrics.kt:FileLyrics$fun toLyricsData: LyricsData?</ID>
+    <ID>ReturnCount:FingerprintBatchPlanner.kt:FingerprintBatchPlanner$fun isBackedOff: Boolean</ID>
     <ID>ReturnCount:FingerprintTrackProcessor.kt:FingerprintTrackProcessor$private suspend fun audioSourceFor: Pair&lt;String, Map&lt;String, String&gt;&gt;?</ID>
     <ID>ReturnCount:FriendKeyDirectory.kt:FriendKeyDirectory$suspend fun keysFor: Map&lt;String, String&gt;</ID>
     <ID>ReturnCount:GrantBinding.kt:GrantBinding$fun sealingKey: String?</ID>
     <ID>ReturnCount:HomeSectionOps.kt:internal fun List&lt;HomeSection&gt;.withSection: List&lt;HomeSection&gt;</ID>
-    <ID>ReturnCount:HttpClientFactory.kt:HttpClientFactory$private fun isLocalOrLoopback: Boolean</ID>
+    <ID>ReturnCount:Id3Lyrics.kt:Id3Lyrics$fun read: FileLyrics?</ID>
+    <ID>ReturnCount:Id3Lyrics.kt:Id3Lyrics$internal fun decodeSylt: List&lt;LyricLine&gt;</ID>
+    <ID>ReturnCount:Id3Lyrics.kt:Id3Lyrics$internal fun decodeUslt: String?</ID>
+    <ID>ReturnCount:Id3Lyrics.kt:Id3Lyrics$private fun terminator: Int</ID>
     <ID>ReturnCount:ImportModels.kt:PlatformType.Companion$fun detect: PlatformType</ID>
     <ID>ReturnCount:InnerTubeArtistParsing.kt:private fun JsonObject.moreEndpoint: Pair&lt;String, String?&gt;?</ID>
     <ID>ReturnCount:InnerTubeArtistParsing.kt:private fun parseArtistPageAlbum: UnifiedAlbum?</ID>
     <ID>ReturnCount:InnerTubeArtistParsing.kt:private fun parseRelatedArtist: RelatedArtist?</ID>
     <ID>ReturnCount:InnerTubeHomeParsing.kt:private fun parseTwoRowItem: UnifiedTrack?</ID>
+    <ID>ReturnCount:InnerTubeLibraryParsing.kt:internal fun parseLibraryAlbum: UnifiedAlbum?</ID>
+    <ID>ReturnCount:InnerTubeLibraryParsing.kt:internal fun parseLibraryAlbumTile: UnifiedAlbum?</ID>
+    <ID>ReturnCount:InnerTubeLibraryParsing.kt:private fun libraryPlaylist: UnifiedPlaylist?</ID>
+    <ID>ReturnCount:InnerTubeLyricsParsing.kt:internal fun JsonObject.parseLyrics: LyricsData?</ID>
     <ID>ReturnCount:InnerTubeParsing.kt:internal fun parseDurationText: Long</ID>
-    <ID>ReturnCount:InnerTubeParsing.kt:internal fun parseLibraryAlbum: UnifiedAlbum?</ID>
     <ID>ReturnCount:InnerTubeParsing.kt:internal fun parsePlaylistPanelVideo: UnifiedTrack?</ID>
     <ID>ReturnCount:InnerTubeParsing.kt:internal fun parseResponsiveListItem: UnifiedTrack?</ID>
     <ID>ReturnCount:InnerTubePlayerResolver.kt:InnerTubePlayerResolver$private suspend fun visitorSession: String?</ID>
@@ -1612,7 +1726,9 @@
     <ID>ReturnCount:JamRadioTopUp.kt:JamRadioTopUp$private fun check</ID>
     <ID>ReturnCount:JamRepository.kt:JamRepository$private suspend fun displaceAutoRadio</ID>
     <ID>ReturnCount:JamViewModel.kt:JamViewModel$fun shareUrl: String?</ID>
-    <ID>ReturnCount:ListenAlongBar.kt:internal fun ListenAlongSession.statusLine: String</ID>
+    <ID>ReturnCount:LauncherShortcutHandler.kt:LauncherShortcutHandler$fun handle: Boolean</ID>
+    <ID>ReturnCount:LikeOutbox.kt:LikeOutbox$private suspend fun send: Outcome</ID>
+    <ID>ReturnCount:ListenAlongBar.kt:internal fun ListenAlongSession.status: ListenAlongStatus</ID>
     <ID>ReturnCount:ListenAlongController.kt:ListenAlongController$fun onFrame</ID>
     <ID>ReturnCount:ListenAlongPeerResolver.kt:ListenAlongPeerResolver$fun resolveOffGrid: ResolvedTrack?</ID>
     <ID>ReturnCount:ListenAlongResolver.kt:ListenAlongResolver$suspend fun resolve: ResolvedTrack?</ID>
@@ -1627,23 +1743,31 @@
     <ID>ReturnCount:MediaFormController.kt:MediaFormController$private suspend fun settle</ID>
     <ID>ReturnCount:MediaItems.kt:internal fun MediaItem.toUnifiedTrack: UnifiedTrack?</ID>
     <ID>ReturnCount:MediaItems.kt:internal fun Uri.wandaTrackId: String?</ID>
+    <ID>ReturnCount:Mp4Lyrics.kt:Mp4Lyrics$fun read: FileLyrics?</ID>
+    <ID>ReturnCount:Mp4Lyrics.kt:Mp4Lyrics$private fun child: Pair&lt;Long, Long&gt;?</ID>
     <ID>ReturnCount:MusicBrainzArtistFallback.kt:MusicBrainzArtistFallback$suspend fun lookup: ArtistFetch</ID>
     <ID>ReturnCount:NavTransitions.kt:private fun tabDirection: Int?</ID>
+    <ID>ReturnCount:NavidromeLyrics.kt:NavidromeLyrics$private suspend fun classic: Result&lt;LyricsData?&gt;</ID>
     <ID>ReturnCount:NavidromeShareReuse.kt:private fun SubsonicShare.isOpenAt: Boolean</ID>
     <ID>ReturnCount:NavidromeSource.kt:NavidromeSource$override suspend fun createPlaylist: Result&lt;String&gt;</ID>
+    <ID>ReturnCount:NavidromeSource.kt:NavidromeSource$override suspend fun getStreamInfo: Result&lt;StreamInfo&gt;</ID>
+    <ID>ReturnCount:NavidromeSource.kt:NavidromeSource$override suspend fun moveInPlaylist: Result&lt;Unit&gt;</ID>
     <ID>ReturnCount:NotificationButtons.kt:NotificationButtons$fun handle: Boolean</ID>
     <ID>ReturnCount:NowPlayingForwarder.kt:NowPlayingForwarder$private fun consider</ID>
     <ID>ReturnCount:OffGridBeacon.kt:OffGridBeacon.Companion$fun fromBytes: OffGridBeacon?</ID>
     <ID>ReturnCount:OffGridListenAlongPoller.kt:OffGridListenAlongPoller$fun startPolling: Result&lt;Unit&gt;</ID>
     <ID>ReturnCount:OffGridPairing.kt:OffGridPairing$private fun matchesBeacon: Boolean</ID>
+    <ID>ReturnCount:OfflinePredictor.kt:OfflinePredictor$fun rank: List&lt;String&gt;</ID>
     <ID>ReturnCount:P2PAudioResponseWriter.kt:P2PAudioResponseWriter$private fun openTrackStream: Pair&lt;InputStream, Long&gt;?</ID>
     <ID>ReturnCount:P2PGrantManager.kt:P2PGrantManager$fun isAuthorised: Boolean</ID>
     <ID>ReturnCount:P2PGrantManager.kt:P2PGrantManager$fun mintPairingGrant: String?</ID>
     <ID>ReturnCount:P2PServer.kt:P2PServer$private suspend fun serve</ID>
     <ID>ReturnCount:P2PServer.kt:P2PServer$suspend fun start: Result&lt;Unit&gt;</ID>
     <ID>ReturnCount:PcmDecoder.kt:PcmDecoder$private fun decodeTrack: FloatArray?</ID>
-    <ID>ReturnCount:PcmDecoder.kt:Resampler$fun toFingerprintRate: FloatArray</ID>
+    <ID>ReturnCount:PcmResampler.kt:Resampler$fun toFingerprintRate: FloatArray</ID>
     <ID>ReturnCount:PeerReachability.kt:PeerReachability$suspend fun canReach: Boolean</ID>
+    <ID>ReturnCount:PlayNextShuffleOrder.kt:PlayNextShuffleOrder$override fun cloneAndInsert: ShuffleOrder</ID>
+    <ID>ReturnCount:PlaybackEventListener.kt:PlaybackEventListener$override fun onPlayerError</ID>
     <ID>ReturnCount:PlaybackService.kt:PlaybackService.PlayCountRecorder$private fun checkScrobbleProgress</ID>
     <ID>ReturnCount:PlaybackSnapshotBuilder.kt:PlaybackSnapshotBuilder$fun MediaItem.resolveTrack: UnifiedTrack?</ID>
     <ID>ReturnCount:PlaybackStreamResolver.kt:PlaybackStreamResolver$private suspend fun downloadedFileOf: String?</ID>
@@ -1652,19 +1776,31 @@
     <ID>ReturnCount:PlaybackStreamResolver.kt:PlaybackStreamResolver$private suspend fun navidromeSubstituteFor: StreamInfo?</ID>
     <ID>ReturnCount:PlaybackStreamResolver.kt:PlaybackStreamResolver$private suspend fun originalSourceStream: Result&lt;StreamInfo&gt;</ID>
     <ID>ReturnCount:PlaybackStreamResolver.kt:PlaybackStreamResolver$private suspend fun sameRecordingAs: TrackEntity?</ID>
+    <ID>ReturnCount:PlaybackWakeMode.kt:PlaybackWakeMode$private fun MediaItem.isOnDevice: Boolean</ID>
     <ID>ReturnCount:PlayerArtworkAnchors.kt:PlayerArtworkAnchors$private fun LayoutCoordinates.toSheetRect: Rect?</ID>
     <ID>ReturnCount:PlayerConnection.kt:PlayerConnection$fun play</ID>
     <ID>ReturnCount:PlayerQueueManager.kt:PlayerQueueManager$fun moveInQueue</ID>
     <ID>ReturnCount:PlayerQueueManager.kt:PlayerQueueManager$fun snapshotQueue: PlayerConnection.QueueSnapshot?</ID>
+    <ID>ReturnCount:PlayerSheetState.kt:PlayerSheetState$internal suspend fun settle: Boolean</ID>
     <ID>ReturnCount:PlaylistCreator.kt:PlaylistCreator$suspend fun collaborative: Result&lt;String&gt;</ID>
     <ID>ReturnCount:PlaylistImportWorker.kt:PlaylistImportWorker$private suspend fun contents: Pair&lt;String, List&lt;String&gt;&gt;?</ID>
     <ID>ReturnCount:PlaylistPublicationRepository.kt:PlaylistPublicationRepository$private suspend fun available: SharedPlaylistEntity?</ID>
+    <ID>ReturnCount:PlaylistTrackRows.kt:internal fun playlistSelectionActions: List&lt;SelectionAction&gt;</ID>
     <ID>ReturnCount:PlaylistWriteRepository.kt:PlaylistWriteRepository$private suspend fun deleting: Result&lt;Unit&gt;</ID>
+    <ID>ReturnCount:PodcastEpisodeNotifier.kt:PodcastEpisodeNotifier$fun notifyNewEpisodes</ID>
     <ID>ReturnCount:PodcastRepository.kt:PodcastRepository$suspend fun importOpml: Result&lt;OpmlImportResult&gt;</ID>
+    <ID>ReturnCount:PodcastRepository.kt:private fun PodcastEntity.announcedAt: PodcastEntity</ID>
     <ID>ReturnCount:PreloadDecision.kt:PreloadDecision$fun canPreload: Boolean</ID>
+    <ID>ReturnCount:QueueInsert.kt:internal fun planInsertUndo: InsertUndo</ID>
+    <ID>ReturnCount:QueueTrackActions.kt:internal fun moveStepsFor: Pair&lt;Int?, Int?&gt;</ID>
     <ID>ReturnCount:RecognitionRepository.kt:RecognitionRepository$private suspend fun trackFor: UnifiedTrack?</ID>
     <ID>ReturnCount:RecordingArtwork.kt:RecordingArtwork$suspend fun coverFor: String?</ID>
+    <ID>ReturnCount:ReleaseVersion.kt:ReleaseVersion.Companion$fun parse: ReleaseVersion?</ID>
+    <ID>ReturnCount:ReleaseVersion.kt:ReleaseVersion.Companion$private fun comparePreRelease: Int</ID>
+    <ID>ReturnCount:ReleaseVersion.kt:internal fun isNewer: Boolean?</ID>
+    <ID>ReturnCount:RemoteLikesImport.kt:RemoteLikesImport$private suspend fun readLikes: Result&lt;LikeWalk&gt;</ID>
     <ID>ReturnCount:RssFeedParser.kt:RssFeedParser$internal fun parseDurationMs: Long</ID>
+    <ID>ReturnCount:SavedQueue.kt:SavedQueue.Companion$fun of: SavedQueue?</ID>
     <ID>ReturnCount:ScrobbleForwarding.kt:ScrobbleForwarding$private suspend fun drain: Boolean</ID>
     <ID>ReturnCount:ServiceShelvesRepository.kt:ServiceShelvesRepository$suspend fun youtubePicks: ServiceShelfResult</ID>
     <ID>ReturnCount:ShareLinkRewriter.kt:ShareLinkRewriter$fun unwrap: Uri?</ID>
@@ -1678,49 +1814,56 @@
     <ID>ReturnCount:SharedPlaylistRunner.kt:SharedPlaylistRunner$suspend fun syncAll: Boolean</ID>
     <ID>ReturnCount:SharedPlaylistSync.kt:SharedPlaylistSync$internal suspend fun push: SyncOutcome</ID>
     <ID>ReturnCount:SharedPlaylistViewModel.kt:SharedPlaylistViewModel$fun canRemove: Boolean</ID>
+    <ID>ReturnCount:SharedTextHandler.kt:SharedTextHandler$fun resolve: Intent?</ID>
     <ID>ReturnCount:ShelfSuggestions.kt:ShelfSuggestions$fun rarelyUsed: List&lt;String&gt;</ID>
     <ID>ReturnCount:ShortLinkExpander.kt:ShortLinkExpander$suspend fun expand: Result&lt;String&gt;</ID>
     <ID>ReturnCount:SmartRadioBuilder.kt:SmartRadioBuilder$fun build: List&lt;UnifiedTrack&gt;</ID>
     <ID>ReturnCount:SmartRadioBuilder.kt:SmartRadioBuilder$private fun interleave: List&lt;UnifiedTrack&gt;</ID>
+    <ID>ReturnCount:SocialActionReceiver.kt:SocialActionReceiver$private suspend fun play</ID>
     <ID>ReturnCount:SocialRepository.kt:SocialRepository$suspend fun refresh: Result&lt;Unit&gt;</ID>
+    <ID>ReturnCount:SonicNeighbours.kt:SonicNeighbours.Companion$private fun meanUnit: FloatArray?</ID>
+    <ID>ReturnCount:SourceReachability.kt:SourceReachability$fun isReachable: Boolean</ID>
+    <ID>ReturnCount:SourceScrobbleOutbox.kt:SourceScrobbleOutbox$private suspend fun drain: Boolean</ID>
     <ID>ReturnCount:SyncedLyricsView.kt:@Composable fun SyncedLyricsView</ID>
     <ID>ReturnCount:TrackActionsSheet.kt:@OptIn(ExperimentalMaterial3Api::class) @Composable fun TrackActionsSheet</ID>
     <ID>ReturnCount:TrackDeduplicator.kt:TrackDeduplicator$fun deduplicate: List&lt;UnifiedTrack&gt;</ID>
     <ID>ReturnCount:TrackDeduplicator.kt:TrackDeduplicator$fun isSameRecording: Boolean</ID>
+    <ID>ReturnCount:TrackErrorRecovery.kt:TrackErrorRecovery$fun refreshExpiredStream: Boolean</ID>
+    <ID>ReturnCount:TrackErrorRecovery.kt:TrackErrorRecovery$fun skipPastFailedItem: Boolean</ID>
     <ID>ReturnCount:TrackMatcher.kt:TrackMatcher$suspend fun match: UnifiedTrack?</ID>
     <ID>ReturnCount:TrackResolution.kt:TrackResolution$fun bestMatch: UnifiedTrack?</ID>
     <ID>ReturnCount:TranscriptParser.kt:TranscriptParser$private fun parseTimestamp: Long?</ID>
     <ID>ReturnCount:UniversalAlbumLink.kt:UniversalAlbumLink.Companion$fun parse: UniversalAlbumLink?</ID>
     <ID>ReturnCount:UniversalPlaylistLink.kt:UniversalPlaylistLink.Companion$fun parse: UniversalPlaylistLink?</ID>
     <ID>ReturnCount:UniversalTrackLink.kt:UniversalTrackLink.Companion$fun parse: UniversalTrackLink?</ID>
+    <ID>ReturnCount:UpdateChecker.kt:UpdateChecker$private suspend fun fetchLatestRelease: Fetched</ID>
     <ID>ReturnCount:UpdateChecker.kt:UpdateChecker$suspend fun checkForUpdate: UpdateCheckResult</ID>
+    <ID>ReturnCount:VorbisLyrics.kt:VorbisLyrics$fun readFlac: FileLyrics?</ID>
+    <ID>ReturnCount:VorbisLyrics.kt:VorbisLyrics$fun readOgg: FileLyrics?</ID>
+    <ID>ReturnCount:VorbisLyrics.kt:VorbisLyrics$private fun comments: Map&lt;String, String&gt;</ID>
     <ID>ReturnCount:WifiDirectLink.kt:WifiDirectLink$@Synchronized private fun channel: WifiP2pManager.Channel?</ID>
     <ID>ReturnCount:WifiDirectLink.kt:WifiDirectLink$internal suspend fun connect: Result&lt;DirectLink&gt;</ID>
     <ID>ReturnCount:WifiDirectLink.kt:WifiDirectLink$private suspend fun connectInner: Result&lt;DirectLink&gt;</ID>
     <ID>ReturnCount:WifiDirectLink.kt:WifiDirectLink$suspend fun makeDiscoverable: Result&lt;Unit&gt;</ID>
     <ID>ReturnCount:WifiP2pCalls.kt:fun settle: LinkOutcome?</ID>
-    <ID>ReturnCount:WorkEta.kt:WorkEta$fun describe: String?</ID>
+    <ID>ReturnCount:WorkEta.kt:WorkEta$fun estimate: Estimate?</ID>
+    <ID>ReturnCount:YTMusicCatalogLoader.kt:YTMusicCatalogLoader$suspend fun getLyrics: Result&lt;LyricsData?&gt;</ID>
     <ID>ReturnCount:YTMusicSource.kt:YTMusicSource$suspend fun accountName: String</ID>
     <ID>ReturnCount:YouTubeEntityLinks.kt:internal fun youTubeEntity: YouTubeEntity?</ID>
     <ID>ReturnCount:YouTubeLinks.kt:internal fun youTubeVideoId: String?</ID>
     <ID>SwallowedException:AgroStreamFetcher.kt:AgroStreamFetcher$e: IllegalArgumentException</ID>
     <ID>SwallowedException:AgroStreamFetcher.kt:AgroStreamFetcher$error: IllegalArgumentException</ID>
+    <ID>SwallowedException:CarouselPlaybackSync.kt:e: CancellationException</ID>
     <ID>SwallowedException:EpisodeChapters.kt:EpisodeChapters$e: IllegalArgumentException</ID>
     <ID>SwallowedException:EpisodeChapters.kt:EpisodeChapters$e: SerializationException</ID>
-    <ID>SwallowedException:FullScreenLyrics.kt:e: CancellationException</ID>
-    <ID>SwallowedException:InboxScreen.kt:e: CancellationException</ID>
     <ID>SwallowedException:LyricsRepository.kt:LyricsRepository$e: ClientRequestException</ID>
     <ID>SwallowedException:MicRecorder.kt:MicRecorder$e: IllegalArgumentException</ID>
     <ID>SwallowedException:MicRecorder.kt:MicRecorder$e: IllegalStateException</ID>
-    <ID>SwallowedException:PcmDecoder.kt:PcmDecoder$e: IllegalArgumentException</ID>
-    <ID>SwallowedException:PcmDecoder.kt:PcmDecoder$e: IllegalStateException</ID>
-    <ID>SwallowedException:PcmDecoder.kt:PcmDecoder$e: MediaCodec.CodecException</ID>
-    <ID>SwallowedException:PcmDecoder.kt:PcmDecoder$e: java.io.IOException</ID>
-    <ID>SwallowedException:PlayerCoverCarousel.kt:e: CancellationException</ID>
     <ID>SwallowedException:PlayerSheetGestures.kt:e: CancellationException</ID>
     <ID>SwallowedException:PodcastFeedClient.kt:PodcastFeedClient$e: XmlPullParserException</ID>
     <ID>SwallowedException:PodcastIndexClient.kt:PodcastIndexClient$e: SerializationException</ID>
     <ID>SwallowedException:ReplayShare.kt:cause: IOException</ID>
+    <ID>SwallowedException:SecureLyricsOffsetPreferences.kt:SecureLyricsOffsetPreferences$e: SerializationException</ID>
     <ID>SwallowedException:TranscriptParser.kt:TranscriptParser$e: IllegalArgumentException</ID>
     <ID>SwallowedException:TranscriptParser.kt:TranscriptParser$e: SerializationException</ID>
     <ID>SwallowedException:WebViewLifecycle.kt:e: ActivityNotFoundException</ID>
@@ -1729,17 +1872,20 @@
     <ID>ThrowsCount:AgroUploader.kt:AgroUploader$private fun begin: Result&lt;Begin&gt;</ID>
     <ID>ThrowsCount:BackupCodec.kt:BackupCodec$fun lockOf: BackupLock</ID>
     <ID>ThrowsCount:BackupIntegrity.kt:internal fun BackupDocument.verifyIntegrity</ID>
-    <ID>ThrowsCount:DeezerStreamResolver.kt:DeezerStreamResolver$private fun fetchTrackToken: Result&lt;String&gt;</ID>
-    <ID>ThrowsCount:DeezerStreamResolver.kt:DeezerStreamResolver$private fun requestMediaUrl: Result&lt;String&gt;</ID>
+    <ID>ThrowsCount:DeezerApiClient.kt:DeezerApiClient$private fun fetchJson: Result&lt;JsonElement&gt;</ID>
+    <ID>ThrowsCount:DeezerGateway.kt:DeezerGateway$private fun call: Pair&lt;JsonObject, Headers&gt;</ID>
+    <ID>ThrowsCount:DeezerStreamResolver.kt:DeezerStreamResolver$private fun requestMediaUrl: Result&lt;Pair&lt;String, DeezerAudioFormat&gt;&gt;</ID>
     <ID>ThrowsCount:EpisodeChapters.kt:EpisodeChapters$fun parse: List&lt;Chapter&gt;</ID>
     <ID>ThrowsCount:PodcastIndexClient.kt:PodcastIndexClient$private fun request: List&lt;PodcastHit&gt;</ID>
     <ID>ThrowsCount:RelayStreamFraming.kt:RelayStreamFraming$fun readFrame: Frame?</ID>
     <ID>ThrowsCount:StreamUrlResolver.kt:StreamUrlResolver$private suspend fun deobfuscate: String</ID>
     <ID>ThrowsCount:TranscriptParser.kt:TranscriptParser$private fun parseJson: List&lt;TranscriptCue&gt;</ID>
+    <ID>TooGenericExceptionCaught:SettingsAccountCoordinator.kt:SettingsAccountCoordinator$e: Exception</ID>
     <ID>TooManyFunctions:AgroFriendsApi.kt:AgroFriendsApi</ID>
     <ID>TooManyFunctions:AgroJamApi.kt:AgroJamApi</ID>
     <ID>TooManyFunctions:AgroSessionApi.kt:AgroSessionApi</ID>
     <ID>TooManyFunctions:AgroVault.kt:AgroVault</ID>
+    <ID>TooManyFunctions:AlbumViewModel.kt:AlbumViewModel : ViewModel</ID>
     <ID>TooManyFunctions:AppModule.kt:AppModule</ID>
     <ID>TooManyFunctions:ArtistPlaybackCoordinator.kt:ArtistPlaybackCoordinator</ID>
     <ID>TooManyFunctions:ArtistViewModel.kt:ArtistViewModel : ViewModel</ID>
@@ -1747,31 +1893,37 @@
     <ID>TooManyFunctions:CatalogCollectionRepository.kt:CatalogCollectionRepository</ID>
     <ID>TooManyFunctions:CatalogRecordingDao.kt:CatalogRecordingDao</ID>
     <ID>TooManyFunctions:CatalogRepository.kt:CatalogRepository</ID>
+    <ID>TooManyFunctions:DeezerSource.kt:DeezerSource : IMusicSource</ID>
     <ID>TooManyFunctions:Destinations.kt:Routes</ID>
     <ID>TooManyFunctions:DropDao.kt:DropDao</ID>
-    <ID>TooManyFunctions:HistoryDao.kt:HistoryDao</ID>
+    <ID>TooManyFunctions:DropNotifier.kt:DropNotifier</ID>
+    <ID>TooManyFunctions:HistoryDao.kt:HistoryDao : HistoryEditQueries</ID>
     <ID>TooManyFunctions:HomeLayoutActions.kt:HomeLayoutActions</ID>
     <ID>TooManyFunctions:HomeViewModel.kt:HomeViewModel : ViewModel</ID>
     <ID>TooManyFunctions:IMusicSource.kt:IMusicSource</ID>
     <ID>TooManyFunctions:InnerTubeParsing.kt:com.wander.android.data.sources.ytmusic.InnerTubeParsing.kt</ID>
     <ID>TooManyFunctions:JamRepository.kt:JamRepository</ID>
     <ID>TooManyFunctions:JamViewModel.kt:JamViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:LibraryBrowseDao.kt:LibraryBrowseDao</ID>
+    <ID>TooManyFunctions:LibraryBrowseRepository.kt:LibraryBrowseRepository</ID>
     <ID>TooManyFunctions:LibraryPlaybackCoordinator.kt:LibraryPlaybackCoordinator</ID>
     <ID>TooManyFunctions:LibrarySyncRepository.kt:LibrarySyncRepository</ID>
-    <ID>TooManyFunctions:LibraryTrackRepository.kt:LibraryTrackRepository</ID>
     <ID>TooManyFunctions:LibraryViewModel.kt:LibraryViewModel : ViewModel</ID>
-    <ID>TooManyFunctions:ListeningTogetherNotifier.kt:ListeningTogetherNotifier</ID>
     <ID>TooManyFunctions:LocalMusicSource.kt:LocalMusicSource : IMusicSource</ID>
     <ID>TooManyFunctions:MusicRepository.kt:MusicRepository</ID>
     <ID>TooManyFunctions:NavidromeCatalogLoader.kt:NavidromeCatalogLoader</ID>
     <ID>TooManyFunctions:NavidromeSource.kt:NavidromeSource : IMusicSource</ID>
     <ID>TooManyFunctions:NowPlayingViewModel.kt:NowPlayingViewModel : ViewModel</ID>
     <ID>TooManyFunctions:P2PServer.kt:P2PServer</ID>
+    <ID>TooManyFunctions:PlayNextShuffleOrder.kt:PlayNextShuffleOrder : ShuffleOrder</ID>
+    <ID>TooManyFunctions:PlaybackStreamResolver.kt:PlaybackStreamResolver</ID>
     <ID>TooManyFunctions:PlayerConnection.kt:PlayerConnection</ID>
+    <ID>TooManyFunctions:PlayerQueueManager.kt:PlayerQueueManager</ID>
     <ID>TooManyFunctions:PlaylistImportViewModel.kt:PlaylistImportViewModel : ViewModel</ID>
     <ID>TooManyFunctions:PlaylistShareViewModel.kt:PlaylistShareViewModel : ViewModel</ID>
     <ID>TooManyFunctions:PlaylistViewModel.kt:PlaylistViewModel : ViewModel</ID>
     <ID>TooManyFunctions:PlaylistWriteRepository.kt:PlaylistWriteRepository</ID>
+    <ID>TooManyFunctions:PodcastDao.kt:PodcastDao</ID>
     <ID>TooManyFunctions:SearchViewModel.kt:SearchViewModel : ViewModel</ID>
     <ID>TooManyFunctions:SecureAgroPreferences.kt:SecureAgroPreferences</ID>
     <ID>TooManyFunctions:SecureDisplayPreferences.kt:SecureDisplayPreferences</ID>
@@ -1786,7 +1938,7 @@
     <ID>TooManyFunctions:SocialRepository.kt:SocialRepository</ID>
     <ID>TooManyFunctions:SocialViewModel.kt:SocialViewModel : ViewModel</ID>
     <ID>TooManyFunctions:SubsonicApiClient.kt:SubsonicApiClient</ID>
-    <ID>TooManyFunctions:TrackDao.kt:TrackDao : TrackLibraryQueriesTrackSyncQueries</ID>
+    <ID>TooManyFunctions:TrackDao.kt:TrackDao : TrackLibraryQueriesTrackSyncQueriesTrackRadioQueries</ID>
     <ID>TooManyFunctions:TrackEmbeddingDao.kt:TrackEmbeddingDao</ID>
     <ID>TooManyFunctions:TrackLibraryQueries.kt:TrackLibraryQueries</ID>
     <ID>TooManyFunctions:TrackLyricsDao.kt:TrackLyricsDao</ID>
@@ -1810,6 +1962,10 @@
     <ID>TopLevelPropertyNaming:CardMotion.kt:private const val EntranceStartScale = 0.75f</ID>
     <ID>TopLevelPropertyNaming:CardMotion.kt:private const val MaxStaggeredIndex = 5</ID>
     <ID>TopLevelPropertyNaming:CardMotion.kt:private const val StaggerStepMs = 12L</ID>
+    <ID>TopLevelPropertyNaming:CarouselPlaybackSync.kt:private const val EchoTimeoutMs = 2_000L</ID>
+    <ID>TopLevelPropertyNaming:CarouselPlaybackSync.kt:private const val HealDelayMs = 120L</ID>
+    <ID>TopLevelPropertyNaming:CarouselPlaybackSync.kt:private const val NotSettled = -1</ID>
+    <ID>TopLevelPropertyNaming:CarouselPlaybackSync.kt:private const val OwnSlideGraceMs = 300L</ID>
     <ID>TopLevelPropertyNaming:CircularProgressRing.kt:/** * How many soft bumps the ring and the button's own outline share while playing — see * [rememberCookieMorphShape]. Low and shallow on purpose: this sits at icon size, and a tight, * deep scallop at that scale reads as a jagged gear rather than a soft, rounded cookie. */ private const val CookieLobes = 6</ID>
     <ID>TopLevelPropertyNaming:CircularProgressRing.kt:private const val LobeDepthFraction = 0.05f</ID>
     <ID>TopLevelPropertyNaming:CoverPalette.kt:/** Long enough to read as a crossfade, short enough to have finished before the cover settles. */ private const val SeedTweenMs = 450</ID>
@@ -1858,7 +2014,9 @@
     <ID>TopLevelPropertyNaming:LikeButton.kt:/** The ring ends up half again the heart's size; big enough to read, small enough not to crowd. */ private const val BurstSizeFactor = 1.8f</ID>
     <ID>TopLevelPropertyNaming:LikeButton.kt:/** Where the heart starts from when it fills. Below 1, so it springs *out* to its size. */ private const val PressedScale = 0.6f</ID>
     <ID>TopLevelPropertyNaming:LyricLineItem.kt:/** Pre-compensation offset to align human audio perception and hardware buffer latency. */ private const val LyricsLeadOffsetMs = 120L</ID>
+    <ID>TopLevelPropertyNaming:LyricsControls.kt:/** Half a second: small enough to land on a word, large enough that a few taps fix most tracks. */ private const val OffsetStepMs = 500L</ID>
     <ID>TopLevelPropertyNaming:LyricsControls.kt:/** Matches `PlayerActionBar`'s container, so the two groups are visibly the same idiom. */ private const val ContainerAlpha = 0.55f</ID>
+    <ID>TopLevelPropertyNaming:LyricsControls.kt:private const val MsPerSecond = 1_000f</ID>
     <ID>TopLevelPropertyNaming:MiniPlayer.kt:/** * Drag distance at which the strip's text has faded out completely. Matches the swipe's own * commit threshold (see `TrackSwipe.kt`), so the text is gone exactly when releasing would skip. */ private const val SwipeFadeDistancePx = 120f</ID>
     <ID>TopLevelPropertyNaming:MiniPlayer.kt:/** Tonal, not solid: the strip is translucent over the sheet and this should not fight it. */ private const val MiniButtonContainerAlpha = 0.55f</ID>
     <ID>TopLevelPropertyNaming:MorphingArtwork.kt:/** A full circle — `RoundedCornerShape(percent = 50)`'s own figure — while fully docked. */ private const val CircleCornerPercent = 50</ID>
@@ -1874,10 +2032,6 @@
     <ID>TopLevelPropertyNaming:PlayerAttachedBar.kt:/** * How far the sheet travels before the bar has fully gone. * * Well short of the whole way: the bar sits where the expanding sheet is about to be, so it has to * be out of the way before the sheet's own content arrives underneath it. */ private const val HiddenByProgress = 0.3f</ID>
     <ID>TopLevelPropertyNaming:PlayerControls.kt:/** Matches the play toggle's playing corner, so the three read as one family. */ private const val SkipCornerFraction = 0.3f</ID>
     <ID>TopLevelPropertyNaming:PlayerCoverCarousel.kt:/** [MorphShape]'s 12% corner, as a fraction of the cover's width. */ private const val CoverCornerFraction = 0.12f</ID>
-    <ID>TopLevelPropertyNaming:PlayerCoverCarousel.kt:private const val EchoTimeoutMs = 2_000L</ID>
-    <ID>TopLevelPropertyNaming:PlayerCoverCarousel.kt:private const val HealDelayMs = 120L</ID>
-    <ID>TopLevelPropertyNaming:PlayerCoverCarousel.kt:private const val NotSettled = -1</ID>
-    <ID>TopLevelPropertyNaming:PlayerCoverCarousel.kt:private const val OwnSlideGraceMs = 300L</ID>
     <ID>TopLevelPropertyNaming:PlayerSeekBar.kt:/** How close `positionMs` must land to the seek target to count as "caught up." */ private const val SeekSettleToleranceMs = 400L</ID>
     <ID>TopLevelPropertyNaming:PlayerSeekBar.kt:/** How long to hold the released position before giving up on the player ever confirming it. */ private const val SeekSettleTimeoutMs = 1500L</ID>
     <ID>TopLevelPropertyNaming:PlayerSeekBarTrack.kt:/** `Modifier.weight` rejects exactly 0 — the floor keeps a segment from vanishing at either end. */ private const val MinTrackWeight = 0.001f</ID>
@@ -1894,6 +2048,7 @@
     <ID>TopLevelPropertyNaming:PlayerSkeleton.kt:internal const val CoverWidthFraction = 0.88f</ID>
     <ID>TopLevelPropertyNaming:PlayerSkeleton.kt:private const val SeekProgress = 0.35f</ID>
     <ID>TopLevelPropertyNaming:PlayerTopBar.kt:private const val OverlayScrimAlpha = 0.28f</ID>
+    <ID>TopLevelPropertyNaming:PlaylistFilterField.kt:/** Playlists shorter than this are read at a glance and get no filter field. */ internal const val PlaylistFilterMinTracks = 20</ID>
     <ID>TopLevelPropertyNaming:PressMorph.kt:/** * How long a touch on a list item holds before it shows it is pressed — the same beat a click waits * before showing its own press feedback. In a list, a finger that lands to scroll should not make * every row it crosses round off and shrink. */ internal const val ListPressDelayMillis = 100L</ID>
     <ID>TopLevelPropertyNaming:PressMorph.kt:/** How far a pressed row's content shrinks. The same as the cards and track rows shrink on their own. */ private const val PressedScale = 0.94f</ID>
     <ID>TopLevelPropertyNaming:ProfileActions.kt:/** Invite to jam beside the Activity button: about the split the old fixed 56 dp square left. */ private const val InviteWeight = 3.5f</ID>
@@ -1953,6 +2108,7 @@
     <ID>TopLevelPropertyNaming:TrackCarouselCard.kt:private const val ScrimAlpha = 0.65f</ID>
     <ID>TopLevelPropertyNaming:TrackPagerShelf.kt:/** How many rows one page of a [HomeSectionStyle.TRACK_PAGER] shelf holds. */ const val RowsPerPage = 4</ID>
     <ID>TopLevelPropertyNaming:TrackRow.kt:/** Material's disabled-content opacity. */ private const val DisabledAlpha = 0.38f</ID>
+    <ID>TopLevelPropertyNaming:TrackSelectionBar.kt:/** How many actions sit in the bar itself; the rest are behind its overflow. */ private const val InlineActions = 3</ID>
     <ID>TopLevelPropertyNaming:TrackSheetPageIndicator.kt:/** * One page of buttons, one page of [TrackInfoPage] — swipe right from the buttons to reach it. * Shared between [TrackActionsSheet] and `NowPlayingMenuDrawer`. */ internal const val MenuSheetPageCount = 2</ID>
     <ID>TopLevelPropertyNaming:TrackSheetPageIndicator.kt:internal const val MenuSheetInfoPageIndex = 1</ID>
     <ID>TopLevelPropertyNaming:TrackSwipe.kt:/** Drags track at 70% of the finger so the gesture feels weighted rather than loose. */ private const val DragResistance = 0.7f</ID>
@@ -1965,8 +2121,6 @@
     <ID>TopLevelPropertyNaming:WandaSheet.kt:/** How small a sheet gets at the far end of a back swipe, before it commits and slides away. */ private const val BackMinScale = 0.9f</ID>
     <ID>TopLevelPropertyNaming:WanderAppOverlays.kt:/** * How far the player sheet may travel before it counts as opening. * * Not zero: the docked sheet settles on an animated float, so an exact comparison would flicker on * the last fraction of a spring that has effectively already stopped. */ private const val DockedEpsilon = 0.01f</ID>
     <ID>UnusedParameter:FeaturedHeroShelf.kt:sectionId: String</ID>
-    <ID>UnusedParameter:NavidromeCatalogLoader.kt:NavidromeCatalogLoader$limit: Int</ID>
-    <ID>UnusedParameter:NavidromeCatalogLoader.kt:NavidromeCatalogLoader$offset: Int</ID>
     <ID>UnusedParameter:RecognitionActivity.kt:readiness: IndexReadiness</ID>
     <ID>UnusedPrivateClass:IdentityKeyManagerTest.kt:IdentityKeyManagerTest$FakeSecureStorage : SecureStorageHolder</ID>
   </CurrentIssues>

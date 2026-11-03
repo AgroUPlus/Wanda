@@ -1,7 +1,6 @@
 package com.wander.android.ui.screens.player
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,18 +24,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
-import com.wander.android.data.model.nameRes
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.core.playback.SpeedAndPitch
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.model.nameRes
 import com.wander.android.data.sources.agro.Jam
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.scrollingTitle
@@ -85,6 +83,7 @@ internal fun StandardPlayerLayout(
     modifier: Modifier = Modifier
 ) {
     val toggleLyrics by rememberUpdatedState(onToggleLyrics)
+    val doubleTapLike = rememberCoverDoubleTapLike(track, track.id in likedTrackIds, viewModel::like)
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -123,12 +122,7 @@ internal fun StandardPlayerLayout(
                     .fillMaxWidth(CoverWidthFraction)
                     .aspectRatio(1f)
                     .then(artworkModifier)
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onTap = { toggleLyrics() },
-                            onLongPress = { onOpenSpeedPitch() }
-                        )
-                    }
+                    .coverTapGestures(doubleTapLike, onTap = { toggleLyrics() }, onLongPress = { onOpenSpeedPitch() })
             ) {
                 if (artworkSlot != null) {
                     artworkSlot(track.artworkUrl, track.title)
@@ -144,6 +138,7 @@ internal fun StandardPlayerLayout(
                         )
                     }
                 }
+                CoverHeartOverlay(doubleTapLike)
 
                 if (showSpeedPitch) {
                     SpeedPitchPopup(
@@ -224,8 +219,11 @@ internal fun StandardPlayerLayout(
                             Text(
                                 text = " · ${shown.album}",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = if (albumId != null) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (albumId != null) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
                                 maxLines = 1,
                                 overflow = TextOverflow.Clip,
                                 modifier = Modifier.scrollingTitle()
@@ -246,7 +244,8 @@ internal fun StandardPlayerLayout(
                 modifier = Modifier.padding(top = PlayerRowGap),
                 isLive = track.isLive,
                 isPlaying = state.isPlaying,
-                isSeekable = state.isSeekable
+                isSeekable = state.isSeekable,
+                scrubLyricAt = rememberScrubLyricLookup(viewModel, track.id)
             )
 
             PlayerControls(

@@ -1,9 +1,5 @@
 package com.wander.android.ui.screens.library
 
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
-import com.wander.android.R
-import com.wander.android.data.model.nameRes
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -21,14 +17,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.wander.android.R
 import com.wander.android.data.model.UnifiedPlaylist
+import com.wander.android.data.model.nameRes
 import com.wander.android.ui.components.Artwork
 import com.wander.android.ui.components.rememberPressScale
 import com.wander.android.ui.components.rememberShelfArtworkShape
 import com.wander.android.ui.components.rememberShelfEntranceScale
 import com.wander.android.ui.components.scrollingTitle
+import com.wander.android.ui.components.sharedArtwork
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -40,7 +41,9 @@ fun PlaylistRow(
     /** In place of the source and track count, for a row that has something better to say. */
     subtitle: String? = null,
     /** Long press handler for actions sheet. */
-    onLongPress: (() -> Unit)? = null
+    onLongPress: (() -> Unit)? = null,
+    /** Carries the cover into the playlist's page; see [sharedArtwork]. */
+    sharedKey: String? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -67,7 +70,7 @@ fun PlaylistRow(
             contentDescription = null,
             sizeDp = 52.dp,
             shape = artworkShape,
-            modifier = Modifier.size(52.dp)
+            modifier = Modifier.sharedArtwork(sharedKey, artworkShape).size(52.dp)
         )
         Column(
             modifier = Modifier

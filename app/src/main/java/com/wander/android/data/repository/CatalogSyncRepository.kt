@@ -1,6 +1,5 @@
 package com.wander.android.data.repository
 
-import com.wander.android.core.network.loggableMessage
 import android.util.Log
 import com.wander.android.core.audio.fingerprint.AudioEmbedder
 import com.wander.android.core.database.dao.CatalogRecordingDao
@@ -8,6 +7,7 @@ import com.wander.android.core.database.dao.TrackEmbeddingDao
 import com.wander.android.core.database.dao.TrackLyricsDao
 import com.wander.android.core.database.entity.CatalogRecordingEntity
 import com.wander.android.core.database.entity.TrackLyricsEntity
+import com.wander.android.core.network.loggableMessage
 import com.wander.android.core.security.SecureStorage
 import com.wander.android.data.sources.agro.AgroCatalogApi
 import com.wander.android.data.sources.agro.AgroCatalogEntry

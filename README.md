@@ -26,14 +26,14 @@
 
 ---
 
-Wanda unifies **Navidrome / Subsonic**, **local device files**, **YouTube Music**, and **Deezer** into a single cohesive library, queue, and playback engine. 
+Wanda unifies **Subsonic servers** (Navidrome, Airsonic, Gonic and friends), **local device files**, **YouTube Music**, and **Deezer** into a single cohesive library, queue, and playback engine. 
 
 Designed for digital sovereignty and hardened operating systems like GrapheneOS: zero telemetry, zero analytics, Keystore-backed secrets, application-layer HTTPS enforcement, and battery-first background audio.
 
 Wanda is a complete player on its own. Connect it to [Agro](https://github.com/AgroUPlus/Agro), the optional server, for Jam rooms, friends, E2EE listen-along and real-time handoff with [Wander](https://github.com/AgroUPlus/Wander) on desktop.
 
 <p align="center">
-  <img width="1600" height="1000" alt="Wanda showing a Navidrome daily mix, an artist page and search across sources" src="docs/promo-wanda-sources.jpg" />
+  <img width="1600" height="1000" alt="Wanda showing a Subsonic daily mix, an artist page and search across sources" src="docs/promo-wanda-sources.jpg" />
 </p>
 
 ---
@@ -43,7 +43,7 @@ Wanda is a complete player on its own. Connect it to [Agro](https://github.com/A
 <details>
 <summary><b>I already use a major streaming app. Why should I use Wanda?</b></summary>
 <br>
-Because your music shouldn't be trapped in silos. Wanda is a premium Android player that lets you seamlessly mix your local files, your private Navidrome/Subsonic server, Deezer, and YouTube Music into <em>one single library</em>. Plus, it has zero tracking, true offline support, and social features that don't rely on a corporate server.
+Because your music shouldn't be trapped in silos. Wanda is a premium Android player that lets you seamlessly mix your local files, your private Subsonic server (Navidrome, Airsonic, Gonic…), Deezer, and YouTube Music into <em>one single library</em>. Plus, it has zero tracking, true offline support, and social features that don't rely on a corporate server.
 </details>
 
 <details>
@@ -113,12 +113,12 @@ Every backend implements a single interface (`IMusicSource`) declaring explicit 
 
 | Source | Search | Albums | Artists | Playlists | Likes | Scrobble | Radio | Lossless |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Navidrome / Subsonic** | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| **Subsonic** | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | **On This Device** | Yes | Yes | Yes | Local | N/A | N/A | Yes | Yes |
 | **YouTube Music** | Yes | Yes | Yes | Yes | Yes | N/A | Yes | N/A |
 | **Deezer** | Yes | Yes | Yes | Yes | Yes | N/A | Yes | Yes |
 
-* **Navidrome / Subsonic**: Full Subsonic API support, salted token authentication (passwords never touch the network), remote playlists, star ratings, scrobbling, and similar-artist radio.
+* **Subsonic**: Built on the Subsonic API, so Navidrome and other Subsonic-compatible servers (Airsonic-Advanced, Gonic…) connect the same way. Full Subsonic API support, salted token authentication (passwords never touch the network), remote playlists, star ratings, scrobbling, and similar-artist radio.
 * **Local Files**: MediaStore and SAF indexing persisted directly in Room with incremental `DATE_MODIFIED` watermarks.
 * **YouTube Music**: Direct InnerTube integration with Opus (itag 251) stream extraction, artist discovery, and personalized mixes. Works completely signed out or with optional in-app sign-in.
 * **Deezer**: High-fidelity FLAC and 320kbps MP3 streaming with on-the-fly decryption, artist catalogs, search, and personal library integration.
@@ -129,11 +129,21 @@ Every backend implements a single interface (`IMusicSource`) declaring explicit 
 
 * **E2EE Listen-Along & Jam Rooms** (with Agro): Host or join synchronized listening sessions with friends over local Wi-Fi or secure Agro relays. Encrypted end-to-end, with zero tracking of your listening history.
 * **Off-Grid Local Mesh** (no server needed): Discover nearby listeners on the local network and connect point-to-point, each side verifying the other by its identity fingerprint, without Internet connectivity.
-* **Synced Lyrics**: Native source lyrics prioritized first (Navidrome structured formats), followed by optional, user-consented lookups via LRCLIB. Time-synced lines highlight smoothly and allow tap-to-seek.
+* **Synced Lyrics**: Native source lyrics prioritized first (Subsonic / OpenSubsonic structured formats), followed by optional, user-consented lookups via LRCLIB. Time-synced lines highlight smoothly and allow tap-to-seek.
 * **Acoustic Fingerprinting**: An in-house, on-device fingerprinter (Haitsma-Kalker family, plus neural audio embeddings) matches recordings across backends for deduplication and library matching. No Chromaprint or `fpcalc` binary is bundled.
 * **Smart Mixes & Infinite Radio**: Endless Radio, Forgotten Favourites, and Never Played computed locally on-device from your listening graph.
 * **Incognito Mode**: Stops recording play history and search history, and stops scrobbling, now-playing updates and Agro presence. Audio already streamed may still be kept in the local playback cache.
 * **Material 3 Expressive UI**: Fluid spring animations, edge-to-edge window insets, predictive back gestures, cover-art dynamic color tinting, and pure OLED black theming.
+* **Conversation Notifications**: A song a friend sends you lands as a conversation with them, with their avatar, the cover and quick actions, filed under Android's Conversations.
+
+### Gestures & Feel
+
+* **Predictive back everywhere**: In-screen pages (a conversation, a genre, search results, importer steps) shrink into a card that leans away from your swipe while the screen underneath comes forward, its scroll kept. Covers fly from the grid into the album or playlist page and back with your finger.
+* **Swipe a track**: Right to play it next, left to add it to the queue, with Undo — on albums, playlists, search, artist pages, History and Home.
+* **Now Playing**: Double-tap the cover to like it; hold skip to fast-forward or rewind; while scrubbing, a bubble shows the time and the synced lyric line at that point.
+* **Mini player**: Swipe sideways to skip, pull down to pause and tuck it away (with Undo).
+* **Tap the tab you are on** to go back to its root, or to the top of its list.
+* **Small touches**: Rubber-band edges on the queue and lyrics, a tick per letter on the fast scroller, and a soft haptic when a swipe or sheet settles.
 
 <p align="center">
   <img width="1600" height="1000" alt="Wanda importing a playlist, recognising a song and showing synced lyrics" src="docs/promo-wanda-discovery.jpg" />
@@ -185,7 +195,7 @@ app/src/main/java/com/wander/android/
 ├── data/
 │   ├── model/        Unified audio domain models
 │   ├── repository/   Room-backed reactive repositories
-│   └── sources/      Navidrome, Local, YouTube Music, Deezer, Agro
+│   └── sources/      Subsonic, Local, YouTube Music, Deezer, Agro
 └── ui/
     ├── components/   M3 Expressive player sheet, mini-player, and bars
     ├── navigation/   Deep-link routing and Compose destination graphs

@@ -9,8 +9,8 @@
     <!-- Shared by the quality pickers. -->
     <string name="settings_quality_320_kbps">320 kbps</string>
     <string name="settings_quality_128_kbps">128 kbps</string>
-    <string name="settings_navidrome_quality_wifi">Navidrome quality on Wi-Fi</string>
-    <string name="settings_navidrome_quality_mobile">Navidrome quality on mobile data</string>
+    <string name="settings_navidrome_quality_wifi">Subsonic quality on Wi-Fi</string>
+    <string name="settings_navidrome_quality_mobile">Subsonic quality on mobile data</string>
     <string name="settings_navidrome_quality_sub">Original sends the file as stored. A lower setting asks your server to convert it, which saves data but can stop seeking from working on some servers.</string>
     <string name="settings_navidrome_quality_original">Original</string>
     <string name="settings_navidrome_quality_192">192 kbps</string>

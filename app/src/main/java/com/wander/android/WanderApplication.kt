@@ -27,13 +27,21 @@ import javax.inject.Inject
 class WanderApplication : Application(), Configuration.Provider, SingletonImageLoader.Factory {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
+
     @Inject lateinit var downloadScheduler: DownloadScheduler
+
     @Inject internal lateinit var periodicSyncGate: com.wander.android.core.work.PeriodicSyncGate
+
     @Inject internal lateinit var cloudBackupScheduler: com.wander.android.core.backup.CloudBackupScheduler
+
     @Inject internal lateinit var artistReleaseScheduler: com.wander.android.core.work.ArtistReleaseScheduler
+
     @Inject lateinit var p2pServer: com.wander.android.core.sync.P2PServer
+
     @Inject lateinit var secureStorage: com.wander.android.core.security.SecureStorage
+
     @Inject lateinit var likedTrackCacheProtector: com.wander.android.data.repository.LikedTrackCacheProtector
+
     @Inject @field:com.wander.android.di.ArtworkHttpClient
     lateinit var artworkHttpClient: okhttp3.OkHttpClient
 
@@ -45,27 +53,25 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
      * entering a list, memory-cache hits included, which is what made Home and Library stutter.
      * The full-screen player opts in per request instead (see [com.wander.android.ui.components.Artwork]).
      */
-    override fun newImageLoader(context: PlatformContext): ImageLoader {
-        return ImageLoader.Builder(context)
-            .components {
-                // Share the app's client so artwork reuses one connection pool and the
-                // default User-Agent interceptor, instead of Coil spinning up its own. It also
-                // signs Navidrome cover art, whose stored URLs carry no credentials.
-                add(OkHttpNetworkFetcherFactory(callFactory = { artworkHttpClient }))
-            }
-            .memoryCache {
-                MemoryCache.Builder()
-                    .maxSizePercent(context, 0.25)
-                    .build()
-            }
-            .diskCache {
-                DiskCache.Builder()
-                    .directory(context.cacheDir.resolve("image_cache"))
-                    .maxSizeBytes(imageDiskCacheBytes(context))
-                    .build()
-            }
-            .build()
-    }
+    override fun newImageLoader(context: PlatformContext): ImageLoader = ImageLoader.Builder(context)
+        .components {
+            // Share the app's client so artwork reuses one connection pool and the
+            // default User-Agent interceptor, instead of Coil spinning up its own. It also
+            // signs Navidrome cover art, whose stored URLs carry no credentials.
+            add(OkHttpNetworkFetcherFactory(callFactory = { artworkHttpClient }))
+        }
+        .memoryCache {
+            MemoryCache.Builder()
+                .maxSizePercent(context, 0.25)
+                .build()
+        }
+        .diskCache {
+            DiskCache.Builder()
+                .directory(context.cacheDir.resolve("image_cache"))
+                .maxSizeBytes(imageDiskCacheBytes(context))
+                .build()
+        }
+        .build()
 
     /**
      * A percentage of free space, the same idea [MemoryCache.Builder.maxSizePercent] already
@@ -144,4 +150,3 @@ class WanderApplication : Application(), Configuration.Provider, SingletonImageL
         const val MAX_IMAGE_CACHE_BYTES = 1024L * 1024 * 1024
     }
 }
-
