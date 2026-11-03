@@ -25,6 +25,8 @@ import com.wander.android.R
 import com.wander.android.data.model.UnifiedPlaylist
 import com.wander.android.data.model.nameRes
 import com.wander.android.ui.components.Artwork
+import com.wander.android.ui.components.CARD_ARTWORK_CORNER
+import com.wander.android.ui.components.HERO_ARTWORK_CORNER
 import com.wander.android.ui.components.rememberPressScale
 import com.wander.android.ui.components.rememberShelfArtworkShape
 import com.wander.android.ui.components.rememberShelfEntranceScale
@@ -70,7 +72,7 @@ fun PlaylistRow(
             contentDescription = null,
             sizeDp = 52.dp,
             shape = artworkShape,
-            modifier = Modifier.sharedArtwork(sharedKey, artworkShape).size(52.dp)
+            modifier = Modifier.sharedArtwork(sharedKey, CARD_ARTWORK_CORNER, HERO_ARTWORK_CORNER).size(52.dp)
         )
         Column(
             modifier = Modifier

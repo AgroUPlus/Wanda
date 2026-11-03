@@ -1,5 +1,8 @@
 package com.wander.android.ui.navigation
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.EnterExitState
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -44,6 +47,24 @@ internal fun Modifier.clearsTouchOrigin(): Modifier = pointerInput(Unit) {
         while (true) {
             val event = awaitPointerEvent(PointerEventPass.Initial)
             if (event.type == PointerEventType.Press) TouchOrigin.set(null)
+        }
+    }
+}
+
+/**
+ * A screen on its way out takes no taps. Opening a page, a tap on an empty spot of the arriving one
+ * fell through to the screen under it, still composed for its exit, and pressed whatever row sat
+ * there: it went to the old screen. Consumed on the initial pass, before anything inside sees it.
+ */
+@Composable
+internal fun Modifier.inertWhileLeaving(scope: AnimatedVisibilityScope): Modifier {
+    val leaving = scope.transition.targetState == EnterExitState.PostExit
+    if (!leaving) return this
+    return pointerInput(Unit) {
+        awaitPointerEventScope {
+            while (true) {
+                awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+            }
         }
     }
 }

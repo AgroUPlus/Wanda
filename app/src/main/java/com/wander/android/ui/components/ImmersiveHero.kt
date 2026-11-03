@@ -56,7 +56,7 @@ fun ImmersiveHero(
     imageUrl: String?,
     contentDescription: String?,
     modifier: Modifier = Modifier,
-    aspect: Float = DefaultAspect,
+    aspect: Float = DEFAULT_HERO_ASPECT,
     horizontalPadding: Dp = 24.dp,
     captionAlignment: Alignment.Horizontal = Alignment.Start,
     overlay: @Composable BoxScope.() -> Unit = {},
@@ -81,7 +81,10 @@ fun ImmersiveHero(
                 // a tablet.
                 sizeDp = DecodeSize,
                 shape = RectangleShape,
-                modifier = Modifier.sharedArtwork(sharedKey, RectangleShape).fillMaxWidth().aspectRatio(aspect)
+                modifier = Modifier
+                    .sharedArtwork(sharedKey, HERO_ARTWORK_CORNER, CARD_ARTWORK_CORNER)
+                    .fillMaxWidth()
+                    .aspectRatio(aspect)
             )
         }
     )
@@ -99,7 +102,7 @@ fun ImmersiveHero(
 @Composable
 fun ImmersiveHero(
     modifier: Modifier = Modifier,
-    aspect: Float = DefaultAspect,
+    aspect: Float = DEFAULT_HERO_ASPECT,
     horizontalPadding: Dp = 24.dp,
     captionAlignment: Alignment.Horizontal = Alignment.Start,
     overlay: @Composable BoxScope.() -> Unit = {},
@@ -162,6 +165,6 @@ val HeroSheetShape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp)
 val HeroSheetOverlap = 40.dp
 
 /** Slightly taller than wide: a square crop of a publicity photo usually cuts the chin off. */
-const val DefaultAspect = 0.9f
+const val DEFAULT_HERO_ASPECT = 0.9f
 
 private val DecodeSize = 480.dp
