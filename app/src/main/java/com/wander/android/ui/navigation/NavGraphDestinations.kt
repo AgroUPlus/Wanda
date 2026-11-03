@@ -6,12 +6,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.wander.android.ui.components.LocalDestinationScope
+import com.wander.android.ui.components.LocalSharedKeyClaims
+import com.wander.android.ui.components.SharedKeyClaims
 import com.wander.android.ui.components.enteringBlur
 import com.wander.android.ui.screens.settings.SettingsCategory
 
@@ -63,7 +66,10 @@ internal fun NavGraphBuilder.detailDestination(
  */
 @Composable
 internal fun AnimatedContentScope.BlurredWhileEntering(entry: NavBackStackEntry, content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalDestinationScope provides this) {
-        Box(modifier = Modifier.fillMaxSize().recordsTouchOrigin(entry).enteringBlur(this)) { content() }
+    val claims = remember { SharedKeyClaims() }
+    CompositionLocalProvider(LocalDestinationScope provides this, LocalSharedKeyClaims provides claims) {
+        Box(
+            modifier = Modifier.fillMaxSize().recordsTouchOrigin(entry).inertWhileLeaving(this).enteringBlur(this)
+        ) { content() }
     }
 }
