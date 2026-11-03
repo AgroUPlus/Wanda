@@ -27,7 +27,7 @@ import com.wander.android.ui.components.isPlayableNow
 /**
  * A track row's swipe shortcuts: toward the end (right, in left-to-right) plays it next, toward
  * the start adds it to the end of the queue. Each ticks as it passes the trigger and confirms with
- * a snackbar, since the row itself springs back unchanged.
+ * a snackbar that offers to undo it, since the row itself springs back unchanged.
  *
  * Off while [enabled] is false — during a selection a swipe would be a second gesture on a row
  * whose tap already means something else — and for a track that would not play right now.
@@ -46,8 +46,8 @@ fun TrackSwipeBox(
     val queued = stringResource(R.string.swipe_added_to_queue, track.title)
     val active = enabled && track.isPlayableNow()
     ElasticSwipeBox(
-        onSwipeStart = { actions.swipePlayNext(track, playingNext) }.takeIf { active },
-        onSwipeEnd = { actions.swipeAddToQueue(track, queued) }.takeIf { active },
+        onSwipeStart = { actions.playNext(listOf(track), playingNext) }.takeIf { active },
+        onSwipeEnd = { actions.addToQueue(listOf(track), queued) }.takeIf { active },
         enabled = active,
         modifier = modifier,
         background = { side, progress -> SwipeHint(side, progress) },

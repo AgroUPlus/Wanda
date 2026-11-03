@@ -1460,4 +1460,12 @@
     <string name="debug_gain_album">album gain</string>
     <string name="debug_gain_none">Loudness: no ReplayGain tags · volume ×%1$.2f (pre-amp only)</string>
     <string name="debug_gain_off">Loudness: levelling off</string>
+    <plurals name="selection_playing_next">
+        <item quantity="one">%d titre à suivre</item>
+        <item quantity="other">%d titres à suivre</item>
+    </plurals>
+    <plurals name="selection_added_to_queue">
+        <item quantity="one">%d titre ajouté à la file d\'attente</item>
+        <item quantity="other">%d titres ajoutés à la file d\'attente</item>
+    </plurals>
 </resources>

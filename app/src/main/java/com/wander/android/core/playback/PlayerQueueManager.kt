@@ -1,7 +1,9 @@
 package com.wander.android.core.playback
 
+import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaController
 import com.wander.android.data.model.UnifiedTrack
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -24,23 +26,43 @@ internal class PlayerQueueManager {
         ctrl.play()
     }
 
-    fun addToQueue(ctrl: MediaController, tracks: List<UnifiedTrack>) {
-        if (tracks.isEmpty()) return
-        tracks.forEach { trackCache[it.id] = it }
-        ctrl.addMediaItems(tracks.map(UnifiedTrack::toMediaItem))
+    fun addToQueue(ctrl: MediaController, tracks: List<UnifiedTrack>): QueueInsert? {
+        if (tracks.isEmpty()) return null
+        val insert = newInsert(ctrl)
+        ctrl.addMediaItems(taggedItems(tracks, insert))
+        return insert
     }
 
-    fun playNext(ctrl: MediaController, tracks: List<UnifiedTrack>) {
-        if (tracks.isEmpty()) return
-        tracks.forEach { trackCache[it.id] = it }
-        val items = tracks.map(UnifiedTrack::toMediaItem)
-        if (ctrl.mediaItemCount == 0) {
+    fun playNext(ctrl: MediaController, tracks: List<UnifiedTrack>): QueueInsert? {
+        if (tracks.isEmpty()) return null
+        val insert = newInsert(ctrl)
+        val items = taggedItems(tracks, insert)
+        if (insert.queueWasEmpty) {
             ctrl.setMediaItems(items)
             ctrl.prepare()
             ctrl.play()
         } else {
             ctrl.addMediaItems((ctrl.currentMediaItemIndex + 1).coerceAtMost(ctrl.mediaItemCount), items)
         }
+        return insert
+    }
+
+    /** Takes back what [insert] added, wherever it has got to; see [planInsertUndo] for what stays. */
+    fun undoInsert(ctrl: MediaController, insert: QueueInsert) {
+        val tokens = List(ctrl.mediaItemCount) { ctrl.getMediaItemAt(it).insertToken }
+        when (val plan = planInsertUndo(tokens, ctrl.currentMediaItemIndex, insert)) {
+            InsertUndo.Unchanged -> Unit
+            InsertUndo.Clear -> clearQueue(ctrl)
+            is InsertUndo.Remove -> plan.indices.forEach(ctrl::removeMediaItem)
+        }
+    }
+
+    private fun newInsert(ctrl: MediaController) =
+        QueueInsert(token = UUID.randomUUID().toString(), queueWasEmpty = ctrl.mediaItemCount == 0)
+
+    private fun taggedItems(tracks: List<UnifiedTrack>, insert: QueueInsert): List<MediaItem> {
+        tracks.forEach { trackCache[it.id] = it }
+        return tracks.map { it.toMediaItem().taggedWith(insert) }
     }
 
     fun replaceCurrentItem(ctrl: MediaController, track: UnifiedTrack) {

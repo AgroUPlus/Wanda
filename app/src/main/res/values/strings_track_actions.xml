@@ -17,6 +17,15 @@
         <item quantity="one">%d selected</item>
         <item quantity="other">%d selected</item>
     </plurals>
+    <!-- Snackbars after queueing the selected tracks; each offers to undo it. -->
+    <plurals name="selection_playing_next">
+        <item quantity="one">%d track plays next</item>
+        <item quantity="other">%d tracks play next</item>
+    </plurals>
+    <plurals name="selection_added_to_queue">
+        <item quantity="one">%d track added to the queue</item>
+        <item quantity="other">%d tracks added to the queue</item>
+    </plurals>
 
     <!-- Row accessibility -->
     <string name="common_more_options_for">More options for %1$s</string>

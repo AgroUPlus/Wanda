@@ -24,3 +24,9 @@ sealed interface PlaybackMessage {
         override fun resolve(context: Context): String = text
     }
 }
+
+/**
+ * A notice for the snackbar: its [message] and, when what it reports can be taken back, the
+ * [undo] that does so, offered as the snackbar's action.
+ */
+data class PlaybackNotice(val message: PlaybackMessage, val undo: (() -> Unit)? = null)

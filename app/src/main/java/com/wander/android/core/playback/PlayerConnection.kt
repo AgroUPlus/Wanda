@@ -56,8 +56,8 @@ class PlayerConnection @Inject constructor(
     private val _errors = MutableSharedFlow<PlaybackMessage>(extraBufferCapacity = 1)
     val errors: SharedFlow<PlaybackMessage> = _errors.asSharedFlow()
 
-    private val _notices = MutableSharedFlow<PlaybackMessage>(extraBufferCapacity = 1)
-    val notices: SharedFlow<PlaybackMessage> = _notices.asSharedFlow()
+    private val _notices = MutableSharedFlow<PlaybackNotice>(extraBufferCapacity = 1)
+    val notices: SharedFlow<PlaybackNotice> = _notices.asSharedFlow()
 
     val speedAndPitch: StateFlow<SpeedAndPitch> = speedController.speedAndPitch
 
@@ -143,6 +143,11 @@ class PlayerConnection @Inject constructor(
 
     fun addToQueue(tracks: List<UnifiedTrack>) = _controller.value?.let { queueManager.addToQueue(it, tracks) }
     fun playNext(tracks: List<UnifiedTrack>) = _controller.value?.let { queueManager.playNext(it, tracks) }
+
+    /** A no-op while following a jam, like every other control: the host owns that queue. */
+    fun undoInsert(insert: QueueInsert) {
+        if (!isFollowing) _controller.value?.let { queueManager.undoInsert(it, insert) }
+    }
     fun replaceCurrentTrack(track: UnifiedTrack) { if (!isFollowing) _controller.value?.let { queueManager.replaceCurrentItem(it, track) } }
 
     fun removeFromQueue(index: Int) = _controller.value?.let { queueManager.removeFromQueue(it, index) }
@@ -150,10 +155,7 @@ class PlayerConnection @Inject constructor(
     fun moveInQueue(from: Int, to: Int) = _controller.value?.let { queueManager.moveInQueue(it, from, to, state.value.orderLocked) }
     fun clearQueue() = _controller.value?.let { queueManager.clearQueue(it) }
 
-    fun snapshotQueue(): QueueSnapshot? {
-        val s = queueManager.snapshotQueue(_controller.value) ?: return null
-        return QueueSnapshot(s.tracks, s.index, s.positionMs)
-    }
+    fun snapshotQueue(): QueueSnapshot? = queueManager.snapshotQueue(_controller.value)
 
     fun restoreQueue(snapshot: QueueSnapshot) = _controller.value?.let { queueManager.restoreQueue(it, snapshot) }
 
@@ -233,15 +235,17 @@ class PlayerConnection @Inject constructor(
             .build()
     }
 
-    /** Raises [message] — already localized by the caller — as a snackbar through [notices]. */
-    fun notify(message: String) = _notices.tryEmit(PlaybackMessage.Verbatim(message))
+    /** Raises [message], already localized by the caller, as a snackbar through [notices]. */
+    fun notify(message: String, undo: (() -> Unit)? = null) =
+        _notices.tryEmit(PlaybackNotice(PlaybackMessage.Verbatim(message), undo))
 
-    fun notifyNoStation() = _notices.tryEmit(PlaybackMessage.Resource(R.string.radio_no_station))
+    fun notifyNoStation() = _notices.tryEmit(PlaybackNotice(PlaybackMessage.Resource(R.string.radio_no_station)))
 
     fun toggleRadio() {
         val enabled = !secureStorage.isRadioMode.value
         secureStorage.setRadioMode(enabled)
-        _notices.tryEmit(PlaybackMessage.Resource(if (enabled) R.string.radio_mode_on else R.string.radio_mode_off))
+        val message = PlaybackMessage.Resource(if (enabled) R.string.radio_mode_on else R.string.radio_mode_off)
+        _notices.tryEmit(PlaybackNotice(message))
     }
 
     fun setSpeedAndPitch(speed: Float, pitch: Float) =

@@ -1,12 +1,15 @@
 package com.wander.android.ui
 
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wander.android.R
 import com.wander.android.core.playback.PlayerConnection
 import com.wander.android.ui.components.ConfirmDialog
 import com.wander.android.ui.components.NetworkStateDialog
@@ -37,8 +40,21 @@ internal fun AppEvents(
     }
 
     LaunchedEffect(playerConnection, context) {
-        playerConnection.notices.collect { message ->
-            snackbarHostState.showSnackbar(message.resolve(context))
+        playerConnection.notices.collect { notice ->
+            val undo = notice.undo
+            if (undo == null) {
+                snackbarHostState.showSnackbar(notice.message.resolve(context))
+                return@collect
+            }
+            // Long, not the Indefinite a snackbar with an action defaults to: an offer to undo
+            // should outlast a glance, but not sit there until it is dismissed by hand.
+            val result = snackbarHostState.showSnackbar(
+                message = notice.message.resolve(context),
+                actionLabel = context.getString(R.string.common_undo),
+                withDismissAction = true,
+                duration = SnackbarDuration.Long
+            )
+            if (result == SnackbarResult.ActionPerformed) undo()
         }
     }
 
