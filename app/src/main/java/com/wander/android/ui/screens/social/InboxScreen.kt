@@ -1,5 +1,6 @@
 package com.wander.android.ui.screens.social
 
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,7 +14,6 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +28,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
+import com.wander.android.ui.components.WandaNoticeHost
 import com.wander.android.ui.components.BackLayers
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.rememberLastLive
@@ -158,9 +159,9 @@ internal fun InboxScreen(
             }
         }
 
-        SnackbarHost(
+        WandaNoticeHost(
             hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
+            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding()
         )
     }
 }

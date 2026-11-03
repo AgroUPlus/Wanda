@@ -298,6 +298,7 @@ kover {
 
 detekt {
     buildUponDefaultConfig = true
+    config.setFrom(file("detekt.yml"))
     // Existing findings are frozen so only new ones fail; regenerate with `detektBaseline`.
     baseline = file("detekt-baseline.xml")
     source.setFrom("src/main/java", "src/test/java")

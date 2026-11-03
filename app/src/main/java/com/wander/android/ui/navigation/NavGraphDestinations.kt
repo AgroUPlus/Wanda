@@ -36,7 +36,7 @@ internal fun NavGraphBuilder.tabDestination(
     exitTransition = { tabExit(initialState.route(), targetState.route(), motion) },
     popEnterTransition = { tabEnter(initialState.route(), targetState.route(), motion) },
     popExitTransition = { tabExit(initialState.route(), targetState.route(), motion) },
-    content = { entry -> BlurredWhileEntering { ProvideTabReselect(route) { content(entry) } } }
+    content = { entry -> BlurredWhileEntering(entry) { ProvideTabReselect(route) { content(entry) } } }
 )
 
 /** A screen opened on top of another: shared-axis Z. */
@@ -52,17 +52,18 @@ internal fun NavGraphBuilder.detailDestination(
     exitTransition = { detailExit(motion) },
     popEnterTransition = { detailPopEnter(motion) },
     popExitTransition = { detailPopExit(motion) },
-    content = { entry -> BlurredWhileEntering { content(entry) } }
+    content = { entry -> BlurredWhileEntering(entry) { content(entry) } }
 )
 
 /**
  * The screen a back swipe reveals starts blurred and sharpens with the swipe — see
  * [enteringBlur]. Wraps every destination, so it covers every back in the graph. It also hands
- * the destination's own transition to [LocalDestinationScope], which covers travel on.
+ * the destination's own transition to [LocalDestinationScope], which covers travel on, and notes
+ * the touches that land on it for `navigateSettled` ([recordsTouchOrigin]).
  */
 @Composable
-internal fun AnimatedContentScope.BlurredWhileEntering(content: @Composable () -> Unit) {
+internal fun AnimatedContentScope.BlurredWhileEntering(entry: NavBackStackEntry, content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalDestinationScope provides this) {
-        Box(modifier = Modifier.fillMaxSize().enteringBlur(this)) { content() }
+        Box(modifier = Modifier.fillMaxSize().recordsTouchOrigin(entry).enteringBlur(this)) { content() }
     }
 }

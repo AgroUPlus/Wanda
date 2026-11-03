@@ -1,0 +1,5 @@
+# Layered on detekt's defaults (buildUponDefaultConfig), so only what differs is listed.
+naming:
+  FunctionNaming:
+    # Compose names composables like types (PascalCase), which the default pattern refuses.
+    ignoreAnnotated: ['Composable']

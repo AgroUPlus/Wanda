@@ -2,7 +2,9 @@ package com.wander.android.ui.screens.library
 
 import androidx.compose.foundation.lazy.itemsIndexed
 import com.wander.android.ui.components.rememberShelfEntranceScale
+import com.wander.android.ui.components.WandaNoticeHost
 import androidx.compose.ui.draw.scale
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -31,7 +33,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -120,7 +121,7 @@ internal fun PodcastSearchScreen(
                 }
             }
         }
-        SnackbarHost(snackbar, modifier = Modifier.align(Alignment.BottomCenter).padding(contentPadding.listInset()))
+        WandaNoticeHost(snackbar, modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding())
     }
 }
 

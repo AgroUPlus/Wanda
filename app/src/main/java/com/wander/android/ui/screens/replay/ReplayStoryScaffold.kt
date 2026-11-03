@@ -15,7 +15,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -33,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
+import com.wander.android.ui.components.WandaNoticeHost
 import com.wander.android.ui.theme.LocalReducedMotion
 import kotlinx.coroutines.launch
 
@@ -210,10 +210,10 @@ internal fun ReplayStoryScaffold(
                     .safeDrawingPadding()
                     .padding(end = ControlsGutter, top = ControlsTop)
             )
-            SnackbarHost(
+            WandaNoticeHost(
                 hostState = snackbar,
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
+                    .align(Alignment.TopCenter)
                     .safeDrawingPadding()
             )
         }

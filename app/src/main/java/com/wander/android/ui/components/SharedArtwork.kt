@@ -5,6 +5,8 @@ import androidx.compose.animation.BoundsTransform
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -67,5 +69,27 @@ fun Modifier.sharedArtwork(key: String?, shape: Shape): Modifier {
             resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(ContentScale.Crop),
             clipInOverlayDuringTransition = OverlayClip(shape)
         )
+    }
+}
+
+/**
+ * Keeps this above a travelling cover. The cover flies in the shared layout's overlay, over the
+ * whole page, so the hero's sheet and the top bar sat under it until it landed; while a cover is in
+ * flight these are drawn in that overlay too, above it ([layer]: higher draws later), and fade
+ * with the page they belong to.
+ */
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+fun Modifier.aboveSharedArtwork(layer: Float = 1f): Modifier {
+    val shared = LocalSharedTransitionScope.current
+    val destination = LocalDestinationScope.current
+    if (shared == null || destination == null) return this
+    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    return with(shared) {
+        with(destination) {
+            this@aboveSharedArtwork
+                .renderInSharedTransitionScopeOverlay(zIndexInOverlay = layer)
+                .animateEnterExit(enter = fadeIn(effects), exit = fadeOut(effects))
+        }
     }
 }

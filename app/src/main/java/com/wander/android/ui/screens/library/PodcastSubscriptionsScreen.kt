@@ -2,9 +2,11 @@ package com.wander.android.ui.screens.library
 
 import androidx.compose.foundation.lazy.itemsIndexed
 import com.wander.android.ui.components.rememberShelfEntranceScale
+import com.wander.android.ui.components.WandaNoticeHost
 import androidx.compose.ui.draw.scale
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -35,7 +37,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -173,7 +174,7 @@ internal fun PodcastSubscriptionsScreen(
                 }
             }
         }
-        SnackbarHost(snackbar, modifier = Modifier.align(Alignment.BottomCenter).padding(contentPadding.listInset()))
+        WandaNoticeHost(snackbar, modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding())
     }
 
     if (showAdd) AddPodcastDialog(onConfirm = viewModel::add, onDismiss = { showAdd = false })

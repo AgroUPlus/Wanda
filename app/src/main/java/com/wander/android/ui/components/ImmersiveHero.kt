@@ -122,7 +122,8 @@ fun ImmersiveHero(
         Surface(
             shape = HeroSheetShape,
             color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.fillMaxWidth().riseBy(HeroSheetOverlap)
+            // Over the cover that rises behind it, including while that cover is still flying in.
+            modifier = Modifier.aboveSharedArtwork().fillMaxWidth().riseBy(HeroSheetOverlap)
         ) {
             Column(
                 horizontalAlignment = captionAlignment,
