@@ -39,6 +39,7 @@ import com.wander.android.ui.components.player.PlayPauseIcon
 /**
  * Transport controls: previous, play/pause, next — or, for a podcast episode, back 10s and
  * forward 30s. Moving between episodes is rare; missing a sentence or a sponsor read is not.
+ * Holding either skip scrubs instead, rewinding or fast-forwarding until the finger lifts.
  *
  * Shuffle and repeat used to flank these. They are secondary — you set them once and forget them,
  * while these three are pressed constantly — and they now sit in [PlayerActionBar] below, which is
@@ -69,6 +70,12 @@ fun PlayerControls(
     val nextInteraction = remember { MutableInteractionSource() }
     val nextPressed by nextInteraction.collectIsPressedAsState()
     val isEpisode = state.currentTrack?.isEpisode == true
+
+    // Holding a skip scrubs through the track — see [rememberHoldToSeek]. Not for a live stream,
+    // which has no end to scan towards, nor for anything the player says it cannot seek in.
+    val canHoldSeek = state.isSeekable && state.currentTrack?.isLive != true
+    val prevHold = rememberHoldToSeek(prevInteraction, connection, direction = -1, enabled = canHoldSeek)
+    val nextHold = rememberHoldToSeek(nextInteraction, connection, direction = 1, enabled = canHoldSeek)
 
     // An expressive connected group: each control shares the exact same height (`playButtonSize`)
     // and the two gaps between them never change. Playing, next and previous are rounded squares
@@ -103,10 +110,12 @@ fun PlayerControls(
             modifier = Modifier.fillMaxWidth()
         ) {
             SkipButton(
-                onClick = if (isEpisode) {
-                    { connection.seekBy(-EpisodeJumps.BACK_MS) }
-                } else {
-                    connection::previous
+                onClick = {
+                    when {
+                        prevHold.consumeClick() -> Unit
+                        isEpisode -> connection.seekBy(-EpisodeJumps.BACK_MS)
+                        else -> connection.previous()
+                    }
                 },
                 interaction = prevInteraction,
                 pressed = prevPressed,
@@ -140,10 +149,12 @@ fun PlayerControls(
             }
 
             SkipButton(
-                onClick = if (isEpisode) {
-                    { connection.seekBy(EpisodeJumps.FORWARD_MS) }
-                } else {
-                    connection::next
+                onClick = {
+                    when {
+                        nextHold.consumeClick() -> Unit
+                        isEpisode -> connection.seekBy(EpisodeJumps.FORWARD_MS)
+                        else -> connection.next()
+                    }
                 },
                 interaction = nextInteraction,
                 pressed = nextPressed,
