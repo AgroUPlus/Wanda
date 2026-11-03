@@ -87,10 +87,13 @@ internal fun ScrubTooltip(
         Surface(
             // A pill for the time alone; a rounded card once a line of words may wrap under it.
             shape = if (shownLine == null) CircleShape else MaterialTheme.shapes.large,
-            // Inverse surface: the one role guaranteed to contrast with the cover-tinted
-            // background behind the player, whatever colour the sleeve made it.
-            color = MaterialTheme.colorScheme.inverseSurface,
-            contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+            // The sleeve's own container pair. The player sits inside `CoverTintedTheme`, so this
+            // is the cover's colour rather than a neutral grey slab that belonged to no screen in
+            // particular. The pair is contrast-matched by the scheme itself, whatever the cover,
+            // and it is opaque with a shadow, so it still reads over artwork in the immersive
+            // layout — where a translucent or surface role would take on the image behind it.
+            color = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             shadowElevation = 6.dp
         ) {
             Column(
