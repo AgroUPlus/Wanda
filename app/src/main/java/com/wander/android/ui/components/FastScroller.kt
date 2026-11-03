@@ -79,6 +79,8 @@ fun FastScroller(
     val currentJump by rememberUpdatedState(onJumpTo)
     val currentFirst by rememberUpdatedState(firstVisibleItem)
     val currentScrolling by rememberUpdatedState(isScrollInProgress)
+    val currentLabelFor by rememberUpdatedState(labelFor)
+    val haptics = rememberHaptics()
     // Conflated: a fast drag asks for many indices a frame, and only the newest one matters.
     val jumps = remember { Channel<Int>(Channel.CONFLATED) }
 
@@ -123,10 +125,20 @@ fun FastScroller(
                     modifier = Modifier
                         .size(width = 28.dp, height = ThumbTouch)
                         .pointerInput(Unit) {
+                            // The letter the bubble last showed in this drag. Crossing into a new
+                            // one is a boundary the thumb passed, so it ticks; the letter a drag
+                            // opens on is just where it started. Unloaded rows have no letter and
+                            // keep the last one, so A, a gap, A again doesn't tick twice.
+                            var shownLetter: String? = null
                             detectVerticalDragGestures(
                                 onDragStart = {
                                     dragFraction = fractionNow()
+                                    // Where the thumb is now, not where the last drag left it, so
+                                    // the bubble opens on the list's own letter rather than a stale
+                                    // one that the first move would then "cross" away from.
+                                    target = (dragFraction * (currentTotal - 1)).roundToInt()
                                     dragging = true
+                                    shownLetter = currentLabelFor?.invoke(target)
                                 },
                                 onDragEnd = { dragging = false },
                                 onDragCancel = { dragging = false },
@@ -138,6 +150,11 @@ fun FastScroller(
                                     if (index != target) {
                                         target = index
                                         jumps.trySend(index)
+                                        val letter = currentLabelFor?.invoke(index)
+                                        if (letter != null) {
+                                            if (shownLetter != null && letter != shownLetter) haptics.tick()
+                                            shownLetter = letter
+                                        }
                                     }
                                 }
                             )
