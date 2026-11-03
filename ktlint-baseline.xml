@@ -1309,8 +1309,6 @@
     <file name="app/src/main/java/com/wander/android/ui/components/player/PlayerSheet.kt">
         <error line="3" column="1" source="standard:import-ordering" />
         <error line="53" column="1" source="standard:kdoc" />
-        <error line="173" column="1" source="standard:indent" />
-        <error line="178" column="1" source="standard:indent" />
     </file>
     <file name="app/src/main/java/com/wander/android/ui/components/player/PlayerSheetBackground.kt">
         <error line="11" column="19" source="standard:property-naming" />

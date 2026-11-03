@@ -170,12 +170,12 @@ fun PlayerSheet(
         // read only inside `graphicsLayer` below — never in composition scope.
         val pairednessState = animateFloatAsState(
             targetValue = if (pairedWithDockRow) 1f else 0f,
-        animationSpec = MaterialTheme.motionScheme.slowSpatialSpec(),
+            animationSpec = MaterialTheme.motionScheme.slowSpatialSpec(),
             label = "docked-pairedness"
         )
 
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val sheetHeight = maxHeight
+            val sheetHeight = maxHeight
 
             SheetTravelEffect(sheetState, sheetHeight, dockedHeightState, bottomInsetState)
 
