@@ -1477,11 +1477,6 @@
     </plurals>
 
     <!-- Notifications sociales. -->
-    <string name="friends_channel_name">Amis</string>
-    <string name="friend_request_title">Demande d\'ami</string>
-    <string name="friend_request_body">%1$s souhaite devenir votre ami</string>
-    <string name="friend_accepted_title">Demande d\'ami acceptée</string>
-    <string name="friend_accepted_body">%1$s a accepté votre demande d\'ami !</string>
     <string name="notif_self_name">Vous</string>
     <string name="notif_drop_note">« %1$s »</string>
     <string name="notif_drop_public">Un ami vous a envoyé un morceau</string>

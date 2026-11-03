@@ -60,8 +60,11 @@ internal class LikesAndHistoryRepository(
     // The artist query is a substring `LIKE`, so a blank artist would match every row and pull
     // the whole library into memory.
     private suspend fun candidatesFor(artist: String): List<UnifiedTrack> =
-        if (artist.isBlank()) emptyList()
-        else trackDao.getTracksByArtistOnce(artist).map(TrackEntity::toUnifiedTrack)
+        if (artist.isBlank()) {
+            emptyList()
+        } else {
+            trackDao.getTracksByArtistOnce(artist).map(TrackEntity::toUnifiedTrack)
+        }
 
     /** Runs at every launch: one artist query per distinct artist, not one per liked track. */
     suspend fun unifySplitLikes(): Int = withContext(Dispatchers.IO) {
