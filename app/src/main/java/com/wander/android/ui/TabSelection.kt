@@ -25,8 +25,9 @@ internal fun NavHostController.switchTab(destination: TopLevelDestination) {
 /**
  * A tap on a tab's button: home within it when you are already in it, otherwise a switch.
  *
- * "In it" means it is the tab the current screen was opened from ([TrackTabOwner]). On that tab's root the tap goes to [reselection] for the screen to scroll
- * itself back up; on a page opened from it (an album, an artist) it pops back to the root.
+ * "In it" means it is the tab the current screen was opened from ([TrackTabOwner]). On that
+ * tab's root the tap goes to [reselection] for the screen to scroll itself back up; on a page
+ * opened from it (an album, an artist) it pops back to the root.
  */
 internal fun NavHostController.selectTab(tab: TopLevelDestination, reselection: TabReselection) {
     when {
