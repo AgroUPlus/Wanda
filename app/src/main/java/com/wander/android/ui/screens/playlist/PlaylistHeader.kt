@@ -15,7 +15,7 @@ import com.wander.android.ui.components.collapsingTitleSource
 import com.wander.android.ui.components.rememberDownloadAll
 import com.wander.android.ui.screens.album.AlbumHero
 
-/** The playlist's cover, title and header actions: "Navidrome · 24 tracks · Shared · its description". */
+/** The playlist's cover, title and header actions: "Subsonic · 24 tracks · Shared · its description". */
 @Composable
 internal fun PlaylistHeader(
     playlist: UnifiedPlaylist?,

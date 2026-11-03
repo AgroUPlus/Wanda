@@ -70,7 +70,7 @@ internal class NavidromeLyrics(private val apiClient: SubsonicApiClient) {
 
     internal companion object {
         private const val SONG_LYRICS = "songLyrics"
-        private const val SOURCE = "Navidrome"
+        private const val SOURCE = "Subsonic"
 
         /** A server's refusal as no answer at all; anything else is passed on as it was. */
         private fun <T> Result<T>.answered(): Result<T?> =

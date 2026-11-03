@@ -153,7 +153,7 @@
     <string name="common_music_device">Musique sur l\'appareil</string>
     <string name="common_my_profile">Mon profil</string>
     <string name="common_name">Nom</string>
-    <string name="common_navidrome">Navidrome</string>
+    <string name="common_navidrome">Subsonic</string>
     <string name="common_new_playlist">Nouvelle playlist</string>
     <string name="common_new_playlist_2">Nouvelle playlist…</string>
     <string name="common_no_match">Aucune correspondance</string>
@@ -193,7 +193,7 @@
     <string name="artist_show_all">Show all</string>
     <string name="artist_show_less">Show less</string>
     <!-- Home -->
-    <string name="home_connect_navidrome_youtube_music_settings">Connecter Navidrome ou YouTube Music dans les paramètres, ou donner l\'accès aux musiques sur cet appareil.</string>
+    <string name="home_connect_navidrome_youtube_music_settings">Connecter Subsonic ou YouTube Music dans les paramètres, ou donner l\'accès aux musiques sur cet appareil.</string>
     <string name="home_nothing_here_yet">Rien ici pour l\'instant</string>
     <string name="home_nothing_play_yet">Rien à jouer pour l\'instant</string>
     <string name="home_edit_title">Personnaliser la page d\'accueil</string>
@@ -450,7 +450,7 @@
     <string name="library_recent">Récent</string>
     <string name="library_shuffle_all">Tout mélanger</string>
     <!-- Sign-in -->
-    <string name="login_connect_navidrome">Connecter Navidrome</string>
+    <string name="login_connect_navidrome">Connecter Subsonic</string>
     <string name="login_music_example_com">music.exemple.com</string>
     <string name="login_password">Mot de passe</string>
     <string name="login_password_stored_android_keystore_only">Votre mot de passe est stocké dans le trousseau de clefs Android et n\'est envoyé qu\'à votre propre serveur sous forme de hash salé.</string>
@@ -502,7 +502,7 @@
     <string name="queue_waiting_room_votes">En attente de votes de la salle</string>
     <!-- Search -->
     <string name="search_matched_lyrics">Correspondance par paroles</string>
-    <string name="search_navidrome_youtube_music_music_device">Navidrome, YouTube Music and musiques sur cet appareil dans une liste unifiée.</string>
+    <string name="search_navidrome_youtube_music_music_device">Subsonic, YouTube Music and musiques sur cet appareil dans une liste unifiée.</string>
     <string name="search_no_matches">Aucune correspondance</string>
     <string name="search_search_everything_once">Tout rechercher à la fois</string>
     <string name="search_songs">Musiques</string>
@@ -633,12 +633,12 @@
     <string name="settings_share_example_com">partage.exemple.com</string>
     <string name="settings_share_links">Partager des liens</string>
     <string name="settings_share_my_listening_stats">Partager mon historique d\'écoute</string>
-    <string name="settings_share_navidrome_address_between_devices">Partager l\'adresse Navidrome entre les appareils.</string>
+    <string name="settings_share_navidrome_address_between_devices">Partager l\'adresse Subsonic entre les appareils.</string>
     <string name="settings_sharing_paused_incognito">Partage désactivé par le mode incognito</string>
     <string name="settings_show_what_i_m_playing">Montrer ce que j\'écoute</string>
     <string name="settings_sign_out_deezer">Vous souhaitez vous déconnecter de Deezer ?</string>
     <string name="settings_deezer_streaming_stops_until">La lecture en streaming sur Deezer sera interrompue jusqu\'à ce que vous vous reconnectiez. Les titres déjà téléchargés resteront disponibles.</string>
-    <string name="settings_sign_out_navidrome">Se déconnecter de Navidrome ?</string>
+    <string name="settings_sign_out_navidrome">Se déconnecter de Subsonic ?</string>
     <string name="settings_sign_out_youtube_music">Se déconnecter de YouTube Music ?</string>
     <string name="settings_signs_out_every_source_erases">Se déconnecter de toutes les sources et supprimer les secrets ?</string>
     <string name="settings_some_servers_let_anyone_hold">Certains serveurs autorisent les utilisateurs mais nécessitent l\'approbation. D\'autres ont besoin d\'un code.</string>
@@ -648,7 +648,7 @@
     <string name="settings_sweep_active_word_one_letter">Surligne le mot actif lettre par lettre dans un style de karaoké. Désactivé surligne la ligne active.</string>
     <string name="settings_sync_now">Synchroniser maintenant</string>
     <string name="settings_sync_summary_peer">Partage direct entre pairs.</string>
-    <string name="settings_sync_summary_navidrome">Archivé sur Navidrome.</string>
+    <string name="settings_sync_summary_navidrome">Archivé sur Subsonic.</string>
     <string name="settings_sync_summary_agro">Archivé sur le serveur Agro.</string>
     <string name="settings_sync_count_device">%1$d sur cet appareil</string>
     <string name="settings_sync_count_server">%1$d sur le serveur</string>
@@ -975,7 +975,7 @@
     <string name="cloud_backup_accounts">Inclure les connexions</string>
     <string name="cloud_backup_accounts_sub">Hors ligne : après la restauration, vous devez vous reconnecter à vos sources.</string>
     <string name="cloud_backup_accounts_confirm_title">Faut-il inclure les données de connexion dans les sauvegardes sur le cloud ?</string>
-    <string name="cloud_backup_accounts_confirm_message">Votre mot de passe Navidrome ainsi que vos sessions YouTube et Deezer seraient conservés sur Agro, verrouillés comme le reste. Votre phrase de passe serait alors la seule protection dont ils disposeraient si quelqu\'un venait à copier la base de données du serveur.</string>
+    <string name="cloud_backup_accounts_confirm_message">Votre mot de passe Subsonic ainsi que vos sessions YouTube et Deezer seraient conservés sur Agro, verrouillés comme le reste. Votre phrase de passe serait alors la seule protection dont ils disposeraient si quelqu\'un venait à copier la base de données du serveur.</string>
     <string name="cloud_backup_accounts_confirm">Ajoutez-les</string>
     <string name="cloud_backup_restore">Restauration à partir d\'Agro</string>
     <string name="cloud_backup_restore_sub">Importez une sauvegarde depuis n\'importe lequel de vos appareils vers celui-ci.</string>
@@ -1083,7 +1083,7 @@
     <string name="settings_category_external">Externe</string>
     <string name="settings_category_privacy">Confidentialité</string>
     <string name="settings_category_about">À propos</string>
-    <string name="settings_category_sub_navidrome_youtube_music_local_files">Navidrome, YouTube Music et vos fichiers locaux</string>
+    <string name="settings_category_sub_navidrome_youtube_music_local_files">Subsonic, YouTube Music et vos fichiers locaux</string>
     <string name="settings_category_sub_devices_library_syncing_what_gets">Appareils, synchronisation de la bibliothèque et ce qui est partagé</string>
     <string name="settings_category_sub_change_theme_colours_app">Changer le thème et les couleurs de l\'app</string>
     <string name="settings_category_sub_offline_mode_downloads_cache">Mode hors ligne, téléchargements et cache</string>
@@ -1112,14 +1112,14 @@
     <string name="mix_sub_library_still_unheard">Pépites cachées</string>
     <!-- Fingerprint sections -->
     <string name="fp_section_external">Externe</string>
-    <string name="fp_section_navidrome">Navidrome</string>
+    <string name="fp_section_navidrome">Subsonic</string>
     <string name="fp_section_on_device">Sur cet appareil</string>
     <string name="fp_section_external_sub">YouTube Music. La mesure prend environ une minute d\'audio depuis une source externe et peut échouer.</string>
     <string name="fp_section_navidrome_sub">Votre propre serveur. Une mesure prend environ une minute.</string>
     <string name="fp_section_on_device_sub">Fichiers locaux. Ne coûtent rien; rouge signifie un problème de format.</string>
     <!-- Transport badge, spoken descriptions -->
     <string name="transport_spoken_device">Lecture depuis cet appareil. Rien ne quitte ce téléphone.</string>
-    <string name="transport_spoken_navidrome">Streamé depuis votre serveur Navidrome.</string>
+    <string name="transport_spoken_navidrome">Streamé depuis votre serveur Subsonic.</string>
     <string name="transport_spoken_stream">Correspondance et streamé depuis YouTube Music. Utilise quelques données.</string>
     <string name="transport_spoken_lan">Streamé directement depuis les autres appareils sur votre réseau local, chiffré.</string>
     <string name="transport_spoken_offgrid">Streamé de téléphone à téléphone via un lien radio direct, aucun réseau impliqué, chiffré.</string>
@@ -1158,7 +1158,7 @@
     <string name="backup_section_settings">Paramètres</string>
     <string name="backup_section_settings_detail">Apparence, lecture, confidentialité et toutes les autres préférences</string>
     <string name="backup_section_accounts">Connexions</string>
-    <string name="backup_section_accounts_detail">Comptes Navidrome, YouTube Music et Agro</string>
+    <string name="backup_section_accounts_detail">Comptes Subsonic, YouTube Music et Agro</string>
     <string name="backup_section_history">Historique d\'écoute</string>
     <string name="backup_section_history_detail">Toutes vos parties et vos rediffusions enregistrées</string>
     <string name="backup_section_library">Bibliothèque</string>
@@ -1451,7 +1451,7 @@
     <string name="debug_format">Format : %1$s · %2$d kbps</string>
     <string name="debug_route_download">fichier téléchargé</string>
     <string name="debug_route_local_copy">copie locale de ce même enregistrement</string>
-    <string name="debug_route_navidrome">Serveur Navidrome</string>
+    <string name="debug_route_navidrome">Serveur Subsonic</string>
     <string name="debug_route_source">la source propre au morceau</string>
     <string name="debug_route_ephemeral">flux ponctuel (entre pairs)</string>
     <string name="debug_route_podcast">épisode de podcast</string>

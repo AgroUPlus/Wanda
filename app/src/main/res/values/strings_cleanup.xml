@@ -5,7 +5,7 @@
 
     <!-- Where a track or playlist comes from, as named on screen -->
     <string name="source_name_local">On this device</string>
-    <string name="source_name_navidrome" translatable="false">Navidrome</string>
+    <string name="source_name_navidrome" translatable="false">Subsonic</string>
     <string name="source_name_ytmusic" translatable="false">YouTube Music</string>
     <string name="source_name_deezer" translatable="false">Deezer</string>
     <string name="source_name_podcast">Podcasts</string>

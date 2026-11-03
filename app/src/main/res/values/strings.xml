@@ -163,7 +163,7 @@
     <string name="common_music_device">Music on this device</string>
     <string name="common_my_profile">My profile</string>
     <string name="common_name">Name</string>
-    <string name="common_navidrome">Navidrome</string>
+    <string name="common_navidrome">Subsonic</string>
     <string name="common_new_playlist">New playlist</string>
     <string name="common_new_playlist_2">New playlist…</string>
     <string name="common_no_match">No match</string>
@@ -206,7 +206,7 @@
     <string name="artist_show_less">Show less</string>
 
     <!-- Home -->
-    <string name="home_connect_navidrome_youtube_music_settings">Connect Navidrome or YouTube Music in Settings, or grant access to music stored on this device.</string>
+    <string name="home_connect_navidrome_youtube_music_settings">Connect Subsonic or YouTube Music in Settings, or grant access to music stored on this device.</string>
     <string name="home_nothing_here_yet">Nothing here yet</string>
     <string name="home_nothing_play_yet">Nothing to play yet</string>
     <string name="home_edit_title">Customize Home</string>
@@ -473,7 +473,7 @@
     <string name="library_shuffle_all">Shuffle all</string>
 
     <!-- Sign-in -->
-    <string name="login_connect_navidrome">Connect Navidrome</string>
+    <string name="login_connect_navidrome">Connect Subsonic</string>
     <string name="login_music_example_com">music.example.com</string>
     <string name="login_password">Password</string>
     <string name="login_password_stored_android_keystore_only">Your password is stored in the Android Keystore and only ever sent to your own server, as a salted hash.</string>
@@ -530,7 +530,7 @@
 
     <!-- Search -->
     <string name="search_matched_lyrics">Matched in lyrics</string>
-    <string name="search_navidrome_youtube_music_music_device">Navidrome, YouTube Music and music on this device, in one list.</string>
+    <string name="search_navidrome_youtube_music_music_device">Subsonic, YouTube Music and music on this device, in one list.</string>
     <string name="search_no_matches">No matches</string>
     <string name="search_search_everything_once">Search everything at once</string>
     <string name="search_songs">Songs</string>
@@ -662,12 +662,12 @@
     <string name="settings_share_example_com">share.example.com</string>
     <string name="settings_share_links">Share links</string>
     <string name="settings_share_my_listening_stats">Share my listening stats</string>
-    <string name="settings_share_navidrome_address_between_devices">Share the Navidrome address between devices.</string>
+    <string name="settings_share_navidrome_address_between_devices">Share the Subsonic address between devices.</string>
     <string name="settings_sharing_paused_incognito">Sharing paused by incognito</string>
     <string name="settings_show_what_i_m_playing">Show what I\'m playing</string>
     <string name="settings_sign_out_deezer">Sign out of Deezer?</string>
     <string name="settings_deezer_streaming_stops_until">Deezer streaming stops until you sign in again. Anything already downloaded stays playable.</string>
-    <string name="settings_sign_out_navidrome">Sign out of Navidrome?</string>
+    <string name="settings_sign_out_navidrome">Sign out of Subsonic?</string>
     <string name="settings_sign_out_youtube_music">Sign out of YouTube Music?</string>
     <string name="settings_signs_out_every_source_erases">Signs out of every source and erases stored secrets</string>
     <string name="settings_some_servers_let_anyone_hold">Some servers let anyone in and hold new accounts for approval. Others need a code.</string>
@@ -677,7 +677,7 @@
     <string name="settings_sweep_active_word_one_letter">Sweep the active word in one letter at a time, karaoke-style. Off highlights the whole line as it\'s sung.</string>
     <string name="settings_sync_now">Sync now</string>
     <string name="settings_sync_summary_peer">Direct peer-to-peer sharing.</string>
-    <string name="settings_sync_summary_navidrome">Archived to Navidrome.</string>
+    <string name="settings_sync_summary_navidrome">Archived to Subsonic.</string>
     <string name="settings_sync_summary_agro">Archived to Agro server.</string>
     <string name="settings_sync_count_device">%1$d on this device</string>
     <string name="settings_sync_count_server">%1$d on server</string>
@@ -1008,7 +1008,7 @@
     <string name="cloud_backup_accounts">Include sign-ins</string>
     <string name="cloud_backup_accounts_sub">Off: after restoring, you sign back into your sources.</string>
     <string name="cloud_backup_accounts_confirm_title">Include sign-ins in cloud backups?</string>
-    <string name="cloud_backup_accounts_confirm_message">Your Navidrome password and YouTube and Deezer sessions would be kept on Agro, sealed like the rest. Your passphrase is then all that protects them if someone copies the server\'s database.</string>
+    <string name="cloud_backup_accounts_confirm_message">Your Subsonic password and YouTube and Deezer sessions would be kept on Agro, sealed like the rest. Your passphrase is then all that protects them if someone copies the server\'s database.</string>
     <string name="cloud_backup_accounts_confirm">Include them</string>
     <string name="cloud_backup_restore">Restore from Agro</string>
     <string name="cloud_backup_restore_sub">Bring a backup from any of your devices onto this one.</string>
@@ -1119,7 +1119,7 @@
     <string name="settings_category_external">External</string>
     <string name="settings_category_privacy">Privacy</string>
     <string name="settings_category_about">About</string>
-    <string name="settings_category_sub_navidrome_youtube_music_local_files">Navidrome, YouTube Music and your local files</string>
+    <string name="settings_category_sub_navidrome_youtube_music_local_files">Subsonic, YouTube Music and your local files</string>
     <string name="settings_category_sub_devices_library_syncing_what_gets">Devices, library syncing and what gets shared</string>
     <string name="settings_category_sub_change_theme_colours_app">Change the theme and colours of the app</string>
     <string name="settings_category_sub_offline_mode_downloads_cache">Offline mode, downloads and the cache</string>
@@ -1150,7 +1150,7 @@
 
     <!-- Fingerprint sections -->
     <string name="fp_section_external">External</string>
-    <string name="fp_section_navidrome">Navidrome</string>
+    <string name="fp_section_navidrome">Subsonic</string>
     <string name="fp_section_on_device">On this device</string>
     <string name="fp_section_external_sub">YouTube Music. Measuring one fetches about a minute of audio from a third party, so these are the slowest to fill in and the likeliest to fail outright.</string>
     <string name="fp_section_navidrome_sub">Your own server. Measuring one downloads about a minute of it, so these fill in over Wi-Fi.</string>
@@ -1158,7 +1158,7 @@
 
     <!-- Transport badge, spoken descriptions -->
     <string name="transport_spoken_device">Playing from this device. Nothing leaves the phone.</string>
-    <string name="transport_spoken_navidrome">Streamed from your own Navidrome server.</string>
+    <string name="transport_spoken_navidrome">Streamed from your own Subsonic server.</string>
     <string name="transport_spoken_stream">Matched and streamed from YouTube Music. Uses data.</string>
     <string name="transport_spoken_lan">Streamed directly from the other device over your local network, encrypted.</string>
     <string name="transport_spoken_offgrid">Streamed phone to phone over a direct radio link, with no network involved, encrypted.</string>
@@ -1198,7 +1198,7 @@
     <string name="backup_section_settings">Settings</string>
     <string name="backup_section_settings_detail">Appearance, playback, privacy and every other preference</string>
     <string name="backup_section_accounts">Sign-ins</string>
-    <string name="backup_section_accounts_detail">Navidrome, YouTube Music and Agro accounts</string>
+    <string name="backup_section_accounts_detail">Subsonic, YouTube Music and Agro accounts</string>
     <string name="backup_section_history">Listening history</string>
     <string name="backup_section_history_detail">Every play and your saved Replays</string>
     <string name="backup_section_library">Library</string>
@@ -1517,7 +1517,7 @@
     <string name="debug_format">Format: %1$s · %2$d kbps</string>
     <string name="debug_route_download">downloaded file</string>
     <string name="debug_route_local_copy">local copy of the same recording</string>
-    <string name="debug_route_navidrome">Navidrome server</string>
+    <string name="debug_route_navidrome">Subsonic server</string>
     <string name="debug_route_source">the track\'s own source</string>
     <string name="debug_route_ephemeral">one-off stream (peer)</string>
     <string name="debug_route_podcast">podcast episode</string>

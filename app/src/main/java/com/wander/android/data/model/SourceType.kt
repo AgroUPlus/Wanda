@@ -24,7 +24,7 @@ enum class SourceType(
     val isPersonalLibrary: Boolean
 ) {
     LOCAL("On this device", "local:", priority = 0, isPersonalLibrary = true),
-    NAVIDROME("Navidrome", "navidrome:", priority = 1, isPersonalLibrary = true),
+    NAVIDROME("Subsonic", "navidrome:", priority = 1, isPersonalLibrary = true),
     YTMUSIC("YouTube Music", "ytm:", priority = 2, isPersonalLibrary = false),
     DEEZER("Deezer", "deezer:", priority = 3, isPersonalLibrary = false),
     PODCAST("Podcasts", "podcast:", priority = 4, isPersonalLibrary = false),

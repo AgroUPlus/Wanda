@@ -36,7 +36,7 @@ class NavidromeSource @Inject constructor(
 ) : IMusicSource {
 
     override val sourceType = SourceType.NAVIDROME
-    override val displayName = "Navidrome"
+    override val displayName = "Subsonic"
 
     override val capabilities = SourceCapabilities(
         search = true,
@@ -99,7 +99,7 @@ class NavidromeSource @Inject constructor(
         catalogLoader.getTrack(trackId)
 
     override suspend fun getStreamInfo(trackId: String): Result<StreamInfo> {
-        if (!apiClient.isConfigured) return Result.failure(IllegalStateException("Navidrome not configured"))
+        if (!apiClient.isConfigured) return Result.failure(IllegalStateException("Subsonic server not configured"))
         if (trackId.startsWith(NavidromeHomeFeed.RADIO_PREFIX)) return homeFeed.radioStream(trackId)
         val quality = if (connectivity.isMetered) {
             secureStorage.playbackPrefs.navidromeQualityMobile.value
@@ -229,10 +229,10 @@ class NavidromeSource @Inject constructor(
             val share = shares.firstOrNull {
                 it.id == shareUrlOrId || it.url == shareUrlOrId || it.url.endsWith("/$shareUrlOrId") ||
                     (it.id.isNotBlank() && shareUrlOrId.contains(it.id))
-            } ?: throw IOException("Share not found or expired on Navidrome server")
+            } ?: throw IOException("Share not found or expired on Subsonic server")
             with(catalogLoader) {
                 share.entry?.firstOrNull()?.toUnified()
-                    ?: throw IOException("Navidrome share has no playable songs")
+                    ?: throw IOException("Subsonic share has no playable songs")
             }
         }
 }
