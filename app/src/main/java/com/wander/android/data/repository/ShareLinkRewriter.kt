@@ -56,10 +56,18 @@ class ShareLinkRewriter @Inject constructor(
     internal fun domain(): String =
         secureStorage.agroShareDomain.value.ifBlank { secureStorage.shareDomain.value }
 
+    /**
+     * [title] and [subtitle] describe what the link is of — a track and its artist — and travel
+     * only on an Agro short link, which puts them in the preview a chat draws under it
+     * (`SHARE_LINKS.md` §3.4). The link is public by construction, so this names nothing the
+     * person opening it would not see anyway.
+     */
     suspend fun rewrite(
         url: String,
         speedPitch: SpeedAndPitch = SpeedAndPitch(),
-        expiresAt: Long? = null
+        expiresAt: Long? = null,
+        title: String? = null,
+        subtitle: String? = null
     ): String {
         val base = shareBase() ?: return url
 
@@ -74,8 +82,9 @@ class ShareLinkRewriter @Inject constructor(
                 // Agro's link manager; without the source, deleting it there cannot say whether
                 // anything is left behind on Navidrome.
                 val mutation = "mutation CreateShortLink(\$userId: String, \$targetUrl: String!, " +
-                    "\$source: String, \$expiresAt: Int) { createShortLink(userId: \$userId, targetUrl: " +
-                    "\$targetUrl, source: \$source, expiresAt: \$expiresAt) }"
+                    "\$source: String, \$expiresAt: Int, \$title: String, \$subtitle: String) { " +
+                    "createShortLink(userId: \$userId, targetUrl: \$targetUrl, source: \$source, " +
+                    "expiresAt: \$expiresAt, title: \$title, subtitle: \$subtitle) }"
                 val vars = buildJsonObject {
                     put("userId", agroGraphQl.userId)
                     put("targetUrl", url)
@@ -83,6 +92,8 @@ class ShareLinkRewriter @Inject constructor(
                     if (expiresAt != null) {
                         put("expiresAt", expiresAt)
                     }
+                    title?.takeIf(String::isNotBlank)?.let { put("title", it) }
+                    subtitle?.takeIf(String::isNotBlank)?.let { put("subtitle", it) }
                 }
                 agroGraphQl.execute(mutation, vars).getOrNull()
                     ?.get("createShortLink")?.jsonPrimitive?.contentOrNull
@@ -182,13 +193,6 @@ class ShareLinkRewriter @Inject constructor(
     }
 
     /**
-     * Whether a URL is one of ours to forward.
-     *
-     * `https` only — an `http` target would be a downgrade the recipient never agreed to — and the
-     * host must either be YouTube's or the user's own music server, which is the only other place
-     * this app mints links for.
-     */
-    /**
      * Which backend a link points at, as Agro's link manager records it.
      *
      * Only `"navidrome"` is acted on there — it is the one case where deleting the link leaves a
@@ -205,6 +209,13 @@ class ShareLinkRewriter @Inject constructor(
         }
     }
 
+    /**
+     * Whether a URL is one of ours to forward.
+     *
+     * `https` only — an `http` target would be a downgrade the recipient never agreed to — and the
+     * host must either be YouTube's or the user's own music server, which is the only other place
+     * this app mints links for.
+     */
     internal fun Uri.isAllowed(): Boolean {
         if (!scheme.equals("https", ignoreCase = true)) return false
         val host = host?.lowercase()?.removePrefix("www.")?.removePrefix("m.") ?: return false
@@ -237,8 +248,7 @@ class ShareLinkRewriter @Inject constructor(
  * the half of it that can be pinned down by a plain unit test.
  */
 internal fun playbackSuffix(speedPitch: SpeedAndPitch): String =
-    if (speedPitch.isDefault) ""
-    else "&s=${speedPitch.speed}&p=${speedPitch.pitch}"
+    if (speedPitch.isDefault) "" else "&s=${speedPitch.speed}&p=${speedPitch.pitch}"
 
 /**
  * The speed and pitch a link asks for, or null when it carries none this player will honour.
