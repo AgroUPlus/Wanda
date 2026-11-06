@@ -56,10 +56,18 @@ class ShareLinkRewriter @Inject constructor(
     internal fun domain(): String =
         secureStorage.agroShareDomain.value.ifBlank { secureStorage.shareDomain.value }
 
+    /**
+     * [title] and [subtitle] describe what the link is of — a track and its artist — and travel
+     * only on an Agro short link, which puts them in the preview a chat draws under it
+     * (`SHARE_LINKS.md` §3.4). The link is public by construction, so this names nothing the
+     * person opening it would not see anyway.
+     */
     suspend fun rewrite(
         url: String,
         speedPitch: SpeedAndPitch = SpeedAndPitch(),
-        expiresAt: Long? = null
+        expiresAt: Long? = null,
+        title: String? = null,
+        subtitle: String? = null
     ): String {
         val base = shareBase() ?: return url
 
@@ -74,8 +82,9 @@ class ShareLinkRewriter @Inject constructor(
                 // Agro's link manager; without the source, deleting it there cannot say whether
                 // anything is left behind on Navidrome.
                 val mutation = "mutation CreateShortLink(\$userId: String, \$targetUrl: String!, " +
-                    "\$source: String, \$expiresAt: Int) { createShortLink(userId: \$userId, targetUrl: " +
-                    "\$targetUrl, source: \$source, expiresAt: \$expiresAt) }"
+                    "\$source: String, \$expiresAt: Int, \$title: String, \$subtitle: String) { " +
+                    "createShortLink(userId: \$userId, targetUrl: \$targetUrl, source: \$source, " +
+                    "expiresAt: \$expiresAt, title: \$title, subtitle: \$subtitle) }"
                 val vars = buildJsonObject {
                     put("userId", agroGraphQl.userId)
                     put("targetUrl", url)
@@ -83,6 +92,8 @@ class ShareLinkRewriter @Inject constructor(
                     if (expiresAt != null) {
                         put("expiresAt", expiresAt)
                     }
+                    title?.takeIf(String::isNotBlank)?.let { put("title", it) }
+                    subtitle?.takeIf(String::isNotBlank)?.let { put("subtitle", it) }
                 }
                 agroGraphQl.execute(mutation, vars).getOrNull()
                     ?.get("createShortLink")?.jsonPrimitive?.contentOrNull

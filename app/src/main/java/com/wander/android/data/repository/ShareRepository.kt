@@ -230,7 +230,13 @@ class ShareRepository @Inject constructor(
 
         source.createShareLink(target).fold(
             onSuccess = { url ->
-                _links.tryEmit(ShareLink(target = target, url = shareLinkRewriter.rewrite(url, speedPitch)))
+                val wrapped = shareLinkRewriter.rewrite(
+                    url,
+                    speedPitch,
+                    title = target.title,
+                    subtitle = target.subtitle
+                )
+                _links.tryEmit(ShareLink(target = target, url = wrapped))
             },
             onFailure = {
                 // Sharing is off by default on a fresh Navidrome, and the server says so — which
