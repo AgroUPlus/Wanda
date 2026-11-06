@@ -193,13 +193,6 @@ class ShareLinkRewriter @Inject constructor(
     }
 
     /**
-     * Whether a URL is one of ours to forward.
-     *
-     * `https` only — an `http` target would be a downgrade the recipient never agreed to — and the
-     * host must either be YouTube's or the user's own music server, which is the only other place
-     * this app mints links for.
-     */
-    /**
      * Which backend a link points at, as Agro's link manager records it.
      *
      * Only `"navidrome"` is acted on there — it is the one case where deleting the link leaves a
@@ -216,6 +209,13 @@ class ShareLinkRewriter @Inject constructor(
         }
     }
 
+    /**
+     * Whether a URL is one of ours to forward.
+     *
+     * `https` only — an `http` target would be a downgrade the recipient never agreed to — and the
+     * host must either be YouTube's or the user's own music server, which is the only other place
+     * this app mints links for.
+     */
     internal fun Uri.isAllowed(): Boolean {
         if (!scheme.equals("https", ignoreCase = true)) return false
         val host = host?.lowercase()?.removePrefix("www.")?.removePrefix("m.") ?: return false
@@ -248,8 +248,7 @@ class ShareLinkRewriter @Inject constructor(
  * the half of it that can be pinned down by a plain unit test.
  */
 internal fun playbackSuffix(speedPitch: SpeedAndPitch): String =
-    if (speedPitch.isDefault) ""
-    else "&s=${speedPitch.speed}&p=${speedPitch.pitch}"
+    if (speedPitch.isDefault) "" else "&s=${speedPitch.speed}&p=${speedPitch.pitch}"
 
 /**
  * The speed and pitch a link asks for, or null when it carries none this player will honour.
