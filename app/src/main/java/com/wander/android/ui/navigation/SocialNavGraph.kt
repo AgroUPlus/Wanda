@@ -21,15 +21,17 @@ internal fun NavGraphBuilder.socialNavGraph(
     contentPadding: PaddingValues
 ) {
     tabDestination(motion, TopLevelDestination.FRIENDS.route) {
-        SocialScreen(
-            contentPadding = contentPadding,
-            onOpenProfile = { navController.navigateSettled(Routes.profile(it)) },
-            onOpenJam = { navController.navigateSettled(Routes.JAM) },
-            onOpenActivity = { navController.navigateSettled(Routes.ACTIVITY) },
-            onOpenOffGrid = { navController.navigateSettled(Routes.OFFGRID) },
-            onOpenMyProfile = { navController.navigateSettled(Routes.MY_PROFILE) },
-            onOpenSettings = { navController.navigateSettled(SYNC_SETTINGS) }
-        )
+        navController.TabWithSearch(contentPadding) {
+            SocialScreen(
+                contentPadding = contentPadding,
+                onOpenProfile = { navController.navigateSettled(Routes.profile(it)) },
+                onOpenJam = { navController.navigateSettled(Routes.JAM) },
+                onOpenActivity = { navController.navigateSettled(Routes.ACTIVITY) },
+                onOpenOffGrid = { navController.navigateSettled(Routes.OFFGRID) },
+                onOpenMyProfile = { navController.navigateSettled(Routes.MY_PROFILE) },
+                onOpenSettings = { navController.navigateSettled(SYNC_SETTINGS) }
+            )
+        }
     }
 
     tabDestination(motion, Routes.MY_PROFILE) {

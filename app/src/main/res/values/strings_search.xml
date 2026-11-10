@@ -27,6 +27,15 @@
     <!-- Content description of the button that removes one recent search. %1$s is the search. -->
     <string name="search_recent_remove">Remove %1$s from recent searches</string>
 
+    <!-- Two shortcuts under an empty search field. Each plays that slice of the library. -->
+    <string name="search_shortcuts_title">Your library</string>
+    <string name="search_shortcut_recently_added">Recently added</string>
+    <string name="search_shortcut_recently_added_hint">Newest first</string>
+    <string name="search_shortcut_most_played">Most played</string>
+    <string name="search_shortcut_most_played_hint">Your top tracks</string>
+    <!-- Content description of one shortcut tile. %1$s is its name, e.g. "Most played". -->
+    <string name="search_shortcut_play">Play %1$s</string>
+
     <!-- The mood tiles under an empty search field. Each one starts a radio across every source. -->
     <string name="search_mood_radio_title">Mood radio</string>
     <string name="search_mood_radio_hint">Plays from all your sources</string>

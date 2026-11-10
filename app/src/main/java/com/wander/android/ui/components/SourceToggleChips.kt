@@ -13,11 +13,12 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.data.model.SourceType
+import com.wander.android.data.model.shortNameRes
 
 /**
  * Which backends a search actually queries — several at once, not one at a time.
  *
- * The same connected toggle buttons as every other choice row, with several allowed on at once.
+ * The same row as Home's [SourceFilterChips] — same names, same badges — with several allowed on.
  * "All" is a shortcut, not a state: it selects everything, and clears to the default when
  * everything is already on.
  */
@@ -42,14 +43,17 @@ fun SourceToggleChips(
             options = options,
             isChecked = { if (it == null) allSelected else it in selected },
             role = Role.Checkbox,
-            label = { it?.displayName ?: stringResource(R.string.common_all) },
+            // The same short, translated names as Home's row: `displayName` is the English one for
+            // logs, and showing it here was why the two rows read differently.
+            label = { stringResource(it?.shortNameRes ?: R.string.common_all) },
             onSelect = { source ->
                 when {
                     source == null -> onSelectAll()
                     source !in selected || selected.size > 1 -> onToggle(source)
                 }
             },
-            equalWidth = false
+            equalWidth = false,
+            leadingIcon = { source, checked -> SourceChipMark(source, checked) }
         )
     }
 }

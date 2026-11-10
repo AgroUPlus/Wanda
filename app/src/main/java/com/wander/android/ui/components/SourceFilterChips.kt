@@ -43,7 +43,21 @@ fun SourceFilterChips(
             label = { stringResource(it?.let(label) ?: R.string.common_all) },
             onSelect = { onSelect(if (it == selected) null else it) },
             equalWidth = false,
-            enabled = enabled
+            enabled = enabled,
+            leadingIcon = { source, checked -> SourceChipMark(source, checked) }
         )
     }
 }
+
+/**
+ * What a source chip leads with: the source's own badge, always — so the row reads by shape and
+ * colour before its labels are read — and the check only on "All", which has no badge of its own.
+ * Shared by this row and Search's [SourceToggleChips], so the two never drift apart again.
+ */
+@Composable
+internal fun SourceChipMark(source: SourceType?, checked: Boolean) {
+    val gap = Modifier.padding(end = 6.dp)
+    if (source == null) ToggleCheck(checked, gap) else SourceIcon(source, gap, size = SourceMarkSize)
+}
+
+private val SourceMarkSize = 24.dp

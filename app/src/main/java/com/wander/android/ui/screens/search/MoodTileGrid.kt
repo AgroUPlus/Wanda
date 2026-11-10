@@ -1,16 +1,24 @@
 package com.wander.android.ui.screens.search
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
@@ -19,13 +27,18 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
@@ -61,8 +74,10 @@ internal fun MoodTileGrid(
 }
 
 /**
- * One mood. The big shape bleeding off its top corner is decoration only — each tile gets a
- * different one so the four read apart at a glance, before their labels are read.
+ * One mood, in its own colour with its own shape bleeding off the top corner, so no two tiles
+ * read alike before their labels are read. Pressing squares the corners and turns the shape —
+ * the expressive press response — and the playing mood swaps its glyph for an equaliser and
+ * gains an outline.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -73,30 +88,29 @@ private fun MoodTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = MaterialTheme.colorScheme
-    val palette = listOf(
-        colors.primaryContainer to colors.onPrimaryContainer,
-        colors.secondaryContainer to colors.onSecondaryContainer,
-        colors.tertiaryContainer to colors.onTertiaryContainer
+    val motion = MaterialTheme.motionScheme
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val corner by animateDpAsState(if (pressed) 16.dp else 28.dp, motion.fastSpatialSpec(), label = "corner")
+    val turn by animateFloatAsState(
+        targetValue = DecorationTurns[index % DecorationTurns.size] + if (pressed || playing) PressTurn else 0f,
+        animationSpec = motion.defaultSpatialSpec(),
+        label = "turn"
     )
-    val (container, content) = if (playing) colors.primary to colors.onPrimary else palette[index % palette.size]
-    val decorations = listOf(
-        MaterialShapes.Cookie9Sided,
-        MaterialShapes.Clover4Leaf,
-        MaterialShapes.Sunny,
-        MaterialShapes.SoftBurst
-    )
-    val decoration = decorations[index % decorations.size].toShape()
+    val (container, decorationColor) = moodColors(index)
+    val decoration = Decorations[index % Decorations.size].toShape()
     val name = mood.label()
     val description = stringResource(R.string.search_mood_radio_start, name)
 
     Surface(
         onClick = onClick,
-        shape = MaterialTheme.shapes.extraLarge,
+        interactionSource = interaction,
+        shape = RoundedCornerShape(corner),
         color = container,
-        contentColor = content,
+        contentColor = MoodInk,
+        border = if (playing) BorderStroke(3.dp, MoodInk) else null,
         modifier = modifier
-            .height(112.dp)
+            .height(120.dp)
             .semantics {
                 contentDescription = description
                 selected = playing
@@ -106,22 +120,23 @@ private fun MoodTile(
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .offset(x = 28.dp, y = (-28).dp)
-                    .size(104.dp)
+                    .offset(x = 24.dp, y = (-24).dp)
+                    .size(112.dp)
+                    .rotate(turn)
                     .clip(decoration)
-                    .background(content.copy(alpha = DECORATION_ALPHA))
+                    .background(decorationColor)
             )
             Column(
                 verticalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxSize()
                     .padding(16.dp)
             ) {
-                Icon(mood.icon(), contentDescription = null)
-                Spacer(Modifier.height(28.dp))
+                Icon(if (playing) Icons.Rounded.GraphicEq else mood.icon(), contentDescription = null)
                 Text(
                     text = name,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -130,4 +145,29 @@ private fun MoodTile(
     }
 }
 
-private const val DECORATION_ALPHA = 0.12f
+/**
+ * Fixed hues rather than the theme's three containers: four moods over three containers meant
+ * two tiles always shared a colour. Light enough that [MoodInk] passes 4.5:1 on each, in either
+ * theme; the second of each pair is the same hue a step deeper, for the shape.
+ */
+private fun moodColors(index: Int): Pair<Color, Color> = MoodPalette[index % MoodPalette.size]
+
+private val MoodPalette = listOf(
+    Color(0xFFC9BBEA) to Color(0xFFA291D3), // lavender
+    Color(0xFFB9C4F2) to Color(0xFF8C9BDB), // periwinkle
+    Color(0xFFF2AE6B) to Color(0xFFD9853A), // apricot
+    Color(0xFFEDA1CB) to Color(0xFFD474AA) // pink
+)
+
+private val MoodInk = Color(0xFF1C1014)
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private val Decorations = listOf(
+    MaterialShapes.Cookie9Sided,
+    MaterialShapes.Clover4Leaf,
+    MaterialShapes.Sunny,
+    MaterialShapes.SoftBurst
+)
+
+private val DecorationTurns = listOf(0f, 45f, 12f, -30f)
+private const val PressTurn = 30f

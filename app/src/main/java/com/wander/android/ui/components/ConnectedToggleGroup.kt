@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -54,8 +53,12 @@ internal fun <T> ConnectedToggleButtons(
     checkIconGap: Dp = 6.dp,
     equalWidth: Boolean = true,
     enabled: Boolean = true,
-    /** Drawn before the label while the option is not chosen; the check takes its place when it is. */
-    leadingIcon: (@Composable (T) -> Unit)? = null
+    /**
+     * Drawn before the label in place of the check, told whether the option is chosen — for a row
+     * whose options carry their own mark, like the sources' badges. It brings its own gap to the
+     * label, so a mark that is hidden leaves none behind.
+     */
+    leadingIcon: (@Composable (option: T, checked: Boolean) -> Unit)? = null
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
@@ -82,15 +85,10 @@ internal fun <T> ConnectedToggleButtons(
                     .height(48.dp)
                     .semantics { this.role = role }
             ) {
-                AnimatedVisibility(visible = checked) {
-                    Icon(
-                        imageVector = Icons.Rounded.Check,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = checkIconGap).size(18.dp)
-                    )
-                }
-                if (leadingIcon != null && !checked) {
-                    Box(Modifier.padding(end = checkIconGap)) { leadingIcon(option) }
+                if (leadingIcon != null) {
+                    leadingIcon(option, checked)
+                } else {
+                    ToggleCheck(checked, Modifier.padding(end = checkIconGap))
                 }
                 // One line: a label too long for its share of the row steps down instead of being cut.
                 val style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
@@ -122,8 +120,20 @@ internal fun <T> ConnectedToggleGroup(
     checkIconGap: Dp = 6.dp,
     equalWidth: Boolean = true,
     enabled: Boolean = true,
-    leadingIcon: (@Composable (T) -> Unit)? = null
+    leadingIcon: (@Composable (option: T, checked: Boolean) -> Unit)? = null
 ) = ConnectedToggleButtons(
     options, { it == selected }, Role.RadioButton, label, onSelect, modifier,
     uncheckedContainer, checkIconGap, equalWidth, enabled, leadingIcon
 )
+
+/** The check a chosen toggle grows, animating in and out with the choice. */
+@Composable
+internal fun ToggleCheck(checked: Boolean, modifier: Modifier = Modifier) {
+    AnimatedVisibility(visible = checked) {
+        Icon(
+            imageVector = Icons.Rounded.Check,
+            contentDescription = null,
+            modifier = modifier.size(18.dp)
+        )
+    }
+}

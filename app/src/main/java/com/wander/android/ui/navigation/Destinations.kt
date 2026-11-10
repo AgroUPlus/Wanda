@@ -11,8 +11,8 @@ import java.net.URLEncoder
  * pages within it.
  *
  * [HOME] is where the app opens and where back lands: it is the default view rather than a button.
- * [LIBRARY] is what the search field opens, and what it searches from. Search is not a destination
- * of its own — see `LibrarySurface`.
+ * Search is not a destination of its own: the dock's field opens its results over whichever of
+ * these is showing — see `SearchLayer`.
  */
 enum class TopLevelDestination(val route: String) {
     HOME("home"),

@@ -57,7 +57,7 @@ class SearchViewModel @Inject constructor(
     /**
      * The field lives in the dock at the bottom of the app, which outlives this ViewModel, so the
      * text is owned by [SearchQueryHolder] and only observed here. It is also what decides whether
-     * this screen is on show at all — see `LibrarySurface`.
+     * this screen is on show at all — see `SearchLayer`.
      */
     val query: StateFlow<String> = queryHolder.query
 
@@ -66,8 +66,8 @@ class SearchViewModel @Inject constructor(
      *
      * A flow, not a snapshot. This used to read `isConfigured.value` once when the ViewModel was
      * constructed, so a backend that finished signing in a moment later never gained a chip and
-     * was never searched until the screen was recreated — and since the search surface is now part
-     * of the library destination, that could be a long time.
+     * was never searched until the screen was recreated — and since the search surface lives on each
+     * root tab, that could be a long time.
      *
      * Keyed on `isSearchable` rather than `isConfigured`: YouTube Music answers a search without
      * an account, and excluding it while signed out was the reason its results went missing.
@@ -110,7 +110,7 @@ class SearchViewModel @Inject constructor(
 
     fun retry() { attempt.update { it + 1 } }
 
-    /** Empties the dock's field, which is what ends a search — see `LibrarySurface`. */
+    /** Empties the dock's field, which is what ends a search — see `SearchLayer`. */
     fun clearQuery() = queryHolder.set("")
 
     // Re-runs when the sources change as well as the query: toggling a backend on has to go and

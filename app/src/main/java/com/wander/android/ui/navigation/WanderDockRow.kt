@@ -67,7 +67,6 @@ fun WanderDockRow(
     onOpenItem: (DockItem) -> Unit,
     onOpenLibrary: () -> Unit,
     onQueryChange: (String) -> Unit,
-    onSearch: () -> Unit,
     onListen: () -> Unit,
     /** Told when the field gains or loses focus — the library offers recent searches meanwhile. */
     onSearchFocusChanged: (Boolean) -> Unit,
@@ -93,7 +92,6 @@ fun WanderDockRow(
         DockSearchField(
             query = query,
             onQueryChange = onQueryChange,
-            onSearch = onSearch,
             onListen = onListen,
             onFocusChanged = { hasFocus ->
                 focused = hasFocus

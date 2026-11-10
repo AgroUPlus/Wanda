@@ -168,12 +168,9 @@ internal fun rememberWanderDockState(
     val tabReselection = LocalTabReselection.current
     val dockItems by hiltViewModel<NavLayoutViewModel>().dockItems.collectAsStateWithLifecycle()
     val openLibrary = { navController.switchTab(TopLevelDestination.LIBRARY) }
-    val onQueryChange: (String) -> Unit = { value ->
-        if (value.isNotBlank() && dockRoute != TopLevelDestination.LIBRARY.route) {
-            openLibrary()
-        }
-        viewModel.setSearchQuery(value)
-    }
+    // Typing searches over whichever tab is showing — see `SearchLayer` — rather than switching to
+    // one first, so ending the search leaves you where you started.
+    val onQueryChange: (String) -> Unit = viewModel::setSearchQuery
 
     val standaloneDock: @Composable BoxScope.() -> Unit = {
         AnimatedVisibility(
@@ -202,7 +199,6 @@ internal fun rememberWanderDockState(
                 onOpenItem = { item -> navController.openDockItem(item, tabReselection) },
                 onOpenLibrary = openLibrary,
                 onQueryChange = onQueryChange,
-                onSearch = openLibrary,
                 onListen = onListen,
                 onSearchFocusChanged = viewModel::setSearchFocused,
                 // The raw signal, overshoot and all — see `WanderDock`'s own doc for why this is
