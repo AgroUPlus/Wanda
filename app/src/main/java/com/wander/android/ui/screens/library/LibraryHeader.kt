@@ -1,22 +1,22 @@
 package com.wander.android.ui.screens.library
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryScrollableTabRow
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 
@@ -43,49 +43,33 @@ internal fun LibraryTitleRow(onOpenHistory: () -> Unit) {
 }
 
 /**
- * The section tabs.
+ * Every section that is not a shelf, as one row of chips.
  *
- * The expressive indicator, and the reason it is worth spelling out: the stock one is a bar
- * spanning the whole tab, which on a row of clipped labels read as a highlight on a column rather
- * than as a marker under a word. `matchContentSize` shrinks it to the label it belongs to, and a
- * rounded shape makes it a pill instead of a rule — so the selected tab is legible from its
- * silhouette before any text is read. Scrollable so each label stays whole however many sections
- * are shown.
+ * Chips rather than tabs: with Liked and Offline lifted into [LibraryShelves], what is left is a
+ * set of ways to browse, not a set of places. While a shelf is open no chip is selected.
+ * Scrollable so each label stays whole however many sections are shown.
  */
 @Composable
-internal fun LibraryTabRow(
+internal fun LibrarySectionChips(
     tabs: List<LibraryTab>,
-    selectedPage: Int,
-    onSelect: (LibraryTab) -> Unit
+    current: LibraryTab?,
+    onSelect: (LibraryTab) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    PrimaryScrollableTabRow(
-        selectedTabIndex = selectedPage,
-        edgePadding = 12.dp,
-        divider = {},
-        indicator = {
-            TabRowDefaults.PrimaryIndicator(
-                modifier = Modifier.tabIndicatorOffset(selectedPage, matchContentSize = true),
-                width = Dp.Unspecified,
-                height = 4.dp,
-                shape = MaterialTheme.shapes.large
-            )
-        }
+    val sections = tabs.filterNot { it in ShelfTabs }
+    if (sections.isEmpty()) return
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp)
     ) {
-        tabs.forEachIndexed { index, entry ->
-            val isSelected = index == selectedPage
-            Tab(
-                selected = isSelected,
+        sections.forEach { entry ->
+            FilterChip(
+                selected = entry == current,
                 onClick = { onSelect(entry) },
-                selectedContentColor = MaterialTheme.colorScheme.primary,
-                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                text = {
-                    Text(
-                        text = stringResource(entry.label),
-                        style = if (isSelected) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyMedium,
-                        maxLines = 1,
-                        softWrap = false
-                    )
-                }
+                label = { Text(stringResource(entry.label), maxLines = 1, softWrap = false) }
             )
         }
     }
