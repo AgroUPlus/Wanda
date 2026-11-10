@@ -13,13 +13,9 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Bolt
-import androidx.compose.material.icons.rounded.CenterFocusStrong
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Nightlight
 import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.material.icons.rounded.Shuffle
-import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.FloatingActionButtonMenu
 import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.FloatingActionButtonMenuScope
@@ -39,10 +35,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import com.wander.android.R
 import com.wander.android.data.repository.MoodPreset
+import com.wander.android.ui.components.icon
+import com.wander.android.ui.components.label
 
 /** Where the trigger sits, bottom-right corner — only the whole-widget appear/disappear uses this. */
 private val CornerOrigin = TransformOrigin(1f, 1f)
@@ -184,25 +181,4 @@ private fun FloatingActionButtonMenuScope.MoodMenuItem(mood: MoodPreset, playing
             MaterialTheme.colorScheme.onSecondaryContainer
         }
     )
-}
-
-/** The localized label for a [MoodPreset] — the one place its [MoodPreset.key] becomes text. */
-@Composable
-private fun MoodPreset.label(): String = stringResource(
-    when (key) {
-        "late_night_chill" -> R.string.mood_preset_late_night_chill
-        "focus_flow" -> R.string.mood_preset_focus_flow
-        "morning_energizer" -> R.string.mood_preset_morning_energizer
-        "high_voltage" -> R.string.mood_preset_high_voltage
-        else -> R.string.mood_preset_late_night_chill
-    }
-)
-
-/** One glyph per preset, standing in for its tempo/energy at a glance. */
-private fun MoodPreset.icon(): ImageVector = when (key) {
-    "late_night_chill" -> Icons.Rounded.Nightlight
-    "focus_flow" -> Icons.Rounded.CenterFocusStrong
-    "morning_energizer" -> Icons.Rounded.WbSunny
-    "high_voltage" -> Icons.Rounded.Bolt
-    else -> Icons.Rounded.Radio
 }
