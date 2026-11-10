@@ -44,7 +44,6 @@ import com.wander.android.ui.components.rememberHaptics
 internal fun DockSearchField(
     query: String,
     onQueryChange: (String) -> Unit,
-    onSearch: () -> Unit,
     onListen: () -> Unit,
     onFocusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -111,10 +110,7 @@ internal fun DockSearchField(
         },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         keyboardActions = KeyboardActions(
-            onSearch = {
-                keyboard?.hide()
-                onSearch()
-            }
+            onSearch = { keyboard?.hide() }
         ),
         shape = if (isFocused) CircleShape else MaterialTheme.shapes.extraLarge,
         colors = TextFieldDefaults.colors(
