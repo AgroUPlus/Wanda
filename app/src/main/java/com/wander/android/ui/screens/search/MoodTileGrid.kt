@@ -74,18 +74,19 @@ private fun MoodTile(
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
-    val (container, content) = when {
-        playing -> colors.primary to colors.onPrimary
-        index % 3 == 0 -> colors.primaryContainer to colors.onPrimaryContainer
-        index % 3 == 1 -> colors.secondaryContainer to colors.onSecondaryContainer
-        else -> colors.tertiaryContainer to colors.onTertiaryContainer
-    }
-    val decoration = when (index % 4) {
-        0 -> MaterialShapes.Cookie9Sided
-        1 -> MaterialShapes.Clover4Leaf
-        2 -> MaterialShapes.Sunny
-        else -> MaterialShapes.SoftBurst
-    }.toShape()
+    val palette = listOf(
+        colors.primaryContainer to colors.onPrimaryContainer,
+        colors.secondaryContainer to colors.onSecondaryContainer,
+        colors.tertiaryContainer to colors.onTertiaryContainer
+    )
+    val (container, content) = if (playing) colors.primary to colors.onPrimary else palette[index % palette.size]
+    val decorations = listOf(
+        MaterialShapes.Cookie9Sided,
+        MaterialShapes.Clover4Leaf,
+        MaterialShapes.Sunny,
+        MaterialShapes.SoftBurst
+    )
+    val decoration = decorations[index % decorations.size].toShape()
     val name = mood.label()
     val description = stringResource(R.string.search_mood_radio_start, name)
 

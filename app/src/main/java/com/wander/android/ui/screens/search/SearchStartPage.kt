@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,38 +45,7 @@ internal fun SearchStartPage(
         modifier = modifier.fillMaxSize()
     ) {
         if (recentSearches.isNotEmpty()) {
-            item(key = "header_recent", contentType = "section_header") {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 20.dp, end = 8.dp, top = 4.dp)
-                ) {
-                    SectionTitle(R.string.search_recent_title)
-                    TextButton(onClick = onClearSearches) {
-                        Text(stringResource(R.string.search_recent_clear_all))
-                    }
-                }
-            }
-            item(key = "recent_chips", contentType = "recent_chips") {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                        .animateItem()
-                ) {
-                    recentSearches.forEach { query ->
-                        RecentSearchChip(
-                            query = query,
-                            onSelect = { onSearch(query) },
-                            onRemove = { onRemoveSearch(query) }
-                        )
-                    }
-                }
-            }
+            recentSearchesSection(recentSearches, onSearch, onRemoveSearch, onClearSearches)
         }
 
         item(key = "header_moods", contentType = "section_header") {
@@ -106,8 +76,51 @@ internal fun SearchStartPage(
     }
 }
 
+/** The "Recent searches" title with its Clear all, then the searches as wrapping chips. */
+private fun LazyListScope.recentSearchesSection(
+    queries: List<String>,
+    onSearch: (String) -> Unit,
+    onRemove: (String) -> Unit,
+    onClearAll: () -> Unit
+) {
+    item(key = "header_recent", contentType = "section_header") {
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 8.dp, top = 4.dp)
+        ) {
+            SectionTitle(R.string.search_recent_title)
+            TextButton(onClick = onClearAll) {
+                Text(stringResource(R.string.search_recent_clear_all))
+            }
+        }
+    }
+    item(key = "recent_chips", contentType = "recent_chips") {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .animateItem()
+        ) {
+            queries.forEach { query ->
+                RecentSearchChip(
+                    query = query,
+                    onSelect = { onSearch(query) },
+                    onRemove = { onRemove(query) }
+                )
+            }
+        }
+    }
+}
+
 @Composable
-private fun SectionTitle(@StringRes title: Int) {
+private fun SectionTitle(
+    @StringRes title: Int
+) {
     Text(
         text = stringResource(title),
         style = MaterialTheme.typography.titleMedium
