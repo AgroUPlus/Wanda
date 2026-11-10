@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 /**
  * Recent searches, for the moment between focusing the search field and typing into it.
  *
- * Its own view model rather than more of [SearchViewModel]: it is read by `LibrarySurface` to
+ * Its own view model rather than more of [SearchViewModel]: it is read by `SearchLayer` to
  * decide whether the search side is showing at all, before any query exists to search for.
  */
 @HiltViewModel
