@@ -27,6 +27,12 @@
     <!-- Content description of the button that removes one recent search. %1$s is the search. -->
     <string name="search_recent_remove">Remove %1$s from recent searches</string>
 
+    <!-- The mood tiles under an empty search field. Each one starts a radio across every source. -->
+    <string name="search_mood_radio_title">Mood radio</string>
+    <string name="search_mood_radio_hint">Plays from all your sources</string>
+    <!-- Content description of one mood tile. %1$s is the mood's name. -->
+    <string name="search_mood_radio_start">Start %1$s radio</string>
+
     <!-- Every source the search asked failed to answer, and nothing on the device matched. -->
     <string name="search_failed_title">Search didn\'t go through</string>
     <string name="search_failed_message">None of your sources answered. Check your connection and try again.</string>

@@ -115,7 +115,16 @@ fun LibraryScreen(
                 .padding(contentPadding.headerInset())
         ) {
             LibraryTitleRow(onOpenHistory)
-            LibraryTabRow(tabs, selectedPage, viewModel::selectTab)
+            val shownTab = tabs.getOrNull(selectedPage)
+            LibraryShelves(
+                tabs = tabs,
+                current = shownTab,
+                likedCount = likedTracks.size,
+                downloadedCount = downloadedTracks.size,
+                onSelect = viewModel::selectTab,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            LibrarySectionChips(tabs, shownTab, viewModel::selectTab)
 
             HorizontalPager(
                 state = pagerState,

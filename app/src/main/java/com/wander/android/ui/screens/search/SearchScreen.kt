@@ -29,6 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
+import com.wander.android.data.repository.MoodPresets
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.SearchKindToggle
@@ -41,6 +42,7 @@ import com.wander.android.ui.components.selection.SelectedTrack
 import com.wander.android.ui.components.selection.TrackSelectionBar
 import com.wander.android.ui.components.selection.TrackSwipeBox
 import com.wander.android.ui.components.selection.rememberTrackSelectionState
+import com.wander.android.ui.screens.home.MoodMatrixViewModel
 
 @Composable
 fun SearchScreen(
@@ -48,8 +50,10 @@ fun SearchScreen(
     onOpenAlbum: (String) -> Unit,
     onOpenArtist: (String, String?) -> Unit,
     viewModel: SearchViewModel = hiltViewModel(),
-    historyViewModel: SearchHistoryViewModel = hiltViewModel()
+    historyViewModel: SearchHistoryViewModel = hiltViewModel(),
+    moodViewModel: MoodMatrixViewModel = hiltViewModel()
 ) {
+    val moodState by moodViewModel.state.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val recentSearches by historyViewModel.recent.collectAsStateWithLifecycle()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -137,12 +141,15 @@ fun SearchScreen(
 
                     // The field, not `hasQuery`: the state trails typing by the debounce, and the
                     // history must not flash up under a query that is already there.
-                    query.isBlank() && recentSearches.isNotEmpty() -> RecentSearchesList(
-                        queries = recentSearches,
+                    query.isBlank() -> SearchStartPage(
+                        recentSearches = recentSearches,
+                        moods = MoodPresets,
+                        playingMoodKey = moodState.playingKey,
                         contentPadding = contentPadding.nestedListInset(),
-                        onSelect = historyViewModel::search,
-                        onRemove = historyViewModel::remove,
-                        onClearAll = historyViewModel::clear
+                        onSearch = historyViewModel::search,
+                        onRemoveSearch = historyViewModel::remove,
+                        onClearSearches = historyViewModel::clear,
+                        onPlayMood = moodViewModel::playMood
                     )
 
                     !state.hasQuery -> EmptyState(
