@@ -93,7 +93,7 @@ private fun MoodTile(
     val pressed by interaction.collectIsPressedAsState()
     val corner by animateDpAsState(if (pressed) 16.dp else 28.dp, motion.fastSpatialSpec(), label = "corner")
     val turn by animateFloatAsState(
-        targetValue = DecorationTurns[index % DecorationTurns.size] + if (pressed || playing) PressTurn else 0f,
+        targetValue = DecorationTurns[index % DecorationTurns.size] + if (pressed || playing) PRESS_TURN else 0f,
         animationSpec = motion.defaultSpatialSpec(),
         label = "turn"
     )
@@ -170,4 +170,4 @@ private val Decorations = listOf(
 )
 
 private val DecorationTurns = listOf(0f, 45f, 12f, -30f)
-private const val PressTurn = 30f
+private const val PRESS_TURN = 30f
