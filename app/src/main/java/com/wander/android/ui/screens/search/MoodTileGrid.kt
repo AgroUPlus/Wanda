@@ -108,7 +108,7 @@ private fun MoodTile(
                     .offset(x = 28.dp, y = (-28).dp)
                     .size(104.dp)
                     .clip(decoration)
-                    .background(content.copy(alpha = DecorationAlpha))
+                    .background(content.copy(alpha = DECORATION_ALPHA))
             )
             Column(
                 verticalArrangement = Arrangement.SpaceBetween,
@@ -129,4 +129,4 @@ private fun MoodTile(
     }
 }
 
-private const val DecorationAlpha = 0.12f
+private const val DECORATION_ALPHA = 0.12f

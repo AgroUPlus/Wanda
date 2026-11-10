@@ -30,7 +30,6 @@ import com.wander.android.R
 import com.wander.android.data.model.UnifiedAlbum
 import com.wander.android.data.model.UnifiedTrack
 import com.wander.android.data.repository.MoodPresets
-import com.wander.android.ui.screens.home.MoodMatrixViewModel
 import com.wander.android.ui.components.AddToPlaylistHost
 import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.SearchKindToggle
@@ -43,6 +42,7 @@ import com.wander.android.ui.components.selection.SelectedTrack
 import com.wander.android.ui.components.selection.TrackSelectionBar
 import com.wander.android.ui.components.selection.TrackSwipeBox
 import com.wander.android.ui.components.selection.rememberTrackSelectionState
+import com.wander.android.ui.screens.home.MoodMatrixViewModel
 
 @Composable
 fun SearchScreen(
