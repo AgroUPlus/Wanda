@@ -101,7 +101,8 @@ internal fun NavGraphBuilder.socialNavGraph(
         )
     ) { backStackEntry ->
         val rawCode = backStackEntry.arguments?.getString("code")
-        val initialCode = if (rawCode.isNullOrBlank() || rawCode == "{code}" || rawCode.equals("CODE", ignoreCase = true)) {
+        val isPlaceholder = rawCode.isNullOrBlank() || rawCode == "{code}" || rawCode.equals("CODE", ignoreCase = true)
+        val initialCode = if (isPlaceholder) {
             null
         } else {
             rawCode.trim().uppercase().filter { it.isLetterOrDigit() }.take(10)
