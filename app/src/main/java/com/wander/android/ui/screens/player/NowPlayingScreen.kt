@@ -106,88 +106,87 @@ internal fun NowPlayingScreen(
     val base = MaterialTheme.colorScheme
 
     CoverTintedTheme(seedColor = coverSeed, base = base, dark = dark, amoled = false) {
+        // Over the player sheet itself — see `FullScreenLyrics` for why that has to be a dialog.
+        // Composed here, inside the cover tint, so it carries the same background the player has rather
+        // than the app's untinted one. Closing it goes back to the lyrics over the cover.
+        if (fullScreenLyrics) {
+            FullScreenLyrics(
+                lyrics = lyrics,
+                state = state,
+                playerConnection = playerConnection,
+                onDismiss = { fullScreenLyrics = false },
+                listState = lyricsListState,
+                letterByLetterEnabled = letterByLetterLyrics
+            )
+        }
 
-    // Over the player sheet itself — see `FullScreenLyrics` for why that has to be a dialog.
-    // Composed here, inside the cover tint, so it carries the same background the player has rather
-    // than the app's untinted one. Closing it goes back to the lyrics over the cover.
-    if (fullScreenLyrics) {
-        FullScreenLyrics(
-            lyrics = lyrics,
-            state = state,
-            playerConnection = playerConnection,
-            onDismiss = { fullScreenLyrics = false },
-            listState = lyricsListState,
-            letterByLetterEnabled = letterByLetterLyrics
-        )
-    }
-
-    if (showSourcePicker) {
-        SourcePickerDialog(
-            current = track,
-            renditions = renditions,
-            isSearching = isFindingRenditions,
-            onSelect = { rendition ->
-                // Read at the moment of the swap, not when the picker opened — the song has been
-                // playing the whole time the search was running.
-                viewModel.playFrom(rendition, playerConnection.currentPositionMs() ?: 0L)
-                showSourcePicker = false
+        if (showSourcePicker) {
+            SourcePickerDialog(
+                current = track,
+                renditions = renditions,
+                isSearching = isFindingRenditions,
+                onSelect = { rendition ->
+                    // Read at the moment of the swap, not when the picker opened — the song has been
+                    // playing the whole time the search was running.
+                    viewModel.playFrom(rendition, playerConnection.currentPositionMs() ?: 0L)
+                    showSourcePicker = false
+                    viewModel.clearRenditions()
+                },
+                onDismiss = {
+                    showSourcePicker = false
                 viewModel.clearRenditions()
-            },
-            onDismiss = {
-                showSourcePicker = false
-                viewModel.clearRenditions()
-            }
-        )
-    }
+                }
+            )
+        }
 
-    if (showAudioTrackPicker) {
-        AudioTrackPickerDialog(
-            audioTracks = state.audioTracks,
-            onSelect = { pickedTrack ->
-                viewModel.setPreferredAudioLanguage(pickedTrack.language)
-                showAudioTrackPicker = false
-            },
-            onDismiss = { showAudioTrackPicker = false }
-        )
-    }
+        if (showAudioTrackPicker) {
+            AudioTrackPickerDialog(
+                audioTracks = state.audioTracks,
+                onSelect = { pickedTrack ->
+                    viewModel.setPreferredAudioLanguage(pickedTrack.language)
+                    showAudioTrackPicker = false
+                },
+                onDismiss = { showAudioTrackPicker = false }
+            )
+        }
 
-    var showSpeedPitch by remember { mutableStateOf(false) }
-    var showMenuDrawer by remember { mutableStateOf(false) }
-    var showSleepTimer by remember { mutableStateOf(false) }
-    val sleepTimerState by viewModel.sleepTimerState.collectAsStateWithLifecycle()
-    val addToPlaylist = AddToPlaylistHost()
-    val jamViewModel: JamViewModel = hiltViewModel()
-    val speedAndPitch by playerConnection.speedAndPitch.collectAsStateWithLifecycle()
+        var showSpeedPitch by remember { mutableStateOf(false) }
+        var showMenuDrawer by remember { mutableStateOf(false) }
+        var showSleepTimer by remember { mutableStateOf(false) }
+        val sleepTimerState by viewModel.sleepTimerState.collectAsStateWithLifecycle()
+        val addToPlaylist = AddToPlaylistHost()
+        val jamViewModel: JamViewModel = hiltViewModel()
+        val speedAndPitch by playerConnection.speedAndPitch.collectAsStateWithLifecycle()
 
-    // The menu drawer's "Source" row — the one way to it now the top bar's source chip is gone.
-    val onOpenSourcePicker: (() -> Unit)? = {
-        showSourcePicker = true
-        viewModel.findRenditions(track, state.durationMs)
-    }.takeIf { viewModel.canSwitchSource(track, state.durationMs) }
+        // The menu drawer's "Source" row — the one way to it now the top bar's source chip is gone.
+        val onOpenSourcePicker: (() -> Unit)? = {
+            showSourcePicker = true
+            viewModel.findRenditions(track, state.durationMs)
+        }.takeIf { viewModel.canSwitchSource(track, state.durationMs) }
 
-    if (showMenuDrawer) {
-        NowPlayingMenuDrawer(
-            track = track,
-            isLiked = track.id in likedTrackIds,
-            isRadioMode = state.isRadioMode,
-            queueSize = state.queue.size,
-            canSwitchSource = viewModel.canSwitchSource(track, state.durationMs),
-            canShare = viewModel.canShare(track),
-            canAddToPlaylist = addToPlaylist.canAdd(track),
-            hasMultipleAudioTracks = state.audioTracks.size > 1,
-            isSleepTimerOn = sleepTimerState != SleepTimerState.Off,
-            onOpenSleepTimer = { showSleepTimer = true },
-            onOpenQueue = onOpenQueue,
-            onAddToPlaylist = { addToPlaylist.open(track) },
-            onToggleRadio = playerConnection::toggleRadio,
-            onOpenSpeedPitch = { showSpeedPitch = true },
-            onAddToQueue = { playerConnection.addToQueue(listOf(track)) },
-            onToggleLike = { viewModel.toggleLike(track) },
-            onShare = { viewModel.share(track) }.takeIf { viewModel.canShare(track) },
-            onOpenSourcePicker = onOpenSourcePicker,
-            onOpenAudioTrackPicker = { showAudioTrackPicker = true }.takeIf { state.audioTracks.size > 1 },
-            onOpenChapters = { episodePanel = EpisodePanel.CHAPTERS }.takeIf { episodeExtras?.chaptersUrl != null },
-            onOpenTranscript = {
+        if (showMenuDrawer) {
+            NowPlayingMenuDrawer(
+                track = track,
+                isLiked = track.id in likedTrackIds,
+                isRadioMode = state.isRadioMode,
+                queueSize = state.queue.size,
+                canSwitchSource = viewModel.canSwitchSource(track, state.durationMs),
+                canShare = viewModel.canShare(track),
+                canAddToPlaylist = addToPlaylist.canAdd(track),
+                hasMultipleAudioTracks = state.audioTracks.size > 1,
+                isSleepTimerOn = sleepTimerState != SleepTimerState.Off,
+                onOpenSleepTimer = { showSleepTimer = true },
+                onOpenQueue = onOpenQueue,
+                onAddToPlaylist = { addToPlaylist.open(track) },
+                onToggleRadio = playerConnection::toggleRadio,
+                onOpenSpeedPitch = { showSpeedPitch = true },
+                onAddToQueue = { playerConnection.addToQueue(listOf(track)) },
+                onToggleLike = { viewModel.toggleLike(track) },
+                onShare = { viewModel.share(track) }.takeIf { viewModel.canShare(track) },
+                onOpenSourcePicker = onOpenSourcePicker,
+                onOpenAudioTrackPicker = { showAudioTrackPicker = true }.takeIf { state.audioTracks.size > 1 },
+                onOpenChapters = { episodePanel = EpisodePanel.CHAPTERS }.takeIf { episodeExtras?.chaptersUrl != null },
+                onOpenTranscript = {
                     episodePanel = EpisodePanel.TRANSCRIPT
                 }.takeIf { episodeExtras?.transcriptUrl != null },
                 onOpenArtist = onOpenArtist?.let { open -> { name -> open(name, track.artistIdFor(name)) } },
@@ -205,7 +204,7 @@ internal fun NowPlayingScreen(
             onDismiss = { episodePanel = null }
         )
 
-    if (showSleepTimer) {
+        if (showSleepTimer) {
             SleepTimerSheet(
                 state = sleepTimerState,
                 isEpisode = track.isEpisode,
