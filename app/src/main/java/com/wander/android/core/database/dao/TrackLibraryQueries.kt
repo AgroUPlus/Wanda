@@ -1,6 +1,7 @@
 package com.wander.android.core.database.dao
 
 import androidx.room.Query
+import androidx.room.Transaction
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.SourceType
 import kotlinx.coroutines.flow.Flow
@@ -29,8 +30,22 @@ interface TrackLibraryQueries {
     @Query("SELECT * FROM tracks WHERE isLibrary = 1 AND source = :source ORDER BY title ASC")
     fun getTracksBySourceFlow(source: SourceType): Flow<List<TrackEntity>>
 
-    @Query("SELECT * FROM tracks WHERE isLiked = 1 AND isEpisode = 0 ORDER BY lastPlayedTimestamp DESC")
-    fun getLikedTracksFlow(): Flow<List<TrackEntity>>
+    /**
+     * The cache key of every liked track: its downloaded file if there is one, else its stream.
+     *
+     * Just the key, not the row. This Flow lives as long as the process and Room re-runs it on
+     * every write to `tracks`; selecting every column of every like filled a CursorWindow (2 MB)
+     * at around 850 rows, and a read past the window re-runs the query to refill it. A write
+     * between the two runs (a like, a likes import) left the cursor counting rows the re-run no
+     * longer had, and the next read crashed the app with "Couldn't read row N from CursorWindow".
+     * [Transaction] reads every window from one snapshot, for a list still too large for one.
+     */
+    @Transaction
+    @Query(
+        "SELECT COALESCE(localFilePath, streamUri) FROM tracks " +
+            "WHERE isLiked = 1 AND isEpisode = 0 AND COALESCE(localFilePath, streamUri) IS NOT NULL"
+    )
+    fun getLikedTrackCacheKeysFlow(): Flow<List<String>>
 
     /** Home's Favourites shelf: [getLikedTracksList]'s order and limit, kept up to date. */
     @Query("SELECT * FROM tracks WHERE isLiked = 1 AND isEpisode = 0 ORDER BY lastPlayedTimestamp DESC, addedTimestamp DESC LIMIT :limit")
