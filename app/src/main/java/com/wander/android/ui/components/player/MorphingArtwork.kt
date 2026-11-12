@@ -3,31 +3,33 @@ package com.wander.android.ui.components.player
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.lerp
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import com.wander.android.ui.components.Artwork
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-/** A subtle "settle," not a dramatic shrink — the cover barely moves, it just stops breathing. */
-internal const val PausedScale = 0.96f
+/**
+ * A subtle "settle," not a dramatic shrink — the docked cover barely moves, it just stops
+ * breathing. Docked only: the full player's cover runs edge to edge, where any shrink would open a
+ * gap at the screen's edges, so it breathes by [PLAYING_ZOOM] inside its frame instead.
+ */
+private const val PAUSED_SCALE = 0.96f
+
+/**
+ * How far the full player's cover zooms into its own frame while playing, easing back on pause.
+ * The picture moves, never its edges. Shared with [PlayerCoverCarousel] so the hand-off matches.
+ */
+internal const val PLAYING_ZOOM = 1.04f
 
 /**
  * Decode size for the travelling cover. **Constant on purpose.**
@@ -47,34 +49,6 @@ internal val MorphArtworkSize = 360.dp
  * large image. Shared with [PeekArtwork], which is never docked and so never needs [MorphingCoverShape].
  */
 internal val MorphShape = RoundedCornerShape(percent = 12)
-
-/** [MorphShape]'s own corner, as the percent [MorphingCoverShape] eases toward once expanded. */
-private const val FullCornerPercent = 12
-
-/** A full circle — `RoundedCornerShape(percent = 50)`'s own figure — while fully docked. */
-private const val CircleCornerPercent = 50
-
-/**
- * The cover's own shape, circular while docked and easing to [MorphShape]'s rounded square as the
- * player opens — the one thing about the strip that reads as a "mini player" rather than a smaller
- * copy of the full one, the same way a circular avatar reads differently from a square thumbnail.
- *
- * A [Shape], not a plain `by` computed at the call site: [progress] changes every frame of a drag,
- * and this file's whole discipline is never recomposing over that — see the class doc above. Corner
- * *percent*, not two competing `RoundedCornerShape`s cross-faded, so the two endpoints are one
- * continuous animation of the same underlying value rather than two shapes drawn on top of each
- * other with one fading out.
- */
-private class MorphingCoverShape(private val progress: () -> Float) : Shape {
-    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
-        val percent = lerpFloat(
-            CircleCornerPercent.toFloat(),
-            FullCornerPercent.toFloat(),
-            progress().coerceIn(0f, 1f)
-        ).roundToInt()
-        return RoundedCornerShape(percent).createOutline(size, layoutDirection, density)
-    }
-}
 
 /**
  * Space between the current cover and the neighbours waiting either side of it.
@@ -104,7 +78,6 @@ internal fun MorphingArtwork(
     anchors: PlayerArtworkAnchors,
     progress: () -> Float,
     rawProgress: () -> Float,
-    visible: Boolean,
     swipe: TrackSwipeState,
     previousUrl: String?,
     nextUrl: String?,
@@ -117,14 +90,18 @@ internal fun MorphingArtwork(
     /** Drawn over the cover inside its shape, so it travels and shrinks with it — the video clip. */
     overlay: @Composable () -> Unit = {}
 ) {
-    if (!visible) return
-
     // A small settle on pause, springing back on resume — the same "breathing" idiom as the
-    // player's own transport buttons, just on the thing those buttons control.
+    // player's own transport buttons, just on the thing those buttons control. The frame settles
+    // while docked; open, the picture zooms inside a frame that stays put (see [PLAYING_ZOOM]).
     val pauseScale by animateFloatAsState(
-        targetValue = if (isPlaying) 1f else PausedScale,
+        targetValue = if (isPlaying) 1f else PAUSED_SCALE,
         animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
         label = "coverPauseScale"
+    )
+    val playingZoom by animateFloatAsState(
+        targetValue = if (isPlaying) PLAYING_ZOOM else 1f,
+        animationSpec = MaterialTheme.motionScheme.slowSpatialSpec(),
+        label = "coverPlayingZoom"
     )
 
     // Checked here rather than inside the layout block below: the docked strip reports its bounds
@@ -137,10 +114,16 @@ internal fun MorphingArtwork(
     if (showPeeks) {
         // Drawn before the current cover so it stays on top as the neighbours slide under it.
         if (canPrevious) {
-            PeekArtwork(previousUrl, anchors, mini, progress, rawProgress, swipe, side = -1, carouselEnabled = carouselEnabled)
+            PeekArtwork(
+                previousUrl, anchors, mini, progress, rawProgress, swipe,
+                side = -1, carouselEnabled = carouselEnabled
+            )
         }
         if (canNext) {
-            PeekArtwork(nextUrl, anchors, mini, progress, rawProgress, swipe, side = 1, carouselEnabled = carouselEnabled)
+            PeekArtwork(
+                nextUrl, anchors, mini, progress, rawProgress, swipe,
+                side = 1, carouselEnabled = carouselEnabled
+            )
         }
     }
 
@@ -152,52 +135,62 @@ internal fun MorphingArtwork(
         // the sliver where the two happened to overlap, which is the "top half of the cover"
         // effect. Inside, the layer is the placeable itself and travels with it.
         modifier = modifier
-            .layout { measurable, _ ->
-                val rect = anchors.currentRect(mini, rawProgress)
-                val width = rect.width.roundToInt().coerceAtLeast(0)
-                val height = rect.height.roundToInt().coerceAtLeast(0)
-                val placeable = measurable.measure(Constraints.fixed(width, height))
-                // The pitch the neighbours are spaced by, published so a committed swipe carries
-                // this cover off by exactly one slot instead of an arbitrary distance.
-                swipe.stepPx = rect.width + PeekGap.toPx()
-                layout(width, height) {
-                    placeable.place(
-                        x = (rect.left + swipe.shift).roundToInt(),
-                        y = rect.top.roundToInt()
-                    )
-                }
-            }
+            .placeCover(anchors, mini, rawProgress, swipe)
             .graphicsLayer {
                 this.alpha = alpha()
-                scaleX = pauseScale
-                scaleY = pauseScale
-                if (carouselEnabled && progress() > 0.8f) {
-                    val step = swipe.stepPx.takeIf { it > 0f } ?: FullExitDistance
-                    val offset = swipe.shift
-                    val progressAway = (abs(offset) / step).coerceIn(0f, 1f)
-                    val swipeScale = lerpFloat(1f, 0.85f, progressAway)
-                    scaleX *= swipeScale
-                    scaleY *= swipeScale
-                    rotationY = (-offset / step * 12f).coerceIn(-14f, 14f)
-                    cameraDistance = 12f * density
-                }
+                val settle = lerpFloat(pauseScale, 1f, progress().coerceIn(0f, 1f))
+                scaleX = settle
+                scaleY = settle
+                if (carouselEnabled && progress() > 0.8f) tiltWithSwipe(swipe)
             }
     ) {
-        val coverShape = remember(progress) { MorphingCoverShape(progress) }
-        Artwork(
-            // While a skip is settling this is the cover the gesture already put in the slot; see
-            // [TrackSwipeState.pendingArtworkUrl].
+        MorphingCoverContent(
+            // While a skip is settling this is the cover the gesture already put in the slot;
+            // see [TrackSwipeState.pendingArtworkUrl].
             url = swipe.pendingArtworkUrl ?: url,
             contentDescription = contentDescription,
-            sizeDp = MorphArtworkSize,
-            shape = coverShape,
-            // Nothing to cross-fade: this is one continuous element, and animating it is what made
-            // the hand-off visible.
-            crossfade = false,
-            modifier = Modifier.fillMaxSize()
+            progress = progress,
+            playingZoom = { playingZoom },
+            overlay = overlay
         )
-        Box(Modifier.fillMaxSize().clip(coverShape)) { overlay() }
     }
+}
+
+/**
+ * Sizes and places the cover at [currentRect], shifted by the live swipe. Every path measures
+ * exactly once, as a `layout` block must.
+ */
+private fun Modifier.placeCover(
+    anchors: PlayerArtworkAnchors,
+    mini: Rect,
+    rawProgress: () -> Float,
+    swipe: TrackSwipeState
+): Modifier = layout { measurable, _ ->
+    val rect = anchors.currentRect(mini, rawProgress)
+    val width = rect.width.roundToInt().coerceAtLeast(0)
+    val height = rect.height.roundToInt().coerceAtLeast(0)
+    val placeable = measurable.measure(Constraints.fixed(width, height))
+    // The pitch the neighbours are spaced by, published so a committed swipe carries this cover
+    // off by exactly one slot instead of an arbitrary distance.
+    swipe.stepPx = rect.width + PeekGap.toPx()
+    layout(width, height) {
+        placeable.place(
+            x = (rect.left + swipe.shift).roundToInt(),
+            y = rect.top.roundToInt()
+        )
+    }
+}
+
+/** Shrinks the open cover and turns it on its vertical axis as a swipe carries it away. */
+private fun GraphicsLayerScope.tiltWithSwipe(swipe: TrackSwipeState) {
+    val step = swipe.stepPx.takeIf { it > 0f } ?: FullExitDistance
+    val offset = swipe.shift
+    val progressAway = (abs(offset) / step).coerceIn(0f, 1f)
+    val swipeScale = lerpFloat(1f, 0.85f, progressAway)
+    scaleX *= swipeScale
+    scaleY *= swipeScale
+    rotationY = (-offset / step * 12f).coerceIn(-14f, 14f)
+    cameraDistance = 12f * density
 }
 
 /**
