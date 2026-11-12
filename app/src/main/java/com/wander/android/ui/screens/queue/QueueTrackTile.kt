@@ -91,7 +91,7 @@ internal fun QueueTrackTile(
                 showBackground = false,
                 onPlay = onPlay,
                 onLongPress = onLongPress,
-                modifier = Modifier.weight(1f).alpha(if (played) PlayedAlpha else 1f)
+                modifier = Modifier.weight(1f).alpha(if (played) PLAYED_ALPHA else 1f)
             )
             onPlayAgain?.let { PlayAgainButton(entry.track.title, onClick = it) }
             dragHandle?.let { ReorderGrip(entry.track.title, handle = it) }
@@ -140,4 +140,4 @@ private val DraggingElevation = 6.dp
 private val HandleTouchSize = 48.dp
 
 /** Played tracks stay readable — they can be played again — but step back from what is coming. */
-private const val PlayedAlpha = 0.6f
+private const val PLAYED_ALPHA = 0.6f
