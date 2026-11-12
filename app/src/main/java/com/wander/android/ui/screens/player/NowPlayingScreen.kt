@@ -8,7 +8,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.core.playback.PlayerConnection
@@ -22,41 +21,23 @@ import com.wander.android.data.repository.artistIdFor
 import com.wander.android.ui.theme.LocalDarkTheme
 
 /**
- * The gap between the rows that belong to the cover: title, artist, bar, transport.
- *
- * Tight, because they are one block — the picture, what it is, where you are in it, and the
- * controls for it. The distance in this stack is not what separates anything; [ActionBarGap] is.
- * `internal` rather than `private`: both [ImmersivePlayerLayout] and [StandardPlayerLayout] use it.
- */
-internal val PlayerRowGap = 12.dp
-
-/**
- * The gap above the utility group at the foot.
- *
- * Much wider than [PlayerRowGap], and the only real division in the column. Everything above it is
- * about the track playing; the group below is about settings that outlive it — shuffle, repeat,
- * like, the overflow.
- */
-internal val ActionBarGap = 44.dp
-
-/**
  * The Now Playing screen: state collection, the dialogs/sheets that float over it, and the cover
- * tint — then dispatches to [ImmersivePlayerLayout] or [StandardPlayerLayout] for the actual
- * layout, which used to live inline here before this file crossed 800 lines.
+ * tint — then hands the actual layout to [CoverLedPlayerLayout], which used to live inline here
+ * before this file crossed 800 lines.
  *
  * @param artworkSlot fills the cover-art area. By default the screen draws its own artwork; the
  *   player sheet passes a slot that only reserves and reports the space, because it draws a single
  *   artwork that travels between here and the docked strip.
- * @param showLyrics whether the lyrics are up instead of the cover. Hoisted rather than kept here
- *   because the sheet has to know — it draws the travelling artwork this replaces — and because
+ * @param showLyrics whether the lyrics are up over the dimmed cover. Hoisted rather than kept here
+ *   because the sheet has to know — it pauses the cover's video clip under them — and because
  *   state owned here outlived the screen: collapsing the player disposes this composable but
  *   `rememberSaveable` restored the flag, so the sheet was left hiding a cover nothing would ever
  *   ask it to show again.
- * @param artworkModifier applied to the cover-art square. The sheet passes its shared
+ * @param artworkModifier applied to the cover-art area. The sheet passes its shared
  *   drag-to-skip gesture here, keeping the *movement* on the artwork it draws itself — if the box
  *   that reports the artwork bounds moved with the finger, the peeking neighbour covers would be
  *   measured against a frame that is itself sliding.
- * @param onMinimize collapses the player sheet back to the docked strip — the top bar's own
+ * @param onMinimize collapses the player sheet back to the docked strip — the cover's own
  *   button, distinct from the swipe-down gesture which still works everywhere else on the sheet.
  */
 @Composable
@@ -70,8 +51,8 @@ internal fun NowPlayingScreen(
     onMinimize: () -> Unit = {},
     contentAlpha: () -> Float = { 1f },
     /**
-     * Alpha for the share button floating over the cover. Separate from [contentAlpha] because the
-     * cover it sits on is drawn by the sheet, not by this layout — see [PlayerOverlayButtons].
+     * Alpha for the lyrics pill riding the cover. Separate from [contentAlpha] because the cover it
+     * sits on is drawn by the sheet, not by this layout, and it has to leave before the cover does.
      */
     overlayAlpha: () -> Float = contentAlpha,
     artworkSlot: (@Composable (url: String?, contentDescription: String) -> Unit)? = null,
@@ -112,7 +93,10 @@ internal fun NowPlayingScreen(
         .collectAsStateWithLifecycle(initialValue = null)
     var episodePanel by remember { mutableStateOf<EpisodePanel?>(null) }
 
-    KeepScreenOn(keepAwake = showLyrics)
+    // Opened from the lyrics over the cover, for the controls only the full screen has: the
+    // synced/static switch and the timing offset.
+    var fullScreenLyrics by remember { mutableStateOf(false) }
+    KeepScreenOn(keepAwake = showLyrics || fullScreenLyrics)
     if (isDebugMode) PlaybackDebugOverlay(track, streamDebug, state.durationMs)
 
     // Extract the dominant colour from the cover art and use it to tint the player surface,
@@ -123,15 +107,15 @@ internal fun NowPlayingScreen(
 
     CoverTintedTheme(seedColor = coverSeed, base = base, dark = dark, amoled = false) {
 
-    // Over both layouts, and over the player sheet itself — see `FullScreenLyrics` for why that
-    // has to be a dialog. Composed here, inside the cover tint, so it carries the same background
-    // the player has rather than the app's untinted one.
-    if (showLyrics) {
+    // Over the player sheet itself — see `FullScreenLyrics` for why that has to be a dialog.
+    // Composed here, inside the cover tint, so it carries the same background the player has rather
+    // than the app's untinted one. Closing it goes back to the lyrics over the cover.
+    if (fullScreenLyrics) {
         FullScreenLyrics(
             lyrics = lyrics,
             state = state,
             playerConnection = playerConnection,
-            onDismiss = onToggleLyrics,
+            onDismiss = { fullScreenLyrics = false },
             listState = lyricsListState,
             letterByLetterEnabled = letterByLetterLyrics
         )
@@ -175,8 +159,7 @@ internal fun NowPlayingScreen(
     val jamViewModel: JamViewModel = hiltViewModel()
     val speedAndPitch by playerConnection.speedAndPitch.collectAsStateWithLifecycle()
 
-    // Shared by the menu drawer's "Source" row and the top bar's source-name chip — same action,
-    // two entry points to it.
+    // The menu drawer's "Source" row — the one way to it now the top bar's source chip is gone.
     val onOpenSourcePicker: (() -> Unit)? = {
         showSourcePicker = true
         viewModel.findRenditions(track, state.durationMs)
@@ -231,70 +214,55 @@ internal fun NowPlayingScreen(
             )
         }
 
-        val onOpenAudioTrackPicker: () -> Unit = { showAudioTrackPicker = true }
-        val onOpenSpeedPitch: () -> Unit = { showSpeedPitch = true }
-        val onDismissSpeedPitch: () -> Unit = { showSpeedPitch = false }
-        val onOpenMenu: () -> Unit = { showMenuDrawer = true }
-
-        if (immersivePlayer && artworkSlot != null) {
-            ImmersivePlayerLayout(
-                mediaToggle = mediaToggle,
-                onSwapMediaType = viewModel::swapMediaType,
-                playerConnection = playerConnection,
-                viewModel = viewModel,
-                state = state,
-                track = track,
-                jam = jam,
-                likedTrackIds = likedTrackIds,
-                onOpenJam = onOpenJam,
-                onOpenArtist = onOpenArtist,
-                onOpenAlbum = onOpenAlbum,
-                onOpenQueue = onOpenQueue,
-                onMinimize = onMinimize,
-                onOpenMenu = onOpenMenu,
-                onOpenSourcePicker = onOpenSourcePicker,
-                onToggleLyrics = onToggleLyrics,
-                contentAlpha = contentAlpha,
-                overlayAlpha = overlayAlpha,
-                artworkModifier = artworkModifier,
-                artworkSlot = artworkSlot,
-                onOpenAudioTrackPicker = onOpenAudioTrackPicker,
-            showSpeedPitch = showSpeedPitch,
-                onOpenSpeedPitch = onOpenSpeedPitch,
-                onDismissSpeedPitch = onDismissSpeedPitch,
-                speedAndPitch = speedAndPitch,
-                modifier = modifier
-            )
-        } else {
-            StandardPlayerLayout(
-                mediaToggle = mediaToggle,
-                onSwapMediaType = viewModel::swapMediaType,
-                playerConnection = playerConnection,
-                viewModel = viewModel,
-                state = state,
-                track = track,
-                previewIndex = previewIndex,
-                jam = jam,
-                likedTrackIds = likedTrackIds,
-                onOpenJam = onOpenJam,
-                onOpenArtist = onOpenArtist,
-                onOpenAlbum = onOpenAlbum,
-                onOpenQueue = onOpenQueue,
-                onMinimize = onMinimize,
-                onOpenMenu = onOpenMenu,
-                onOpenSourcePicker = onOpenSourcePicker,
-                onToggleLyrics = onToggleLyrics,
-                contentAlpha = contentAlpha,
-                overlayAlpha = overlayAlpha,
-                artworkModifier = artworkModifier,
-                artworkSlot = artworkSlot,
-                onOpenAudioTrackPicker = onOpenAudioTrackPicker,
-                showSpeedPitch = showSpeedPitch,
-                onOpenSpeedPitch = onOpenSpeedPitch,
-                onDismissSpeedPitch = onDismissSpeedPitch,
-                speedAndPitch = speedAndPitch,
-                modifier = modifier
+        if (showSpeedPitch) {
+            SpeedPitchPopup(
+                value = speedAndPitch,
+                onChange = { playerConnection.setSpeedAndPitch(it.speed, it.pitch) },
+                onDismiss = { showSpeedPitch = false }
             )
         }
+
+        CoverLedPlayerLayout(
+            immersive = immersivePlayer,
+            playerConnection = playerConnection,
+            viewModel = viewModel,
+            state = state,
+            track = track,
+            previewIndex = previewIndex,
+            isLiked = track.id in likedTrackIds,
+            status = PlayerStatus(
+                jam = jam,
+                mediaToggle = mediaToggle,
+                onSwapMediaType = viewModel::swapMediaType,
+                sleepTimer = sleepTimerState,
+                onOpenJam = onOpenJam
+            ),
+            onOpenArtist = onOpenArtist,
+            onOpenAlbum = onOpenAlbum,
+            onOpenQueue = onOpenQueue,
+            onMinimize = onMinimize,
+            onOpenMenu = { showMenuDrawer = true },
+            // Hidden under the full-screen dialog: the two share one list state, and two lists
+            // driving one state fight over its scroll position.
+            showLyrics = showLyrics && !fullScreenLyrics,
+            lyrics = {
+                CoverLyrics(
+                    lyrics = lyrics,
+                    playerConnection = playerConnection,
+                    trackId = track.id,
+                    listState = lyricsListState,
+                    letterByLetterEnabled = letterByLetterLyrics,
+                    onClose = onToggleLyrics
+                )
+            },
+            onToggleLyrics = onToggleLyrics,
+            onOpenFullScreenLyrics = { fullScreenLyrics = true },
+            onOpenSpeedPitch = { showSpeedPitch = true },
+            contentAlpha = contentAlpha,
+            overlayAlpha = overlayAlpha,
+            artworkModifier = artworkModifier,
+            artworkSlot = artworkSlot,
+            modifier = modifier
+        )
     } // end CoverTintedTheme
 }
