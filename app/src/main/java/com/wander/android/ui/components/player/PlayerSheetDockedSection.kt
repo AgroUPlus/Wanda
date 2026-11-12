@@ -2,17 +2,10 @@ package com.wander.android.ui.components.player
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -26,8 +19,18 @@ import androidx.compose.ui.semantics.semantics
 import com.wander.android.R
 import com.wander.android.core.playback.PlaybackState
 import com.wander.android.core.playback.PlayerConnection
-import com.wander.android.ui.components.MiniArtworkSize
 import com.wander.android.ui.components.MiniPlayer
+
+/**
+ * Progress by which the travelling cover (`MorphingArtwork`) has faded in over the strip's own
+ * bleeding cover. While docked the strip draws the cover itself, faded into the card, so the
+ * travelling one has to stay invisible at rest: `PlayerSheetContent` must scale its alpha by
+ * `smoothStep(progress(), 0f, DOCKED_COVER_HANDOFF)`.
+ */
+internal const val DOCKED_COVER_HANDOFF = 0.08f
+
+/** Progress by which the strip's own cover has gone, a little ahead of its text at 0.30. */
+private const val STRIP_COVER_GONE = 0.25f
 
 /** The horizontal dismiss swipe on the docked strip: the gesture [modifier] and the live drag offset. */
 internal class DockedSwipe(val modifier: Modifier, val offsetX: () -> Float)
@@ -66,21 +69,18 @@ internal fun BoxScope.PlayerSheetDockedSection(
         playerConnection = playerConnection,
         contentAlpha = { 1f - smoothStep(progress(), 0f, 0.30f) },
         swipeOffset = swipe.offsetX,
+        // Holds on until the travelling cover is opaque over it, then goes: the two are the same
+        // bitmap in the same place, so the hand-over reads as the fade filling in, not a swap.
+        coverAlpha = { 1f - smoothStep(progress(), DOCKED_COVER_HANDOFF, STRIP_COVER_GONE) },
         containerColor = Color.Transparent,
-        artworkSlot = {
-            Box(
-                modifier = Modifier
-                    .size(MiniArtworkSize)
-                    .onGloballyPositioned(anchors::onMiniPositioned)
-            )
-        },
+        // The bleeding cover region is the travelling cover's starting frame.
+        coverModifier = Modifier.onGloballyPositioned(anchors::onMiniPositioned),
         modifier = Modifier
             .align(Alignment.TopCenter)
             .fillMaxWidth()
+            // Side insets are the strip's own business — see `MiniPlayer` — so its cover can still
+            // reach the card's edge.
             .padding(horizontal = DockedSideInset)
-            // The sheet spans the whole window: in landscape a three-button navigation bar or a
-            // cutout sits on a side edge, and the strip's controls must not land under it.
-            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
             .height(MiniStripHeight)
             .then(if (docked) swipe.modifier else Modifier)
             .clickable(
