@@ -16,10 +16,10 @@ import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.graphics.shapes.RoundedPolygon
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.graphics.shapes.RoundedPolygon
 
 /** One tile of [LibraryShelves]: a shaped badge, a title and a one-line subtitle. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
