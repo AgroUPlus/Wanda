@@ -3,6 +3,7 @@ package com.wander.android.data.repository
 import com.wander.android.core.cache.AudioCacheManager
 import com.wander.android.core.database.dao.TrackDao
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -24,8 +25,9 @@ class LikedTrackCacheProtector @Inject constructor(
     private val audioCacheManager: AudioCacheManager
 ) {
     fun start(scope: CoroutineScope) {
-        trackDao.getLikedTracksFlow()
-            .map { tracks -> tracks.mapNotNull { it.localFilePath ?: it.streamUri }.toSet() }
+        trackDao.getLikedTrackCacheKeysFlow()
+            .map { keys -> keys.toSet() }
+            .distinctUntilChanged()
             .onEach(audioCacheManager::updateProtectedStreamUris)
             .launchIn(scope)
     }

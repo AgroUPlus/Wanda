@@ -124,15 +124,15 @@
         <error line="45" column="1" source="standard:no-consecutive-blank-lines" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/database/dao/TrackLibraryQueries.kt">
-        <error line="36" column="121" source="standard:max-line-length" />
-        <error line="120" column="120" source="standard:max-line-length" />
-        <error line="137" column="120" source="standard:max-line-length" />
-        <error line="140" column="120" source="standard:max-line-length" />
-        <error line="172" column="121" source="standard:max-line-length" />
-        <error line="178" column="120" source="standard:max-line-length" />
-        <error line="184" column="120" source="standard:max-line-length" />
-        <error line="187" column="120" source="standard:max-line-length" />
-        <error line="190" column="120" source="standard:max-line-length" />
+        <error line="51" column="121" source="standard:max-line-length" />
+        <error line="135" column="120" source="standard:max-line-length" />
+        <error line="152" column="120" source="standard:max-line-length" />
+        <error line="155" column="120" source="standard:max-line-length" />
+        <error line="187" column="121" source="standard:max-line-length" />
+        <error line="193" column="120" source="standard:max-line-length" />
+        <error line="199" column="120" source="standard:max-line-length" />
+        <error line="202" column="120" source="standard:max-line-length" />
+        <error line="205" column="120" source="standard:max-line-length" />
     </file>
     <file name="app/src/main/java/com/wander/android/core/database/dao/TrackLyricsDao.kt">
         <error line="3" column="1" source="standard:import-ordering" />
