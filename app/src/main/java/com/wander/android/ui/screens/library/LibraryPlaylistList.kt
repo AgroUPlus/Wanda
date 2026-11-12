@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -183,44 +182,15 @@ internal fun PlaylistList(
         modifier = Modifier.fillMaxSize()
     ) {
         item(key = "playlist_actions", contentType = "action") {
-            // Invitations ride in the leading row rather than as rows of their own: the paging
-            // below counts exactly one item above the playlists.
-            Column {
-                BlendInvites(onJoined = onOpenPlaylist, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp))
-                if (sharedViewModel.isAvailable) {
-                    PlaylistScopeToggle(scope, selectScope, Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp))
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp)
-                ) {
-                    if (viewModel.canCreatePlaylists) {
-                        FilledTonalButton(
-                            onClick = { naming = true },
-                            modifier = Modifier.weight(1f),
-                            shapes = ButtonDefaults.shapes()
-                        ) {
-                            Icon(imageVector = Icons.Rounded.Add, contentDescription = null)
-                            Text(
-                                text =
-                                    stringResource(R.string.common_new_playlist),
-                                modifier = Modifier.padding(start = 6.dp)
-                            )
-                        }
-                    }
-                    FilledTonalButton(
-                        onClick = onOpenImport,
-                        modifier = Modifier.weight(1f),
-                        shapes = ButtonDefaults.shapes()
-                    ) {
-                        Icon(imageVector = Icons.Rounded.Download, contentDescription = null)
-                        Text(text = stringResource(R.string.common_import), modifier = Modifier.padding(start = 6.dp))
-                    }
-                }
-            }
+            PlaylistListActions(
+                showsScope = sharedViewModel.isAvailable,
+                scope = scope,
+                onSelectScope = selectScope,
+                canCreate = viewModel.canCreatePlaylists,
+                onNewPlaylist = { naming = true },
+                onOpenImport = onOpenImport,
+                onOpenPlaylist = onOpenPlaylist
+            )
         }
         if (scope == PlaylistScope.SHARED) {
             sharedWithMeItems(
@@ -241,6 +211,7 @@ internal fun PlaylistList(
                 onClick = { onOpenPlaylist(playlist.id) },
                 onLongPress = { actionsForPlaylist = playlist },
                 sharedKey = playlistArtKey(playlist.id),
+                onMore = { actionsForPlaylist = playlist },
                 modifier = Modifier
                     .animateItem()
                     .scale(rememberShelfEntranceScale(index))
