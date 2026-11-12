@@ -51,11 +51,9 @@ fun SearchScreen(
     onOpenArtist: (String, String?) -> Unit,
     viewModel: SearchViewModel = hiltViewModel(),
     historyViewModel: SearchHistoryViewModel = hiltViewModel(),
-    moodViewModel: MoodMatrixViewModel = hiltViewModel(),
-    shortcutsViewModel: SearchShortcutsViewModel = hiltViewModel()
+    moodViewModel: MoodMatrixViewModel = hiltViewModel()
 ) {
     val moodState by moodViewModel.state.collectAsStateWithLifecycle()
-    val shortcutTracks by shortcutsViewModel.tracks.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val recentSearches by historyViewModel.recent.collectAsStateWithLifecycle()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -145,14 +143,12 @@ fun SearchScreen(
                     // history must not flash up under a query that is already there.
                     query.isBlank() -> SearchStartPage(
                         recentSearches = recentSearches,
-                        shortcuts = SearchShortcut.entries.filter { it in shortcutTracks },
                         moods = MoodPresets,
                         playingMoodKey = moodState.playingKey,
                         contentPadding = contentPadding.nestedListInset(),
                         onSearch = historyViewModel::search,
                         onRemoveSearch = historyViewModel::remove,
                         onClearSearches = historyViewModel::clear,
-                        onPlayShortcut = shortcutsViewModel::play,
                         onPlayMood = moodViewModel::playMood
                     )
 
