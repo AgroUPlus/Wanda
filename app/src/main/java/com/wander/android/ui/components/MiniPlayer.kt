@@ -5,22 +5,27 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.SkipNext
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -29,19 +34,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.core.playback.PlayerConnection
+import com.wander.android.core.playback.progressOf
+import com.wander.android.core.playback.rememberPlaybackPosition
 import com.wander.android.data.model.UnifiedTrack
-import com.wander.android.ui.components.player.MiniButtonSize
-import com.wander.android.ui.components.player.MiniPlayButton
-import com.wander.android.ui.components.player.MiniTouchTargetSize
-import com.wander.android.ui.components.player.hiddenFromAccessibility
-import com.wander.android.ui.components.player.miniTouchTarget
+import com.wander.android.ui.components.player.MiniBleedingCover
+import com.wander.android.ui.components.player.MiniCoverBleedWidth
+import com.wander.android.ui.components.player.MiniProgressHairline
+import com.wander.android.ui.components.player.MiniProgressHeight
+import com.wander.android.ui.components.player.TurningCookiePlayButton
 import kotlin.math.abs
 
-/** The edge of the docked strip's cover art. */
+/**
+ * The strip's 48dp content row — the play cookie's edge. Named for the round cover it once
+ * measured; with [MiniRowVerticalPadding] it still sets `MiniStripHeight`.
+ */
 val MiniArtworkSize = 48.dp
 
 /**
@@ -50,13 +59,13 @@ val MiniArtworkSize = 48.dp
  */
 private const val SwipeFadeDistancePx = 120f
 
-/** Padding above and below the artwork row. Summed into `MiniStripHeight`. */
+/** Padding above and below the content row. Summed into `MiniStripHeight`. */
 val MiniRowVerticalPadding = 8.dp
 
-private val MiniButtonGap = 4.dp
+/** Where the title starts: halfway across the cover's fade, so it reads on the art. */
+private val MiniTextInset = 64.dp
 
-/** Tonal, not solid: the strip is translucent over the sheet and this should not fight it. */
-private const val MiniButtonContainerAlpha = 0.55f
+private val MiniPlayIconSize = 24.dp
 
 /**
  * The docked strip at the top of the player sheet.
@@ -64,10 +73,11 @@ private const val MiniButtonContainerAlpha = 0.55f
  * It no longer navigates anywhere: the sheet it sits on is dragged open, and this fades out as
  * that happens (see `PlayerSheetContent`).
  *
- * The cover art is *not* drawn here. [artworkSlot] reserves its space and reports its bounds so
- * the sheet can draw one artwork that travels continuously into the full player. [contentAlpha]
- * fades everything else, leaving the cover untouched. It is a lambda so the fade is read
- * during draw rather than composition — the sheet's progress changes every frame.
+ * The cover bleeds in from the leading edge and fades into the strip, with the title starting on
+ * top of the fade. [coverModifier] goes on that cover region, which is how the sheet learns where
+ * the travelling cover has to start from; [coverAlpha] hands it over to that cover as the sheet
+ * opens. [contentAlpha] fades everything else. Both are lambdas so the fades are read during draw
+ * rather than composition — the sheet's progress changes every frame.
  *
  * [swipeOffset] is the live drag-to-skip distance, and only the title and artist follow it: the
  * strip's own surface must not slide around over the navigation bar, but a gesture where nothing
@@ -82,127 +92,158 @@ fun MiniPlayer(
      * The length the *player* reports, not the one the metadata claimed.
      *
      * These disagree, and only one of them is reliable. A YouTube Music row whose subtitle carried
-     * no `3:45` reaches Room with `durationMs = 0`, so a progress ring driven from the track ran at
-     * zero for the whole song. The full player never had the bug because it was already reading the
+     * no `3:45` reaches Room with `durationMs = 0`, so progress driven from the track ran at zero
+     * for the whole song. The full player never had the bug because it was already reading the
      * player's own duration; this is that same number.
      */
     durationMs: Long,
-    /** Whether the engine is still fetching audio — see [PlayPauseIcon]. */
+    /** Whether the engine is still fetching audio — see `PlayPauseIcon`. */
     isBuffering: Boolean = false,
     modifier: Modifier = Modifier,
     contentAlpha: () -> Float = { 1f },
+    coverAlpha: () -> Float = contentAlpha,
     swipeOffset: () -> Float = { 0f },
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    artworkSlot: @Composable () -> Unit = {
-        Artwork(
-            url = track?.artworkUrl,
-            contentDescription = null,
-            sizeDp = MiniArtworkSize,
-            shape = MaterialTheme.shapes.small,
-            modifier = Modifier.size(MiniArtworkSize)
-        )
-    }
+    coverModifier: Modifier = Modifier
 ) {
     if (track == null) return
+    // The State itself, read only inside the hairline's draw: a position tick must not recompose
+    // the strip.
+    val position = rememberPlaybackPosition(playerConnection)
 
     Surface(
         color = containerColor,
         modifier = modifier.fillMaxWidth()
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = MiniRowVerticalPadding)
-        ) {
-            artworkSlot()
+        Box(Modifier.fillMaxSize()) {
+            // Drawn edge to edge, under any side inset: it is decoration, and stopping it short of
+            // the card's own edge would leave a strip of background between the two.
+            MiniBleedingCover(
+                url = track.artworkUrl,
+                alpha = coverAlpha,
+                modifier = coverModifier
+                    .width(MiniCoverBleedWidth)
+                    .fillMaxHeight()
+            )
 
-            Column(
-                verticalArrangement = Arrangement.Center,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 12.dp)
-                    .graphicsLayer {
-                        translationX = swipeOffset()
-                        // Fades as it travels, so the outgoing title does not simply run into
-                        // the play button. Reaching zero at the skip threshold means the
-                        // gesture's commit point is something you can see.
-                        val travel = (abs(swipeOffset()) / SwipeFadeDistancePx).coerceIn(0f, 1f)
-                        alpha = contentAlpha() * (1f - travel)
-                    }
+                    .fillMaxSize()
+                    // The sheet spans the whole window: in landscape a three-button navigation bar
+                    // or a cutout sits on a side edge, and the controls must not land under it.
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
+                    )
+                    .padding(start = MiniTextInset, end = 8.dp)
+                    .padding(vertical = MiniRowVerticalPadding)
             ) {
-                Text(
-                    text = track.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Clip,
-                    modifier = Modifier.scrollingTitle()
+                MiniStripText(
+                    track = track,
+                    contentAlpha = contentAlpha,
+                    swipeOffset = swipeOffset,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp)
                 )
-                Text(
-                    text = track.artist,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Clip,
-                    modifier = Modifier.scrollingTitle()
+                MiniStripControls(
+                    isPlaying = isPlaying,
+                    isBuffering = isBuffering,
+                    playerConnection = playerConnection,
+                    contentAlpha = contentAlpha
                 )
             }
 
-            // Each button gets a container of its own. Bare glyphs on the strip sat directly
-            // on whatever the sheet's cover tint happened to be that track, which is a colour
-            // chosen by the artwork rather than for legibility — a pale sleeve left them
-            // barely there. A tonal shape behind each one is a constant background to read
-            // against, and it gives the two targets a visible edge on a strip where they are
-            // otherwise a pair of icons floating next to the title.
-            //
-            // The *glyphs* on it are the empty/outline pair, not the containers — see
-            // `PlayPauseIcon`'s own doc on `outlined`. The container stays solid because a
-            // hollow button that small is hard to find by touch; only the icon inside it reads
-            // as the lighter mark this strip asked for.
-            //
-            // The 48dp minimum-touch-target wrapper is switched off for these: it lays a 40dp
-            // button out at 40dp but *places* it as if the box were 48, shifting the glyph 4dp
-            // down-right of its own layout box — which is what pushed the play button off the
-            // centre of the progress ring around it. Each button gets a full-size target of its own
-            // instead — see `miniTouchTarget`.
-            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(MiniButtonGap),
-                    modifier = Modifier.graphicsLayer { alpha = contentAlpha() }
-                ) {
-                    MiniPlayButton(
-                        isPlaying = isPlaying,
-                        isBuffering = isBuffering,
-                        playerConnection = playerConnection,
-                        durationMs = durationMs
-                    )
-                    val nextInteraction = remember { MutableInteractionSource() }
-                    val nextScale by rememberPressScale(nextInteraction)
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(MiniTouchTargetSize)
-                            .miniTouchTarget(stringResource(R.string.action_next), nextInteraction, playerConnection::next)
-                    ) {
-                        FilledTonalIconButton(
-                            onClick = playerConnection::next,
-                            interactionSource = nextInteraction,
-                            shape = CircleShape,
-                            colors = IconButtonDefaults.filledTonalIconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                                    .copy(alpha = MiniButtonContainerAlpha)
-                            ),
-                            modifier = Modifier
-                                .size(MiniButtonSize)
-                                .hiddenFromAccessibility()
-                                .graphicsLayer { scaleX = nextScale; scaleY = nextScale }
-                        ) {
-                            Icon(Icons.Rounded.SkipNext, contentDescription = null)
-                        }
-                    }
-                }
-            }
+            MiniProgressHairline(
+                progress = { progressOf(position.value.positionMs, durationMs) },
+                alpha = contentAlpha,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .height(MiniProgressHeight)
+            )
+        }
+    }
+}
+
+/**
+ * The title and artist, the only part of the strip that follows [swipeOffset]: the surface under
+ * them stays put over the navigation bar.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun MiniStripText(
+    track: UnifiedTrack,
+    contentAlpha: () -> Float,
+    swipeOffset: () -> Float,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        verticalArrangement = Arrangement.Center,
+        modifier = modifier.graphicsLayer {
+            translationX = swipeOffset()
+            // Fades as it travels, so the outgoing title does not simply run into the play
+            // button. Reaching zero at the skip threshold means the gesture's commit point is
+            // something you can see.
+            val travel = (abs(swipeOffset()) / SwipeFadeDistancePx).coerceIn(0f, 1f)
+            alpha = contentAlpha() * (1f - travel)
+        }
+    ) {
+        Text(
+            text = track.title,
+            style = MaterialTheme.typography.titleMediumEmphasized,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Clip,
+            modifier = Modifier.scrollingTitle()
+        )
+        Text(
+            text = track.artist,
+            style = MaterialTheme.typography.bodyMediumEmphasized,
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 1,
+            overflow = TextOverflow.Clip,
+            modifier = Modifier.scrollingTitle()
+        )
+    }
+}
+
+/** The play cookie and the skip button at the strip's trailing end. */
+@Composable
+private fun MiniStripControls(
+    isPlaying: Boolean,
+    isBuffering: Boolean,
+    playerConnection: PlayerConnection,
+    contentAlpha: () -> Float
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = Modifier.graphicsLayer { alpha = contentAlpha() }
+    ) {
+        // Still, not spinning: this is on screen for the whole session, and a turn would redraw
+        // it every frame of it. It gets a quarter turn on play and pause.
+        TurningCookiePlayButton(
+            isPlaying = isPlaying,
+            isBuffering = isBuffering,
+            onToggle = playerConnection::togglePlayPause,
+            size = MiniArtworkSize,
+            iconSize = MiniPlayIconSize,
+            spins = false,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        )
+        val nextInteraction = remember { MutableInteractionSource() }
+        val nextScale by rememberPressScale(nextInteraction)
+        IconButton(
+            onClick = playerConnection::next,
+            interactionSource = nextInteraction,
+            colors = IconButtonDefaults.iconButtonColors(
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ),
+            modifier = Modifier.graphicsLayer { scaleX = nextScale; scaleY = nextScale }
+        ) {
+            Icon(Icons.Rounded.SkipNext, contentDescription = stringResource(R.string.action_next))
         }
     }
 }
