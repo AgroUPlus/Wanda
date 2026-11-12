@@ -107,7 +107,9 @@ internal fun PlaylistList(
                 .takeIf { viewModel.canShare(playlist.source) },
             onDelete = { viewModel.deletePlaylist(playlist) }
                 .takeIf {
-                    playlist.source == SourceType.LOCAL || playlist.source == SourceType.AGRO || viewModel.canCreatePlaylists
+                    playlist.source == SourceType.LOCAL ||
+                        playlist.source == SourceType.AGRO ||
+                        viewModel.canCreatePlaylists
                 },
             onDismiss = { actionsForPlaylist = null }
         )
@@ -136,7 +138,10 @@ internal fun PlaylistList(
                             shapes = ButtonDefaults.shapes()
                         ) {
                             Icon(Icons.Rounded.Add, contentDescription = null)
-                            Text(stringResource(R.string.common_new_playlist), modifier = Modifier.padding(start = 8.dp))
+                            Text(
+                                stringResource(R.string.common_new_playlist),
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
                         }
                     }
                     FilledTonalButton(
