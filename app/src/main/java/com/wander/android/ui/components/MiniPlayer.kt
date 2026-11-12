@@ -57,7 +57,7 @@ val MiniArtworkSize = 48.dp
  * Drag distance at which the strip's text has faded out completely. Matches the swipe's own
  * commit threshold (see `TrackSwipe.kt`), so the text is gone exactly when releasing would skip.
  */
-private const val SwipeFadeDistancePx = 120f
+private const val SWIPE_FADE_DISTANCE_PX = 120f
 
 /** Padding above and below the content row. Summed into `MiniStripHeight`. */
 val MiniRowVerticalPadding = 8.dp
@@ -185,7 +185,7 @@ private fun MiniStripText(
             // Fades as it travels, so the outgoing title does not simply run into the play
             // button. Reaching zero at the skip threshold means the gesture's commit point is
             // something you can see.
-            val travel = (abs(swipeOffset()) / SwipeFadeDistancePx).coerceIn(0f, 1f)
+            val travel = (abs(swipeOffset()) / SWIPE_FADE_DISTANCE_PX).coerceIn(0f, 1f)
             alpha = contentAlpha() * (1f - travel)
         }
     ) {
