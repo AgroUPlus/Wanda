@@ -16,8 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
@@ -27,7 +26,7 @@ import com.wander.android.ui.components.Artwork
 
 /**
  * The full player's cover as an M3 Expressive hero carousel over the queue, clipped to the cover's
- * own square: only the playing cover shows at rest, and a swipe shrinks it while the previous or
+ * own frame: only the playing cover shows at rest, and a swipe shrinks it while the previous or
  * next one slides in.
  *
  * The hero item is exactly cover-sized (see the bleed below), which is what lets [MorphingArtwork]
@@ -54,26 +53,22 @@ internal fun PlayerCoverCarousel(
     val state = rememberCarouselState(initialItem = currentIndex.coerceIn(0, queue.lastIndex)) { queue.size }
     CarouselPlaybackSync(state, currentIndex, queue.size, onSeekToIndex, onPreviewIndex)
 
-    // The same settle-on-pause as the cover [MorphingArtwork] hands over from.
-    val pauseScale by animateFloatAsState(
-        targetValue = if (isPlaying) 1f else PausedScale,
-        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
-        label = "carouselPauseScale"
+    // The same zoom-while-playing as the cover [MorphingArtwork] hands over from, inside each
+    // cover's own mask so the frame's edges never move.
+    val playingZoom by animateFloatAsState(
+        targetValue = if (isPlaying) PLAYING_ZOOM else 1f,
+        animationSpec = MaterialTheme.motionScheme.slowSpatialSpec(),
+        label = "carouselPlayingZoom"
     )
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        // A fixed radius, not a percentage: a percentage shrinks with the item, so the covers
-        // sliding in would be less rounded than the one sitting still.
-        val cornerRadius = maxWidth * CoverCornerFraction
-        val cornerShape = RoundedCornerShape(cornerRadius)
         // The hero item is a hair larger than the cover on every side, so it can never come out
         // narrower than it and crop the artwork's edges; the clip below trims it back.
         val itemWidth = maxWidth + ItemBleed * 2
         val itemHeight = maxHeight + ItemBleed * 2
-        // Clipped to the cover's own rounded square: at rest only the playing cover shows, and a
-        // swipe shrinks it while the neighbour slides in from beyond the edge. Rounded, so the
-        // neighbour arrives with a curved edge instead of a cut-off square one.
-        Box(modifier = Modifier.fillMaxSize().clip(cornerShape)) {
+        // Clipped to the cover's own frame: at rest only the playing cover shows, and a swipe
+        // shrinks it while the neighbour slides in from beyond the edge.
+        Box(modifier = Modifier.fillMaxSize().clipToBounds()) {
             HorizontalCenteredHeroCarousel(
                 state = state,
                 maxItemWidth = itemWidth,
@@ -88,15 +83,11 @@ internal fun PlayerCoverCarousel(
                 modifier = Modifier
                     .requiredWidth(itemWidth)
                     .requiredHeight(itemHeight)
-                    .graphicsLayer {
-                        this.alpha = alpha()
-                        scaleX = pauseScale
-                        scaleY = pauseScale
-                    }
+                    .graphicsLayer { this.alpha = alpha() }
             ) { index ->
                 val track = queue.getOrNull(index)
                 if (track != null) {
-                    CoverItem(track, cornerRadius, itemWidth)
+                    CoverItem(track, itemWidth, zoom = { playingZoom })
                 }
             }
         }
@@ -107,10 +98,10 @@ internal fun PlayerCoverCarousel(
 @Composable
 private fun CarouselItemScope.CoverItem(
     track: UnifiedTrack,
-    cornerRadius: Dp,
-    itemWidth: Dp
+    itemWidth: Dp,
+    zoom: () -> Float
 ) {
-    val shape = remember(cornerRadius, itemWidth) { SwipeGapShape(carouselItemDrawInfo, cornerRadius, itemWidth) }
+    val shape = remember(itemWidth) { SwipeGapShape(carouselItemDrawInfo, CoverCorner, itemWidth) }
     Box(modifier = Modifier.fillMaxSize().maskClip(shape)) {
         Artwork(
             url = track.artworkUrl,
@@ -119,13 +110,18 @@ private fun CarouselItemScope.CoverItem(
             // `maskClip` above already shapes the item; see TrackCarouselCard.
             shape = RectangleShape,
             crossfade = false,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = zoom()
+                    scaleY = zoom()
+                }
         )
     }
 }
 
-/** [MorphShape]'s 12% corner, as a fraction of the cover's width. */
-private const val CoverCornerFraction = 0.12f
+/** Square, like the expanded [MorphingArtwork] it takes over from: the cover runs edge to edge. */
+private val CoverCorner = 0.dp
 
 /** How far the hero item overshoots the cover on each side, before the clip trims it. */
 private val ItemBleed = 2.dp
