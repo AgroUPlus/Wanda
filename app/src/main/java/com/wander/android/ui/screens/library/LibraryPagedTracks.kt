@@ -25,7 +25,6 @@ import com.wander.android.ui.components.EmptyState
 import com.wander.android.ui.components.FastScroller
 import com.wander.android.ui.components.ScrollToTopOnReselect
 import com.wander.android.ui.components.SkeletonRow
-import com.wander.android.ui.components.TrackRow
 import com.wander.android.ui.components.fastScrollLetter
 import com.wander.android.ui.components.groupedListItem
 import com.wander.android.ui.components.nestedListInset
@@ -54,7 +53,6 @@ internal fun PagedTrackList(
     isSyncing: Boolean,
     contentPadding: PaddingValues,
     onPlay: (UnifiedTrack) -> Unit,
-    onToggleLike: (UnifiedTrack) -> Unit,
     onLongPress: (UnifiedTrack) -> Unit,
     selection: TrackSelectionState,
     letterFor: ((UnifiedTrack) -> String?)? = null
@@ -105,14 +103,14 @@ internal fun PagedTrackList(
                 }
                 val entranceScale = rememberShelfEntranceScale(index)
                 val item = SelectedTrack(track.id, track)
-                TrackRow(
+                LibraryTrackRow(
                     track = track,
                     // The queue is built from the database on tap, not from what the screen holds:
                     // paging means the screen holds only the pages scrolled through, and playing
                     // the fortieth track must still queue the rest of the library after it.
                     onPlay = selection.onTap(item) { onPlay(track) },
-                    onToggleLike = { onToggleLike(track) },
                     onLongPress = selection.onLongPress(item) { onLongPress(track) },
+                    onMore = { onLongPress(track) },
                     selected = selection.stateOf(item.key),
                     modifier = Modifier.scale(entranceScale).then(position)
                 )
@@ -141,7 +139,11 @@ internal fun trackLetter(sort: LibrarySort?): ((UnifiedTrack) -> String?)? = whe
     else -> null
 }
 
-/** The Tracks tab: [PagedTrackList] under its [LibraryListToolbar]. */
+/**
+ * The Tracks tab: [PagedTrackList] under its [LibraryListToolbar] — or, with the Downloaded filter
+ * on, what is on the device as a [TrackList] in the same order. The empty state then speaks as
+ * Offline's does, since that is the list it is showing.
+ */
 @Composable
 internal fun AllTracksPage(
     tracks: LazyPagingItems<UnifiedTrack>,
@@ -153,15 +155,25 @@ internal fun AllTracksPage(
     selection: TrackSelectionState
 ) {
     val sorts by browse.sorts.collectAsStateWithLifecycle()
+    val downloadedOnly by browse.downloadedOnly.collectAsStateWithLifecycle()
+    val sort = sorts[LibraryTab.TRACKS]
     Column(modifier = Modifier.fillMaxSize()) {
         LibraryListToolbar(LibraryTab.TRACKS, browse)
-        PagedTrackList(
-            tracks, LibraryTab.TRACKS, isSyncing, contentPadding,
-            onPlay = browse::playFromLibrary,
-            onToggleLike = viewModel::toggleLike,
-            onLongPress = onLongPress,
-            selection = selection,
-            letterFor = trackLetter(sorts[LibraryTab.TRACKS])
-        )
+        if (downloadedOnly) {
+            val downloaded by browse.downloadedLibraryTracks.collectAsStateWithLifecycle()
+            TrackList(
+                downloaded, LibraryTab.DOWNLOADS, isSyncing, contentPadding, viewModel, onLongPress, selection,
+                letterFor = trackLetter(sort),
+                order = sort
+            )
+        } else {
+            PagedTrackList(
+                tracks, LibraryTab.TRACKS, isSyncing, contentPadding,
+                onPlay = browse::playFromLibrary,
+                onLongPress = onLongPress,
+                selection = selection,
+                letterFor = trackLetter(sort)
+            )
+        }
     }
 }
