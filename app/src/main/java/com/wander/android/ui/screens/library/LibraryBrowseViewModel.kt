@@ -68,6 +68,30 @@ class LibraryBrowseViewModel @Inject constructor(
     private fun sortOf(tab: LibraryTab): Flow<LibrarySort> =
         _sorts.map { it[tab] ?: tab.defaultSort }.distinctUntilChanged()
 
+    private val _views = MutableStateFlow(
+        LibraryTab.entries.filter { it.offersGrid }.associateWith { prefs.viewFor(it, it.defaultView) }
+    )
+
+    /** List or grid, for each tab that [offersGrid]. A tab missing here is always a list. */
+    val views: StateFlow<Map<LibraryTab, LibraryView>> = _views.asStateFlow()
+
+    fun setView(tab: LibraryTab, view: LibraryView) {
+        if (!tab.offersGrid) return
+        _views.update { it + (tab to view) }
+        prefs.setView(tab, view)
+    }
+
+    /**
+     * Whether the track lists that [offersDownloadedFilter] show only what is on the device. One
+     * choice for every such tab, as the source filter is.
+     */
+    private val _downloadedOnly = MutableStateFlow(false)
+    val downloadedOnly: StateFlow<Boolean> = _downloadedOnly.asStateFlow()
+
+    fun setDownloadedOnly(on: Boolean) {
+        _downloadedOnly.value = on
+    }
+
     // Configured sources only — not every registered backend, the same accessor Home's own source
     // filter uses. A source no one is signed into (Deezer before login, say) has nothing to filter
     // by and reads as a broken chip that always returns zero tracks.
@@ -107,6 +131,28 @@ class LibraryBrowseViewModel @Inject constructor(
     val downloadedTracks: StateFlow<List<UnifiedTrack>> = combine(sortOf(LibraryTab.DOWNLOADS), sources, ::Pair)
         .flatMapLatest { (sort, filter) -> browse.downloadedTracks(sort, filter) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * Liked as its page lists it: every liked track, or with [downloadedOnly] the ones the Offline
+     * list would hold too — the same rule as `observeDownloadedTracks`. [likedTracks] stays whole
+     * for the shelf's count.
+     */
+    val shownLikedTracks: StateFlow<List<UnifiedTrack>> = combine(likedTracks, _downloadedOnly) { tracks, only ->
+        if (only) tracks.filter { it.isDownloaded && it.source != SourceType.LOCAL && !it.isEpisode } else tracks
+    }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * The Tracks tab with [downloadedOnly]: the Offline list in the Tracks tab's own order. Read
+     * as a whole list rather than paged — it is what is on the device, not the whole library.
+     */
+    val downloadedLibraryTracks: StateFlow<List<UnifiedTrack>> =
+        combine(_downloadedOnly, sortOf(LibraryTab.TRACKS), sources, ::Triple)
+            .flatMapLatest { (only, sort, filter) ->
+                if (only) browse.downloadedTracks(sort, filter) else flowOf(emptyList())
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val albums: StateFlow<List<UnifiedAlbum>> = combine(sortOf(LibraryTab.ALBUMS), sources, ::Pair)
         .flatMapLatest { (sort, filter) -> browse.albums(sort, filter) }

@@ -829,10 +829,6 @@
     <string name="queue_reorder">Réorganiser %1$s</string>
     <string name="queue_now_playing">En cours de lecture</string>
     <string name="queue_section_up_next">À suivre</string>
-    <string name="queue_section_played">Joué</string>
-    <!-- Spoken by screen readers on a section that folds open and closed. -->
-    <string name="common_expanded">Développé</string>
-    <string name="common_collapsed">Réduit</string>
     <string name="queue_tracks">%1$s des %2$s pistes</string>
     <string name="queue_voted">Voté (%1$s)</string>
     <string name="search_nothing_found_connected_sources">Rien n\'a été trouvé pour \"%1$s\" dans vos sources connectées.</string>

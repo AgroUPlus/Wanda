@@ -9,7 +9,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * How the Library was last left: which section was open, and how each list was sorted.
+ * How the Library was last left: which section was open, and how each list was sorted and laid out.
  *
  * Plain preferences rather than `SecureStorage`: none of this is a secret, and it is a device's
  * own habit rather than a setting worth carrying in a backup.
@@ -35,9 +35,19 @@ class LibraryBrowsePrefs @Inject constructor(@ApplicationContext context: Contex
     fun setSort(tab: LibraryTab, sort: LibrarySort) =
         prefs.edit { putString(KEY_SORT_PREFIX + tab.name, sort.name) }
 
+    /** Whether [tab] was last left as a list or a grid, or its [default] when never switched. */
+    fun viewFor(tab: LibraryTab, default: LibraryView): LibraryView =
+        prefs.getString(KEY_VIEW_PREFIX + tab.name, null)
+            ?.let { name -> LibraryView.entries.firstOrNull { it.name == name } }
+            ?: default
+
+    fun setView(tab: LibraryTab, view: LibraryView) =
+        prefs.edit { putString(KEY_VIEW_PREFIX + tab.name, view.name) }
+
     private companion object {
         const val PREFS_NAME = "wander_library_browse"
         const val KEY_TAB = "last_tab"
         const val KEY_SORT_PREFIX = "sort_"
+        const val KEY_VIEW_PREFIX = "view_"
     }
 }

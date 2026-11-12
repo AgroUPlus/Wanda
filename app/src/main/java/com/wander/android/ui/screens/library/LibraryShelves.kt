@@ -1,34 +1,28 @@
 package com.wander.android.ui.screens.library
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.DownloadDone
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.LibraryAdd
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wander.android.R
 
@@ -36,11 +30,11 @@ import com.wander.android.R
 internal val ShelfTabs = setOf(LibraryTab.LIKED, LibraryTab.DOWNLOADS)
 
 /**
- * Liked and Offline as two tiles side by side, each with its track count.
+ * Liked, Offline, Recently added and Most played as one connected two-by-two group.
  *
- * They are the two collections you made yourself, so they get the larger target and a count you
- * can read without opening them. Tapping one opens it in the pager like any other section; a
- * section hidden in the layout settings has no tile.
+ * Liked and Offline are the collections you made yourself: they open in the pager like any other
+ * section and show their track count. The two shortcuts play that slice of the library at once.
+ * A section hidden in the layout settings, or a shortcut with nothing behind it, has no tile.
  */
 @Composable
 internal fun LibraryShelves(
@@ -48,96 +42,113 @@ internal fun LibraryShelves(
     current: LibraryTab?,
     likedCount: Int,
     downloadedCount: Int,
+    shortcuts: List<LibraryShortcut>,
     onSelect: (LibraryTab) -> Unit,
+    onPlayShortcut: (LibraryShortcut) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val shelves = tabs.filter { it in ShelfTabs }
-    if (shelves.isEmpty()) return
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    val cells = tabs.filter { it in ShelfTabs }.map { tab ->
+        Shelf.Section(tab, if (tab == LibraryTab.LIKED) likedCount else downloadedCount)
+    } + shortcuts.map(Shelf::Shortcut)
+    if (cells.isEmpty()) return
+
+    val rows = cells.chunked(COLUMNS)
+    Column(
+        verticalArrangement = Arrangement.spacedBy(GAP),
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
     ) {
-        shelves.forEachIndexed { index, tab ->
-            ShelfTile(
-                tab = tab,
-                count = if (tab == LibraryTab.LIKED) likedCount else downloadedCount,
-                selected = tab == current,
-                shape = rowShape(index, shelves.size),
-                onClick = { onSelect(tab) },
-                modifier = Modifier.weight(1f)
-            )
+        rows.forEachIndexed { row, cellsInRow ->
+            Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
+                cellsInRow.forEachIndexed { column, cell ->
+                    val shape = gridShape(row, column, cells.size)
+                    val tile = Modifier.weight(1f)
+                    when (cell) {
+                        is Shelf.Section -> SectionTile(cell, cell.tab == current, shape, onSelect, tile)
+                        is Shelf.Shortcut -> ShortcutTile(cell.shortcut, shape, onPlayShortcut, tile)
+                    }
+                }
+                // A lone last tile keeps its half width rather than stretching across the row.
+                if (cellsInRow.size < COLUMNS) Spacer(Modifier.weight(1f))
+            }
         }
     }
+}
+
+private sealed interface Shelf {
+    data class Section(val tab: LibraryTab, val count: Int) : Shelf
+    data class Shortcut(val shortcut: LibraryShortcut) : Shelf
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ShelfTile(
-    tab: LibraryTab,
-    count: Int,
+private fun SectionTile(
+    cell: Shelf.Section,
     selected: Boolean,
     shape: RoundedCornerShape,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onSelect: (LibraryTab) -> Unit,
+    modifier: Modifier
 ) {
-    val colors = MaterialTheme.colorScheme
-    val isLiked = tab == LibraryTab.LIKED
-    Surface(
-        onClick = onClick,
+    val isLiked = cell.tab == LibraryTab.LIKED
+    LibraryShelfTile(
+        title = stringResource(cell.tab.label),
+        subtitle = pluralStringResource(R.plurals.library_track_count, cell.count, cell.count),
+        icon = if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.DownloadDone,
+        badge = if (isLiked) MaterialShapes.Cookie9Sided else MaterialShapes.Clover4Leaf,
+        selected = selected,
         shape = shape,
-        color = if (selected) colors.primaryContainer else colors.surfaceContainerHigh,
-        contentColor = if (selected) colors.onPrimaryContainer else colors.onSurface,
-        modifier = modifier
-            .height(72.dp)
-            .semantics {
-                this.selected = selected
-                role = Role.Tab
-            }
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 12.dp)
-        ) {
-            Surface(
-                shape = (if (isLiked) MaterialShapes.Cookie9Sided else MaterialShapes.Clover4Leaf).toShape(),
-                color = if (selected) colors.primary else colors.secondaryContainer,
-                contentColor = if (selected) colors.onPrimary else colors.onSecondaryContainer,
-                modifier = Modifier.size(44.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.DownloadDone,
-                        contentDescription = null,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
-            Column(modifier = Modifier.padding(start = 12.dp)) {
-                Text(
-                    text = stringResource(tab.label),
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = pluralStringResource(R.plurals.library_track_count, count, count),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (selected) colors.onPrimaryContainer else colors.onSurfaceVariant,
-                    maxLines = 1
-                )
-            }
+        onClick = { onSelect(cell.tab) },
+        modifier = modifier.semantics {
+            this.selected = selected
+            role = Role.Tab
         }
-    }
+    )
 }
 
-/** Round on the row's outer edges, tight at the seam, like the app's grouped lists turned sideways. */
-private fun rowShape(index: Int, count: Int): RoundedCornerShape {
-    val start = if (index == 0) Outer else Inner
-    val end = if (index == count - 1) Outer else Inner
-    return RoundedCornerShape(topStart = start, bottomStart = start, topEnd = end, bottomEnd = end)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ShortcutTile(
+    shortcut: LibraryShortcut,
+    shape: RoundedCornerShape,
+    onPlay: (LibraryShortcut) -> Unit,
+    modifier: Modifier
+) {
+    val isRecent = shortcut == LibraryShortcut.RECENTLY_ADDED
+    val title = stringResource(
+        if (isRecent) R.string.library_shortcut_recently_added else R.string.library_shortcut_most_played
+    )
+    val description = stringResource(R.string.library_shortcut_play, title)
+    LibraryShelfTile(
+        title = title,
+        subtitle = stringResource(
+            if (isRecent) R.string.library_shortcut_recently_added_hint else R.string.library_shortcut_most_played_hint
+        ),
+        icon = if (isRecent) Icons.Rounded.LibraryAdd else Icons.AutoMirrored.Rounded.TrendingUp,
+        badge = if (isRecent) MaterialShapes.Pill else MaterialShapes.Sunny,
+        selected = false,
+        shape = shape,
+        onClick = { onPlay(shortcut) },
+        modifier = modifier.semantics { contentDescription = description }
+    )
 }
 
+/**
+ * Round where the group meets the outside, tight where a tile meets a neighbour: a corner is
+ * outer only when there is no tile beside it on either of its two sides.
+ */
+private fun gridShape(row: Int, column: Int, count: Int): RoundedCornerShape {
+    fun exists(r: Int, c: Int) = r >= 0 && c in 0 until COLUMNS && r * COLUMNS + c < count
+    fun corner(dr: Int, dc: Int) = if (exists(row + dr, column) || exists(row, column + dc)) Inner else Outer
+    return RoundedCornerShape(
+        topStart = corner(-1, -1),
+        topEnd = corner(-1, 1),
+        bottomEnd = corner(1, 1),
+        bottomStart = corner(1, -1)
+    )
+}
+
+private const val COLUMNS = 2
+private val GAP = 4.dp
 private val Outer = 26.dp
 private val Inner = 8.dp

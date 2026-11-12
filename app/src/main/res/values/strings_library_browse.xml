@@ -31,4 +31,12 @@
     <string name="library_sort_year">Year</string>
     <string name="library_sort_most_played">Most played</string>
     <string name="library_sort_recently_played">Recently played</string>
+
+    <!-- Two shortcut tiles beside Liked and Offline. Each plays that slice of the library at once. -->
+    <string name="library_shortcut_recently_added">Recently added</string>
+    <string name="library_shortcut_recently_added_hint">Newest first</string>
+    <string name="library_shortcut_most_played">Most played</string>
+    <string name="library_shortcut_most_played_hint">Your top tracks</string>
+    <!-- Content description of one shortcut tile. %1$s is its name, e.g. "Most played". -->
+    <string name="library_shortcut_play">Play %1$s</string>
 </resources>

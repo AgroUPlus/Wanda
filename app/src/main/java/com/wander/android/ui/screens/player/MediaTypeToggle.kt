@@ -60,7 +60,7 @@ private const val PILL_ALPHA = 0.2f
 private const val SCRIM_ALPHA = 0.28f
 
 /**
- * [MediaTypeToggle] that fades and expands in under the source name, and fades and collapses out
+ * [MediaTypeToggle] that fades and expands in on the cover's top bar, and fades and collapses out
  * with the same springs when it goes away. The last state is held while it leaves, so the pill
  * does not blank out before it has finished shrinking.
  */

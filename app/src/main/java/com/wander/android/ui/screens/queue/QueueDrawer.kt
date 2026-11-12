@@ -1,63 +1,47 @@
 package com.wander.android.ui.screens.queue
- 
-import kotlin.coroutines.cancellation.CancellationException
-import com.wander.android.ui.components.backResistance
-import com.wander.android.ui.components.WandaNoticeHost
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.material3.Surface
-import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.background
-import androidx.activity.compose.PredictiveBackHandler
+
 import android.annotation.SuppressLint
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.DeleteSweep
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.core.playback.PlayerConnection
-import com.wander.android.core.playback.playPosition
 import com.wander.android.ui.components.AddToPlaylistHost
+import com.wander.android.ui.components.WandaNoticeHost
+import com.wander.android.ui.components.backResistance
 import com.wander.android.ui.components.rememberHaptics
-import com.wander.android.ui.components.scrollingTitle
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * The queue, as a drawer over the player rather than a screen on top of it — a panel that follows
@@ -136,6 +120,22 @@ internal fun QueueDrawer(
         )
     }
 
+    val onRemove: (QueueEntry) -> Unit = { entry ->
+        queueViewModel.removeFromQueue(entry.queueIndex)
+        scope.launch {
+            val result = snackbarHostState.showSnackbar(
+                message = context.getString(R.string.queue_removed, entry.track.title),
+                actionLabel = context.getString(R.string.common_undo),
+                withDismissAction = true
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                itemGenerations = itemGenerations + (entry.track.id to (itemGenerations[entry.track.id] ?: 0) + 1)
+                queueViewModel.insertInQueue(entry.queueIndex, entry.track)
+            }
+        }
+    }
+    val drawerHeight = with(LocalDensity.current) { drawer.heightPx.toDp() }
+
     Box(modifier = Modifier.fillMaxSize()) {
         // Tapping what is left of the player puts the drawer away; it also stops those taps from
         // reaching the player's controls while the drawer is over them.
@@ -148,13 +148,15 @@ internal fun QueueDrawer(
         )
 
         Surface(
+            // The surface clips to this shape, so the cover strip at the top of it takes the same
+            // rounded corners and needs none of its own.
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
             color = surfaceColor,
             shadowElevation = 8.dp,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .height(with(LocalDensity.current) { drawer.heightPx.toDp() })
+                .height(drawerHeight)
                 .graphicsLayer {
                     translationY = (1f - drawer.progress) * size.height
                 }
@@ -165,45 +167,21 @@ internal fun QueueDrawer(
                     onDragStopped = { velocity -> drawer.settle(velocity, spec) }
                 )
         ) {
-            Box(modifier = Modifier.fillMaxSize().navigationBarsPadding()) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    BottomSheetDefaults.DragHandle(modifier = Modifier.align(Alignment.CenterHorizontally))
-                    QueueDrawerHeader(
-                        playPosition = state.playPosition,
-                        queueSize = state.queue.size,
-                        orderLocked = state.orderLocked,
-                        onClearQueue = playerConnection::clearQueue,
-                        queue = state.queue
-                    )
-
-                    QueueUpNext(
-                        entries = entries,
-                        canReorder = canReorder,
-                        onPlay = { playerConnection.seekToIndex(it) },
-                        onMove = { from, to ->
-                            playerConnection.moveInQueue(from, to)
-                            haptics.settled()
-                        },
-                        onLongPress = { actionsFor = it },
-                        onRemove = { entry ->
-                            queueViewModel.removeFromQueue(entry.queueIndex)
-                            scope.launch {
-                                val result = snackbarHostState.showSnackbar(
-                                    message = context.getString(
-                                        R.string.queue_removed,
-                                        entry.track.title
-                                    ),
-                                    actionLabel = context.getString(R.string.common_undo),
-                                    withDismissAction = true
-                                )
-                                if (result == SnackbarResult.ActionPerformed) {
-                                    itemGenerations = itemGenerations + (entry.track.id to (itemGenerations[entry.track.id] ?: 0) + 1)
-                                    queueViewModel.insertInQueue(entry.queueIndex, entry.track)
-                                }
-                            }
-                        }
-                    )
-                }
+            Box(modifier = Modifier.fillMaxSize()) {
+                QueueDrawerBody(
+                    state = state,
+                    entries = entries,
+                    canReorder = canReorder,
+                    playerConnection = playerConnection,
+                    surfaceColor = surfaceColor,
+                    coverHeight = (drawerHeight * COVER_FRACTION).coerceIn(CoverMinHeight, CoverMaxHeight),
+                    onMove = { from, to ->
+                        playerConnection.moveInQueue(from, to)
+                        haptics.settled()
+                    },
+                    onLongPress = { actionsFor = it },
+                    onRemove = onRemove
+                )
 
                 WandaNoticeHost(
                     hostState = snackbarHostState,
@@ -213,3 +191,11 @@ internal fun QueueDrawer(
         }
     }
 }
+
+/**
+ * The cover strip's share of the drawer, and the bounds on it: 280 dp on a phone held upright, as
+ * designed, and never so short in landscape that the play button meets the options button.
+ */
+private const val COVER_FRACTION = 0.4f
+private val CoverMinHeight = 168.dp
+private val CoverMaxHeight = 280.dp

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -30,7 +31,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wander.android.R
 import com.wander.android.core.database.dao.LibraryArtistRow
 import com.wander.android.ui.components.EmptyState
-import com.wander.android.ui.components.FastScroller
 import com.wander.android.ui.components.ScrollToTopOnReselect
 import com.wander.android.ui.components.fastScrollLetter
 import com.wander.android.ui.components.groupedListItem
@@ -38,7 +38,8 @@ import com.wander.android.ui.components.monogramOf
 import com.wander.android.ui.components.nestedListInset
 
 /**
- * The library by artist, A to Z, each opening the artist's page.
+ * The library by artist, A to Z, each opening the artist's page — as rows or as a grid of
+ * monograms, whichever the toolbar's switch last chose.
  *
  * Read from what Room already holds rather than asked of a source: a library that is local files,
  * a Navidrome server and a few YouTube likes has one list of artists, not three.
@@ -50,6 +51,7 @@ internal fun LibraryArtistsPage(
     onOpenArtist: (String, String?) -> Unit
 ) {
     val artists by browse.artists.collectAsStateWithLifecycle()
+    val views by browse.views.collectAsStateWithLifecycle()
     Column(modifier = Modifier.fillMaxSize()) {
         LibraryListToolbar(LibraryTab.ARTISTS, browse)
         if (artists.isEmpty()) {
@@ -62,36 +64,54 @@ internal fun LibraryArtistsPage(
             }
             return@Column
         }
-        val listState = rememberLazyListState()
-        ScrollToTopOnReselect(listState)
+        // Always by name, so always lettered: the rail needs no order of its own to key on.
+        val starts = rememberLetterStarts<LibraryArtistRow>(artists, Unit, ArtistLetter)
+        val gutter = Modifier.padding(end = if (starts != null) LetterRailGutter else 0.dp)
+        val edge = Modifier.padding(contentPadding.nestedListInset()).padding(vertical = 8.dp)
         Box(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                state = listState,
-                contentPadding = contentPadding.nestedListInset(),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                itemsIndexed(artists, key = { _, artist -> artist.name }) { index, artist ->
-                    ArtistRow(
-                        artist = artist,
-                        onClick = { onOpenArtist(artist.name, artist.artistId) },
-                        modifier = Modifier.groupedListItem(index, artists.size)
+            if ((views[LibraryTab.ARTISTS] ?: LibraryTab.ARTISTS.defaultView) == LibraryView.GRID) {
+                val gridState = rememberLazyGridState()
+                ScrollToTopOnReselect(gridState)
+                ArtistGrid(artists, contentPadding, gridState, onOpenArtist, gutter)
+                starts?.let {
+                    LetterRail(
+                        starts = it,
+                        letterAt = { railLetter(ArtistLetter(artists.getOrNull(gridState.firstVisibleItemIndex))) },
+                        onJump = { index -> gridState.scrollToItem(index) },
+                        modifier = Modifier.align(Alignment.TopEnd).then(edge)
+                    )
+                }
+            } else {
+                val listState = rememberLazyListState()
+                ScrollToTopOnReselect(listState)
+                LazyColumn(
+                    state = listState,
+                    contentPadding = contentPadding.nestedListInset(),
+                    modifier = Modifier.fillMaxSize().then(gutter)
+                ) {
+                    itemsIndexed(artists, key = { _, artist -> artist.name }) { index, artist ->
+                        ArtistRow(
+                            artist = artist,
+                            onClick = { onOpenArtist(artist.name, artist.artistId) },
+                            modifier = Modifier.groupedListItem(index, artists.size)
+                        )
+                    }
+                }
+                starts?.let {
+                    LetterRail(
+                        starts = it,
+                        letterAt = { railLetter(ArtistLetter(artists.getOrNull(listState.firstVisibleItemIndex))) },
+                        onJump = { index -> listState.scrollToItem(index) },
+                        modifier = Modifier.align(Alignment.TopEnd).then(edge)
                     )
                 }
             }
-            FastScroller(
-                totalItems = artists.size,
-                firstVisibleItem = { listState.firstVisibleItemIndex },
-                isScrollInProgress = { listState.isScrollInProgress },
-                onJumpTo = { listState.scrollToItem(it) },
-                labelFor = { index -> fastScrollLetter(artists.getOrNull(index)?.name) },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(contentPadding.nestedListInset())
-                    .padding(vertical = 8.dp)
-            )
         }
     }
 }
+
+/** The letter an artist is filed under: the first of their name. */
+private val ArtistLetter: (LibraryArtistRow?) -> String? = { artist -> fastScrollLetter(artist?.name) }
 
 @Composable
 private fun ArtistRow(artist: LibraryArtistRow, onClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -107,7 +127,7 @@ private fun ArtistRow(artist: LibraryArtistRow, onClick: () -> Unit, modifier: M
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(48.dp)
+                .size(52.dp)
                 .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
         ) {
             Text(

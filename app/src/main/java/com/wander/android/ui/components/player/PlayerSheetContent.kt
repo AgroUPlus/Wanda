@@ -1,6 +1,5 @@
 package com.wander.android.ui.components.player
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -74,13 +73,6 @@ fun PlayerSheetContent(
     var lockedDrag by remember { mutableFloatStateOf(0f) }
     val jamOpenDistancePx = with(density) { JamQueueOpenDistance.toPx() }
 
-    val artworkAlphaState = animateFloatAsState(
-        targetValue = if (lyricsVisible && !immersivePlayer) 0f else 1f,
-        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-        label = "artwork-lyrics-fade"
-    )
-
-    val artworkPresent by remember { derivedStateOf { artworkAlphaState.value > 0f } }
     val fullPlayerPresent by remember { derivedStateOf { progress() > 0f } }
     val docked by remember { derivedStateOf { progress() == 0f } }
     val playerFullyOpen by remember { derivedStateOf { progress() >= QueueGestureArmed } }
@@ -199,10 +191,11 @@ fun PlayerSheetContent(
                 anchors = anchors,
                 progress = progress,
                 rawProgress = rawProgress,
-                visible = artworkPresent,
                 // Stays opaque under the carousel while it fades in, then leaves in one step, so the
-                // two never cross-fade into a dip.
-                alpha = { if (carouselTookOver) 0f else artworkAlphaState.value },
+                // two never cross-fade into a dip. Lyrics no longer hide it: they are laid over the
+                // dimmed cover now, not in its place. Invisible while docked: the strip draws its
+                // own faded cover there, and this one fades in over it as the sheet starts to open.
+                alpha = { if (carouselTookOver) 0f else smoothStep(progress(), 0f, DOCKED_COVER_HANDOFF) },
                 swipe = swipe,
                 previousUrl = previousArtwork,
                 nextUrl = nextArtwork,
@@ -252,7 +245,7 @@ fun PlayerSheetContent(
                                     onSeekToIndex = { order.getOrNull(it)?.let(playerConnection::seekToIndex) },
                                     onPreviewIndex = { previewIndex = it?.let(order::getOrNull) },
                                     isPlaying = playback.isPlaying,
-                                    alpha = { carouselHandoff() * artworkAlphaState.value }
+                                    alpha = carouselHandoff
                                 )
                             }
                         }

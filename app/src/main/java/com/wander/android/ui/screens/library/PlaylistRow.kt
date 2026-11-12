@@ -45,7 +45,9 @@ fun PlaylistRow(
     /** Long press handler for actions sheet. */
     onLongPress: (() -> Unit)? = null,
     /** Carries the cover into the playlist's page; see [sharedArtwork]. */
-    sharedKey: String? = null
+    sharedKey: String? = null,
+    /** A ⋮ at the row's end opening the same sheet as [onLongPress]; null draws none. */
+    onMore: (() -> Unit)? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -65,7 +67,7 @@ fun PlaylistRow(
                 onLongClickLabel = stringResource(R.string.common_more_options),
                 onLongClick = onLongPress
             )
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = if (onMore != null) 4.dp else 16.dp)
     ) {
         Artwork(
             url = playlist.coverArtUrl,
@@ -95,6 +97,7 @@ fun PlaylistRow(
                 modifier = Modifier.scrollingTitle()
             )
         }
+        onMore?.let { LibraryMoreButton(it) }
     }
 }
 

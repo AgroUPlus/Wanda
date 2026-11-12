@@ -40,38 +40,16 @@ internal fun LibraryPage(
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
     when (tab) {
         LibraryTab.ALBUMS -> SortablePage(tab, browse) {
-            val albums by browse.albums.collectAsStateWithLifecycle()
-            val recentAlbums by browse.recentAlbums.collectAsStateWithLifecycle()
-            val albumsError by viewModel.albumsError.collectAsStateWithLifecycle()
-            val sorts by browse.sorts.collectAsStateWithLifecycle()
-            AlbumGrid(
-                albums = albums,
-                recentAlbums = recentAlbums,
-                contentPadding = contentPadding,
-                onOpenAlbum = actions.onOpenAlbum,
-                onAlbumLongPress = actions.onAlbumLongPress,
-                loadError = albumsError,
-                onRetry = viewModel::refresh,
-                letterFor = albumLetter(sorts[tab])
-            )
+            AlbumsContent(tab, contentPadding, viewModel, browse, actions)
         }
         LibraryTab.PLAYLISTS -> SortablePage(tab, browse) {
-            val all by viewModel.playlists.collectAsStateWithLifecycle()
-            val chosen by browse.sourceFilter.collectAsStateWithLifecycle()
-            val playlists = remember(all, chosen) {
-                if (chosen.isEmpty()) all else all.filter { it.source in chosen }
-            }
-            PlaylistList(
-                playlists, contentPadding, viewModel, addToPlaylist, actions.onOpenPlaylist, actions.onOpenImport
-            )
+            PlaylistsContent(contentPadding, viewModel, browse, addToPlaylist, actions)
         }
         LibraryTab.LIKED -> SortablePage(tab, browse) {
-            val likedTracks by browse.likedTracks.collectAsStateWithLifecycle()
-            TrackList(likedTracks, tab, isSyncing, contentPadding, viewModel, actions.onTrackLongPress, actions.selection)
+            LikedContent(tab, isSyncing, contentPadding, viewModel, browse, actions)
         }
         LibraryTab.DOWNLOADS -> SortablePage(tab, browse) {
-            val downloadedTracks by browse.downloadedTracks.collectAsStateWithLifecycle()
-            TrackList(downloadedTracks, tab, isSyncing, contentPadding, viewModel, actions.onTrackLongPress, actions.selection)
+            DownloadsContent(tab, isSyncing, contentPadding, viewModel, browse, actions)
         }
         LibraryTab.PODCASTS ->
             LibraryPodcastsPage(
@@ -82,7 +60,9 @@ internal fun LibraryPage(
             )
         LibraryTab.TRACKS -> {
             val tracks = browse.tracks.collectAsLazyPagingItems()
-            AllTracksPage(tracks, isSyncing, contentPadding, viewModel, browse, actions.onTrackLongPress, actions.selection)
+            AllTracksPage(
+                tracks, isSyncing, contentPadding, viewModel, browse, actions.onTrackLongPress, actions.selection
+            )
         }
         LibraryTab.ARTISTS -> LibraryArtistsPage(contentPadding, browse, actions.onOpenArtist)
         LibraryTab.GENRES ->
@@ -91,9 +71,111 @@ internal fun LibraryPage(
     }
 }
 
+/** The Albums tab, as a list or a grid per the tab's chosen view. */
+@Composable
+private fun AlbumsContent(
+    tab: LibraryTab,
+    contentPadding: PaddingValues,
+    viewModel: LibraryViewModel,
+    browse: LibraryBrowseViewModel,
+    actions: LibraryPageActions
+) {
+    val albums by browse.albums.collectAsStateWithLifecycle()
+    val recentAlbums by browse.recentAlbums.collectAsStateWithLifecycle()
+    val albumsError by viewModel.albumsError.collectAsStateWithLifecycle()
+    val sorts by browse.sorts.collectAsStateWithLifecycle()
+    val views by browse.views.collectAsStateWithLifecycle()
+    val sort = sorts[tab]
+    // The grid owns the empty state, list or not: "no albums yet" reads the same either way.
+    if (albums.isNotEmpty() && (views[tab] ?: tab.defaultView) == LibraryView.LIST) {
+        AlbumList(
+            albums = albums,
+            contentPadding = contentPadding,
+            onOpenAlbum = actions.onOpenAlbum,
+            onAlbumLongPress = actions.onAlbumLongPress,
+            letterFor = albumLetter(sort),
+            order = sort
+        )
+    } else {
+        AlbumGrid(
+            albums = albums,
+            recentAlbums = recentAlbums,
+            contentPadding = contentPadding,
+            onOpenAlbum = actions.onOpenAlbum,
+            onAlbumLongPress = actions.onAlbumLongPress,
+            loadError = albumsError,
+            onRetry = viewModel::refresh,
+            letterFor = albumLetter(sort),
+            order = sort
+        )
+    }
+}
+
+/** The Playlists tab, narrowed to the sources picked in its filter. */
+@Composable
+private fun PlaylistsContent(
+    contentPadding: PaddingValues,
+    viewModel: LibraryViewModel,
+    browse: LibraryBrowseViewModel,
+    addToPlaylist: AddToPlaylistController,
+    actions: LibraryPageActions
+) {
+    val all by viewModel.playlists.collectAsStateWithLifecycle()
+    val chosen by browse.sourceFilter.collectAsStateWithLifecycle()
+    val playlists = remember(all, chosen) {
+        if (chosen.isEmpty()) all else all.filter { it.source in chosen }
+    }
+    PlaylistList(
+        playlists, contentPadding, viewModel, addToPlaylist, actions.onOpenPlaylist, actions.onOpenImport
+    )
+}
+
+/** The Liked tab, optionally narrowed to what is on the device. */
+@Composable
+private fun LikedContent(
+    tab: LibraryTab,
+    isSyncing: Boolean,
+    contentPadding: PaddingValues,
+    viewModel: LibraryViewModel,
+    browse: LibraryBrowseViewModel,
+    actions: LibraryPageActions
+) {
+    val likedTracks by browse.shownLikedTracks.collectAsStateWithLifecycle()
+    val downloadedOnly by browse.downloadedOnly.collectAsStateWithLifecycle()
+    val sorts by browse.sorts.collectAsStateWithLifecycle()
+    // Narrowed to the device and empty, it is the Offline list that is empty, and says so.
+    TrackList(
+        likedTracks, if (downloadedOnly) LibraryTab.DOWNLOADS else tab, isSyncing, contentPadding,
+        viewModel, actions.onTrackLongPress, actions.selection,
+        letterFor = trackLetter(sorts[tab]),
+        order = sorts[tab]
+    )
+}
+
+/** The Downloads tab: every track kept on the device. */
+@Composable
+private fun DownloadsContent(
+    tab: LibraryTab,
+    isSyncing: Boolean,
+    contentPadding: PaddingValues,
+    viewModel: LibraryViewModel,
+    browse: LibraryBrowseViewModel,
+    actions: LibraryPageActions
+) {
+    val downloadedTracks by browse.downloadedTracks.collectAsStateWithLifecycle()
+    val sorts by browse.sorts.collectAsStateWithLifecycle()
+    TrackList(
+        downloadedTracks, tab, isSyncing, contentPadding, viewModel,
+        actions.onTrackLongPress, actions.selection,
+        letterFor = trackLetter(sorts[tab]),
+        order = sorts[tab]
+    )
+}
+
 /** The tabs whose rows can be selected; the sheet offers Select only there. */
 internal val LibraryTab.selectsTracks: Boolean
-    get() = this == LibraryTab.TRACKS || this == LibraryTab.LIKED || this == LibraryTab.DOWNLOADS || this == LibraryTab.GENRES
+    get() = this == LibraryTab.TRACKS || this == LibraryTab.LIKED ||
+        this == LibraryTab.DOWNLOADS || this == LibraryTab.GENRES
 
 /** A list under its [LibraryListToolbar], which stays put even when the list below is empty. */
 @Composable

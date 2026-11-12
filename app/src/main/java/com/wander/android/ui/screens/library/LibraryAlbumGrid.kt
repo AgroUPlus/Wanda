@@ -57,7 +57,9 @@ internal fun AlbumGrid(
     onAlbumLongPress: (UnifiedAlbum) -> Unit = {},
     @StringRes loadError: Int? = null,
     onRetry: () -> Unit = {},
-    letterFor: ((UnifiedAlbum) -> String?)? = null
+    letterFor: ((UnifiedAlbum) -> String?)? = null,
+    /** What [letterFor] was made from, so the rail re-reads the albums when the order changes. */
+    order: Any? = null
 ) {
     if (albums.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -95,12 +97,15 @@ internal fun AlbumGrid(
             }
     }
 
+    val starts = rememberLetterStarts(albums, order, letterFor)
     Box(modifier = Modifier.fillMaxSize()) {
         LazyVerticalGrid(
             state = gridState,
             columns = GridCells.Adaptive(minSize = 156.dp),
             contentPadding = contentPadding.nestedListInset(),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(end = if (starts != null) LetterRailGutter else 0.dp)
         ) {
             if (showsRecentRow) {
                 item(span = { GridItemSpan(maxLineSpan) }, key = "recent_header") {
@@ -170,27 +175,39 @@ internal fun AlbumGrid(
                 }
             }
         }
-        FastScroller(
-            totalItems = albums.size,
-            firstVisibleItem = { (gridState.firstVisibleItemIndex - headerCount).coerceAtLeast(0) },
-            isScrollInProgress = { gridState.isScrollInProgress },
-            onJumpTo = { index ->
-                // The grid only holds the window scrolled through so far; widen it to the target
-                // first, and wait for those tiles to be in the grid before jumping to one of them.
-                if (index >= albumPageSize) {
-                    albumPageSize = (index + ALBUMS_PAGE_SIZE).coerceAtMost(albums.size)
-                    withTimeoutOrNull(WINDOW_WAIT_MS) {
-                        snapshotFlow { gridState.layoutInfo.totalItemsCount }.first { it > headerCount + index }
-                    }
+        val firstAlbum = { (gridState.firstVisibleItemIndex - headerCount).coerceAtLeast(0) }
+        val jumpTo: suspend (Int) -> Unit = { index ->
+            // The grid only holds the window scrolled through so far; widen it to the target
+            // first, and wait for those tiles to be in the grid before jumping to one of them.
+            if (index >= albumPageSize) {
+                albumPageSize = (index + ALBUMS_PAGE_SIZE).coerceAtMost(albums.size)
+                withTimeoutOrNull(WINDOW_WAIT_MS) {
+                    snapshotFlow { gridState.layoutInfo.totalItemsCount }.first { it > headerCount + index }
                 }
-                gridState.scrollToItem(headerCount + index)
-            },
-            labelFor = letterFor?.let { letter -> { index -> albums.getOrNull(index)?.let(letter) } },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(contentPadding.nestedListInset())
-                .padding(vertical = 8.dp)
-        )
+            }
+            gridState.scrollToItem(headerCount + index)
+        }
+        val edge = Modifier
+            .align(Alignment.TopEnd)
+            .padding(contentPadding.nestedListInset())
+            .padding(vertical = 8.dp)
+        // An alphabetical order gets the A–Z rail; any other has no letters, only the thumb.
+        if (starts != null) {
+            LetterRail(
+                starts = starts,
+                letterAt = { albums.getOrNull(firstAlbum())?.let { railLetter(letterFor?.invoke(it)) } },
+                onJump = jumpTo,
+                modifier = edge
+            )
+        } else {
+            FastScroller(
+                totalItems = albums.size,
+                firstVisibleItem = firstAlbum,
+                isScrollInProgress = { gridState.isScrollInProgress },
+                onJumpTo = jumpTo,
+                modifier = edge
+            )
+        }
     }
 }
 

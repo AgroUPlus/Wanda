@@ -69,7 +69,7 @@ internal fun SyncedStaticToggle(
     // unchecked half has nothing behind it — `ButtonGroup`'s members are transparent until
     // checked — so the control read as one button beside a floating word.
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = ContainerAlpha),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = CONTAINER_ALPHA),
         shape = RoundedCornerShape(ContainerRadius),
         modifier = modifier
     ) {
@@ -186,7 +186,7 @@ internal fun LyricsOffsetControl(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = ContainerAlpha),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = CONTAINER_ALPHA),
         shape = RoundedCornerShape(ContainerRadius),
         modifier = modifier
     ) {
@@ -215,10 +215,8 @@ private val OffsetLabelWidth = 52.dp
 /** The biggest control on the screen, because it is the only one you press without looking. */
 private val PlayButtonSize = 96.dp
 private val PlayIconSize = 46.dp
-/** How far the lyrics dissolve into the background at each end of the list. */
-
-/** Matches `PlayerActionBar`'s container, so the two groups are visibly the same idiom. */
-private const val ContainerAlpha = 0.55f
+/** Translucent, so the group reads as part of the tinted screen rather than a card pasted on it. */
+private const val CONTAINER_ALPHA = 0.55f
 private val ContainerInset = 6.dp
 
 /** Explicit, because the inner clip is derived from it — concentric corners need both radii. */

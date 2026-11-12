@@ -20,6 +20,8 @@ import com.wander.android.ui.components.AddToPlaylistController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import com.wander.android.ui.navigation.NavLayoutStore
+import com.wander.android.ui.navigation.ShellRequest
+import com.wander.android.ui.navigation.ShellRequests
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -39,7 +41,8 @@ class LibraryViewModel @Inject constructor(
     private val playlistsLoader: LibraryPlaylistsLoader,
     navLayout: NavLayoutStore,
     private val savedState: SavedStateHandle,
-    private val browsePrefs: LibraryBrowsePrefs
+    private val browsePrefs: LibraryBrowsePrefs,
+    private val shellRequests: ShellRequests
 ) : ViewModel() {
 
     /** Whether any connected source can be written to. Drives the "New playlist" affordance. */
@@ -130,6 +133,12 @@ class LibraryViewModel @Inject constructor(
             if (musicRepository.importMissingAlbumTracks() == 0) return
         }
     }
+
+    /**
+     * The header's search button: puts the cursor in the dock's search field, which opens search
+     * over the Library — the same request a launcher shortcut makes, see `ShellRequests`.
+     */
+    fun openSearch() = shellRequests.request(ShellRequest.FOCUS_SEARCH)
 
     fun selectTab(tab: LibraryTab) {
         if (tab == this.tab.value) return

@@ -1,4 +1,4 @@
-package com.wander.android.ui.screens.search
+package com.wander.android.ui.screens.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,32 +12,32 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 
-/** The slices of your own library the search start page offers to play in one tap. */
-enum class SearchShortcut { RECENTLY_ADDED, MOST_PLAYED }
+/** The slices of your own library the Library screen offers to play in one tap. */
+enum class LibraryShortcut { RECENTLY_ADDED, MOST_PLAYED }
 
 /**
- * Backs the start page's "Recently added" and "Most played" tiles.
+ * Backs the Library's "Recently added" and "Most played" tiles, beside Liked and Offline.
  *
  * Both are Room reads through [HomeShelfRepository] — the same ones Home's shelves use — so they
  * cost nothing on the network and work offline. A shortcut with nothing behind it (a fresh
  * install, nothing played yet) is left out rather than shown as a tile that does nothing.
  */
 @HiltViewModel
-class SearchShortcutsViewModel @Inject constructor(
+class LibraryShortcutsViewModel @Inject constructor(
     private val shelves: HomeShelfRepository,
     private val playerConnection: PlayerConnection
 ) : ViewModel() {
 
-    val tracks: StateFlow<Map<SearchShortcut, List<UnifiedTrack>>> = flow {
+    val tracks: StateFlow<Map<LibraryShortcut, List<UnifiedTrack>>> = flow {
         emit(
             mapOf(
-                SearchShortcut.RECENTLY_ADDED to shelves.getRecentlyAdded(QUEUE_LIMIT),
-                SearchShortcut.MOST_PLAYED to shelves.getTopTracks(QUEUE_LIMIT)
+                LibraryShortcut.RECENTLY_ADDED to shelves.getRecentlyAdded(QUEUE_LIMIT),
+                LibraryShortcut.MOST_PLAYED to shelves.getTopTracks(QUEUE_LIMIT)
             ).filterValues { it.isNotEmpty() }
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
-    fun play(shortcut: SearchShortcut) {
+    fun play(shortcut: LibraryShortcut) {
         tracks.value[shortcut]?.let { playerConnection.play(it) }
     }
 

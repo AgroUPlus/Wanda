@@ -9,7 +9,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -36,6 +39,10 @@ import com.wander.android.ui.components.TrackRow
  * Moving a track without dragging is [onMoveUp] and [onMoveDown], offered as accessibility actions
  * on the row and as entries in its long-press sheet.
  *
+ * [onPlayAgain] is the trailing replay button of a played track in the History tab. The track
+ * steps back from what is coming, dimmed; the button does not, so it still reads as something to
+ * press.
+ *
  * The tile is opaque because `SwipeToDismissBox` keeps the "Remove" backdrop stacked behind it at
  * full size the whole time; a translucent tile let the label show through every track.
  */
@@ -48,7 +55,8 @@ internal fun QueueTrackTile(
     onLongPress: () -> Unit,
     dragHandle: (Modifier.() -> Modifier)? = null,
     onMoveUp: (() -> Unit)? = null,
-    onMoveDown: (() -> Unit)? = null
+    onMoveDown: (() -> Unit)? = null,
+    onPlayAgain: (() -> Unit)? = null
 ) {
     val played = entry.role == QueueItemRole.PREVIOUS
     val moveUp = stringResource(R.string.action_move_up)
@@ -71,7 +79,6 @@ internal fun QueueTrackTile(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .alpha(if (played) PlayedAlpha else 1f)
                 .semantics {
                     customActions = listOfNotNull(
                         onMoveUp?.let { CustomAccessibilityAction(moveUp) { it(); true } },
@@ -84,25 +91,46 @@ internal fun QueueTrackTile(
                 showBackground = false,
                 onPlay = onPlay,
                 onLongPress = onLongPress,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f).alpha(if (played) PlayedAlpha else 1f)
             )
-            dragHandle?.let { handle ->
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .padding(end = 4.dp)
-                        .size(HandleTouchSize)
-                        .handle()
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.DragHandle,
-                        contentDescription = stringResource(R.string.queue_reorder, entry.track.title),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
+            onPlayAgain?.let { PlayAgainButton(entry.track.title, onClick = it) }
+            dragHandle?.let { ReorderGrip(entry.track.title, handle = it) }
         }
+    }
+}
+
+/** The History tab's trailing replay button, at full strength on a dimmed row. */
+@Composable
+private fun PlayAgainButton(title: String, onClick: () -> Unit) {
+    IconButton(
+        onClick = onClick,
+        shapes = IconButtonDefaults.shapes(),
+        modifier = Modifier.padding(end = 4.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Replay,
+            contentDescription = stringResource(R.string.queue_next_play_again, title),
+            tint = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+/** The trailing reorder grip: [handle] wires the drag, and it takes no click. */
+@Composable
+private fun ReorderGrip(title: String, handle: Modifier.() -> Modifier) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .padding(end = 4.dp)
+            .size(HandleTouchSize)
+            .handle()
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.DragHandle,
+            contentDescription = stringResource(R.string.queue_reorder, title),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(24.dp)
+        )
     }
 }
 

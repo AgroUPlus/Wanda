@@ -2,14 +2,19 @@ package com.wander.android.ui.screens.library
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Sort
+import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -17,6 +22,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import com.wander.android.R
 import com.wander.android.data.model.LibrarySort
 
@@ -65,7 +73,14 @@ internal val LibrarySort.label: Int
         LibrarySort.RECENTLY_PLAYED -> R.string.library_sort_recently_played
     }
 
-/** A sort button that opens the orders [options] offers, with the current one checked. */
+/**
+ * A sort button naming the current order, opening the orders [options] offers with the current
+ * one checked.
+ *
+ * A menu rather than a button that cycles: the lists offer six orders, and stepping through all of
+ * them to reach the last is slower than picking it. No direction arrow either — every order runs
+ * one way, fixed in the browse queries, and an arrow that could not be turned would be a lie.
+ */
 @Composable
 internal fun LibrarySortMenu(
     options: List<LibrarySort>,
@@ -75,11 +90,26 @@ internal fun LibrarySortMenu(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier = modifier) {
-        IconButton(onClick = { expanded = true }) {
+        val description = stringResource(R.string.library_sort_by, stringResource(selected.label))
+        TextButton(
+            onClick = { expanded = true },
+            shapes = ButtonDefaults.shapes(),
+            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
+            contentPadding = ButtonDefaults.TextButtonWithIconContentPadding,
+            modifier = Modifier.semantics { contentDescription = description }
+        ) {
             Icon(
                 Icons.AutoMirrored.Rounded.Sort,
-                contentDescription = stringResource(R.string.library_sort_by, stringResource(selected.label))
+                contentDescription = null,
+                modifier = Modifier.size(ButtonDefaults.IconSize)
             )
+            Text(
+                text = stringResource(selected.label),
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                modifier = Modifier.padding(start = ButtonDefaults.IconSpacing)
+            )
+            Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, modifier = Modifier.size(20.dp))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { option ->
