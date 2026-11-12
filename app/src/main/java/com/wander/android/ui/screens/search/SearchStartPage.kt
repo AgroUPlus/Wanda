@@ -23,8 +23,7 @@ import com.wander.android.R
 import com.wander.android.data.repository.MoodPreset
 
 /**
- * What Search shows under an empty field: the last few searches as chips, the "Recently added" and
- * "Most played" shortcuts, then the mood radios.
+ * What Search shows under an empty field: the last few searches as chips, then the mood radios.
  *
  * The moods are the same presets as Home's radio button, so a mood is one tap from either place.
  * Each tile starts a radio drawn from every connected source — see `MoodRadioRepository`.
@@ -32,14 +31,12 @@ import com.wander.android.data.repository.MoodPreset
 @Composable
 internal fun SearchStartPage(
     recentSearches: List<String>,
-    shortcuts: List<SearchShortcut>,
     moods: List<MoodPreset>,
     playingMoodKey: String?,
     contentPadding: PaddingValues,
     onSearch: (String) -> Unit,
     onRemoveSearch: (String) -> Unit,
     onClearSearches: () -> Unit,
-    onPlayShortcut: (SearchShortcut) -> Unit,
     onPlayMood: (MoodPreset) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -51,33 +48,12 @@ internal fun SearchStartPage(
             recentSearchesSection(recentSearches, onSearch, onRemoveSearch, onClearSearches)
         }
 
-        if (shortcuts.isNotEmpty()) {
-            item(key = "header_shortcuts", contentType = "section_header") {
-                SectionTitle(
-                    R.string.search_shortcuts_title,
-                    Modifier.padding(
-                        start = 20.dp,
-                        end = 20.dp,
-                        top = if (recentSearches.isEmpty()) 4.dp else 28.dp,
-                        bottom = 12.dp
-                    )
-                )
-            }
-            item(key = "shortcuts", contentType = "shortcuts") {
-                SearchShortcutTiles(
-                    shortcuts = shortcuts,
-                    onPlay = onPlayShortcut,
-                    modifier = Modifier.padding(horizontal = 16.dp).animateItem()
-                )
-            }
-        }
-
         item(key = "header_moods", contentType = "section_header") {
             Column(
                 modifier = Modifier.padding(
                     start = 20.dp,
                     end = 20.dp,
-                    top = if (recentSearches.isEmpty() && shortcuts.isEmpty()) 4.dp else 28.dp,
+                    top = if (recentSearches.isEmpty()) 4.dp else 28.dp,
                     bottom = 12.dp
                 )
             ) {
