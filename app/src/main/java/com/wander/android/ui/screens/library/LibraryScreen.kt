@@ -42,7 +42,8 @@ fun LibraryScreen(
     onOpenImport: () -> Unit = {},
     onOpenSubscriptions: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
-    browse: LibraryBrowseViewModel = hiltViewModel()
+    browse: LibraryBrowseViewModel = hiltViewModel(),
+    shortcutsViewModel: LibraryShortcutsViewModel = hiltViewModel()
 ) {
     val tab by viewModel.tab.collectAsStateWithLifecycle()
     val tabs by viewModel.tabs.collectAsStateWithLifecycle()
@@ -84,6 +85,10 @@ fun LibraryScreen(
     val likedTracks by browse.likedTracks.collectAsStateWithLifecycle()
     val downloadedTracks by browse.downloadedTracks.collectAsStateWithLifecycle()
     val hasLibraryTracks by browse.hasTracks.collectAsStateWithLifecycle()
+    val shownLikedTracks by browse.shownLikedTracks.collectAsStateWithLifecycle()
+    val downloadedOnly by browse.downloadedOnly.collectAsStateWithLifecycle()
+    val downloadedLibraryTracks by browse.downloadedLibraryTracks.collectAsStateWithLifecycle()
+    val shortcutTracks by shortcutsViewModel.tracks.collectAsStateWithLifecycle()
 
     val pagerState = rememberPagerState(
         initialPage = tabs.indexOf(tab).coerceAtLeast(0),
@@ -114,14 +119,16 @@ fun LibraryScreen(
                 // Top inset here rather than on the lists, so the title and tabs clear the status bar.
                 .padding(contentPadding.headerInset())
         ) {
-            LibraryTitleRow(onOpenHistory)
+            LibraryTitleRow(onOpenSearch = viewModel::openSearch, onOpenHistory = onOpenHistory)
             val shownTab = tabs.getOrNull(selectedPage)
             LibraryShelves(
                 tabs = tabs,
                 current = shownTab,
                 likedCount = likedTracks.size,
                 downloadedCount = downloadedTracks.size,
+                shortcuts = LibraryShortcut.entries.filter { it in shortcutTracks },
                 onSelect = viewModel::selectTab,
+                onPlayShortcut = shortcutsViewModel::play,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
             LibrarySectionChips(tabs, shownTab, viewModel::selectTab)
@@ -161,14 +168,17 @@ fun LibraryScreen(
         // Outside the Column, inside the Box: the pill floats over the list rather than taking a
         // row at the bottom of it, which is the reason the Box was wrapped around this at all.
         val currentTab = tabs.getOrElse(selectedPage) { tabs.first() }
+        // What the page shows, so Play all plays that: with the Downloaded filter on, Liked and
+        // Tracks are narrowed to the device and the pill plays the narrowed list.
         val activeTracks = when (currentTab) {
-            LibraryTab.LIKED -> likedTracks
+            LibraryTab.LIKED -> shownLikedTracks
             LibraryTab.DOWNLOADS -> downloadedTracks
+            LibraryTab.TRACKS -> downloadedLibraryTracks
             else -> emptyList()
         }
         // The Tracks tab is paged and may be far larger than memory should hold, so it plays from
         // the database rather than from a list on screen — see `LibraryPlaybackCoordinator`.
-        val playsLibrary = currentTab == LibraryTab.TRACKS
+        val playsLibrary = currentTab == LibraryTab.TRACKS && !downloadedOnly
         LibraryPlayShufflePill(
             visible = if (playsLibrary) hasLibraryTracks else activeTracks.isNotEmpty(),
             onPlayAll = { if (playsLibrary) browse.playAllTracks() else viewModel.play(activeTracks, 0) },
