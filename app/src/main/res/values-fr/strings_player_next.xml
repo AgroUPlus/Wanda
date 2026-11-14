@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Now Playing: short label in front of the next song's name, in the bar at the foot of the player that opens the queue. -->
+    <string name="player_next_up_label">Next</string>
+    <!-- Now Playing: the next song in the queue bar; %1$s is the song title, %2$s its artist. -->
+    <string name="player_next_up_track">%1$s · %2$s</string>
+    <!-- Now Playing: spoken description of the queue bar; %1$s is the next song title, %2$s its artist. -->
+    <string name="player_next_up_description">Open queue. Next: %1$s by %2$s</string>
+    <!-- Now Playing: spoken description of the queue bar when the next song has no artist; %1$s is its title. -->
+    <string name="player_next_up_description_title_only">Open queue. Next: %1$s</string>
+    <!-- Now Playing: queue bar text when nothing is queued after this song but radio mode will keep the music going. -->
+    <string name="player_next_up_radio">Radio picks what plays next</string>
+    <!-- Now Playing: queue bar text when this is the last song in the queue and radio mode is off. -->
+    <string name="player_next_up_end">End of the queue</string>
+    <!-- Now Playing: spoken description of the queue bar when there is no next song; %1$s is the bar's visible text. -->
+    <string name="player_next_up_fallback_description">Open queue. %1$s</string>
+    <!-- Now Playing: button shown next to the lyrics toggle while lyrics are over the cover; opens them on their own full screen. -->
+    <string name="player_lyrics_full_screen">Open lyrics full screen</string>
+</resources>
