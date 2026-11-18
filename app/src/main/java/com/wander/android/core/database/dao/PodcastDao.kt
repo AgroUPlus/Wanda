@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.wander.android.core.database.entity.PodcastEntity
 import com.wander.android.core.database.entity.TrackEntity
 import kotlinx.coroutines.flow.Flow
@@ -62,7 +63,11 @@ interface PodcastDao {
     /**
      * Unplayed episodes of subscribed feeds, newest first. An episode with no progress row has not
      * been started; one whose position reached its duration has been finished.
+     *
+     * No limit, so every subscribed feed's unplayed episodes together can outgrow one
+     * CursorWindow: [Transaction], for the reason [LibraryBrowseDao] gives.
      */
+    @Transaction
     @Query(
         """
         SELECT t.* FROM tracks t

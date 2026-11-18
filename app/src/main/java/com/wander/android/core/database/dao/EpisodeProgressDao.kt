@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.wander.android.core.database.entity.EpisodeProgressEntity
 import com.wander.android.core.database.entity.TrackEntity
 import kotlinx.coroutines.flow.Flow
@@ -23,7 +24,11 @@ interface EpisodeProgressDao {
      *
      * Every episode search hit is persisted too, so filtering on `isEpisode` alone would fill the
      * Podcasts tab with things merely scrolled past.
+     *
+     * No limit, and the list only grows with listening, so it can outgrow one CursorWindow:
+     * [Transaction], for the reason [LibraryBrowseDao] gives.
      */
+    @Transaction
     @Query(
         """
         SELECT * FROM tracks

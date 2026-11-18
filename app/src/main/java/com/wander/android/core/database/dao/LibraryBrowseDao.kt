@@ -3,6 +3,7 @@ package com.wander.android.core.database.dao
 import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Query
+import androidx.room.Transaction
 import com.wander.android.core.database.entity.AlbumEntity
 import com.wander.android.core.database.entity.TrackEntity
 import com.wander.android.data.model.SourceType
@@ -37,6 +38,13 @@ internal const val LIBRARY_TRACKS = "isLibrary = 1 AND isEpisode = 0 AND source 
  *
  * `sources` is never empty: "every source" is passed as every source, so one `IN` serves both the
  * filtered and the unfiltered list.
+ *
+ * A list read whole, every column of every row, is [Transaction]. Room re-runs it on each write to
+ * `tracks`, and around 850 tracks fill one 2 MB CursorWindow. Reading past a window re-runs the
+ * query to refill it; a write between two fills made the cursor read past what the new fill held,
+ * and that read crashed the app with "Couldn't read row N from CursorWindow". One transaction
+ * reads every window from the same snapshot. The paged list is exempt: a page is far smaller
+ * than a window.
  */
 @Dao
 interface LibraryBrowseDao {
@@ -65,11 +73,13 @@ interface LibraryBrowseDao {
     @Query("SELECT EXISTS(SELECT 1 FROM tracks WHERE $LIBRARY_TRACKS)")
     fun observeHasLibraryTracks(sources: List<SourceType>): Flow<Boolean>
 
+    @Transaction
     @Query(
         "SELECT * FROM tracks WHERE isLiked = 1 AND isEpisode = 0 AND source IN (:sources) ORDER BY $TRACK_ORDER"
     )
     fun observeLikedTracks(sort: String, sources: List<SourceType>): Flow<List<TrackEntity>>
 
+    @Transaction
     @Query(
         """
         SELECT * FROM tracks
@@ -154,6 +164,7 @@ interface LibraryBrowseDao {
     fun observeLibraryGenres(sources: List<SourceType>): Flow<List<LibraryGenreRow>>
 
     /** One genre's tracks, A to Z; [genre] matches whatever capitalisation each row was tagged in. */
+    @Transaction
     @Query(
         """
         SELECT * FROM tracks

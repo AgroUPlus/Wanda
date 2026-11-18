@@ -91,6 +91,9 @@ interface TrackLibraryQueries {
     // found the row for either name on it — only for the string as a whole. This is deliberately
     // wider than that; `ArtistIdentity.creditsMatch` is what narrows the wider result back down to
     // real matches, since a bare substring also catches "Artisan" inside a query for "Art".
+    // Being that wide, it can match more whole rows than one CursorWindow holds: `@Transaction`,
+    // for the reason `LibraryBrowseDao` gives.
+    @Transaction
     @Query(
         """
         SELECT * FROM tracks
@@ -202,6 +205,11 @@ interface TrackLibraryQueries {
     @Query("SELECT COUNT(*) FROM tracks WHERE isLive = 0 AND (isLibrary = 1 OR playCount > 0 OR lastPlayedTimestamp IS NOT NULL)")
     suspend fun getFingerprintableTrackCount(): Int
 
+    /**
+     * The whole library, whole rows, observed while the indexer writes to those same rows:
+     * [Transaction], for the reason [LibraryBrowseDao] gives.
+     */
+    @Transaction
     @Query("SELECT * FROM tracks WHERE isLive = 0 AND (isLibrary = 1 OR playCount > 0 OR lastPlayedTimestamp IS NOT NULL)")
     fun getFingerprintableTracksFlow(): Flow<List<TrackEntity>>
 
