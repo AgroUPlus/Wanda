@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The search button beside History in the Library header; it opens the dock's search over the Library. -->
+    <string name="library_open_search">Search</string>
+    <!-- Toolbar filter chip: narrows a track list to the tracks downloaded to this device. -->
+    <string name="library_filter_downloaded">Downloaded</string>
+    <!-- The list/grid switch above a Library list. -->
+    <string name="library_view_list">List view</string>
+    <string name="library_view_grid">Grid view</string>
+    <!-- The A–Z rail beside an alphabetical Library list; %1$s is a letter or #. -->
+    <string name="library_jump_to_letter">Jump to %1$s</string>
+</resources>

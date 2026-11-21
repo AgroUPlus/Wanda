@@ -193,7 +193,7 @@
     <string name="artist_show_all">Show all</string>
     <string name="artist_show_less">Show less</string>
     <!-- Home -->
-    <string name="home_connect_navidrome_youtube_music_settings">Connecter Subsonic ou YouTube Music dans les paramètres, ou donner l\'accès aux musiques sur cet appareil.</string>
+    <string name="home_connect_navidrome_youtube_music_settings">Connect Subsonic or YouTube Music in Settings, or grant access to music stored on this device.</string>
     <string name="home_nothing_here_yet">Rien ici pour l\'instant</string>
     <string name="home_nothing_play_yet">Rien à jouer pour l\'instant</string>
     <string name="home_edit_title">Personnaliser la page d\'accueil</string>
@@ -457,7 +457,7 @@
     <string name="library_recent">Récent</string>
     <string name="library_shuffle_all">Tout mélanger</string>
     <!-- Sign-in -->
-    <string name="login_connect_navidrome">Connecter Subsonic</string>
+    <string name="login_connect_navidrome">Connect Subsonic</string>
     <string name="login_music_example_com">music.exemple.com</string>
     <string name="login_password">Mot de passe</string>
     <string name="login_password_stored_android_keystore_only">Votre mot de passe est stocké dans le trousseau de clefs Android et n\'est envoyé qu\'à votre propre serveur sous forme de hash salé.</string>
@@ -509,7 +509,7 @@
     <string name="queue_waiting_room_votes">En attente de votes de la salle</string>
     <!-- Search -->
     <string name="search_matched_lyrics">Correspondance par paroles</string>
-    <string name="search_navidrome_youtube_music_music_device">Subsonic, YouTube Music and musiques sur cet appareil dans une liste unifiée.</string>
+    <string name="search_navidrome_youtube_music_music_device">Subsonic, YouTube Music and music on this device, in one list.</string>
     <string name="search_no_matches">Aucune correspondance</string>
     <string name="search_search_everything_once">Tout rechercher à la fois</string>
     <string name="search_songs">Musiques</string>
@@ -640,12 +640,12 @@
     <string name="settings_share_example_com">partage.exemple.com</string>
     <string name="settings_share_links">Partager des liens</string>
     <string name="settings_share_my_listening_stats">Partager mon historique d\'écoute</string>
-    <string name="settings_share_navidrome_address_between_devices">Partager l\'adresse Subsonic entre les appareils.</string>
+    <string name="settings_share_navidrome_address_between_devices">Share the Subsonic address between devices.</string>
     <string name="settings_sharing_paused_incognito">Partage désactivé par le mode incognito</string>
     <string name="settings_show_what_i_m_playing">Montrer ce que j\'écoute</string>
     <string name="settings_sign_out_deezer">Vous souhaitez vous déconnecter de Deezer ?</string>
     <string name="settings_deezer_streaming_stops_until">La lecture en streaming sur Deezer sera interrompue jusqu\'à ce que vous vous reconnectiez. Les titres déjà téléchargés resteront disponibles.</string>
-    <string name="settings_sign_out_navidrome">Se déconnecter de Subsonic ?</string>
+    <string name="settings_sign_out_navidrome">Sign out of Subsonic?</string>
     <string name="settings_sign_out_youtube_music">Se déconnecter de YouTube Music ?</string>
     <string name="settings_signs_out_every_source_erases">Se déconnecter de toutes les sources et supprimer les secrets ?</string>
     <string name="settings_some_servers_let_anyone_hold">Certains serveurs autorisent les utilisateurs mais nécessitent l\'approbation. D\'autres ont besoin d\'un code.</string>
@@ -655,7 +655,7 @@
     <string name="settings_sweep_active_word_one_letter">Surligne le mot actif lettre par lettre dans un style de karaoké. Désactivé surligne la ligne active.</string>
     <string name="settings_sync_now">Synchroniser maintenant</string>
     <string name="settings_sync_summary_peer">Partage direct entre pairs.</string>
-    <string name="settings_sync_summary_navidrome">Archivé sur Subsonic.</string>
+    <string name="settings_sync_summary_navidrome">Archived to Subsonic.</string>
     <string name="settings_sync_summary_agro">Archivé sur le serveur Agro.</string>
     <string name="settings_sync_count_device">%1$d sur cet appareil</string>
     <string name="settings_sync_count_server">%1$d sur le serveur</string>
@@ -825,7 +825,7 @@
     <string name="queue_from">%1$s · depuis @%2$s</string>
     <string name="queue_members_tap_open_jam">%1$s membres · Cliquez pour ouvrir la jam</string>
     <string name="queue_removed">%1$s retiré</string>
-    <string name="player_dismissed">Lecture mise en pause</string>
+    <string name="player_dismissed">Playback paused</string>
     <string name="queue_reorder">Réorganiser %1$s</string>
     <string name="queue_now_playing">En cours de lecture</string>
     <string name="queue_section_up_next">À suivre</string>
@@ -978,7 +978,7 @@
     <string name="cloud_backup_accounts">Inclure les connexions</string>
     <string name="cloud_backup_accounts_sub">Hors ligne : après la restauration, vous devez vous reconnecter à vos sources.</string>
     <string name="cloud_backup_accounts_confirm_title">Faut-il inclure les données de connexion dans les sauvegardes sur le cloud ?</string>
-    <string name="cloud_backup_accounts_confirm_message">Votre mot de passe Subsonic ainsi que vos sessions YouTube et Deezer seraient conservés sur Agro, verrouillés comme le reste. Votre phrase de passe serait alors la seule protection dont ils disposeraient si quelqu\'un venait à copier la base de données du serveur.</string>
+    <string name="cloud_backup_accounts_confirm_message">Your Subsonic password and YouTube and Deezer sessions would be kept on Agro, sealed like the rest. Your passphrase is then all that protects them if someone copies the server\'s database.</string>
     <string name="cloud_backup_accounts_confirm">Ajoutez-les</string>
     <string name="cloud_backup_restore">Restauration à partir d\'Agro</string>
     <string name="cloud_backup_restore_sub">Importez une sauvegarde depuis n\'importe lequel de vos appareils vers celui-ci.</string>
@@ -1086,7 +1086,7 @@
     <string name="settings_category_external">Externe</string>
     <string name="settings_category_privacy">Confidentialité</string>
     <string name="settings_category_about">À propos</string>
-    <string name="settings_category_sub_navidrome_youtube_music_local_files">Subsonic, YouTube Music et vos fichiers locaux</string>
+    <string name="settings_category_sub_navidrome_youtube_music_local_files">Subsonic, YouTube Music and your local files</string>
     <string name="settings_category_sub_devices_library_syncing_what_gets">Appareils, synchronisation de la bibliothèque et ce qui est partagé</string>
     <string name="settings_category_sub_change_theme_colours_app">Changer le thème et les couleurs de l\'app</string>
     <string name="settings_category_sub_offline_mode_downloads_cache">Mode hors ligne, téléchargements et cache</string>
@@ -1122,7 +1122,7 @@
     <string name="fp_section_on_device_sub">Fichiers locaux. Ne coûtent rien; rouge signifie un problème de format.</string>
     <!-- Transport badge, spoken descriptions -->
     <string name="transport_spoken_device">Lecture depuis cet appareil. Rien ne quitte ce téléphone.</string>
-    <string name="transport_spoken_navidrome">Streamé depuis votre serveur Subsonic.</string>
+    <string name="transport_spoken_navidrome">Streamed from your own Subsonic server.</string>
     <string name="transport_spoken_stream">Correspondance et streamé depuis YouTube Music. Utilise quelques données.</string>
     <string name="transport_spoken_lan">Streamé directement depuis les autres appareils sur votre réseau local, chiffré.</string>
     <string name="transport_spoken_offgrid">Streamé de téléphone à téléphone via un lien radio direct, aucun réseau impliqué, chiffré.</string>
@@ -1161,7 +1161,7 @@
     <string name="backup_section_settings">Paramètres</string>
     <string name="backup_section_settings_detail">Apparence, lecture, confidentialité et toutes les autres préférences</string>
     <string name="backup_section_accounts">Connexions</string>
-    <string name="backup_section_accounts_detail">Comptes Subsonic, YouTube Music et Agro</string>
+    <string name="backup_section_accounts_detail">Subsonic, YouTube Music and Agro accounts</string>
     <string name="backup_section_history">Historique d\'écoute</string>
     <string name="backup_section_history_detail">Toutes vos parties et vos rediffusions enregistrées</string>
     <string name="backup_section_library">Bibliothèque</string>
@@ -1454,7 +1454,7 @@
     <string name="debug_format">Format : %1$s · %2$d kbps</string>
     <string name="debug_route_download">fichier téléchargé</string>
     <string name="debug_route_local_copy">copie locale de ce même enregistrement</string>
-    <string name="debug_route_navidrome">Serveur Subsonic</string>
+    <string name="debug_route_navidrome">Subsonic server</string>
     <string name="debug_route_source">la source propre au morceau</string>
     <string name="debug_route_ephemeral">flux ponctuel (entre pairs)</string>
     <string name="debug_route_podcast">épisode de podcast</string>
@@ -1463,26 +1463,20 @@
     <string name="debug_gain_album">album gain</string>
     <string name="debug_gain_none">Loudness: no ReplayGain tags · volume ×%1$.2f (pre-amp only)</string>
     <string name="debug_gain_off">Loudness: levelling off</string>
-    <plurals name="selection_playing_next">
-        <item quantity="one">%d titre à suivre</item>
-        <item quantity="other">%d titres à suivre</item>
-    </plurals>
-    <plurals name="selection_added_to_queue">
-        <item quantity="one">%d titre ajouté à la file d\'attente</item>
-        <item quantity="other">%d titres ajoutés à la file d\'attente</item>
-    </plurals>
-
-    <!-- Notifications sociales. -->
-    <string name="notif_self_name">Vous</string>
-    <string name="notif_drop_note">« %1$s »</string>
-    <string name="notif_drop_public">Un ami vous a envoyé un morceau</string>
-    <string name="notif_action_play">Lire</string>
-    <string name="notif_action_love">J\'adore</string>
-    <string name="notif_action_mark_read">Marquer comme lu</string>
-    <string name="notif_action_accept">Accepter</string>
-    <string name="notif_action_decline">Refuser</string>
-    <string name="notif_drop_not_found">Impossible de trouver « %1$s » dans votre bibliothèque ou sur YouTube Music.</string>
-    <string name="notif_drop_play_failed">Impossible de lancer la lecture.</string>
-    <string name="notif_drop_love_failed">Impossible d\'envoyer votre réaction.</string>
-    <string name="notif_friend_answer_failed">Impossible de répondre à la demande d\'ami.</string>
+    <!-- Social notifications: drops as conversations, friend requests, blend invites. -->
+    <!-- The account itself, as the conversation names it beside a reaction sent from the shade. -->
+    <string name="notif_self_name">You</string>
+    <!-- A friend's note under the track they sent, in the language's own quotation marks. -->
+    <string name="notif_drop_note">“%1$s”</string>
+    <!-- All the lock screen says about a drop: it names nobody. -->
+    <string name="notif_drop_public">A friend sent you a track</string>
+    <string name="notif_action_play">Play</string>
+    <string name="notif_action_love">Love it</string>
+    <string name="notif_action_mark_read">Mark as read</string>
+    <string name="notif_action_accept">Accept</string>
+    <string name="notif_action_decline">Decline</string>
+    <string name="notif_drop_not_found">Couldn\'t find “%1$s” in your library or on YouTube Music.</string>
+    <string name="notif_drop_play_failed">Couldn\'t start playback.</string>
+    <string name="notif_drop_love_failed">Couldn\'t send your reaction.</string>
+    <string name="notif_friend_answer_failed">Couldn\'t answer the friend request.</string>
 </resources>

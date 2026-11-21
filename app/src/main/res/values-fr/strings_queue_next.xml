@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tab of the queue drawer listing the tracks that have already played, most recent first. The other tab is "Up next". -->
+    <string name="queue_next_tab_history">History</string>
+    <!-- Beside the "Up next" tab: minutes left in the queue, then the clock time it runs out. %2$s is a localized time, such as 21:47 or 9:47 PM. -->
+    <plurals name="queue_next_time_left">
+        <item quantity="one">%1$d min · ends %2$s</item>
+        <item quantity="other">%1$d min · ends %2$s</item>
+    </plurals>
+    <!-- Beside the "History" tab: how many tracks of the queue have already played. -->
+    <plurals name="queue_next_played_count">
+        <item quantity="one">%1$d played</item>
+        <item quantity="other">%1$d played</item>
+    </plurals>
+    <!-- Spoken label of the round button on the queue drawer's cover that opens "Save as playlist" and "Clear queue". -->
+    <string name="queue_next_options">Queue options</string>
+    <!-- Spoken label of the button on a played track that plays it again; %1$s is the track's title. -->
+    <string name="queue_next_play_again">Play %1$s again</string>
+    <!-- Under the last upcoming track, with radio on; %1$s is the artist playing now. -->
+    <string name="queue_next_then_radio_from">Then radio from %1$s</string>
+    <!-- Under the last upcoming track, with radio on, when the track playing now has no artist. -->
+    <string name="queue_next_then_radio">Then radio</string>
+    <!-- Under the last upcoming track, with radio off: playback stops when the queue runs out. -->
+    <string name="queue_next_then_silence">Then silence</string>
+    <!-- Spoken label of the switch under the last upcoming track. -->
+    <string name="queue_next_radio_switch">Keep playing similar music when the queue ends</string>
+    <!-- The History tab of the queue drawer before anything has played. -->
+    <string name="queue_next_history_empty">Nothing has played yet</string>
+</resources>
